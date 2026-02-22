@@ -177,6 +177,16 @@
         <!-- Main Content Area -->
         <div id="main-wrapper">
             <header id="topbar">
+                <!-- Mobile Menu Button -->
+                <button id="mobile-menu-toggle" class="mobile-only-btn" title="Menü öffnen">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="3" y1="12" x2="21" y2="12"></line>
+                        <line x1="3" y1="6" x2="21" y2="6"></line>
+                        <line x1="3" y1="18" x2="21" y2="18"></line>
+                    </svg>
+                </button>
+
                 <!-- Header Social Links (Left) -->
                 <!-- Header Social Links (Left) -->
                 <div class="header-social-links">
@@ -237,6 +247,9 @@
                     </div>
                 </div>
             </header>
+
+            <!-- Sidebar Overlay for Mobile -->
+            <div id="sidebar-overlay"></div>
 
             <main id="main-content">
                 <!-- Home View -->
@@ -5517,15 +5530,24 @@
         <script>
             document.addEventListener('DOMContentLoaded', function () {
                 const sidebarToggle = document.getElementById('sidebar-toggle');
+                const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+                const sidebarOverlay = document.getElementById('sidebar-overlay');
                 const sidebar = document.getElementById('sidebar');
                 const mainWrapper = document.getElementById('main-wrapper');
 
-                if (sidebarToggle && sidebar && mainWrapper) {
-                    sidebarToggle.addEventListener('click', function () {
+                function toggleSidebar() {
+                    if (window.innerWidth <= 768) {
+                        sidebar.classList.toggle('mobile-open');
+                        sidebarOverlay.classList.toggle('active');
+                    } else {
                         sidebar.classList.toggle('collapsed');
                         mainWrapper.classList.toggle('collapsed-sidebar');
-                    });
+                    }
                 }
+
+                if (sidebarToggle) sidebarToggle.addEventListener('click', toggleSidebar);
+                if (mobileMenuToggle) mobileMenuToggle.addEventListener('click', toggleSidebar);
+                if (sidebarOverlay) sidebarOverlay.addEventListener('click', toggleSidebar);
             });
         </script>
 
