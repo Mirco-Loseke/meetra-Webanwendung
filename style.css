@@ -4598,157 +4598,107 @@ tr.completed-task td {
 }
 
 /* ==========================================
-   RESPONSIVE DESIGN (iPad & Mobile)
+   RESPONSIVE DESIGN REFINEMENTS
    ========================================== */
 
-/* Utility for mobile only buttons */
-.mobile-only-btn {
-    display: none;
-    background: transparent;
-    border: none;
-    color: #fff;
-    cursor: pointer;
-    padding: 8px;
-    align-items: center;
-    justify-content: center;
-}
+/* Responsive Typography */
+@media (max-width: 768px) {
+    h1 {
+        font-size: 1.8rem !important;
+    }
 
-/* Sidebar Overlay */
-#sidebar-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.6);
-    backdrop-filter: blur(4px);
-    z-index: 998;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s ease;
-}
+    h2 {
+        font-size: 1.5rem !important;
+    }
 
-#sidebar-overlay.active {
-    opacity: 1;
-    pointer-events: auto;
+    h3 {
+        font-size: 1.2rem !important;
+    }
+
+    .view {
+        padding: 1rem !important;
+    }
 }
 
 /* iPad Breakpoint (max-width: 1024px) */
 @media (max-width: 1024px) {
-    #sidebar {
-        width: 80px;
-    }
-
-    #sidebar .sidebar-nav span,
-    #sidebar .sidebar-header .logo {
-        display: none;
-    }
-
-    #sidebar .sidebar-nav .nav-link {
-        justify-content: center;
-        padding: 12px;
-    }
-
-    #main-wrapper {
-        margin-left: 80px;
-        width: calc(100% - 80px);
-    }
-
     .card-grid {
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
     }
 
     .dashboard-grid {
         grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
     }
 }
 
 /* Mobile Breakpoint (max-width: 768px) */
 @media (max-width: 768px) {
-    .mobile-only-btn {
-        display: flex;
-    }
 
-    #sidebar {
-        position: fixed;
-        left: -280px;
-        top: 0;
-        bottom: 0;
-        z-index: 999;
-        width: 280px !important;
-        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border-right: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    #sidebar.mobile-open {
-        left: 0;
-    }
-
-    #sidebar .sidebar-nav span,
-    #sidebar .sidebar-header .logo {
-        display: inline-block;
-    }
-
-    #sidebar .sidebar-nav .nav-link {
-        justify-content: flex-start;
-        padding: 12px 20px;
-    }
-
-    #main-wrapper {
-        margin-left: 0;
-        width: 100%;
-        padding: 1rem;
-        padding-top: calc(70px + 1rem);
-    }
-
-    #topbar {
-        left: 0;
-        width: 100%;
-        padding: 0 1rem;
-        justify-content: space-between;
-    }
-
-    .header-social-links {
-        display: none;
-        /* Hide social on mobile to save space */
-    }
-
-    .dashboard-grid {
-        grid-template-columns: 1fr;
-    }
-
+    .dashboard-grid,
     .card-grid {
         grid-template-columns: 1fr;
+        gap: 1.25rem;
     }
 
-    /* Table Scrolling Fix */
+    /* Optimize Table View for Mobile (Horizontal Scroll) */
     .glass-card {
-        overflow-x: auto;
+        padding: 1rem !important;
+        overflow-x: auto !important;
         -webkit-overflow-scrolling: touch;
     }
 
     .task-table,
     .procurement-table {
-        min-width: 600px;
+        min-width: 800px;
+        /* Slightly wider to ensure clarity */
+        font-size: 0.85rem;
+    }
+
+    .task-table td,
+    .procurement-table td {
+        padding: 12px 10px;
+    }
+
+    .task-table tr:nth-child(even),
+    .procurement-table tr:nth-child(even) {
+        background: rgba(255, 255, 255, 0.02);
+    }
+
+    /* Fixed Sidebar (Slim Version) */
+    #sidebar {
+        width: 70px !important;
+        padding-top: 1.5rem !important;
+    }
+
+    #sidebar .sidebar-nav span,
+    #sidebar .sidebar-header .logo,
+    #sidebar .sidebar-nav .nav-link span {
+        display: none !important;
+    }
+
+    #sidebar .sidebar-nav .nav-link {
+        justify-content: center;
+        padding: 15px !important;
+    }
+
+    #main-wrapper {
+        margin-left: 70px !important;
+        width: calc(100% - 70px) !important;
+    }
+
+    #topbar {
+        left: 70px !important;
+        width: calc(100% - 70px) !important;
+        padding: 0 1rem;
     }
 
     /* Modal Adjustments */
     .modal-content {
         width: 95% !important;
-        margin: 20px auto;
-        padding: 1.5rem;
-    }
-
-    .modal-body form>div {
-        grid-template-columns: 1fr !important;
-    }
-
-    .users-header-container {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-    }
-
-    .users-header-actions {
-        width: 100%;
-        justify-content: space-between;
+        max-height: 90vh;
+        overflow-y: auto;
     }
 }
 
