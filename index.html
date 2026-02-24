@@ -4078,7 +4078,155 @@
                     modal.classList.remove('show');
                     setTimeout(() => {
                         modal.classList.add('hidden');
-                        modal.style.display = 'none';
+                    }, 300);
+                }
+            };
+
+            window.openHistoryModal = async function (machineId) {
+                if (event) event.stopPropagation();
+                const modal = document.getElementById('machine-history-modal');
+                const container = document.getElementById('history-timeline-container');
+                if (!modal || !container || !window.supabaseClient) return;
+
+                modal.classList.remove('hidden');
+                modal.style.display = 'flex';
+                requestAnimationFrame(() => {
+                    modal.classList.add('show');
+                });
+                container.innerHTML = '<div style="text-align: center; color: rgba(255,255,255,0.4); padding: 2rem;">Lade Historie...</div>';
+
+                try {
+                    // Fetch data concurrently
+                    const [
+                        serviceRes,
+                        procRes,
+                        calRes,
+                        intakeRes,
+                        acceptanceRes
+                    ] = await Promise.all([
+                        window.supabaseClient.from('service_entries').select('*').eq('machine_id', machineId),
+                        window.supabaseClient.from('procurements').select('*').eq('machine_id', machineId),
+                        window.supabaseClient.from('calendar_events').select('*').eq('machine_id', machineId),
+                        window.supabaseClient.from('intake_protocols').select('*').eq('machine_id', machineId),
+                        window.supabaseClient.from('acceptance_protocols').select('*').eq('machine_id', machineId)
+                    ]);
+
+                    let historyItems = [];
+
+                    if (serviceRes.data) {
+                        serviceRes.data.forEach(s => {
+                            historyItems.push({
+                                date: new Date(s.date || s.created_at),
+                                type: 'Servicebericht',
+                                title: s.title || 'Servicebericht',
+                                description: s.description || '',
+                                color: '#3b82f6',
+                                icon: '📄'
+                            });
+                        });
+                    }
+
+                    if (procRes.data) {
+                        procRes.data.forEach(p => {
+                            historyItems.push({
+                                date: new Date(p.created_at),
+                                type: 'Bestellung/Aufgabe',
+                                title: p.title || p.task || 'Aufgabe',
+                                description: p.description || p.status || '',
+                                color: '#f59e0b',
+                                icon: '🛒'
+                            });
+                        });
+                    }
+
+                    if (calRes.data) {
+                        calRes.data.forEach(c => {
+                            historyItems.push({
+                                date: new Date(c.start_time || c.created_at),
+                                type: 'Termin',
+                                title: c.title || 'Termin',
+                                description: c.description || '',
+                                color: '#10b981',
+                                icon: '📅'
+                            });
+                        });
+                    }
+
+                    if (intakeRes.data) {
+                        intakeRes.data.forEach(p => {
+                            historyItems.push({
+                                date: new Date(p.created_at),
+                                type: 'Eingangsprotokoll',
+                                title: 'Protokoll-ID: ' + p.id,
+                                description: 'Erstellt am ' + new Date(p.created_at).toLocaleDateString(),
+                                color: '#8b5cf6',
+                                icon: '📥'
+                            });
+                        });
+                    }
+
+                    if (acceptanceRes.data) {
+                        acceptanceRes.data.forEach(p => {
+                            historyItems.push({
+                                date: new Date(p.created_at),
+                                type: 'Abnahmeprotokoll',
+                                title: 'Protokoll-ID: ' + p.id,
+                                description: 'Erstellt am ' + new Date(p.created_at).toLocaleDateString(),
+                                color: '#ec4899',
+                                icon: '✅'
+                            });
+                        });
+                    }
+
+                    // Sort descending (newest top)
+                    historyItems.sort((a, b) => b.date - a.date);
+
+                    if (historyItems.length === 0) {
+                        container.innerHTML = '<div style="text-align: center; color: rgba(255,255,255,0.4); padding: 2rem;">Keine Einträge für diese Maschine vorhanden.</div>';
+                        return;
+                    }
+
+                    let html = '';
+                    historyItems.forEach(item => {
+                        const dateStr = item.date.toLocaleDateString('de-DE');
+                        const timeStr = item.date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+                        html += `
+                            <div class="history-item" style="position: relative; padding: 1rem 0 1rem 1.5rem; border-left: 2px solid rgba(255,255,255,0.1); margin-left: 1rem;">
+                                <div class="history-icon" style="position: absolute; left: -16px; top: 1.25rem; width: 30px; height: 30px; border-radius: 50%; background: ${item.color}20; border: 2px solid ${item.color}; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; box-shadow: 0 0 10px ${item.color}40;">
+                                    ${item.icon}
+                                </div>
+                                <div class="history-content" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 1.25rem; border-radius: 16px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; gap: 1rem;">
+                                        <div>
+                                            <span style="font-size: 0.75rem; font-weight: 800; color: ${item.color}; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 0.25rem;">${item.type}</span>
+                                            <h4 style="margin: 0; color: #fff; font-size: 1.1rem; font-weight: 600;">${item.title}</h4>
+                                        </div>
+                                        <div style="font-size: 0.8rem; color: rgba(255,255,255,0.5); font-weight: 600; text-align: right; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 6px;">
+                                            <div>${dateStr}</div>
+                                            <div>${timeStr}</div>
+                                        </div>
+                                    </div>
+                                    ${item.description ? `<p style="margin: 0; color: rgba(255,255,255,0.6); font-size: 0.95rem; line-height: 1.5;">${item.description}</p>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    container.innerHTML = html;
+
+                } catch (error) {
+                    console.error("Error loading machine history", error);
+                    container.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 2rem;">Fehler beim Laden der Historie.</div>';
+                }
+            };
+
+            window.closeHistoryModal = function () {
+                const modal = document.getElementById('machine-history-modal');
+                if (modal) {
+                    modal.classList.remove('show');
+                    setTimeout(() => {
+                        modal.classList.add('hidden');
                     }, 300);
                 }
             };
