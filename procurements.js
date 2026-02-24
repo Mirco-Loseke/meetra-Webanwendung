@@ -27,6 +27,7 @@ async function fetchProcurements() {
         if (error) throw error;
 
         allProcurements = data || [];
+        window.procurementList = allProcurements; // Expose globally for dashboard
         renderProcurements(allProcurements);
     } catch (err) {
         console.error('Error fetching procurements:', err);

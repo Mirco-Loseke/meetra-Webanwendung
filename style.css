@@ -4797,3 +4797,289 @@ MACHINE HISTORY TIMELINE
 .history-icon {
     z-index: 2;
 }
+
+/* =======================================================
+   COMPREHENSIVE RESPONSIVE DESIGN
+   Desktop first — everything scales down gracefully
+   ======================================================= */
+
+/* ---- Large screens / minor adjustments ≤ 1280px ---- */
+@media (max-width: 1280px) {
+
+    /* KPI strip: allow wrapping to 2 per row */
+    #home .kpi-strip,
+    [style*="flex-wrap:wrap"] {
+        flex-wrap: wrap !important;
+    }
+}
+
+/* ---- Tablet / iPad  ≤ 1024px ---- */
+@media (max-width: 1024px) {
+
+    /* Sidebar collapses to icon-only automatically */
+    #sidebar {
+        width: 80px !important;
+    }
+
+    #sidebar .sidebar-nav .nav-link span,
+    #sidebar .sidebar-header .logo,
+    #sidebar .sidebar-header p {
+        display: none !important;
+    }
+
+    #sidebar .sidebar-nav .nav-link {
+        justify-content: center !important;
+        padding: 15px !important;
+    }
+
+    #main-wrapper {
+        margin-left: 80px !important;
+        width: calc(100% - 80px) !important;
+    }
+
+    #topbar {
+        left: 80px !important;
+        width: calc(100% - 80px) !important;
+    }
+
+    /* Card grids: 2 columns max */
+    .card-grid {
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)) !important;
+        gap: 1.25rem !important;
+    }
+
+    /* Dashboard 2-col sections: keep 2 col but smaller */
+    /* KPI strip: 2 per row */
+    .kpi-strip {
+        flex-wrap: wrap;
+    }
+
+    /* Kanban board: allow overflow scroll */
+    .kanban-board {
+        gap: 1rem !important;
+    }
+
+    .kanban-column {
+        min-width: 240px !important;
+    }
+
+    /* Sidebar toggle button stays visible */
+    #sidebar-toggle-btn {
+        display: flex !important;
+    }
+}
+
+/* ---- Tablet portrait / large phone  ≤ 768px ---- */
+@media (max-width: 768px) {
+
+    /* Sidebar: hidden off-screen, opened by hamburger */
+    #sidebar {
+        width: 280px !important;
+        transform: translateX(-100%);
+        transition: transform 0.35s ease;
+        z-index: 1000;
+    }
+
+    #sidebar.mobile-open {
+        transform: translateX(0);
+    }
+
+    /* Show sidebar nav labels again when open on mobile */
+    #sidebar.mobile-open .sidebar-nav .nav-link span,
+    #sidebar.mobile-open .sidebar-header .logo {
+        display: block !important;
+    }
+
+    #sidebar.mobile-open .sidebar-nav .nav-link {
+        justify-content: flex-start !important;
+        padding: 14px 20px !important;
+    }
+
+    #main-wrapper {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+
+    #topbar {
+        left: 0 !important;
+        width: 100% !important;
+        padding: 0 1rem !important;
+    }
+
+    /* Mobile hamburger button */
+    #mobile-sidebar-toggle {
+        display: flex !important;
+    }
+
+    /* Page padding */
+    .view {
+        padding: 1rem !important;
+    }
+
+    /* Page title headings */
+    h1 {
+        font-size: 1.6rem !important;
+    }
+
+    .users-header-container h1,
+    #machines h1,
+    #tasks h1,
+    #service h1,
+    #home h1,
+    #settings h1,
+    #calendar h1,
+    #workshop h1,
+    #procurements h1,
+    #protocols h1 {
+        font-size: 1.6rem !important;
+    }
+
+    /* ---- Card grid: 1 column ---- */
+    .card-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+
+    /* ---- Dashboard inline grids (KPI 2-col) ---- */
+    /* KPI strip: 2 per row on mobile */
+    div[style*="display:flex"][style*="flex-wrap:wrap"],
+    div[style*="display: flex"][style*="flex-wrap: wrap"] {
+        flex-wrap: wrap !important;
+    }
+
+    /* Force KPI cards to 2-col */
+    div[style*="min-width:190px"],
+    div[style*="min-width: 190px"] {
+        min-width: calc(50% - 0.5rem) !important;
+        flex: 1 1 calc(50% - 0.5rem) !important;
+    }
+
+    /* ---- Dashboard middle row (alarms + calendar): stack ---- */
+    div[style*="grid-template-columns:1fr 1fr"],
+    div[style*="grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* ---- Kanban board: horizontal scroll ---- */
+    .kanban-board {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+        flex-wrap: nowrap !important;
+        padding-bottom: 1rem;
+    }
+
+    .kanban-column {
+        min-width: 260px !important;
+        max-width: 85vw;
+    }
+
+    /* ---- Tables: horizontal scroll ---- */
+    .glass-card {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .task-table,
+    table {
+        min-width: 640px;
+        font-size: 0.85rem;
+    }
+
+    /* ---- View headers: stack vertically ---- */
+    .view-header-row-top,
+    .view-header-row-bottom {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.75rem !important;
+    }
+
+    .view-header-left,
+    .view-header-right {
+        width: 100% !important;
+        justify-content: flex-start !important;
+        flex-wrap: wrap !important;
+        margin-top: 0 !important;
+    }
+
+    /* ---- Search inputs: full width ---- */
+    .custom-search-wrapper,
+    .glass-search-input-wrapper {
+        width: 100% !important;
+    }
+
+    /* ---- Calendar view tabs: wrap ---- */
+    .calendar-view-tabs {
+        flex-wrap: wrap !important;
+        gap: 4px !important;
+    }
+
+    /* ---- Modals: full width ---- */
+    .modal-content {
+        width: 95% !important;
+        max-height: 90vh !important;
+        overflow-y: auto !important;
+    }
+
+    /* ---- Topbar: hide search on mobile ---- */
+    #topbar .custom-search-wrapper {
+        display: none !important;
+    }
+
+    #topbar {
+        gap: 0.5rem !important;
+    }
+
+    /* ---- Sidebar overlay (backdrop when open) ---- */
+    #sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        backdrop-filter: blur(2px);
+    }
+
+    #sidebar-overlay.active {
+        display: block;
+    }
+}
+
+/* ---- Small phones ≤ 480px ---- */
+@media (max-width: 480px) {
+
+    .view {
+        padding: 0.75rem !important;
+    }
+
+    /* KPI cards: 1 per row on very small screens */
+    div[style*="min-width:190px"],
+    div[style*="min-width: 190px"] {
+        min-width: 100% !important;
+        flex: 1 1 100% !important;
+    }
+
+    /* Card images: shorter */
+    .card-grid img,
+    .card img {
+        max-height: 160px;
+        object-fit: contain;
+    }
+
+    /* Modal: full screen */
+    .modal-content {
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 100vh !important;
+        border-radius: 0 !important;
+    }
+
+    h1 {
+        font-size: 1.35rem !important;
+    }
+
+    /* View header action buttons: smaller */
+    .btn-add-bg {
+        padding: 10px 14px !important;
+        font-size: 0.85rem !important;
+    }
+}
