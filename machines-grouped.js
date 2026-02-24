@@ -87,16 +87,18 @@
             categorySection.className = 'machine-category-section';
             categorySection.style.marginBottom = '3rem';
 
+            const catColor = cat.color || '#fff';
+
             // Category Header with Collapse Toggle
             const header = document.createElement('div');
             header.className = 'machine-category-header';
             header.innerHTML = `
-                <h2 style="font-size: 1.8rem; color: #fff; margin: 0; font-family: 'Outfit', sans-serif; display: flex; align-items: center; gap: 15px;">
-                    <svg class="chevron" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="color: #3b82f6;">
+                <h2 style="font-size: 1.8rem; color: ${catColor}; margin: 0; font-family: 'Outfit', sans-serif; display: flex; align-items: center; gap: 15px;">
+                    <svg class="chevron" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${catColor}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="6 9 12 15 18 9"></polyline>
                     </svg>
                     ${cat.name}
-                    <span style="background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 12px; font-size: 1rem; color: rgba(255,255,255,0.4); font-weight: 600;">${categoryMachines.length}</span>
+                    <span style="background: rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 12px; font-size: 1rem; color: #ffffff; font-weight: 800;">${categoryMachines.length}</span>
                 </h2>
             `;
 
@@ -150,7 +152,21 @@
     function createMachineCard(machine) {
         const card = document.createElement('div');
         card.className = 'card';
-        card.style.cssText = 'font-family: \'Inter\', sans-serif; overflow: hidden; display: flex; flex-direction: column; background: rgba(255,255,255,0.03); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative;';
+
+        let catColor = null;
+        if (window.categoryList && machine.category_id) {
+            const cat = window.categoryList.find(c => c.id == machine.category_id);
+            if (cat && cat.color) {
+                catColor = cat.color;
+            }
+        }
+
+        if (catColor) {
+            card.style.cssText = `font-family: 'Inter', sans-serif; overflow: hidden; display: flex; flex-direction: column; background: ${catColor}14; backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); border-left: 6px solid ${catColor}; border-right: 6px solid ${catColor}; border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative;`;
+        } else {
+            card.style.cssText = 'font-family: \'Inter\', sans-serif; overflow: hidden; display: flex; flex-direction: column; background: rgba(255,255,255,0.03); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative;';
+        }
+
         card.onclick = () => window.openEditStammdaten(machine.id);
 
         // Image logic

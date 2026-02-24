@@ -555,7 +555,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 40px;
+    padding: 0 2rem;
     position: relative;
     width: 100%;
     z-index: 999;
@@ -563,11 +563,8 @@ body {
 
 
 .header-social-links {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: space-evenly;
-    padding: 0 20px;
+    display: contents;
+    /* This allows the <a> tags to become flex items of #topbar */
 }
 
 /* Sizing Logic: Normalizing container space but allowing images to be larger */
@@ -4707,4 +4704,65 @@ tr.completed-task td {
     border-color: #10b981;
     color: #000;
     /* Checkmark color */
+}
+
+/* 
+==================================================
+VIEW HEADER RESPONSIVE LAYOUT (v2)
+==================================================
+*/
+.view-header-layout {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin-bottom: 2rem;
+    gap: 1.5rem;
+}
+
+.view-header-row-top,
+.view-header-row-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.view-header-left {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.view-header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    justify-content: flex-end;
+    /* Gleichmäßige Aufteilung auf restliche Breite */
+    flex: 1;
+}
+
+@media (max-width: 1024px) {
+    /* No longer needed, padding-right was removed globally from .view-header-row-top */
+}
+
+@media (max-width: 768px) {
+
+    .view-header-row-top,
+    .view-header-row-bottom {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .view-header-left,
+    .view-header-right {
+        width: 100%;
+        margin-top: 1rem;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+
+    .custom-search-wrapper {
+        width: 100% !important;
+    }
 }
