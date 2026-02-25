@@ -26,7 +26,7 @@
 <body>
     <div id="app-layout">
         <!-- Sidebar Toggle Button (outside aside so backdrop-filter doesn't clip it) -->
-        <button id="sidebar-toggle" title="Menü ein/ausklappen">
+        <button id="sidebar-toggle" title="Menü ein/ausklappen" onclick="window.toggleSidebar()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
                 stroke-linecap="round" stroke-linejoin="round">
                 <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -1122,34 +1122,28 @@
                 const sidebar = document.getElementById('sidebar');
                 const mainWrapper = document.getElementById('main-wrapper');
 
-                // ---- Sidebar Toggle (button is a sibling of aside, position:fixed) ----
-                const sidebarToggleBtn = document.getElementById('sidebar-toggle');
+                // ---- Global sidebar toggle function (called via onclick attribute) ----
+                window.toggleSidebar = function () {
+                    const sb = document.getElementById('sidebar');
+                    const mw = document.getElementById('main-wrapper');
+                    const btn = document.getElementById('sidebar-toggle');
+                    if (!sb) return;
+                    const willCollapse = !sb.classList.contains('collapsed');
+                    sb.classList.toggle('collapsed');
+                    if (mw) mw.classList.toggle('collapsed-sidebar');
+                    if (btn) btn.style.left = willCollapse ? 'calc(80px - 15px)' : 'calc(280px - 15px)';
+                };
 
-                function applySidebarCollapsed(collapsed) {
-                    if (!sidebar) return;
-                    if (collapsed) {
-                        sidebar.classList.add('collapsed');
-                        if (mainWrapper) mainWrapper.classList.add('collapsed-sidebar');
-                    } else {
-                        sidebar.classList.remove('collapsed');
-                        if (mainWrapper) mainWrapper.classList.remove('collapsed-sidebar');
-                    }
-                    // Update fixed button position
-                    if (sidebarToggleBtn) {
-                        sidebarToggleBtn.style.left = collapsed ? 'calc(80px - 15px)' : 'calc(280px - 15px)';
-                    }
-                }
-
-                // Default: always start collapsed
-                applySidebarCollapsed(true);
-
-                if (sidebarToggleBtn) {
-                    sidebarToggleBtn.addEventListener('click', function () {
-                        const isCollapsed = sidebar.classList.contains('collapsed');
-                        applySidebarCollapsed(!isCollapsed);
-                    });
-                }
-
+                // Default: always start COLLAPSED on page load
+                (function initSidebarState() {
+                    const sb = document.getElementById('sidebar');
+                    const mw = document.getElementById('main-wrapper');
+                    const btn = document.getElementById('sidebar-toggle');
+                    if (!sb) return;
+                    sb.classList.add('collapsed');
+                    if (mw) mw.classList.add('collapsed-sidebar');
+                    if (btn) btn.style.left = 'calc(80px - 15px)';
+                })();
 
                 // Load Users if on user view or just generally on startup
                 if (supabaseClient) {
