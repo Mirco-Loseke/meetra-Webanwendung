@@ -260,9 +260,10 @@ body {
 
 #sidebar-toggle {
     position: fixed;
-    left: 80px;
-    /* default: collapsed sidebar is 80px wide → button right at edge */
-    top: 38px;
+    left: 65px;
+    /* 15px inside the 80px border so the 30px button is centered on the border */
+    top: 65px;
+    /* moved further down */
     width: 30px;
     height: 30px;
     background: var(--primary-red);
@@ -278,10 +279,12 @@ body {
     transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-/* When sidebar is NOT collapsed: move button to 280px */
+/* When sidebar is NOT collapsed: move button to center on 280px border */
 #app-layout:has(#sidebar:not(.collapsed)) #sidebar-toggle {
-    left: 280px;
+    left: 265px;
+    /* 280px width - 15px */
 }
+
 
 #sidebar-toggle:hover {
     transform: scale(1.1);
