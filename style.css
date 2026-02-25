@@ -182,7 +182,7 @@
 
 body {
     font-family: var(--font-serif);
-    background: radial-gradient(circle at center, #1e293b 0%, #020617 100%);
+    background: radial-gradient(circle at top left, #1e1b4b 0%, #020617 40%, #0f071a 100%);
     color: var(--color-text);
     line-height: 1.6;
     min-height: 100vh;
@@ -239,7 +239,7 @@ body {
 /* Sidebar Styles */
 #sidebar {
     width: 280px;
-    background: rgba(2, 6, 23, 0.6);
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.75) 0%, rgba(30, 27, 75, 0.65) 50%, rgba(2, 6, 23, 0.8) 100%);
     backdrop-filter: blur(32px);
     -webkit-backdrop-filter: blur(32px);
     border-right: 1px solid var(--glass-border);
@@ -533,9 +533,6 @@ body {
 /* Topbar Styles */
 #topbar {
     height: 80px;
-    background: linear-gradient(to bottom, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.85) 70%, rgba(15, 23, 42, 0) 100%);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -543,6 +540,20 @@ body {
     position: relative;
     width: 100%;
     z-index: 999;
+}
+
+/* Pseudo element for the faded glass effect */
+#topbar::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(to bottom, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.6) 50%, rgba(15, 23, 42, 0) 100%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    mask-image: linear-gradient(to bottom, black 10%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 10%, transparent 100%);
+    pointer-events: none;
 }
 
 
