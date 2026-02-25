@@ -263,9 +263,10 @@ body {
 
 #sidebar-toggle {
     position: fixed;
-    /* fixed so it's never clipped by sidebar overflow */
+    /* outside sidebar, never clipped by backdrop-filter */
     left: calc(280px - 15px);
-    top: 30px;
+    top: 38px;
+    /* 8px lower than before */
     width: 30px;
     height: 30px;
     background: var(--primary-red);
@@ -286,9 +287,7 @@ body {
     box-shadow: 0 0 20px rgba(190, 30, 45, 0.5);
 }
 
-#sidebar.collapsed #sidebar-toggle {
-    left: calc(80px - 15px);
-}
+/* collapsed state: button left position updated by JS */
 
 .hidden {
     display: none !important;

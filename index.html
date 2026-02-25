@@ -25,16 +25,17 @@
 
 <body>
     <div id="app-layout">
+        <!-- Sidebar Toggle Button (outside aside so backdrop-filter doesn't clip it) -->
+        <button id="sidebar-toggle" title="Menü ein/ausklappen">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+        </button>
         <!-- Sidebar -->
         <aside id="sidebar">
-            <button id="sidebar-toggle" title="Menü ein/ausklappen">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="3" y1="12" x2="21" y2="12"></line>
-                    <line x1="3" y1="6" x2="21" y2="6"></line>
-                    <line x1="3" y1="18" x2="21" y2="18"></line>
-                </svg>
-            </button>
             <div class="sidebar-header">
                 <!-- Full logo (desktop expanded) -->
                 <img src="meetra logo remove.png" alt="meetra Logo" class="logo">
@@ -1120,6 +1121,28 @@
                 console.log('DOM Ready');
                 const sidebar = document.getElementById('sidebar');
                 const mainWrapper = document.getElementById('main-wrapper');
+
+                // ---- Sidebar Toggle Button (outside aside, position:fixed) ----
+                const sidebarToggleBtn = document.getElementById('sidebar-toggle');
+                function updateTogglePosition() {
+                    if (!sidebarToggleBtn || !sidebar) return;
+                    const collapsed = sidebar.classList.contains('collapsed');
+                    sidebarToggleBtn.style.left = collapsed ? 'calc(80px - 15px)' : 'calc(280px - 15px)';
+                }
+                if (sidebarToggleBtn && sidebar) {
+                    sidebarToggleBtn.addEventListener('click', () => {
+                        sidebar.classList.toggle('collapsed');
+                        if (mainWrapper) mainWrapper.classList.toggle('collapsed-sidebar');
+                        updateTogglePosition();
+                        localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
+                    });
+                    // Restore saved state
+                    if (localStorage.getItem('sidebarCollapsed') === 'true') {
+                        sidebar.classList.add('collapsed');
+                        if (mainWrapper) mainWrapper.classList.add('collapsed-sidebar');
+                        updateTogglePosition();
+                    }
+                }
 
 
                 // Load Users if on user view or just generally on startup
