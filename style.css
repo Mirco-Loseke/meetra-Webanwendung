@@ -250,6 +250,9 @@ body {
     left: 0;
     top: 0;
     z-index: 1000;
+    overflow-y: auto;
+    /* whole sidebar scrolls as one unit */
+    overflow-x: hidden;
     transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -334,7 +337,8 @@ body {
 .sidebar-nav {
     padding: calc(var(--spacing-unit) * 2);
     flex: 1;
-    overflow-y: auto;
+    /* No overflow here — the sidebar scrolls as a whole */
+    overflow-y: visible;
 }
 
 .sidebar-nav ul {
