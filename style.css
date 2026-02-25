@@ -4850,69 +4850,12 @@ MACHINE HISTORY TIMELINE
     }
 }
 
-/* ---- Tablet / iPad  ≤ 1100px ---- */
+/* ---- Tablet / iPad  ≤ 1100px layout adjustments ---- */
 @media (max-width: 1100px) {
 
-    /* Hide the desktop collapse button — sidebar auto-collapses on tablet/phone */
-    #sidebar-toggle {
-        display: none !important;
-    }
-
-    /* Sidebar: icon-only automatically (no text) */
-    #sidebar {
-        width: 72px !important;
-        min-width: 72px !important;
-    }
-
-    #sidebar .sidebar-header {
-        padding: 1rem 0 !important;
-        justify-content: center !important;
-        flex-direction: column !important;
-        gap: 0 !important;
-    }
-
-    #sidebar .sidebar-header .logo,
-    #sidebar .sidebar-header p,
-    #sidebar .sidebar-nav .nav-link span,
-    #sidebar .sidebar-user-profile .user-info {
-        display: none !important;
-    }
-
-    /* Nav links: icon only, properly centered */
-    #sidebar .sidebar-nav .nav-link {
-        justify-content: center !important;
-        padding: 14px 0 !important;
-        margin: 3px 8px !important;
-        gap: 0 !important;
-    }
-
-    /* Make sure SVG icons are always visible */
-    #sidebar .sidebar-nav .nav-link svg {
-        display: block !important;
-        flex-shrink: 0 !important;
-        width: 22px !important;
-        height: 22px !important;
-    }
-
-    #sidebar .sidebar-user-profile {
-        justify-content: center !important;
-        padding: 8px 0 !important;
-    }
-
-    #main-wrapper {
-        margin-left: 72px !important;
-        width: calc(100% - 72px) !important;
-    }
-
-    #topbar {
-        left: 72px !important;
-        width: calc(100% - 72px) !important;
-    }
-
-    /* Card grid: max 2 columns on tablet
-       minmax(340px) → with ~950px content = 2 cards */
+    /* Card grid: max 2 columns on tablet */
     .card-grid {
-        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)) !important;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
         gap: 1.5rem !important;
     }
 
