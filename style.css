@@ -4879,6 +4879,11 @@ MACHINE HISTORY TIMELINE
         display: flex !important;
     }
 
+    /* Hide the desktop red toggle button on mobile */
+    #sidebar-toggle {
+        display: none !important;
+    }
+
     /* Page padding */
     .view {
         padding: 1rem !important;
