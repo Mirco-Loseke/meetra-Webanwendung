@@ -1122,26 +1122,32 @@
                 const sidebar = document.getElementById('sidebar');
                 const mainWrapper = document.getElementById('main-wrapper');
 
-                // ---- Sidebar Toggle Button (outside aside, position:fixed) ----
+                // ---- Sidebar Toggle (button is a sibling of aside, position:fixed) ----
                 const sidebarToggleBtn = document.getElementById('sidebar-toggle');
-                function updateTogglePosition() {
-                    if (!sidebarToggleBtn || !sidebar) return;
-                    const collapsed = sidebar.classList.contains('collapsed');
-                    sidebarToggleBtn.style.left = collapsed ? 'calc(80px - 15px)' : 'calc(280px - 15px)';
-                }
-                if (sidebarToggleBtn && sidebar) {
-                    sidebarToggleBtn.addEventListener('click', () => {
-                        sidebar.classList.toggle('collapsed');
-                        if (mainWrapper) mainWrapper.classList.toggle('collapsed-sidebar');
-                        updateTogglePosition();
-                        localStorage.setItem('sidebarCollapsed', sidebar.classList.contains('collapsed'));
-                    });
-                    // Restore saved state
-                    if (localStorage.getItem('sidebarCollapsed') === 'true') {
+
+                function applySidebarCollapsed(collapsed) {
+                    if (!sidebar) return;
+                    if (collapsed) {
                         sidebar.classList.add('collapsed');
                         if (mainWrapper) mainWrapper.classList.add('collapsed-sidebar');
-                        updateTogglePosition();
+                    } else {
+                        sidebar.classList.remove('collapsed');
+                        if (mainWrapper) mainWrapper.classList.remove('collapsed-sidebar');
                     }
+                    // Update fixed button position
+                    if (sidebarToggleBtn) {
+                        sidebarToggleBtn.style.left = collapsed ? 'calc(80px - 15px)' : 'calc(280px - 15px)';
+                    }
+                }
+
+                // Default: always start collapsed
+                applySidebarCollapsed(true);
+
+                if (sidebarToggleBtn) {
+                    sidebarToggleBtn.addEventListener('click', function () {
+                        const isCollapsed = sidebar.classList.contains('collapsed');
+                        applySidebarCollapsed(!isCollapsed);
+                    });
                 }
 
 
