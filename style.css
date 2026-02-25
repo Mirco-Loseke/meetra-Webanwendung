@@ -292,29 +292,43 @@ body {
 
 .sidebar-header {
     padding: 0;
-    /* No padding to maximize space */
     border-bottom: 1px solid transparent;
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 120px;
-    /* Force height so logo has room */
+    min-height: 80px;
+    overflow: hidden;
 }
 
+/* --- Full logo (shown when sidebar is expanded) --- */
 .sidebar-header .logo {
-    width: 100%;
-    max-width: 260px;
+    width: auto;
+    max-width: 85%;
+    max-height: 76px;
     height: auto;
     display: block;
     object-fit: contain;
-    padding: 10px;
-    transition: all 0.4s ease;
+    padding: 10px 16px;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-#sidebar.collapsed .logo {
-    opacity: 0;
-    transform: scale(0.5);
-    pointer-events: none;
+/* --- Small icon logo (hidden in expanded state) --- */
+.sidebar-header .logo-icon {
+    display: none;
+    width: 44px;
+    height: 44px;
+    object-fit: contain;
+    border-radius: 10px;
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- Collapsed sidebar: hide full logo, show icon --- */
+#sidebar.collapsed .sidebar-header .logo {
+    display: none;
+}
+
+#sidebar.collapsed .sidebar-header .logo-icon {
+    display: block;
 }
 
 .sidebar-nav {
@@ -433,39 +447,50 @@ body {
 
 /* Sidebar Footer / Copyright */
 .sidebar-footer {
-    position: absolute;
-    bottom: 20px;
-    left: 0;
-    right: 0;
     display: flex;
     justify-content: center;
-    padding: 0;
-    margin: 0;
-    border-top: none;
-    z-index: 10;
+    align-items: center;
+    padding: 14px 16px;
+    margin-top: auto;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
 }
 
 .copyright {
     display: flex;
     align-items: center;
-    gap: 12px;
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.95rem;
-    /* Even larger as requested */
+    gap: 10px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.88rem;
     font-family: 'Inter', sans-serif;
     transition: all 0.3s ease;
     white-space: nowrap;
+    overflow: hidden;
 }
 
 .copyright svg {
-    width: 18px;
-    height: 18px;
-    opacity: 0.8;
+    width: 16px;
+    height: 16px;
+    opacity: 0.7;
     flex-shrink: 0;
 }
 
+.copyright span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: opacity 0.3s ease, max-width 0.35s ease;
+    max-width: 200px;
+}
+
+/* Collapsed: show only the © icon, hide the name */
 #sidebar.collapsed .sidebar-footer {
-    display: none;
+    padding: 14px 0;
+}
+
+#sidebar.collapsed .copyright span {
+    opacity: 0;
+    max-width: 0;
+    overflow: hidden;
 }
 
 /* Dropdown positioning for sidebar */
@@ -4912,6 +4937,10 @@ MACHINE HISTORY TIMELINE
     #sidebar.mobile-open .sidebar-nav .nav-link span,
     #sidebar.mobile-open .sidebar-header .logo {
         display: block !important;
+    }
+
+    #sidebar.mobile-open .sidebar-header .logo-icon {
+        display: none !important;
     }
 
     #sidebar.mobile-open .sidebar-nav .nav-link {
