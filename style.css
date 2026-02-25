@@ -1291,6 +1291,11 @@ h1,
     overflow: hidden;
 }
 
+/* Override min-height for settings cards specifically to halve their height */
+.settings-card {
+    min-height: 200px;
+}
+
 .card:hover,
 .settings-card:hover {
     transform: scale(1.03) translateY(-8px);
