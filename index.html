@@ -1597,8 +1597,8 @@
                             onmouseout="this.style.background='rgba(255,255,255,0.03)'">
                             <div style="width:10px; height:10px; border-radius:50%; background:${dotColor}; box-shadow:0 0 8px ${dotColor}; flex-shrink:0;"></div>
                             <div style="flex:1; min-width:0;">
-                                <div style="font-size:0.9rem; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fullTitle}</div>
-                                <div style="font-size:0.75rem; color:rgba(255,255,255,0.4); font-weight:600;">${cat ? cat.name : ''}</div>
+                                <div style="font-size: clamp(0.9rem, 1.5vw, 1.1rem); font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${fullTitle}</div>
+                                <div style="font-size: clamp(0.75rem, 1vw, 0.9rem); color:rgba(255,255,255,0.4); font-weight:600;">${cat ? cat.name : ''}</div>
                             </div>
                             <div style="font-size:0.78rem; font-weight:800; color:${dotColor}; background:${dotColor}18; border:1px solid ${dotColor}40; padding:3px 10px; border-radius:20px; white-space:nowrap; flex-shrink:0;">${label}</div>
                         </div>`;
@@ -1642,8 +1642,8 @@
                                 ? `<img src="${machine.image_url}" style="width:100%; height:260px; object-fit:contain; display:block; border-bottom:1px solid rgba(255,255,255,0.08);">`
                                 : `<div style="width:100%; height:200px; background:rgba(255,255,255,0.04); display:flex; align-items:center; justify-content:center; border-bottom:1px solid rgba(255,255,255,0.08);"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.12;"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div>`}
                             <div style="padding:1.5rem; flex:1; display:flex; flex-direction:column; gap:0.75rem;">
-                                <h3 style="margin:0; color:#fff; font-size:1.4rem; font-weight:800; line-height:1.2; word-break:break-word;">${fullTitle}</h3>
-                                <div style="display:flex; align-items:center; gap:6px; font-size:0.82rem; color:var(--secondary-green); font-weight:700; text-transform:uppercase; letter-spacing:0.8px;">
+                                <h3 style="margin:0; color:#fff; font-size: clamp(1.2rem, 2vw, 1.5rem); font-weight:800; line-height:1.2; word-break:break-word;">${fullTitle}</h3>
+                                <div style="display:flex; align-items:center; gap:6px; font-size: clamp(0.82rem, 1.2vw, 1rem); color:var(--secondary-green); font-weight:700; text-transform:uppercase; letter-spacing:0.8px;">
                                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                                     ${dateStr} &nbsp;${timeStr}
                                 </div>
@@ -1684,8 +1684,8 @@
                                     <span style="font-size:0.72rem; font-weight:800; color:${borderColor}; text-transform:uppercase; letter-spacing:1px;">${catLabel}</span>
                                     <span style="font-size:0.78rem; color:rgba(255,255,255,0.45); font-weight:600;">${dateStr}</span>
                                 </div>
-                                <h3 style="margin:0; color:#fff; font-size:1.1rem; font-weight:800; line-height:1.25; word-break:break-word;">${typeLabel}</h3>
-                                <div style="font-size:0.82rem; color:rgba(255,255,255,0.5); font-weight:600; display:flex; align-items:center; gap:6px;">
+                                <h3 style="margin:0; color:#fff; font-size: clamp(1.1rem, 1.8vw, 1.35rem); font-weight:800; line-height:1.25; word-break:break-word;">${typeLabel}</h3>
+                                <div style="font-size: clamp(0.82rem, 1.2vw, 1rem); color:rgba(255,255,255,0.5); font-weight:600; display:flex; align-items:center; gap:6px;">
                                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                                     ${machineTitle}
                                 </div>
@@ -1701,7 +1701,7 @@
                         <!-- Page Title -->
                         <div style="padding-bottom:2rem;">
                             <h1 style="margin:0; font-size:2rem; font-weight:900; font-family:'Inter',sans-serif; display:flex; align-items:center; gap:12px;">
-                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--primary-red)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
                                 Startseite
                             </h1>
                             <p style="margin:6px 0 0; color:rgba(255,255,255,0.4); font-size:0.95rem; font-family:'Inter',sans-serif;">Übersicht &amp; Statistiken</p>

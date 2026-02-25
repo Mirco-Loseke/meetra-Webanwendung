@@ -3405,13 +3405,13 @@ tr.completed-task td {
 
 .task-card-title {
     font-weight: 700;
-    font-size: 1rem;
+    font-size: clamp(1rem, 1.5vw, 1.25rem);
     margin-bottom: 0.5rem;
     line-height: 1.4;
 }
 
 .task-card-desc {
-    font-size: 0.85rem;
+    font-size: clamp(0.85rem, 1.1vw, 1rem);
     color: rgba(255, 255, 255, 0.5);
     margin-bottom: 1rem;
     display: -webkit-box;

@@ -227,7 +227,7 @@
                         </div>
                     </div>
                     <div style="display:flex; flex-direction:column; gap:4px;">
-                        <span style="${task.status === 'completed' ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${task.title}</span>
+                        <span style="font-size: clamp(1rem, 1.3vw, 1.2rem); ${task.status === 'completed' ? 'text-decoration: line-through; opacity: 0.6;' : ''}">${task.title}</span>
                         ${task.subtasks && task.subtasks.length > 0 ? `
                         <div class="task-list-subtasks" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
                             ${task.subtasks.map((sub, index) => `
@@ -238,7 +238,7 @@
                                          title="${sub.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
                                         <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                     </div>
-                                    <span style="font-size: 0.8rem; font-weight: 400; line-height: 1.3; color: ${sub.status === 'completed' ? 'rgba(255,255,255,0.4); text-decoration: line-through;' : 'rgba(255,255,255,0.8);'};">${sub.title}</span>
+                                    <span style="font-size: clamp(0.8rem, 1vw, 0.95rem); font-weight: 400; line-height: 1.3; color: ${sub.status === 'completed' ? 'rgba(255,255,255,0.4); text-decoration: line-through;' : 'rgba(255,255,255,0.8);'};">${sub.title}</span>
                                 </div>
                             `).join('')}
                         </div>
