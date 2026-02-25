@@ -263,10 +263,9 @@ body {
 
 #sidebar-toggle {
     position: fixed;
-    /* outside sidebar, never clipped by backdrop-filter */
-    left: calc(280px - 15px);
+    left: 80px;
+    /* fully outside the 80px collapsed sidebar */
     top: 38px;
-    /* 8px lower than before */
     width: 30px;
     height: 30px;
     background: var(--primary-red);

@@ -1128,10 +1128,11 @@
                     const mw = document.getElementById('main-wrapper');
                     const btn = document.getElementById('sidebar-toggle');
                     if (!sb) return;
-                    const willCollapse = !sb.classList.contains('collapsed');
+                    const isCollapsed = sb.classList.contains('collapsed');
                     sb.classList.toggle('collapsed');
                     if (mw) mw.classList.toggle('collapsed-sidebar');
-                    if (btn) btn.style.left = willCollapse ? 'calc(80px - 15px)' : 'calc(280px - 15px)';
+                    // Move button fully outside sidebar in both states
+                    if (btn) btn.style.left = isCollapsed ? '280px' : '80px';
                 };
 
                 // Default: always start COLLAPSED on page load
@@ -1142,7 +1143,7 @@
                     if (!sb) return;
                     sb.classList.add('collapsed');
                     if (mw) mw.classList.add('collapsed-sidebar');
-                    if (btn) btn.style.left = 'calc(80px - 15px)';
+                    if (btn) btn.style.left = '80px'; /* fully outside the 80px collapsed sidebar */
                 })();
 
                 // Load Users if on user view or just generally on startup
