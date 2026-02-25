@@ -26,7 +26,7 @@
 <body>
     <div id="app-layout">
         <!-- Sidebar toggle button: OUTSIDE aside to avoid backdrop-filter stacking issues -->
-        <button id="sidebar-toggle" title="Menü ein/ausklappen" onclick="window.toggleSidebar()">
+        <button id="sidebar-toggle" title="Menü ein/ausklappen">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
                 stroke-linecap="round" stroke-linejoin="round">
                 <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -1122,7 +1122,26 @@
                 const sidebar = document.getElementById('sidebar');
                 const mainWrapper = document.getElementById('main-wrapper');
 
-                // ---- Sidebar toggle (simple class toggle) ----
+                // ---- Sidebar toggle via addEventListener (no onclick attribute) ----
+                var _sidebarToggling = false;
+                var _sidebarBtn = document.getElementById('sidebar-toggle');
+                if (_sidebarBtn) {
+                    _sidebarBtn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        if (_sidebarToggling) return; // debounce guard
+                        _sidebarToggling = true;
+                        setTimeout(function () { _sidebarToggling = false; }, 200);
+
+                        var sb = document.getElementById('sidebar');
+                        var mw = document.getElementById('main-wrapper');
+                        if (!sb) return;
+                        sb.classList.toggle('collapsed');
+                        if (mw) mw.classList.toggle('collapsed-sidebar');
+                    });
+                }
+
+                // Also expose as global for mobile compatibility
                 window.toggleSidebar = function () {
                     var sb = document.getElementById('sidebar');
                     var mw = document.getElementById('main-wrapper');
@@ -6058,22 +6077,6 @@
                 </div>
             </div>
         </div>
-
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                const sidebarToggle = document.getElementById('sidebar-toggle');
-                const sidebar = document.getElementById('sidebar');
-                const mainWrapper = document.getElementById('main-wrapper');
-
-                if (sidebarToggle && sidebar && mainWrapper) {
-                    sidebarToggle.addEventListener('click', function () {
-                        sidebar.classList.toggle('collapsed');
-                        mainWrapper.classList.toggle('collapsed-sidebar');
-                    });
-                }
-            });
-        </script>
-
         <!-- Load scripts -->
         <script src="machines-grouped.js"></script>
         <script src="protocols.js"></script>
