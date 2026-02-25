@@ -25,17 +25,16 @@
 
 <body>
     <div id="app-layout">
-        <!-- Sidebar Toggle Button (outside aside so backdrop-filter doesn't clip it) -->
-        <button id="sidebar-toggle" title="Menü ein/ausklappen" onclick="window.toggleSidebar()">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                stroke-linecap="round" stroke-linejoin="round">
-                <line x1="3" y1="12" x2="21" y2="12"></line>
-                <line x1="3" y1="6" x2="21" y2="6"></line>
-                <line x1="3" y1="18" x2="21" y2="18"></line>
-            </svg>
-        </button>
         <!-- Sidebar -->
         <aside id="sidebar">
+            <button id="sidebar-toggle" title="Menü ein/ausklappen" onclick="window.toggleSidebar()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
             <div class="sidebar-header">
                 <!-- Full logo (desktop expanded) -->
                 <img src="meetra logo remove.png" alt="meetra Logo" class="logo">
@@ -1122,28 +1121,21 @@
                 const sidebar = document.getElementById('sidebar');
                 const mainWrapper = document.getElementById('main-wrapper');
 
-                // ---- Global sidebar toggle function (called via onclick attribute) ----
+                // ---- Sidebar toggle (simple class toggle) ----
                 window.toggleSidebar = function () {
-                    const sb = document.getElementById('sidebar');
-                    const mw = document.getElementById('main-wrapper');
-                    const btn = document.getElementById('sidebar-toggle');
+                    var sb = document.getElementById('sidebar');
+                    var mw = document.getElementById('main-wrapper');
                     if (!sb) return;
-                    const isCollapsed = sb.classList.contains('collapsed');
                     sb.classList.toggle('collapsed');
                     if (mw) mw.classList.toggle('collapsed-sidebar');
-                    // Move button fully outside sidebar in both states
-                    if (btn) btn.style.left = isCollapsed ? '280px' : '80px';
                 };
 
-                // Default: always start COLLAPSED on page load
-                (function initSidebarState() {
-                    const sb = document.getElementById('sidebar');
-                    const mw = document.getElementById('main-wrapper');
-                    const btn = document.getElementById('sidebar-toggle');
-                    if (!sb) return;
-                    sb.classList.add('collapsed');
+                // Default: start collapsed on page load
+                (function () {
+                    var sb = document.getElementById('sidebar');
+                    var mw = document.getElementById('main-wrapper');
+                    if (sb) sb.classList.add('collapsed');
                     if (mw) mw.classList.add('collapsed-sidebar');
-                    if (btn) btn.style.left = '80px'; /* fully outside the 80px collapsed sidebar */
                 })();
 
                 // Load Users if on user view or just generally on startup
