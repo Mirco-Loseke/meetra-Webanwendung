@@ -20,6 +20,7 @@
         machine: 'all',
         search: ''
     };
+    window.showCompletedTasks = false;
 
     // ==========================================
     // INITIALIZATION
@@ -162,6 +163,7 @@
             renderMachinesView(filteredTasks);
         }
     }
+    window.renderTasks = renderTasks;
 
     function renderBoard(tasks) {
         document.getElementById('tasks-list').classList.add('hidden');
@@ -187,7 +189,7 @@
             }
         });
 
-        // Update counts
+        // Update counts and toggle logic for completed
         Object.keys(columns).forEach(status => {
             const colElem = document.querySelector(`.kanban-column[data-status="${status}"]`);
             if (colElem) {
@@ -195,6 +197,41 @@
                 if (countLabel) {
                     const count = tasks.filter(t => t.status === status).length;
                     countLabel.textContent = count;
+                }
+
+                if (status === 'completed') {
+                    // Inject toggle UI into completed column header
+                    const titleElem = colElem.querySelector('.column-title');
+                    if (titleElem && !titleElem.hasAttribute('data-toggle-bound')) {
+                        titleElem.setAttribute('data-toggle-bound', 'true');
+                        titleElem.style.cursor = 'pointer';
+                        titleElem.style.display = 'flex';
+                        titleElem.style.alignItems = 'center';
+                        titleElem.style.justifyContent = 'space-between';
+
+                        const countHTML = titleElem.querySelector('.task-count').outerHTML;
+                        const textNode = Array.from(titleElem.childNodes).find(n => n.nodeType === 3 && n.textContent.trim()).textContent.trim();
+                        titleElem.innerHTML = `
+                            <span>${textNode}</span>
+                            <div style="display:flex; align-items:center; gap: 16px;">
+                                ${countHTML}
+                                <svg id="board-completed-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.2s; transform: ${window.showCompletedTasks ? 'rotate(180deg)' : 'rotate(0deg)'}; color: rgba(255,255,255,0.5);">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </div>
+                        `;
+
+                        titleElem.onclick = () => {
+                            window.showCompletedTasks = !window.showCompletedTasks;
+                            renderTasks();
+                        };
+                    }
+
+                    // Apply visibility
+                    const listElem = columns['completed'];
+                    if (listElem) {
+                        listElem.style.display = window.showCompletedTasks ? 'flex' : 'none';
+                    }
                 }
             }
         });
@@ -210,7 +247,10 @@
         if (!tbody) return;
         tbody.innerHTML = '';
 
-        tasks.forEach(task => {
+        const openTasks = tasks.filter(t => t.status !== 'completed');
+        const completedTasks = tasks.filter(t => t.status === 'completed');
+
+        openTasks.forEach(task => {
             const tr = document.createElement('tr');
             if (task.status === 'completed') {
                 tr.classList.add('completed-task');
@@ -264,6 +304,82 @@
             tr.onclick = () => window.openTaskModal(task.id);
             tbody.appendChild(tr);
         });
+
+        if (completedTasks.length > 0) {
+            // Add a toggle row for completed tasks
+            const toggleTr = document.createElement('tr');
+            toggleTr.style.cursor = 'pointer';
+            toggleTr.style.background = 'rgba(255,255,255,0.02)';
+            toggleTr.innerHTML = `
+                <td colspan="8" style="padding: 1rem 1.25rem;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; font-weight: 700; color: rgba(255,255,255,0.6);" onclick="event.stopPropagation(); window.showCompletedTasks = !window.showCompletedTasks; window.renderTasks();">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 0.95rem;">Erledigte Aufgaben (${completedTasks.length})</span>
+                        </div>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.2s; transform: ${window.showCompletedTasks ? 'rotate(180deg)' : 'rotate(0deg)'};">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(toggleTr);
+
+            if (window.showCompletedTasks) {
+                completedTasks.forEach(task => {
+                    const tr = document.createElement('tr');
+                    tr.classList.add('completed-task');
+                    if (task.status) {
+                        tr.classList.add(`status-${task.status}`);
+                    }
+                    tr.style.opacity = '0.6';
+                    tr.innerHTML = `
+                        <td><span class="status-pill status-${task.status}">${formatStatus(task.status)}</span></td>
+                        <td style="font-weight: 600; display:flex; align-items:flex-start; gap:8px;">
+                            <div style="padding-top: 2px;">
+                                <div class="task-quick-complete completed" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="Wieder öffnen">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </div>
+                            </div>
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                <span style="font-size: clamp(1rem, 1.3vw, 1.2rem); text-decoration: line-through;">${task.title}</span>
+                                ${task.subtasks && task.subtasks.length > 0 ? `
+                                <div class="task-list-subtasks" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
+                                    ${task.subtasks.map((sub, index) => `
+                                        <div class="subtask-item" style="display:flex; align-items:flex-start; gap: 6px;">
+                                            <div class="task-quick-complete ${sub.status === 'completed' ? 'completed' : ''}" 
+                                                 onclick="event.stopPropagation(); window.toggleSubtaskStatus('${task.id}', ${index}, '${sub.status}')" 
+                                                 style="width: 14px; height: 14px; min-width: 14px; margin-top: 1px;"
+                                                 title="${sub.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
+                                                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                            </div>
+                                            <span style="font-size: clamp(0.8rem, 1vw, 0.95rem); font-weight: 400; line-height: 1.3; color: ${sub.status === 'completed' ? 'rgba(255,255,255,0.4); text-decoration: line-through;' : 'rgba(255,255,255,0.8);'};">${sub.title}</span>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                ` : ''}
+                            </div>
+                        </td>
+                        <td><span class="priority-badge p-${task.priority}">${formatPriority(task.priority)}</span></td>
+                        <td>${getMachineLabel(task.machines)}</td>
+                        <td>${task.end_date ? new Date(task.end_date).toLocaleDateString() : '-'}</td>
+                        <td>${renderAvatars(task.assigned_to)}</td>
+                        <td>${renderProgress(task)}</td>
+                        <td>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="btn-icon-soft edit" onclick="event.stopPropagation(); window.openTaskModal('${task.id}')" title="Bearbeiten">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                </button>
+                                <button class="btn-icon-soft delete" onclick="event.stopPropagation(); window.deleteTask('${task.id}')" title="Löschen">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    tr.onclick = () => window.openTaskModal(task.id);
+                    tbody.appendChild(tr);
+                });
+            }
+        }
     }
 
     function createTaskCard(task) {
@@ -367,9 +483,12 @@
         container.classList.remove('hidden');
         container.innerHTML = '';
 
-        // Group tasks by machine
+        const openTasks = tasks.filter(t => t.status !== 'completed');
+        const completedTasks = tasks.filter(t => t.status === 'completed');
+
+        // Group only open tasks by machine
         const grouped = {};
-        tasks.forEach(t => {
+        openTasks.forEach(t => {
             const mid = t.machine_id || 'unassigned';
             if (!grouped[mid]) {
                 grouped[mid] = [];
@@ -417,7 +536,58 @@
             container.appendChild(section);
         });
 
-        if (machineOrder.length === 0) {
+        if (completedTasks.length > 0) {
+            const section = document.createElement('div');
+            section.className = 'glass-card';
+            section.style.marginBottom = '20px';
+            section.style.background = 'rgba(255,255,255,0.02)';
+
+            const header = document.createElement('div');
+            header.style.display = 'flex';
+            header.style.alignItems = 'center';
+            header.style.justifyContent = 'space-between';
+            header.style.cursor = 'pointer';
+            header.style.fontWeight = '700';
+            header.style.color = 'rgba(255,255,255,0.8)';
+            header.style.background = 'rgba(255,255,255,0.05)';
+            header.style.borderRadius = '12px';
+            header.style.padding = '16px 20px';
+            header.style.marginBottom = window.showCompletedTasks ? '20px' : '0';
+
+            header.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 1.1rem;">Erledigte Aufgaben</span>
+                    <span class="task-count" style="margin-left:10px; background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 6px; font-size: 0.85rem;">${completedTasks.length}</span>
+                </div>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.2s; transform: ${window.showCompletedTasks ? 'rotate(180deg)' : 'rotate(0deg)'};">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            `;
+
+            header.onclick = (e) => {
+                e.stopPropagation();
+                window.showCompletedTasks = !window.showCompletedTasks;
+                window.renderTasks();
+            };
+
+            section.appendChild(header);
+
+            if (window.showCompletedTasks) {
+                const grid = document.createElement('div');
+                grid.style.display = 'grid';
+                grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
+                grid.style.gap = '15px';
+
+                completedTasks.forEach(task => {
+                    grid.appendChild(createTaskCard(task));
+                });
+                section.appendChild(grid);
+            }
+
+            container.appendChild(section);
+        }
+
+        if (machineOrder.length === 0 && completedTasks.length === 0) {
             container.innerHTML = '<div style="text-align:center; color:rgba(255,255,255,0.5); padding: 40px;">Keine Aufgaben gefunden</div>';
         }
     }

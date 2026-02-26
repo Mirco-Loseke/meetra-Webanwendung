@@ -86,7 +86,6 @@ function renderProcurements(procurements) {
                     ${status.label}
                 </span>
             </td>
-            <td><span style="font-family: monospace; color: rgba(255,255,255,0.5); font-size: 0.95rem;">${proc.order_number}</span></td>
             <td>${getCategoryBadge(proc.category)}</td>
             <td>
                 <div style="display: flex; flex-direction: column; gap: 4px;">

@@ -162,9 +162,9 @@
         }
 
         if (catColor) {
-            card.style.cssText = `font-family: 'Inter', sans-serif; overflow: hidden; display: flex; flex-direction: column; background: ${catColor}14; backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); border-left: 6px solid ${catColor}; border-right: 6px solid ${catColor}; border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative;`;
+            card.style.cssText = `font-family: 'Inter', sans-serif; overflow: hidden; display: flex; flex-direction: column; background: ${catColor}14; backdrop-filter: blur(16px); border: 1px solid ${catColor}33; border-top: 7px solid ${catColor}; border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative;`;
         } else {
-            card.style.cssText = 'font-family: \'Inter\', sans-serif; overflow: hidden; display: flex; flex-direction: column; background: rgba(255,255,255,0.03); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative;';
+            card.style.cssText = 'font-family: \'Inter\', sans-serif; overflow: hidden; display: flex; flex-direction: column; background: rgba(255,255,255,0.03); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative;';
         }
 
         card.onclick = () => window.openEditStammdaten(machine.id);
@@ -172,10 +172,10 @@
         // Image logic
         let imageHtml = '';
         if (machine.image_url) {
-            imageHtml = `<img src="${machine.image_url.trim()}" alt="${machine.name}" style="width: 100%; height: 300px; object-fit: contain; display: block; border-bottom: 1px solid rgba(255,255,255,0.1);">`;
+            imageHtml = `<img src="${machine.image_url.trim()}" alt="${machine.name}" style="width: 100%; height: 300px; object-fit: contain; display: block; object-position: center;">`;
         } else {
             imageHtml = `
-                <div class="card-image-placeholder" style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)); color: rgba(255,255,255,0.2); height: 300px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <div class="card-image-placeholder" style="background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); color: rgba(255,255,255,0.2); height: 300px; display: flex; align-items: center; justify-content: center;">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.4;">
                         <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
                         <circle cx="9" cy="9" r="2"/>
@@ -204,13 +204,14 @@
         `;
 
         // Maintenance logic
-        const lastMaintDate = machine.last_maintenance ? new Date(machine.last_maintenance).toLocaleDateString('de-DE') : 'Keine Daten';
+        const lastMaintDate = machine.last_maintenance ? new Date(machine.last_maintenance).toLocaleDateString('de-DE') : '/';
         const nextMaintDate = machine.next_maintenance ? new Date(machine.next_maintenance) : null;
-        const nextMaintStr = nextMaintDate ? nextMaintDate.toLocaleDateString('de-DE') : 'Kein Termin';
+        const nextMaintStr = nextMaintDate ? nextMaintDate.toLocaleDateString('de-DE') : '/';
 
         // Check if next maintenance was auto-calculated
         const isAuto = Array.isArray(machine.files) && machine.files.some(f => f.type === 'meta' && f.key === 'is_next_maintenance_auto' && f.property === 'true');
-        const autoBadge = isAuto ? `<span class="badge" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 0.65rem; padding: 1px 5px; border-radius: 4px; font-weight: 800; margin-left: 8px; vertical-align: middle;">AUTO</span>` : '';
+        // We'll place the auto badge absolutely like the workshop icon
+        const autoBadge = '';
 
         // Determine status color for urgency
         let maintStatusColor = '#10b981'; // Default Green (OK)
@@ -235,12 +236,15 @@
         }
 
         card.innerHTML = `
-            ${workshopIcon}
-            ${imageHtml}
-            <div class="card-content" style="padding: 1.75rem; flex: 1; display: flex; flex-direction: column;">
+            <div style="position: relative; width: 100%; background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));">
+                ${workshopIcon}
+                ${imageHtml}
+            </div>
+            <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 0;"></div>
+            <div class="card-content" style="padding: 1.25rem; flex: 1; display: flex; flex-direction: column;">
                 <div style="margin-bottom: 1.5rem;">
                     <div style="flex: 1; overflow: hidden;">
-                        <h2 class="card-title" style="margin: 0; font-size: 2.0rem; color: #fff; font-weight: 800; line-height: 1.3; font-family: 'Inter', sans-serif;">
+                        <h2 class="card-title" style="margin: 0; font-size: 1.75rem; color: #fff; font-weight: 800; line-height: 1.3; font-family: 'Inter', sans-serif;">
                             ${[
                 machine.manufacturer,
                 machine.name,
@@ -251,7 +255,7 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.75rem; background: rgba(0,0,0,0.15); padding: 18px 1.75rem; border-radius: 14px; border: 1px solid rgba(255,255,255,0.06); margin-left: -1.75rem; margin-right: -1.75rem; position: relative;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; background: rgba(0,0,0,0.15); padding: 18px 1.25rem; border-radius: 14px; border: 1px solid rgba(255,255,255,0.06); margin-left: -1.25rem; margin-right: -1.25rem; position: relative;">
                     <div style="border-right: 1px solid rgba(255,255,255,0.05); padding-right: 12px;">
                         <div style="font-size: 0.85rem; color: rgba(255,255,255,0.4); margin-bottom: 5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Letzte Wartung</div>
                         <div style="font-size: 1.05rem; color: #fff; display: flex; align-items: center; gap: 6px; font-weight: 700;">
@@ -266,20 +270,17 @@
                             ${nextMaintStr}${autoBadge}
                         </div>
                     </div>
-                    <div style="position: absolute; top: -10px; right: 20px; background: ${maintStatusColor}; color: #fff; font-size: 0.7rem; font-weight: 900; padding: 2px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
-                        ${maintStatusText}
+                    ${isAuto ? `
+                    <div style="position: absolute; top: -10px; right: 20px; background: rgba(59, 130, 246, 0.9); color: #fff; font-size: 0.7rem; font-weight: 900; padding: 2px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); border: 1px solid rgba(255,255,255,0.3); cursor: default; transition: all 0.3s ease;"
+                         onmouseover="this.style.transform='scale(1.1)'"
+                         onmouseout="this.style.transform='scale(1)'"
+                         title="Nächste Wartung wird automatisch berechnet">
+                        AUTO
                     </div>
-                </div>
-                    <div style="padding-left: 6px; cursor: pointer;" onclick="event.stopPropagation(); window.open('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent('${machine.location || ''}'), '_blank')">
-                        <div style="font-size: 0.85rem; color: rgba(255,255,255,0.4); margin-bottom: 5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Standort</div>
-                        <div style="font-size: 1.05rem; color: #fff; display: flex; align-items: start; gap: 6px; font-weight: 600;">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #3b82f6; margin-top: 3px; flex-shrink: 0;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                            <span style="word-break: break-word; line-height: 1.4;">${machine.location || 'N/A'}</span>
-                        </div>
-                    </div>
+                    ` : ''}
                 </div>
 
-                <div class="card-actions" style="margin-top: auto; display: flex; align-items: center; gap: 12px; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.06);">
+                <div class="card-actions" style="margin-top: auto; display: flex; align-items: center; gap: 10px; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.06); margin-left: -0.25rem; margin-right: -0.25rem;">
                     <button class="btn-reports" style="flex: 1; min-height: 48px;" onclick="window.openServiceActionsModal(event, ${machine.id})">
                         Berichte & Protokolle
                     </button>

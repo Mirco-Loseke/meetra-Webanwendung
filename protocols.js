@@ -1050,7 +1050,7 @@
     // ==========================================
     // PDF GENERATION
     // ==========================================
-    window.generateProtocolPDF = async function () {
+    window.generateProtocolPDF = async function (previewOpen = false) {
         try {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
@@ -1206,15 +1206,23 @@
                 doc.text(`Abgeschlossen von: ${completedUser?.name || 'Unbekannt'}`, 20, yPos);
             }
 
-            // Save PDF
+            // Save or Preview PDF
             const fileName = `${title}_${machineTitle.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
-            doc.save(fileName);
 
-            alert('PDF erfolgreich erstellt!');
+            if (previewOpen) {
+                window.open(doc.output('bloburl'), '_blank');
+            } else {
+                doc.save(fileName);
+                alert('PDF erfolgreich erstellt!');
+            }
         } catch (err) {
             console.error('PDF generation error:', err);
             alert('Fehler beim Erstellen des PDFs: ' + err.message);
         }
+    };
+
+    window.generateProtocolPDFPreview = async function () {
+        await window.generateProtocolPDF(true);
     };
 
     // ==========================================
