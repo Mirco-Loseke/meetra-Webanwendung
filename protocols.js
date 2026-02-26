@@ -1463,4 +1463,17 @@
     };
 
     console.log('Protocols module loaded successfully');
+    window.openProtocolPDF = async function (machineId, protocolId, type) {
+        try {
+            currentProtocolType = type;
+            await loadProtocol(protocolId, type);
+            if (currentProtocol) {
+                await window.generateProtocolPDF(true); // true for preview in new tab
+            }
+        } catch (err) {
+            console.error('Error opening protocol PDF from history:', err);
+            alert('Fehler beim Öffnen des PDFs');
+        }
+    };
+
 })();

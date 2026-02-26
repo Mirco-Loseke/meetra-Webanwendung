@@ -132,10 +132,9 @@
 
 /* Hover: The "box getting bigger" effect */
 #procurement-list tr:hover {
-    transform: scale(1.01) translateY(-3px);
-    /* Subtle scale up */
     z-index: 50;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    background: rgba(255, 255, 255, 0.12) !important;
 }
 
 #procurement-list tr:hover td {
@@ -169,6 +168,57 @@
     display: flex !important;
     gap: 12px !important;
     align-items: center;
+    justify-content: flex-end;
+}
+
+/* Specific alignments for Procurement Table */
+#procurement-table th:first-child,
+#procurement-table td:first-child {
+    width: 1%;
+    white-space: nowrap;
+    padding-right: 32px;
+    /* Pull Status tight, but with more room to Kategorie */
+}
+
+#procurement-table th:nth-child(2),
+#procurement-table td:nth-child(2) {
+    width: 1%;
+    white-space: nowrap;
+    padding-left: 0;
+    padding-right: 48px;
+    /* More space to Maschine */
+}
+
+#procurement-table th:nth-child(3),
+#procurement-table td:nth-child(3) {
+    width: 1%;
+    white-space: nowrap;
+    padding-left: 0;
+    padding-right: 64px;
+    /* More space to Titel */
+}
+
+#procurement-table th:nth-child(4),
+#procurement-table td:nth-child(4) {
+    width: auto;
+    padding-left: 0;
+}
+
+#procurement-table th:nth-child(5),
+#procurement-table td:nth-child(5),
+#procurement-table th:nth-child(6),
+#procurement-table td:nth-child(6),
+#procurement-table th:nth-child(7),
+#procurement-table td:nth-child(7) {
+    width: 1%;
+    white-space: nowrap;
+    padding-left: 32px;
+}
+
+#procurement-table th:nth-child(7),
+#procurement-table td:nth-child(7) {
+    text-align: right;
+    padding-left: 48px;
 }
 
 /* Modern CSS Reset */
@@ -308,37 +358,51 @@ body {
     align-items: center;
     min-height: 80px;
     overflow: hidden;
+    position: relative;
+    /* Added for absolute positioning of logos */
 }
 
 /* --- Full logo (shown when sidebar is expanded) --- */
 .sidebar-header .logo {
     width: auto;
-    max-width: 85%;
-    max-height: 76px;
+    max-width: 92%;
+    max-height: 82px;
     height: auto;
     display: block;
     object-fit: contain;
-    padding: 10px 16px;
-    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    padding: 8px 12px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 1;
+    transform: scale(1);
+    position: absolute;
 }
 
 /* --- Small icon logo (hidden in expanded state) --- */
 .sidebar-header .logo-icon {
-    display: none;
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
+    max-width: 80%;
+    max-height: 80%;
     object-fit: contain;
-    border-radius: 10px;
-    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 8px;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    transform: scale(0.5);
+    position: absolute;
+    pointer-events: none;
 }
 
-/* --- Collapsed sidebar: hide full logo, show icon --- */
+/* --- Collapsed sidebar: cross-fade transition --- */
 #sidebar.collapsed .sidebar-header .logo {
-    display: none;
+    opacity: 0;
+    transform: scale(0.8);
+    pointer-events: none;
 }
 
 #sidebar.collapsed .sidebar-header .logo-icon {
-    display: block;
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
 }
 
 .sidebar-nav {
@@ -5076,4 +5140,44 @@ MACHINE HISTORY TIMELINE
         padding: 10px 14px !important;
         font-size: 0.85rem !important;
     }
+}
+
+/* History Action Buttons */
+.history-action-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+    padding: 8px 16px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 0.5rem;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.history-action-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.history-action-btn.pdf {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.25);
+    color: #fca5a5;
+}
+
+.history-action-btn.pdf:hover {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: rgba(239, 68, 68, 0.45);
+    color: #fff;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
 }

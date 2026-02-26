@@ -88,6 +88,25 @@ function renderProcurements(procurements) {
             </td>
             <td>${getCategoryBadge(proc.category)}</td>
             <td>
+                <div style="font-size: 0.95rem; font-weight: 500; color: rgba(255,255,255,0.8);">
+                    ${(() => {
+                if (!proc.location_ref || !window.machineList) return '-';
+                const machine = window.machineList.find(m => String(m.id) === String(proc.location_ref));
+                if (!machine) return proc.location_ref;
+
+                let parts = [
+                    machine.manufacturer,
+                    machine.name,
+                    machine.type,
+                    machine.serial ? '#' + machine.serial : null,
+                    machine.year ? '(' + machine.year + ')' : null
+                ].filter(Boolean);
+
+                return parts.join(' ');
+            })()}
+                </div>
+            </td>
+            <td>
                 <div style="display: flex; flex-direction: column; gap: 4px;">
                     <span style="font-weight: 600; font-size: 1.05rem;">${proc.title}</span>
                     <span style="font-size: 0.85rem; color: rgba(255,255,255,0.5);">${proc.description || ''}</span>

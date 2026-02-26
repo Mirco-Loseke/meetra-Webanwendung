@@ -40,7 +40,7 @@
                 <!-- Full logo (desktop expanded) -->
                 <img src="meetra logo remove.png" alt="meetra Logo" class="logo">
                 <!-- Small icon logo (collapsed sidebar + iPad) -->
-                <img src="meetra logo remove.png" alt="meetra" class="logo-icon">
+                <img src="meetra_arrows_icon.png" alt="meetra" class="logo-icon">
             </div>
 
             <nav class="sidebar-nav">
@@ -336,8 +336,8 @@
                             <thead>
                                 <tr>
                                     <th>Status</th>
-                                    <th>Nr.</th>
                                     <th>Kategorie</th>
+                                    <th>Maschine</th>
                                     <th>Titel</th>
                                     <th>Ersteller</th>
                                     <th>Datum</th>
@@ -1592,8 +1592,8 @@
                     // --- KPI Card helper ---
                     function kpiCard(icon, value, label, color, onclick) {
                         return `<div onclick="${onclick}" style="flex:1; min-width:190px; background:${color}15; border:1px solid ${color}35; border-left:5px solid ${color}; border-radius:22px; padding:2rem 2rem 1.75rem; cursor:pointer; transition:all 0.2s; display:flex; flex-direction:column; gap:8px; font-family:'Inter',sans-serif;"
-                            onmouseover="this.style.background='${color}25'; this.style.transform='translateY(-3px)'; this.style.boxShadow='0 12px 32px ${color}30'"
-                            onmouseout="this.style.background='${color}15'; this.style.transform='translateY(0)'; this.style.boxShadow=''">
+                            onmouseover="this.style.background='${color}25'; this.style.boxShadow='0 12px 32px ${color}30'"
+                            onmouseout="this.style.background='${color}15'; this.style.boxShadow=''">
                             <div style="width:52px; height:52px; display:flex; align-items:center; justify-content:center; color:${color}; background:${color}20; border-radius:14px; margin-bottom:6px;">${icon}</div>
                             <div style="font-size:2.8rem; font-weight:900; color:#fff; line-height:1;">${value}</div>
                             <div style="font-size:0.85rem; color:rgba(255,255,255,0.55); font-weight:700; text-transform:uppercase; letter-spacing:0.8px;">${label}</div>
@@ -1651,8 +1651,8 @@
                         const machineCat = categories.find(c => c.id === machine.category_id);
                         const catColor = (machineCat && machineCat.color) ? machineCat.color : '#3b82f6';
                         return `<div onclick="openMachineDetails(${machine.id})" style="flex:1; font-family:'Inter',sans-serif; overflow:hidden; display:flex; flex-direction:column; background:${catColor}12; backdrop-filter:blur(16px); border:1px solid ${catColor}30; border-left:6px solid ${catColor}; border-radius:20px; cursor:pointer; transition:all 0.3s ease;"
-                            onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 12px 40px ${catColor}20'"
-                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow=''">
+                            onmouseover="this.style.boxShadow='0 12px 40px ${catColor}20'"
+                            onmouseout="this.style.boxShadow=''">
                             ${machine.image_url
                                 ? `<img src="${machine.image_url}" style="width:100%; height:260px; object-fit:contain; display:block; border-bottom:1px solid rgba(255,255,255,0.08);">`
                                 : `<div style="width:100%; height:200px; background:rgba(255,255,255,0.04); display:flex; align-items:center; justify-content:center; border-bottom:1px solid rgba(255,255,255,0.08);"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.12;"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div>`}
@@ -1692,8 +1692,8 @@
                         const catLabel = serviceCat ? serviceCat.name : (machineCat ? machineCat.name : '');
 
                         return `<div onclick="window.openMachineDetails && window.openMachineDetails(${entry.machine_id})" style="flex:1; font-family:'Inter',sans-serif; overflow:hidden; display:flex; flex-direction:column; background:${borderColor}10; backdrop-filter:blur(16px); border:1px solid ${borderColor}30; border-left:6px solid ${borderColor}; border-radius:20px; cursor:pointer; transition:all 0.3s ease;"
-                            onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 12px 40px ${borderColor}25'"
-                            onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow=''">
+                            onmouseover="this.style.boxShadow='0 12px 40px ${borderColor}25'"
+                            onmouseout="this.style.boxShadow=''">
                             <div style="padding:1.25rem 1.5rem; display:flex; flex-direction:column; gap:0.6rem;">
                                 <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
                                     <span style="font-size:0.72rem; font-weight:800; color:${borderColor}; text-transform:uppercase; letter-spacing:1px;">${catLabel}</span>
@@ -1709,7 +1709,9 @@
                         </div>`;
                     }
 
-                    const serviceEntries = (window.serviceEntryList || []).slice(0, 3);
+                    const serviceEntries = (window.serviceEntryList || [])
+                        .filter(e => e.title !== 'Werkstattaufenthalt Beginn' && e.title !== 'Werkstattaufenthalt Ende')
+                        .slice(0, 3);
                     const recentReportCards = serviceEntries.map(recentReportCard);
 
                     homeSection.innerHTML = `
@@ -1722,11 +1724,9 @@
                             <p style="margin:6px 0 0; color:rgba(255,255,255,0.4); font-size:0.95rem; font-family:'Inter',sans-serif;">Übersicht &amp; Statistiken</p>
                         </div>
 
-                        <!-- KPI Strip -->
                         <div style="display:flex; flex-wrap:wrap; gap:1rem; margin-bottom:2.5rem;">
                             ${kpiCard(`<svg width="36" height="36" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><rect x="38" y="30" width="28" height="22" rx="3"/><line x1="62" y1="34" x2="88" y2="18"/><line x1="88" y1="18" x2="92" y2="46"/><path d="M92 46 L80 56 L72 50 L84 40 Z"/><rect x="20" y="54" width="58" height="14" rx="4"/><rect x="14" y="63" width="70" height="10" rx="5"/><circle cx="22" cy="68" r="7"/><circle cx="76" cy="68" r="7"/><circle cx="49" cy="68" r="5"/></svg>`, totalMachines, 'Maschinen gesamt', '#3b82f6', "navigateTo('machines')")}
                             ${kpiCard(`<svg width="28" height="28" viewBox="0 0 100 100" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><path d="M43 8h14l3 11a31 31 0 0 1 9 4l10-5 10 10-5 10a31 31 0 0 1 4 9l11 3v14l-11 3a31 31 0 0 1-4 9l5 10-10 10-10-5a31 31 0 0 1-9 4l-3 11H43l-3-11a31 31 0 0 1-9-4l-10 5-10-10 5-10a31 31 0 0 1-4-9L1 57V43l11-3a31 31 0 0 1 4-9L11 21l10-10 10 5a31 31 0 0 1 9-4Z"/><circle cx="50" cy="50" r="22"/><path d="M38 34a12 12 0 0 1 12 12 12 12 0 0 1-2.5 7.5L60 66a3 3 0 0 1 0 4.2 3 3 0 0 1-4.2 0L43.5 57.5A12 12 0 0 1 38 58a12 12 0 0 1-12-12 12 12 0 0 1 6-10.4l5.5 5.5 3.4-3.4-5.5-5.5A12 12 0 0 1 38 34z"/></svg>`, inWorkshop, 'In der Werkstatt', '#f59e0b', "navigateTo('workshop')")}
-                            ${kpiCard(`<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`, overdueCount + dueSoonCount, 'Wartung ausstehend', '#ef4444', "navigateTo('calendar')")}
                             ${kpiCard(`<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>`, openProcurements, 'Offene Bestellungen', '#8b5cf6', "navigateTo('procurements')")}
                         </div>
 
@@ -1734,7 +1734,7 @@
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:2.5rem;">
 
                             <!-- Maintenance Alarms -->
-                            <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:20px; padding:1.5rem;">
+                            <div style="background:rgba(239, 68, 68, 0.05); border:1px solid rgba(239, 68, 68, 0.15); border-left:6px solid #ef4444; border-radius:20px; padding:1.5rem;">
                                 <h2 style="margin:0 0 1rem; font-size:1rem; font-weight:800; color:rgba(255,255,255,0.8); font-family:'Inter',sans-serif; display:flex; align-items:center; gap:8px; text-transform:uppercase; letter-spacing:0.8px;">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                                     Wartungs-Alarme
@@ -2193,24 +2193,101 @@
                     if (!supabaseClient) { alert('Datenbank nicht verbunden'); return; }
 
                     const newStatus = !currentStatus;
+                    let workshopOrderNumber = null;
+
+                    if (newStatus) {
+                        workshopOrderNumber = prompt('Bitte Werkstattauftragsnummer eingeben (optional):');
+                    }
+
+                    // Get category color for "Werkstattaufenthalt" (ID 16)
+                    const workshopCat = (window.categoryList || []).find(c => c.id === 16);
+                    const workshopColor = workshopCat ? workshopCat.color : '#f59e0b';
+
                     const { error } = await supabaseClient
                         .from('machines')
-                        .update({ is_in_workshop: newStatus })
+                        .update({
+                            is_in_workshop: newStatus,
+                            workshop_order_number: newStatus ? workshopOrderNumber : null
+                        })
                         .eq('id', id);
 
                     if (error) {
                         console.error('Error toggling workshop status:', error);
                         alert('Fehler: ' + error.message);
                     } else {
+                        const now = new Date();
+                        const timeStr = now.toLocaleString('de-DE', {
+                            day: '2-digit', month: '2-digit', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                        });
+
+                        const title = newStatus ? 'Werkstattaufenthalt Beginn' : 'Werkstattaufenthalt Ende';
+                        const description = (newStatus && workshopOrderNumber) ? `Auftrag: ${workshopOrderNumber}` : '';
+
+                        try {
+                            // 1. Log Start/End Status
+                            await supabaseClient.from('service_entries').insert([{
+                                machine_id: id,
+                                title: title,
+                                date: now.toISOString(),
+                                description: description,
+                                category_id: 16 // Werkstattaufenthalt
+                            }]);
+
+                            // 2. If Ending Stay: Create Consolidated Service Report
+                            if (!newStatus) {
+                                // Find the latest "Beginn" entry to get the start date and order number
+                                const { data: startEntries } = await supabaseClient
+                                    .from('service_entries')
+                                    .select('*')
+                                    .eq('machine_id', id)
+                                    .eq('title', 'Werkstattaufenthalt Beginn')
+                                    .order('date', { ascending: false })
+                                    .limit(1);
+
+                                let reportDescription = `Werkstattaufenthalt beendet am ${timeStr}.`;
+                                let dateFrom = null;
+                                let orderNum = '—';
+
+                                if (startEntries && startEntries.length > 0) {
+                                    const startEntry = startEntries[0];
+                                    const startDate = new Date(startEntry.date);
+                                    dateFrom = startEntry.date;
+                                    const startDateStr = startDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                                    orderNum = startEntry.description && startEntry.description.includes('Auftrag: ') ? startEntry.description.split('Auftrag: ')[1] : '—';
+
+                                    reportDescription = `Zeitraum: ${startDateStr} - ${now.toLocaleDateString('de-DE')}\nAuftragsnummer: ${orderNum}`;
+                                }
+
+                                await supabaseClient.from('service_entries').insert([{
+                                    machine_id: id,
+                                    title: 'Servicebericht: Werkstattaufenthalt',
+                                    date: now.toISOString(),
+                                    datum_von: dateFrom || now.toISOString(),
+                                    datum_bis: now.toISOString(),
+                                    description: reportDescription,
+                                    category_id: 16 // Werkstattaufenthalt
+                                }]);
+                            }
+                        } catch (histErr) {
+                            console.error('Error creating workshop history entries:', histErr);
+                        }
+
                         // Update local list if it exists
                         if (window.machineList) {
                             const m = window.machineList.find(m => m.id === id);
-                            if (m) m.is_in_workshop = newStatus;
+                            if (m) {
+                                m.is_in_workshop = newStatus;
+                                m.workshop_order_number = newStatus ? workshopOrderNumber : null;
+                            }
                         }
 
                         // Always re-render both views to keep them in sync
                         renderMachines('machine-list-container');
                         renderMachines('workshop-machines-container');
+
+                        // Refresh service entries in the background if on dashboard
+                        if (typeof fetchServiceEntries === 'function') fetchServiceEntries();
                     }
                 };
 
@@ -4056,10 +4133,11 @@
                     if (!supabaseClient) throw new Error('Supabase client ist nicht initialisiert!');
 
                     const machineId = document.getElementById('selected-machine-id').value;
-                    const startDate = document.getElementById('service-date-start').value;
+                    const dateStart = document.getElementById('service-date-start').value;
+                    const dateEnd = document.getElementById('service-date-end').value;
                     const description = document.getElementById('service-description').value;
 
-                    if (!machineId || !startDate || !description) {
+                    if (!machineId || !dateStart || !description) {
                         alert('Bitte Maschine, Datum und Beschreibung ausfüllen.');
                         if (submitBtn) {
                             submitBtn.disabled = false;
@@ -4102,7 +4180,9 @@
                         machine_id: parseInt(machineId),
                         category_id: categoryId ? parseInt(categoryId) : null,
                         title: reportTitle,
-                        date: startDate,
+                        date: dateStart,
+                        datum_von: dateStart,
+                        datum_bis: dateEnd || null,
                         hours: 0,
                         technicians: (typeof selectedTechs !== 'undefined') ? selectedTechs : [],
                         files: finalFiles,
@@ -4441,13 +4521,22 @@
 
                     if (serviceRes.data) {
                         serviceRes.data.forEach(s => {
+                            const isWorkshopStatus = s.title === 'Werkstattaufenthalt Beginn' || s.title === 'Werkstattaufenthalt Ende';
+
+                            // Find category color
+                            const cat = (window.categoryList || []).find(c => c.id === s.category_id);
+                            const catColor = cat ? cat.color : (isWorkshopStatus ? '#f59e0b' : '#3b82f6');
+
                             historyItems.push({
+                                id: s.id,
+                                machineId: machineId,
                                 date: new Date(s.date || s.created_at),
-                                type: 'Servicebericht',
+                                type: isWorkshopStatus ? 'Werkstatt-Status' : 'Servicebericht',
                                 title: s.title || 'Servicebericht',
                                 description: s.description || '',
-                                color: '#3b82f6',
-                                icon: '📄'
+                                color: catColor,
+                                icon: isWorkshopStatus ? '🔧' : '📄',
+                                itemType: isWorkshopStatus ? 'workshop' : 'service'
                             });
                         });
                     }
@@ -4481,12 +4570,16 @@
                     if (intakeRes.data) {
                         intakeRes.data.forEach(p => {
                             historyItems.push({
+                                id: p.id,
+                                machineId: machineId,
                                 date: new Date(p.created_at),
                                 type: 'Eingangsprotokoll',
-                                title: 'Protokoll-ID: ' + p.id,
+                                title: 'Eingangsprotokoll',
+                                status: p.status,
                                 description: 'Erstellt am ' + new Date(p.created_at).toLocaleDateString(),
                                 color: '#8b5cf6',
-                                icon: '📥'
+                                icon: '📥',
+                                itemType: 'intake'
                             });
                         });
                     }
@@ -4494,12 +4587,16 @@
                     if (acceptanceRes.data) {
                         acceptanceRes.data.forEach(p => {
                             historyItems.push({
+                                id: p.id,
+                                machineId: machineId,
                                 date: new Date(p.created_at),
                                 type: 'Abnahmeprotokoll',
-                                title: 'Protokoll-ID: ' + p.id,
+                                title: 'Abnahmeprotokoll',
+                                status: p.status,
                                 description: 'Erstellt am ' + new Date(p.created_at).toLocaleDateString(),
                                 color: '#ec4899',
-                                icon: '✅'
+                                icon: '✅',
+                                itemType: 'acceptance'
                             });
                         });
                     }
@@ -4517,6 +4614,31 @@
                         const dateStr = item.date.toLocaleDateString('de-DE');
                         const timeStr = item.date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 
+                        let actionButtons = '';
+                        if (item.itemType === 'service') {
+                            actionButtons = `
+                                <button onclick="window.openEditServicebericht(${item.id})" class="history-action-btn">
+                                    <span>Öffnen</span>
+                                </button>
+                            `;
+                        } else if (item.itemType === 'intake' || item.itemType === 'acceptance') {
+                            const openFn = item.itemType === 'intake' ? 'openIntakeProtocol' : 'openAcceptanceProtocol';
+                            const pdfBtn = item.status === 'completed' ? `
+                                <button onclick="window.openProtocolPDF(${item.machineId}, '${item.id}', '${item.itemType}')" class="history-action-btn pdf">
+                                    <span>PDF Öffnen</span>
+                                </button>
+                            ` : '';
+
+                            actionButtons = `
+                                <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                                    <button onclick="window.${openFn}(${item.machineId}, '${item.id}')" class="history-action-btn">
+                                        <span>Öffnen</span>
+                                    </button>
+                                    ${pdfBtn}
+                                </div>
+                            `;
+                        }
+
                         html += `
                             <div class="history-item" style="position: relative; padding: 1rem 0 1rem 1.5rem; border-left: 2px solid rgba(255,255,255,0.1); margin-left: 1rem;">
                                 <div class="history-icon" style="position: absolute; left: -16px; top: 1.25rem; width: 30px; height: 30px; border-radius: 50%; background: ${item.color}20; border: 2px solid ${item.color}; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; box-shadow: 0 0 10px ${item.color}40;">
@@ -4533,7 +4655,8 @@
                                             <div>${timeStr}</div>
                                         </div>
                                     </div>
-                                    ${item.description ? `<p style="margin: 0; color: rgba(255,255,255,0.6); font-size: 0.95rem; line-height: 1.5;">${item.description}</p>` : ''}
+                                    ${item.description ? `<p style="margin: 0; color: ${item.itemType === 'workshop' ? '#fff' : 'rgba(255,255,255,0.6)'}; font-size: 0.95rem; line-height: 1.5; font-weight: ${item.itemType === 'workshop' ? '700' : '400'};">${item.description}</p>` : ''}
+                                    ${actionButtons}
                                 </div>
                             </div>
                         `;
@@ -5088,7 +5211,10 @@
                             if (reportTitle) reportTitle.value = editData.title || '';
 
                             const dateStart = document.getElementById('service-date-start');
-                            if (dateStart) dateStart.value = editData.date || '';
+                            if (dateStart) dateStart.value = editData.datum_von || editData.date || '';
+
+                            const dateEnd = document.getElementById('service-date-end');
+                            if (dateEnd) dateEnd.value = editData.datum_bis || '';
 
                             const description = document.getElementById('service-description');
                             if (description) description.value = editData.description || '';
@@ -5167,7 +5293,10 @@
                     const searchInput = document.getElementById('service-search-input');
                     if (!list || !tbody) return;
 
-                    let entries = allServiceEntries;
+                    let entries = (allServiceEntries || []).filter(e =>
+                        e.title !== 'Werkstattaufenthalt Beginn' &&
+                        e.title !== 'Werkstattaufenthalt Ende'
+                    );
 
                     // Filter by Category
                     if (window.activeServiceCategoryFilters && !window.activeServiceCategoryFilters.includes('all')) {
@@ -5259,19 +5388,28 @@
 
                                     <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 0;"></div>
 
-                                    <div class="card-content" style="padding: 1.25rem; flex: 1; display: flex; flex-direction: column; gap: 1rem;">
-                                        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem;">
-                                            <div style="flex: 1; min-width: 0;">
-                                                <h2 style="margin: 0; font-size: 1.5rem; color: var(--color-primary-green); font-weight: 800; line-height: 1.3; font-family: 'Inter', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                                    ${machine ? `${machine.manufacturer} ${machine.name}` : 'Unbekannte Maschine'}
-                                                </h2>
-                                                <div style="font-size: 0.9rem; color: rgba(255,255,255,0.4); font-weight: 600; margin-top: 4px;">
-                                                    ${machine ? `#${machine.serial || '?'} (${machine.year || '?'})` : ''}
-                                                </div>
-                                            </div>
-                                            <div style="display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.7); font-size: 0.95rem; font-weight: 700; white-space: nowrap; flex-shrink: 0; padding-top: 4px;">
-                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                    <div class="card-content" style="padding: 1.25rem; flex: 1; display: flex; flex-direction: column; gap: 0.75rem;">
+                                        
+                                        <!-- Header: Date and Category Name -->
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: -0.25rem;">
+                                            <div style="display: flex; align-items: center; gap: 6px; color: rgba(255,255,255,0.4); font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                                                 ${dateStr}
+                                            </div>
+                                        </div>
+
+                                        <!-- Main Title: The Service Report Heading -->
+                                        <div style="min-width: 0;">
+                                            <h2 style="margin: 0; font-size: 1.6rem; color: #fff; font-weight: 900; line-height: 1.2; font-family: 'Outfit', sans-serif;">
+                                                ${e.title || 'Servicebericht'}
+                                            </h2>
+                                            
+                                            <!-- Subtitle: Machine Info -->
+                                            <div style="font-size: 1.1rem; color: var(--color-primary-green); font-weight: 800; margin-top: 6px; display: flex; align-items: center; gap: 8px;">
+                                                <span>${machine ? `${machine.manufacturer} ${machine.name}` : 'Unbekannte Maschine'}</span>
+                                            </div>
+                                            <div style="font-size: 0.85rem; color: rgba(255,255,255,0.4); font-weight: 700; margin-top: 2px;">
+                                                ${machine ? `#${machine.serial || '?'} (${machine.year || '?'})` : ''}
                                             </div>
                                         </div>
 
