@@ -161,10 +161,13 @@
             }
         }
 
+        // Standardize the glass background across all cards with improved contrast
+        const glassBg = 'background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);';
+
         if (catColor) {
-            card.style.cssText = `font-family: 'Inter', sans-serif; overflow: hidden; display: flex; flex-direction: column; background: ${catColor}14; backdrop-filter: blur(16px); border: 1px solid ${catColor}33; border-top: 7px solid ${catColor}; border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative;`;
+            card.style.cssText = `font-family: 'Inter', sans-serif; overflow: hidden; display: flex; flex-direction: column; ${glassBg} border: 3px solid ${catColor}66; border-top: 7px solid ${catColor}; border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative;`;
         } else {
-            card.style.cssText = 'font-family: \'Inter\', sans-serif; overflow: hidden; display: flex; flex-direction: column; background: rgba(255,255,255,0.03); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.15); border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative;';
+            card.style.cssText = `font-family: 'Inter', sans-serif; overflow: hidden; display: flex; flex-direction: column; ${glassBg} border: 3px solid rgba(255,255,255,0.3); border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative;`;
         }
 
         card.onclick = () => window.openEditStammdaten(machine.id);
@@ -188,7 +191,7 @@
         const isInWorkshop = machine.is_in_workshop === true;
         const workshopIcon = `
             <div class="workshop-toggle ${isInWorkshop ? 'active' : ''}" 
-                 onclick="event.stopPropagation(); window.toggleWorkshopStatus(${machine.id}, ${isInWorkshop})"
+                 onclick="event.stopPropagation(); window.toggleWorkshopStatus('${machine.id}', ${isInWorkshop})"
                  title="${isInWorkshop ? 'Aus Werkstatt entfernen' : 'In Werkstatt verschieben'}"
                  style="position: absolute; top: 1rem; right: 1rem; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; z-index: 10; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); 
                         background: ${isInWorkshop ? 'rgba(245, 158, 11, 0.9)' : 'rgba(255,255,255,0.1)'}; 
@@ -245,9 +248,28 @@
             </div>
         ` : '';
 
+        // Workshop Photo Icon
+        const photoIcon = isInWorkshop ? `
+            <div class="workshop-photo-btn"
+                 onclick="event.stopPropagation(); window.openWorkshopPhotoModal('${machine.id}')"
+                 title="Werkstatt-Fotos verwalten"
+                 style="position: absolute; top: 1rem; right: 4rem; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; z-index: 10; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); 
+                        background: rgba(139, 92, 246, 0.9); 
+                        border: 1px solid rgba(255,255,255,0.3);
+                        box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);"
+                 onmouseover="this.style.transform='scale(1.1)'; this.style.background='rgba(139, 92, 246, 1)'"
+                 onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(139, 92, 246, 0.9)'">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                    <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+            </div>
+        ` : '';
+
         card.innerHTML = `
             <div style="position: relative; width: 100%; background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));">
                 ${workshopIcon}
+                ${photoIcon}
                 ${orderNumberTag}
                 ${imageHtml}
             </div>
@@ -300,7 +322,7 @@
                         Historie
                     </button>
 
-                    <button class="btn-icon-soft delete" onclick="event.stopPropagation(); deleteMachine(${machine.id})" title="Maschine löschen" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.1); color: #ef4444; border-radius: 14px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(239, 68, 68, 0.15)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.05)'">
+                    <button class="btn-icon-soft btn-delete-card" onclick="event.stopPropagation(); deleteMachine(${machine.id})" title="Maschine löschen">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M3 6h18"></path>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path>
@@ -309,6 +331,7 @@
                 </div>
             </div>
         `;
+
 
         return card;
     }

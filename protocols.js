@@ -707,7 +707,7 @@
         const files = event.target.files;
         if (!files || files.length === 0) return;
 
-        const uploadBtn = event.target.previousElementSibling;
+        const uploadBtn = event.target.nextElementSibling;
         const originalText = uploadBtn.textContent;
         uploadBtn.textContent = 'Wird hochgeladen...';
         uploadBtn.disabled = true;
@@ -715,18 +715,18 @@
         try {
             for (let file of files) {
                 const cleanName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-                const fileName = `Protokolle / ${Date.now()} -${cleanName} `;
+                const fileName = `protocols/${Date.now()}_${cleanName}`;
 
                 const { data, error } = await window.supabaseClient
                     .storage
-                    .from('meetra-storage')
+                    .from('machine-images')
                     .upload(fileName, file);
 
                 if (error) throw error;
 
                 const { data: urlData } = window.supabaseClient
                     .storage
-                    .from('meetra-storage')
+                    .from('machine-images')
                     .getPublicUrl(fileName);
 
                 protocolPhotos.push({
@@ -752,19 +752,27 @@
         const container = document.getElementById('protocol-photos-grid');
         container.innerHTML = '';
 
+        // Prepare an array of string URLs for the lightbox
+        const imageUrls = protocolPhotos.map(p => p.file_url);
+
         protocolPhotos.forEach((photo, index) => {
             const photoCard = document.createElement('div');
             photoCard.className = 'protocol-photo-card';
 
-            photoCard.innerHTML = `
-                <img src="${photo.file_url}" loading="lazy">
-                <button onclick="window.deleteProtocolPhoto(${index})" class="protocol-photo-remove">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
-            `;
+            const img = document.createElement('img');
+            img.src = photo.file_url;
+            img.loading = 'lazy';
+            img.className = 'clickable-image';
+            img.style.cursor = 'pointer';
+            img.onclick = () => window.openPhotosLightbox(imageUrls, index);
+
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'protocol-photo-remove';
+            removeBtn.onclick = () => window.deleteProtocolPhoto(index);
+            removeBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="stroke-current" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+
+            photoCard.appendChild(img);
+            photoCard.appendChild(removeBtn);
 
             container.appendChild(photoCard);
         });
@@ -1050,164 +1058,267 @@
     // ==========================================
     // PDF GENERATION
     // ==========================================
+    async function getTemplateBackground() {
+        if (window.VORLAGE_BASE64) {
+            return window.VORLAGE_BASE64;
+        }
+        try {
+            const res = await fetch('vorlage_bg.jpg');
+            if (!res.ok) throw new Error('Vorlage nicht gefunden');
+            const blob = await res.blob();
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+        } catch (err) {
+            console.warn('Konnte Hintergrundvorlage nicht laden:', err);
+            return null;
+        }
+    }
+
+    async function getBase64ImageFromUrl(imageUrl) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                resolve({
+                    dataUrl: canvas.toDataURL('image/jpeg', 0.8),
+                    width: img.width,
+                    height: img.height
+                });
+            };
+            img.onerror = (e) => {
+                console.warn('Fehler beim Laden des Bildes für PDF:', e);
+                resolve(null);
+            };
+            img.src = imageUrl;
+        });
+    }
+
     window.generateProtocolPDF = async function (previewOpen = false) {
         try {
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
+
+            // Show loading state
+            const loadingOverlay = document.createElement('div');
+            loadingOverlay.innerHTML = '<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;color:white;font-size:1.5rem;font-weight:bold;font-family:\'Inter\',sans-serif;">PDF wird generiert...</div>';
+            document.body.appendChild(loadingOverlay);
+
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const bgImage = await getTemplateBackground();
+
+            // Helper to add background
+            const addBackground = () => {
+                if (bgImage) {
+                    // Slight zoom to push borders out: left: -5, top: -5, width: 220, height: 307
+                    doc.addImage(bgImage, 'JPEG', -5, -5, 220, 307, undefined, 'FAST');
+                }
+            };
+
+            // Overlay doc.addPage to automatically add background
+            const originalAddPage = doc.addPage.bind(doc);
+            doc.addPage = function () {
+                originalAddPage();
+                addBackground();
+                return doc;
+            };
+
+            addBackground();
 
             const title = currentProtocolType === 'intake' ? 'Eingangsprotokoll' : 'Abnahmeprotokoll';
-            const machineTitle = currentProtocol.title;
+            const machineTitle = currentProtocol.title || 'Ohne Titel';
 
-            // Title
-            doc.setFontSize(18);
+            // Header area below template letterhead (start around Y = 36)
+            doc.setFontSize(22);
             doc.setFont(undefined, 'bold');
-            doc.text(title, 20, 20);
+            doc.setTextColor(30, 41, 59);
+            doc.text(title, 20, 36);
 
-            // Machine
             doc.setFontSize(12);
             doc.setFont(undefined, 'normal');
-            doc.text(`Maschine: ${machineTitle}`, 20, 30);
+            doc.setTextColor(71, 85, 105);
+            const dateStr = new Date(currentProtocol.created_at || Date.now()).toLocaleDateString('de-DE');
+            doc.text(`Datum: ${dateStr}`, 145, 36);
 
-            // Status
-            doc.text(`Status: ${currentProtocol.status === 'completed' ? 'Abgeschlossen' : 'Entwurf'}`, 20, 37);
-
-            let yPos = 50;
-
-            // Predefined checkpoints
             doc.setFontSize(14);
             doc.setFont(undefined, 'bold');
-            doc.text('Vordefinierte Prüfpunkte', 20, yPos);
-            yPos += 10;
+            doc.setTextColor(15, 23, 42);
+            doc.text(`Maschine: ${machineTitle}`, 20, 46);
 
-            doc.setFontSize(10);
             doc.setFont(undefined, 'normal');
+            doc.text(`Status: ${currentProtocol.status === 'completed' ? 'Abgeschlossen' : 'Entwurf'}`, 20, 54);
+
+            let startY = 64;
+
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(15, 23, 42);
+            doc.text('Prüfpunkte', 20, startY);
+            startY += 6;
+
+            const tableData = [];
 
             if (Array.isArray(currentProtocol.predefined_checkpoints)) {
-                // New structured format from template
                 currentProtocol.predefined_checkpoints.forEach(group => {
-                    if (yPos > 260) {
-                        doc.addPage();
-                        yPos = 20;
-                    }
-                    doc.setFont(undefined, 'bold');
-                    doc.text(group.group_title || 'Gruppe', 20, yPos);
-                    yPos += 7;
-                    doc.setFont(undefined, 'normal');
-
+                    tableData.push([{ content: group.group_title || 'Kategorie', colSpan: 3, styles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' } }]);
                     group.items.forEach(item => {
-                        const result = item.result === true ? 'Ja' : 'Nein';
-                        const comment = item.comment ? ` (${item.comment})` : '';
-                        doc.text(`${item.label}: ${result}${comment}`, 25, yPos);
-                        yPos += 6;
-                        if (yPos > 275) {
-                            doc.addPage();
-                            yPos = 20;
-                        }
+                        const result = item.result === true ? 'Ja' : (item.result === false ? 'Nein' : '-');
+                        tableData.push([item.label, result, item.comment || '']);
                     });
-                    yPos += 4;
                 });
-            } else {
-                // Legacy object format
+            } else if (currentProtocol.predefined_checkpoints) {
                 Object.keys(currentProtocol.predefined_checkpoints).forEach(key => {
                     const label = getCheckpointLabel(key, currentProtocolType);
                     const value = currentProtocol.predefined_checkpoints[key];
-                    const result = value === true ? 'Ja' : (value === false ? 'Nein' : 'Nicht beantwortet');
-                    doc.text(`${label}: ${result}`, 20, yPos);
-                    yPos += 6;
-
-                    if (yPos > 270) {
-                        doc.addPage();
-                        yPos = 20;
-                    }
+                    const result = value === true ? 'Ja' : (value === false ? 'Nein' : '-');
+                    tableData.push([label, result, '']);
                 });
             }
 
-            // Custom checkpoints
-            if (customCheckpoints.length > 0) {
-                yPos += 5;
-                doc.setFontSize(14);
-                doc.setFont(undefined, 'bold');
-                doc.text('Zusätzliche Prüfpunkte', 20, yPos);
-                yPos += 10;
-
-                doc.setFontSize(10);
-                doc.setFont(undefined, 'normal');
+            if (customCheckpoints && customCheckpoints.length > 0) {
+                tableData.push([{ content: 'Zusätzliche Prüfpunkte', colSpan: 3, styles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' } }]);
                 customCheckpoints.forEach(cp => {
-                    const result = cp.result === true ? 'Ja' : (cp.result === false ? 'Nein' : 'Nicht beantwortet');
-                    doc.text(`${cp.description}: ${result}`, 20, yPos);
-                    yPos += 6;
-
-                    if (yPos > 270) {
-                        doc.addPage();
-                        yPos = 20;
-                    }
+                    const result = cp.result === true ? 'Ja' : (cp.result === false ? 'Nein' : '-');
+                    tableData.push([cp.description, result, '']);
                 });
             }
+
+            doc.autoTable({
+                startY: startY,
+                head: [[
+                    { content: 'Prüfpunkt', styles: { halign: 'left' } },
+                    { content: 'Ergebnis', styles: { halign: 'center' } },
+                    { content: 'Bemerkung', styles: { halign: 'center' } }
+                ]],
+                body: tableData,
+                theme: 'grid',
+                headStyles: { fillColor: [203, 213, 225], textColor: [15, 23, 42], lineWidth: 0.1, lineColor: [148, 163, 184] },
+                styles: { fontSize: 10, cellPadding: 4, lineWidth: 0.1, lineColor: [148, 163, 184] },
+                columnStyles: {
+                    0: { cellWidth: 70 },
+                    1: { cellWidth: 25, halign: 'center' },
+                    2: { cellWidth: 'auto', halign: 'left' }
+                },
+                margin: { top: 36, bottom: 20, left: 20, right: 20 }
+            });
+
+            startY = doc.lastAutoTable.finalY + 15;
 
             // Text fields
-            yPos += 5;
-            if (currentProtocolType === 'intake' && currentProtocol.error_description) {
+            const addTextField = (label, text) => {
+                if (!text) return;
+                if (startY > 255) { doc.addPage(); startY = 36; }
                 doc.setFontSize(14);
                 doc.setFont(undefined, 'bold');
-                doc.text('Fehlerbeschreibung / Arbeitsauftrag', 20, yPos);
-                yPos += 10;
+                doc.setTextColor(15, 23, 42);
+                doc.text(label, 20, startY);
+                startY += 8;
                 doc.setFontSize(10);
                 doc.setFont(undefined, 'normal');
-                const lines = doc.splitTextToSize(currentProtocol.error_description, 170);
-                doc.text(lines, 20, yPos);
-                yPos += lines.length * 6 + 5;
-            } else if (currentProtocolType === 'acceptance') {
-                if (currentProtocol.work_performed) {
-                    doc.setFontSize(14);
-                    doc.setFont(undefined, 'bold');
-                    doc.text('Durchgeführte Arbeiten', 20, yPos);
-                    yPos += 10;
-                    doc.setFontSize(10);
-                    doc.setFont(undefined, 'normal');
-                    const lines = doc.splitTextToSize(currentProtocol.work_performed, 170);
-                    doc.text(lines, 20, yPos);
-                    yPos += lines.length * 6 + 5;
-                }
+                doc.setTextColor(51, 65, 85);
+                const lines = doc.splitTextToSize(text, 170);
+                doc.text(lines, 20, startY);
+                startY += lines.length * 5 + 10;
+            };
 
-                if (currentProtocol.parts_replaced) {
-                    if (yPos > 250) {
-                        doc.addPage();
-                        yPos = 20;
-                    }
-                    doc.setFontSize(14);
-                    doc.setFont(undefined, 'bold');
-                    doc.text('Getauschte Teile', 20, yPos);
-                    yPos += 10;
-                    doc.setFontSize(10);
-                    doc.setFont(undefined, 'normal');
-                    const lines = doc.splitTextToSize(currentProtocol.parts_replaced, 170);
-                    doc.text(lines, 20, yPos);
-                    yPos += lines.length * 6 + 5;
-                }
+            if (currentProtocolType === 'intake') {
+                addTextField('Fehlerbeschreibung / Arbeitsauftrag', currentProtocol.error_description);
+            } else {
+                addTextField('Durchgeführte Arbeiten', currentProtocol.work_performed);
+                addTextField('Getauschte Teile', currentProtocol.parts_replaced);
+                addTextField('Einstellungen / Kalibrierungen', currentProtocol.settings_calibrations);
+                addTextField('Restmängel', currentProtocol.remaining_defects);
             }
 
-            // Completion info
             if (currentProtocol.completed_at) {
-                if (yPos > 250) {
-                    doc.addPage();
-                    yPos = 20;
-                }
-                yPos += 5;
+                if (startY > 255) { doc.addPage(); startY = 36; }
                 doc.setFontSize(12);
                 doc.setFont(undefined, 'bold');
-                doc.text('Abschlussinformationen', 20, yPos);
-                yPos += 10;
+                doc.setTextColor(220, 38, 38); // Rot
+                doc.text('Abschlussinformationen', 105, startY, { align: 'center' });
+                startY += 8;
                 doc.setFontSize(10);
                 doc.setFont(undefined, 'normal');
+                doc.setTextColor(220, 38, 38); // Rot für alle Textzeilen
                 const completedDate = new Date(currentProtocol.completed_at).toLocaleString('de-DE');
                 const completedUser = window.userList?.find(u => u.id === currentProtocol.completed_by);
-                doc.text(`Abgeschlossen am: ${completedDate}`, 20, yPos);
-                yPos += 6;
-                doc.text(`Abgeschlossen von: ${completedUser?.name || 'Unbekannt'}`, 20, yPos);
+                doc.text(`Abgeschlossen am: ${completedDate}`, 105, startY, { align: 'center' });
+                startY += 6;
+                doc.text(`Abgeschlossen von: ${completedUser?.name || 'Unbekannt'}`, 105, startY, { align: 'center' });
             }
 
-            // Save or Preview PDF
-            const fileName = `${title}_${machineTitle.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+            // Photos
+            if (protocolPhotos && protocolPhotos.length > 0) {
+                doc.addPage();
+                let photoY = 36;
+                doc.setFontSize(16);
+                doc.setFont(undefined, 'bold');
+                doc.setTextColor(15, 23, 42);
+                doc.text('Fotodokumentation', 20, photoY);
+                photoY += 15;
+
+                const pageWidth = 210;
+                const margin = 20;
+                const photoWidth = (pageWidth - margin * 2 - 10) / 2;
+                const maxPhotoHeight = 100; // Allow dynamic height up to 100mm per row
+
+                let col = 0;
+                let rowMaxHeight = 0;
+
+                for (let i = 0; i < protocolPhotos.length; i++) {
+                    const photo = protocolPhotos[i];
+
+                    if (photoY + maxPhotoHeight > 277) {
+                        doc.addPage();
+                        photoY = 36;
+                        col = 0;
+                        rowMaxHeight = 0;
+                    }
+
+                    const imgResult = await getBase64ImageFromUrl(photo.file_url);
+                    if (imgResult && imgResult.dataUrl) {
+                        const { dataUrl, width, height } = imgResult;
+                        const imgRatio = height / width;
+
+                        let finalRenderWidth = photoWidth;
+                        let finalRenderHeight = photoWidth * imgRatio;
+
+                        if (finalRenderHeight > maxPhotoHeight) {
+                            finalRenderHeight = maxPhotoHeight;
+                            finalRenderWidth = finalRenderHeight / imgRatio;
+                        }
+
+                        if (finalRenderHeight > rowMaxHeight) {
+                            rowMaxHeight = finalRenderHeight;
+                        }
+
+                        const finalX = margin + (col * (photoWidth + 10)) + ((photoWidth - finalRenderWidth) / 2);
+
+                        try {
+                            doc.addImage(dataUrl, 'JPEG', finalX, photoY, finalRenderWidth, finalRenderHeight, undefined, 'FAST');
+                        } catch (e) { console.warn('Konnte Foto nicht zeichnen:', e); }
+                    }
+
+                    col++;
+                    if (col > 1) {
+                        col = 0;
+                        photoY += rowMaxHeight + 10;
+                        rowMaxHeight = 0;
+                    }
+                }
+            }
+
+            const cleanFileName = (title + '_' + machineTitle).replace(/[^a-zA-Z0-9_-]/g, '_');
+            const fileName = `${cleanFileName}_${new Date().toISOString().split('T')[0]}.pdf`;
+
+            document.body.removeChild(loadingOverlay);
 
             if (previewOpen) {
                 window.open(doc.output('bloburl'), '_blank');
@@ -1217,6 +1328,8 @@
             }
         } catch (err) {
             console.error('PDF generation error:', err);
+            const overlay = document.querySelector('div[style*="PDF wird generiert"]');
+            if (overlay) overlay.remove();
             alert('Fehler beim Erstellen des PDFs: ' + err.message);
         }
     };

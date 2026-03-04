@@ -21,6 +21,8 @@
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <!-- jsPDF for PDF Generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="vorlage_base64.js"></script>
 </head>
 
 <body>
@@ -1591,12 +1593,12 @@
 
                     // --- KPI Card helper ---
                     function kpiCard(icon, value, label, color, onclick) {
-                        return `<div onclick="${onclick}" style="flex:1; min-width:190px; background:${color}15; border:1px solid ${color}35; border-left:5px solid ${color}; border-radius:22px; padding:2rem 2rem 1.75rem; cursor:pointer; transition:all 0.2s; display:flex; flex-direction:column; gap:8px; font-family:'Inter',sans-serif;"
-                            onmouseover="this.style.background='${color}25'; this.style.boxShadow='0 12px 32px ${color}30'"
-                            onmouseout="this.style.background='${color}15'; this.style.boxShadow=''">
+                        return `<div onclick="${onclick}" style="flex:1; min-width:190px; background:rgba(110, 122, 140, 0.45); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:3px solid ${color}66; border-left:7px solid ${color}; border-radius:22px; padding:2rem 2rem 1.75rem; cursor:pointer; box-shadow:0 10px 30px rgba(0,0,0,0.6); transition:all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); display:flex; flex-direction:column; gap:8px; font-family:'Inter',sans-serif;"
+                            onmouseover="this.style.boxShadow='0 16px 40px rgba(0,0,0,0.8)'; this.style.transform='scale(1.03) translateY(-4px)';"
+                            onmouseout="this.style.boxShadow='0 10px 30px rgba(0,0,0,0.6)'; this.style.transform='scale(1)';\"> 
                             <div style="width:52px; height:52px; display:flex; align-items:center; justify-content:center; color:${color}; background:${color}20; border-radius:14px; margin-bottom:6px;">${icon}</div>
                             <div style="font-size:2.8rem; font-weight:900; color:#fff; line-height:1;">${value}</div>
-                            <div style="font-size:0.85rem; color:rgba(255,255,255,0.55); font-weight:700; text-transform:uppercase; letter-spacing:0.8px;">${label}</div>
+                            <div style="font-size:0.85rem; color:rgba(255,255,255,0.7); font-weight:700; text-transform:uppercase; letter-spacing:0.8px;">${label}</div>
                         </div>`;
                     }
 
@@ -1650,9 +1652,9 @@
                         const fullTitle = [machine.manufacturer, machine.name, machine.serial ? `#${machine.serial}` : null, machine.year ? `(${machine.year})` : null].filter(Boolean).join(' ');
                         const machineCat = categories.find(c => c.id === machine.category_id);
                         const catColor = (machineCat && machineCat.color) ? machineCat.color : '#3b82f6';
-                        return `<div onclick="openMachineDetails(${machine.id})" style="flex:1; font-family:'Inter',sans-serif; overflow:hidden; display:flex; flex-direction:column; background:${catColor}12; backdrop-filter:blur(16px); border:1px solid ${catColor}30; border-left:6px solid ${catColor}; border-radius:20px; cursor:pointer; transition:all 0.3s ease;"
-                            onmouseover="this.style.boxShadow='0 12px 40px ${catColor}20'"
-                            onmouseout="this.style.boxShadow=''">
+                        return `<div onclick="openMachineDetails(${machine.id})" style="flex:1; font-family:'Inter',sans-serif; overflow:hidden; display:flex; flex-direction:column; background:rgba(255, 255, 255, 0.18); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); box-shadow:0 10px 30px rgba(0, 0, 0, 0.6); border:3px solid ${catColor}66; border-left:7px solid ${catColor}; border-radius:20px; cursor:pointer; transition:all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);"
+                            onmouseover="this.style.boxShadow='0 15px 40px rgba(0,0,0,0.8)'; this.style.transform='scale(1.02)';"
+                            onmouseout="this.style.boxShadow='0 10px 30px rgba(0,0,0,0.6)'; this.style.transform='scale(1)';">
                             ${machine.image_url
                                 ? `<img src="${machine.image_url}" style="width:100%; height:260px; object-fit:contain; display:block; border-bottom:1px solid rgba(255,255,255,0.08);">`
                                 : `<div style="width:100%; height:200px; background:rgba(255,255,255,0.04); display:flex; align-items:center; justify-content:center; border-bottom:1px solid rgba(255,255,255,0.08);"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.12;"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div>`}
@@ -1691,9 +1693,9 @@
                         const typeLabel = entry.title || 'Servicebericht';
                         const catLabel = serviceCat ? serviceCat.name : (machineCat ? machineCat.name : '');
 
-                        return `<div onclick="window.openMachineDetails && window.openMachineDetails(${entry.machine_id})" style="flex:1; font-family:'Inter',sans-serif; overflow:hidden; display:flex; flex-direction:column; background:${borderColor}10; backdrop-filter:blur(16px); border:1px solid ${borderColor}30; border-left:6px solid ${borderColor}; border-radius:20px; cursor:pointer; transition:all 0.3s ease;"
-                            onmouseover="this.style.boxShadow='0 12px 40px ${borderColor}25'"
-                            onmouseout="this.style.boxShadow=''">
+                        return `<div onclick="window.openMachineDetails && window.openMachineDetails(${entry.machine_id})" style="flex:1; font-family:'Inter',sans-serif; overflow:hidden; display:flex; flex-direction:column; background:rgba(255, 255, 255, 0.18); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); box-shadow:0 10px 30px rgba(0, 0, 0, 0.6); border:3px solid ${borderColor}66; border-left:7px solid ${borderColor}; border-radius:20px; cursor:pointer; transition:all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);"
+                            onmouseover="this.style.boxShadow='0 15px 40px rgba(0,0,0,0.8)'; this.style.transform='scale(1.02)';"
+                            onmouseout="this.style.boxShadow='0 10px 30px rgba(0,0,0,0.6)'; this.style.transform='scale(1)';">
                             <div style="padding:1.25rem 1.5rem; display:flex; flex-direction:column; gap:0.6rem;">
                                 <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem;">
                                     <span style="font-size:0.72rem; font-weight:800; color:${borderColor}; text-transform:uppercase; letter-spacing:1px;">${catLabel}</span>
@@ -1734,7 +1736,7 @@
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:2.5rem;">
 
                             <!-- Maintenance Alarms -->
-                            <div style="background:rgba(239, 68, 68, 0.05); border:1px solid rgba(239, 68, 68, 0.15); border-left:6px solid #ef4444; border-radius:20px; padding:1.5rem;">
+                            <div style="background:rgba(110, 122, 140, 0.45); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:3px solid rgba(239,68,68,0.5); border-left:7px solid #ef4444; border-radius:20px; padding:1.5rem; box-shadow:0 10px 30px rgba(0,0,0,0.6);">
                                 <h2 style="margin:0 0 1rem; font-size:1rem; font-weight:800; color:rgba(255,255,255,0.8); font-family:'Inter',sans-serif; display:flex; align-items:center; gap:8px; text-transform:uppercase; letter-spacing:0.8px;">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
                                     Wartungs-Alarme
@@ -1746,7 +1748,7 @@
                             </div>
 
                             <!-- Upcoming Calendar -->
-                            <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:20px; padding:1.5rem;">
+                            <div style="background:rgba(110, 122, 140, 0.45); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:3px solid rgba(255,255,255,0.2); border-radius:20px; padding:1.5rem; box-shadow:0 10px 30px rgba(0,0,0,0.6);">
                                 <h2 style="margin:0 0 1rem; font-size:1rem; font-weight:800; color:rgba(255,255,255,0.8); font-family:'Inter',sans-serif; display:flex; align-items:center; gap:8px; text-transform:uppercase; letter-spacing:0.8px;">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                                     Nächste Termine
@@ -4489,7 +4491,11 @@
                 }
             };
 
+            window.currentHistoryMachineId = null;
+
             window.openHistoryModal = async function (machineId) {
+                window.currentHistoryMachineId = machineId;
+                window.toggleManualHistoryForm(null); // Reset form
                 const modal = document.getElementById('machine-history-modal');
                 const container = document.getElementById('history-timeline-container');
                 if (!modal || !container || !window.supabaseClient) return;
@@ -4601,6 +4607,44 @@
                         });
                     }
 
+                    if (window.supabaseClient) {
+                        const { data: manualEntries, error: manualError } = await window.supabaseClient
+                            .from('manual_history_entries')
+                            .select('*')
+                            .eq('machine_id', machineId);
+
+                        if (manualEntries) {
+                            manualEntries.forEach(m => {
+                                const typeMap = {
+                                    'phone': { label: 'Telefon', icon: '📞', color: '#10b981' },
+                                    'note': { label: 'Bemerkung', icon: '📝', color: '#f59e0b' },
+                                    'photo': {
+                                        label: (m.files && Array.isArray(m.files) && m.files.length > 0) ? `Foto <span style="display:inline-flex; align-items:center; background:rgba(139,92,246,0.2); padding:2px 8px; border-radius:12px; font-size:0.7rem; margin-left:8px; color:#c4b5fd; border: 1px solid rgba(139,92,246,0.3);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>${m.files.length}</span>` : 'Foto',
+                                        icon: '📸',
+                                        color: '#8b5cf6'
+                                    }
+                                };
+                                const config = typeMap[m.type] || { label: 'Eintrag', icon: '📄', color: '#9ca3af' };
+
+                                // Find user from global list since join might fail without FK
+                                const user = window.userList?.find(u => u.id == m.created_by);
+
+                                historyItems.push({
+                                    id: m.id,
+                                    date: new Date(m.created_at),
+                                    type: config.label,
+                                    title: m.title,
+                                    description: m.content,
+                                    color: config.color,
+                                    icon: config.icon,
+                                    source: 'manuell',
+                                    user: user, // Populated from global list
+                                    files: m.files // Added files here
+                                });
+                            });
+                        }
+                    }
+
                     // Sort descending (newest top)
                     historyItems.sort((a, b) => b.date - a.date);
 
@@ -4613,6 +4657,10 @@
                     historyItems.forEach(item => {
                         const dateStr = item.date.toLocaleDateString('de-DE');
                         const timeStr = item.date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+                        const sourceTag = item.source === 'manuell'
+                            ? `<span style="background: rgba(16,185,129,0.15); color: #10b981; padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; border: 1px solid rgba(16,185,129,0.2); margin-left: 8px;">MANUELL</span>`
+                            : `<span style="background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.4); padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); margin-left: 8px;">SYSTEM</span>`;
 
                         let actionButtons = '';
                         if (item.itemType === 'service') {
@@ -4637,6 +4685,46 @@
                                     ${pdfBtn}
                                 </div>
                             `;
+                        } else if (item.source === 'manuell') {
+                            actionButtons = `
+                                <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                                    <button onclick="window.editManualHistoryEntry('${item.id}')" class="history-action-btn">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                        <span>Bearbeiten</span>
+                                    </button>
+                                </div>
+                            `;
+                        }
+
+                        let userBadge = '';
+                        if (item.source === 'manuell' && item.user) {
+                            userBadge = `
+                                <div style="position: absolute; right: 0; bottom: 0; display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                                    <div style="width: 20px; height: 20px; border-radius: 50%; background: ${item.user.color || '#3b82f6'}; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800; color: #fff;">
+                                        ${item.user.initials || '?'}
+                                    </div>
+                                    <span style="font-size: 0.7rem; color: rgba(255,255,255,0.5); font-weight: 600;">${item.user.name}</span>
+                                </div>
+                            `;
+                        }
+
+                        let photoGallery = '';
+                        if (item.source === 'manuell' && item.files && Array.isArray(item.files) && item.files.length > 0) {
+                            photoGallery = `
+                                <div style="display: flex; gap: 8px; margin-top: 1rem; overflow-x: auto; padding-bottom: 4px;">
+                                    ${item.files.map((fileUrl, index) => `
+                                        <div onclick="openPhotosLightbox(${JSON.stringify(item.files).replace(/"/g, '&quot;')}, ${index})" 
+                                             style="width: 80px; height: 80px; flex-shrink: 0; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: transform 0.2s; position: relative;"
+                                             onmouseover="this.style.transform='scale(1.05)'; this.querySelector('.overlay').style.opacity='1'"
+                                             onmouseout="this.style.transform='scale(1)'; this.querySelector('.overlay').style.opacity='0'">
+                                            <img src="${fileUrl}" style="width: 100%; height: 100%; object-fit: cover;">
+                                            <div class="overlay" style="position: absolute; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;">
+                                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            `;
                         }
 
                         html += `
@@ -4647,7 +4735,10 @@
                                 <div class="history-content" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 1.25rem; border-radius: 16px;">
                                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; gap: 1rem;">
                                         <div>
-                                            <span style="font-size: 0.75rem; font-weight: 800; color: ${item.color}; text-transform: uppercase; letter-spacing: 1px; display: block; margin-bottom: 0.25rem;">${item.type}</span>
+                                            <div style="display: flex; align-items: center; margin-bottom: 0.25rem;">
+                                                <span style="font-size: 0.75rem; font-weight: 800; color: ${item.color}; text-transform: uppercase; letter-spacing: 1px;">${item.type}</span>
+                                                ${sourceTag}
+                                            </div>
                                             <h4 style="margin: 0; color: #fff; font-size: 1.1rem; font-weight: 600;">${item.title}</h4>
                                         </div>
                                         <div style="font-size: 0.8rem; color: rgba(255,255,255,0.5); font-weight: 600; text-align: right; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 6px;">
@@ -4656,7 +4747,11 @@
                                         </div>
                                     </div>
                                     ${item.description ? `<p style="margin: 0; color: ${item.itemType === 'workshop' ? '#fff' : 'rgba(255,255,255,0.6)'}; font-size: 0.95rem; line-height: 1.5; font-weight: ${item.itemType === 'workshop' ? '700' : '400'};">${item.description}</p>` : ''}
-                                    ${actionButtons}
+                                    ${photoGallery}
+                                    <div style="position: relative;">
+                                        ${actionButtons}
+                                        ${userBadge}
+                                    </div>
                                 </div>
                             </div>
                         `;
@@ -4667,6 +4762,297 @@
                 } catch (error) {
                     console.error("Error loading machine history", error);
                     container.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 2rem;">Fehler beim Laden der Historie.</div>';
+                }
+            };
+
+            window.toggleManualHistoryForm = function (type) {
+                const container = document.getElementById('manual-history-form-container');
+                const fields = document.getElementById('manual-history-fields');
+                const typeInput = document.getElementById('manual-history-type');
+
+                if (!type || (container.style.display === 'block' && typeInput.value === type && !document.getElementById('manual-history-id').value)) {
+                    container.style.display = 'none';
+                    document.getElementById('manual-history-id').value = '';
+                    document.getElementById('existing-photos-container').style.display = 'none';
+                    return;
+                }
+
+                document.getElementById('manual-history-id').value = '';
+                document.getElementById('existing-photos-container').style.display = 'none';
+
+                // Reset button text and hide delete
+                const saveBtn = document.querySelector('#manual-history-form-container .btn-primary');
+                const deleteBtn = document.getElementById('btn-delete-manual');
+                if (saveBtn) {
+                    const iconHtml = saveBtn.querySelector('svg').outerHTML;
+                    saveBtn.innerHTML = `${iconHtml} Eintrag speichern`;
+                }
+                if (deleteBtn) {
+                    deleteBtn.style.display = 'none';
+                }
+
+                typeInput.value = type;
+                container.style.display = 'block';
+                fields.innerHTML = '';
+
+                let html = '';
+                if (type === 'phone') {
+                    html = `
+                        <input type="text" id="manual-title" placeholder="Gesprächspartner" class="glass-input" style="margin-bottom: 0.75rem;">
+                        <textarea id="manual-content" placeholder="Ergebnis des Telefonats..." class="glass-input" style="min-height: 80px;"></textarea>
+                    `;
+                } else if (type === 'note') {
+                    html = `
+                        <input type="text" id="manual-title" placeholder="Titel der Bemerkung" class="glass-input" style="margin-bottom: 0.75rem;">
+                        <textarea id="manual-content" placeholder="Details..." class="glass-input" style="min-height: 80px;"></textarea>
+                    `;
+                } else if (type === 'photo') {
+                    html = `
+                        <input type="text" id="manual-title" placeholder="Beschreibung der Fotos" class="glass-input" style="margin-bottom: 0.75rem;">
+                        <div style="background: rgba(255,255,255,0.05); border: 2px dashed rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; text-align: center;">
+                            <input type="file" id="manual-photos" multiple accept="image/*" style="display: none;" onchange="updatePhotoCount(this)">
+                            <label for="manual-photos" style="cursor: pointer;">
+                                <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📸</div>
+                                <div id="photo-upload-label" style="font-size: 0.85rem; color: rgba(255,255,255,0.6);">Bilder zum Hochladen auswählen</div>
+                            </label>
+                        </div>
+                    `;
+                }
+                fields.innerHTML = html;
+
+                // Scroll to form after a short delay to ensure rendering
+                setTimeout(() => {
+                    container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 100);
+            };
+
+            window.updatePhotoCount = function (input) {
+                const label = document.getElementById('photo-upload-label');
+                let previewContainer = document.getElementById('new-photos-preview-list');
+
+                if (!previewContainer) {
+                    previewContainer = document.createElement('div');
+                    previewContainer.id = 'new-photos-preview-list';
+                    previewContainer.style.display = 'flex';
+                    previewContainer.style.flexWrap = 'wrap';
+                    previewContainer.style.gap = '8px';
+                    previewContainer.style.marginTop = '1rem';
+                    previewContainer.style.justifyContent = 'center';
+                    input.parentElement.appendChild(previewContainer);
+                }
+
+                previewContainer.innerHTML = '';
+
+                if (input.files && input.files.length > 0) {
+                    label.textContent = input.files.length + ' Bilder zum Upload bereit';
+                    label.style.color = '#10b981';
+
+                    Array.from(input.files).forEach(file => {
+                        const reader = new FileReader();
+                        reader.onload = function (e) {
+                            const div = document.createElement('div');
+                            div.style.width = '50px';
+                            div.style.height = '50px';
+                            div.style.borderRadius = '8px';
+                            div.style.overflow = 'hidden';
+                            div.style.border = '2px solid rgba(16,185,129,0.5)';
+                            div.innerHTML = `<img src="${e.target.result}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.8;">`;
+                            previewContainer.appendChild(div);
+                        }
+                        reader.readAsDataURL(file);
+                    });
+                } else {
+                    label.textContent = 'Bilder zum Hochladen auswählen';
+                    label.style.color = 'rgba(255,255,255,0.6)';
+                }
+            };
+
+            window.editManualHistoryEntry = async function (id) {
+                try {
+                    const { data: entry, error } = await window.supabaseClient
+                        .from('manual_history_entries')
+                        .select('*')
+                        .eq('id', id)
+                        .single();
+
+                    if (error) throw error;
+
+                    // 1. Ensure Schnelleintrag is open
+                    const schnelleintragContent = document.getElementById('schnelleintrag-content');
+                    if (schnelleintragContent.style.display === 'none') {
+                        window.toggleSchnelleintrag(document.querySelector('.section-header'));
+                    }
+
+                    // 2. Clear previous form state
+                    window.toggleManualHistoryForm(null);
+
+                    // 3. Open appropriate form type
+                    window.toggleManualHistoryForm(entry.type);
+
+                    // 4. Set ID and pre-fill fields
+                    document.getElementById('manual-history-id').value = id;
+                    document.getElementById('manual-title').value = entry.title;
+                    if (document.getElementById('manual-content')) {
+                        document.getElementById('manual-content').value = entry.content;
+                    }
+
+                    // 4.5 Change button text and show delete button
+                    const saveBtn = document.querySelector('#manual-history-form-container .btn-primary');
+                    const deleteBtn = document.getElementById('btn-delete-manual');
+                    if (saveBtn) {
+                        const iconHtml = saveBtn.querySelector('svg').outerHTML;
+                        saveBtn.innerHTML = `${iconHtml} Änderungen speichern`;
+                    }
+                    if (deleteBtn) {
+                        deleteBtn.style.display = 'flex';
+                    }
+
+                    // 5. Handle existing photos
+                    if (entry.type === 'photo' && entry.files && entry.files.length > 0) {
+                        const container = document.getElementById('existing-photos-container');
+                        const list = document.getElementById('existing-photos-list');
+                        container.style.display = 'block';
+                        list.innerHTML = entry.files.map((url, index) => `
+                            <div style="position: relative; width: 60px; height: 60px; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); cursor: pointer;"
+                                 onclick="if(!event.target.closest('button')) window.openPhotosLightbox(${JSON.stringify(entry.files).replace(/"/g, '&quot;')}, ${index})">
+                                <img src="${url}" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                                <button onclick="window.removeExistingPhoto('${url}', event)" style="position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3); z-index: 10;">&times;</button>
+                            </div>
+                        `).join('');
+                    }
+
+                } catch (err) {
+                    console.error("Error loading for edit:", err);
+                }
+            };
+
+            window.removeExistingPhoto = function (url, event) {
+                if (event) event.stopPropagation();
+                const list = document.getElementById('existing-photos-list');
+                const photoDiv = Array.from(list.children).find(div => div.querySelector('img').src === url);
+                if (photoDiv) photoDiv.remove();
+
+                // Hide container if empty
+                if (list.children.length === 0) {
+                    document.getElementById('existing-photos-container').style.display = 'none';
+                }
+            };
+
+            window.saveManualHistoryEntry = async function () {
+                const id = document.getElementById('manual-history-id').value;
+                const type = document.getElementById('manual-history-type').value;
+                const title = document.getElementById('manual-title').value;
+                const content = document.getElementById('manual-content') ? document.getElementById('manual-content').value : '';
+                const machineId = window.currentHistoryMachineId;
+
+                if (!title) {
+                    alert('Bitte geben Sie einen Titel/Betreff ein.');
+                    return;
+                }
+
+                try {
+                    let filesArray = [];
+
+                    // 1. For edits, get existing photos that weren't deleted
+                    if (id && type === 'photo') {
+                        const existingList = document.getElementById('existing-photos-list');
+                        Array.from(existingList.children).forEach(div => {
+                            filesArray.push(div.querySelector('img').src);
+                        });
+                    }
+
+                    // 2. Upload new photos
+                    const photoInput = document.getElementById('manual-photos');
+                    if (photoInput && photoInput.files && photoInput.files.length > 0) {
+                        for (let i = 0; i < photoInput.files.length; i++) {
+                            const file = photoInput.files[i];
+                            const ext = file.name.split('.').pop();
+                            const path = `manual-history/${machineId}/${Date.now()}-${i}.${ext}`;
+
+                            const { error: uploadError } = await window.supabaseClient.storage
+                                .from('machine-images')
+                                .upload(path, file);
+
+                            if (uploadError) {
+                                console.error('Fehler beim Foto-Upload:', uploadError);
+                                alert('Ein Foto konnte nicht hochgeladen werden: ' + uploadError.message);
+                            } else {
+                                const { data: { publicUrl } } = window.supabaseClient.storage
+                                    .from('machine-images')
+                                    .getPublicUrl(path);
+                                filesArray.push(publicUrl);
+                            }
+                        }
+                    }
+
+                    if (id) {
+                        // UPDATE existing entry
+                        const { error } = await window.supabaseClient
+                            .from('manual_history_entries')
+                            .update({
+                                title: title,
+                                content: content,
+                                files: filesArray,
+                                updated_at: new Date()
+                            })
+                            .eq('id', id);
+                        if (error) throw error;
+                    } else {
+                        // CREATE new entry
+                        const { error } = await window.supabaseClient
+                            .from('manual_history_entries')
+                            .insert([{
+                                machine_id: machineId,
+                                type: type,
+                                title: title,
+                                content: content,
+                                files: filesArray,
+                                created_by: window.activeUser?.id // Use the active user ID from switcher
+                            }]);
+                        if (error) throw error;
+                    }
+
+                    window.toggleManualHistoryForm(null);
+                    window.openHistoryModal(machineId); // Refresh
+                } catch (err) {
+                    console.error('Error saving manual entry:', err);
+                    const errorMsg = err.message || (err.error ? err.error.message : 'Unbekannter Fehler');
+                    alert('Fehler beim Speichern des Eintrags: ' + errorMsg);
+                }
+            };
+
+            window.toggleSchnelleintrag = function (header) {
+                const content = document.getElementById('schnelleintrag-content');
+                const chevron = header.querySelector('.toggle-chevron');
+                const isHidden = content.style.display === 'none';
+
+                content.style.display = isHidden ? 'block' : 'none';
+                chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+
+                if (!isHidden) {
+                    window.toggleManualHistoryForm(null); // Reset form if closing
+                }
+            };
+
+            window.deleteManualHistoryEntry = async function () {
+                const id = document.getElementById('manual-history-id').value;
+                if (!id) return;
+
+                if (!confirm('Soll dieser Eintrag wirklich gelöscht werden?')) return;
+
+                try {
+                    const { error } = await window.supabaseClient
+                        .from('manual_history_entries')
+                        .delete()
+                        .eq('id', id);
+
+                    if (error) throw error;
+
+                    window.toggleManualHistoryForm(null);
+                    window.openHistoryModal(window.currentHistoryMachineId); // Refresh
+                } catch (err) {
+                    console.error('Error deleting manual entry:', err);
+                    alert('Fehler beim Löschen des Eintrags: ' + err.message);
                 }
             };
 
@@ -6049,51 +6435,103 @@
                         </div>
                     </div>
 
-                    <h3 class="section-title" style="margin-top: 2rem;">2. Wartung</h3>
-                    <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                        <div class="form-group">
-                            <label>Letzte Wartung</label>
-                            <input type="date" id="machine-last-maintenance" class="glass-input">
+                    <div class="collapsible-section" style="margin-top: 2rem;">
+                        <div class="section-header" onclick="toggleAddMachineSection(this)"
+                            style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 12px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 1rem; transition: all 0.2s;"
+                            onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
+                            onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <h3 class="section-title"
+                                    style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">2.
+                                    Wartung</h3>
+                                <span style="font-size: 0.75rem; opacity: 0.4; font-weight: 500;">(Klicken zum
+                                    Ausklappen)</span>
+                            </div>
+                            <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                                style="transition: transform 0.3s ease; opacity: 0.6;">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
                         </div>
-                        <div class="form-group" style="position: relative;">
-                            <label style="display: flex; justify-content: space-between; align-items: center;">
-                                Nächste Wartung
-                                <span id="maint-auto-badge" class="badge hidden"
-                                    style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 0.7rem; padding: 2px 6px; border-radius: 6px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">Auto</span>
-                            </label>
-                            <input type="date" id="machine-next-maintenance" class="glass-input">
+                        <div class="section-content" style="display: none; transition: all 0.3s ease;">
+                            <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div class="form-group">
+                                    <label>Letzte Wartung</label>
+                                    <input type="date" id="machine-last-maintenance" class="glass-input">
+                                </div>
+                                <div class="form-group" style="position: relative;">
+                                    <label style="display: flex; justify-content: space-between; align-items: center;">
+                                        Nächste Wartung
+                                        <span id="maint-auto-badge" class="badge hidden"
+                                            style="background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); font-size: 0.7rem; padding: 2px 6px; border-radius: 6px; font-weight: 800; letter-spacing: 0.5px; text-transform: uppercase;">Auto</span>
+                                    </label>
+                                    <input type="date" id="machine-next-maintenance" class="glass-input">
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <h3 class="section-title" style="margin-top: 2rem;">3. Standort & Besitzer</h3>
-                    <div class="form-group">
-                        <label>Firma / Besitzer / Verantwortliche</label>
-                        <input type="text" id="machine-owner" placeholder="Name des Besitzers">
+                    <div class="collapsible-section" style="margin-top: 2rem;">
+                        <div class="section-header" onclick="toggleAddMachineSection(this)"
+                            style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 12px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 1rem; transition: all 0.2s;"
+                            onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
+                            onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <h3 class="section-title"
+                                    style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">3.
+                                    Standort & Besitzer</h3>
+                                <span style="font-size: 0.75rem; opacity: 0.4; font-weight: 500;">(Klicken zum
+                                    Ausklappen)</span>
+                            </div>
+                            <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                                style="transition: transform 0.3s ease; opacity: 0.6;">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+
+                        <div class="section-content" style="display: none; transition: all 0.3s ease;">
+                            <div class="form-group">
+                                <label>Firma / Besitzer / Verantwortliche</label>
+                                <input type="text" id="machine-owner" placeholder="Name des Besitzers">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Betreiberstandort (Karte öffnen)</label>
+                                <div style="display: flex; gap: 10px;">
+                                    <input type="text" id="machine-address-input" placeholder="Straße, PLZ, Stadt, Land"
+                                        style="flex:1;"
+                                        oninput="debounceSearchAddress('machine-address-input', 'address-suggestions')">
+                                    <button type="button" class="btn-secondary"
+                                        onclick="openGoogleMaps('machine-address-input')">Karte öffnen</button>
+                                </div>
+                                <div id="address-suggestions" class="suggestions-box" style="display:none;"></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Maschinenstandort (Karte öffnen)</label>
+                                <div style="display: flex; gap: 10px;">
+                                    <input type="text" id="machine-location-input"
+                                        placeholder="Straße, PLZ, Stadt, Land" style="flex:1;"
+                                        oninput="debounceSearchAddress('machine-location-input', 'location-suggestions')">
+                                    <button type="button" class="btn-secondary"
+                                        onclick="openGoogleMaps('machine-location-input')">Karte öffnen</button>
+                                </div>
+                                <div id="location-suggestions" class="suggestions-box" style="display:none;"></div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Betreiberstandort (Karte öffnen)</label>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="text" id="machine-address-input" placeholder="Straße, PLZ, Stadt, Land"
-                                style="flex:1;"
-                                oninput="debounceSearchAddress('machine-address-input', 'address-suggestions')">
-                            <button type="button" class="btn-secondary"
-                                onclick="openGoogleMaps('machine-address-input')">Karte öffnen</button>
-                        </div>
-                        <div id="address-suggestions" class="suggestions-box" style="display:none;"></div>
-                    </div>
+                    <script>
+                        function toggleAddMachineSection(header) {
+                            const content = header.nextElementSibling;
+                            const chevron = header.querySelector('.toggle-chevron');
+                            const isHidden = content.style.display === 'none';
 
-                    <div class="form-group">
-                        <label>Maschinenstandort (Karte öffnen)</label>
-                        <div style="display: flex; gap: 10px;">
-                            <input type="text" id="machine-location-input" placeholder="Straße, PLZ, Stadt, Land"
-                                style="flex:1;"
-                                oninput="debounceSearchAddress('machine-location-input', 'location-suggestions')">
-                            <button type="button" class="btn-secondary"
-                                onclick="openGoogleMaps('machine-location-input')">Karte öffnen</button>
-                        </div>
-                        <div id="location-suggestions" class="suggestions-box" style="display:none;"></div>
-                    </div>
+                            content.style.display = isHidden ? 'block' : 'none';
+                            chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+                        }
+                    </script>
 
                     <div id="machine-map" style="display:none;"></div> <!-- Map hidden/removed -->
                     <!-- Hidden Lat/Lng fields kept for potential future use or address geocoding if needed -->
@@ -6490,12 +6928,15 @@
     </script>
 
     <!-- Modal: History Timeline -->
-    <div id="machine-history-modal" class="modal-backdrop hidden">
-        <div class="modal-content"
-            style="max-width: 600px; padding: 2rem; max-height: 90vh; display: flex; flex-direction: column;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h2>Historie</h2>
-                <button class="btn-icon-soft" onclick="window.closeHistoryModal()">
+    <div id="machine-history-modal" class="modal-backdrop hidden"
+        style="z-index: 1050; display: none; align-items: center; justify-content: center;">
+        <div class="modal-content glass-card"
+            style="max-width: 600px; width: 90%; padding: 2rem; max-height: 90vh; display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 24px 64px rgba(0,0,0,0.5); position: relative; overflow: hidden;">
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-shrink: 0;">
+                <h2 style="margin: 0; font-size: 1.5rem; color: white;">Historie</h2>
+                <button class="btn-icon-soft" onclick="window.closeHistoryModal()"
+                    style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 8px;">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
                         stroke-linecap="round" stroke-linejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -6503,10 +6944,99 @@
                     </svg>
                 </button>
             </div>
-            <div id="history-timeline-container" class="history-timeline"
-                style="flex: 1; overflow-y: auto; padding-right: 10px; display: flex; flex-direction: column; gap: 0;">
-                <!-- Items go here -->
-                <div style="text-align: center; color: rgba(255,255,255,0.4); padding: 2rem;">Lade Historie...</div>
+
+            <div
+                style="flex: 1; overflow-y: auto; padding-right: 15px; display: flex; flex-direction: column; min-height: 0;">
+
+                <!-- Manuelle Schnelleingabe -->
+                <div
+                    style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 0; margin-bottom: 1.5rem; overflow: visible;">
+                    <div class="section-header" onclick="window.toggleSchnelleintrag(this)"
+                        style="display: flex; justify-content: space-between; align-items: center; padding: 1.25rem; background: rgba(255,255,255,0.02); cursor: pointer; transition: all 0.2s;">
+                        <span
+                            style="font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px;">Schnelleintrag</span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span style="font-size: 0.75rem; color: rgba(255,255,255,0.3); font-weight: 600;">(Klicken
+                                zum
+                                Ausklappen)</span>
+                            <svg class="toggle-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                                style="transition: transform 0.3s ease; opacity: 0.5;">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <div id="schnelleintrag-content"
+                        style="display: none; padding: 1.25rem; border-top: 1px solid rgba(255,255,255,0.05);">
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
+                            <button class="quick-entry-btn" onclick="window.toggleManualHistoryForm('phone')"
+                                style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: #10b981; padding: 10px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.2s;">
+                                <span style="font-size: 1.2rem;">📞</span>
+                                <span style="font-size: 0.75rem; font-weight: 700;">Telefon</span>
+                            </button>
+                            <button class="quick-entry-btn" onclick="window.toggleManualHistoryForm('note')"
+                                style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); color: #f59e0b; padding: 10px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.2s;">
+                                <span style="font-size: 1.2rem;">📝</span>
+                                <span style="font-size: 0.75rem; font-weight: 700;">Bemerkung</span>
+                            </button>
+                            <button class="quick-entry-btn" onclick="window.toggleManualHistoryForm('photo')"
+                                style="background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2); color: #8b5cf6; padding: 10px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.2s;">
+                                <span style="font-size: 1.2rem;">📸</span>
+                                <span style="font-size: 0.75rem; font-weight: 700;">Foto</span>
+                            </button>
+                        </div>
+
+                        <!-- Hidden Form Area -->
+                        <div id="manual-history-form-container"
+                            style="display: none; margin-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 1.25rem;">
+                            <input type="hidden" id="manual-history-id">
+                            <input type="hidden" id="manual-history-type">
+                            <div id="existing-photos-container" style="display: none; margin-bottom: 1rem;">
+                                <div
+                                    style="font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; margin-bottom: 0.5rem;">
+                                    Bereits hochgeladene Fotos:</div>
+                                <div id="existing-photos-list" style="display: flex; flex-wrap: wrap; gap: 8px;"></div>
+                            </div>
+                            <div id="manual-history-fields">
+                                <!-- Fields populated via JS -->
+                            </div>
+                            <div style="display: flex; gap: 12px; margin-top: 1.5rem;">
+                                <button onclick="window.saveManualHistoryEntry()" class="btn-primary"
+                                    style="flex: 2; padding: 12px; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z">
+                                        </path>
+                                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                        <polyline points="7 3 7 8 15 8"></polyline>
+                                    </svg>
+                                    Eintrag speichern
+                                </button>
+                                <button onclick="window.deleteManualHistoryEntry()" id="btn-delete-manual"
+                                    style="flex: 1; padding: 12px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #ef4444; border-radius: 12px; cursor: pointer; transition: all 0.2s; display: none; align-items: center; justify-content: center; gap: 6px; font-weight: 600;"
+                                    onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'"
+                                    onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M3 6h18"></path>
+                                        <path
+                                            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
+                                        </path>
+                                    </svg>
+                                    Löschen
+                                </button>
+                                <button onclick="window.toggleManualHistoryForm(null)" class="btn-secondary"
+                                    style="flex: 1; padding: 12px;">Abbrechen</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="history-timeline-container" class="history-timeline"
+                    style="display: flex; flex-direction: column; gap: 0;">
+                    <!-- Items go here -->
+                    <div style="text-align: center; color: rgba(255,255,255,0.4); padding: 2rem;">Lade Historie...</div>
+                </div>
             </div>
         </div>
     </div>
@@ -6571,6 +7101,469 @@
             }
         };
     </script>
+
+    <!-- NEW: Workshop Photo Modal -->
+    <div id="workshop-photo-modal" class="modal-backdrop hidden"
+        style="z-index: 1060; display: none; align-items: center; justify-content: center;">
+        <div class="modal-content glass-card"
+            style="max-width: 800px; width: 95%; padding: 2.5rem; max-height: 90vh; display: flex; flex-direction: column; border: 1px solid rgba(139, 92, 246, 0.3); border-top: 6px solid #8b5cf6; box-shadow: 0 30px 80px rgba(0,0,0,0.6); position: relative; overflow: hidden; background: linear-gradient(135deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.98));">
+
+            <div
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-shrink: 0;">
+                <div>
+                    <h2
+                        style="margin: 0; font-size: 1.8rem; color: white; display: flex; align-items: center; gap: 12px;">
+                        <span
+                            style="background: rgba(139, 92, 246, 0.2); padding: 8px; border-radius: 12px; display: flex; color: #8b5cf6;">
+                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path
+                                    d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z">
+                                </path>
+                                <circle cx="12" cy="13" r="4"></circle>
+                            </svg>
+                        </span>
+                        Werkstatt-Fotos
+                    </h2>
+                    <p id="workshop-photo-machine-name"
+                        style="margin: 0.5rem 0 0 0; color: rgba(255,255,255,0.6); font-size: 1rem; font-weight: 500;">
+                    </p>
+                </div>
+                <button class="btn-icon-soft" onclick="window.closeWorkshopPhotoModal()"
+                    style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 10px; transition: all 0.2s;"
+                    onmouseover="this.style.background='rgba(239, 68, 68, 0.2)'; this.style.color='#ef4444'"
+                    onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.color=''">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <div
+                style="flex: 1; overflow-y: auto; padding-right: 15px; display: flex; flex-direction: column; min-height: 0; gap: 2rem;">
+
+                <!-- Section 1: New Photo Upload -->
+                <div
+                    style="background: rgba(139, 92, 246, 0.05); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 20px; padding: 1.5rem;">
+                    <h3
+                        style="margin: 0 0 1rem 0; font-size: 1.2rem; color: #fff; display: flex; align-items: center; gap: 8px;">
+                        <span style="color: #8b5cf6;">➕</span> Neues Foto aufnehmen
+                    </h3>
+
+                    <div class="form-group" style="margin-bottom: 1.5rem;">
+                        <div class="file-drop-zone" id="workshop-photo-dropzone"
+                            style="background: rgba(0,0,0,0.2) !important; border-color: rgba(139, 92, 246, 0.3) !important;"
+                            onclick="document.getElementById('workshop-new-photo-input').click()">
+                            <input type="file" id="workshop-new-photo-input" multiple accept="image/*"
+                                class="hidden-file-input" onchange="window.handleWorkshopPhotoSelect(event)">
+                            <div class="drop-zone-content" style="pointer-events: none;">
+                                <span class="icon" style="filter: hue-rotate(250deg);">📸</span>
+                                <p>Fotos hierher ziehen oder klicken</p>
+                            </div>
+                        </div>
+                        <!-- Preview Grid -->
+                        <div id="workshop-new-photo-preview"
+                            style="display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap;"></div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label style="color: rgba(255,255,255,0.7); font-weight: 600; font-size: 0.9rem;">Notiz
+                            (optional)</label>
+                        <textarea id="workshop-new-photo-note" class="glass-input" rows="2"
+                            placeholder="Zustand, festgestellter Defekt..."></textarea>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end;">
+                        <button id="btn-save-workshop-photo" class="btn-primary" onclick="window.saveNewWorkshopPhoto()"
+                            style="background: #8b5cf6; border-color: #7c3aed; padding: 12px 24px; font-weight: 700; border-radius: 12px; display: flex; align-items: center; gap: 8px;"
+                            disabled>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                                <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                                <polyline points="7 3 7 8 15 8"></polyline>
+                            </svg>
+                            Speichern
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Layout Separator -->
+                <div style="height: 1px; background: rgba(255,255,255,0.1); width: 100%;"></div>
+
+                <!-- Section 2: Existing Workshop Photos -->
+                <div>
+                    <h3
+                        style="margin: 0 0 1.5rem 0; font-size: 1.2rem; color: #fff; display: flex; align-items: center; gap: 8px;">
+                        <span style="color: #64748b;">⏳</span> Bisherige Werkstatt-Fotos
+                    </h3>
+
+                    <div id="workshop-photos-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <!-- Dynamically populated entries go here -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Workshop Photo Feature Logic ---
+
+        window.currentWorkshopPhotoMachineId = null;
+        window.workshopPhotosToUpload = [];
+        window.workshopPhotoAppendEntryId = null; // Used when appending to existing entry
+
+        window.openWorkshopPhotoModal = async function (machineId) {
+            window.currentWorkshopPhotoMachineId = machineId;
+            window.workshopPhotosToUpload = [];
+
+            // UI Reset
+            document.getElementById('workshop-new-photo-note').value = '';
+            document.getElementById('workshop-new-photo-preview').innerHTML = '';
+            document.getElementById('btn-save-workshop-photo').disabled = true;
+            document.getElementById('workshop-photos-list').innerHTML = '<div style="color: rgba(255,255,255,0.5); font-size: 0.9rem;">Lade Fotos...</div>';
+
+            const modal = document.getElementById('workshop-photo-modal');
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            requestAnimationFrame(() => {
+                modal.classList.add('show');
+            });
+
+            if (!window.supabaseClient) return;
+
+            try {
+                // Fetch machine details
+                const { data: machine } = await window.supabaseClient
+                    .from('machines')
+                    .select('name, internal_id')
+                    .eq('id', machineId)
+                    .single();
+
+                if (machine) {
+                    const nameDisplay = machine.internal_id ? `${machine.name} (${machine.internal_id})` : machine.name;
+                    document.getElementById('workshop-photo-machine-name').innerText = nameDisplay;
+                }
+
+                await window.reloadWorkshopPhotosList();
+            } catch (err) {
+                console.error("Fehler beim Öffnen des Werkstatt-Foto Modals:", err);
+            }
+        };
+
+        window.closeWorkshopPhotoModal = function () {
+            const modal = document.getElementById('workshop-photo-modal');
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+                window.currentWorkshopPhotoMachineId = null;
+                window.workshopPhotosToUpload = [];
+                window.workshopPhotoAppendEntryId = null;
+            }, 300);
+        };
+
+        window.reloadWorkshopPhotosList = async function () {
+            if (!window.currentWorkshopPhotoMachineId) return;
+            const machineId = window.currentWorkshopPhotoMachineId;
+            const container = document.getElementById('workshop-photos-list');
+
+            try {
+                // Find start of current workshop stay
+                const { data: serviceData } = await window.supabaseClient
+                    .from('service_entries')
+                    .select('created_at')
+                    .eq('machine_id', machineId)
+                    .eq('title', 'Werkstattaufenthalt Beginn')
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+
+                const workshopStartTime = serviceData && serviceData.length > 0 ? serviceData[0].created_at : null;
+
+                // Fetch photo entries
+                let query = window.supabaseClient
+                    .from('manual_history_entries')
+                    .select('*')
+                    .eq('machine_id', machineId)
+                    .eq('type', 'photo')
+                    .order('created_at', { ascending: false });
+
+                if (workshopStartTime) {
+                    query = query.gte('created_at', workshopStartTime);
+                }
+
+                const { data: photoEntries, error } = await query;
+
+                if (error) throw error;
+
+                if (!photoEntries || photoEntries.length === 0) {
+                    container.innerHTML = '<div style="color: rgba(255,255,255,0.4); font-size: 0.9rem; font-style: italic;">Noch keine Fotos während dieses Werkstattaufenthalts hochgeladen.</div>';
+                    return;
+                }
+
+                let html = '';
+                photoEntries.forEach(entry => {
+                    const dateStr = new Date(entry.created_at).toLocaleDateString('de-DE');
+                    const timeStr = new Date(entry.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+
+                    let photosHtml = '';
+                    if (entry.files && Array.isArray(entry.files) && entry.files.length > 0) {
+                        photosHtml = `
+                            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
+                                ${entry.files.map((url, i) => `
+                                    <div onclick="openPhotosLightbox(${JSON.stringify(entry.files).replace(/"/g, '&quot;')}, ${i})" 
+                                         style="width: 70px; height: 70px; border-radius: 8px; overflow: hidden; cursor: pointer; border: 1px solid rgba(255,255,255,0.1); transition: transform 0.2s;"
+                                         onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                        <img src="${url}" style="width: 100%; height: 100%; object-fit: cover;">
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    }
+
+                    html += `
+                        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                <div>
+                                    <div style="font-size: 0.8rem; color: rgba(255,255,255,0.5);">${dateStr} ${timeStr}</div>
+                                    <h4 style="margin: 0.25rem 0 0.5rem 0; color: #fff; font-size: 1rem;">${entry.title || 'Foto'}</h4>
+                                    ${entry.content ? `<div style="font-size: 0.9rem; color: rgba(255,255,255,0.7); margin-bottom: 0.5rem;">${entry.content}</div>` : ''}
+                                </div>
+                                <button onclick="window.triggerAppendToEntry('${entry.id}')" class="btn-icon-soft" style="font-size: 0.8rem; background: rgba(59,130,246,0.1); color: #60a5fa; border: 1px solid rgba(59,130,246,0.2); padding: 4px 10px; border-radius: 8px; display: flex; align-items: center; gap: 6px;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    Fotos ergänzen
+                                </button>
+                            </div>
+                            ${photosHtml}
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+
+            } catch (err) {
+                console.error("Error loading workshop photos", err);
+                container.innerHTML = '<div style="color: #ef4444; font-size: 0.9rem;">Fehler beim Laden der Fotos.</div>';
+            }
+        };
+
+        window.handleWorkshopPhotoSelect = function (event) {
+            const files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            for (let i = 0; i < files.length; i++) {
+                window.workshopPhotosToUpload.push(files[i]);
+            }
+
+            event.target.value = ''; // Reset input
+            window.renderWorkshopPhotoPreview();
+        };
+
+        window.removeWorkshopPhotoSelect = function (index) {
+            window.workshopPhotosToUpload.splice(index, 1);
+            window.renderWorkshopPhotoPreview();
+        };
+
+        window.renderWorkshopPhotoPreview = function () {
+            const container = document.getElementById('workshop-new-photo-preview');
+            const submitBtn = document.getElementById('btn-save-workshop-photo');
+
+            if (window.workshopPhotosToUpload.length === 0) {
+                container.innerHTML = '';
+                submitBtn.disabled = true;
+                return;
+            }
+
+            submitBtn.disabled = false;
+            let html = '';
+
+            window.workshopPhotosToUpload.forEach((file, index) => {
+                const url = URL.createObjectURL(file);
+                html += `
+                    <div style="position: relative; width: 60px; height: 60px; border-radius: 8px; overflow: hidden; border: 1px solid rgba(139, 92, 246, 0.4);">
+                        <img src="${url}" style="width: 100%; height: 100%; object-fit: cover;">
+                        <div onclick="window.removeWorkshopPhotoSelect(${index})" style="position: absolute; top: 2px; right: 2px; background: rgba(0,0,0,0.6); color: white; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 10px; font-weight: bold;">✕</div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+        };
+
+        window.saveNewWorkshopPhoto = async function () {
+            if (window.workshopPhotosToUpload.length === 0) return;
+
+            const submitBtn = document.getElementById('btn-save-workshop-photo');
+            const machineId = window.currentWorkshopPhotoMachineId;
+            const noteText = document.getElementById('workshop-new-photo-note').value;
+
+            // Set loading state
+            const originalBtnHtml = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<svg class="spinner" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg> Speichert...`;
+
+            try {
+                let uploadedUrls = [];
+
+                // Upload photos
+                for (let i = 0; i < window.workshopPhotosToUpload.length; i++) {
+                    const file = window.workshopPhotosToUpload[i];
+                    const ext = file.name.split('.').pop();
+                    const path = `manual-history/${machineId}/workshop-${Date.now()}-${i}.${ext}`;
+
+                    const { error: uploadError } = await window.supabaseClient.storage
+                        .from('machine-images')
+                        .upload(path, file);
+
+                    if (uploadError) {
+                        console.error('Upload Error:', uploadError);
+                        throw uploadError;
+                    }
+
+                    const { data: { publicUrl } } = window.supabaseClient.storage
+                        .from('machine-images')
+                        .getPublicUrl(path);
+
+                    uploadedUrls.push(publicUrl);
+                }
+
+                // Create manual entry
+                const { error: insertError } = await window.supabaseClient
+                    .from('manual_history_entries')
+                    .insert([{
+                        machine_id: machineId,
+                        type: 'photo',
+                        title: 'Werkstatt Foto',
+                        content: noteText,
+                        files: uploadedUrls,
+                        created_by: window.activeUser?.id || null
+                    }]);
+
+                if (insertError) throw insertError;
+
+                // Reset form
+                window.workshopPhotosToUpload = [];
+                document.getElementById('workshop-new-photo-note').value = '';
+                window.renderWorkshopPhotoPreview();
+
+                // Refresh list
+                await window.reloadWorkshopPhotosList();
+
+                // Trigger an event passing up the chain so main UI history view updates if needed
+                if (window.updateHistoryViewExternally) window.updateHistoryViewExternally(machineId);
+
+            } catch (err) {
+                console.error("Error saving workshop photo:", err);
+                alert("Fehler beim Speichern der Fotos.");
+            } finally {
+                submitBtn.innerHTML = originalBtnHtml;
+                submitBtn.disabled = window.workshopPhotosToUpload.length === 0;
+            }
+        };
+
+        window.triggerAppendToEntry = function (entryId) {
+            window.workshopPhotoAppendEntryId = entryId;
+            let hiddenInput = document.getElementById('workshop-append-photo-input');
+            if (!hiddenInput) {
+                hiddenInput = document.createElement('input');
+                hiddenInput.type = 'file';
+                hiddenInput.id = 'workshop-append-photo-input';
+                hiddenInput.multiple = true;
+                hiddenInput.accept = 'image/*';
+                hiddenInput.style.display = 'none';
+                hiddenInput.onchange = window.handleAppendPhotoSelect;
+                document.body.appendChild(hiddenInput);
+            }
+            hiddenInput.click();
+        };
+
+        window.handleAppendPhotoSelect = async function (event) {
+            const files = event.target.files;
+            const entryId = window.workshopPhotoAppendEntryId;
+            const machineId = window.currentWorkshopPhotoMachineId;
+
+            if (!files || files.length === 0 || !entryId || !machineId) return;
+
+            try {
+                // Fetch the existing entry
+                const { data: entry, error: fetchError } = await window.supabaseClient
+                    .from('manual_history_entries')
+                    .select('files')
+                    .eq('id', entryId)
+                    .single();
+
+                if (fetchError) throw fetchError;
+
+                let existingFiles = entry.files || [];
+                if (!Array.isArray(existingFiles)) existingFiles = [];
+
+                let newUploadedUrls = [];
+
+                // Set a visual loading indicator... could be tricky without a specific button. Let's just grey out the modal temporarily
+                const listContainer = document.getElementById('workshop-photos-list');
+                listContainer.style.opacity = '0.5';
+                listContainer.style.pointerEvents = 'none';
+
+                // Upload new photos
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const ext = file.name.split('.').pop();
+                    const path = `manual-history/${machineId}/workshop-append-${Date.now()}-${i}.${ext}`;
+
+                    const { error: uploadError } = await window.supabaseClient.storage
+                        .from('machine-images')
+                        .upload(path, file);
+
+                    if (uploadError) throw uploadError;
+
+                    const { data: { publicUrl } } = window.supabaseClient.storage
+                        .from('machine-images')
+                        .getPublicUrl(path);
+
+                    newUploadedUrls.push(publicUrl);
+                }
+
+                const updatedFilesList = [...existingFiles, ...newUploadedUrls];
+
+                // Update the entry
+                const { error: updateError } = await window.supabaseClient
+                    .from('manual_history_entries')
+                    .update({
+                        files: updatedFilesList,
+                        updated_at: new Date()
+                    })
+                    .eq('id', entryId);
+
+                if (updateError) throw updateError;
+
+                event.target.value = ''; // Reset input
+                window.workshopPhotoAppendEntryId = null;
+
+                // Reload list
+                listContainer.style.opacity = '1';
+                listContainer.style.pointerEvents = 'auto';
+                await window.reloadWorkshopPhotosList();
+
+            } catch (err) {
+                console.error("Fehler beim Ergänzen der Fotos:", err);
+                alert("Fehler beim Hochladen der neuen Fotos.");
+                const listContainer = document.getElementById('workshop-photos-list');
+                listContainer.style.opacity = '1';
+                listContainer.style.pointerEvents = 'auto';
+            }
+        };
+
+        // Ensure history view is appropriately updated globally
+        window.updateHistoryViewExternally = function (machineId) {
+            if (window.currentHistoryMachineId === machineId) {
+                window.openHistoryModal(machineId);
+            }
+        };
+    </script>
+
     <!-- Mobile sidebar overlay backdrop -->
     <div id="sidebar-overlay" onclick="window.closeMobileSidebar()"></div>
 
