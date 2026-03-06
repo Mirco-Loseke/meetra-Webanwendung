@@ -4487,20 +4487,20 @@
                         if (acceptanceBtnText) acceptanceBtnText.textContent = `Abnahmeprotokoll${catSuffix}`;
 
                         // Initially collapse everything
-                        const anlegenContent = document.getElementById('report-options-anlegen');
-                        const ansehenContent = document.getElementById('report-history-ansehen');
-                        const anlegenIcon = document.getElementById('report-options-anlegen-icon');
-                        const ansehenIcon = document.getElementById('report-history-ansehen-icon');
+                        const createSection = document.getElementById('create-section');
+                        const viewSection = document.getElementById('view-section');
+                        const createIcon = document.getElementById('create-section-icon');
+                        const viewIcon = document.getElementById('view-section-icon');
 
-                        if (anlegenContent) {
-                            anlegenContent.style.maxHeight = '0px';
-                            anlegenContent.style.opacity = '0';
-                            if (anlegenIcon) anlegenIcon.style.transform = 'rotate(-90deg)';
+                        if (createSection) {
+                            createSection.style.maxHeight = '0px';
+                            createSection.style.opacity = '0';
+                            if (createIcon) createIcon.style.transform = 'rotate(-90deg)';
                         }
-                        if (ansehenContent) {
-                            ansehenContent.style.maxHeight = '0px';
-                            ansehenContent.style.opacity = '0';
-                            if (ansehenIcon) ansehenIcon.style.transform = 'rotate(-90deg)';
+                        if (viewSection) {
+                            viewSection.style.maxHeight = '0px';
+                            viewSection.style.opacity = '0';
+                            if (viewIcon) viewIcon.style.transform = 'rotate(-90deg)';
                         }
                     });
                 }
@@ -5099,23 +5099,35 @@
                 const machine = machines.find(m => m.id === currentSelectedMachineForService);
                 if (!machine) return;
 
-                // 1. Switch to Service View
-                switchView('service');
+                const isProtocol = typeTitle === 'Eingangsprotokoll' || typeTitle === 'Abnahmeprotokoll';
+
+                // 1. Switch View
+                switchView(isProtocol ? 'protocols' : 'service');
 
                 // 2. Pre-fill Search
-                const searchInput = document.getElementById('service-search-input');
+                const searchInputId = isProtocol ? 'protocol-search-input' : 'service-search-input';
+                const searchInput = document.getElementById(searchInputId);
+
+                const searchStr = [
+                    machine.manufacturer,
+                    machine.name,
+                    machine.serial
+                ].filter(Boolean).join(' ');
+
                 if (searchInput) {
-                    // Create a search string: Manufacturer Name Serial
-                    const searchStr = [
-                        machine.manufacturer,
-                        machine.name,
-                        machine.serial
-                    ].filter(Boolean).join(' ');
                     searchInput.value = searchStr;
                 }
 
-                // 3. Fetch and Render (Filtered)
-                fetchServiceEntries();
+                // 3. Apply Filters and Fetch
+                if (isProtocol) {
+                    const protocolType = typeTitle === 'Eingangsprotokoll' ? 'intake' : 'acceptance';
+                    if (window.handleProtocolSearch) window.handleProtocolSearch(searchStr);
+                    if (window.setProtocolFilter) window.setProtocolFilter(protocolType);
+                    if (window.fetchProtocols) window.fetchProtocols();
+                } else {
+                    // Service behavior (existing/extended)
+                    if (typeof fetchServiceEntries === 'function') fetchServiceEntries();
+                }
             };
 
             window.startReportCreation = function (type) {
