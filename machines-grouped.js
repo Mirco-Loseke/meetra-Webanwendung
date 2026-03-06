@@ -278,10 +278,10 @@
         ` : '';
 
         card.innerHTML = `
+            ${orderNumberTag}
             ${workshopIcon}
             ${photoIcon}
             <div style="position: relative; width: 100%; background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); overflow: hidden; border-radius: 16px 16px 0 0;">
-                ${orderNumberTag}
                 ${imageHtml}
             </div>
             <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 0;"></div>
