@@ -1368,10 +1368,21 @@ h1,
 
 .card,
 .settings-card {
-    background: rgba(255, 255, 255, 0.18);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 3px solid rgba(255, 255, 255, 0.3);
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(180, 30, 45, 0.12) 60%, rgba(10, 10, 20, 0.35) 100%) padding-box,
+        linear-gradient(90deg,
+            rgba(255, 255, 255, 0.00) 0%,
+            rgba(255, 255, 255, 0.08) 8%,
+            rgba(255, 255, 255, 0.22) 18%,
+            rgba(255, 255, 255, 0.45) 32%,
+            rgba(255, 255, 255, 0.58) 50%,
+            rgba(255, 255, 255, 0.45) 68%,
+            rgba(255, 255, 255, 0.22) 82%,
+            rgba(255, 255, 255, 0.08) 92%,
+            rgba(255, 255, 255, 0.00) 100%) border-box;
+    backdrop-filter: blur(48px);
+    -webkit-backdrop-filter: blur(48px);
+    border: 3px solid transparent;
     border-radius: 32px;
     padding: 32px;
     min-height: 400px;
@@ -1391,7 +1402,18 @@ h1,
 .card:hover,
 .settings-card:hover {
     transform: scale(1.03) translateY(-8px);
-    border-color: rgba(255, 255, 255, 0.4);
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.26) 0%, rgba(180, 30, 45, 0.16) 60%, rgba(10, 10, 20, 0.4) 100%) padding-box,
+        linear-gradient(90deg,
+            rgba(255, 255, 255, 0.00) 0%,
+            rgba(255, 255, 255, 0.12) 8%,
+            rgba(255, 255, 255, 0.32) 18%,
+            rgba(255, 255, 255, 0.60) 32%,
+            rgba(255, 255, 255, 0.75) 50%,
+            rgba(255, 255, 255, 0.60) 68%,
+            rgba(255, 255, 255, 0.32) 82%,
+            rgba(255, 255, 255, 0.12) 92%,
+            rgba(255, 255, 255, 0.00) 100%) border-box;
     box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
 }
 

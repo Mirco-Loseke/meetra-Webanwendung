@@ -165,9 +165,9 @@
         const glassBg = 'background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);';
 
         if (catColor) {
-            card.style.cssText = `font-family: 'Inter', sans-serif; overflow: hidden; display: flex; flex-direction: column; ${glassBg} border: 3px solid ${catColor}66; border-top: 7px solid ${catColor}; border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative;`;
+            card.style.cssText = `font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; ${glassBg} border: 3px solid ${catColor}66; border-top: 7px solid ${catColor}; border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative; padding-top: 22px;`;
         } else {
-            card.style.cssText = `font-family: 'Inter', sans-serif; overflow: hidden; display: flex; flex-direction: column; ${glassBg} border: 3px solid rgba(255,255,255,0.3); border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative;`;
+            card.style.cssText = `font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; ${glassBg} border: 3px solid rgba(255,255,255,0.3); border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative; padding-top: 22px;`;
         }
 
         card.onclick = () => window.openEditStammdaten(machine.id);
@@ -193,13 +193,18 @@
             <div class="workshop-toggle ${isInWorkshop ? 'active' : ''}" 
                  onclick="event.stopPropagation(); window.toggleWorkshopStatus('${machine.id}', ${isInWorkshop})"
                  title="${isInWorkshop ? 'Aus Werkstatt entfernen' : 'In Werkstatt verschieben'}"
-                 style="position: absolute; top: 1rem; right: 1rem; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; z-index: 10; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); 
-                        background: ${isInWorkshop ? 'rgba(245, 158, 11, 0.9)' : 'rgba(255,255,255,0.1)'}; 
-                        border: 1px solid ${isInWorkshop ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.1)'};
-                        box-shadow: ${isInWorkshop ? '0 0 15px rgba(245, 158, 11, 0.4)' : 'none'};"
-                 onmouseover="this.style.transform='scale(1.1)'; this.style.background='${isInWorkshop ? 'rgba(245, 158, 11, 1)' : 'rgba(255,255,255,0.2)'}'"
-                 onmouseout="this.style.transform='scale(1)'; this.style.background='${isInWorkshop ? 'rgba(245, 158, 11, 0.9)' : 'rgba(255,255,255,0.1)'}'">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="${isInWorkshop ? '#fff' : 'rgba(255,255,255,0.5)'}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                 style="position: absolute; top: -20px; right: 10px;
+                        width: 40px; height: 40px; border-radius: 50%;
+                        display: flex; align-items: center; justify-content: center;
+                        z-index: 20; cursor: pointer;
+                        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                        background: ${isInWorkshop ? 'rgba(245, 158, 11, 0.95)' : 'rgba(30, 35, 50, 0.85)'};
+                        border: 2px solid ${isInWorkshop ? 'rgba(255,220,100,0.6)' : 'rgba(255,255,255,0.25)'};
+                        box-shadow: ${isInWorkshop ? '0 4px 18px rgba(245, 158, 11, 0.5)' : '0 4px 14px rgba(0,0,0,0.5)'};
+                        backdrop-filter: blur(12px);"
+                 onmouseover="this.style.transform='scale(1.12)'"
+                 onmouseout="this.style.transform='scale(1)'">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${isInWorkshop ? '#fff' : 'rgba(255,255,255,0.7)'}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="3"></circle>
                     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1-1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                 </svg>
@@ -253,13 +258,18 @@
             <div class="workshop-photo-btn"
                  onclick="event.stopPropagation(); window.openWorkshopPhotoModal('${machine.id}')"
                  title="Werkstatt-Fotos verwalten"
-                 style="position: absolute; top: 1rem; right: 4rem; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; z-index: 10; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); 
-                        background: rgba(139, 92, 246, 0.9); 
-                        border: 1px solid rgba(255,255,255,0.3);
-                        box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);"
-                 onmouseover="this.style.transform='scale(1.1)'; this.style.background='rgba(139, 92, 246, 1)'"
-                 onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(139, 92, 246, 0.9)'">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                 style="position: absolute; top: -20px; right: 58px;
+                        width: 40px; height: 40px; border-radius: 50%;
+                        display: flex; align-items: center; justify-content: center;
+                        z-index: 20; cursor: pointer;
+                        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                        background: rgba(139, 92, 246, 0.92);
+                        border: 2px solid rgba(200,170,255,0.4);
+                        box-shadow: 0 4px 18px rgba(139, 92, 246, 0.5);
+                        backdrop-filter: blur(12px);"
+                 onmouseover="this.style.transform='scale(1.12)'"
+                 onmouseout="this.style.transform='scale(1)'">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                     <circle cx="12" cy="13" r="4"></circle>
                 </svg>
@@ -267,9 +277,9 @@
         ` : '';
 
         card.innerHTML = `
-            <div style="position: relative; width: 100%; background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));">
-                ${workshopIcon}
-                ${photoIcon}
+            ${workshopIcon}
+            ${photoIcon}
+            <div style="position: relative; width: 100%; background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); overflow: hidden; border-radius: 16px 16px 0 0;">
                 ${orderNumberTag}
                 ${imageHtml}
             </div>
