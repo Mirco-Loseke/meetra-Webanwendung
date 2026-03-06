@@ -2256,8 +2256,7 @@
                                     dateFrom = startEntry.date;
                                     orderNum = startEntry.description && startEntry.description.includes('Auftrag: ') ? startEntry.description.split('Auftrag: ')[1] : '—';
                                 }
-
-                                let reportDescription = `Automatischer Systemeintrag:\nAuftragsnummer: ${orderNum !== '—' ? orderNum : 'ohne Auftragsnummer'}`;
+                                let reportDescription = `Automatischer Systemeintrag:\nWerkstattauftrag ${orderNum !== '—' ? orderNum : 'ohne Auftragsnummer'}`;
 
                                 await supabaseClient.from('service_entries').insert([{
                                     machine_id: id,
@@ -5760,7 +5759,7 @@
 
                             // Format Automatischer Systemeintrag
                             if (isAutoEntry) {
-                                cleanDesc = `<span style="color: var(--color-primary-orange, #f59e0b); font-weight: 800;">${cleanDesc}</span>`;
+                                cleanDesc = `<span style="color: var(--color-primary-red, #ef4444); font-weight: 800;">${cleanDesc}</span>`;
                             }
 
                             // Separate Images and Documents
