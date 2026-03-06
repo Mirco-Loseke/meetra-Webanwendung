@@ -5809,18 +5809,18 @@
                                         <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 8px; margin-top: 0.5rem;">
                                             ${images.length > 0 ? `
                                             <div onclick="openPhotosLightbox(${JSON.stringify(images).replace(/"/g, '&quot;')}, 0)" title="Bilder ansehen"
-                                                 style="display: flex; align-items: center; gap: 7px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); padding: 5px 12px; border-radius: 10px; cursor: pointer; transition: all 0.2s; color: #10b981; font-size: 0.85rem; font-weight: 700;"
-                                                 onmouseover="this.style.background='rgba(16, 185, 129, 0.2)'; this.style.transform='translateY(-2px)'"
-                                                 onmouseout="this.style.background='rgba(16, 185, 129, 0.1)'; this.style.transform='translateY(0)'">
+                                                 style="display: flex; align-items: center; gap: 7px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s; color: #10b981; font-size: 0.85rem; font-weight: 700;"
+                                                 onmouseover="this.style.background='rgba(16, 185, 129, 0.25)'; this.style.transform='translateY(-2px)'"
+                                                 onmouseout="this.style.background='rgba(16, 185, 129, 0.15)'; this.style.transform='translateY(0)'">
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
                                                 Bilder (${images.length})
                                             </div>` : ''}
                                             
                                             ${docs.length > 0 ? `
                                             <div onclick="openDocumentsModal(${JSON.stringify(docs).replace(/"/g, '&quot;')})" title="Dokumente ansehen"
-                                                 style="display: flex; align-items: center; gap: 7px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.2); padding: 5px 12px; border-radius: 10px; cursor: pointer; transition: all 0.2s; color: #60a5fa; font-size: 0.85rem; font-weight: 700;"
-                                                 onmouseover="this.style.background='rgba(59, 130, 246, 0.2)'; this.style.transform='translateY(-2px)'"
-                                                 onmouseout="this.style.background='rgba(59, 130, 246, 0.1)'; this.style.transform='translateY(0)'">
+                                                 style="display: flex; align-items: center; gap: 7px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s; color: #60a5fa; font-size: 0.85rem; font-weight: 700;"
+                                                 onmouseover="this.style.background='rgba(59, 130, 246, 0.25)'; this.style.transform='translateY(-2px)'"
+                                                 onmouseout="this.style.background='rgba(59, 130, 246, 0.15)'; this.style.transform='translateY(0)'">
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
                                                 Dokumente (${docs.length})
                                             </div>` : ''}
