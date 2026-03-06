@@ -1424,8 +1424,12 @@
         // 2. Filter by Search Term
         if (protocolSearchTerm) {
             filtered = filtered.filter(p => {
-                const searchString = `${p.title} ${p.type === 'intake' ? 'Eingang' : 'Abnahme'}`.toLowerCase();
-                return searchString.includes(protocolSearchTerm);
+                const m = p.machines || {};
+                const machineStr = `${m.manufacturer || ''} ${m.name || ''} ${m.serial ? `#${m.serial}` : ''} ${m.year ? `(${m.year})` : ''}`;
+                const searchString = `${p.title} ${p.type === 'intake' ? 'Eingang' : 'Abnahme'} ${machineStr}`.toLowerCase();
+
+                // Split search term into words and check if ALL words are present
+                return protocolSearchTerm.split(' ').every(word => searchString.includes(word));
             });
         }
 

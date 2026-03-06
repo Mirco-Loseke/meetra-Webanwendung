@@ -5741,8 +5741,7 @@
                         entries = entries.filter(e => {
                             const machines = window.machineList || [];
                             const machine = machines.find(m => m.id === e.machine_id);
-                            const machineName = machine ? `${machine.manufacturer} ${machine.name} ${machine.serial || ''} ${machine.year ||
-                                ''}` : '';
+                            const machineName = machine ? `${machine.manufacturer} ${machine.name} ${machine.serial ? `#${machine.serial}` : ''} ${machine.year ? `(${machine.year})` : ''}` : '';
 
                             const text = `${e.title} ${e.description} ${e.date} ${machineName}`.toLowerCase();
 
