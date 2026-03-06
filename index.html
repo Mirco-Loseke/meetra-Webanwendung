@@ -5108,10 +5108,12 @@
                 const searchInputId = isProtocol ? 'protocol-search-input' : 'service-search-input';
                 const searchInput = document.getElementById(searchInputId);
 
+                // Create a precise search string: Manufacturer Name #Serial (Year)
                 const searchStr = [
                     machine.manufacturer,
                     machine.name,
-                    machine.serial
+                    machine.serial ? `#${machine.serial}` : null,
+                    machine.year ? `(${machine.year})` : null
                 ].filter(Boolean).join(' ');
 
                 if (searchInput) {
