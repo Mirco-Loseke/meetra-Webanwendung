@@ -324,13 +324,15 @@
                     ` : ''}
                 </div>
 
-                <div class="card-actions" style="margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 16px; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.06); margin-left: -0.25rem; margin-right: -0.25rem;">
+                <div class="card-actions" style="margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.06); margin-left: -0.25rem; margin-right: -0.25rem;">
                     <button class="btn-reports" onclick="window.openServiceActionsModal(event, ${machine.id})" title="Berichte & Protokolle">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        Protokolle
                     </button>
                     
-                    <button class="btn-history" onclick="event.stopPropagation(); window.openHistoryModal ? window.openHistoryModal(${machine.id}) : alert('Historie für ' + ${machine.id})" title="Historie">
+                    <button class="btn-history" style="flex: 1 !important;" onclick="event.stopPropagation(); window.openHistoryModal ? window.openHistoryModal(${machine.id}) : alert('Historie für ' + ${machine.id})" title="Historie">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        Historie
                     </button>
 
                     <button class="btn-delete-card" onclick="event.stopPropagation(); deleteMachine(${machine.id})" title="Maschine löschen">

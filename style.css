@@ -4553,22 +4553,24 @@ tr.completed-task td {
 
 /* Historie Button - Orange Glass Premium */
 .btn-history {
-    width: 40px !important;
     height: 40px !important;
     min-height: auto !important;
-    flex: none !important;
     background: rgba(245, 158, 11, 0.85) !important;
     color: #ffffff !important;
     border: 2px solid rgba(255, 220, 100, 0.6) !important;
-    border-radius: 50% !important;
+    border-radius: 20px !important;
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 8px;
     cursor: pointer;
     box-shadow: 0 4px 14px rgba(245, 158, 11, 0.5) !important;
     backdrop-filter: blur(12px) !important;
-    padding: 0 !important;
+    padding: 0 16px !important;
+    font-weight: 700 !important;
+    font-size: 0.9rem !important;
+    font-family: 'Inter', sans-serif !important;
 }
 
 .btn-history:hover {
@@ -4579,22 +4581,25 @@ tr.completed-task td {
 
 /* Berichte Button - Blue Glass Premium */
 .btn-reports {
-    width: 40px !important;
     height: 40px !important;
     min-height: auto !important;
-    flex: none !important;
+    flex: 1 !important;
     background: rgba(59, 130, 246, 0.85) !important;
     color: #ffffff !important;
     border: 2px solid rgba(147, 197, 253, 0.6) !important;
-    border-radius: 50% !important;
+    border-radius: 20px !important;
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 8px;
     cursor: pointer;
     box-shadow: 0 4px 14px rgba(59, 130, 246, 0.5) !important;
     backdrop-filter: blur(12px) !important;
-    padding: 0 !important;
+    padding: 0 16px !important;
+    font-weight: 700 !important;
+    font-size: 0.9rem !important;
+    font-family: 'Inter', sans-serif !important;
 }
 
 .btn-reports:hover {
