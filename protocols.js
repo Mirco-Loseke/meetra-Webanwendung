@@ -1463,50 +1463,59 @@
                 const typeLabel = isAcceptance ? 'Abnahmeprotokoll' : 'Eingangsprotokoll';
 
                 return `
-                    <div class="card" onclick="${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')" style="font-family: 'Inter', sans-serif; overflow: hidden; display: flex; flex-direction: column; background: rgba(255,255,255,0.03); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative;">
-                        <!-- Status Badge Top Right -->
-                        <div style="position: absolute; top: 1rem; right: 1rem; z-index: 10; background: ${badgeColor}; color: #fff; font-size: 0.75rem; font-weight: 900; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                    <div class="card" onclick="${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')" style="font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); border: 3px solid ${badgeColor}66; border-top: 7px solid ${badgeColor}; border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative; padding-top: 22px;">
+                        
+                        <!-- Premium Badge Top Right -->
+                        <div style="position: absolute; top: -20px; right: 24px; left: auto; height: 40px; padding: 0 16px; background: ${badgeColor}D9; color: #ffffff; border-radius: 20px; font-size: 0.85rem; font-weight: 800; box-shadow: 0 4px 14px ${badgeColor}80; border: 2px solid rgba(255, 255, 255, 0.4); backdrop-filter: blur(12px); z-index: 10; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 8px;">
                             ${badgeText}
                         </div>
                         
-                        <div style="background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <!-- Full-Width Machine Image Container -->
+                        <div style="position: relative; width: 100%; height: 300px; overflow: hidden; background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); display: flex; align-items: center; justify-content: center;">
                             ${p.machines && p.machines.image_url ?
-                        `<img src="${p.machines.image_url}" alt="${p.title}" style="width: 100%; height: 300px; object-fit: contain; display: block;">` :
-                        `<div style="height: 300px; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.2);">
-                                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.4;">
-                                        <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
-                                        <circle cx="9" cy="9" r="2"/>
-                                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
-                                    </svg>
-                                </div>`
+                        `<img src="${p.machines.image_url}" alt="${p.title}" style="width: 100%; height: 100%; object-fit: contain; display: block;">` :
+                        `<svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity: 0.15;">
+                                    <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                                    <circle cx="9" cy="9" r="2"/>
+                                    <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+                                </svg>`
                     }
                         </div>
                         
-                        <div class="card-content" style="padding: 1.75rem; flex: 1; display: flex; flex-direction: column;">
-                            <div style="margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1.5rem;">
-                                <h2 class="card-title" style="margin: 0; font-size: 1.5rem; color: #fff; font-weight: 800; line-height: 1.3;">
+                        <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 0;"></div>
+                        
+                        <div class="card-content" style="padding: 1.25rem; flex: 1; display: flex; flex-direction: column; gap: 0.75rem;">
+                            <!-- First Row: Centered Tag -->
+                            <div style="display: flex; justify-content: center; margin-bottom: 0.25rem;">
+                                <div style="padding: 4px 12px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); border-radius: 12px; color: #93c5fd; font-size: 0.8rem; font-weight: 800; display: flex; align-items: center; gap: 4px; text-transform: uppercase;">
+                                    ${typeLabel}
+                                </div>
+                            </div>
+                            
+                            <!-- Second Row: Date (Left, Larger) -->
+                            <div style="display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.6); font-size: 0.95rem; font-weight: 800; letter-spacing: 0.5px; margin-bottom: -0.25rem; margin-top: 0.25rem;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.8;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                ${protocolDate}
+                            </div>
+
+                            <!-- Third Row: Main Title -->
+                            <div style="min-width: 0;">
+                                <h2 style="margin: 0; font-size: 1.6rem; color: var(--color-primary-green); font-weight: 900; line-height: 1.2; font-family: 'Outfit', sans-serif;">
                                     ${p.title}
                                 </h2>
                             </div>
                             
-                            <!-- Middle section like Machine Cards -->
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.75rem; background: rgba(0,0,0,0.15); padding: 18px 1.75rem; border-radius: 14px; border: 1px solid rgba(255,255,255,0.06); margin-left: -1.75rem; margin-right: -1.75rem;">
-                                <div style="border-right: 1px solid rgba(255,255,255,0.05); padding-right: 12px;">
-                                    <div style="font-size: 0.85rem; color: rgba(255,255,255,0.4); margin-bottom: 5px; font-weight: 700; text-transform: uppercase;">Typ</div>
-                                    <div style="font-size: 1.05rem; color: #fff; display: flex; align-items: center; font-weight: 700; word-break: break-word;">
-                                        ${typeLabel}
-                                    </div>
-                                </div>
-                                <div style="padding-left: 6px;">
-                                    <div style="font-size: 0.85rem; color: rgba(255,255,255,0.4); margin-bottom: 5px; font-weight: 700; text-transform: uppercase;">${dateHeader}</div>
-                                    <div style="font-size: 1.05rem; color: #fff; display: flex; align-items: center; font-weight: 700;">
-                                        ${protocolDate}
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="card-actions" style="margin-top: auto;">
-                                <button class="btn-primary" style="width: 100%; min-height: 48px; border-radius: 14px; font-weight: 800; font-size: 1.1rem;">Öffnen</button>
+                            <!-- Action buttons -->
+                            <div class="card-actions" style="margin-top: auto; padding-top: 0.75rem; display: flex; gap: 8px; align-items: stretch;">
+                                <button class="btn-reports" style="flex: 1; border-radius: 20px;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    Öffnen
+                                </button>
+                                ${p.status === 'completed' ? `
+                                <button class="btn-reports-red" onclick="event.stopPropagation(); window.openProtocolPDF('${p.machine_id}', '${p.id}', '${p.type}')" style="flex: 1.2; border-radius: 20px;">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="stroke: white;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                                    PDF öffnen
+                                </button>` : ''}
                             </div>
                         </div>
                     </div>
@@ -1561,6 +1570,10 @@
                                         <circle cx="12" cy="12" r="3"></circle>
                                     </svg>
                                 </button>
+                                ${p.status === 'completed' ? `
+                                <button class="btn-icon-soft" title="PDF öffnen" onclick="event.stopPropagation(); window.openProtocolPDF('${p.machine_id}', '${p.id}', '${p.type}')" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                                </button>` : ''}
                             </div>
                         </td>
                     </tr>

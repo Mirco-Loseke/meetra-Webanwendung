@@ -97,29 +97,6 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#service" class="nav-link" data-target="service">
-                            <!-- Crossed Tools Icon -->
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                                <path
-                                    d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z" />
-                            </svg>
-                            <span>Serviceberichte</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#calendar" class="nav-link" data-target="calendar">
-                            <!-- Calendar Icon -->
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                <line x1="16" y1="2" x2="16" y2="6"></line>
-                                <line x1="8" y1="2" x2="8" y2="6"></line>
-                                <line x1="3" y1="10" x2="21" y2="10"></line>
-                            </svg>
-                            <span>Kalender</span>
-                        </a>
-                    </li>
-                    <li>
                         <a href="#workshop" class="nav-link" data-target="workshop">
                             <!-- Gear + Wrench / Workshop Icon -->
                             <svg width="24" height="24" viewBox="-10 -10 120 120" fill="none" stroke="currentColor"
@@ -131,6 +108,16 @@
                                     d="M38 34a12 12 0 0 1 12 12 12 12 0 0 1-2.5 7.5L60 66a3 3 0 0 1 0 4.2 3 3 0 0 1-4.2 0L43.5 57.5A12 12 0 0 1 38 58a12 12 0 0 1-12-12 12 12 0 0 1 6-10.4l5.5 5.5 3.4-3.4-5.5-5.5A12 12 0 0 1 38 34z" />
                             </svg>
                             <span>Werkstatt</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#service" class="nav-link" data-target="service">
+                            <!-- Crossed Tools Icon -->
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                                <path
+                                    d="M22.7 19l-9.1-9.1c.9-2.3.4-5-1.5-6.9-2-2-5-2.4-7.4-1.3L9 6 6 9 1.6 4.7C.4 7.1.9 10.1 2.9 12.1c1.9 1.9 4.6 2.4 6.9 1.5l9.1 9.1c.4.4 1 .4 1.4 0l2.3-2.3c.5-.4.5-1.1.1-1.4z" />
+                            </svg>
+                            <span>Serviceberichte</span>
                         </a>
                     </li>
                     <li>
@@ -163,7 +150,19 @@
                             <span>Bestellungen</span>
                         </a>
                     </li>
-
+                    <li>
+                        <a href="#calendar" class="nav-link" data-target="calendar">
+                            <!-- Calendar Icon -->
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            <span>Kalender</span>
+                        </a>
+                    </li>
                     <li>
                         <a href="#settings" class="nav-link" data-target="settings">
                             <!-- Solid Gear Icon -->
@@ -1394,8 +1393,8 @@
                     // Add to front
                     lastViewed.unshift(newEntry);
 
-                    // Keep max 3
-                    lastViewed = lastViewed.slice(0, 3);
+                    // Keep max 2
+                    lastViewed = lastViewed.slice(0, 0 + 2);
 
                     // Update local object
                     activeUser.last_viewed = lastViewed;
@@ -1670,7 +1669,7 @@
 
                     const alarmRows = [...overdueList.map(x => alarmRow(x.machine, x.diff)), ...dueSoonList.map(x => alarmRow(x.machine, x.diff))];
                     const calRows = upcomingEvents.map(calRow);
-                    const recentCards = lastViewed.map(recentCard).filter(Boolean);
+                    const recentCards = lastViewed.slice(0, 0 + 2).map(recentCard).filter(Boolean);
 
                     // --- Recent report card helper ---
                     function recentReportCard(entry) {
@@ -1760,30 +1759,16 @@
                             </div>
                         </div>
 
-                        <!-- Recent Machines + Recent Reports (side by side) -->
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; align-items:stretch;">
-
-                            <!-- Zuletzt angesehene Maschinen -->
-                            <div style="display:flex; flex-direction:column; height:100%;">
+                        <!-- Recent Machines (Full width) -->
+                        <div style="display:block; width:100%;">
+                            <div style="display:flex; flex-direction:column; width:100%;">
                                 <h2 style="font-size:1rem; color:rgba(255,255,255,0.8); margin-bottom:1.25rem; font-family:'Inter',sans-serif; display:flex; align-items:center; gap:8px; text-transform:uppercase; letter-spacing:0.8px; font-weight:800;">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--secondary-green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                                     Zuletzt gesehene Maschinen
                                 </h2>
                                 ${recentCards.length > 0
-                            ? `<div style="display:flex; flex-direction:column; gap:1rem; flex:1;">${recentCards.join('')}</div>`
-                            : `<div style="flex:1; padding:2.5rem; text-align:center; background:rgba(255,255,255,0.02); border-radius:20px; border:1px dashed rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center;"><p style="color:rgba(255,255,255,0.25); margin:0; font-family:'Inter',sans-serif;">Noch keine Maschinen angesehen.</p></div>`
-                        }
-                            </div>
-
-                            <!-- Zuletzt erstellte Berichte & Protokolle -->
-                            <div style="display:flex; flex-direction:column; height:100%;">
-                                <h2 style="font-size:1rem; color:rgba(255,255,255,0.8); margin-bottom:1.25rem; font-family:'Inter',sans-serif; display:flex; align-items:center; gap:8px; text-transform:uppercase; letter-spacing:0.8px; font-weight:800;">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                                    Zuletzt erstellte Berichte
-                                </h2>
-                                ${recentReportCards.length > 0
-                            ? `<div style="display:flex; flex-direction:column; gap:1rem; flex:1;">${recentReportCards.join('')}</div>`
-                            : `<div style="flex:1; padding:2.5rem; text-align:center; background:rgba(255,255,255,0.02); border-radius:20px; border:1px dashed rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center;"><p style="color:rgba(255,255,255,0.25); margin:0; font-family:'Inter',sans-serif;">Noch keine Berichte vorhanden.</p></div>`
+                            ? `<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:1.5rem; width:100%;">${recentCards.join('')}</div>`
+                            : `<div style="width:100%; padding:2.5rem; text-align:center; background:rgba(255,255,255,0.02); border-radius:20px; border:1px dashed rgba(255,255,255,0.08); display:flex; align-items:center; justify-content:center;"><p style="color:rgba(255,255,255,0.25); margin:0; font-family:'Inter',sans-serif;">Noch keine Maschinen angesehen.</p></div>`
                         }
                             </div>
                         </div>
@@ -4174,10 +4159,18 @@
 
                     // 3. Save to database
                     const reportTitle = document.getElementById('service-report-title')?.value || 'Servicebericht';
-                    const categoryId = document.getElementById('service-category-id')?.value;
+                    const catIdsVal = document.getElementById('service-category-id')?.value;
+                    let categoryIds = [];
+                    try {
+                        categoryIds = catIdsVal ? JSON.parse(catIdsVal) : [];
+                    } catch (e) {
+                        categoryIds = catIdsVal ? [parseInt(catIdsVal)] : [];
+                    }
+
                     const reportData = {
                         machine_id: parseInt(machineId),
-                        category_id: categoryId ? parseInt(categoryId) : null,
+                        category_id: categoryIds.length > 0 ? categoryIds[0] : null, // Legacy support
+                        category_ids: categoryIds, // New array support
                         title: reportTitle,
                         date: dateStart,
                         datum_von: dateStart,
@@ -4364,17 +4357,44 @@
                 if (dropdown) dropdown.classList.toggle('show');
             };
 
+            let selectedServiceCategories = [];
+
             window.selectServiceCategory = function (id, name) {
-                const idInput = document.getElementById('service-category-id');
-                const textEl = document.getElementById('service-category-text');
-                if (idInput) idInput.value = id || '';
-                if (textEl) {
-                    textEl.textContent = name || 'Bitte wählen...';
-                    textEl.style.color = id ? 'white' : 'rgba(255,255,255,0.4)';
+                if (id === null) {
+                    selectedServiceCategories = [];
+                } else {
+                    const sid = parseInt(id);
+                    const index = selectedServiceCategories.indexOf(sid);
+                    if (index > -1) {
+                        selectedServiceCategories.splice(index, 1);
+                    } else {
+                        selectedServiceCategories.push(sid);
+                    }
                 }
-                const dropdown = document.getElementById('service-category-dropdown');
-                if (dropdown) dropdown.classList.remove('show');
+                updateServiceCategoryUI();
             };
+
+            function updateServiceCategoryUI() {
+                const textEl = document.getElementById('service-category-text');
+                if (textEl) {
+                    if (selectedServiceCategories.length === 0) {
+                        textEl.textContent = 'Bitte wählen...';
+                        textEl.style.color = 'rgba(255,255,255,0.4)';
+                    } else {
+                        const cats = window.categoryList || [];
+                        const names = selectedServiceCategories.map(id => {
+                            const c = cats.find(cat => cat.id === id);
+                            return c ? c.name : '';
+                        }).filter(n => n !== '');
+                        textEl.textContent = names.join(', ');
+                        textEl.style.color = 'white';
+                    }
+                }
+                const idInput = document.getElementById('service-category-id');
+                if (idInput) idInput.value = JSON.stringify(selectedServiceCategories);
+
+                renderServiceCategoryList();
+            }
 
             window.renderServiceCategoryList = function () {
                 const list = document.getElementById('service-category-list');
@@ -4383,12 +4403,20 @@
                 const categories = window.categoryList || [];
                 const serviceCats = categories.filter(c => c.type === 'service');
 
-                list.innerHTML = `<li class="suggestion-item" onclick="selectServiceCategory(null, 'Keine Kategorie')">Keine Kategorie</li>`;
+                list.innerHTML = `<li class="suggestion-item" onclick="selectServiceCategory(null, 'Keine Kategorie')">Auswahl zurücksetzen</li>`;
 
                 serviceCats.forEach(cat => {
+                    const sid = parseInt(cat.id);
+                    const isSelected = selectedServiceCategories.includes(sid);
                     const li = document.createElement('li');
                     li.className = 'suggestion-item';
-                    li.textContent = cat.name;
+                    li.style.display = 'flex';
+                    li.style.alignItems = 'center';
+                    li.style.justifyContent = 'space-between';
+                    li.innerHTML = `
+                        <span>${cat.name}</span>
+                        ${isSelected ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary-green)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+                    `;
                     li.onclick = (e) => {
                         e.stopPropagation();
                         selectServiceCategory(cat.id, cat.name);
@@ -5603,11 +5631,15 @@
                             if (description) description.value = editData.description || '';
 
                             // Populate category
-                            if (editData.category_id) {
-                                const cat = (window.categoryList || []).find(c => c.id === editData.category_id);
-                                if (cat) {
-                                    selectServiceCategory(cat.id, cat.name);
-                                }
+                            if (editData.category_ids && Array.isArray(editData.category_ids) && editData.category_ids.length > 0) {
+                                selectedServiceCategories = [...editData.category_ids];
+                                updateServiceCategoryUI();
+                            } else if (editData.category_id) {
+                                selectedServiceCategories = [editData.category_id];
+                                updateServiceCategoryUI();
+                            } else {
+                                selectedServiceCategories = [];
+                                updateServiceCategoryUI();
                             }
 
                             // Populate machine
@@ -5713,7 +5745,7 @@
             <p style="color: rgba(255,255,255,0.4); font-size: 1.1rem;">Keine Serviceeinsätze gefunden.</p>
         </div>`;
                         list.innerHTML = emptyState;
-                        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: rgba(255,255,255,0.4);">Keine Serviceeinsätze gefunden.</td></tr>`;
+                        if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: rgba(255,255,255,0.4);">Keine Serviceeinsätze gefunden.</td></tr>`;
                         return;
                     }
 
@@ -5725,12 +5757,22 @@
                             const dateObj = new Date(e.date);
                             const dateStr = dateObj.toLocaleDateString('de-DE');
 
-                            const serviceCat = (window.categoryList || []).find(c => c.id === e.category_id);
-                            const catName = serviceCat ? serviceCat.name : 'Allgemein';
+                            // Multi-Category Logic
+                            let displayedCategories = [];
+                            if (e.category_ids && Array.isArray(e.category_ids) && e.category_ids.length > 0) {
+                                displayedCategories = e.category_ids.map(id => (window.categoryList || []).find(c => c.id === id)).filter(Boolean);
+                            } else if (e.category_id) {
+                                const cat = (window.categoryList || []).find(c => c.id === e.category_id);
+                                if (cat) displayedCategories = [cat];
+                            }
 
+                            if (displayedCategories.length === 0) {
+                                displayedCategories = [{ name: 'Allgemein', color: '#10b981', id: 0 }];
+                            }
+
+                            const mainCat = displayedCategories[0];
                             const fallbackPalette = ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#ef4444', '#06b6d4', '#84cc16'];
-                            const fallbackColor = fallbackPalette[(serviceCat ? serviceCat.id : 0) % fallbackPalette.length];
-                            const catColor = (serviceCat && serviceCat.color) ? serviceCat.color : fallbackColor;
+                            const primaryCatColor = mainCat.color || fallbackPalette[mainCat.id % fallbackPalette.length];
 
                             // Calculate Duration
                             let durationStr = '';
@@ -5750,19 +5792,35 @@
                                 }
                             }
 
-                            // Clean description logic
+                            // --- Order Number Extraction & Desc Clean Logic ---
                             let cleanDesc = e.description || '';
-                            const isAutoEntry = cleanDesc.startsWith('Automatischer Systemeintrag:');
-                            if (!isAutoEntry) {
-                                cleanDesc = cleanDesc.replace(/Zeitraum:.*?\n?/g, '').replace(/Auftragsnummer:.*?\n?/g, '').trim() || '—';
+                            const lowDesc = cleanDesc.toLowerCase();
+                            const isAutoEntry = lowDesc.includes('automatischer systemeintrag');
+
+                            // Get order number from fields or extract from auto-entry
+                            let displayOrderNum = e.auftragsnummer || e.workshop_order_number || '';
+                            if (!displayOrderNum) {
+                                // Extract after "Werkstattauftrag" optionally with colon/space
+                                const match = cleanDesc.match(/Werkstattauftrag[:\s]+([^\s\n]+)/i);
+                                if (match && match[1]) {
+                                    displayOrderNum = match[1].trim();
+                                }
                             }
 
-                            // Format Automatischer Systemeintrag
+                            const hasOrderTag = !!displayOrderNum && displayOrderNum !== '—';
+
                             if (isAutoEntry) {
-                                const parts = cleanDesc.split('\n');
-                                const titlePart = parts[0] || '';
-                                const numberPart = parts.slice(1).join('\n') || '';
-                                cleanDesc = `<span style="color: var(--color-primary-red, #ef4444); font-weight: 800;">${titlePart}</span>\n<span style="color: #ffffff; font-weight: 700;">${numberPart}</span>`;
+                                if (hasOrderTag) {
+                                    cleanDesc = ''; // Hide completely when tag is present
+                                } else {
+                                    // Format correctly if no tag - but user wants it gone
+                                    const parts = cleanDesc.split('\n');
+                                    const titlePart = parts[0] || '';
+                                    const numberPart = parts.slice(1).join('\n') || '';
+                                    cleanDesc = `<span style="color: var(--color-primary-red, #ef4444); font-weight: 800;">${titlePart}</span>\n<span style="color: #ffffff; font-weight: 700;">${numberPart}</span>`;
+                                }
+                            } else {
+                                cleanDesc = cleanDesc.replace(/Zeitraum:.*?\n?/gi, '').replace(/Auftragsnummer:.*?\n?/gi, '').replace(/Werkstattauftrag[:\s]+.*?\n?/gi, '').trim() || '';
                             }
 
                             // Separate Images and Documents
@@ -5783,11 +5841,18 @@
                             }
 
                             return `
-                                <div class="card" style="font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); border: 3px solid ${catColor}66; border-top: 7px solid ${catColor}; border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); position: relative; padding-top: 22px;">
+                                <div class="card" style="font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); border: 3px solid ${primaryCatColor}66; border-top: 7px solid ${primaryCatColor}; border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); position: relative; padding-top: 22px;">
 
-                                    <!-- Category Badge on Top-Left Border -->
-                                    <div style="position: absolute; top: -20px; left: 24px; height: 40px; padding: 0 16px; background: ${catColor}D9; color: #ffffff; border-radius: 20px; font-size: 0.85rem; font-weight: 800; box-shadow: 0 4px 14px ${catColor}80; border: 2px solid rgba(255, 255, 255, 0.4); backdrop-filter: blur(12px); z-index: 10; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                        ${catName}
+                                    <!-- Category Badges on Top-Right Border (Premium Button Style) -->
+                                    <div style="position: absolute; top: -26px; right: 24px; left: auto; display: flex; flex-direction: row-reverse; gap: 8px; z-index: 10;">
+                                        ${displayedCategories.map(cat => {
+                                const cColor = cat.color || fallbackPalette[cat.id % fallbackPalette.length];
+                                return `
+                                                <div style="height: 40px; padding: 0 18px; background: ${cColor}; color: #ffffff; border-radius: 20px; font-size: 0.9rem; font-weight: 700; box-shadow: 0 0 15px ${cColor}60; border: 2.5px solid color-mix(in srgb, ${cColor}, #ffffff 60%); backdrop-filter: blur(8px); letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; font-family: 'Inter', sans-serif;">
+                                                    ${cat.name}
+                                                </div>
+                                            `;
+                            }).join('')}
                                     </div>
 
                                     <!-- Full-Width Machine Image -->
@@ -5807,56 +5872,61 @@
 
                                     <div class="card-content" style="padding: 1.25rem; flex: 1; display: flex; flex-direction: column; gap: 0.75rem;">
                                         
-                                        <!-- Header: Date and Category Name -->
-                                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: -0.25rem; gap: 10px;">
-                                            <div style="display: flex; align-items: center; gap: 6px; color: rgba(255,255,255,0.4); font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">
-                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                                ${(e.datum_von && e.datum_bis && new Date(e.datum_von).toLocaleDateString('de-DE') !== new Date(e.datum_bis).toLocaleDateString('de-DE'))
+                                        <!-- Row 1: Centered Order Tag (Blau-Stil wie Abnahmeprotokoll, falls vorhanden) -->
+                                        ${hasOrderTag ? `
+                                        <div style="display: flex; justify-content: center; margin-bottom: 0.25rem; width: 100%;">
+                                            <div style="height: 32px; padding: 0 16px; background: rgba(59, 130, 246, 0.2); border: 1.5px solid rgba(147, 197, 253, 0.5); border-radius: 16px; color: #93c5fd; font-size: 0.85rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 4px; letter-spacing: 0.5px; backdrop-filter: blur(12px); text-transform: uppercase;">
+                                                Auftrag ${displayOrderNum}
+                                            </div>
+                                        </div>` : ''}
+
+                                        <!-- Row 2: Date (Left-aligned, smaller) -->
+                                        <div style="display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.7); font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px; text-align: left; width: 100%;">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.8;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                            ${(e.datum_von && e.datum_bis && new Date(e.datum_von).toLocaleDateString('de-DE') !== new Date(e.datum_bis).toLocaleDateString('de-DE'))
                                     ? new Date(e.datum_von).toLocaleDateString('de-DE') + ' - ' + new Date(e.datum_bis).toLocaleDateString('de-DE')
                                     : (e.datum_von ? new Date(e.datum_von).toLocaleDateString('de-DE') : dateStr)}${durationStr}
-                                            </div>
-                                            ${(e.auftragsnummer || e.workshop_order_number) ? `
-                                            <div style="padding: 2px 8px; background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 12px; color: #fcd34d; font-size: 0.75rem; font-weight: 800; display: flex; align-items: center; gap: 4px;">
-                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
-                                                ${e.auftragsnummer || e.workshop_order_number}
-                                            </div>` : ''}
                                         </div>
 
-                                        <!-- Main Title: Machine Name -->
-                                        <div style="min-width: 0;">
+                                        <!-- Row 3: Main Title: Machine Name + Serial + Year (Left-aligned) -->
+                                        <div style="min-width: 0; text-align: left; width: 100%;">
                                             <h2 style="margin: 0; font-size: 1.6rem; color: var(--color-primary-green); font-weight: 900; line-height: 1.2; font-family: 'Outfit', sans-serif;">
                                                 ${machine ? `${machine.manufacturer} ${machine.name}` : 'Unbekannte Maschine'}
+                                                <div style="font-size: 1.2rem; opacity: 0.8; margin-top: 2px;">
+                                                    ${machine && machine.serial ? `#${machine.serial}` : ''}
+                                                    ${machine && machine.year ? `(${machine.year})` : ''}
+                                                </div>
                                             </h2>
-                                            
-                                            <div style="font-size: 0.95rem; color: var(--color-primary-green); opacity: 0.8; font-weight: 700; margin-top: 4px;">
-                                                ${machine ? `#${machine.serial || '?'} (${machine.year || '?'})` : ''}
-                                            </div>
                                         </div>
 
-                                        <div style="margin-top: 4px;">
+                                        <!-- Row 4: Short Description (falls vorhanden) -->
+                                        ${cleanDesc ? `
+                                        <div style="margin-top: 4px; text-align: left; width: 100%;">
                                             <div style="font-size: 0.75rem; color: rgba(255,255,255,0.4); font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 0.5rem;">Kurzbeschreibung</div>
                                             <p style="margin: 0; font-size: 0.95rem; color: rgba(255,255,255,0.7); line-height: 1.6; font-weight: 500; white-space: pre-wrap;">${cleanDesc}</p>
-                                        </div>
+                                        </div>` : ''}
 
-                                        <!-- Separated Buttons -->
+                                        <!-- Separated Buttons (Icons Only) -->
                                         ${(images.length > 0 || docs.length > 0) ? `
-                                        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 8px; margin-top: 0.5rem;">
+                                        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 8px; margin-top: 0.5rem; text-align: left;">
                                             ${images.length > 0 ? `
                                             <div onclick="openPhotosLightbox(${JSON.stringify(images).replace(/"/g, '&quot;')}, 0)" title="Bilder ansehen"
-                                                 style="display: flex; align-items: center; gap: 7px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s; color: #10b981; font-size: 0.85rem; font-weight: 700;"
+                                                 style="display: flex; align-items: center; gap: 7px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); padding: 6px 12px; border-radius: 20px; cursor: pointer; transition: all 0.2s; color: #10b981; font-size: 0.85rem; font-weight: 700;"
                                                  onmouseover="this.style.background='rgba(16, 185, 129, 0.25)'; this.style.transform='translateY(-2px)'"
                                                  onmouseout="this.style.background='rgba(16, 185, 129, 0.15)'; this.style.transform='translateY(0)'">
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                                                Bilder (${images.length})
+                                                (${images.length})
                                             </div>` : ''}
                                             
                                             ${docs.length > 0 ? `
-                                            <div onclick="openDocumentsModal(${JSON.stringify(docs).replace(/"/g, '&quot;')})" title="Dokumente ansehen"
-                                                 style="display: flex; align-items: center; gap: 7px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); padding: 6px 14px; border-radius: 20px; cursor: pointer; transition: all 0.2s; color: #60a5fa; font-size: 0.85rem; font-weight: 700;"
+                                            <div onclick="window.openDocumentsModal(this)" 
+                                                 data-docs="${encodeURIComponent(JSON.stringify(docs))}" 
+                                                 title="Dokumente ansehen"
+                                                 style="display: flex; align-items: center; gap: 7px; background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); padding: 6px 12px; border-radius: 20px; cursor: pointer; transition: all 0.2s; color: #60a5fa; font-size: 0.85rem; font-weight: 700;"
                                                  onmouseover="this.style.background='rgba(59, 130, 246, 0.25)'; this.style.transform='translateY(-2px)'"
                                                  onmouseout="this.style.background='rgba(59, 130, 246, 0.15)'; this.style.transform='translateY(0)'">
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
-                                                Dokumente (${docs.length})
+                                                (${docs.length})
                                             </div>` : ''}
                                         </div>` : ''}
 
@@ -7094,47 +7164,73 @@
                     </div>
                     <h2 style="margin: 0; font-size: 1.4rem; color: white;">Dokumente</h2>
                 </div>
-                <button class="btn-close-modal" onclick="closeDocumentsModal()">&times;</button>
+                <button class="btn-close-modal" onclick="window.closeDocumentsModal()">&times;</button>
             </div>
             <div id="document-overview-list"
                 style="display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; padding-right: 5px;">
                 <!-- List of docs -->
             </div>
             <div style="margin-top: 2rem; display: flex; justify-content: flex-end;">
-                <button class="btn-secondary" onclick="closeDocumentsModal()">Schließen</button>
+                <button class="btn-secondary" onclick="window.closeDocumentsModal()">Schließen</button>
             </div>
         </div>
     </div>
 
     <script>
-        window.openDocumentsModal = function (docs) {
+        window.openDocumentsModal = function (el) {
             const modal = document.getElementById('document-overview-modal');
             const list = document.getElementById('document-overview-list');
-            if (!modal || !list) return;
+            if (!modal || !list || !el) return;
+
+            let docs = [];
+            const rawDocs = el.getAttribute('data-docs');
+            if (rawDocs) {
+                try {
+                    docs = JSON.parse(decodeURIComponent(rawDocs));
+                } catch (e) { console.error("Error parsing docs:", e); }
+            }
+
+            if (!docs || docs.length === 0) return;
 
             list.innerHTML = docs.map(doc => `
                 <div class="doc-item" 
-                     onclick="window.open('${doc.url}', '_blank')"
-                     style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; cursor: pointer; transition: all 0.2s;"
-                     onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(59,130,246,0.3)'; this.style.transform='translateX(5px)'"
-                     onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.borderColor='rgba(255,255,255,0.08)'; this.style.transform='translateX(0)'">
-                    <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: rgba(255,255,255,0.4);"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
-                        <span style="color: white; font-weight: 500; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${doc.name}</span>
+                     style="display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; transition: all 0.2s; gap: 12px;">
+                    <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: rgba(255,255,255,0.4); flex-shrink: 0;"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                        <span style="color: white; font-weight: 500; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${doc.name}">${doc.name}</span>
                     </div>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: #60a5fa; flex-shrink: 0;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+                        <button onclick="window.open('${doc.url}', '_blank')" 
+                                title="Dokument ansehen"
+                                style="width: 36px; height: 36px; border-radius: 10px; background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); color: #60a5fa; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;"
+                                onmouseover="this.style.background='rgba(59,130,246,0.25)'; this.style.transform='scale(1.1)'"
+                                onmouseout="this.style.background='rgba(59,130,246,0.15)'; this.style.transform='scale(1)'">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </button>
+                        <a href="${doc.url}" download="${doc.name}" 
+                           title="Dokument herunterladen"
+                           style="width: 36px; height: 36px; border-radius: 10px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #10b981; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; text-decoration: none;"
+                           onmouseover="this.style.background='rgba(16,185,129,0.25)'; this.style.transform='scale(1.1)'"
+                           onmouseout="this.style.background='rgba(16,185,129,0.15)'; this.style.transform='scale(1)'">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        </a>
+                    </div>
                 </div>
             `).join('');
 
-            modal.classList.remove('hidden');
             modal.style.display = 'flex';
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
         };
 
         window.closeDocumentsModal = function () {
             const modal = document.getElementById('document-overview-modal');
             if (modal) {
                 modal.classList.add('hidden');
-                setTimeout(() => modal.style.display = 'none', 300);
+                setTimeout(() => {
+                    modal.style.display = 'none';
+                    document.body.style.overflow = '';
+                }, 300);
             }
         };
     </script>
