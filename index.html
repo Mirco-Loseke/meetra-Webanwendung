@@ -2257,7 +2257,7 @@
                                     orderNum = startEntry.description && startEntry.description.includes('Auftrag: ') ? startEntry.description.split('Auftrag: ')[1] : '—';
                                 }
 
-                                let reportDescription = `Automatischer Systemeintrag: ${orderNum !== '—' ? orderNum : 'ohne Auftragsnummer'}`;
+                                let reportDescription = `Automatischer Systemeintrag:\nAuftragsnummer: ${orderNum !== '—' ? orderNum : 'ohne Auftragsnummer'}`;
 
                                 await supabaseClient.from('service_entries').insert([{
                                     machine_id: id,
@@ -5753,10 +5753,13 @@
 
                             // Clean description logic
                             let cleanDesc = e.description || '';
-                            cleanDesc = cleanDesc.replace(/Zeitraum:.*?\n?/g, '').replace(/Auftragsnummer:.*?\n?/g, '').trim() || '—';
+                            const isAutoEntry = cleanDesc.startsWith('Automatischer Systemeintrag:');
+                            if (!isAutoEntry) {
+                                cleanDesc = cleanDesc.replace(/Zeitraum:.*?\n?/g, '').replace(/Auftragsnummer:.*?\n?/g, '').trim() || '—';
+                            }
 
                             // Format Automatischer Systemeintrag
-                            if (cleanDesc.startsWith('Automatischer Systemeintrag:')) {
+                            if (isAutoEntry) {
                                 cleanDesc = `<span style="color: var(--color-primary-orange, #f59e0b); font-weight: 800;">${cleanDesc}</span>`;
                             }
 
