@@ -204,9 +204,10 @@
                         backdrop-filter: blur(12px);"
                  onmouseover="this.style.transform='scale(1.12)'"
                  onmouseout="this.style.transform='scale(1)'">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="${isInWorkshop ? '#fff' : 'rgba(255,255,255,0.7)'}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1-1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                <svg width="22" height="22" viewBox="-10 -10 120 120" fill="none" stroke="${isInWorkshop ? '#fff' : 'rgba(255,255,255,0.7)'}" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M43 8h14l3 11a31 31 0 0 1 9 4l10-5 10 10-5 10a31 31 0 0 1 4 9l11 3v14l-11 3a31 31 0 0 1-4 9l5 10-10 10-10-5a31 31 0 0 1-9 4l-3 11H43l-3-11a31 31 0 0 1-9-4l-10 5-10-10 5-10a31 31 0 0 1-4-9L1 57V43l11-3a31 31 0 0 1 4-9L11 21l10-10 10 5a31 31 0 0 1 9-4Z" />
+                    <circle cx="50" cy="50" r="22" />
+                    <path d="M38 34a12 12 0 0 1 12 12 12 12 0 0 1-2.5 7.5L60 66a3 3 0 0 1 0 4.2 3 3 0 0 1-4.2 0L43.5 57.5A12 12 0 0 1 38 58a12 12 0 0 1-12-12 12 12 0 0 1 6-10.4l5.5 5.5 3.4-3.4-5.5-5.5A12 12 0 0 1 38 34z" />
                 </svg>
             </div>
         `;
@@ -323,17 +324,17 @@
                     ` : ''}
                 </div>
 
-                <div class="card-actions" style="margin-top: auto; display: flex; align-items: center; gap: 10px; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.06); margin-left: -0.25rem; margin-right: -0.25rem;">
-                    <button class="btn-reports" style="flex: 1; min-height: 48px;" onclick="window.openServiceActionsModal(event, ${machine.id})">
-                        Berichte & Protokolle
+                <div class="card-actions" style="margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 16px; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.06); margin-left: -0.25rem; margin-right: -0.25rem;">
+                    <button class="btn-reports" onclick="window.openServiceActionsModal(event, ${machine.id})" title="Berichte & Protokolle">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                     </button>
                     
-                    <button class="btn-history" style="flex: 1; min-height: 48px;" onclick="event.stopPropagation(); window.openHistoryModal ? window.openHistoryModal(${machine.id}) : alert('Historie für ' + ${machine.id})">
-                        Historie
+                    <button class="btn-history" onclick="event.stopPropagation(); window.openHistoryModal ? window.openHistoryModal(${machine.id}) : alert('Historie für ' + ${machine.id})" title="Historie">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                     </button>
 
-                    <button class="btn-icon-soft btn-delete-card" onclick="event.stopPropagation(); deleteMachine(${machine.id})" title="Maschine löschen">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <button class="btn-delete-card" onclick="event.stopPropagation(); deleteMachine(${machine.id})" title="Maschine löschen">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M3 6h18"></path>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path>
                         </svg>
