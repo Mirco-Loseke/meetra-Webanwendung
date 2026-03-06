@@ -2247,7 +2247,6 @@
                                     .order('date', { ascending: false })
                                     .limit(1);
 
-                                let reportDescription = `Werkstattaufenthalt beendet am ${timeStr}.`;
                                 let dateFrom = null;
                                 let orderNum = '—';
 
@@ -2255,11 +2254,10 @@
                                     const startEntry = startEntries[0];
                                     const startDate = new Date(startEntry.date);
                                     dateFrom = startEntry.date;
-                                    const startDateStr = startDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
                                     orderNum = startEntry.description && startEntry.description.includes('Auftrag: ') ? startEntry.description.split('Auftrag: ')[1] : '—';
-
-                                    reportDescription = `Zeitraum: ${startDateStr} - ${now.toLocaleDateString('de-DE')}\nAuftragsnummer: ${orderNum}`;
                                 }
+
+                                let reportDescription = `Automatischer Systemeintrag: ${orderNum !== '—' ? orderNum : 'ohne Auftragsnummer'}`;
 
                                 await supabaseClient.from('service_entries').insert([{
                                     machine_id: id,
@@ -5756,6 +5754,11 @@
                             // Clean description logic
                             let cleanDesc = e.description || '';
                             cleanDesc = cleanDesc.replace(/Zeitraum:.*?\n?/g, '').replace(/Auftragsnummer:.*?\n?/g, '').trim() || '—';
+
+                            // Format Automatischer Systemeintrag
+                            if (cleanDesc.startsWith('Automatischer Systemeintrag:')) {
+                                cleanDesc = `<span style="color: var(--color-primary-orange, #f59e0b); font-weight: 800;">${cleanDesc}</span>`;
+                            }
 
                             // Separate Images and Documents
                             const images = [];
