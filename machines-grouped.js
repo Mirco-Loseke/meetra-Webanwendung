@@ -248,7 +248,7 @@
         const workshopCat = (window.categoryList || []).find(c => c.id === 16);
         const workshopColor = workshopCat ? workshopCat.color : '#f59e0b';
         const orderNumberTag = (isInWorkshop && machine.workshop_order_number) ? `
-            <div style="position: absolute; top: -20px; left: 10px; height: 40px; padding: 0 16px; background: ${workshopColor}e6; color: #ffffff; border-radius: 20px; font-size: 0.85rem; font-weight: 800; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4); border: 2px solid rgba(255, 220, 100, 0.6); backdrop-filter: blur(12px); z-index: 10; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <div style="position: absolute; top: -20px; left: 24px; height: 40px; padding: 0 16px; background: ${workshopColor}e6; color: #ffffff; border-radius: 20px; font-size: 0.85rem; font-weight: 800; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4); border: 2px solid rgba(255, 220, 100, 0.6); backdrop-filter: blur(12px); z-index: 10; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 8px;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
                 ${machine.workshop_order_number}
             </div>
