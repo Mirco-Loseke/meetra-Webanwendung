@@ -5737,21 +5737,19 @@
 
                             // Calculate Duration
                             let durationStr = '';
-                            if (e.datum_von && e.datum_bis) {
+                            if (e.datum_von) {
                                 const d1 = new Date(e.datum_von);
-                                const d2 = new Date(e.datum_bis);
+                                const d2 = e.datum_bis ? new Date(e.datum_bis) : new Date(e.datum_von);
                                 d1.setHours(0, 0, 0, 0);
                                 d2.setHours(0, 0, 0, 0);
                                 const diffDays = Math.round(Math.abs(d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
 
-                                if (diffDays > 1) {
-                                    if (diffDays >= 30) {
-                                        const months = Math.floor(diffDays / 30);
-                                        const remainingDays = diffDays % 30;
-                                        durationStr = ` (${months}. Monat${remainingDays > 0 ? ` ${remainingDays}. Tage` : ''})`;
-                                    } else {
-                                        durationStr = ` (${diffDays}. Tage)`;
-                                    }
+                                if (diffDays >= 30) {
+                                    const months = Math.floor(diffDays / 30);
+                                    const remainingDays = diffDays % 30;
+                                    durationStr = ` (${months}. Monat${remainingDays > 0 ? ` ${remainingDays}. Tage` : ''})`;
+                                } else {
+                                    durationStr = diffDays === 1 ? ` (1. Tag)` : ` (${diffDays}. Tage)`;
                                 }
                             }
 
@@ -5779,9 +5777,8 @@
                             return `
                                 <div class="card" style="font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); border: 3px solid ${catColor}66; border-top: 7px solid ${catColor}; border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); position: relative; padding-top: 22px;">
 
-                                    <!-- Category Badge on Top-Right Border -->
-                                    <div style="position: absolute; top: -20px; right: 24px; height: 40px; padding: 0 16px; background: rgba(30, 35, 50, 0.85); color: #ffffff; border-radius: 20px; font-size: 0.85rem; font-weight: 800; box-shadow: 0 4px 14px rgba(0,0,0,0.5); border: 2px solid ${catColor}; backdrop-filter: blur(12px); z-index: 10; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                                        <span style="width: 8px; height: 8px; border-radius: 50%; background: ${catColor}; box-shadow: 0 0 8px ${catColor}; flex-shrink: 0;"></span>
+                                    <!-- Category Badge on Top-Left Border -->
+                                    <div style="position: absolute; top: -20px; left: 24px; height: 40px; padding: 0 16px; background: ${catColor}D9; color: #ffffff; border-radius: 20px; font-size: 0.85rem; font-weight: 800; box-shadow: 0 4px 14px ${catColor}80; border: 2px solid rgba(255, 255, 255, 0.4); backdrop-filter: blur(12px); z-index: 10; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 8px;">
                                         ${catName}
                                     </div>
 
@@ -5823,7 +5820,7 @@
                                                 ${machine ? `${machine.manufacturer} ${machine.name}` : 'Unbekannte Maschine'}
                                             </h2>
                                             
-                                            <div style="font-size: 0.95rem; color: rgba(255,255,255,0.4); font-weight: 700; margin-top: 4px;">
+                                            <div style="font-size: 0.95rem; color: var(--color-primary-green); opacity: 0.8; font-weight: 700; margin-top: 4px;">
                                                 ${machine ? `#${machine.serial || '?'} (${machine.year || '?'})` : ''}
                                             </div>
                                         </div>
