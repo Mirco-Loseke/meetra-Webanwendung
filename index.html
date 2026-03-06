@@ -5735,6 +5735,30 @@
                             const fallbackColor = fallbackPalette[(serviceCat ? serviceCat.id : 0) % fallbackPalette.length];
                             const catColor = (serviceCat && serviceCat.color) ? serviceCat.color : fallbackColor;
 
+                            // Calculate Duration
+                            let durationStr = '';
+                            if (e.datum_von && e.datum_bis) {
+                                const d1 = new Date(e.datum_von);
+                                const d2 = new Date(e.datum_bis);
+                                d1.setHours(0, 0, 0, 0);
+                                d2.setHours(0, 0, 0, 0);
+                                const diffDays = Math.round(Math.abs(d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+
+                                if (diffDays > 1) {
+                                    if (diffDays >= 30) {
+                                        const months = Math.floor(diffDays / 30);
+                                        const remainingDays = diffDays % 30;
+                                        durationStr = ` (${months}. Monat${remainingDays > 0 ? ` ${remainingDays}. Tage` : ''})`;
+                                    } else {
+                                        durationStr = ` (${diffDays}. Tage)`;
+                                    }
+                                }
+                            }
+
+                            // Clean description logic
+                            let cleanDesc = e.description || '';
+                            cleanDesc = cleanDesc.replace(/Zeitraum:.*?\n?/g, '').replace(/Auftragsnummer:.*?\n?/g, '').trim() || '—';
+
                             // Separate Images and Documents
                             const images = [];
                             const docs = [];
@@ -5784,7 +5808,7 @@
                                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                                                 ${(e.datum_von && e.datum_bis && new Date(e.datum_von).toLocaleDateString('de-DE') !== new Date(e.datum_bis).toLocaleDateString('de-DE'))
                                     ? new Date(e.datum_von).toLocaleDateString('de-DE') + ' - ' + new Date(e.datum_bis).toLocaleDateString('de-DE')
-                                    : (e.datum_von ? new Date(e.datum_von).toLocaleDateString('de-DE') : dateStr)}
+                                    : (e.datum_von ? new Date(e.datum_von).toLocaleDateString('de-DE') : dateStr)}${durationStr}
                                             </div>
                                             ${(e.auftragsnummer || e.workshop_order_number) ? `
                                             <div style="padding: 2px 8px; background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 12px; color: #fcd34d; font-size: 0.75rem; font-weight: 800; display: flex; align-items: center; gap: 4px;">
@@ -5795,7 +5819,7 @@
 
                                         <!-- Main Title: Machine Name -->
                                         <div style="min-width: 0;">
-                                            <h2 style="margin: 0; font-size: 1.6rem; color: #fff; font-weight: 900; line-height: 1.2; font-family: 'Outfit', sans-serif;">
+                                            <h2 style="margin: 0; font-size: 1.6rem; color: var(--color-primary-green); font-weight: 900; line-height: 1.2; font-family: 'Outfit', sans-serif;">
                                                 ${machine ? `${machine.manufacturer} ${machine.name}` : 'Unbekannte Maschine'}
                                             </h2>
                                             
@@ -5806,7 +5830,7 @@
 
                                         <div style="margin-top: 4px;">
                                             <div style="font-size: 0.75rem; color: rgba(255,255,255,0.4); font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 0.5rem;">Kurzbeschreibung</div>
-                                            <p style="margin: 0; font-size: 0.95rem; color: rgba(255,255,255,0.7); line-height: 1.6; font-weight: 500;">${e.description || '—'}</p>
+                                            <p style="margin: 0; font-size: 0.95rem; color: rgba(255,255,255,0.7); line-height: 1.6; font-weight: 500; white-space: pre-wrap;">${cleanDesc}</p>
                                         </div>
 
                                         <!-- Separated Buttons -->
