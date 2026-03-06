@@ -7286,6 +7286,14 @@
                     </h3>
 
                     <div class="form-group" style="margin-bottom: 1.5rem;">
+                        <label style="color: rgba(255,255,255,0.7); font-weight: 600; font-size: 0.9rem;">Titel
+                            (Pflichtfeld)</label>
+                        <input type="text" id="workshop-new-photo-title" class="glass-input"
+                            placeholder="z.B. Schadensaufnahme Front, Motorraum..."
+                            oninput="window.renderWorkshopPhotoPreview()" style="margin-bottom: 1rem;">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 1.5rem;">
                         <div class="file-drop-zone" id="workshop-photo-dropzone"
                             style="background: rgba(0,0,0,0.2) !important; border-color: rgba(139, 92, 246, 0.3) !important;"
                             onclick="document.getElementById('workshop-new-photo-input').click()">
@@ -7354,6 +7362,7 @@
             window.workshopPhotosToUpload = [];
 
             // UI Reset
+            document.getElementById('workshop-new-photo-title').value = '';
             document.getElementById('workshop-new-photo-note').value = '';
             document.getElementById('workshop-new-photo-preview').innerHTML = '';
             document.getElementById('btn-save-workshop-photo').disabled = true;
@@ -7504,8 +7513,12 @@
             const container = document.getElementById('workshop-new-photo-preview');
             const submitBtn = document.getElementById('btn-save-workshop-photo');
 
-            if (window.workshopPhotosToUpload.length === 0) {
-                container.innerHTML = '';
+            const titleInput = document.getElementById('workshop-new-photo-title');
+            const hasPhotos = window.workshopPhotosToUpload.length > 0;
+            const hasTitle = titleInput && titleInput.value.trim().length > 0;
+
+            if (!hasPhotos || !hasTitle) {
+                container.innerHTML = hasPhotos ? container.innerHTML : ''; // Keep existing preview if just Title is missing
                 submitBtn.disabled = true;
                 return;
             }
@@ -7531,7 +7544,13 @@
 
             const submitBtn = document.getElementById('btn-save-workshop-photo');
             const machineId = window.currentWorkshopPhotoMachineId;
-            const noteText = document.getElementById('workshop-new-photo-note').value;
+            const titleText = document.getElementById('workshop-new-photo-title').value.trim();
+            const noteText = document.getElementById('workshop-new-photo-note').value.trim();
+
+            if (!titleText) {
+                alert("Bitte geben Sie einen Titel ein.");
+                return;
+            }
 
             // Set loading state
             const originalBtnHtml = submitBtn.innerHTML;
@@ -7569,7 +7588,7 @@
                     .insert([{
                         machine_id: machineId,
                         type: 'photo',
-                        title: 'Werkstatt Foto',
+                        title: titleText,
                         content: noteText,
                         files: uploadedUrls,
                         created_by: window.activeUser?.id || null
