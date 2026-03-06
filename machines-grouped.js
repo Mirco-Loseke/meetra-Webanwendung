@@ -191,7 +191,7 @@
         const isInWorkshop = machine.is_in_workshop === true;
         const workshopIcon = `
             <div class="workshop-toggle ${isInWorkshop ? 'active' : ''}" 
-                 onclick="event.stopPropagation(); window.toggleWorkshopStatus('${machine.id}', ${isInWorkshop})"
+                 onclick="event.stopPropagation(); window.toggleWorkshopStatus(${machine.id}, ${isInWorkshop})"
                  title="${isInWorkshop ? 'Aus Werkstatt entfernen' : 'In Werkstatt verschieben'}"
                  style="position: absolute; top: -20px; right: 10px;
                         width: 40px; height: 40px; border-radius: 50%;
@@ -257,7 +257,7 @@
         // Workshop Photo Icon
         const photoIcon = isInWorkshop ? `
             <div class="workshop-photo-btn"
-                 onclick="event.stopPropagation(); window.openWorkshopPhotoModal('${machine.id}')"
+                 onclick="event.stopPropagation(); window.openWorkshopPhotoModal(${machine.id})"
                  title="Werkstatt-Fotos verwalten"
                  style="position: absolute; top: -20px; right: 58px;
                         width: 40px; height: 40px; border-radius: 50%;
