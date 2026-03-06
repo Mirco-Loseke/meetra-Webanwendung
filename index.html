@@ -643,7 +643,7 @@
                                     </div>
                                 </div>
 
-                                <button id="add-service-entry-btn" class="btn-add-bg"
+                                <button id="add-service-entry-btn" class="btn-glass-add"
                                     onclick="openServiceberichtModal()">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
@@ -5759,7 +5759,10 @@
 
                             // Format Automatischer Systemeintrag
                             if (isAutoEntry) {
-                                cleanDesc = `<span style="color: var(--color-primary-red, #ef4444); font-weight: 800;">${cleanDesc}</span>`;
+                                const parts = cleanDesc.split('\n');
+                                const titlePart = parts[0] || '';
+                                const numberPart = parts.slice(1).join('\n') || '';
+                                cleanDesc = `<span style="color: var(--color-primary-red, #ef4444); font-weight: 800;">${titlePart}</span>\n<span style="color: #ffffff; font-weight: 700;">${numberPart}</span>`;
                             }
 
                             // Separate Images and Documents
