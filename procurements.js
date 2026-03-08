@@ -307,9 +307,12 @@ window.openProcurementModal = async function (id = null) {
             document.getElementById('proc-description').value = proc.description || '';
             document.getElementById('proc-category').value = proc.category;
             document.getElementById('proc-quantity').value = proc.quantity;
-            document.getElementById('proc-priority').value = proc.priority;
-            document.getElementById('proc-delivery-date').value = proc.delivery_date || '';
-            document.getElementById('proc-link').value = proc.product_link || '';
+            const prioEl = document.getElementById('proc-priority');
+            if (prioEl) prioEl.value = proc.priority;
+            const dateEl = document.getElementById('proc-delivery-date');
+            if (dateEl) dateEl.value = proc.delivery_date || '';
+            const linkEl = document.getElementById('proc-link');
+            if (linkEl) linkEl.value = proc.product_link || '';
             document.getElementById('proc-location').value = proc.location_ref || '';
 
             // Load existing files
