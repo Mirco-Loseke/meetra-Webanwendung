@@ -274,22 +274,17 @@ window.openProcurementModal = async function (id = null) {
     const modal = document.getElementById('procurement-modal');
     if (!modal) return;
 
-    // Populate Machine Dropdown if window.machineList exists
-    const machineListDropdown = document.getElementById('proc-machine-list');
-    if (machineListDropdown && window.machineList) {
-        let html = '<li data-value="">Ohne Zuordnung</li>';
-        window.machineList.forEach(m => {
-            let displayText = `${m.manufacturer || ''} ${m.name || ''}`.trim();
-            if (m.serial) displayText += ` #${m.serial}`;
-            if (m.year) displayText += ` (${m.year})`;
-            html += `<li data-value="${m.id}">${displayText}</li>`;
-        });
-        machineListDropdown.innerHTML = html;
-    }
+    // Populate Machine Dropdown is no longer needed (now searchable)
+    // window.machineList is used at search-time
 
     // Reset form
     document.getElementById('procurement-form').reset();
     document.getElementById('procurement-id').value = '';
+
+    // Reset machine search input
+    const procMachSearch = document.getElementById('proc-machine-search');
+    if (procMachSearch) { procMachSearch.value = ''; procMachSearch.style.color = ''; }
+    document.getElementById('proc-location').value = '';
 
     // Reset Image Uploads
     procurementFiles = [];
@@ -336,23 +331,19 @@ window.openProcurementModal = async function (id = null) {
                 document.getElementById('proc-status').value = proc.status;
             }
 
-            // Handle location label restoration
-            const locLabel = document.getElementById('proc-machine-label');
-            if (proc.location_ref && locLabel && window.machineList) {
+            // Populate machine search input for edit mode
+            if (proc.location_ref && window.machineList) {
                 const selectedMachine = window.machineList.find(m => String(m.id) === String(proc.location_ref));
                 if (selectedMachine) {
-                    let displayText = `${selectedMachine.manufacturer || ''} ${selectedMachine.name || ''}`.trim();
-                    if (selectedMachine.serial) displayText += ` #${selectedMachine.serial}`;
-                    if (selectedMachine.year) displayText += ` (${selectedMachine.year})`;
-                    locLabel.textContent = displayText;
-                    locLabel.style.opacity = '1';
-                } else {
-                    locLabel.textContent = proc.location_ref;
-                    locLabel.style.opacity = '1';
+                    const label = [
+                        selectedMachine.manufacturer || '',
+                        selectedMachine.name || '',
+                        selectedMachine.serial ? `#${selectedMachine.serial}` : '',
+                        selectedMachine.year ? `(${selectedMachine.year})` : ''
+                    ].filter(Boolean).join(' ');
+                    const srch = document.getElementById('proc-machine-search');
+                    if (srch) { srch.value = label; srch.style.color = 'var(--color-primary-green)'; }
                 }
-            } else if (locLabel) {
-                locLabel.textContent = 'Ohne Zuordnung';
-                locLabel.style.opacity = '0.6';
             }
         }
     } else {
@@ -610,25 +601,106 @@ window.selectProcurementPriority = function (event) {
     document.getElementById('proc-priority-label').style.color = '#fff';
 }
 
-window.selectProcurementMachine = function (event) {
-    const li = event.target.closest('li');
-    if (!li) return;
-
-    const value = li.dataset.value;
-    const text = li.textContent;
-
-    document.getElementById('proc-location').value = value;
-    const label = document.getElementById('proc-machine-label');
-    label.textContent = text;
-
-    if (value) {
-        label.style.opacity = '1';
-        label.style.color = '#fff';
-    } else {
-        label.style.opacity = '0.6';
-        label.style.color = 'inherit';
+// --- Searchable Machine Dropdown for Procurement Modal ---
+function buildProcMachineDropdown(machines) {
+    let dropdown = document.getElementById('proc-machine-dropdown-portal');
+    if (!dropdown) {
+        dropdown = document.createElement('div');
+        dropdown.id = 'proc-machine-dropdown-portal';
+        dropdown.style.cssText = [
+            'position: fixed',
+            'z-index: 999999',
+            'background: rgba(15,23,42,0.98)',
+            'border: 1px solid rgba(255,255,255,0.15)',
+            'border-radius: 12px',
+            'max-height: 260px',
+            'overflow-y: auto',
+            'box-shadow: 0 16px 48px rgba(0,0,0,0.7)',
+            'display: none'
+        ].join(';');
+        document.body.appendChild(dropdown);
     }
+
+    const searchInput = document.getElementById('proc-machine-search');
+    if (searchInput) {
+        const rect = searchInput.getBoundingClientRect();
+        dropdown.style.top = (rect.bottom + 4) + 'px';
+        dropdown.style.left = rect.left + 'px';
+        dropdown.style.width = rect.width + 'px';
+    }
+
+    dropdown.innerHTML = '';
+
+    const noneItem = document.createElement('div');
+    noneItem.textContent = 'Keine Maschine';
+    noneItem.style.cssText = 'padding: 10px 14px; cursor: pointer; color: rgba(255,255,255,0.6); font-size: 0.9rem;';
+    noneItem.onmousedown = (e) => { e.preventDefault(); selectProcMachine('', ''); };
+    noneItem.onmouseover = () => { noneItem.style.background = 'rgba(255,255,255,0.08)'; };
+    noneItem.onmouseout = () => { noneItem.style.background = ''; };
+    dropdown.appendChild(noneItem);
+
+    machines.forEach(m => {
+        const label = [
+            m.manufacturer || '',
+            m.name || '',
+            m.serial ? `#${m.serial}` : '',
+            m.year ? `(${m.year})` : ''
+        ].filter(Boolean).join(' ');
+
+        const item = document.createElement('div');
+        item.style.cssText = 'padding: 10px 14px; cursor: pointer; font-size: 0.9rem; border-top: 1px solid rgba(255,255,255,0.05);';
+        item.innerHTML = `<span style="color: var(--color-primary-green); font-weight: 600;">${label}</span>`;
+        item.onmousedown = (e) => { e.preventDefault(); selectProcMachine(m.id, label); };
+        item.onmouseover = () => { item.style.background = 'rgba(255,255,255,0.06)'; };
+        item.onmouseout = () => { item.style.background = ''; };
+        dropdown.appendChild(item);
+    });
+
+    dropdown.style.display = 'block';
 }
+
+window.showProcMachineDropdown = function () {
+    buildProcMachineDropdown(window.machineList || []);
+};
+
+window.filterProcMachineDropdown = function (query) {
+    const machines = window.machineList || [];
+    const tokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+    const filtered = machines.filter(m => {
+        const searchable = [
+            m.manufacturer || '',
+            m.name || '',
+            m.serial || '',
+            m.year ? String(m.year) : ''
+        ].join(' ').toLowerCase();
+        return tokens.length === 0 || tokens.every(t => searchable.includes(t));
+    });
+    buildProcMachineDropdown(filtered);
+    if (filtered.length === 1) {
+        document.getElementById('proc-location').value = filtered[0].id;
+    } else {
+        document.getElementById('proc-location').value = '';
+    }
+};
+
+window.selectProcMachine = function (id, label) {
+    document.getElementById('proc-location').value = id;
+    const searchInput = document.getElementById('proc-machine-search');
+    if (searchInput) {
+        searchInput.value = label;
+        searchInput.style.color = id ? 'var(--color-primary-green)' : '';
+    }
+    const dropdown = document.getElementById('proc-machine-dropdown-portal');
+    if (dropdown) dropdown.style.display = 'none';
+};
+
+// Close proc dropdown when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('#proc-machine-search') && !e.target.closest('#proc-machine-dropdown-portal')) {
+        const d = document.getElementById('proc-machine-dropdown-portal');
+        if (d) d.style.display = 'none';
+    }
+});
 
 // --- Procurement Image Upload Logic ---
 window.selectProcurementStatus = function (event) {

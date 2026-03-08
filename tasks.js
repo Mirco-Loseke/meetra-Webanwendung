@@ -451,15 +451,7 @@
             window.openTaskModal(task.id);
         };
 
-        div.onmouseenter = () => {
-            const actions = div.querySelector('.task-card-actions');
-            if (actions) actions.style.opacity = '1';
-        };
-
-        div.onmouseleave = () => {
-            const actions = div.querySelector('.task-card-actions');
-            if (actions) actions.style.opacity = '0.2';
-        };
+        // Buttons are always fully visible - no opacity fade needed
 
         div.addEventListener('dragstart', (e) => {
             e.dataTransfer.setData('text/plain', task.id);
