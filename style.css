@@ -3567,6 +3567,10 @@ tr.status-open td {
     /* Brighter Light Red */
 }
 
+.task-card.status-open {
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
 .task-card.status-open,
 tr.status-open td:first-child {
     border-left: 5px solid #ef4444;
@@ -3579,6 +3583,10 @@ tr.status-in_progress td {
     /* Brighter Light Orange */
 }
 
+.task-card.status-in_progress {
+    border-color: rgba(245, 158, 11, 0.4);
+}
+
 .task-card.status-in_progress,
 tr.status-in_progress td:first-child {
     border-left: 5px solid #f59e0b;
@@ -3589,6 +3597,10 @@ tr.status-in_progress td:first-child {
 tr.status-completed td {
     background: rgba(16, 185, 129, 0.20);
     /* Brighter Light Green */
+}
+
+.task-card.status-completed {
+    border-color: rgba(16, 185, 129, 0.4);
 }
 
 .task-card.status-completed,
