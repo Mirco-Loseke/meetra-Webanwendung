@@ -6685,7 +6685,7 @@
         <!-- Task Details/Edit Modal -->
         <div id="task-modal" class="modal-backdrop hidden">
             <div class="modal-content glass-card"
-                style="max-width: 900px; position: relative; background: rgba(255,255,255,0.08); backdrop-filter: blur(32px); border: 1px solid rgba(255,255,255,0.14);">
+                style="max-width: 900px; position: relative; background: rgba(10,15,30,0.97); backdrop-filter: blur(40px); border: 1px solid rgba(255,255,255,0.1);">
                 <div class="modal-header" style="padding-right: 60px; margin-bottom: 1.5rem;">
                     <h2 id="task-modal-title">Aufgabe bearbeiten</h2>
                 </div>
@@ -6761,10 +6761,23 @@
                 </div>
                 <div class="modal-actions"
                     style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 12px;">
-                    <button class="btn-secondary" onclick="closeTaskModal()"
-                        style="min-width: 130px; padding: 12px 20px; border-radius: 12px;">Abbrechen</button>
-                    <button class="btn-primary" onclick="saveTask()"
-                        style="min-width: 160px; padding: 12px 20px; border-radius: 12px;">Änderungen speichern</button>
+                    <button class="btn-modal-base btn-modal-cancel" onclick="closeTaskModal()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                        Abbrechen
+                    </button>
+                    <button class="btn-modal-base btn-modal-save" onclick="saveTask()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                        Speichern
+                    </button>
                 </div>
             </div>
         </div>

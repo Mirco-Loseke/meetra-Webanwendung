@@ -899,9 +899,6 @@
             const item = document.createElement('div');
             item.style.cssText = 'padding: 10px 14px; cursor: pointer; font-size: 0.9rem; border-top: 1px solid rgba(255,255,255,0.05);';
             item.innerHTML = `<span style="color: var(--color-primary-green); font-weight: 600;">${label}</span>`;
-            if (m.serial) {
-                item.innerHTML += `<br><span style="font-size:0.8rem; opacity:0.5;">Seriennr.: ${m.serial}</span>`;
-            }
             item.onmousedown = (e) => { e.preventDefault(); selectMachine(m.id, label); };
             item.onmouseover = () => { item.style.background = 'rgba(255,255,255,0.06)'; };
             item.onmouseout = () => { item.style.background = ''; };
