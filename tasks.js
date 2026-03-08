@@ -1033,7 +1033,7 @@
     }
 
     function renderAvatars(assignedTo) {
-        if (!assignedTo || assignedTo.length === 0) return '<span class="avatar-placeholder">?</span>';
+        if (!assignedTo || assignedTo.length === 0) return '<span style="color: rgba(255,255,255,0.4); font-size: 0.85rem;">Nicht zugeordnet</span>';
 
         return assignedTo.map(uid => {
             const user = window.userList?.find(u => u.id === uid);
