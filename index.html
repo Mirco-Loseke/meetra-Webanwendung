@@ -6705,12 +6705,20 @@
                             <input type="text" id="task-title" class="glass-input" placeholder="Titel der Aufgabe">
                         </div>
                         <!-- Row 1 Right: Maschine -->
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label>Maschine</label>
-                            <select id="task-machine" class="glass-input">
-                                <option value="">Keine Maschine</option>
-                                <!-- Dynamically populated -->
-                            </select>
+                        <div class="form-group" style="margin-bottom: 0; position: relative;">
+                            <label style="color: var(--color-primary-green);">Maschine</label>
+                            <!-- Hidden ID field that saveTask reads -->
+                            <input type="hidden" id="task-machine">
+                            <!-- Visible search/filter input -->
+                            <input type="text" id="task-machine-search" class="glass-input"
+                                placeholder="Suche nach Name, Seriennr., Typ..." autocomplete="off"
+                                oninput="filterMachineDropdown(this.value)" onfocus="showMachineDropdown()"
+                                style="color: var(--color-primary-green);">
+                            <div id="task-machine-dropdown" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:200;
+                                        background: rgba(15,23,42,0.98); border:1px solid rgba(255,255,255,0.12);
+                                        border-radius:12px; max-height:220px; overflow-y:auto; margin-top:4px;
+                                        box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
+                            </div>
                         </div>
                         <!-- Row 2 Left: Beschreibung -->
                         <div class="form-group" style="margin-bottom: 0;">

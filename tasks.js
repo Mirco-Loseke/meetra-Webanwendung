@@ -705,7 +705,16 @@
     function fillModal(task) {
         document.getElementById('task-title').value = task.title || '';
         document.getElementById('task-description').value = task.description || '';
+        // Sync searchable machine field
         document.getElementById('task-machine').value = task.machine_id || '';
+        const machineSearch = document.getElementById('task-machine-search');
+        if (machineSearch) {
+            if (task.machines) {
+                machineSearch.value = getMachineLabel(task.machines);
+            } else {
+                machineSearch.value = '';
+            }
+        }
 
         renderSubtasks(task.subtasks || []);
         renderAssignedUsers(task.assigned_to || []);
@@ -715,6 +724,10 @@
         document.getElementById('task-title').value = '';
         document.getElementById('task-description').value = '';
         document.getElementById('task-machine').value = '';
+        const machineSearch = document.getElementById('task-machine-search');
+        if (machineSearch) machineSearch.value = '';
+        const machineDropdown = document.getElementById('task-machine-dropdown');
+        if (machineDropdown) machineDropdown.style.display = 'none';
         document.getElementById('subtask-list').innerHTML = '';
         window.tempAssigned = [];
         window.tempSubtasks = [];
@@ -821,16 +834,95 @@
         subtasks.forEach(st => {
             const div = document.createElement('div');
             div.className = 'subtask-item';
+            const isCompleted = st.status === 'completed';
             div.innerHTML = `
-                <input type="checkbox" ${st.status === 'completed' ? 'checked' : ''} onchange="toggleSubtask('${st.id}', this.checked)">
-                <span class="${st.status === 'completed' ? 'done' : ''}">${st.title}</span>
+                <div onclick="toggleSubtask('${st.id}', ${!isCompleted})" 
+                     style="min-width: 22px; height: 22px; border-radius: 50%; border: 2px solid ${isCompleted ? 'var(--color-primary-green)' : 'rgba(255,255,255,0.3)'}; background: ${isCompleted ? 'var(--color-primary-green)' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s; flex-shrink: 0;">
+                    ${isCompleted ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+                </div>
+                <span class="${isCompleted ? 'done' : ''}" style="flex: 1;">${st.title}</span>
                 <button class="delete-st" onclick="deleteSubtask('${st.id}')">&times;</button>
             `;
             container.appendChild(div);
         });
     }
 
+    // ==========================================
+    // MACHINE SEARCH DROPDOWN
+    // ==========================================
+    function getMachineListForSearch() {
+        return window.machineList || [];
+    }
+
+    function buildMachineDropdown(machines) {
+        const dropdown = document.getElementById('task-machine-dropdown');
+        if (!dropdown) return;
+        dropdown.innerHTML = '';
+
+        // "Keine Maschine" option
+        const noneItem = document.createElement('div');
+        noneItem.textContent = 'Keine Maschine';
+        noneItem.style.cssText = 'padding: 10px 14px; cursor: pointer; color: rgba(255,255,255,0.6); font-size: 0.9rem;';
+        noneItem.onmousedown = (e) => { e.preventDefault(); selectMachine('', 'Keine Maschine'); };
+        noneItem.onmouseover = () => { noneItem.style.background = 'rgba(255,255,255,0.08)'; };
+        noneItem.onmouseout = () => { noneItem.style.background = ''; };
+        dropdown.appendChild(noneItem);
+
+        machines.forEach(m => {
+            const label = getMachineLabel(m);
+            const item = document.createElement('div');
+            item.style.cssText = 'padding: 10px 14px; cursor: pointer; font-size: 0.9rem; border-top: 1px solid rgba(255,255,255,0.05);';
+            item.innerHTML = `<span style="color: var(--color-primary-green); font-weight: 600;">${label}</span>`;
+            if (m.serial) {
+                item.innerHTML += `<br><span style="font-size:0.8rem; opacity:0.5;">Seriennr.: ${m.serial}</span>`;
+            }
+            item.onmousedown = (e) => { e.preventDefault(); selectMachine(m.id, label); };
+            item.onmouseover = () => { item.style.background = 'rgba(255,255,255,0.06)'; };
+            item.onmouseout = () => { item.style.background = ''; };
+            dropdown.appendChild(item);
+        });
+
+        dropdown.style.display = machines.length > 0 || true ? 'block' : 'none';
+    }
+
+    window.showMachineDropdown = function () {
+        const machines = getMachineListForSearch();
+        buildMachineDropdown(machines);
+    };
+
+    window.filterMachineDropdown = function (query) {
+        const machines = getMachineListForSearch();
+        const q = query.toLowerCase();
+        const filtered = machines.filter(m => {
+            const label = getMachineLabel(m).toLowerCase();
+            return label.includes(q) ||
+                (m.serial && m.serial.toLowerCase().includes(q)) ||
+                (m.name && m.name.toLowerCase().includes(q)) ||
+                (m.manufacturer && m.manufacturer.toLowerCase().includes(q));
+        });
+        buildMachineDropdown(filtered);
+
+        // If exactly one match, auto-select it
+        if (filtered.length === 1) {
+            document.getElementById('task-machine').value = filtered[0].id;
+        } else {
+            document.getElementById('task-machine').value = '';
+        }
+    };
+
+    window.selectMachine = function (id, label) {
+        document.getElementById('task-machine').value = id;
+        const searchInput = document.getElementById('task-machine-search');
+        if (searchInput) {
+            searchInput.value = label !== 'Keine Maschine' ? label : '';
+            searchInput.style.color = id ? 'var(--color-primary-green)' : '';
+        }
+        const dropdown = document.getElementById('task-machine-dropdown');
+        if (dropdown) dropdown.style.display = 'none';
+    };
+
     window.toggleSubtask = async function (id, isChecked) {
+
         const status = isChecked ? 'completed' : 'open';
 
         if (id.startsWith('temp-')) {
