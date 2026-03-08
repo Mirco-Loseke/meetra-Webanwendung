@@ -80,15 +80,15 @@ function renderProcurements(procurements) {
         tr.onclick = () => showStatusUpdateMenu(proc.id, tr);
 
         tr.innerHTML = `
-            <td>
+            <td style="width: 110px;">
                 <span class="status-pill" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 5px 12px; border-radius: 10px; font-size: 0.85rem; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
                     <span style="width: 10px; height: 10px; border-radius: 50%; background: ${status.iconColor}; box-shadow: 0 0 8px ${status.iconColor}88;"></span>
                     ${status.label}
                 </span>
             </td>
-            <td>${getCategoryBadge(proc.category)}</td>
-            <td>
-                <div style="font-size: 0.95rem; font-weight: 500; color: rgba(255,255,255,0.8);">
+            <td style="width: 130px;">${getCategoryBadge(proc.category)}</td>
+            <td style="max-width: 180px;">
+                <div style="font-size: 0.95rem; font-weight: 600; color: var(--color-primary-green);">
                     ${(() => {
                 if (!proc.location_ref || !window.machineList) return '-';
                 const machine = window.machineList.find(m => String(m.id) === String(proc.location_ref));
@@ -106,10 +106,10 @@ function renderProcurements(procurements) {
             })()}
                 </div>
             </td>
-            <td>
+            <td style="max-width: 200px;">
                 <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <span style="font-weight: 600; font-size: 1.05rem;">${proc.title}</span>
-                    <span style="font-size: 0.85rem; color: rgba(255,255,255,0.5);">${proc.description || ''}</span>
+                    <span style="font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${proc.title}</span>
+                    <span style="font-size: 0.82rem; color: rgba(255,255,255,0.5);">${proc.description ? proc.description.substring(0, 50) + (proc.description.length > 50 ? '...' : '') : ''}</span>
                 </div>
             </td>
             <td>
@@ -120,14 +120,18 @@ function renderProcurements(procurements) {
                     <span>${creatorName}</span>
                 </div>
             </td>
-            <td style="color: rgba(255,255,255,0.6);">${new Date(proc.created_at).toLocaleDateString('de-DE')}</td>
-            <td>
-                <div class="procurement-actions">
-                    <button class="btn-icon-soft edit" onclick="event.stopPropagation(); openProcurementModal('${proc.id}')" title="Bearbeiten">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            <td style="width: 80px; color: rgba(255,255,255,0.6); font-size: 0.88rem;">${new Date(proc.created_at).toLocaleDateString('de-DE')}</td>
+            <td style="width: 90px;">
+                <div class="task-card-actions" style="display: flex; gap: 6px; align-items: center;">
+                    <button onclick="event.stopPropagation(); openProcurementModal('${proc.id}')" title="Bearbeiten"
+                        style="width:32px; height:32px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
+                        onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                     </button>
-                    <button class="btn-icon-soft delete" onclick="event.stopPropagation(); deleteProcurement('${proc.id}')" title="Löschen">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                    <button onclick="event.stopPropagation(); deleteProcurement('${proc.id}')" title="Löschen"
+                        style="width:32px; height:32px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
+                        onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     </button>
                 </div>
             </td>
