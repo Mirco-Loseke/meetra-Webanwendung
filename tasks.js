@@ -263,7 +263,7 @@
                 <td style="font-weight: 600; display:flex; align-items:flex-start; gap:8px;">
                     <div style="padding-top: 2px;">
                         <div class="task-quick-complete ${task.status === 'completed' ? 'completed' : ''}" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="${task.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                         </div>
                     </div>
                     <div style="display:flex; flex-direction:column; gap:4px;">
@@ -337,7 +337,7 @@
                         <td style="font-weight: 600; display:flex; align-items:flex-start; gap:8px;">
                             <div style="padding-top: 2px;">
                                 <div class="task-quick-complete completed" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="Wieder öffnen">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                 </div>
                             </div>
                             <div style="display:flex; flex-direction:column; gap:4px;">
@@ -403,7 +403,7 @@
             <div class="task-card-header">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <div class="task-quick-complete ${task.status === 'completed' ? 'completed' : ''}" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="${task.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     </div>
                     ${task.machines ? `<span class="project-tag" style="color: var(--color-primary-green); font-size: 0.95rem; font-weight: 600; opacity: 1;">${getMachineLabel(task.machines)}</span>` : ''}
                 </div>

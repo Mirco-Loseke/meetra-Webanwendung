@@ -3622,7 +3622,6 @@ tr.status-completed td:first-child {
 .task-card.completed-task .task-card-title,
 .task-card.completed-task .task-card-desc,
 tr.completed-task td {
-    text-decoration: line-through;
     color: rgba(255, 255, 255, 0.5);
 }
 
@@ -4937,8 +4936,8 @@ tr.completed-task td {
 
 /* Quick-Complete Checkbox */
 .task-quick-complete {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     border: 2px solid rgba(255, 255, 255, 0.3);
     display: flex;
