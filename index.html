@@ -6801,13 +6801,31 @@
                     <form id="procurement-form" onsubmit="event.preventDefault(); saveProcurement();">
                         <input type="hidden" id="procurement-id">
 
-                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
-                            <div class="form-group">
+                        <!-- 2-column grid: Titel | Maschine -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 16px;">
+                            <div class="form-group" style="margin-bottom: 0;">
                                 <label>Titel / Bezeichnung</label>
                                 <input type="text" id="proc-title" class="glass-input" required
                                     placeholder="Was wird benötigt?">
                             </div>
-                            <div class="form-group">
+                            <div class="form-group" style="position: relative; margin-bottom: 0;">
+                                <label style="color: var(--color-primary-green);">Maschine (Optional)</label>
+                                <input type="hidden" id="proc-location" value="">
+                                <input type="text" id="proc-machine-search" class="glass-input"
+                                    placeholder="Suche nach Name, Seriennr., Typ..." autocomplete="off"
+                                    oninput="filterProcMachineDropdown(this.value)" onfocus="showProcMachineDropdown()"
+                                    style="color: var(--color-primary-green);">
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Artikelbeschreibung | Kategorie -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 16px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Artikelbeschreibung</label>
+                                <textarea id="proc-description" class="glass-input" rows="3"
+                                    placeholder="Detaillierte Beschreibung, Maße, Typ..."></textarea>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
                                 <label>Kategorie</label>
                                 <div class="custom-filter-dropdown" id="proc-category-dropdown" style="width: 100%;">
                                     <span class="filter-label" id="proc-category-label">🔧 Maschinenersatzteil</span>
@@ -6830,18 +6848,36 @@
                             </div>
                         </div>
 
-                        <div class="form-group">
-                            <label>Artikelbeschreibung</label>
-                            <textarea id="proc-description" class="glass-input" rows="3"
-                                placeholder="Detaillierte Beschreibung, Maße, Typ..."></textarea>
-                        </div>
-
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
-                            <div class="form-group">
+                        <!-- Row 3: Menge | Status -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 16px;">
+                            <div class="form-group" style="margin-bottom: 0;">
                                 <label>Menge</label>
                                 <input type="number" id="proc-quantity" class="glass-input" value="1" min="1" required>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Status</label>
+                                <div class="custom-filter-dropdown" id="proc-status-dropdown" style="width: 100%;">
+                                    <span class="filter-label" id="proc-status-label">🔴 Neu</span>
+                                    <input type="hidden" id="proc-status" value="new">
+                                    <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                    <div class="custom-filter-menu">
+                                        <ul class="dropdown-options" onclick="selectProcurementStatus(event)">
+                                            <li data-value="new">🔴 Neu</li>
+                                            <li data-value="ordered">🟠 Bestellt</li>
+                                            <li data-value="received">🟢 Erhalten</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Secondary fields: Priorität | Lieferdatum -->
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 16px;">
+                            <div class="form-group" style="margin-bottom: 0;">
                                 <label>Priorität</label>
                                 <div class="custom-filter-dropdown" id="proc-priority-dropdown" style="width: 100%;">
                                     <span class="filter-label" id="proc-priority-label">Normal</span>
@@ -6860,42 +6896,34 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group" style="margin-bottom: 0;">
                                 <label>Lieferdatum (Opt.)</label>
                                 <input type="date" id="proc-delivery-date" class="glass-input">
                             </div>
                         </div>
 
+                        <!-- Link -->
                         <div class="form-group">
                             <label>Link zum Produkt (Optional)</label>
                             <input type="url" id="proc-link" class="glass-input" placeholder="https://...">
                         </div>
 
-                        <div class="form-group" style="position: relative;">
-                            <label style="color: var(--color-primary-green);">Verbundene Maschine (Optional)</label>
-                            <input type="hidden" id="proc-location" value="">
-                            <input type="text" id="proc-machine-search" class="glass-input"
-                                placeholder="Suche nach Name, Seriennr., Typ..." autocomplete="off"
-                                oninput="filterProcMachineDropdown(this.value)" onfocus="showProcMachineDropdown()"
-                                style="color: var(--color-primary-green);">
-                        </div>
-
+                        <!-- Images -->
                         <div class="form-group">
                             <label>Bilder (z.B. defektes Teil, Typschild)</label>
                             <div id="proc-image-slot" class="machine-modal-image-slot"
                                 onclick="document.getElementById('proc-image-upload').click()"
-                                style="margin-bottom: 1rem; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.2); height: 120px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease;">
+                                style="margin-bottom: 1rem; border-radius: 12px; border: 2px dashed rgba(255,255,255,0.2); height: 100px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease;">
                                 <div class="placeholder-content-inner"
                                     style="display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none;">
-                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
                                         style="opacity: 0.5;">
                                         <path
                                             d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" />
                                         <circle cx="12" cy="13" r="3" />
                                     </svg>
-                                    <span class="placeholder-text"
-                                        style="font-size: 0.9rem; color: rgba(255,255,255,0.5); font-weight: 500;">Bilder
+                                    <span style="font-size: 0.85rem; color: rgba(255,255,255,0.5);">Bilder
                                         hinzufügen</span>
                                 </div>
                             </div>
@@ -6904,33 +6932,31 @@
                             <div id="proc-file-previews" class="file-preview-grid"></div>
                         </div>
 
-                        <!-- Status field -->
-                        <div class="form-group">
-                            <label>Status</label>
-                            <div class="custom-filter-dropdown" id="proc-status-dropdown" style="width: 100%;">
-                                <span class="filter-label" id="proc-status-label">Neu</span>
-                                <input type="hidden" id="proc-status" value="new">
-                                <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                                    stroke-linejoin="round">
-                                    <polyline points="6 9 12 15 18 9"></polyline>
-                                </svg>
-                                <div class="custom-filter-menu">
-                                    <ul class="dropdown-options" onclick="selectProcurementStatus(event)">
-                                        <li data-value="new">🔴 Neu</li>
-                                        <li data-value="ordered">🟠 Bestellt</li>
-                                        <li data-value="received">🟢 Erhalten</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-
                     </form>
                 </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-secondary" onclick="closeProcurementModal()">Abbrechen</button>
-                    <button type="button" class="btn-primary" onclick="saveProcurement()">Bestellung speichern</button>
+                <div class="modal-actions"
+                    style="display: flex; justify-content: flex-end; gap: 12px; padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.07);">
+                    <button type="button" class="btn-modal-base btn-modal-cancel" onclick="closeProcurementModal()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                        Abbrechen
+                    </button>
+                    <button type="button" class="btn-modal-base btn-modal-save" onclick="saveProcurement()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                        Speichern
+                    </button>
                 </div>
+
+
+
             </div>
         </div>
 
