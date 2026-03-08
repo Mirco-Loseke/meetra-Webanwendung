@@ -34,29 +34,126 @@ function renderTemplateList() {
         return;
     }
 
-    protocolTemplates.forEach(template => {
-        const card = document.createElement('div');
-        card.className = 'settings-card';
-        card.style.cursor = 'pointer';
-        card.onclick = () => openTemplateEditor(template.id);
+    const groups = {};
+    const others = [];
 
-        card.innerHTML = `
-            <div class="settings-icon-container" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.25rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid rgba(59, 130, 246, 0.1);">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14 2 14 8 20 8"></polyline>
-                </svg>
-            </div>
-            <div class="settings-content">
-                <h3 style="margin: 0; font-size: 1.15rem; color: #fff; font-family: 'Outfit', sans-serif;">${template.name}</h3>
-                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 0.75rem;">
-                    <span style="font-size: 0.75rem; padding: 2px 8px; background: rgba(255,255,255,0.05); border-radius: 4px; color: rgba(255,255,255,0.5); font-family: 'Inter', sans-serif;">
-                        ${Array.isArray(template.structure) ? template.structure.length : 0} GRUPPEN
-                    </span>
+    protocolTemplates.forEach(template => {
+        const nameMatch = template.name.match(/^(Abnahmeprotokoll|Eingangsprotokoll)\s+(.+)$/i);
+        if (nameMatch) {
+            const type = nameMatch[1];
+            const category = nameMatch[2];
+
+            if (!groups[category]) {
+                groups[category] = { categoryName: category };
+            }
+            if (type.toLowerCase() === 'eingangsprotokoll') {
+                groups[category].eingang = template;
+            } else if (type.toLowerCase() === 'abnahmeprotokoll') {
+                groups[category].abnahme = template;
+            } else {
+                others.push(template);
+            }
+        } else {
+            others.push(template);
+        }
+    });
+
+    const createCardHtml = (template, isGrouped, typeLabel) => {
+        if (!template) {
+            return `
+                <div class="settings-card" style="opacity: 0.3; cursor: default; border-style: dashed; display: flex; align-items: center; justify-content: center; height: 100%;">
+                    <span style="color: rgba(255,255,255,0.5); font-family: 'Outfit', sans-serif;">Kein ${typeLabel} vorhanden</span>
                 </div>
+            `;
+        }
+
+        const nameMatch = template.name.match(/^(Abnahmeprotokoll|Eingangsprotokoll)\s+(.+)$/i);
+        let cardContent = '';
+
+        if (nameMatch) {
+            const isEingang = nameMatch[1].toLowerCase() === 'eingangsprotokoll';
+            const iconColor = isEingang ? '#3b82f6' : '#f59e0b'; // Blue for Eingang, Amber for Abnahme
+            const iconBg = isEingang ? 'rgba(59, 130, 246, 0.1)' : 'rgba(245, 158, 11, 0.1)';
+
+            cardContent = `
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 1.25rem;">
+                    <div class="settings-icon-container" style="background: ${iconBg}; color: ${iconColor}; width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid ${iconBg}; flex-shrink: 0;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                    </div>
+                    <h2 style="margin: 0; font-size: 1.3rem; color: ${iconColor}; font-weight: 500; font-family: 'Outfit', sans-serif; word-break: break-word;">
+                        ${nameMatch[1]}
+                    </h2>
+                </div>
+                <div class="settings-content">
+                    <h3 style="margin: 0; font-size: 1.6rem; color: var(--color-primary-green); font-family: 'Outfit', sans-serif; line-height: 1.25; word-break: break-word;">
+                        ${nameMatch[2]}
+                    </h3>
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 0.75rem;">
+                        <span style="font-size: 0.75rem; padding: 2px 8px; background: rgba(255,255,255,0.05); border-radius: 4px; color: rgba(255,255,255,0.5); font-family: 'Inter', sans-serif;">
+                            ${Array.isArray(template.structure) ? template.structure.length : 0} GRUPPEN
+                        </span>
+                    </div>
+                </div>
+            `;
+        } else {
+            cardContent = `
+                <div class="settings-icon-container" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.25rem; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); border: 2px solid rgba(59, 130, 246, 0.1);">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                </div>
+                <div class="settings-content">
+                    <h3 style="margin: 0; font-size: 1.15rem; color: #fff; font-family: 'Outfit', sans-serif; word-break: break-word;">${template.name}</h3>
+                    <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 0.75rem;">
+                        <span style="font-size: 0.75rem; padding: 2px 8px; background: rgba(255,255,255,0.05); border-radius: 4px; color: rgba(255,255,255,0.5); font-family: 'Inter', sans-serif;">
+                            ${Array.isArray(template.structure) ? template.structure.length : 0} GRUPPEN
+                        </span>
+                    </div>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="settings-card template-card" style="cursor: pointer; height: 100%;" onclick="openTemplateEditor('${template.id}')">
+                ${cardContent}
             </div>
         `;
-        listContainer.appendChild(card);
+    };
+
+    const sortedCategories = Object.values(groups).sort((a, b) => a.categoryName.localeCompare(b.categoryName));
+
+    sortedCategories.forEach(group => {
+        const row = document.createElement('div');
+        row.style.gridColumn = '1 / -1';
+        row.style.display = 'grid';
+        row.style.gridTemplateColumns = 'repeat(auto-fit, minmax(300px, 1fr))';
+        row.style.gap = '1.5rem';
+        row.style.marginBottom = '1.5rem';
+
+        row.innerHTML = `
+            ${createCardHtml(group.eingang, true, 'Eingangsprotokoll')}
+            ${createCardHtml(group.abnahme, true, 'Abnahmeprotokoll')}
+        `;
+        listContainer.appendChild(row);
+    });
+
+    others.forEach(template => {
+        const wrapper = document.createElement('div');
+        wrapper.style.gridColumn = '1 / -1';
+        wrapper.style.display = 'grid';
+        wrapper.style.gridTemplateColumns = 'repeat(auto-fit, minmax(300px, 1fr))';
+        wrapper.style.gap = '1.5rem';
+        wrapper.style.marginBottom = '1.5rem';
+
+        wrapper.innerHTML = `
+            ${createCardHtml(template, false, '')}
+            <div></div> <!-- placeholder if space is needed -->
+        `;
+        listContainer.appendChild(wrapper);
     });
 }
 

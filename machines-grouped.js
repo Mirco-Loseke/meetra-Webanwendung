@@ -165,9 +165,9 @@
         const glassBg = 'background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);';
 
         if (catColor) {
-            card.style.cssText = `font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; ${glassBg} border: 3px solid ${catColor}66; border-top: 7px solid ${catColor}; border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative; padding-top: 22px;`;
+            card.style.cssText = `font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; ${glassBg} border: 3px solid ${catColor}66; border-top: 7px solid ${catColor}; border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative; padding-top: 35px;`;
         } else {
-            card.style.cssText = `font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; ${glassBg} border: 3px solid rgba(255,255,255,0.3); border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative; padding-top: 22px;`;
+            card.style.cssText = `font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; ${glassBg} border: 3px solid rgba(255,255,255,0.3); border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative; padding-top: 35px;`;
         }
 
         card.onclick = () => window.openEditStammdaten(machine.id);
@@ -285,21 +285,19 @@
                 ${imageHtml}
             </div>
             <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 0;"></div>
-            <div class="card-content" style="padding: 1.25rem; flex: 1; display: flex; flex-direction: column;">
+            <div class="card-content" style="padding: 1.25rem 1.25rem 2px 1.25rem; flex: 1; display: flex; flex-direction: column;">
                 <div style="margin-bottom: 1.5rem;">
                     <div style="flex: 1; overflow: hidden;">
-                        <h2 class="card-title" style="margin: 0; font-size: 1.75rem; color: #fff; font-weight: 800; line-height: 1.3; font-family: 'Inter', sans-serif;">
-                            ${[
-                machine.manufacturer,
-                machine.name,
-                machine.serial ? `#${machine.serial}` : null,
-                machine.year ? `(${machine.year})` : null
-            ].filter(Boolean).join(' ')}
+                        <h2 class="card-title" style="margin: 0; font-size: clamp(0.95rem, 3.2vw, 1.75rem); color: var(--color-primary-green); font-weight: 900; line-height: 1.2; font-family: 'Outfit', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            ${machine.manufacturer} ${machine.name}
                         </h2>
+                        <div style="font-size: clamp(0.9rem, 3vw, 1.25rem); color: var(--color-primary-green); opacity: 0.8; font-weight: 700; text-transform: uppercase; margin-top: 4px;">
+                            ${machine.serial ? `#${machine.serial}` : ''} ${machine.year ? `(${machine.year})` : ''}
+                        </div>
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem; background: rgba(0,0,0,0.15); padding: 18px 1.25rem; border-radius: 14px; border: 1px solid rgba(255,255,255,0.06); margin-left: -1.25rem; margin-right: -1.25rem; position: relative;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 0.6rem; background: rgba(0,0,0,0.15); padding: 18px 1.25rem; border-radius: 14px; border: 1px solid rgba(255,255,255,0.06); margin-left: -1.25rem; margin-right: -1.25rem; position: relative;">
                     <div style="border-right: 1px solid rgba(255,255,255,0.05); padding-right: 12px; display: flex; flex-direction: column; align-items: center; text-align: center;">
                         <div style="font-size: 0.85rem; color: rgba(255,255,255,0.4); margin-bottom: 5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; width: 100%;">Letzte Wartung</div>
                         <div style="font-size: 1.05rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 700; width: 100%;">
@@ -324,7 +322,7 @@
                     ` : ''}
                 </div>
 
-                <div class="card-actions" style="margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.06); margin-left: -0.25rem; margin-right: -0.25rem;">
+                <div class="card-actions" style="margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); margin-left: -0.25rem; margin-right: -0.25rem;">
                     <button class="btn-reports" onclick="window.openServiceActionsModal(event, ${machine.id})" title="Berichte & Protokolle">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                         Protokolle

@@ -42,13 +42,13 @@
                         color: #fff;
                         width: 44px;
                         height: 44px;
-                        border-radius: 50%;
+                        border-radius: 12px;
                         cursor: pointer;
                         display: flex;
                         align-items: center;
                         justify-content: center;
                         transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-                    " onmouseover="this.style.transform='rotate(90deg) scale(1.1)'; this.style.background='rgba(255, 100, 100, 0.1)';" onmouseout="this.style.transform='rotate(0deg) scale(1)'; this.style.background='rgba(255, 255, 255, 0.05)';">
+                    " onmouseover="this.style.transform='rotate(90deg) scale(1.1)'; this.style.background='rgba(255, 100, 100, 0.1)'; this.style.borderColor='rgba(255, 100, 100, 0.3)';" onmouseout="this.style.transform='rotate(0deg) scale(1)'; this.style.background='rgba(255, 255, 255, 0.05)'; this.style.borderColor='var(--glass-border)';">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <line x1="18" y1="6" x2="6" y2="18"></line>
                             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -72,7 +72,7 @@
                     <div style="margin-bottom: 2.5rem;">
                         <span class="protocol-section-title">Maschine</span>
                         <div style="position: relative;">
-                            <input type="text" id="protocol-machine-title" readonly class="glass-form-input" style="opacity: 0.7; font-weight: 600; padding-right: 80px;">
+                            <input type="text" id="protocol-machine-title" readonly class="glass-form-input" style="opacity: 0.9; font-weight: 700; padding-right: 80px; color: #10b981 !important; border-color: rgba(16, 185, 129, 0.4) !important; background: rgba(16, 185, 129, 0.05) !important;">
                             <div style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 0.75rem; font-weight: 800; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 4px 8px; border-radius: 6px; pointer-events: none; border: 1px solid rgba(16, 185, 129, 0.2); text-transform: uppercase;">Fixiert</div>
                         </div>
                     </div>
@@ -143,10 +143,22 @@
                 </div>
 
                 <div class="protocol-modal-actions">
-                    <button onclick="window.closeProtocolModal()" class="btn-secondary" style="flex: 1; border-radius: 16px; min-height: 54px; font-weight: 700;">Abbrechen</button>
-                    <button onclick="window.saveProtocol()" class="btn-primary" style="flex: 1; border-radius: 16px; min-height: 54px; font-weight: 700;">Speichern</button>
-                    <button onclick="window.completeProtocol()" id="complete-protocol-btn" class="btn-primary" style="flex: 1.5; background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.3); color: #10b981; border-radius: 16px; min-height: 54px; font-weight: 800;">Abschließen</button>
-                    <button onclick="window.generateProtocolPDF()" id="generate-pdf-btn" style="display: none; flex: 1.5; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; border-radius: 16px; min-height: 54px; font-weight: 800; cursor: pointer; font-family: 'Inter', sans-serif;">PDF erstellen</button>
+                    <button onclick="window.closeProtocolModal()" class="btn-modal-base btn-modal-cancel">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        Abbrechen
+                    </button>
+                    <button onclick="window.saveProtocol()" class="btn-modal-base btn-modal-save">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                        Speichern
+                    </button>
+                    <button onclick="window.completeProtocol()" id="complete-protocol-btn" class="btn-modal-base btn-modal-complete">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        Abschließen
+                    </button>
+                    <button onclick="window.generateProtocolPDF()" id="generate-pdf-btn" class="btn-modal-base btn-modal-pdf" style="display: none;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                        PDF erstellen
+                    </button>
                 </div>
             </div>
         `;
@@ -268,7 +280,7 @@
 
         // Show/hide PDF button
         if (currentProtocol.status === 'completed') {
-            document.getElementById('generate-pdf-btn').style.display = 'block';
+            document.getElementById('generate-pdf-btn').style.display = 'flex';
             document.getElementById('complete-protocol-btn').style.display = 'none';
         }
 
@@ -888,7 +900,7 @@
 
         // Update UI
         updateStatusBadge();
-        document.getElementById('generate-pdf-btn').style.display = 'block';
+        document.getElementById('generate-pdf-btn').style.display = 'flex';
         document.getElementById('complete-protocol-btn').style.display = 'none';
         renderEditHistory();
     };
@@ -1149,10 +1161,15 @@
 
             doc.setFontSize(14);
             doc.setFont(undefined, 'bold');
-            doc.setTextColor(15, 23, 42);
-            doc.text(`Maschine: ${machineTitle}`, 20, 46);
+            doc.setTextColor(15, 23, 42); // Dokument-Schwarz/Blau
+            doc.text(`Maschine: `, 20, 46);
+
+            const prefixWidth = doc.getTextWidth(`Maschine: `);
+            doc.setTextColor(34, 197, 94); // Primär-Grün
+            doc.text(`${machineTitle}`, 20 + prefixWidth, 46);
 
             doc.setFont(undefined, 'normal');
+            doc.setTextColor(15, 23, 42); // Reset auf dunkles Blau/Grau
             doc.text(`Status: ${currentProtocol.status === 'completed' ? 'Abgeschlossen' : 'Entwurf'}`, 20, 54);
 
             let startY = 64;
@@ -1460,14 +1477,16 @@
             // Render Board (like machine cards)
             boardContainer.innerHTML = protocols.map(p => {
                 const isAcceptance = p.type === 'acceptance';
-                const dateHeader = isAcceptance ? 'Abnahmedatum' : 'Eingangsdatum';
-                const protocolDate = new Date(p.created_at).toLocaleDateString('de-DE');
+                const createdDate = new Date(p.created_at).toLocaleDateString('de-DE');
+                const lastChangeDate = new Date(p.completed_at || p.updated_at || p.created_at).toLocaleDateString('de-DE');
+                const dateLabel = p.status === 'completed' ? 'Abgeschlossen am' : 'Zuletzt geändert';
+
                 const badgeText = p.status === 'completed' ? 'Abgeschlossen' : 'Entwurf';
                 const badgeColor = p.status === 'completed' ? '#10b981' : '#f59e0b';
                 const typeLabel = isAcceptance ? 'Abnahmeprotokoll' : 'Eingangsprotokoll';
 
                 return `
-                    <div class="card" onclick="${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')" style="font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); border: 3px solid ${badgeColor}66; border-top: 7px solid ${badgeColor}; border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative; padding-top: 22px;">
+                    <div class="card" onclick="${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')" style="font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); border: 3px solid ${badgeColor}66; border-top: 7px solid ${badgeColor}; border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative; padding-top: 35px;">
                         
                         <!-- Premium Badge Top Right -->
                         <div style="position: absolute; top: -20px; right: 24px; left: auto; height: 40px; padding: 0 16px; background: ${badgeColor}D9; color: #ffffff; border-radius: 20px; font-size: 0.85rem; font-weight: 800; box-shadow: 0 4px 14px ${badgeColor}80; border: 2px solid rgba(255, 255, 255, 0.4); backdrop-filter: blur(12px); z-index: 10; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 8px;">
@@ -1488,7 +1507,7 @@
                         
                         <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 0;"></div>
                         
-                        <div class="card-content" style="padding: 1.25rem; flex: 1; display: flex; flex-direction: column; gap: 0.75rem;">
+                        <div class="card-content" style="padding: 1.25rem 1.25rem 2px 1.25rem; flex: 1; display: flex; flex-direction: column; gap: 0.75rem;">
                             <!-- First Row: Centered Tag -->
                             <div style="display: flex; justify-content: center; margin-bottom: 0.25rem;">
                                 <div style="padding: 4px 12px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); border-radius: 12px; color: #93c5fd; font-size: 0.8rem; font-weight: 800; display: flex; align-items: center; gap: 4px; text-transform: uppercase;">
@@ -1496,15 +1515,21 @@
                                 </div>
                             </div>
                             
-                            <!-- Second Row: Date (Left, Larger) -->
-                            <div style="display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.6); font-size: 0.95rem; font-weight: 800; letter-spacing: 0.5px; margin-bottom: -0.25rem; margin-top: 0.25rem;">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.8;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                ${protocolDate}
+                            <!-- Second Row: Dates -->
+                            <div style="display: flex; flex-direction: column; gap: 4px; color: rgba(255,255,255,0.6); font-size: 0.85rem; font-weight: 700; letter-spacing: 0.3px; margin-bottom: 0.25rem;">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="opacity: 0.7;">Erstellt am:</span>
+                                    <span style="color: #ffffff;">${createdDate}</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="opacity: 0.7;">${dateLabel}:</span>
+                                    <span style="color: #ffffff;">${lastChangeDate}</span>
+                                </div>
                             </div>
-
+                            
                             <!-- Third Row: Main Title -->
                             <div style="min-width: 0;">
-                                <h2 style="margin: 0; font-size: 1.6rem; color: var(--color-primary-green); font-weight: 900; line-height: 1.2; font-family: 'Outfit', sans-serif;">
+                                <h2 style="margin: 0; font-size: clamp(0.95rem, 3.2vw, 1.6rem); color: var(--color-primary-green); font-weight: 900; line-height: 1.2; font-family: 'Outfit', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                     ${p.title}
                                 </h2>
                             </div>
