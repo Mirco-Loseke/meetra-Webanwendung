@@ -6689,53 +6689,57 @@
                 <div style="position: absolute; top: 20px; right: 20px; cursor: pointer; font-size: 24px; line-height: 1;"
                     onclick="closeTaskModal()">&times;</div>
                 <div class="modal-body">
-                    <div style="display: flex; flex-direction: column; gap: 20px;">
-                        <div class="form-group">
+                    <!-- Main 2-column grid -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px;">
+                        <!-- Row 1 Left: Titel -->
+                        <div class="form-group" style="margin-bottom: 0;">
                             <label>Titel</label>
                             <input type="text" id="task-title" class="glass-input" placeholder="Titel der Aufgabe">
                         </div>
-                        <div class="form-group">
+                        <!-- Row 1 Right: Maschine -->
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Maschine</label>
+                            <select id="task-machine" class="glass-input">
+                                <option value="">Keine Maschine</option>
+                                <!-- Dynamically populated -->
+                            </select>
+                        </div>
+                        <!-- Row 2 Left: Beschreibung -->
+                        <div class="form-group" style="margin-bottom: 0;">
                             <label>Beschreibung</label>
-                            <textarea id="task-description" class="glass-input" rows="4"
+                            <textarea id="task-description" class="glass-input" rows="5"
                                 placeholder="Details zur Aufgabe..."></textarea>
                         </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                            <div class="form-group">
-                                <label>Maschine</label>
-                                <select id="task-machine" class="glass-input">
-                                    <option value="">Keine Maschine</option>
-                                    <!-- Dynamically populated -->
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Zuständig</label>
-                                <div class="custom-filter-dropdown" id="task-user-select-trigger" style="width: 100%;">
-                                    <span class="filter-label" id="task-assigned-users-label">Niemand zugewiesen</span>
-                                    <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                                        stroke-linejoin="round">
-                                        <polyline points="6 9 12 15 18 9"></polyline>
-                                    </svg>
-                                    <div class="custom-filter-menu" id="task-user-select-menu"
-                                        style="width: 100%; max-height: 250px; overflow-y: auto;">
-                                        <ul id="task-user-options">
-                                            <!-- Dynamically populated with checkboxes -->
-                                        </ul>
-                                    </div>
+                        <!-- Row 2 Right: Zuständig -->
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Zuständig</label>
+                            <div class="custom-filter-dropdown" id="task-user-select-trigger" style="width: 100%;">
+                                <span class="filter-label" id="task-assigned-users-label">Niemand zugewiesen</span>
+                                <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                                <div class="custom-filter-menu" id="task-user-select-menu"
+                                    style="width: 100%; max-height: 250px; overflow-y: auto;">
+                                    <ul id="task-user-options">
+                                        <!-- Dynamically populated with checkboxes -->
+                                    </ul>
                                 </div>
                             </div>
                         </div>
-                        <div class="subtasks-section">
-                            <h3 class="section-title">Unteraufgaben</h3>
-                            <div id="subtask-list" class="subtask-list">
-                                <!-- Dynamically populated -->
-                            </div>
-                            <div style="display: flex; gap: 10px; margin-top: 10px;">
-                                <input type="text" id="new-subtask-input" class="glass-input"
-                                    placeholder="Neue Unteraufgabe hinzufügen..."
-                                    onkeypress="if(event.key === 'Enter') addSubtask()">
-                                <button class="btn-secondary compact" onclick="addSubtask()">Hinzufügen</button>
-                            </div>
+                    </div>
+                    <!-- Full-width Unteraufgaben row -->
+                    <div class="subtasks-section" style="margin-top: 20px;">
+                        <h3 class="section-title">Unteraufgaben</h3>
+                        <div id="subtask-list" class="subtask-list">
+                            <!-- Dynamically populated -->
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <input type="text" id="new-subtask-input" class="glass-input"
+                                placeholder="Neue Unteraufgabe hinzufügen..."
+                                onkeypress="if(event.key === 'Enter') addSubtask()">
+                            <button class="btn-secondary compact" onclick="addSubtask()">Hinzufügen</button>
                         </div>
                     </div>
                 </div>
