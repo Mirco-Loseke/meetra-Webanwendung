@@ -77,10 +77,10 @@ function renderProcurements(procurements) {
         tr.className = status.class;
         if (proc.status === 'received') tr.classList.add('completed-task');
         tr.style.cursor = 'pointer';
-        tr.onclick = () => showStatusUpdateMenu(proc.id, tr);
+        tr.onclick = () => openProcurementModal(proc.id);
 
         tr.innerHTML = `
-            <td>
+            <td onclick="event.stopPropagation(); showStatusUpdateMenu('${proc.id}', this)" style="cursor:pointer;">
                 <span class="status-pill" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 5px 12px; border-radius: 10px; font-size: 0.85rem; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
                     <span style="width: 10px; height: 10px; border-radius: 50%; background: ${status.iconColor}; box-shadow: 0 0 8px ${status.iconColor}88;"></span>
                     ${status.label}
@@ -198,10 +198,13 @@ function showStatusUpdateMenu(procId, element) {
         menu.appendChild(btn);
     });
 
-    // Position menu near the element
+    // Position menu directly below the clicked element
     const rect = element.getBoundingClientRect();
-    menu.style.left = `${rect.left + (rect.width / 4)}px`;
-    menu.style.top = `${rect.top + (rect.height / 2)}px`;
+    menu.style.position = 'fixed';
+    menu.style.left = `${rect.left}px`;
+    menu.style.top = `${rect.bottom + 6}px`;
+    // Ensure it doesn't go off-screen right
+    menu.style.minWidth = '160px';
 
     document.body.appendChild(menu);
 
