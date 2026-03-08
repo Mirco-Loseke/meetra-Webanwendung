@@ -705,10 +705,7 @@
     function fillModal(task) {
         document.getElementById('task-title').value = task.title || '';
         document.getElementById('task-description').value = task.description || '';
-        document.getElementById('task-status').value = task.status || 'open';
-        document.getElementById('task-priority').value = task.priority || 'medium';
         document.getElementById('task-machine').value = task.machine_id || '';
-        document.getElementById('task-deadline').value = task.end_date ? task.end_date.split('T')[0] : '';
 
         renderSubtasks(task.subtasks || []);
         renderAssignedUsers(task.assigned_to || []);
@@ -717,10 +714,7 @@
     function resetModal() {
         document.getElementById('task-title').value = '';
         document.getElementById('task-description').value = '';
-        document.getElementById('task-status').value = 'open';
-        document.getElementById('task-priority').value = 'medium';
         document.getElementById('task-machine').value = '';
-        document.getElementById('task-deadline').value = '';
         document.getElementById('subtask-list').innerHTML = '';
         window.tempAssigned = [];
         window.tempSubtasks = [];
@@ -738,10 +732,8 @@
         const taskData = {
             title: title,
             description: document.getElementById('task-description').value,
-            status: document.getElementById('task-status').value,
-            priority: document.getElementById('task-priority').value,
+            status: 'open',
             machine_id: document.getElementById('task-machine').value || null,
-            end_date: document.getElementById('task-deadline').value || null,
             updated_at: new Date().toISOString()
         };
 

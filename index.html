@@ -6689,63 +6689,23 @@
                 <div style="position: absolute; top: 20px; right: 20px; cursor: pointer; font-size: 24px; line-height: 1;"
                     onclick="closeTaskModal()">&times;</div>
                 <div class="modal-body">
-                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
-                        <!-- Left Column: Details -->
-                        <div class="task-modal-details">
-                            <div class="form-group">
-                                <label>Titel</label>
-                                <input type="text" id="task-title" class="glass-input" placeholder="Titel der Aufgabe">
-                            </div>
-                            <div class="form-group">
-                                <label>Beschreibung</label>
-                                <textarea id="task-description" class="glass-input" rows="5"
-                                    placeholder="Details zur Aufgabe..."></textarea>
-                            </div>
-
-                            <div class="subtasks-section" style="margin-top: 2rem;">
-                                <h3 class="section-title">Unteraufgaben</h3>
-                                <div id="subtask-list" class="subtask-list">
-                                    <!-- Dynamically populated -->
-                                </div>
-                                <div style="display: flex; gap: 10px; margin-top: 10px;">
-                                    <input type="text" id="new-subtask-input" class="glass-input"
-                                        placeholder="Neue Unteraufgabe hinzufügen..."
-                                        onkeypress="if(event.key === 'Enter') addSubtask()">
-                                    <button class="btn-secondary compact" onclick="addSubtask()">Hinzufügen</button>
-                                </div>
-                            </div>
-
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        <div class="form-group">
+                            <label>Titel</label>
+                            <input type="text" id="task-title" class="glass-input" placeholder="Titel der Aufgabe">
                         </div>
-
-                        <!-- Right Column: Meta -->
-                        <div class="task-modal-meta">
-                            <div class="form-group">
-                                <label>Status</label>
-                                <select id="task-status" class="glass-input">
-                                    <option value="open">Offen</option>
-                                    <option value="in_progress">In Bearbeitung</option>
-                                    <option value="completed">Erledigt</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Priorität</label>
-                                <select id="task-priority" class="glass-input">
-                                    <option value="low">Niedrig</option>
-                                    <option value="medium">Mittel</option>
-                                    <option value="high">Hoch</option>
-                                    <option value="critical">Kritisch</option>
-                                </select>
-                            </div>
+                        <div class="form-group">
+                            <label>Beschreibung</label>
+                            <textarea id="task-description" class="glass-input" rows="4"
+                                placeholder="Details zur Aufgabe..."></textarea>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                             <div class="form-group">
                                 <label>Maschine</label>
                                 <select id="task-machine" class="glass-input">
                                     <option value="">Keine Maschine</option>
                                     <!-- Dynamically populated -->
                                 </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Deadline</label>
-                                <input type="date" id="task-deadline" class="glass-input">
                             </div>
                             <div class="form-group">
                                 <label>Zuständig</label>
@@ -6763,6 +6723,18 @@
                                         </ul>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                        <div class="subtasks-section">
+                            <h3 class="section-title">Unteraufgaben</h3>
+                            <div id="subtask-list" class="subtask-list">
+                                <!-- Dynamically populated -->
+                            </div>
+                            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <input type="text" id="new-subtask-input" class="glass-input"
+                                    placeholder="Neue Unteraufgabe hinzufügen..."
+                                    onkeypress="if(event.key === 'Enter') addSubtask()">
+                                <button class="btn-secondary compact" onclick="addSubtask()">Hinzufügen</button>
                             </div>
                         </div>
                     </div>
