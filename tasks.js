@@ -855,8 +855,34 @@
     }
 
     function buildMachineDropdown(machines) {
-        const dropdown = document.getElementById('task-machine-dropdown');
-        if (!dropdown) return;
+        // Use a body-level overlay so it escapes any overflow/stacking context
+        let dropdown = document.getElementById('task-machine-dropdown-portal');
+        if (!dropdown) {
+            dropdown = document.createElement('div');
+            dropdown.id = 'task-machine-dropdown-portal';
+            dropdown.style.cssText = [
+                'position: fixed',
+                'z-index: 999999',
+                'background: rgba(15,23,42,0.98)',
+                'border: 1px solid rgba(255,255,255,0.15)',
+                'border-radius: 12px',
+                'max-height: 260px',
+                'overflow-y: auto',
+                'box-shadow: 0 16px 48px rgba(0,0,0,0.7)',
+                'display: none'
+            ].join(';');
+            document.body.appendChild(dropdown);
+        }
+
+        // Position under the search input
+        const searchInput = document.getElementById('task-machine-search');
+        if (searchInput) {
+            const rect = searchInput.getBoundingClientRect();
+            dropdown.style.top = (rect.bottom + 4) + 'px';
+            dropdown.style.left = rect.left + 'px';
+            dropdown.style.width = rect.width + 'px';
+        }
+
         dropdown.innerHTML = '';
 
         // "Keine Maschine" option
@@ -882,7 +908,7 @@
             dropdown.appendChild(item);
         });
 
-        dropdown.style.display = machines.length > 0 || true ? 'block' : 'none';
+        dropdown.style.display = 'block';
     }
 
     window.showMachineDropdown = function () {
@@ -894,7 +920,6 @@
         const machines = getMachineListForSearch();
         const tokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
         const filtered = machines.filter(m => {
-            // Build a single searchable string from all fields of this machine
             const searchable = [
                 m.manufacturer || '',
                 m.name || '',
@@ -902,13 +927,10 @@
                 m.year ? String(m.year) : '',
                 getMachineLabel(m)
             ].join(' ').toLowerCase();
-
-            // Every token must appear somewhere in the searchable string
-            return tokens.every(token => searchable.includes(token));
+            return tokens.length === 0 || tokens.every(token => searchable.includes(token));
         });
         buildMachineDropdown(filtered);
 
-        // If exactly one match, auto-select it
         if (filtered.length === 1) {
             document.getElementById('task-machine').value = filtered[0].id;
         } else {
@@ -923,9 +945,17 @@
             searchInput.value = label !== 'Keine Maschine' ? label : '';
             searchInput.style.color = id ? 'var(--color-primary-green)' : '';
         }
-        const dropdown = document.getElementById('task-machine-dropdown');
+        const dropdown = document.getElementById('task-machine-dropdown-portal');
         if (dropdown) dropdown.style.display = 'none';
     };
+
+    // Close machine dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#task-machine-search') && !e.target.closest('#task-machine-dropdown-portal')) {
+            const d = document.getElementById('task-machine-dropdown-portal');
+            if (d) d.style.display = 'none';
+        }
+    });
 
     window.toggleSubtask = async function (id, isChecked) {
 
