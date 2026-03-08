@@ -263,7 +263,7 @@
                 <td style="font-weight: 600; display:flex; align-items:flex-start; gap:8px;">
                     <div style="padding-top: 2px;">
                         <div class="task-quick-complete ${task.status === 'completed' ? 'completed' : ''}" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="${task.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                         </div>
                     </div>
                     <div style="display:flex; flex-direction:column; gap:4px;">
@@ -274,9 +274,9 @@
                                 <div class="subtask-item" style="display:flex; align-items:flex-start; gap: 6px;">
                                     <div class="task-quick-complete ${sub.status === 'completed' ? 'completed' : ''}" 
                                          onclick="event.stopPropagation(); window.toggleSubtaskStatus('${task.id}', ${index}, '${sub.status}')" 
-                                         style="width: 14px; height: 14px; min-width: 14px; margin-top: 1px;"
+                                         style="width: 18px; height: 18px; min-width: 18px; margin-top: 1px;"
                                          title="${sub.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
-                                        <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                     </div>
                                     <span style="font-size: clamp(0.8rem, 1vw, 0.95rem); font-weight: 400; line-height: 1.3; color: ${sub.status === 'completed' ? 'rgba(255,255,255,0.4); text-decoration: line-through;' : 'rgba(255,255,255,0.8);'};">${sub.title}</span>
                                 </div>
@@ -338,7 +338,7 @@
                         <td style="font-weight: 600; display:flex; align-items:flex-start; gap:8px;">
                             <div style="padding-top: 2px;">
                                 <div class="task-quick-complete completed" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="Wieder öffnen">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                 </div>
                             </div>
                             <div style="display:flex; flex-direction:column; gap:4px;">
@@ -349,9 +349,9 @@
                                         <div class="subtask-item" style="display:flex; align-items:flex-start; gap: 6px;">
                                             <div class="task-quick-complete ${sub.status === 'completed' ? 'completed' : ''}" 
                                                  onclick="event.stopPropagation(); window.toggleSubtaskStatus('${task.id}', ${index}, '${sub.status}')" 
-                                                 style="width: 14px; height: 14px; min-width: 14px; margin-top: 1px;"
+                                                 style="width: 18px; height: 18px; min-width: 18px; margin-top: 1px;"
                                                  title="${sub.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
-                                                <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                             </div>
                                             <span style="font-size: clamp(0.8rem, 1vw, 0.95rem); font-weight: 400; line-height: 1.3; color: ${sub.status === 'completed' ? 'rgba(255,255,255,0.4); text-decoration: line-through;' : 'rgba(255,255,255,0.8);'};">${sub.title}</span>
                                         </div>
@@ -405,9 +405,9 @@
             <div class="task-card-header">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <div class="task-quick-complete ${task.status === 'completed' ? 'completed' : ''}" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="${task.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     </div>
-                    ${task.machines ? `<span class="project-tag" style="color: var(--color-primary-green); font-weight: 600; opacity: 1;">${getMachineLabel(task.machines)}</span>` : ''}
+                    ${task.machines ? `<span class="project-tag" style="color: var(--color-primary-green); font-size: 0.95rem; font-weight: 600; opacity: 1;">${getMachineLabel(task.machines)}</span>` : ''}
                 </div>
                 <div class="task-card-actions" style="display: flex; gap: 4px; opacity: 0.2; transition: opacity 0.2s;">
                     <button class="btn-icon-soft edit" style="width:26px; height:26px; padding:0;" onclick="event.stopPropagation(); window.openTaskModal('${task.id}')" title="Bearbeiten">
@@ -427,9 +427,9 @@
                     <div class="subtask-item" style="display:flex; align-items:flex-start; margin-bottom: 6px; gap: 8px;">
                         <div class="task-quick-complete ${sub.status === 'completed' ? 'completed' : ''}" 
                              onclick="event.stopPropagation(); window.toggleSubtaskStatus('${task.id}', ${index}, '${sub.status}')" 
-                             style="width: 14px; height: 14px; min-width: 14px; margin-top: 2px;"
+                             style="width: 18px; height: 18px; min-width: 18px; margin-top: 2px;"
                              title="${sub.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
-                            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                         </div>
                         <span style="font-size: 0.8rem; line-height: 1.3; color: ${sub.status === 'completed' ? 'rgba(255,255,255,0.4); text-decoration: line-through;' : 'rgba(255,255,255,0.8);'};">${sub.title}</span>
                     </div>
