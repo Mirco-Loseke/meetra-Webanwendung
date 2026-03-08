@@ -271,10 +271,10 @@
                         ${task.subtasks && task.subtasks.length > 0 ? `
                         <div class="task-list-subtasks" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
                             ${task.subtasks.map((sub, index) => `
-                                <div class="subtask-item" style="display:flex; align-items:flex-start; gap: 6px;">
+                                <div class="subtask-item" style="display:flex; align-items:center; gap: 6px;">
                                     <div class="task-quick-complete ${sub.status === 'completed' ? 'completed' : ''}" 
                                          onclick="event.stopPropagation(); window.toggleSubtaskStatus('${task.id}', ${index}, '${sub.status}')" 
-                                         style="width: 18px; height: 18px; min-width: 18px; margin-top: 1px;"
+                                         style="width: 18px; height: 18px; min-width: 18px;"
                                          title="${sub.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
                                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                     </div>
@@ -346,10 +346,10 @@
                                 ${task.subtasks && task.subtasks.length > 0 ? `
                                 <div class="task-list-subtasks" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
                                     ${task.subtasks.map((sub, index) => `
-                                        <div class="subtask-item" style="display:flex; align-items:flex-start; gap: 6px;">
+                                        <div class="subtask-item" style="display:flex; align-items:center; gap: 6px;">
                                             <div class="task-quick-complete ${sub.status === 'completed' ? 'completed' : ''}" 
                                                  onclick="event.stopPropagation(); window.toggleSubtaskStatus('${task.id}', ${index}, '${sub.status}')" 
-                                                 style="width: 18px; height: 18px; min-width: 18px; margin-top: 1px;"
+                                                 style="width: 18px; height: 18px; min-width: 18px;"
                                                  title="${sub.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
                                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                             </div>
@@ -424,10 +424,10 @@
             ${task.subtasks && task.subtasks.length > 0 ? `
             <div class="task-card-subtasks" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05);">
                 ${task.subtasks.map((sub, index) => `
-                    <div class="subtask-item" style="display:flex; align-items:flex-start; margin-bottom: 6px; gap: 8px;">
+                    <div class="subtask-item" style="display:flex; align-items:center; margin-bottom: 6px; gap: 8px;">
                         <div class="task-quick-complete ${sub.status === 'completed' ? 'completed' : ''}" 
                              onclick="event.stopPropagation(); window.toggleSubtaskStatus('${task.id}', ${index}, '${sub.status}')" 
-                             style="width: 18px; height: 18px; min-width: 18px; margin-top: 2px;"
+                             style="width: 18px; height: 18px; min-width: 18px;"
                              title="${sub.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                         </div>
@@ -525,7 +525,7 @@
 
             const grid = document.createElement('div');
             grid.style.display = 'grid';
-            grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
+            grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(calc(50% - 15px), 1fr))';
             grid.style.gap = '15px';
 
             mTasks.forEach(task => {
@@ -576,7 +576,7 @@
             if (window.showCompletedTasks) {
                 const grid = document.createElement('div');
                 grid.style.display = 'grid';
-                grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(300px, 1fr))';
+                grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(calc(50% - 15px), 1fr))';
                 grid.style.gap = '15px';
 
                 completedTasks.forEach(task => {
