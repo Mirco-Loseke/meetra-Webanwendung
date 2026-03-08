@@ -3568,7 +3568,7 @@ tr.status-open td {
 }
 
 .task-card.status-open {
-    border-color: rgba(239, 68, 68, 0.4);
+    border-color: rgba(239, 68, 68, 0.25);
 }
 
 .task-card.status-open,
