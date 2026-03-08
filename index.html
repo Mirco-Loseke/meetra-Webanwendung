@@ -6684,10 +6684,18 @@
 
         <!-- Task Details/Edit Modal -->
         <div id="task-modal" class="modal-backdrop hidden">
-            <div class="modal-content glass-card" style="max-width: 900px; position: relative;">
-                <h2 id="task-modal-title" style="margin-bottom: 2rem;">Aufgabe bearbeiten</h2>
-                <div style="position: absolute; top: 20px; right: 20px; cursor: pointer; font-size: 24px; line-height: 1;"
-                    onclick="closeTaskModal()">&times;</div>
+            <div class="modal-content glass-card"
+                style="max-width: 900px; position: relative; background: rgba(255,255,255,0.08); backdrop-filter: blur(32px); border: 1px solid rgba(255,255,255,0.14);">
+                <div class="modal-header" style="padding-right: 60px; margin-bottom: 1.5rem;">
+                    <h2 id="task-modal-title">Aufgabe bearbeiten</h2>
+                </div>
+                <button class="procurement-close-btn" onclick="closeTaskModal()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
                 <div class="modal-body">
                     <!-- Main 2-column grid -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px;">
@@ -6743,9 +6751,12 @@
                         </div>
                     </div>
                 </div>
-                <div class="modal-actions">
-                    <button class="btn-secondary" onclick="closeTaskModal()">Abbrechen</button>
-                    <button class="btn-primary" onclick="saveTask()">Änderungen speichern</button>
+                <div class="modal-actions"
+                    style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 12px;">
+                    <button class="btn-secondary" onclick="closeTaskModal()"
+                        style="min-width: 130px; padding: 12px 20px; border-radius: 12px;">Abbrechen</button>
+                    <button class="btn-primary" onclick="saveTask()"
+                        style="min-width: 160px; padding: 12px 20px; border-radius: 12px;">Änderungen speichern</button>
                 </div>
             </div>
         </div>
