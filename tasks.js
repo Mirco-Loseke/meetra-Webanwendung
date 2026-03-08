@@ -285,8 +285,9 @@
                         ` : ''}
                     </div>
                 </td>
-                <td><span class="priority-badge p-${task.priority}">${formatPriority(task.priority)}</span></td>
-                <td>${getMachineLabel(task.machines)}</td>
+                <td>
+                    ${task.machines ? `<span style="color: var(--color-primary-green); font-weight: 600;">${getMachineLabel(task.machines)}</span>` : '<span style="color: rgba(255,255,255,0.4)">-</span>'}
+                </td>
                 <td>${task.end_date ? new Date(task.end_date).toLocaleDateString() : '-'}</td>
                 <td>${renderAvatars(task.assigned_to)}</td>
                 <td>${renderProgress(task)}</td>
@@ -359,8 +360,9 @@
                                 ` : ''}
                             </div>
                         </td>
-                        <td><span class="priority-badge p-${task.priority}">${formatPriority(task.priority)}</span></td>
-                        <td>${getMachineLabel(task.machines)}</td>
+                        <td>
+                            ${task.machines ? `<span style="color: var(--color-primary-green); font-weight: 600;">${getMachineLabel(task.machines)}</span>` : '<span style="color: rgba(255,255,255,0.4)">-</span>'}
+                        </td>
                         <td>${task.end_date ? new Date(task.end_date).toLocaleDateString() : '-'}</td>
                         <td>${renderAvatars(task.assigned_to)}</td>
                         <td>${renderProgress(task)}</td>
@@ -405,8 +407,7 @@
                     <div class="task-quick-complete ${task.status === 'completed' ? 'completed' : ''}" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="${task.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     </div>
-                    <span class="priority-badge p-${task.priority}">${formatPriority(task.priority)}</span>
-                    ${task.machines ? `<span class="project-tag">${getMachineLabel(task.machines)}</span>` : ''}
+                    ${task.machines ? `<span class="project-tag" style="color: var(--color-primary-green); font-weight: 600; opacity: 1;">${getMachineLabel(task.machines)}</span>` : ''}
                 </div>
                 <div class="task-card-actions" style="display: flex; gap: 4px; opacity: 0.2; transition: opacity 0.2s;">
                     <button class="btn-icon-soft edit" style="width:26px; height:26px; padding:0;" onclick="event.stopPropagation(); window.openTaskModal('${task.id}')" title="Bearbeiten">
