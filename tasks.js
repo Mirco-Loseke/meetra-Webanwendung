@@ -892,13 +892,19 @@
 
     window.filterMachineDropdown = function (query) {
         const machines = getMachineListForSearch();
-        const q = query.toLowerCase();
+        const tokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
         const filtered = machines.filter(m => {
-            const label = getMachineLabel(m).toLowerCase();
-            return label.includes(q) ||
-                (m.serial && m.serial.toLowerCase().includes(q)) ||
-                (m.name && m.name.toLowerCase().includes(q)) ||
-                (m.manufacturer && m.manufacturer.toLowerCase().includes(q));
+            // Build a single searchable string from all fields of this machine
+            const searchable = [
+                m.manufacturer || '',
+                m.name || '',
+                m.serial || '',
+                m.year ? String(m.year) : '',
+                getMachineLabel(m)
+            ].join(' ').toLowerCase();
+
+            // Every token must appear somewhere in the searchable string
+            return tokens.every(token => searchable.includes(token));
         });
         buildMachineDropdown(filtered);
 
