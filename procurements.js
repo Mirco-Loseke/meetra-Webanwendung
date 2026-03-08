@@ -395,9 +395,9 @@ window.saveProcurement = async function () {
     const category = document.getElementById('proc-category').value;
     const description = document.getElementById('proc-description').value;
     const quantity = document.getElementById('proc-quantity').value;
-    const priority = document.getElementById('proc-priority').value;
-    const delivery_date = document.getElementById('proc-delivery-date').value || null;
-    const product_link = document.getElementById('proc-link').value;
+    const priority = document.getElementById('proc-priority')?.value || 'normal';
+    const delivery_date = document.getElementById('proc-delivery-date')?.value || null;
+    const product_link = document.getElementById('proc-link')?.value || '';
     const location_ref = document.getElementById('proc-location').value;
 
     const status = 'new'; // Default for new
