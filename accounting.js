@@ -412,7 +412,7 @@ window.handleAccountingPDFUpload = async function (event) {
                         messages: [
                             {
                                 role: "system",
-                                content: "Du bist ein präziser Buchhaltungs-Assistent. Deine einzige Aufgabe ist es, den angehängten rohen Text aus einem Rechnungs-PDF zu analysieren und als JSON-Objekt zurückzugeben. Antworte AUSSCHLIESSLICH mit dem validen JSON-Objekt, ohne jeglichen Markdown-Text drumherum (wie ```json). Extraghiere folgende Schlüssel:\n1. 'invoice_number': Die Rechnungsnummer (String).\n2. 'date': Das Rechnungsdatum im Format YYYY-MM-DD.\n3. 'net_amount': Der reine Netto-Betrag als Zahl (z.B. 1234.56, nutze Punkt als Dezimaltrennzeichen).\n4. 'vat_rate': Der anwendbare Mehrwertsteuersatz in Prozent als String (z.B. '19', '7' oder '0').\nFalls ein Wert nicht gefunden wird, setze den Wert auf null."
+                                content: "Du bist ein präziser Buchhaltungs-Assistent. Deine einzige Aufgabe ist es, den angehängten rohen Text aus einem Rechnungs-PDF (oder OCR-Text) zu analysieren und als JSON-Objekt zurückzugeben. Antworte AUSSCHLIESSLICH mit dem validen JSON-Objekt, ohne jeglichen Markdown-Text drumherum. Extraghiere folgende Schlüssel:\n\n1. 'invoice_number': Die Rechnungsnummer (String).\n2. 'date': Das Rechnungsdatum im Format YYYY-MM-DD.\n3. 'net_amount': Der reine Netto-Betrag als Zahl (z.B. 1234.56, nutze Punkt als Dezimaltrennzeichen).\n4. 'vat_rate': Der anwendbare Mehrwertsteuersatz in Prozent als String (z.B. '19', '7' oder '0').\n5. 'type': Bestimme, ob es eine Eingangsrechnung oder Ausgangsrechnung ist. EURE FIRMA ist 'Meetra Recycling Maschinen' oder 'Meetra'. Wenn der Absender/Rechnungssteller 'Meetra' ist, ist es eine Ausgangsrechnung ('outgoing'). Wenn der Rechnungsempfänger 'Meetra' ist und jemand anderes die Rechnung stellt, ist es eine Eingangsrechnung ('incoming'). Antworte nur mit 'incoming' oder 'outgoing'.\n6. 'entity': Name des KUNDEN (bei Ausgangsrechnungen) oder LIEFERANTEN (bei Eingangsrechnungen). Finde den Namen des logischen Geschäftspartners (nicht 'Meetra'!).\n\nFalls ein Wert absolut nicht gefunden wird, setze ihn auf null."
                             },
                             {
                                 role: "user",
@@ -445,6 +445,21 @@ window.handleAccountingPDFUpload = async function (event) {
                 }
 
                 // Fill Form Fields with OpenAI Data
+
+                if (parsedData.type) {
+                    const typeSelect = document.getElementById('acc-type');
+                    if (typeSelect) {
+                        typeSelect.value = parsedData.type; // 'incoming' or 'outgoing'
+                    }
+                }
+
+                if (parsedData.entity) {
+                    const entityInput = document.getElementById('acc-entity');
+                    if (entityInput) {
+                        entityInput.value = parsedData.entity;
+                    }
+                }
+
                 if (parsedData.invoice_number) {
                     const invInput = document.getElementById('acc-invoice-number');
                     if (invInput) invInput.value = parsedData.invoice_number;
