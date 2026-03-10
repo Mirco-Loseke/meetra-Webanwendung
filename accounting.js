@@ -421,7 +421,7 @@ window.handleAccountingPDFUpload = async function (event) {
                             },
                             {
                                 role: "user",
-                                content: `Hier ist der Rohtext des PDFs:\n\n\${fullText}`
+                                content: `Hier ist der Rohtext des PDFs:\n\n${fullText}`
                             }
                         ],
                         temperature: 0.1,
