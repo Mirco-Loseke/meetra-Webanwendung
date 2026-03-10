@@ -1923,16 +1923,22 @@ h1,
     left: 0;
     width: 100vw;
     height: 100vh;
-    background-color: rgba(0, 0, 0, 0.6);
+    background-color: rgba(15, 23, 42, 0.8);
+    /* Bläulicher, dunkler Glass-Hintergrund für die App */
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;
+    /* Erlaubt natürliches Scrollen, wenn Modal größer als Bildschirm */
     z-index: 9999;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto;
+    /* Scrolling zulassen */
+    padding: 5vh 1rem;
+    /* Absicherung, dass oben und unten Abstand bleibt */
 }
 
 .modal-backdrop.active,
