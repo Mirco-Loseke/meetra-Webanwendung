@@ -7239,6 +7239,7 @@
             modal.style.alignItems = 'center';
             modal.style.justifyContent = 'center';
             modal.classList.remove('hidden');
+            requestAnimationFrame(() => modal.classList.add('show'));
             document.body.style.overflow = 'hidden';
         };
 
