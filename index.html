@@ -3587,6 +3587,13 @@
                     serviceFileInput.onchange = (e) => handleServiceFiles(e.target.files);
                 }
 
+                // --- Initial View Activation ---
+                // Read the URL hash to determine the starting view, default to 'home'
+                const initialHash = window.location.hash ? window.location.hash.replace('#', '') : 'home';
+                const validTargets = Array.from(document.querySelectorAll('.nav-link')).map(l => l.getAttribute('data-target')).filter(Boolean);
+                const startView = validTargets.includes(initialHash) ? initialHash : 'home';
+                window.switchView(startView);
+
             }); // End of DOMContentLoaded
 
 
