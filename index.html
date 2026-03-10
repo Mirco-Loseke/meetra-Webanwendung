@@ -1159,10 +1159,10 @@
             <!-- Accounting Modal -->
             <div id="accounting-modal" class="modal-backdrop hidden">
                 <div class="modal-content"
-                    style="max-width: 850px; position: relative; max-height: 85vh; overflow-y: auto; padding: 2rem;">
+                    style="max-width: 850px; position: relative; max-height: 85vh; overflow-y: auto; padding: 25px 30px; border-radius: 20px;">
                     <div class="modal-header"
-                        style="position: sticky; top: 0; background: #0f172a; z-index: 10; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px;">
-                        <h2 id="accounting-modal-title" style="margin: 0; padding-right: 40px;">Neuer
+                        style="background: transparent; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 25px;">
+                        <h2 id="accounting-modal-title" style="margin: 0; padding-right: 40px; font-size: 1.4rem;">Neuer
                             Buchhaltungseintrag</h2>
 
                         <button type="button" onclick="closeAccountingModal()" class="modal-close-btn"
@@ -1179,13 +1179,13 @@
                         onchange="handleAccountingPDFUpload(event)" style="display: none;">
 
                     <div id="acc-pdf-dropzone"
-                        style="margin-top: 1.5rem; border: 2px dashed rgba(255,255,255,0.2); border-radius: 12px; padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.3s; background: rgba(0,0,0,0.2);"
+                        style="margin-bottom: 1.5rem; border: 2px dashed rgba(255,255,255,0.2); border-radius: 12px; padding: 1.25rem; text-align: center; cursor: pointer; transition: all 0.3s; background: rgba(0,0,0,0.2);"
                         onclick="document.getElementById('acc-pdf-input').click()"
                         ondragover="event.preventDefault(); this.style.borderColor='var(--color-primary-green)'; this.style.background='rgba(16, 185, 129, 0.1)';"
                         ondragleave="event.preventDefault(); this.style.borderColor='rgba(255,255,255,0.2)'; this.style.background='rgba(0,0,0,0.2)';"
                         ondrop="event.preventDefault(); this.style.borderColor='rgba(255,255,255,0.2)'; this.style.background='rgba(0,0,0,0.2)'; window.handleAccountingPDFDrop(event)">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2" style="margin-bottom: 8px; color: var(--color-primary-green);">
+                            stroke-width="2" style="margin-bottom: 6px; color: var(--color-primary-green);">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                             <polyline points="14 2 14 8 20 8"></polyline>
                             <line x1="12" y1="18" x2="12" y2="12"></line>
@@ -1194,7 +1194,7 @@
                         <div style="font-weight: 600; font-size: 0.95rem; color: #fff;">PDF-Rechnung oder Foto hier
                             ablegen oder
                             anklicken</div>
-                        <div style="font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-top: 4px;">Automatischer
+                        <div style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 2px;">Automatischer
                             Import durch Texterkennung</div>
                     </div>
 
@@ -8261,7 +8261,7 @@
         }
     </script>
 
-    <script src="accounting.js?v=9"></script>
+    <script src="accounting.js?v=10"></script>
 </body>
 
 </html>
