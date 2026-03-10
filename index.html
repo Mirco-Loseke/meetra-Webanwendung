@@ -1201,6 +1201,14 @@
                     window.switchView(targetId);
                 };
 
+                // History and Back/Forward support for Navigation Highlight
+                window.addEventListener('hashchange', () => {
+                    const hash = window.location.hash.replace('#', '') || 'home';
+                    if (window.currentActiveView !== hash) {
+                        window.switchView(hash);
+                    }
+                });
+
                 window.switchView = function (targetId) {
                     console.log('Switching to view:', targetId);
                     const views = document.querySelectorAll('.view');
@@ -1660,26 +1668,26 @@
                     function recentCard(entry) {
                         const machine = machines.find(m => m.id === entry.machine_id);
                         if (!machine) return '';
+
                         const viewedAt = new Date(entry.viewed_at);
                         const timeStr = viewedAt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
                         const dateStr = viewedAt.toLocaleDateString('de-DE');
-                        const fullTitle = [machine.manufacturer, machine.name, machine.serial ? `#${machine.serial}` : null, machine.year ? `(${machine.year})` : null].filter(Boolean).join(' ');
-                        const machineCat = categories.find(c => c.id === machine.category_id);
-                        const catColor = (machineCat && machineCat.color) ? machineCat.color : '#3b82f6';
-                        return `<div onclick="openMachineDetails(${machine.id})" style="flex:1; font-family:'Inter',sans-serif; overflow:hidden; display:flex; flex-direction:column; background:rgba(255, 255, 255, 0.18); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); box-shadow:0 10px 30px rgba(0, 0, 0, 0.6); border:3px solid ${catColor}66; border-left:7px solid ${catColor}; border-radius:20px; cursor:pointer; transition:all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);"
-                            onmouseover="this.style.boxShadow='0 15px 40px rgba(0,0,0,0.8)'; this.style.transform='scale(1.02)';"
-                            onmouseout="this.style.boxShadow='0 10px 30px rgba(0,0,0,0.6)'; this.style.transform='scale(1)';">
-                            ${machine.image_url
-                                ? `<img src="${machine.image_url}" style="width:100%; height:260px; object-fit:contain; display:block; border-bottom:1px solid rgba(255,255,255,0.08);">`
-                                : `<div style="width:100%; height:200px; background:rgba(255,255,255,0.04); display:flex; align-items:center; justify-content:center; border-bottom:1px solid rgba(255,255,255,0.08);"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:0.12;"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div>`}
-                            <div style="padding:1.5rem; flex:1; display:flex; flex-direction:column; gap:0.75rem;">
-                                <h3 style="margin:0; color:#fff; font-size: clamp(1.2rem, 2vw, 1.5rem); font-weight:800; line-height:1.2; word-break:break-word;">${fullTitle}</h3>
-                                <div style="display:flex; align-items:center; gap:6px; font-size: clamp(0.82rem, 1.2vw, 1rem); color:var(--secondary-green); font-weight:700; text-transform:uppercase; letter-spacing:0.8px;">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                                    ${dateStr} &nbsp;${timeStr}
+
+                        // Create the machine card using the shared function
+                        const cardElement = window.createMachineCard ? window.createMachineCard(machine) : document.createElement('div');
+
+                        // Wrap it with the timestamp header as requested
+                        return `
+                            <div style="display:flex; flex-direction:column; gap:10px;">
+                                <div style="font-size:0.8rem; color:rgba(255,255,255,0.4); font-weight:700; text-transform:uppercase; letter-spacing:1px; padding-left:5px; display:flex; align-items:center; gap:6px;">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                    Angesehen am ${dateStr} um ${timeStr}
+                                </div>
+                                <div style="transform: scale(1); transform-origin: top left; width: 100%;">
+                                    ${cardElement.outerHTML || ''}
                                 </div>
                             </div>
-                        </div>`;
+                        `;
                     }
 
                     const alarmRows = [...overdueList.map(x => alarmRow(x.machine, x.diff)), ...dueSoonList.map(x => alarmRow(x.machine, x.diff))];

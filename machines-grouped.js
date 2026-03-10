@@ -349,4 +349,5 @@
 
     // Set globally
     window.renderMachines = renderMachinesGrouped;
+    window.createMachineCard = createMachineCard;
 })();
