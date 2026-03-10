@@ -297,6 +297,7 @@ window.submitAccountingEntry = async function (event) {
 
     try {
         const id = document.getElementById('accounting-id').value;
+        const machineVal = document.getElementById('acc-machine-id').value;
         const entryData = {
             type: document.getElementById('acc-type').value,
             invoice_number: document.getElementById('acc-invoice-number').value,
@@ -305,10 +306,14 @@ window.submitAccountingEntry = async function (event) {
             amount_net: parseFloat(document.getElementById('acc-amount-net').value),
             vat_rate: parseFloat(document.getElementById('acc-vat-rate').value),
             amount_gross: parseFloat(document.getElementById('acc-amount-gross').value),
-            machine_id: document.getElementById('acc-machine-id').value || null,
-            comment: document.getElementById('acc-comment').value,
-            created_by: window.activeUser ? window.activeUser.id : null
+            machine_id: machineVal ? parseInt(machineVal, 10) : null,
+            comment: document.getElementById('acc-comment').value
         };
+
+        // Nur created_by mitsenden, wenn es eine valide UUID sein könnte (nicht '1')
+        if (window.activeUser && window.activeUser.id && isNaN(window.activeUser.id)) {
+            entryData.created_by = window.activeUser.id;
+        }
 
         let result;
         if (id) {
