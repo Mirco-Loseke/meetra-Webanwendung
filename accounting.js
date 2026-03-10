@@ -310,13 +310,13 @@ window.submitAccountingEntry = async function (event) {
             comment: document.getElementById('acc-comment').value
         };
 
-        // Nur created_by mitsenden, wenn es eine valide UUID sein könnte (nicht '1')
-        if (window.activeUser && window.activeUser.id && isNaN(window.activeUser.id)) {
+        // Wenn created_by eine echte UUID ist (Länge > 30), mitsenden, sonst weglassen.
+        if (window.activeUser && window.activeUser.id && String(window.activeUser.id).length > 30) {
             entryData.created_by = window.activeUser.id;
         }
 
         let result;
-        if (id) {
+        if (id && id.length > 30) { // Check valid UUID for update
             result = await window.supabaseClient.from('accounting').update(entryData).eq('id', id);
         } else {
             result = await window.supabaseClient.from('accounting').insert([entryData]);
