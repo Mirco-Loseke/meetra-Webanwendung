@@ -8007,14 +8007,14 @@
 
             <div class="form-group" style="margin-bottom: 1.5rem;">
                 <label
-                    style="color: rgba(255,255,255,0.7); font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">OpenAI
-                    API-Key (ChatGPT)</label>
+                    style="color: rgba(255,255,255,0.7); font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Groq
+                    API-Key (Kostenlose KI)</label>
                 <div style="font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-bottom: 10px; line-height: 1.4;">
                     Wird verwendet für das extrem präzise und fehlerfreie Auslesen von Rechnungs-PDFs via KI. Der Key
                     wird <strong style="color:white;">nur lokal in deinem Browser</strong> gespeichert.
                 </div>
                 <div style="position: relative;">
-                    <input type="password" id="settings-api-key" class="glass-input" placeholder="sk-..."
+                    <input type="password" id="settings-api-key" class="glass-input" placeholder="gsk_..."
                         autocomplete="off" style="font-family: monospace; letter-spacing: 1px;">
                     <button type="button" onclick="toggleApiKeyVisibility()"
                         style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: rgba(255,255,255,0.5); cursor: pointer; transition: color 0.2s;"
@@ -8027,7 +8027,7 @@
                     </button>
                 </div>
                 <div style="margin-top: 8px; font-size: 0.8rem;">
-                    <a href="https://platform.openai.com/api-keys" target="_blank"
+                    <a href="https://console.groq.com/keys" target="_blank"
                         style="color: #60a5fa; text-decoration: none; transition: color 0.2s;"
                         onmouseover="this.style.color='#93c5fd'" onmouseout="this.style.color='#60a5fa'">Hier kannst du
                         deinen API-Key erstellen &rarr;</a>
@@ -8047,7 +8047,7 @@
             const input = document.getElementById('settings-api-key');
 
             // Lade vorhandenen Key (falls vorhanden)
-            const savedKey = localStorage.getItem('openai_api_key');
+            const savedKey = localStorage.getItem('groq_api_key');
             if (savedKey) {
                 input.value = savedKey;
             } else {
@@ -8075,10 +8075,10 @@
         window.saveSettings = function () {
             const key = document.getElementById('settings-api-key').value.trim();
             if (key) {
-                localStorage.setItem('openai_api_key', key);
+                localStorage.setItem('groq_api_key', key);
                 alert('Einstellungen erfolgreich gespeichert.');
             } else {
-                localStorage.removeItem('openai_api_key');
+                localStorage.removeItem('groq_api_key');
                 alert('API-Key entfernt.');
             }
             window.closeSettingsModal();

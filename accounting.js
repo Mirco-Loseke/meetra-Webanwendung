@@ -384,11 +384,11 @@ window.handleAccountingPDFUpload = async function (event) {
                 fullText += pageText + '\n';
             }
 
-            // --- NEU: OpenAI API Integration statt Fehleranfälliger Regex ---
-            const apiKey = localStorage.getItem('openai_api_key');
+            // --- NEU: Groq API Integration (Kostenlose KI) ---
+            const apiKey = localStorage.getItem('groq_api_key');
 
             if (!apiKey) {
-                alert('Bitte hinterlegen Sie zunächst einen OpenAI API-Key in den Einstellungen (Zahnrad-Symbol oben rechts).');
+                alert('Bitte hinterlegen Sie zunächst einen Groq API-Key in den Einstellungen (Zahnrad-Symbol oben rechts).');
                 event.target.value = '';
                 return;
             }
@@ -401,14 +401,14 @@ window.handleAccountingPDFUpload = async function (event) {
             }
 
             try {
-                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${apiKey}`
                     },
                     body: JSON.stringify({
-                        model: "gpt-4o-mini",
+                        model: "llama3-8b-8192",
                         messages: [
                             {
                                 role: "system",
@@ -426,17 +426,21 @@ window.handleAccountingPDFUpload = async function (event) {
 
                 if (!response.ok) {
                     const errData = await response.json();
-                    throw new Error(`OpenAI API Fehler: ${errData.error?.message || response.statusText}`);
+                    throw new Error(`Groq API Fehler: ${errData.error?.message || response.statusText}`);
                 }
 
                 const data = await response.json();
-                const resultText = data.choices[0].message.content;
+                let resultText = data.choices[0].message.content;
+
+                // Remove potential markdown fences from Groq response
+                resultText = resultText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
                 let parsedData;
 
                 try {
                     parsedData = JSON.parse(resultText);
                 } catch (e) {
-                    console.error("Fehler beim Parsen der OpenAI Antwort:", resultText);
+                    console.error("Fehler beim Parsen der Groq Antwort:", resultText);
                     throw new Error("Die KI hat keine gültigen Daten geliefert.");
                 }
 
@@ -475,9 +479,9 @@ window.handleAccountingPDFUpload = async function (event) {
                 alert('Beleg wurde erfolgreich durch die KI analysiert!');
 
             } catch (apiError) {
-                console.error("OpenAI Fehler:", apiError);
+                console.error("Groq Fehler:", apiError);
                 if (apiError.message.includes('insufficient_quota') || apiError.message.includes('exceeded your current quota')) {
-                    alert('Fehler: Dein OpenAI-Guthaben ist aufgebraucht. Bitte lade dein Konto auf platform.openai.com auf.');
+                    alert('Fehler: Das Rate-Limit der kostenlosen Groq API wurde erreicht. Bitte kurz warten.');
                 } else if (apiError.message.includes('invalid_api_key') || apiError.message.includes('Incorrect API key')) {
                     alert('Fehler: Der eingegebene API-Key ist ungültig. Bitte prüfe die Einstellungen.');
                 } else {
