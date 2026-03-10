@@ -21,17 +21,8 @@ CREATE TABLE IF NOT EXISTS public.accounting (
 ALTER TABLE public.accounting ENABLE ROW LEVEL SECURITY;
 
 -- Policies
-CREATE POLICY "Enable read access for all authenticated users" ON public.accounting
-    FOR SELECT USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Enable insert access for all authenticated users" ON public.accounting
-    FOR INSERT WITH CHECK (auth.role() = 'authenticated');
-
-CREATE POLICY "Enable update access for all authenticated users" ON public.accounting
-    FOR UPDATE USING (auth.role() = 'authenticated');
-
-CREATE POLICY "Enable delete access for all authenticated users" ON public.accounting
-    FOR DELETE USING (auth.role() = 'authenticated');
+CREATE POLICY "Allow all operations for accounting" ON public.accounting
+    FOR ALL USING (true) WITH CHECK (true);
 
 -- Trigger for updated_at
 CREATE TRIGGER update_accounting_updated_at
