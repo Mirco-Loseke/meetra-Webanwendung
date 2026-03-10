@@ -1220,7 +1220,7 @@
                         }
                     });
 
-                    // Update sidebar active states if the target matches a sidebar link
+                    // Update sidebar active states
                     navLinks.forEach(link => {
                         if (link.getAttribute('data-target') === targetId) {
                             link.classList.add('active');
@@ -1228,6 +1228,11 @@
                             link.classList.remove('active');
                         }
                     });
+
+                    // Update URL hash so the active state survives soft navigations
+                    if (history.replaceState) {
+                        history.replaceState(null, '', '#' + targetId);
+                    }
 
                     // Special logic for specific views
                     if (targetId === 'home') {
@@ -6044,21 +6049,7 @@
                 if (searchInput) {
                     searchInput.addEventListener('input', () => renderServiceEntries());
                 }
-
-                // Fetch when clicking nav link
-                const navLinks = document.querySelectorAll('.nav-link');
-                navLinks.forEach(link => {
-                    if (link.getAttribute('data-target') === 'service') {
-                        link.addEventListener('click', () => {
-                            // Reset search if not coming from "View Reports" action?
-                            // For now, let's keep search if it's there, or maybe clear it if user wants to see all.
-                            // Better UX: If filter is active, maybe keep it? But user might want to see all.
-                            // Let's NOT clear it automatically here to allow "View Reports" to work effectively.
-                            // But we MUST fetch.
-                            fetchServiceEntries();
-                        });
-                    }
-                });
+                // NOTE: fetchServiceEntries on nav click is handled by switchView (see above)
             });
 
             // Override submit to refresh list
