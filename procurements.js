@@ -75,7 +75,8 @@ function renderProcurements(procurements) {
 
         const tr = document.createElement('tr');
         tr.className = status.class;
-        if (proc.status === 'received') tr.classList.add('completed-task');
+
+
         tr.style.cursor = 'pointer';
         tr.onclick = () => openProcurementModal(proc.id);
 
