@@ -47,22 +47,28 @@ window.renderAccounting = function () {
 
     const filtered = allAccountingEntries.filter(e => e.type === currentAccountingType);
 
-    // Group by Month (January to December)
+    // Group by Month and Year
     const months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
     const grouped = {};
 
     filtered.forEach(entry => {
         const date = new Date(entry.date);
         const monthIndex = date.getMonth();
-        const monthName = months[monthIndex];
-        if (!grouped[monthName]) grouped[monthName] = [];
-        grouped[monthName].push(entry);
+        const year = date.getFullYear();
+        const groupName = `${months[monthIndex]} ${year}`;
+        if (!grouped[groupName]) grouped[groupName] = [];
+        grouped[groupName].push(entry);
     });
 
     let html = '';
 
-    // Sort months Jan -> Dec (using index)
-    const activeMonths = Object.keys(grouped).sort((a, b) => months.indexOf(a) - months.indexOf(b));
+    // Sort groups by Year descending, then Month descending
+    const activeMonths = Object.keys(grouped).sort((a, b) => {
+        const [monthA, yearA] = a.split(' ');
+        const [monthB, yearB] = b.split(' ');
+        if (yearA !== yearB) return parseInt(yearB) - parseInt(yearA);
+        return months.indexOf(monthB) - months.indexOf(monthA);
+    });
 
     activeMonths.forEach(monthName => {
         html += `
@@ -89,13 +95,18 @@ window.renderAccounting = function () {
                     <tbody>
                         ${grouped[monthName].map(e => `
                             <tr style="border-top: 1px solid rgba(255,255,255,0.03);">
-                                <td style="padding: 12px;">
-                                    <input type="checkbox" ${e.is_paid ? 'checked' : ''} 
-                                        onclick="window.togglePaidStatus('${e.id}', this.checked)"
-                                        style="width: 20px; height: 20px; cursor: pointer; accent-color: var(--color-primary-green); border-radius: 4px;">
+                                <td style="padding: 12px; text-align: center;">
+                                    <label style="position: relative; display: inline-block; width: 36px; height: 20px; margin: 0; cursor: pointer;" title="Bezahlt">
+                                        <input type="checkbox" ${e.is_paid ? 'checked' : ''} 
+                                            onchange="window.togglePaidStatus('${e.id}', this.checked)"
+                                            style="opacity: 0; width: 0; height: 0; position: absolute;">
+                                        <span style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: ${e.is_paid ? 'var(--color-primary-green)' : 'rgba(255,255,255,0.1)'}; border: 1px solid ${e.is_paid ? 'transparent' : 'rgba(255,255,255,0.2)'}; transition: .3s; border-radius: 20px;">
+                                            <span style="position: absolute; height: 14px; width: 14px; left: ${e.is_paid ? '20px' : '2px'}; top: 2px; background-color: ${e.is_paid ? '#fff' : 'rgba(255,255,255,0.5)'}; transition: .3s; border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></span>
+                                        </span>
+                                    </label>
                                 </td>
                                 <td style="padding: 12px; font-family: monospace; font-weight: 600;">${e.invoice_number || '-'}</td>
-                                <td style="padding: 12px;">${new Date(e.date).toLocaleDateString('de-DE')}</td>
+                                <td style="padding: 12px;">${new Date(e.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
                                 <td style="padding: 12px; font-weight: 700; color: #fff;">${e.entity}</td>
                                 <td style="padding: 12px;">${window.formatCurrency(e.amount_net)}</td>
                                 <td style="padding: 12px; font-size: 0.8rem; color: rgba(255,255,255,0.5);">${e.vat_rate}%</td>
@@ -158,6 +169,8 @@ window.togglePaidStatus = async function (id, checked) {
 
         const entry = allAccountingEntries.find(e => e.id === id);
         if (entry) entry.is_paid = checked;
+
+        window.renderAccounting(); // UI neu rendern für Toggle-Animation
     } catch (err) {
         console.error('Error updating paid status:', err);
         alert('Fehler beim Aktualisieren des Zahlungsstatus.');
@@ -175,37 +188,52 @@ window.renderQuarters = function () {
         { name: 'Q4', months: [9, 10, 11], label: 'Oktober - Dezember' }
     ];
 
-    grid.innerHTML = quarters.map(q => {
-        const quarterData = allAccountingEntries.filter(e => {
-            const m = new Date(e.date).getMonth();
-            return q.months.includes(m);
-        });
+    // Sammle alle eindeutigen Jahre aus den Daten
+    const years = [...new Set(allAccountingEntries.map(e => new Date(e.date).getFullYear()))].sort((a, b) => b - a);
+    if (years.length === 0) years.push(new Date().getFullYear());
 
-        const incomingNum = quarterData.filter(e => e.type === 'incoming').reduce((sum, e) => sum + parseFloat(e.amount_gross), 0);
-        const outgoingNum = quarterData.filter(e => e.type === 'outgoing').reduce((sum, e) => sum + parseFloat(e.amount_gross), 0);
-        const balance = outgoingNum - incomingNum;
+    let html = '';
 
-        return `
-            <div class="glass-card" style="padding: 1.5rem; text-align: center; border: 2px solid ${balance >= 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'};">
-                <div style="font-size: 1.4rem; font-weight: 900; color: #fff;">${q.name}</div>
-                <div style="font-size: 0.8rem; color: rgba(255,255,255,0.4); margin-bottom: 1.25rem; font-weight: 600;">${q.label}</div>
-                <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
-                        <span style="color: rgba(255,255,255,0.6);">Ausgang:</span>
-                        <span style="color: var(--color-primary-green); font-weight: 800;">${window.formatCurrency(outgoingNum)}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
-                        <span style="color: rgba(255,255,255,0.6);">Eingang:</span>
-                        <span style="color: #f87171; font-weight: 800;">${window.formatCurrency(incomingNum)}</span>
-                    </div>
-                    <div style="margin-top: 10px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; font-weight: 900; font-size: 1.1rem;">
-                        <span>Bilanz:</span>
-                        <span style="color: ${balance >= 0 ? 'var(--color-primary-green)' : '#f87171'};">${window.formatCurrency(balance)}</span>
+    years.forEach(year => {
+        quarters.forEach(q => {
+            const quarterData = allAccountingEntries.filter(e => {
+                const d = new Date(e.date);
+                return d.getFullYear() === year && q.months.includes(d.getMonth());
+            });
+
+            // Zeige nur Quartale an, die entweder im aktuellen Jahr liegen oder Daten enthalten
+            if (quarterData.length === 0 && year !== new Date().getFullYear()) {
+                return;
+            }
+
+            const incomingNum = quarterData.filter(e => e.type === 'incoming').reduce((sum, e) => sum + parseFloat(e.amount_gross), 0);
+            const outgoingNum = quarterData.filter(e => e.type === 'outgoing').reduce((sum, e) => sum + parseFloat(e.amount_gross), 0);
+            const balance = outgoingNum - incomingNum;
+
+            html += `
+                <div class="glass-card" style="padding: 1.5rem; text-align: center; border: 2px solid ${balance >= 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'};">
+                    <div style="font-size: 1.4rem; font-weight: 900; color: #fff;">${q.name} ${year}</div>
+                    <div style="font-size: 0.8rem; color: rgba(255,255,255,0.4); margin-bottom: 1.25rem; font-weight: 600;">${q.label}</div>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
+                            <span style="color: rgba(255,255,255,0.6);">Ausgang:</span>
+                            <span style="color: var(--color-primary-green); font-weight: 800;">${window.formatCurrency(outgoingNum)}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
+                            <span style="color: rgba(255,255,255,0.6);">Eingang:</span>
+                            <span style="color: #f87171; font-weight: 800;">${window.formatCurrency(incomingNum)}</span>
+                        </div>
+                        <div style="margin-top: 10px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; font-weight: 900; font-size: 1.1rem;">
+                            <span>Bilanz:</span>
+                            <span style="color: ${balance >= 0 ? 'var(--color-primary-green)' : '#f87171'};">${window.formatCurrency(balance)}</span>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `;
-    }).join('');
+            `;
+        });
+    });
+
+    grid.innerHTML = html;
 };
 
 window.openAccountingModal = function () {
