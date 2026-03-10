@@ -151,6 +151,17 @@
                         </a>
                     </li>
                     <li>
+                        <a href="#accounting" class="nav-link" data-target="accounting">
+                            <!-- Coins/Accounting Icon -->
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="1" x2="12" y2="23"></line>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                            </svg>
+                            <span>Buchhaltung</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="#calendar" class="nav-link" data-target="calendar">
                             <!-- Calendar Icon -->
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -239,6 +250,18 @@
                     </a>
 
                 </div>
+
+                <!-- Spacer to push right content -->
+                <div style="flex-grow: 1;"></div>
+
+                <!-- Settings Button (Global in Topbar) -->
+                <button class="btn-icon-soft" title="Einstellungen" onclick="openSettingsModal()"
+                    style="margin-right: 1.5rem; display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; color: rgba(255,255,255,0.8); cursor: pointer; transition: all 0.2s;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                        <path
+                            d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.23.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6S13.98 15.6 12 15.6z" />
+                    </svg>
+                </button>
 
                 <!-- User Profile Switcher (Top Right) -->
                 <div class="sidebar-user-profile" id="userProfileTrigger">
@@ -1064,8 +1087,177 @@
                     </div>
                 </section>
 
+                <!-- Buchhaltung View -->
+                <section id="accounting" class="view hidden">
+                    <div class="view-header-layout">
+                        <div class="view-header-row-top">
+                            <div class="view-header-left">
+                                <h1 style="margin: 0; display:flex; align-items:center; gap:12px;">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="12" y1="1" x2="12" y2="23"></line>
+                                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                                    </svg>
+                                    Buchhaltung
+                                </h1>
+                            </div>
+                            <div class="view-header-right">
+                                <button onclick="openAccountingModal()" class="btn-primary"
+                                    style="display: flex; align-items: center; gap: 8px; padding: 10px 20px;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                    Neuer Eintrag
+                                </button>
+                            </div>
+                        </div>
 
+                        <div class="view-header-row-bottom">
+                            <div class="view-header-left">
+                                <div class="calendar-view-tabs" style="margin-bottom: 0;">
+                                    <button class="calendar-tab-btn active" id="tab-incoming"
+                                        onclick="switchAccountingTab('incoming')">Eingangsrechnungen</button>
+                                    <button class="calendar-tab-btn" id="tab-outgoing"
+                                        onclick="switchAccountingTab('outgoing')">Ausgangsrechnungen</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="accounting-table-container" class="glass-card"
+                        style="padding: 0; overflow-x: auto; margin-top: 2rem;">
+                        <!-- Dynamic Table Content -->
+                    </div>
+
+                    <div id="accounting-quarters" style="margin-top: 3rem;">
+                        <h2 style="color: #fff; margin-bottom: 1.5rem;">Quartals-Auswertung</h2>
+                        <div id="quarters-grid"
+                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                            <!-- Quarters will be rendered here -->
+                        </div>
+                    </div>
+                </section>
             </main>
+
+            <!-- Accounting Modal -->
+            <div id="accounting-modal" class="modal-backdrop hidden">
+                <div class="modal-content"
+                    style="max-width: 800px; position: relative; max-height: 90vh; overflow-y: auto;">
+                    <div class="modal-header"
+                        style="position: sticky; top: 0; background: #0f172a; z-index: 10; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px;">
+                        <h2 id="accounting-modal-title" style="margin: 0; padding-right: 40px;">Neuer
+                            Buchhaltungseintrag</h2>
+
+                        <button type="button" onclick="closeAccountingModal()" class="modal-close-btn"
+                            style="position: absolute !important; top: 16px !important; right: 16px !important; width: 32px !important; height: 32px !important; padding: 0 !important; background: rgba(239, 68, 68, 0.15) !important; color: #ef4444 !important; border: 1px solid rgba(239, 68, 68, 0.3) !important; border-radius: 50% !important; display: flex !important; align-items: center !important; justify-content: center !important; z-index: 100 !important; cursor: pointer !important;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <input type="file" id="acc-pdf-input" class="hidden" accept=".pdf"
+                        onchange="handleAccountingPDFUpload(event)" style="display: none;">
+
+                    <div id="acc-pdf-dropzone"
+                        style="margin-top: 1.5rem; border: 2px dashed rgba(255,255,255,0.2); border-radius: 12px; padding: 1.5rem; text-align: center; cursor: pointer; transition: all 0.3s; background: rgba(0,0,0,0.2);"
+                        onclick="document.getElementById('acc-pdf-input').click()"
+                        ondragover="event.preventDefault(); this.style.borderColor='var(--color-primary-green)'; this.style.background='rgba(16, 185, 129, 0.1)';"
+                        ondragleave="event.preventDefault(); this.style.borderColor='rgba(255,255,255,0.2)'; this.style.background='rgba(0,0,0,0.2)';"
+                        ondrop="event.preventDefault(); this.style.borderColor='rgba(255,255,255,0.2)'; this.style.background='rgba(0,0,0,0.2)'; window.handleAccountingPDFDrop(event)">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" style="margin-bottom: 8px; color: var(--color-primary-green);">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="12" y1="18" x2="12" y2="12"></line>
+                            <polyline points="9 15 12 12 15 15"></polyline>
+                        </svg>
+                        <div style="font-weight: 600; font-size: 0.95rem; color: #fff;">PDF-Rechnung hier ablegen oder
+                            anklicken</div>
+                        <div style="font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-top: 4px;">Automatischer
+                            Import durch Texterkennung</div>
+                    </div>
+
+                    <form id="accounting-form" onsubmit="submitAccountingEntry(event)">
+                        <input type="hidden" id="accounting-id">
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+                            <div class="form-group">
+                                <label for="acc-type">Typ</label>
+                                <select id="acc-type" class="glass-form-input" required
+                                    onchange="updateAccountingEntityLabel()">
+                                    <option value="incoming">Eingangsrechnung</option>
+                                    <option value="outgoing">Ausgangsrechnung</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="acc-invoice-number">Rechnungsnummer</label>
+                                <input type="text" id="acc-invoice-number" class="glass-form-input"
+                                    placeholder="z.B. RE-2024-001">
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+                            <div class="form-group">
+                                <label for="acc-date">Datum</label>
+                                <input type="date" id="acc-date" class="glass-form-input" required>
+                            </div>
+                            <div class="form-group">
+                                <label id="acc-entity-label" for="acc-entity">Lieferant</label>
+                                <input type="text" id="acc-entity" class="glass-form-input" required
+                                    placeholder="Name des Unternehmens">
+                            </div>
+                        </div>
+
+                        <div
+                            style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1.5rem; background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
+                            <div class="form-group">
+                                <label for="acc-amount-net">Summe Netto (€)</label>
+                                <input type="number" step="0.01" id="acc-amount-net" class="glass-form-input" required
+                                    oninput="calculateGross()">
+                            </div>
+                            <div class="form-group">
+                                <label for="acc-vat-rate">MwSt. Satz (%)</label>
+                                <select id="acc-vat-rate" class="glass-form-input" onchange="calculateGross()">
+                                    <option value="19">19%</option>
+                                    <option value="7">7%</option>
+                                    <option value="0">0%</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="acc-amount-gross">Summe Brutto (€)</label>
+                                <input type="number" step="0.01" id="acc-amount-gross" class="glass-form-input"
+                                    required>
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+                            <div class="form-group">
+                                <label for="acc-machine-id">Maschine (Optional)</label>
+                                <select id="acc-machine-id" class="glass-form-input">
+                                    <option value="">Keine Zuordnung</option>
+                                    <!-- Populated by JS -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="acc-comment">Verwendungszweck / Kommentar</label>
+                                <input type="text" id="acc-comment" class="glass-form-input"
+                                    placeholder="Wofür war diese Rechnung?">
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 12px;">
+                            <button type="button" class="btn-secondary"
+                                onclick="closeAccountingModal()">Abbrechen</button>
+                            <button type="submit" class="btn-primary">Speichern</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
 
             <!-- Calendar Navigation Popover -->
             <div id="calendar-nav-popover" class="calendar-nav-popover">
@@ -1260,6 +1452,9 @@
                     }
                     if (targetId === 'workshop') {
                         renderMachines('workshop-machines-container');
+                    }
+                    if (targetId === 'accounting' && typeof fetchAccountingEntries === 'function') {
+                        fetchAccountingEntries();
                     }
 
                     if (!found) {
@@ -7791,6 +7986,117 @@
         };
     </script>
 
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal-backdrop hidden"
+        style="z-index: 1200; display: none; align-items: center; justify-content: center;">
+        <div class="modal-content glass-card"
+            style="max-width: 500px; padding: 2rem; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 24px 64px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="margin: 0; font-size: 1.4rem; color: white; display: flex; align-items: center; gap: 10px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round" style="color: #60a5fa;">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                        </path>
+                    </svg>
+                    App Einstellungen
+                </h2>
+                <button class="btn-close-modal" onclick="closeSettingsModal()">&times;</button>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+                <label
+                    style="color: rgba(255,255,255,0.7); font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">OpenAI
+                    API-Key (ChatGPT)</label>
+                <div style="font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-bottom: 10px; line-height: 1.4;">
+                    Wird verwendet für das extrem präzise und fehlerfreie Auslesen von Rechnungs-PDFs via KI. Der Key
+                    wird <strong style="color:white;">nur lokal in deinem Browser</strong> gespeichert.
+                </div>
+                <div style="position: relative;">
+                    <input type="password" id="settings-api-key" class="glass-input" placeholder="sk-..."
+                        autocomplete="off" style="font-family: monospace; letter-spacing: 1px;">
+                    <button type="button" onclick="toggleApiKeyVisibility()"
+                        style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: rgba(255,255,255,0.5); cursor: pointer; transition: color 0.2s;"
+                        onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">
+                        <svg id="eye-icon-api" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                    </button>
+                </div>
+                <div style="margin-top: 8px; font-size: 0.8rem;">
+                    <a href="https://platform.openai.com/api-keys" target="_blank"
+                        style="color: #60a5fa; text-decoration: none; transition: color 0.2s;"
+                        onmouseover="this.style.color='#93c5fd'" onmouseout="this.style.color='#60a5fa'">Hier kannst du
+                        deinen API-Key erstellen &rarr;</a>
+                </div>
+            </div>
+
+            <div class="modal-actions" style="margin-top: 2.5rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                <button class="btn-secondary" onclick="closeSettingsModal()">Abbrechen</button>
+                <button class="btn-primary" onclick="saveSettings()">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.openSettingsModal = function () {
+            const modal = document.getElementById('settings-modal');
+            const input = document.getElementById('settings-api-key');
+
+            // Lade vorhandenen Key (falls vorhanden)
+            const savedKey = localStorage.getItem('openai_api_key');
+            if (savedKey) {
+                input.value = savedKey;
+            } else {
+                input.value = '';
+            }
+
+            modal.style.display = 'flex';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+            modal.classList.remove('hidden');
+            requestAnimationFrame(() => modal.classList.add('show'));
+            document.body.style.overflow = 'hidden';
+        };
+
+        window.closeSettingsModal = function () {
+            const modal = document.getElementById('settings-modal');
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }, 300);
+        };
+
+        window.saveSettings = function () {
+            const key = document.getElementById('settings-api-key').value.trim();
+            if (key) {
+                localStorage.setItem('openai_api_key', key);
+                alert('Einstellungen erfolgreich gespeichert.');
+            } else {
+                localStorage.removeItem('openai_api_key');
+                alert('API-Key entfernt.');
+            }
+            window.closeSettingsModal();
+        };
+
+        window.toggleApiKeyVisibility = function () {
+            const input = document.getElementById('settings-api-key');
+            const icon = document.getElementById('eye-icon-api');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+            } else {
+                input.type = 'password';
+                icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+            }
+        };
+    </script>
+
     <!-- Mobile sidebar overlay backdrop -->
     <div id="sidebar-overlay" onclick="window.closeMobileSidebar()"></div>
 
@@ -7824,6 +8130,17 @@
             });
         });
     </script>
+
+    <!-- PDF.js for Accounting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+        if (window['pdfjs-dist/build/pdf']) {
+            window.pdfjsLib = window['pdfjs-dist/build/pdf'];
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        }
+    </script>
+
+    <script src="accounting.js"></script>
 </body>
 
 </html>
