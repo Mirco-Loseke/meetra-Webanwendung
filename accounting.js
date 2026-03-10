@@ -417,11 +417,11 @@ window.handleAccountingPDFUpload = async function (event) {
                         messages: [
                             {
                                 role: "system",
-                                content: "Du bist ein präziser Buchhaltungs-Assistent. Deine einzige Aufgabe ist es, den angehängten rohen Text aus einem Rechnungs-PDF (oder OCR-Text) zu analysieren und als JSON-Objekt zurückzugeben. Antworte AUSSCHLIESSLICH mit dem validen JSON-Objekt, ohne jeglichen Markdown-Text drumherum. Extraghiere folgende Schlüssel:\n\n1. 'invoice_number': Die Rechnungsnummer (String).\n2. 'date': Das Rechnungsdatum im Format YYYY-MM-DD.\n3. 'net_amount': Der reine Netto-Betrag als Zahl (z.B. 1234.56, nutze Punkt als Dezimaltrennzeichen).\n4. 'vat_rate': Der anwendbare Mehrwertsteuersatz in Prozent als String (z.B. '19', '7' oder '0').\n5. 'type': Bestimme, ob es eine Eingangsrechnung oder Ausgangsrechnung ist. EURE EIGENE FIRMA ist 'Meetra', 'Meetra Recycling', 'Meetra Recycling Maschinen' oder 'Mirco Loseke'. Wenn eure eigene Firma der Absender/Rechnungssteller ist (also ihr das Geld bekommt), ist es eine Ausgangsrechnung ('outgoing'). Wenn eure Firma der Rechnungsempfänger ist und jemand anderes euch eine Rechnung stellt (ihr müsst bezahlen), ist es eine Eingangsrechnung ('incoming'). Antworte strikt mit 'incoming' oder 'outgoing'.\n6. 'entity': Name des logischen Geschäftspartners (Name des Kunden oder des Lieferanten). Trage hier NIEMALS eure eigene Firma ('Meetra', 'Mirco Loseke' etc.) ein, sondern immer die ANDERE Firma/Person auf dem Beleg.\n\nFalls ein Wert absolut nicht gefunden wird, setze ihn auf null."
+                                content: "Du bist ein präziser Buchhaltungs-Assistent. Deine einzige Aufgabe ist es, den angehängten rohen Text aus einem Rechnungs-PDF (oder OCR-Text) zu analysieren und als JSON-Objekt zurückzugeben. Antworte AUSSCHLIESSLICH mit dem validen JSON-Objekt, ohne jeglichen Markdown-Text drumherum. Extraghiere folgende Schlüssel:\n\n1. 'invoice_number': Die Rechnungsnummer.\n2. 'date': Das Rechnungsdatum als YYYY-MM-DD.\n3. 'net_amount': Der Netto-Betrag als Zahl.\n4. 'vat_rate': Der Mehrwertsteuersatz in Prozent (z.B. '19').\n5. 'type': 'incoming' (Eingangsrechnung - DU musst bezahlen) oder 'outgoing' (Ausgangsrechnung - DU bekommst Geld). EURE EIGENE FIRMA heißt 'Meetra', 'Meetra Recycling' oder 'Mirco Loseke'. Wenn eure Firma der RECHNUNGSAUSSTELLER/ABSENDER ist, also das Geld fordert, ist es IMMER 'outgoing'. Wenn eure Firma nur der EMPFÄNGER ist, an den die Rechnung gerichtet ist, ist es IMMER 'incoming'.\n6. 'entity': Trage hier den Kunden (bei outgoing) oder den Lieferanten (bei incoming) ein. Das ist IMMER DER ANDERE Geschäftspartner, NIEMALS eure eigene Firma ('Meetra', 'Mirco Loseke' etc. dürfen hier unter keinen Umständen stehen!). Steht eure Firma als Absender, ist die entity der Empfänger. Steht eure Firma als Empfänger, ist die entity der Absender.\n\nSetze nicht gefundene Werte auf null."
                             },
                             {
                                 role: "user",
-                                content: `Hier ist der Rohtext des PDFs:\n\n${fullText}`
+                                content: `Hier ist der Rohtext des PDFs:\n\n\${fullText}`
                             }
                         ],
                         temperature: 0.1,
@@ -455,6 +455,9 @@ window.handleAccountingPDFUpload = async function (event) {
                     const typeSelect = document.getElementById('acc-type');
                     if (typeSelect) {
                         typeSelect.value = parsedData.type; // 'incoming' or 'outgoing'
+                        if (window.updateAccountingEntityLabel) {
+                            window.updateAccountingEntityLabel();
+                        }
                     }
                 }
 
