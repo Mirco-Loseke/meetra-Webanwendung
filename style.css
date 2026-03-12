@@ -5602,3 +5602,10 @@ select.glass-form-input option, select.glass-form-select option {
   background-color: #1a1a24;
   color: #ffffff;
 }
+
+
+/* Global Dropdown Visibility Fix */
+select.glass-form-input, select.glass-form-select, select.glass-form-input option, select.glass-form-select option {
+  background-color: #1a1a24 !important;
+  color: #ffffff !important;
+}

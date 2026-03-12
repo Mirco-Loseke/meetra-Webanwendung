@@ -864,15 +864,22 @@ window.updateFinancialDashboard = function () {
         </div>
     `;
 
+    const overdueIncoming = overdueItems.filter(e => e.type === 'incoming');
+    const overdueOutgoing = overdueItems.filter(e => e.type === 'outgoing');
+
     // Sektionen
-    if (overdueItems.length > 0) {
-        html += renderDashboardSection('⚠️ Überfällig (Eingang & Ausgang)', overdueItems, 'ef4444', 'due_date');
+    if (overdueOutgoing.length > 0) {
+        html += renderDashboardSection('⚠️ Überfällig: Ausgang (Kunden)', overdueOutgoing, 'ef4444', 'due_date', false, '#ef4444');
+    }
+    
+    if (overdueIncoming.length > 0) {
+        html += renderDashboardSection('⚠️ Überfällig: Eingang (Lieferanten)', overdueIncoming, 'f59e0b', 'due_date', false, '#f59e0b');
     }
 
     if (direction === 'future') {
         html += renderDashboardSection('📥 Eingang: Demnächst fällig', incomingItems, 'f87171', 'due_date');
         html += renderDashboardSection('🏷️ Eingang: Skonto-Fristen', skontoDeals, '10b981', 'discount_date', true);
-        html += renderDashboardSection('📤 Ausgang: Erwartete Zahlungen', outgoingItems, '10b981', 'due_date');
+        html += renderDashboardSection('📤 Ausgang: Erwartete Zahlungen', outgoingItems, '10b981', 'due_date', false, '#10b981');
     } else {
         html += renderDashboardSection('Rechnungen im gewählten Zeitraum', [...incomingItems, ...outgoingItems], '60a5fa', 'due_date');
     }
@@ -880,12 +887,14 @@ window.updateFinancialDashboard = function () {
     content.innerHTML = html;
 };
 
-function renderDashboardSection(title, items, color, dateField, showSkonto = false) {
+function renderDashboardSection(title, items, color, dateField, showSkonto = false, borderColor = null) {
     if (items.length === 0) return '';
 
+    const borderStyle = borderColor ? `border: 2px solid ${borderColor}; box-shadow: 0 0 15px ${borderColor}1a;` : '';
+
     return `
-        <div class="fin-card">
-            <div class="fin-section-title" style="color: #${color};">
+        <div class="fin-card" style="${borderStyle}">
+            <div class="fin-section-title" style="color: #${color.startsWith('#') ? color.slice(1) : color};">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                 ${title}
             </div>
