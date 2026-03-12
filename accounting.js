@@ -867,6 +867,8 @@ window.updateFinancialDashboard = function () {
     const overdueIncoming = overdueItems.filter(e => e.type === 'incoming');
     const overdueOutgoing = overdueItems.filter(e => e.type === 'outgoing');
 
+    const timeRangeLabel = direction === 'future' ? `(die nächsten ${days} Tage)` : `(die letzten ${days} Tage)`;
+
     // Sektionen
     if (overdueOutgoing.length > 0) {
         html += renderDashboardSection('⚠️ Überfällig: Ausgang (Kunden)', overdueOutgoing, 'ef4444', 'due_date', false, '#ef4444');
@@ -877,26 +879,30 @@ window.updateFinancialDashboard = function () {
     }
 
     if (direction === 'future') {
-        html += renderDashboardSection('📥 Eingang: Demnächst fällig', incomingItems, 'f87171', 'due_date');
-        html += renderDashboardSection('🏷️ Eingang: Skonto-Fristen', skontoDeals, 'facc15', 'discount_date', true, '#facc15');
-        html += renderDashboardSection('📤 Ausgang: Erwartete Zahlungen', outgoingItems, '10b981', 'due_date', false, '#10b981');
+        html += renderDashboardSection('📥 Eingang: Demnächst fällig', incomingItems, 'f87171', 'due_date', false, null, timeRangeLabel);
+        html += renderDashboardSection('🏷️ Eingang: Skonto-Fristen', skontoDeals, 'facc15', 'discount_date', true, '#facc15', timeRangeLabel);
+        html += renderDashboardSection('📤 Ausgang: Erwartete Zahlungen', outgoingItems, '10b981', 'due_date', false, '#10b981', timeRangeLabel);
     } else {
-        html += renderDashboardSection('Rechnungen im gewählten Zeitraum', [...incomingItems, ...outgoingItems], '60a5fa', 'due_date');
+        html += renderDashboardSection('Rechnungen im gewählten Zeitraum', [...incomingItems, ...outgoingItems], '60a5fa', 'due_date', false, null, timeRangeLabel);
     }
 
     content.innerHTML = html;
 };
 
-function renderDashboardSection(title, items, color, dateField, showSkonto = false, borderColor = null) {
+function renderDashboardSection(title, items, color, dateField, showSkonto = false, borderColor = null, timeLabel = null) {
     if (items.length === 0) return '';
 
     const borderStyle = borderColor ? `border: 2px solid ${borderColor}; box-shadow: 0 0 15px ${borderColor}1a;` : '';
+    const sectionSum = items.reduce((sum, e) => sum + (showSkonto ? (parseFloat(e.discount_amount) || 0) : (parseFloat(e.amount_gross) || 0)), 0);
 
     return `
         <div class="fin-card" style="${borderStyle} height: auto; min-height: min-content;">
-            <div class="fin-section-title" style="color: #${color.startsWith('#') ? color.slice(1) : color};">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                ${title}
+            <div class="fin-section-title" style="color: #${color.startsWith('#') ? color.slice(1) : color}; justify-content: space-between; width: 100%;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    ${title}
+                </div>
+                ${timeLabel ? `<span style="color: rgba(255,255,255,0.4); font-size: 0.8rem; font-weight: 400; text-transform: none; letter-spacing: 0;">${timeLabel}</span>` : ''}
             </div>
             ${items.map(e => {
         const isOutgoing = e.type === 'outgoing';
@@ -917,6 +923,10 @@ function renderDashboardSection(title, items, color, dateField, showSkonto = fal
                 </div>
                 `;
     }).join('')}
+            <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.85rem; color: rgba(255,255,255,0.4); font-weight: 700; text-transform: uppercase;">Gesamt:</span>
+                <span style="font-size: 1.1rem; font-weight: 900; color: #${color.startsWith('#') ? color.slice(1) : color};">${window.formatCurrency(sectionSum)}</span>
+            </div>
         </div>
     `;
 }
