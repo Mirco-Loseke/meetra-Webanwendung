@@ -151,8 +151,20 @@ window.initGlassSelect = function(selectEl) {
             const opt = selectEl.options[selectEl.selectedIndex];
             textSpan.textContent = opt.text;
             textSpan.style.color = opt.value ? (wrapper.style.color || '#fff') : 'rgba(255,255,255,0.4)';
-            if (wrapper.className.includes('machine-workshop') && opt.value) {
-                textSpan.style.color = 'var(--color-primary-green)';
+            
+            // Special styling for workshop machine dropdown placeholders
+            if (wrapper.className.includes('machine-workshop')) {
+                if (opt.value) {
+                    textSpan.style.color = 'var(--color-primary-green)';
+                    textSpan.style.textAlign = 'left';
+                    icon.style.display = 'flex';
+                } else {
+                    textSpan.style.textAlign = 'center';
+                    icon.style.display = 'none';
+                }
+            } else {
+                textSpan.style.textAlign = 'left';
+                icon.style.display = 'flex';
             }
         } else {
             textSpan.textContent = '';
