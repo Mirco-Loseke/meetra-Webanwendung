@@ -879,7 +879,7 @@ window.updateFinancialDashboard = function () {
 
     if (direction === 'future') {
         html += renderDashboardSection('📥 Eingang: Demnächst fällig', incomingItems, 'f87171', 'due_date');
-        html += renderDashboardSection('🏷️ Eingang: Skonto-Fristen', skontoDeals, '10b981', 'discount_date', true);
+        html += renderDashboardSection('🏷️ Eingang: Skonto-Fristen', skontoDeals, 'facc15', 'discount_date', true, '#facc15');
         html += renderDashboardSection('📤 Ausgang: Erwartete Zahlungen', outgoingItems, '10b981', 'due_date', false, '#10b981');
     } else {
         html += renderDashboardSection('Rechnungen im gewählten Zeitraum', [...incomingItems, ...outgoingItems], '60a5fa', 'due_date');
@@ -894,7 +894,7 @@ function renderDashboardSection(title, items, color, dateField, showSkonto = fal
     const borderStyle = borderColor ? `border: 2px solid ${borderColor}; box-shadow: 0 0 15px ${borderColor}1a;` : '';
 
     return `
-        <div class="fin-card" style="${borderStyle} height: auto; min-height: min-content; overflow: hidden;">
+        <div class="fin-card" style="${borderStyle} height: auto; min-height: min-content;">
             <div class="fin-section-title" style="color: #${color.startsWith('#') ? color.slice(1) : color};">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                 ${title}

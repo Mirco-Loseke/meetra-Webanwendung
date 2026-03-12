@@ -1344,9 +1344,9 @@
 
             <!-- Financial Dashboard Modal -->
             <div id="financial-dashboard-modal" class="modal-backdrop hidden">
-                <div class="modal-content" style="max-width: 1000px; max-height: 90vh; overflow-y: auto;">
+                <div class="modal-content" style="max-width: 1100px; max-height: 85vh; display: flex; flex-direction: column;">
                     <div class="modal-header"
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-shrink: 0;">
                         <h2 style="margin: 0; display: flex; align-items: center; gap: 12px; font-size: 1.5rem;">
                             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2.5">
@@ -1388,7 +1388,7 @@
                         </div>
                     </div>
 
-                    <div id="financial-dashboard-content">
+                    <div id="financial-dashboard-content" style="overflow-y: auto; flex-grow: 1; padding-right: 5px;">
                         <!-- Dynamic Content via JS -->
                     </div>
                 </div>
