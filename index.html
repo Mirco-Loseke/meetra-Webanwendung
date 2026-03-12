@@ -1117,6 +1117,10 @@
                                         <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
                                     </svg>
                                 </button>
+                                <button onclick="window.openMachineEvaluation()" class="btn-icon-soft"
+                                    style="padding: 10px; color: #fff; margin-right: 10px;" title="Maschinen-Auswertung">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path><path d="M12 12L16 16"></path><path d="M12 12l4-4"></path><path d="M12 12l-4 4"></path><path d="M12 12l-4-4"></path></svg>
+                                </button>
                                 <button onclick="openAccountingModal()" class="btn-primary"
                                     style="display: flex; align-items: center; gap: 8px; padding: 10px 20px;">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1126,6 +1130,27 @@
                                     </svg>
                                     Neuer Eintrag
                                 </button>
+                            </div>
+                        </div>
+
+                        <!-- Machine Evaluation Modal -->
+                        <div id="machine-evaluation-modal" class="modal-backdrop hidden">
+                            <div class="modal-content" style="max-width: 1000px; max-height: 90vh; overflow-y: auto;">
+                                <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                    <h2 style="margin: 0; display: flex; align-items: center; gap: 12px; font-size: 1.5rem;">
+                                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                                        Maschinen-Kosten-Auswertung
+                                    </h2>
+                                    <button onclick="window.closeMachineEvaluation()" class="btn-icon-soft" style="color: #ef4444; padding: 5px;">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div id="machine-evaluation-content">
+                                    <!-- Dynamic Content via JS -->
+                                </div>
                             </div>
                         </div>
 
@@ -1267,10 +1292,26 @@
                             </div>
                         </div>
 
+                        <!-- Individual Positions Section -->
+                        <div style="margin-top: 2rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                                <h3 style="margin: 0; font-size: 1.1rem; color: #fff; display: flex; align-items: center; gap: 8px;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                                    Einzelne Positionen
+                                </h3>
+                                <button type="button" class="btn-secondary compact" onclick="window.addAccountingItemRow()" style="font-size: 0.8rem; padding: 6px 12px;">
+                                    + Position hinzufügen
+                                </button>
+                            </div>
+                            <div id="accounting-items-container" style="display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; padding-right: 5px;">
+                                <!-- Item rows added dynamically -->
+                            </div>
+                        </div>
+
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
                             <div class="form-group">
                                 <label for="acc-machine-id">Maschine (Optional)</label>
-                                <select id="acc-machine-id" class="glass-form-input">
+                                <select id="acc-machine-id" class="glass-form-input" style="color: var(--color-primary-green); font-weight: 700;">
                                     <option value="">Keine Zuordnung</option>
                                     <!-- Populated by JS -->
                                 </select>
@@ -1963,7 +2004,7 @@
                     // --- Calendar event row helper ---
                     function calRow(ev) {
                         const machine = machines.find(m => m.id === ev.machine_id);
-                        const machineTitle = machine ? [machine.manufacturer, machine.name].join(' ') : ev.title || 'Termin';
+                        const machineTitle = machine ? [machine.manufacturer, machine.name, machine.serial_number || machine.serial ? `#${machine.serial_number || machine.serial}` : null, machine.year ? `(${machine.year})` : null].filter(Boolean).join(' ') : ev.title || 'Termin';
                         const evDate = new Date(ev.date);
                         const dateStr = evDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
                         const isToday = ev.date === today;
@@ -2026,7 +2067,7 @@
                         const reportDate = entry.date ? new Date(entry.date) : new Date(entry.created_at);
                         const dateStr = reportDate.toLocaleDateString('de-DE');
                         const machineTitle = machine
-                            ? [machine.manufacturer, machine.name, machine.serial ? `#${machine.serial}` : null].filter(Boolean).join(' ')
+                            ? [machine.manufacturer, machine.name, machine.serial_number || machine.serial ? `#${machine.serial_number || machine.serial}` : null, machine.year ? `(${machine.year})` : null].filter(Boolean).join(' ')
                             : 'Unbekannte Maschine';
 
                         const typeLabel = entry.title || 'Servicebericht';
@@ -6249,12 +6290,8 @@
                                         <!-- Row 3: Main Title: Machine Name + Serial + Year (Left-aligned) -->
                                         <div style="min-width: 0; text-align: left; width: 100%;">
                                             <h2 style="margin: 0; font-size: clamp(0.95rem, 3.2vw, 1.6rem); color: var(--color-primary-green); font-weight: 900; line-height: 1.2; font-family: 'Outfit', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                                ${machine ? `${machine.manufacturer} ${machine.name}` : 'Unbekannte Maschine'}
+                                                ${machine ? [machine.manufacturer, machine.name, machine.serial_number || machine.serial ? `#${machine.serial_number || machine.serial}` : null, machine.year ? `(${machine.year})` : null].filter(Boolean).join(' ') : 'Unbekannte Maschine'}
                                             </h2>
-                                            <div style="font-size: clamp(0.9rem, 3vw, 1.2rem); opacity: 0.8; margin-top: 4px; color: var(--color-primary-green); font-weight: 700;">
-                                                ${machine && machine.serial ? `#${machine.serial}` : ''}
-                                                ${machine && machine.year ? `(${machine.year})` : ''}
-                                            </div>
                                         </div>
 
                                         <!-- Row 4: Short Description (falls vorhanden) -->
@@ -6331,7 +6368,7 @@
                                         </div>
                                     </td>
                                     <td style="color: var(--color-primary-green); font-weight: 600;">
-                                        ${machine ? `${machine.manufacturer} ${machine.name} #${machine.serial || '?'} (${machine.year || '?'})` : '-'}
+                                        ${machine ? [machine.manufacturer, machine.name, machine.serial_number || machine.serial ? `#${machine.serial_number || machine.serial}` : null, machine.year ? `(${machine.year})` : null].filter(Boolean).join(' ') : '-'}
                                     </td>
                                     <td style="color: rgba(255,255,255,0.5); font-size: 0.9rem;">
                                         ${e.description.substring(0, 80)}${e.description.length > 80 ? '...' : ''}
@@ -7745,7 +7782,8 @@
                     .single();
 
                 if (machine) {
-                    const nameDisplay = machine.internal_id ? `${machine.name} (${machine.internal_id})` : machine.name;
+                    const fullName = [machine.manufacturer, machine.name, machine.serial_number || machine.serial ? `#${machine.serial_number || machine.serial}` : null, machine.year ? `(${machine.year})` : null].filter(Boolean).join(' ');
+                    const nameDisplay = machine.internal_id ? `${fullName} (${machine.internal_id})` : fullName;
                     document.getElementById('workshop-photo-machine-name').innerText = nameDisplay;
                 }
 

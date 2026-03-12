@@ -5590,3 +5590,15 @@ MACHINE HISTORY TIMELINE
     transform: translateY(-1px);
     box-shadow: 0 4px 16px rgba(59, 130, 246, 0.25);
 }
+/* --- Expandable Accounting Rows --- */
+.hidden { display: none !important; }
+.spinner-small { width: 14px; height: 14px; border: 2px solid rgba(255, 255, 255, 0.1); border-top-color: var(--color-primary-green); border-radius: 50%; animation: spin-sm 0.8s linear infinite; }
+@keyframes spin-sm { to { transform: rotate(360deg); } }
+.accounting-main-row:hover { background: rgba(255, 255, 255, 0.04) !important; }
+.details-row { animation: slideDown 0.3s ease-out; }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+select.glass-form-input option, select.glass-form-select option {
+  background-color: #1a1a24;
+  color: #ffffff;
+}

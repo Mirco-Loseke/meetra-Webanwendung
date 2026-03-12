@@ -80,6 +80,7 @@ window.renderAccounting = function () {
                 <table class="data-table" style="width: 100%; border-collapse: collapse;">
                     <thead>
                         <tr style="text-align: left; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">
+                            <th style="padding: 12px; width: 30px;"></th>
                             <th style="padding: 12px; width: 40px;">Blt.</th>
                             <th style="padding: 12px;">Nr.</th>
                             <th style="padding: 12px;">Datum</th>
@@ -94,7 +95,10 @@ window.renderAccounting = function () {
                     </thead>
                     <tbody>
                         ${grouped[monthName].map(e => `
-                            <tr style="border-top: 1px solid rgba(255,255,255,0.03);">
+                            <tr style="border-top: 1px solid rgba(255,255,255,0.03); transition: background 0.2s;" class="accounting-main-row" id="row-${e.id}">
+                                <td style="padding: 12px; text-align: center; cursor: pointer; color: var(--color-primary-green);" onclick="window.toggleAccountingDetails('${e.id}', this)">
+                                    <svg class="chevron-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.3s;"><path d="M9 18l6-6-6-6"></path></svg>
+                                </td>
                                 <td style="padding: 12px; text-align: center;">
                                     <label style="position: relative; display: inline-block; width: 32px; height: 18px; margin: 0; cursor: pointer;" title="Bezahlt">
                                         <input type="checkbox" ${e.is_paid ? 'checked' : ''} 
@@ -127,7 +131,7 @@ window.renderAccounting = function () {
                                         </div>` : ''}
                                 </td>
                                 <td style="padding: 10px 12px; font-size: 0.85rem;">
-                                    <span style="color: #60a5fa; font-weight: 600;">
+                                    <span style="color: var(--color-primary-green); font-weight: 700;">
                                         ${window.getMachineName(e.machine_id)}
                                     </span>
                                 </td>
@@ -142,6 +146,16 @@ window.renderAccounting = function () {
                                         <button onclick="window.deleteAccountingEntry('${e.id}')" class="btn-icon-soft delete" title="Löschen" style="padding: 4px; color: #ef4444;">
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                         </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr id="details-${e.id}" class="hidden" style="background: rgba(255,255,255,0.01);">
+                                <td colspan="11" style="padding: 0 1.5rem 1.5rem 3rem;">
+                                    <div id="details-content-${e.id}" style="padding: 1.5rem; border: 1px solid rgba(255,255,255,0.05); border-top: none; border-radius: 0 0 16px 16px; background: rgba(0,0,0,0.2);">
+                                        <div style="color: rgba(255,255,255,0.3); font-size: 0.85rem; display: flex; align-items: center; gap: 10px;">
+                                            <div class="spinner-small"></div>
+                                            Lade Details...
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -171,7 +185,7 @@ window.getMachineName = function (id) {
     if (!id || !window.machineList) return '-';
     // Fallback if ID is string/number mismatch
     const machine = window.machineList.find(m => String(m.id) === String(id));
-    return machine ? `${machine.manufacturer} ${machine.name}` : '-';
+    return machine ? [machine.manufacturer, machine.name, machine.serial_number || machine.serial ? `#${machine.serial_number || machine.serial}` : null, machine.year ? `(${machine.year})` : null].filter(Boolean).join(' ') : '-';
 };
 
 window.togglePaidStatus = async function (id, checked) {
@@ -281,8 +295,8 @@ window.openAccountingModal = function () {
     // Populate Machines Dropdown
     const machineSelect = document.getElementById('acc-machine-id');
     if (machineSelect && window.machineList) {
-        machineSelect.innerHTML = '<option value="">Keine Zuordnung</option>' +
-            window.machineList.map(m => `<option value="${m.id}">${m.manufacturer} ${m.name} (${m.serial || '-'})</option>`).join('');
+        machineSelect.innerHTML = '<option value="" style="color: #fff;">Keine Zuordnung</option>' +
+            window.machineList.map(m => `<option value="${m.id}" style="color: var(--color-primary-green); font-weight: 600;">${window.getMachineName(m.id)}</option>`).join('');
     }
 
     modal.classList.remove('hidden');
@@ -291,7 +305,74 @@ window.openAccountingModal = function () {
     requestAnimationFrame(() => {
         modal.classList.add('show');
     });
+
+    // Clear Positions
+    const itemsContainer = document.getElementById('accounting-items-container');
+    if (itemsContainer) itemsContainer.innerHTML = '';
+
     console.log('Accounting Module: Modal shown');
+};
+
+window.addAccountingItemRow = function (data = {}) {
+    const container = document.getElementById('accounting-items-container');
+    if (!container) return;
+
+    const rowId = 'item-row-' + Math.random().toString(36).substr(2, 9);
+    const div = document.createElement('div');
+    div.id = rowId;
+    div.className = 'item-row';
+    div.style.display = 'grid';
+    div.style.gridTemplateColumns = '2fr 80px 80px 100px 100px 1.5fr 40px';
+    div.style.gap = '10px';
+    div.style.alignItems = 'center';
+    div.style.padding = '10px';
+    div.style.background = 'rgba(255,255,255,0.03)';
+    div.style.borderRadius = '10px';
+    div.style.border = '1px solid rgba(255,255,255,0.05)';
+
+    const machineOptions = (window.machineList || []).map(m => `<option value="${m.id}" ${String(data.machine_id) === String(m.id) ? 'selected' : ''} style="color: var(--color-primary-green); font-weight: 600;">${window.getMachineName(m.id)}</option>`).join('');
+    const initialLineTotal = ((parseFloat(data.quantity) || 1) * (parseFloat(data.price_net) || 0)).toFixed(2);
+
+    div.innerHTML = `
+        <input type="text" class="glass-form-input item-desc" value="${data.description || ''}" placeholder="Bezeichnung" style="padding: 8px;">
+        <input type="number" step="0.01" class="glass-form-input item-qty" value="${data.quantity || 1}" placeholder="Menge" style="padding: 8px;" oninput="window.updateAccountingTotalFromItems()">
+        <input type="text" class="glass-form-input item-unit" value="${data.unit || 'Stk'}" placeholder="Einh." style="padding: 8px;">
+        <input type="number" step="0.01" class="glass-form-input item-price" value="${data.price_net || ''}" placeholder="Preis (€)" style="padding: 8px;" oninput="window.updateAccountingTotalFromItems()">
+        <div class="item-line-total" style="color: var(--color-primary-green); font-weight: 700; text-align: right; padding-right: 5px;">${initialLineTotal} €</div>
+        <select class="glass-form-input item-machine" style="padding: 8px; color: var(--color-primary-green); font-weight: 700;">
+            <option value="" style="color: #fff;">Keine Maschine</option>
+            ${machineOptions}
+        </select>
+        <button type="button" class="btn-icon-soft" onclick="document.getElementById('${rowId}').remove(); window.updateAccountingTotalFromItems();" style="color: #ef4444; padding: 5px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+    `;
+
+    container.appendChild(div);
+};
+
+window.updateAccountingTotalFromItems = function () {
+    const rows = document.querySelectorAll('#accounting-items-container .item-row');
+    if (rows.length === 0) return;
+
+    let totalNet = 0;
+    rows.forEach(row => {
+        const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+        const price = parseFloat(row.querySelector('.item-price').value) || 0;
+        const lineTotal = qty * price;
+        totalNet += lineTotal;
+        
+        const lineTotalEl = row.querySelector('.item-line-total');
+        if (lineTotalEl) {
+            lineTotalEl.innerText = lineTotal.toFixed(2) + ' €';
+        }
+    });
+
+    const netInput = document.getElementById('acc-amount-net');
+    if (netInput) {
+        netInput.value = totalNet.toFixed(2);
+        window.calculateGross();
+    }
 };
 
 window.closeAccountingModal = function () {
@@ -365,10 +446,32 @@ window.submitAccountingEntry = async function (event) {
         if (id && id.length > 30) { // Check valid UUID for update
             result = await window.supabaseClient.from('accounting').update(entryData).eq('id', id);
         } else {
-            result = await window.supabaseClient.from('accounting').insert([entryData]);
+            result = await window.supabaseClient.from('accounting').insert([entryData]).select();
         }
 
         if (result.error) throw result.error;
+        const accountingId = id || result.data[0].id;
+
+        // Save Items
+        const itemRows = document.querySelectorAll('#accounting-items-container .item-row');
+        const items = Array.from(itemRows).map(row => ({
+            accounting_id: accountingId,
+            description: row.querySelector('.item-desc').value,
+            quantity: parseFloat(row.querySelector('.item-qty').value) || 1,
+            unit: row.querySelector('.item-unit').value,
+            price_net: parseFloat(row.querySelector('.item-price').value) || 0,
+            machine_id: row.querySelector('.item-machine').value ? parseInt(row.querySelector('.item-machine').value, 10) : null
+        }));
+
+        // Delete old items first if updating
+        if (id) {
+            await window.supabaseClient.from('accounting_items').delete().eq('accounting_id', id);
+        }
+
+        if (items.length > 0) {
+            const { error: itemsError } = await window.supabaseClient.from('accounting_items').insert(items);
+            if (itemsError) throw itemsError;
+        }
 
         window.closeAccountingModal();
         window.fetchAccountingEntries();
@@ -398,6 +501,26 @@ window.editAccountingEntry = async function (id) {
     document.getElementById('acc-discount-date').value = entry.discount_date || '';
     document.getElementById('acc-discount-amount').value = entry.discount_amount || '';
 
+    document.getElementById('acc-discount-amount').value = entry.discount_amount || '';
+
+    // Fetch and render items
+    try {
+        const { data: items, error: itemsError } = await window.supabaseClient
+            .from('accounting_items')
+            .select('*')
+            .eq('accounting_id', id);
+        
+        if (itemsError) throw itemsError;
+        
+        const itemsContainer = document.getElementById('accounting-items-container');
+        if (itemsContainer) itemsContainer.innerHTML = '';
+        if (items && items.length > 0) {
+            items.forEach(item => window.addAccountingItemRow(item));
+        }
+    } catch (err) {
+        console.error('Error fetching accounting items:', err);
+    }
+
     window.updateAccountingEntityLabel();
 };
 
@@ -418,209 +541,199 @@ window.handleAccountingPDFUpload = async function (event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    if (!window.pdfjsLib) {
-        alert('PDF-Bibliothek konnte nicht geladen werden. Bitte prüfen Sie Ihre Internetverbindung.');
+    const apiKey = localStorage.getItem('groq_api_key');
+    if (!apiKey) {
+        alert('Bitte hinterlegen Sie einen Groq API-Key in den Einstellungen.');
         return;
     }
 
+    const uploadBox = document.getElementById('acc-pdf-dropzone');
+    const originalContent = uploadBox ? uploadBox.innerHTML : '';
+    
+    // UI Feedback Start
+    if (uploadBox) {
+        uploadBox.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #60a5fa;">
+                <svg class="spinner" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite; margin-bottom: 10px;">
+                    <line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line>
+                    <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+                    <line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line>
+                    <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+                </svg>
+                <p style="margin:0;" id="ai-status-text">KI analysiert Beleg...</p>
+            </div>`;
+    }
+
+    const updateStatus = (text) => {
+        const el = document.getElementById('ai-status-text');
+        if (el) el.innerText = text;
+        console.log(`[AI-Status]: ${text}`);
+    };
+
     try {
-        const apiKey = localStorage.getItem('groq_api_key');
-        if (!apiKey) {
-            alert('Bitte hinterlegen Sie zunächst einen Groq API-Key in den Einstellungen (Zahnrad-Symbol oben rechts).');
-            event.target.value = '';
-            return;
-        }
-
-        // UI Feedback
-        const uploadBox = document.getElementById('acc-pdf-dropzone');
-        const originalContent = uploadBox ? uploadBox.innerHTML : '';
-        if (uploadBox) {
-            uploadBox.innerHTML = '<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #60a5fa;"><svg class="spinner" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation: spin 1s linear infinite; margin-bottom: 10px;"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg><p style="margin:0;">KI analysiert Beleg...</p></div>';
-        }
-
         const isImage = file.type.startsWith('image/');
+        const systemPrompt = `Du bist ein präziser Buchhaltungs-Assistent für das Unternehmen 'Meetra'. Analysiere das Dokument und gib NUR valides JSON zurück. 
+Schlüssel: invoice_number, date (YYYY-MM-DD), net_amount (Zahl), vat_rate (Zahl), type (incoming/outgoing), entity (Geschäftspartner), due_date (YYYY-MM-DD), discount_amount (Zahl), positions (Array aus {description, quantity, unit, price_net}). 
 
-        const systemPrompt = "Du bist ein präziser Buchhaltungs-Assistent. Deine einzige Aufgabe ist es, den angehängten Rechnungs-Text/das Bild zu analysieren und als JSON-Objekt zurückzugeben. Antworte AUSSCHLIESSLICH mit dem validen JSON-Objekt, ohne jeglichen Markdown-Text drumherum. Extraghiere folgende Schlüssel:\n\n1. 'invoice_number': Die Rechnungsnummer.\n2. 'date': Das Rechnungsdatum als YYYY-MM-DD.\n3. 'net_amount': Der Netto-Betrag als Zahl.\n4. 'vat_rate': Der Mehrwertsteuersatz in Prozent (z.B. '19'). WICHTIG: Prüfe genau ob MwSt anfällt! Wenn auf der Rechnung z.B. Reverse-Charge, §13b, 0% steht, oder schlichtweg KEINE MwSt ausgewiesen ist (nur Netto=Brutto existiert), MUSST du vat_rate '0' zurückgeben!\n5. 'type': 'incoming' (Eingangsrechnung - DU musst bezahlen) oder 'outgoing' (Ausgangsrechnung - DU bekommst Geld). EURE EIGENE FIRMA heißt 'Meetra', 'Meetra Recycling' oder 'Mirco Loseke'. Wenn eure Firma der RECHNUNGSAUSSTELLER ist, ist es IMMER 'outgoing'. Wenn eure Firma der EMPFÄNGER ist, ist es IMMER 'incoming'.\n6. 'entity': Trage hier den Kunden (bei outgoing) oder Lieferanten (bei incoming) ein. Das ist IMMER DER ANDERE Geschäftspartner. ACHTUNG: Verwende NIEMALS eine Adresse, die explizit mit 'Lieferanschrift' oder 'Lieferadresse' gekennzeichnet ist als Kundenadresse! Nimm die echte Rechnungsadresse, die meist darüber steht.\n7. 'due_date': Das Zahlungsziel im Format YYYY-MM-DD. Suche nach Begriffen wie 'Zahlungsvereinbarungen', 'zahlbar bis zum', 'fällig am' oder 'Zahlungsziel'. Wenn dort z.B. steht '10 Tage' hinter 'Zahlungsvereinbarungen', rechne das Datum (Rechnungsdatum + 10 Tage) aus.\n8. 'discount_date': Das Datum, bis wann Skonto gezogen werden kann, im Format YYYY-MM-DD. Suche nach Begriffen wie 'Skonto', 'abzüglich % Skonto' oder 'Zahlung innerhalb von X Tagen X% Skonto'.\n9. 'discount_amount': Der Skonto-Betrag absolut in Euro (als Zahl). WICHTIG: Wenn auf der Rechnung ein Prozentsatz (z.B. 2% Skonto) oder das Wort '%' im Kontext von Skonto/Zahlung steht, BERECHNE den Skonto-Betrag absolut aus dem Bruttobetrag (Brutto = Netto * (1 + MwSt-Satz/100)). Gib diesen hier als Zahl an.\n\nSetze nicht gefundene Werte auf null.";
+WICHTIG ZUR IDENTIFIKATION (entity):
+- 'Meetra' ist DEIN UNTERNEHMEN. Bei EINGANG (incoming) ist 'entity' der ABSENDER. 'Meetra' darf NIEMALS als 'entity' eingetragen werden.
+
+WICHTIG ZU PREISEN (price_net):
+- 'price_net' MUSS der EINZELPREIS pro Einheit sein.
+- Falls Bezeichnungen wie '230/100' oder 'EUR/1000' klein dabeistehen: Das bedeutet der Preis gilt für 100 Einheiten. Rechne den Einzelpreis (1 Einheit) aus!
+- PRIORITÄT: Falls die Zeile einen GESAMTPREIS hat (z.B. rechts am Rand), nutze diesen als festen Anker. Wenn Einzelpreis * Menge nicht den Zeilengesamtpreis ergibt, korrigiere den 'price_net' (Einzelpreis = Gesamtpreis / Menge).
+- Achte auf klein gedruckte Divisoren oder Rabattspalten.
+Setze Unbekanntes auf null.`;
 
         let requestBody = {};
 
         if (isImage) {
-            // Read Image as Base64 for Vision Model
+            updateStatus('Lese Bilddaten...');
             const base64Image = await new Promise((resolve, reject) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve(reader.result);
-                reader.onerror = reject;
+                reader.onerror = () => reject(new Error('Fehler beim Lesen der Bilddatei.'));
                 reader.readAsDataURL(file);
             });
 
             requestBody = {
-                model: "llama-3.2-90b-vision-preview",
-                messages: [
-                    {
-                        role: "user",
-                        content: [
-                            { type: "text", text: systemPrompt + "\n\nhier ist das Bild der Rechnung:" },
-                            { type: "image_url", image_url: { url: base64Image } }
-                        ]
-                    }
-                ],
+                model: "meta-llama/llama-4-scout-17b-16e-instruct",
+                messages: [{
+                    role: "user",
+                    content: [
+                        { type: "text", text: systemPrompt },
+                        { type: "image_url", image_url: { url: base64Image } }
+                    ]
+                }],
                 temperature: 0.1,
                 response_format: { type: "json_object" }
             };
         } else {
-            // Read PDF Text for standard Model
-            const fileReader = new FileReader();
-            const fullText = await new Promise((resolve, reject) => {
-                fileReader.onload = async function () {
-                    try {
-                        const typedarray = new Uint8Array(this.result);
-                        const loadingTask = window.pdfjsLib.getDocument(typedarray);
-                        const pdfDocument = await loadingTask.promise;
-                        let text = '';
-                        for (let i = 1; i <= pdfDocument.numPages; i++) {
-                            const page = await pdfDocument.getPage(i);
-                            const textContent = await page.getTextContent();
-                            text += textContent.items.map(item => item.str).join(' ') + '\n';
+            updateStatus('Lese PDF aus...');
+            const base64Images = await new Promise((resolve, reject) => {
+                try {
+                    const reader = new FileReader();
+                    reader.onload = async function() {
+                        try {
+                            const typedarray = new Uint8Array(this.result);
+                            const loadingTask = window.pdfjsLib.getDocument(typedarray);
+                            const pdfDocument = await loadingTask.promise;
+                            
+                            // Max 3 pages to prevent payload size issues/rate limits
+                            const numPages = Math.min(pdfDocument.numPages, 3);
+                            let images = [];
+                            
+                            for (let i = 1; i <= numPages; i++) {
+                                const page = await pdfDocument.getPage(i);
+                                const viewport = page.getViewport({ scale: 3.0 }); // Even higher scale for razor-sharp OCR of tiny text (230/100 etc)
+                                const canvas = document.createElement('canvas');
+                                const context = canvas.getContext('2d');
+                                canvas.height = viewport.height;
+                                canvas.width = viewport.width;
+                                await page.render({ canvasContext: context, viewport: viewport }).promise;
+                                images.push(canvas.toDataURL('image/jpeg', 0.95));
+                            }
+                            resolve(images);
+                        } catch (e) {
+                            reject(new Error('Fehler beim Rendern der PDF: ' + e.message));
                         }
-                        resolve(text);
-                    } catch (e) {
-                        reject(e);
-                    }
-                };
-                fileReader.readAsArrayBuffer(file);
+                    };
+                    reader.onerror = () => {
+                        const errName = reader.error ? reader.error.name : 'UnknownError';
+                        const errMsg = reader.error ? reader.error.message : 'No detailed message available';
+                        console.error('FileReader Error:', reader.error);
+                        reject(new Error(`Fehler beim Einlesen der PDF-Datei (${errName}: ${errMsg}).`));
+                    };
+                    reader.readAsArrayBuffer(file);
+                } catch (err) {
+                    reject(new Error('Unerwarteter Fehler beim Dateizugriff: ' + err.message));
+                }
+            });
+
+            const contentArray = [ { type: "text", text: systemPrompt } ];
+            base64Images.forEach(b64 => {
+                contentArray.push({ type: "image_url", image_url: { url: b64 } });
             });
 
             requestBody = {
-                model: "llama-3.3-70b-versatile",
-                messages: [
-                    { role: "system", content: systemPrompt },
-                    { role: "user", content: `Hier ist der Rohtext des PDFs:\n\n${fullText}` }
-                ],
+                model: "meta-llama/llama-4-scout-17b-16e-instruct",
+                messages: [{ role: "user", content: contentArray }],
                 temperature: 0.1,
                 response_format: { type: "json_object" }
             };
         }
 
-        try {
-            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}`
-                },
-                body: JSON.stringify(requestBody)
-            });
+        updateStatus('KI verarbeitet Daten...');
+        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(requestBody)
+        });
 
-            if (!response.ok) {
-                const errData = await response.json();
-                throw new Error(`Groq API Fehler: ${errData.error?.message || response.statusText}`);
-            }
-
-            const data = await response.json();
-            let resultText = data.choices[0].message.content;
-
-            // Remove potential markdown fences from Groq response
-            resultText = resultText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-
-            let parsedData;
-
-            try {
-                parsedData = JSON.parse(resultText);
-            } catch (e) {
-                console.error("Fehler beim Parsen der Groq Antwort:", resultText);
-                throw new Error("Die KI hat keine gültigen Daten geliefert.");
-            }
-
-            // Fill Form Fields with OpenAI Data
-
-            if (parsedData.type) {
-                const typeSelect = document.getElementById('acc-type');
-                if (typeSelect) {
-                    typeSelect.value = parsedData.type; // 'incoming' or 'outgoing'
-                    if (window.updateAccountingEntityLabel) {
-                        window.updateAccountingEntityLabel();
-                    }
-                }
-            }
-
-            if (parsedData.entity) {
-                const entityInput = document.getElementById('acc-entity');
-                if (entityInput) {
-                    entityInput.value = parsedData.entity;
-                }
-            }
-
-            if (parsedData.invoice_number) {
-                const invInput = document.getElementById('acc-invoice-number');
-                if (invInput) invInput.value = parsedData.invoice_number;
-            }
-
-            if (parsedData.date) {
-                const dateInput = document.getElementById('acc-date');
-                // Gpt should format it YYYY-MM-DD
-                if (dateInput) dateInput.value = parsedData.date;
-            }
-
-            if (parsedData.net_amount !== null && parsedData.net_amount !== undefined) {
-                const netInput = document.getElementById('acc-amount-net');
-                if (netInput && !isNaN(parsedData.net_amount)) {
-                    netInput.value = parseFloat(parsedData.net_amount).toFixed(2);
-                }
-            }
-
-            if (parsedData.vat_rate) {
-                const vatSelect = document.getElementById('acc-vat-rate');
-                if (vatSelect) {
-                    Array.from(vatSelect.options).forEach(opt => {
-                        if (opt.value === parsedData.vat_rate.toString()) {
-                            vatSelect.value = parsedData.vat_rate.toString();
-                        }
-                    });
-                }
-            }
-
-            if (parsedData.due_date) {
-                const dueInput = document.getElementById('acc-due-date');
-                if (dueInput) dueInput.value = parsedData.due_date;
-            }
-
-            if (parsedData.discount_date) {
-                const discountDateInput = document.getElementById('acc-discount-date');
-                if (discountDateInput) discountDateInput.value = parsedData.discount_date;
-            }
-
-            if (parsedData.discount_amount !== null && parsedData.discount_amount !== undefined) {
-                const discountAmtInput = document.getElementById('acc-discount-amount');
-                if (discountAmtInput && !isNaN(parsedData.discount_amount)) {
-                    discountAmtInput.value = parseFloat(parsedData.discount_amount).toFixed(2);
-                }
-            }
-
-            // Trigger Brutto Calculation
-            window.calculateGross();
-            alert('Beleg wurde erfolgreich durch die KI analysiert!');
-
-        } catch (apiErr) {
-            console.error("Groq Fehler:", apiErr);
-            if (apiErr.message && (apiErr.message.includes('insufficient_quota') || apiErr.message.includes('exceeded your current quota'))) {
-                alert('Fehler: Das Rate-Limit der kostenlosen Groq API wurde erreicht. Bitte kurz warten.');
-            } else if (apiErr.message && (apiErr.message.includes('invalid_api_key') || apiErr.message.includes('Incorrect API key'))) {
-                alert('Fehler: Der eingegebene API-Key ist ungültig. Bitte prüfe die Einstellungen.');
-            } else {
-                const btn = document.getElementById('acc-auto-calc-gross-btn');
-                if (btn) btn.click();
-                alert(`Fehler bei der KI-Analyse: ${apiErr.message}`);
-            }
-        } finally {
-            // Restore UI
-            if (uploadBox && typeof originalContent !== 'undefined') {
-                uploadBox.innerHTML = originalContent;
-            }
-            event.target.value = ''; // Reset file input
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(`Groq Fehler: ${errData.error?.message || response.statusText}`);
         }
+
+        const data = await response.json();
+        let resultText = data.choices[0].message.content;
+        resultText = resultText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+        const parsedData = JSON.parse(resultText);
+        updateStatus('Daten erfolgreich extrahiert!');
+
+        // Populate Form
+        if (parsedData.type) {
+            const sel = document.getElementById('acc-type');
+            if (sel) {
+                sel.value = parsedData.type;
+                if (window.updateAccountingEntityLabel) window.updateAccountingEntityLabel();
+            }
+        }
+        if (parsedData.entity) document.getElementById('acc-entity').value = parsedData.entity;
+        if (parsedData.invoice_number) document.getElementById('acc-invoice-number').value = parsedData.invoice_number;
+        if (parsedData.date) document.getElementById('acc-date').value = parsedData.date;
+        if (parsedData.net_amount !== null) document.getElementById('acc-amount-net').value = parseFloat(parsedData.net_amount).toFixed(2);
+        
+        if (parsedData.vat_rate !== null) {
+            const vatSel = document.getElementById('acc-vat-rate');
+            if (vatSel) vatSel.value = parsedData.vat_rate.toString();
+        }
+
+        if (parsedData.due_date) document.getElementById('acc-due-date').value = parsedData.due_date;
+        if (parsedData.discount_date) document.getElementById('acc-discount-date').value = parsedData.discount_date;
+        if (parsedData.discount_amount !== null) document.getElementById('acc-discount-amount').value = parseFloat(parsedData.discount_amount).toFixed(2);
+
+        window.calculateGross();
+
+        // Positions
+        const cont = document.getElementById('accounting-items-container');
+        if (cont) {
+            cont.innerHTML = '';
+            if (parsedData.positions && Array.isArray(parsedData.positions)) {
+                parsedData.positions.forEach(pos => window.addAccountingItemRow(pos));
+            }
+        }
+
+        alert('Analyse abgeschlossen!');
+
     } catch (err) {
-        console.error("Error parsing PDF:", err);
-        alert('Fehler beim Analysieren der PDF-Datei.');
+        console.error("AI Analysis Error:", err);
+        const errMsg = err.message || JSON.stringify(err) || "Unbekannter Fehler beim API-Aufruf.";
+        
+        if (errMsg.includes('insufficient_quota') || errMsg.includes('exceeded your current quota')) {
+            alert('Fehler: Das Rate-Limit der kostenlosen Groq API wurde erreicht. Bitte kurz warten.');
+        } else if (errMsg.includes('invalid_api_key') || errMsg.includes('Incorrect API key')) {
+            alert('Fehler: Der eingegebene API-Key ist ungültig. Bitte prüfe die Einstellungen.');
+        } else {
+            alert(`Fehler bei der Analyse: ${errMsg}`);
+        }
+    } finally {
+        if (uploadBox) uploadBox.innerHTML = originalContent;
+        event.target.value = ''; 
     }
 };
 
@@ -791,3 +904,212 @@ function renderDashboardSection(title, items, color, dateField, showSkonto = fal
     `;
 }
 
+window.openMachineEvaluation = function () {
+    const modal = document.getElementById('machine-evaluation-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        requestAnimationFrame(() => {
+            modal.classList.add('show');
+        });
+        window.updateMachineEvaluation();
+    }
+};
+
+window.closeMachineEvaluation = function () {
+    const modal = document.getElementById('machine-evaluation-modal');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => {
+            modal.classList.add('hidden');
+            modal.style.display = 'none';
+        }, 300);
+    }
+};
+
+window.updateMachineEvaluation = async function () {
+    const content = document.getElementById('machine-evaluation-content');
+    if (!content) return;
+
+    console.time('MachineEvaluation');
+    content.innerHTML = '<div style="padding: 2rem; text-align: center; color: rgba(255,255,255,0.4);">Optimiere Datenzugriff...</div>';
+
+    try {
+        if (!window.supabaseClient) throw new Error('Supabase client not initialized');
+
+        // 1. Fetch Items with joined accounting data
+        console.log('Fetching accounting items...');
+        const { data: items, error: itemsError } = await window.supabaseClient
+            .from('accounting_items')
+            .select(`
+                accounting_id, 
+                machine_id, 
+                price_net, 
+                quantity,
+                accounting ( id, date, type )
+            `)
+            .not('machine_id', 'is', null);
+
+        if (itemsError) throw itemsError;
+        console.log(`Found ${items?.length || 0} items with machine assignment.`);
+
+        // 2. Refresh main entries if needed (for direct assignments and UI sync)
+        if (!allAccountingEntries || allAccountingEntries.length === 0) {
+            console.log('Main entries empty, fetching...');
+            await window.fetchAccountingEntries();
+        }
+
+        const grouped = {};
+        const months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
+        const itemAccountingIds = new Set();
+
+        // 3. Process items O(N)
+        (items || []).forEach(item => {
+            const entry = item.accounting;
+            // Ignore items where parent accounting is deleted or not incoming
+            if (!entry || entry.type !== 'incoming') return;
+            
+            itemAccountingIds.add(item.accounting_id);
+
+            const date = new Date(entry.date);
+            const monthYear = `${months[date.getMonth()]} ${date.getFullYear()}`;
+
+            if (!grouped[item.machine_id]) grouped[item.machine_id] = {};
+            if (!grouped[item.machine_id][monthYear]) grouped[item.machine_id][monthYear] = 0;
+            
+            grouped[item.machine_id][monthYear] += (parseFloat(item.price_net) || 0) * (parseFloat(item.quantity) || 1);
+        });
+
+        // 4. Process direct assignments O(M)
+        allAccountingEntries.forEach(entry => {
+            if (entry.machine_id && entry.type === 'incoming' && !itemAccountingIds.has(entry.id)) {
+                const date = new Date(entry.date);
+                const monthYear = `${months[date.getMonth()]} ${date.getFullYear()}`;
+                
+                if (!grouped[entry.machine_id]) grouped[entry.machine_id] = {};
+                if (!grouped[entry.machine_id][monthYear]) grouped[entry.machine_id][monthYear] = 0;
+                grouped[entry.machine_id][monthYear] += parseFloat(entry.amount_net) || 0;
+            }
+        });
+
+        const allMonths = [...new Set(Object.values(grouped).flatMap(Object.keys))].sort((a,b) => {
+             const partsA = a.split(' ');
+             const partsB = b.split(' ');
+             if (partsA.length < 2 || partsB.length < 2) return 0;
+             if (partsA[1] !== partsB[1]) return parseInt(partsB[1]) - parseInt(partsA[1]);
+             return months.indexOf(partsB[0]) - months.indexOf(partsA[0]);
+        });
+
+        if (Object.keys(grouped).length === 0) {
+            content.innerHTML = '<div style="padding: 4rem; text-align: center; color: rgba(255,255,255,0.2);">Keine Kosten-Zuordnungen gefunden.</div>';
+            return;
+        }
+
+        let html = `
+            <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="text-align: left; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase;">
+                        <th style="padding: 12px;">Maschine</th>
+                        ${allMonths.map(m => `<th style="padding: 12px; text-align: right;">${m}</th>`).join('')}
+                        <th style="padding: 12px; text-align: right;">Gesamt</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        Object.keys(grouped).forEach(mId => {
+            const machineName = window.getMachineName(mId);
+            let machineTotal = 0;
+            html += `
+                <tr style="border-top: 1px solid rgba(255,255,255,0.05);">
+                    <td style="padding: 12px; font-weight: 700; color: var(--color-primary-green);">${machineName}</td>
+                    ${allMonths.map(m => {
+                        const val = grouped[mId][m] || 0;
+                        machineTotal += val;
+                        return `<td style="padding: 12px; text-align: right; color: ${val > 0 ? '#fff' : 'rgba(255,255,255,0.1)'};">${val > 0 ? window.formatCurrency(val) : '-'}</td>`;
+                    }).join('')}
+                    <td style="padding: 12px; text-align: right; font-weight: 800; background: rgba(255,255,255,0.02);">${window.formatCurrency(machineTotal)}</td>
+                </tr>
+            `;
+        });
+
+        html += '</tbody></table>';
+        content.innerHTML = html;
+        console.timeEnd('MachineEvaluation');
+
+    } catch (err) {
+        console.error('Error updating machine evaluation:', err);
+        content.innerHTML = `<div style="padding: 2rem; color: #ef4444; text-align: center;">
+            <div style="font-weight: 800; margin-bottom: 0.5rem;">Fehler beim Laden</div>
+            <div style="font-size: 0.8rem; opacity: 0.7;">${err.message || 'Unbekannter Fehler'}</div>
+            <button onclick="window.updateMachineEvaluation()" class="btn-primary" style="margin-top: 1rem; padding: 5px 15px; font-size: 0.8rem;">Erneut versuchen</button>
+        </div>`;
+    }
+};
+
+window.toggleAccountingDetails = async function (id, btn) {
+    const detailsRow = document.getElementById(`details-${id}`);
+    const mainRow = document.getElementById(`row-${id}`);
+    const content = document.getElementById(`details-content-${id}`);
+    const chevron = btn.querySelector('.chevron-icon');
+
+    if (!detailsRow || !content) return;
+
+    if (!detailsRow.classList.contains('hidden')) {
+        detailsRow.classList.add('hidden');
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
+        if (mainRow) mainRow.style.background = 'transparent';
+        return;
+    }
+
+    // Show and rotate
+    detailsRow.classList.remove('hidden');
+    if (chevron) chevron.style.transform = 'rotate(90deg)';
+    if (mainRow) mainRow.style.background = 'rgba(255,255,255,0.02)';
+
+    // Lazy Load
+    try {
+        const { data: items, error } = await window.supabaseClient
+            .from('accounting_items')
+            .select('*')
+            .eq('accounting_id', id);
+
+        if (error) throw error;
+
+        if (!items || items.length === 0) {
+            content.innerHTML = '<div style="color: rgba(255,255,255,0.3); font-size: 0.85rem;">Keine Einzelpositionen für diesen Beleg gefunden.</div>';
+            return;
+        }
+
+        let itemsHtml = `
+            <div style="display: grid; grid-template-columns: 2fr 80px 80px 100px 100px 1.5fr; gap: 1rem; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div>Bezeichnung</div>
+                <div>Menge</div>
+                <div>Einh.</div>
+                <div style="text-align: right;">Preis (€)</div>
+                <div style="text-align: right;">Gesamt (€)</div>
+                <div style="padding-left: 1rem;">Maschine</div>
+            </div>
+        `;
+
+        items.forEach(item => {
+            const machineName = window.getMachineName(item.machine_id);
+            itemsHtml += `
+                <div style="display: grid; grid-template-columns: 2fr 80px 80px 100px 100px 1.5fr; gap: 1rem; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 0.85rem;">
+                    <div style="font-weight: 600; color: #fff;">${item.description}</div>
+                    <div style="color: rgba(255,255,255,0.6);">${item.quantity || 1}</div>
+                    <div style="color: rgba(255,255,255,0.4);">${item.unit || '-'}</div>
+                    <div style="text-align: right; font-weight: 700;">${window.formatCurrency(item.price_net)}</div>
+                    <div style="text-align: right; font-weight: 800; color: #fff;">${window.formatCurrency((parseFloat(item.price_net) || 0) * (parseFloat(item.quantity) || 1))}</div>
+                    <div style="padding-left: 1rem; color: var(--color-primary-green); font-weight: 600;">${machineName}</div>
+                </div>
+            `;
+        });
+
+        content.innerHTML = itemsHtml;
+
+    } catch (err) {
+        console.error('Error loading details:', err);
+        content.innerHTML = '<div style="color: #ef4444; font-size: 0.85rem;">Fehler beim Laden der Details.</div>';
+    }
+};
