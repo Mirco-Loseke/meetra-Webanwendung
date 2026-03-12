@@ -871,25 +871,25 @@ window.updateFinancialDashboard = function () {
 
     // Sektionen
     if (overdueOutgoing.length > 0) {
-        html += renderDashboardSection('⚠️ Überfällig: Ausgang (Kunden)', overdueOutgoing, 'ef4444', 'due_date', false, '#ef4444');
+        html += renderDashboardSection('⚠️ Überfällig: Ausgang (Kunden)', overdueOutgoing, 'ef4444', 'due_date', false, '#ef4444', null, today);
     }
     
     if (overdueIncoming.length > 0) {
-        html += renderDashboardSection('⚠️ Überfällig: Eingang (Lieferanten)', overdueIncoming, 'ea580c', 'due_date', false, '#ea580c');
+        html += renderDashboardSection('⚠️ Überfällig: Eingang (Lieferanten)', overdueIncoming, 'ea580c', 'due_date', false, '#ea580c', null, today);
     }
 
     if (direction === 'future') {
-        html += renderDashboardSection('📥 Eingang: Demnächst fällig', incomingItems, 'f87171', 'due_date', false, null, timeRangeLabel);
-        html += renderDashboardSection('🏷️ Eingang: Skonto-Fristen', skontoDeals, 'facc15', 'discount_date', true, '#facc15', timeRangeLabel);
-        html += renderDashboardSection('📤 Ausgang: Erwartete Zahlungen', outgoingItems, '10b981', 'due_date', false, '#10b981', timeRangeLabel);
+        html += renderDashboardSection('📥 Eingang: Demnächst fällig', incomingItems, 'f87171', 'due_date', false, null, timeRangeLabel, today);
+        html += renderDashboardSection('🏷️ Eingang: Skonto-Fristen', skontoDeals, 'facc15', 'discount_date', true, '#facc15', timeRangeLabel, today);
+        html += renderDashboardSection('📤 Ausgang: Erwartete Zahlungen', outgoingItems, '10b981', 'due_date', false, '#10b981', timeRangeLabel, today);
     } else {
-        html += renderDashboardSection('Rechnungen im gewählten Zeitraum', [...incomingItems, ...outgoingItems], '60a5fa', 'due_date', false, null, timeRangeLabel);
+        html += renderDashboardSection('Rechnungen im gewählten Zeitraum', [...incomingItems, ...outgoingItems], '60a5fa', 'due_date', false, null, timeRangeLabel, today);
     }
 
     content.innerHTML = html;
 };
 
-function renderDashboardSection(title, items, color, dateField, showSkonto = false, borderColor = null, timeLabel = null) {
+function renderDashboardSection(title, items, color, dateField, showSkonto = false, borderColor = null, timeLabel = null, today = new Date()) {
     if (items.length === 0) return '';
 
     const borderStyle = borderColor ? `border: 2px solid ${borderColor}; box-shadow: 0 0 15px ${borderColor}1a;` : '';
@@ -907,15 +907,41 @@ function renderDashboardSection(title, items, color, dateField, showSkonto = fal
             ${items.map(e => {
         const isOutgoing = e.type === 'outgoing';
         const itemColor = isOutgoing ? '10b981' : (showSkonto ? '10b981' : color);
-        const displayDate = e[dateField] ? new Date(e[dateField]).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
+        const itemDate = e[dateField] ? new Date(e[dateField]) : null;
+        const displayDate = itemDate ? itemDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
+
+        // Berechnung relative Tage
+        let relativeText = '';
+        if (itemDate) {
+            const diffTime = itemDate.getTime() - today.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays === 0) {
+                relativeText = 'heute fällig';
+            } else if (diffDays < 0) {
+                const absDays = Math.abs(diffDays);
+                if (isOutgoing) {
+                    relativeText = `Zahlung überfällig seit ${absDays} ${absDays === 1 ? 'Tag' : 'Tagen'}`;
+                } else {
+                    relativeText = `überfällig seit ${absDays} ${absDays === 1 ? 'Tag' : 'Tagen'}`;
+                }
+            } else {
+                if (showSkonto) {
+                    relativeText = `Skontofrist endet in ${diffDays} ${diffDays === 1 ? 'Tag' : 'Tagen'}`;
+                } else {
+                    relativeText = `fällig in ${diffDays} ${diffDays === 1 ? 'Tag' : 'Tagen'}`;
+                }
+            }
+        }
 
         return `
                 <div class="fin-item">
-                    <div style="font-weight: 600; color: rgba(255,255,255,0.5);">${displayDate}</div>
-                    <div style="font-weight: 800; color: #fff;">
+                    <div style="font-weight: 600; color: #fff;">${displayDate}</div>
+                    <div style="font-weight: 800; color: #fff; overflow: visible;">
                         <span style="color: ${isOutgoing ? '#10b981' : '#f87171'}; font-size: 0.7rem; text-transform: uppercase; margin-right: 5px;">${isOutgoing ? 'Ausgang' : 'Eingang'}</span>
                         ${e.entity} 
                         <span style="font-weight: 400; color: rgba(255,255,255,0.3); font-size: 0.75rem; margin-left: 8px;">${e.invoice_number || ''}</span>
+                        <div style="font-size: 0.75rem; font-weight: 500; color: rgba(255,255,255,0.4); margin-top: 2px;">${relativeText}</div>
                     </div>
                     <div style="text-align: right; color: #${itemColor.startsWith('#') ? itemColor.slice(1) : itemColor}; font-weight: 800;">
                         ${showSkonto ? '-' + window.formatCurrency(e.discount_amount) : window.formatCurrency(e.amount_gross)}
@@ -924,7 +950,7 @@ function renderDashboardSection(title, items, color, dateField, showSkonto = fal
                 `;
     }).join('')}
             <div style="margin-top: 15px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 0.85rem; color: rgba(255,255,255,0.4); font-weight: 700; text-transform: uppercase;">Gesamt:</span>
+                <span style="font-size: 0.85rem; color: #fff; font-weight: 700; text-transform: uppercase;">Gesamt:</span>
                 <span style="font-size: 1.1rem; font-weight: 900; color: #${color.startsWith('#') ? color.slice(1) : color};">${window.formatCurrency(sectionSum)}</span>
             </div>
         </div>
