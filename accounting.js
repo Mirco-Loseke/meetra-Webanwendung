@@ -475,13 +475,19 @@ window.resetAccountingForm = function () {
     document.getElementById('accounting-id').value = '';
     
     const typeSelect = document.getElementById('acc-type');
-    if (typeSelect) { typeSelect.value = 'incoming'; typeSelect.dispatchEvent(new Event('change')); }
+    if (typeSelect) { 
+        typeSelect.value = window.currentAccountingType || 'incoming'; 
+        typeSelect.dispatchEvent(new Event('change')); 
+    }
     
     const vatSelect = document.getElementById('acc-vat-rate');
     if (vatSelect) { vatSelect.value = '19'; vatSelect.dispatchEvent(new Event('change')); }
     
     document.getElementById('acc-date').value = new Date().toISOString().split('T')[0];
     document.getElementById('accounting-modal-title').textContent = 'Neuer Eintrag';
+    
+    const paidCheck = document.getElementById('acc-is-paid');
+    if (paidCheck) paidCheck.checked = false;
     
     document.getElementById('accounting-items-container').innerHTML = '';
     window.updateAccountingEntityLabel();
@@ -494,28 +500,6 @@ window.openAccountingModal = function () {
         console.error('Accounting Modal not found!');
         return;
     }
-    if (!form) {
-        console.error('Accounting Form not found!');
-        return;
-    }
-
-    form.reset();
-    const idField = document.getElementById('accounting-id');
-    if (idField) idField.value = '';
-
-    const titleField = document.getElementById('accounting-modal-title');
-    if (titleField) titleField.textContent = 'Neuer Buchhaltungseintrag';
-
-    // Set current type as default
-    const typeField = document.getElementById('acc-type');
-    if (typeField) {
-        typeField.value = currentAccountingType;
-        window.updateAccountingEntityLabel();
-    }
-
-    const paidCheck = document.getElementById('acc-is-paid');
-    if (paidCheck) paidCheck.checked = false;
-
 
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
