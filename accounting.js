@@ -764,10 +764,10 @@ window.openFinancialDashboard = function () {
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
 
-        // Initialisierung des Bezugsdatums auf HEUTE falls leer
-        const dateInput = document.getElementById('fin-reference-date');
-        if (dateInput && !dateInput.value) {
-            dateInput.value = new Date().toISOString().split('T')[0];
+        // Anzeige des heutigen Datums
+        const dateSpan = document.getElementById('fin-today-date');
+        if (dateSpan) {
+            dateSpan.textContent = '(Heute: ' + new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ')';
         }
 
         requestAnimationFrame(() => {
@@ -794,9 +794,8 @@ window.updateFinancialDashboard = function () {
     const content = document.getElementById('financial-dashboard-content');
     if (!content) return;
 
-    const refDateVal = document.getElementById('fin-reference-date').value;
-    const now = refDateVal ? new Date(refDateVal) : new Date();
-    // Normalisiere Bezugsdatum auf Start des Tages
+    const now = new Date();
+    // Normalisiere heute auf Start des Tages für saubere Vergleiche
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     const limitDate = new Date(today);
@@ -874,7 +873,7 @@ window.updateFinancialDashboard = function () {
     }
     
     if (overdueIncoming.length > 0) {
-        html += renderDashboardSection('⚠️ Überfällig: Eingang (Lieferanten)', overdueIncoming, 'f59e0b', 'due_date', false, '#f59e0b');
+        html += renderDashboardSection('⚠️ Überfällig: Eingang (Lieferanten)', overdueIncoming, 'ea580c', 'due_date', false, '#ea580c');
     }
 
     if (direction === 'future') {
@@ -912,8 +911,7 @@ function renderDashboardSection(title, items, color, dateField, showSkonto = fal
                         ${e.entity} 
                         <span style="font-weight: 400; color: rgba(255,255,255,0.3); font-size: 0.75rem; margin-left: 8px;">${e.invoice_number || ''}</span>
                     </div>
-                    <div style="text-align: right; font-weight: 700;">${window.formatCurrency(e.amount_gross)}</div>
-                    <div style="text-align: right; color: #${itemColor}; font-weight: 800;">
+                    <div style="text-align: right; color: #${itemColor.startsWith('#') ? itemColor.slice(1) : itemColor}; font-weight: 800;">
                         ${showSkonto ? '-' + window.formatCurrency(e.discount_amount) : window.formatCurrency(e.amount_gross)}
                     </div>
                 </div>

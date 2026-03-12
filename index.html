@@ -1354,12 +1354,8 @@
                                 <path d="M22 12A10 10 0 0 0 12 2v10z"></path>
                             </svg>
                             Finanz-Übersicht
-                            <div style="display: flex; align-items: center; gap: 8px; margin-left: 15px;">
-                                <label for="fin-reference-date" style="font-size: 0.8rem; color: rgba(255,255,255,0.4); font-weight: 600;">Bezugsdatum:</label>
-                                <input type="date" id="fin-reference-date" class="glass-form-input" 
-                                    style="padding: 4px 8px; font-size: 0.9rem; width: 140px; background: #1a1a1a; cursor: pointer;"
-                                    onchange="window.updateFinancialDashboard()">
-                            </div>
+                            <span id="fin-today-date"
+                                style="font-size: 1rem; color: rgba(255,255,255,0.4); font-weight: 400; margin-left: 10px;"></span>
                         </h2>
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <div
@@ -1416,7 +1412,7 @@
 
                 .fin-item {
                     display: grid;
-                    grid-template-columns: 90px 1fr 100px 110px;
+                    grid-template-columns: 90px 1fr 120px;
                     gap: 12px;
                     padding: 10px 0;
                     border-top: 1px solid rgba(255, 255, 255, 0.03);
