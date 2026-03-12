@@ -764,10 +764,10 @@ window.openFinancialDashboard = function () {
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
 
-        // Anzeige des heutigen Datums
-        const dateSpan = document.getElementById('fin-today-date');
-        if (dateSpan) {
-            dateSpan.textContent = '(Heute: ' + new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ')';
+        // Initialisierung des Bezugsdatums auf HEUTE falls leer
+        const dateInput = document.getElementById('fin-reference-date');
+        if (dateInput && !dateInput.value) {
+            dateInput.value = new Date().toISOString().split('T')[0];
         }
 
         requestAnimationFrame(() => {
@@ -794,8 +794,9 @@ window.updateFinancialDashboard = function () {
     const content = document.getElementById('financial-dashboard-content');
     if (!content) return;
 
-    const now = new Date();
-    // Normalisiere heute auf Start des Tages für saubere Vergleiche
+    const refDateVal = document.getElementById('fin-reference-date').value;
+    const now = refDateVal ? new Date(refDateVal) : new Date();
+    // Normalisiere Bezugsdatum auf Start des Tages
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     const limitDate = new Date(today);
@@ -893,7 +894,7 @@ function renderDashboardSection(title, items, color, dateField, showSkonto = fal
     const borderStyle = borderColor ? `border: 2px solid ${borderColor}; box-shadow: 0 0 15px ${borderColor}1a;` : '';
 
     return `
-        <div class="fin-card" style="${borderStyle}">
+        <div class="fin-card" style="${borderStyle} height: auto; min-height: min-content; overflow: hidden;">
             <div class="fin-section-title" style="color: #${color.startsWith('#') ? color.slice(1) : color};">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                 ${title}
