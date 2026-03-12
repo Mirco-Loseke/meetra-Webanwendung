@@ -187,7 +187,6 @@ window.getMachineName = function (id) {
     const machine = window.machineList.find(m => String(m.id) === String(id));
     return machine ? [machine.manufacturer, machine.name, machine.serial_number || machine.serial ? `#${machine.serial_number || machine.serial}` : null, machine.year ? `(${machine.year})` : null].filter(Boolean).join(' ') : '-';
 };
-
 window.togglePaidStatus = async function (id, checked) {
     try {
         const { error } = await window.supabaseClient
@@ -206,8 +205,16 @@ window.togglePaidStatus = async function (id, checked) {
     }
 };
 
+let selectedQuartersYear = new Date().getFullYear();
+
+window.switchQuartersYear = function(year) {
+    selectedQuartersYear = parseInt(year);
+    window.renderQuarters();
+};
+
 window.renderQuarters = function () {
     const grid = document.getElementById('quarters-grid');
+    const yearSelect = document.getElementById('quarters-year-select');
     if (!grid) return;
 
     const quarters = [
@@ -219,29 +226,32 @@ window.renderQuarters = function () {
 
     // Sammle alle eindeutigen Jahre aus den Daten
     const years = [...new Set(allAccountingEntries.map(e => new Date(e.date).getFullYear()))].sort((a, b) => b - a);
-    if (years.length === 0) years.push(new Date().getFullYear());
+    if (!years.includes(new Date().getFullYear())) {
+        years.push(new Date().getFullYear());
+        years.sort((a, b) => b - a);
+    }
+
+    // Dropdown befüllen falls vorhanden
+    if (yearSelect) {
+        const currentSelection = yearSelect.value || selectedQuartersYear;
+        yearSelect.innerHTML = years.map(y => `<option value="${y}" ${String(y) === String(currentSelection) ? 'selected' : ''}>${y}</option>`).join('');
+    }
 
     let html = '';
 
-    years.forEach(year => {
-        quarters.forEach(q => {
-            const quarterData = allAccountingEntries.filter(e => {
-                const d = new Date(e.date);
-                return d.getFullYear() === year && q.months.includes(d.getMonth());
-            });
+    quarters.forEach(q => {
+        const quarterData = allAccountingEntries.filter(e => {
+            const d = new Date(e.date);
+            return d.getFullYear() === selectedQuartersYear && q.months.includes(d.getMonth());
+        });
 
-            // Zeige nur Quartale an, die entweder im aktuellen Jahr liegen oder Daten enthalten
-            if (quarterData.length === 0 && year !== new Date().getFullYear()) {
-                return;
-            }
+        const incomingNum = quarterData.filter(e => e.type === 'incoming').reduce((sum, e) => sum + parseFloat(e.amount_gross), 0);
+        const outgoingNum = quarterData.filter(e => e.type === 'outgoing').reduce((sum, e) => sum + parseFloat(e.amount_gross), 0);
+        const balance = outgoingNum - incomingNum;
 
-            const incomingNum = quarterData.filter(e => e.type === 'incoming').reduce((sum, e) => sum + parseFloat(e.amount_gross), 0);
-            const outgoingNum = quarterData.filter(e => e.type === 'outgoing').reduce((sum, e) => sum + parseFloat(e.amount_gross), 0);
-            const balance = outgoingNum - incomingNum;
-
-            html += `
-                <div class="glass-card" style="padding: 1.5rem; text-align: center; border: 2px solid ${balance >= 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'};">
-                    <div style="font-size: 1.4rem; font-weight: 900; color: #fff;">${q.name} ${year}</div>
+        html += `
+            <div class="glass-card" style="padding: 1.5rem; text-align: center; border: 2px solid ${balance >= 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'};">
+                <div style="font-size: 1.4rem; font-weight: 900; color: #fff;">${q.name} ${selectedQuartersYear}</div>
                     <div style="font-size: 0.8rem; color: rgba(255,255,255,0.4); margin-bottom: 1.25rem; font-weight: 600;">${q.label}</div>
                     <div style="display: flex; flex-direction: column; gap: 10px;">
                         <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
@@ -260,7 +270,6 @@ window.renderQuarters = function () {
                 </div>
             `;
         });
-    });
 
     grid.innerHTML = html;
 };

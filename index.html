@@ -1172,7 +1172,16 @@
                     </div>
 
                     <div id="accounting-quarters" style="margin-top: 3rem;">
-                        <h2 style="color: #fff; margin-bottom: 1.5rem;">Quartals-Auswertung</h2>
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+                            <h2 style="color: #fff; margin: 0;">Quartals-Auswertung</h2>
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <label for="quarters-year-select" style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600;">Jahr:</label>
+                                <select id="quarters-year-select" onchange="window.switchQuartersYear(this.value)" 
+                                    style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 6px 12px; border-radius: 8px; font-size: 0.9rem; font-weight: 700; outline: none; cursor: pointer;">
+                                    <!-- Years will be populated dynamically -->
+                                </select>
+                            </div>
+                        </div>
                         <div id="quarters-grid"
                             style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
                             <!-- Quarters will be rendered here -->
