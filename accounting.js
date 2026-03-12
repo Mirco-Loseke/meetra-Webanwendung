@@ -17,6 +17,8 @@ window.addEventListener('hashchange', () => {
     }
 });
 
+let selectedAccountingYear = null; // null = alle Jahre / Standardwert: aktuelles Jahr
+
 window.fetchAccountingEntries = async function () {
     console.log('Accounting Module: fetching entries');
     try {
@@ -27,10 +29,64 @@ window.fetchAccountingEntries = async function () {
 
         if (error) throw error;
         allAccountingEntries = data || [];
+        
+        // Jahr-Dropdown befüllen (custom)
+        const yearDisplay = document.getElementById('acc-year-display');
+        const yearList = document.getElementById('acc-year-list');
+        if (yearDisplay && yearList) {
+            const years = [...new Set(allAccountingEntries.map(e => new Date(e.date).getFullYear()))].sort((a, b) => b - a);
+            const currentYear = new Date().getFullYear();
+            if (!years.includes(currentYear)) years.unshift(currentYear);
+            if (selectedAccountingYear === null) selectedAccountingYear = currentYear;
+
+            const options = [{ value: 'alle', label: 'Alle' }, ...years.map(y => ({ value: y, label: String(y) }))];
+            yearList.innerHTML = options.map(opt => `
+                <div onclick="event.stopPropagation(); window.filterAccountingByYear('${opt.value}')"
+                    style="padding: 8px 16px; font-size: 0.9rem; font-weight: 700; color: ${String(opt.value) === String(selectedAccountingYear) ? 'var(--color-primary-green)' : '#fff'}; cursor: pointer; transition: background 0.15s; white-space: nowrap;"
+                    onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'">
+                    ${opt.label}
+                </div>`).join('');
+            yearDisplay.textContent = selectedAccountingYear === 'alle' ? 'Alle' : selectedAccountingYear;
+        }
+
         renderAccounting();
+        window.renderQuarters();
     } catch (err) {
         console.error('Error fetching accounting:', err);
     }
+};
+
+window.toggleYearDropdown = function(e) {
+    e.stopPropagation();
+    const list = document.getElementById('acc-year-list');
+    if (!list) return;
+    list.classList.toggle('hidden');
+};
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function() {
+    const list = document.getElementById('acc-year-list');
+    if (list) list.classList.add('hidden');
+});
+
+window.filterAccountingByYear = function(year) {
+    selectedAccountingYear = year === 'alle' ? 'alle' : parseInt(year);
+
+    // Update custom dropdown display
+    const yearDisplay = document.getElementById('acc-year-display');
+    const yearList = document.getElementById('acc-year-list');
+    if (yearDisplay) yearDisplay.textContent = selectedAccountingYear === 'alle' ? 'Alle' : selectedAccountingYear;
+    if (yearList) {
+        // Refresh active highlight
+        yearList.querySelectorAll('div').forEach(div => {
+            const val = div.getAttribute('onclick').match(/'([^']+)'\)/)?.[1];
+            div.style.color = val && String(val) === String(selectedAccountingYear) ? 'var(--color-primary-green)' : '#fff';
+        });
+        yearList.classList.add('hidden');
+    }
+
+    renderAccounting();
+    window.renderQuarters();
 };
 
 window.switchAccountingTab = function (type) {
@@ -45,7 +101,14 @@ window.renderAccounting = function () {
     const container = document.getElementById('accounting-table-container');
     if (!container) return;
 
-    const filtered = allAccountingEntries.filter(e => e.type === currentAccountingType);
+    const filtered = allAccountingEntries.filter(e => {
+        if (e.type !== currentAccountingType) return false;
+        if (selectedAccountingYear !== 'alle' && selectedAccountingYear !== null) {
+            const year = new Date(e.date).getFullYear();
+            if (year !== selectedAccountingYear) return false;
+        }
+        return true;
+    });
 
     // Group by Month and Year
     const months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
@@ -77,20 +140,18 @@ window.renderAccounting = function () {
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                     ${monthName}
                 </h3>
-                <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                <table class="data-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
                     <thead>
                         <tr style="text-align: left; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">
-                            <th style="padding: 12px; width: 30px;"></th>
-                            <th style="padding: 12px; width: 40px;">Blt.</th>
-                            <th style="padding: 12px;">Nr.</th>
-                            <th style="padding: 12px;">Datum</th>
+                            <th style="padding: 12px; width: 28px;"></th>
+                            <th style="padding: 12px; width: 60px;">Blt.</th>
+                            <th style="padding: 12px; width: 155px;">Nr.</th>
+                            <th style="padding: 12px; width: 140px;">Datum</th>
                             <th style="padding: 12px;">${currentAccountingType === 'incoming' ? 'Lieferant' : 'Kunde'}</th>
-                            <th style="padding: 12px;">Netto</th>
-                            <th style="padding: 12px;">MwSt.</th>
-                            <th style="padding: 12px;">Brutto</th>
-                            <th style="padding: 12px;">Maschine</th>
-                            <th style="padding: 12px;">Zweck</th>
-                            <th style="padding: 12px; width: 80px; text-align: center;">Aktion</th>
+                            <th style="padding: 12px; width: 110px;">Netto</th>
+                            <th style="padding: 12px; width: 55px;">MwSt.</th>
+                            <th style="padding: 12px; width: 150px;">Brutto</th>
+                            <th style="padding: 12px; width: 85px; text-align: center;">Aktion</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -99,7 +160,7 @@ window.renderAccounting = function () {
                                 <td style="padding: 12px; text-align: center; cursor: pointer; color: var(--color-primary-green);" onclick="window.toggleAccountingDetails('${e.id}', this)">
                                     <svg class="chevron-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.3s;"><path d="M9 18l6-6-6-6"></path></svg>
                                 </td>
-                                <td style="padding: 12px; text-align: center;">
+                                <td style="padding: 8px 12px; text-align: center; vertical-align: middle;">
                                     <label style="position: relative; display: inline-block; width: 32px; height: 18px; margin: 0; cursor: pointer;" title="Bezahlt">
                                         <input type="checkbox" ${e.is_paid ? 'checked' : ''} 
                                             onchange="window.togglePaidStatus('${e.id}', this.checked)"
@@ -108,11 +169,12 @@ window.renderAccounting = function () {
                                             <span style="position: absolute; height: 12px; width: 12px; left: ${e.is_paid ? '18px' : '2px'}; top: 2px; background-color: ${e.is_paid ? '#fff' : 'rgba(255,255,255,0.5)'}; transition: .3s; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.3);"></span>
                                         </span>
                                     </label>
+                                    ${e.paid_at ? `<div style="font-size: 0.65rem; color: var(--color-primary-green); margin-top: 3px; font-weight: 600; opacity: 0.8; white-space: nowrap;">${new Date(e.paid_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}</div>` : ''}
                                 </td>
                                 <td style="padding: 10px 12px; font-weight: 600; font-size: 0.85rem;">${e.invoice_number || '-'}</td>
-                                <td style="padding: 10px 12px; font-size: 0.85rem;">
+                                <td style="padding: 10px 12px; font-size: 0.85rem; white-space: nowrap;">
                                     <div style="font-weight: 600;">${new Date(e.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
-                                    ${e.due_date ? `<div style="font-size: 0.75rem; color: #f87171; margin-top: 2px; font-weight: 700;">fällig: ${new Date(e.due_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>` : ''}
+                                    ${e.due_date ? `<div style="font-size: 0.75rem; color: #f87171; margin-top: 2px; font-weight: 700; white-space: nowrap;">fällig: ${new Date(e.due_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>` : ''}
                                 </td>
                                 <td style="padding: 10px 12px; font-weight: 700; color: #fff; font-size: 0.85rem;">${e.entity}</td>
                                 <td style="padding: 10px 12px; font-size: 0.85rem;">${window.formatCurrency(e.amount_net)}</td>
@@ -130,27 +192,23 @@ window.renderAccounting = function () {
                                             </div>
                                         </div>` : ''}
                                 </td>
-                                <td style="padding: 10px 12px; font-size: 0.85rem;">
-                                    <span style="color: var(--color-primary-green); font-weight: 700;">
-                                        ${window.getMachineName(e.machine_id)}
-                                    </span>
-                                </td>
-                                <td style="padding: 10px 12px; font-size: 0.8rem; color: rgba(255,255,255,0.5);" title="${e.comment || ''}">
-                                    ${e.comment ? (e.comment.length > 20 ? e.comment.substring(0, 20) + '...' : e.comment) : '-'}
-                                </td>
                                 <td style="padding: 10px 12px; text-align: center;">
-                                    <div style="display:flex; justify-content: center; gap: 6px;">
-                                        <button onclick="window.editAccountingEntry('${e.id}')" class="btn-icon-soft" title="Bearbeiten" style="padding: 4px;">
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                    <div style="display:flex; justify-content: center; gap: 8px;">
+                                        <button onclick="window.editAccountingEntry('${e.id}')" title="Bearbeiten"
+                                            style="width:30px; height:30px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
+                                            onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                         </button>
-                                        <button onclick="window.deleteAccountingEntry('${e.id}')" class="btn-icon-soft delete" title="Löschen" style="padding: 4px; color: #ef4444;">
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                        <button onclick="window.deleteAccountingEntry('${e.id}')" title="Löschen"
+                                            style="width:30px; height:30px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
+                                            onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                         </button>
                                     </div>
                                 </td>
                             </tr>
                             <tr id="details-${e.id}" class="hidden" style="background: rgba(255,255,255,0.01);">
-                                <td colspan="11" style="padding: 0 1.5rem 1.5rem 3rem;">
+                                <td colspan="9" style="padding: 0 1.5rem 1.5rem 3rem;">
                                     <div id="details-content-${e.id}" style="padding: 1.5rem; border: 1px solid rgba(255,255,255,0.05); border-top: none; border-radius: 0 0 16px 16px; background: rgba(0,0,0,0.2);">
                                         <div style="color: rgba(255,255,255,0.3); font-size: 0.85rem; display: flex; align-items: center; gap: 10px;">
                                             <div class="spinner-small"></div>
@@ -189,14 +247,22 @@ window.getMachineName = function (id) {
 };
 window.togglePaidStatus = async function (id, checked) {
     try {
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const updateData = {
+            is_paid: checked,
+            paid_at: checked ? today : null
+        };
         const { error } = await window.supabaseClient
             .from('accounting')
-            .update({ is_paid: checked })
+            .update(updateData)
             .eq('id', id);
         if (error) throw error;
 
         const entry = allAccountingEntries.find(e => e.id === id);
-        if (entry) entry.is_paid = checked;
+        if (entry) {
+            entry.is_paid = checked;
+            entry.paid_at = checked ? today : null;
+        }
 
         window.renderAccounting(); // UI neu rendern für Toggle-Animation
     } catch (err) {
@@ -214,62 +280,71 @@ window.switchQuartersYear = function(year) {
 
 window.renderQuarters = function () {
     const grid = document.getElementById('quarters-grid');
-    const yearSelect = document.getElementById('quarters-year-select');
     if (!grid) return;
 
     const quarters = [
-        { name: 'Q1', months: [0, 1, 2], label: 'Januar - März' },
-        { name: 'Q2', months: [3, 4, 5], label: 'April - Juni' },
-        { name: 'Q3', months: [6, 7, 8], label: 'Juli - September' },
-        { name: 'Q4', months: [9, 10, 11], label: 'Oktober - Dezember' }
+        { name: 'Q1', months: [0, 1, 2], label: 'Jan–Mär' },
+        { name: 'Q2', months: [3, 4, 5], label: 'Apr–Jun' },
+        { name: 'Q3', months: [6, 7, 8], label: 'Jul–Sep' },
+        { name: 'Q4', months: [9, 10, 11], label: 'Okt–Dez' }
     ];
 
-    // Sammle alle eindeutigen Jahre aus den Daten
-    const years = [...new Set(allAccountingEntries.map(e => new Date(e.date).getFullYear()))].sort((a, b) => b - a);
-    if (!years.includes(new Date().getFullYear())) {
-        years.push(new Date().getFullYear());
-        years.sort((a, b) => b - a);
-    }
+    // Determine which years to show
+    let allYears = [...new Set(allAccountingEntries.map(e => new Date(e.date).getFullYear()))].sort((a, b) => b - a);
+    const currentYear = new Date().getFullYear();
+    if (!allYears.includes(currentYear)) allYears.unshift(currentYear);
 
-    // Dropdown befüllen falls vorhanden
-    if (yearSelect) {
-        const currentSelection = yearSelect.value || selectedQuartersYear;
-        yearSelect.innerHTML = years.map(y => `<option value="${y}" ${String(y) === String(currentSelection) ? 'selected' : ''}>${y}</option>`).join('');
-    }
+    const yearsToShow = (selectedAccountingYear === 'alle' || selectedAccountingYear === null)
+        ? allYears
+        : [typeof selectedAccountingYear === 'number' ? selectedAccountingYear : parseInt(selectedAccountingYear)];
 
     let html = '';
 
-    quarters.forEach(q => {
-        const quarterData = allAccountingEntries.filter(e => {
-            const d = new Date(e.date);
-            return d.getFullYear() === selectedQuartersYear && q.months.includes(d.getMonth());
-        });
-
-        const incomingNum = quarterData.filter(e => e.type === 'incoming').reduce((sum, e) => sum + parseFloat(e.amount_gross), 0);
-        const outgoingNum = quarterData.filter(e => e.type === 'outgoing').reduce((sum, e) => sum + parseFloat(e.amount_gross), 0);
-        const balance = outgoingNum - incomingNum;
-
+    yearsToShow.forEach(yr => {
         html += `
-            <div class="glass-card" style="padding: 1.5rem; text-align: center; border: 2px solid ${balance >= 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'};">
-                <div style="font-size: 1.4rem; font-weight: 900; color: #fff;">${q.name} ${selectedQuartersYear}</div>
-                    <div style="font-size: 0.8rem; color: rgba(255,255,255,0.4); margin-bottom: 1.25rem; font-weight: 600;">${q.label}</div>
-                    <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
-                            <span style="color: rgba(255,255,255,0.6);">Ausgang:</span>
+        <div style="margin-bottom: 2rem;">
+            <div style="font-size: 1.1rem; font-weight: 900; color: rgba(255,255,255,0.5); margin-bottom: 1rem; display: flex; align-items: center; gap: 10px;">
+                <span style="color: #fff;">${yr}</span>
+                <span style="display: inline-block; height: 1px; flex: 1; background: rgba(255,255,255,0.08);"></span>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+        `;
+
+        quarters.forEach(q => {
+            const quarterData = allAccountingEntries.filter(e => {
+                const d = new Date(e.date);
+                return d.getFullYear() === yr && q.months.includes(d.getMonth());
+            });
+
+            const incomingNum = quarterData.filter(e => e.type === 'incoming').reduce((sum, e) => sum + parseFloat(e.amount_gross || 0), 0);
+            const outgoingNum = quarterData.filter(e => e.type === 'outgoing').reduce((sum, e) => sum + parseFloat(e.amount_gross || 0), 0);
+            const balance = outgoingNum - incomingNum;
+            const hasData = quarterData.length > 0;
+
+            html += `
+                <div class="glass-card" style="padding: 1.25rem; text-align: center; border: 2px solid ${hasData ? (balance >= 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)') : 'rgba(255,255,255,0.04)'}; opacity: ${hasData ? '1' : '0.4'};">
+                    <div style="font-size: 1.2rem; font-weight: 900; color: #fff; margin-bottom: 2px;">${q.name}</div>
+                    <div style="font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-bottom: 1rem; font-weight: 600;">${q.label}</div>
+                    <div style="display: flex; flex-direction: column; gap: 6px;">
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                            <span style="color: rgba(255,255,255,0.5);">Ausgang:</span>
                             <span style="color: var(--color-primary-green); font-weight: 800;">${window.formatCurrency(outgoingNum)}</span>
                         </div>
-                        <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
-                            <span style="color: rgba(255,255,255,0.6);">Eingang:</span>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+                            <span style="color: rgba(255,255,255,0.5);">Eingang:</span>
                             <span style="color: #f87171; font-weight: 800;">${window.formatCurrency(incomingNum)}</span>
                         </div>
-                        <div style="margin-top: 10px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; font-weight: 900; font-size: 1.1rem;">
-                            <span>Bilanz:</span>
+                        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; font-weight: 900; font-size: 1rem;">
+                            <span style="color: rgba(255,255,255,0.6);">Bilanz:</span>
                             <span style="color: ${balance >= 0 ? 'var(--color-primary-green)' : '#f87171'};">${window.formatCurrency(balance)}</span>
                         </div>
                     </div>
                 </div>
             `;
         });
+
+        html += `</div></div>`;
+    });
 
     grid.innerHTML = html;
 };
@@ -301,12 +376,9 @@ window.openAccountingModal = function () {
         window.updateAccountingEntityLabel();
     }
 
-    // Populate Machines Dropdown
-    const machineSelect = document.getElementById('acc-machine-id');
-    if (machineSelect && window.machineList) {
-        machineSelect.innerHTML = '<option value="" style="color: #fff;">Keine Zuordnung</option>' +
-            window.machineList.map(m => `<option value="${m.id}" style="color: var(--color-primary-green); font-weight: 600;">${window.getMachineName(m.id)}</option>`).join('');
-    }
+    const paidCheck = document.getElementById('acc-is-paid');
+    if (paidCheck) paidCheck.checked = false;
+
 
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
@@ -322,43 +394,312 @@ window.openAccountingModal = function () {
     console.log('Accounting Module: Modal shown');
 };
 
+// --- Enhanced Assignment UI Logic ---
+
+function buildAccMachineDropdown(machines, rowId) {
+    let dropdown = document.getElementById('acc-machine-dropdown-portal');
+    if (!dropdown) {
+        dropdown = document.createElement('div');
+        dropdown.id = 'acc-machine-dropdown-portal';
+        dropdown.style.cssText = [
+            'position: fixed',
+            'z-index: 999999',
+            'background: rgba(15,23,42,0.98)',
+            'border: 1px solid rgba(255,255,255,0.15)',
+            'border-radius: 12px',
+            'max-height: 260px',
+            'overflow-y: auto',
+            'box-shadow: 0 16px 48px rgba(0,0,0,0.7)',
+            'display: none'
+        ].join(';');
+        document.body.appendChild(dropdown);
+    }
+
+    const row = document.getElementById(rowId);
+    const searchInput = row ? row.querySelector('.item-machine-search') : null;
+    if (searchInput) {
+        const rect = searchInput.getBoundingClientRect();
+        dropdown.style.top = (rect.bottom + 4) + 'px';
+        dropdown.style.left = rect.left + 'px';
+        dropdown.style.width = rect.width + 'px';
+    }
+
+    dropdown.innerHTML = '';
+
+    const noneItem = document.createElement('div');
+    noneItem.textContent = 'Keine Maschine';
+    noneItem.style.cssText = 'padding: 10px 14px; cursor: pointer; color: rgba(255,255,255,0.6); font-size: 0.9rem;';
+    noneItem.onmousedown = (e) => { e.preventDefault(); selectAccMachine('', '', rowId); };
+    noneItem.onmouseover = () => { noneItem.style.background = 'rgba(255,255,255,0.08)'; };
+    noneItem.onmouseout = () => { noneItem.style.background = ''; };
+    dropdown.appendChild(noneItem);
+
+    machines.forEach(m => {
+        const label = window.getMachineName(m.id);
+        const item = document.createElement('div');
+        item.style.cssText = 'padding: 10px 14px; cursor: pointer; font-size: 0.9rem; border-top: 1px solid rgba(255,255,255,0.05);';
+        item.innerHTML = `<span style="color: var(--color-primary-green); font-weight: 600;">${label}</span>`;
+        item.onmousedown = (e) => { e.preventDefault(); selectAccMachine(m.id, label, rowId); };
+        item.onmouseover = () => { item.style.background = 'rgba(255,255,255,0.06)'; };
+        item.onmouseout = () => { item.style.background = ''; };
+        dropdown.appendChild(item);
+    });
+
+    dropdown.style.display = 'block';
+}
+
+window.filterAccMachineDropdown = function (query, rowId) {
+    const machines = window.machineList || [];
+    const tokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+    const filtered = machines.filter(m => {
+        const searchable = [
+            m.manufacturer || '',
+            m.name || '',
+            m.serial || '',
+            m.year ? String(m.year) : ''
+        ].join(' ').toLowerCase();
+        return tokens.length === 0 || tokens.every(t => searchable.includes(t));
+    });
+    buildAccMachineDropdown(filtered, rowId);
+};
+
+window.selectAccMachine = function (id, label, rowId) {
+    const row = document.getElementById(rowId);
+    if (!row) return;
+
+    row.dataset.machineId = id;
+    const searchInput = row.querySelector('.item-machine-search');
+    if (searchInput) {
+        searchInput.value = label;
+        searchInput.style.color = id ? 'var(--color-primary-green)' : '';
+    }
+    const dropdown = document.getElementById('acc-machine-dropdown-portal');
+    if (dropdown) dropdown.style.display = 'none';
+};
+
+// Toggle Assignment Type (Maschine vs Andere)
+window.toggleAccAssignmentType = function (rowId, type) {
+    const row = document.getElementById(rowId);
+    if (!row) return;
+
+    row.dataset.assignmentType = type;
+    const machineUI = row.querySelector('.machine-ui');
+    const otherUI = row.querySelector('.other-ui');
+    const btns = row.querySelectorAll('.type-btn');
+
+    btns.forEach(btn => {
+        const isActive = btn.classList.contains(type === 'machine' ? 'mac' : 'and');
+        btn.classList.toggle('active', isActive);
+        btn.style.background = isActive ? (type === 'machine' ? 'var(--color-primary-green)' : '#6366f1') : 'transparent';
+        btn.style.color = isActive ? 'white' : 'rgba(255,255,255,0.4)';
+    });
+
+    if (type === 'machine') {
+        if (machineUI) machineUI.classList.remove('hidden');
+        if (otherUI) otherUI.classList.add('hidden');
+        row.dataset.assignmentArea = '';
+    } else {
+        if (machineUI) machineUI.classList.add('hidden');
+        if (otherUI) otherUI.classList.remove('hidden');
+        row.dataset.machineId = '';
+        const searchInput = row.querySelector('.item-machine-search');
+        if (searchInput) searchInput.value = '';
+    }
+};
+
+// Toggle Machine Filter (Werkstatt vs Alle)
+window.toggleAccMachineFilter = function (rowId, filter) {
+    const row = document.getElementById(rowId);
+    if (!row) return;
+
+    row.dataset.machineFilter = filter;
+    const workshopDropdown = row.querySelector('.item-machine-workshop');
+    const allSearch = row.querySelector('.search-input-wrapper');
+    const btns = row.querySelectorAll('.filter-btn');
+
+    btns.forEach(btn => {
+        const isActive = btn.classList.contains(filter === 'all' ? 'all' : 'wrk');
+        btn.classList.toggle('active', isActive);
+        btn.style.background = isActive ? 'rgba(255,255,255,0.1)' : 'transparent';
+        btn.style.color = isActive ? 'white' : 'rgba(255,255,255,0.4)';
+    });
+
+    if (filter === 'workshop') {
+        if (workshopDropdown) workshopDropdown.classList.remove('hidden');
+        if (allSearch) allSearch.classList.add('hidden');
+    } else {
+        if (workshopDropdown) workshopDropdown.classList.add('hidden');
+        if (allSearch) allSearch.classList.remove('hidden');
+    }
+};
+
+// Global click to close portal
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.item-machine-search') && !e.target.closest('#acc-machine-dropdown-portal')) {
+        const d = document.getElementById('acc-machine-dropdown-portal');
+        if (d) d.style.display = 'none';
+    }
+});
+
 window.addAccountingItemRow = function (data = {}) {
     const container = document.getElementById('accounting-items-container');
     if (!container) return;
 
-    const rowId = 'item-row-' + Math.random().toString(36).substr(2, 9);
-    const div = document.createElement('div');
-    div.id = rowId;
-    div.className = 'item-row';
-    div.style.display = 'grid';
-    div.style.gridTemplateColumns = '2fr 80px 80px 100px 100px 1.5fr 40px';
-    div.style.gap = '10px';
-    div.style.alignItems = 'center';
-    div.style.padding = '10px';
-    div.style.background = 'rgba(255,255,255,0.03)';
-    div.style.borderRadius = '10px';
-    div.style.border = '1px solid rgba(255,255,255,0.05)';
+    const rowId = 'item-' + (data.id || Math.random().toString(36).substr(2, 9));
+    const row = document.createElement('div');
+    row.id = rowId;
+    row.className = 'item-row';
+    row.dataset.assignmentType = data.assignment_type || 'machine';
+    row.dataset.machineId = data.machine_id || '';
+    row.dataset.assignmentArea = data.assignment_area || '';
+    row.dataset.machineFilter = data.machine_filter || 'all';
 
-    const machineOptions = (window.machineList || []).map(m => `<option value="${m.id}" ${String(data.machine_id) === String(m.id) ? 'selected' : ''} style="color: var(--color-primary-green); font-weight: 600;">${window.getMachineName(m.id)}</option>`).join('');
-    const initialLineTotal = ((parseFloat(data.quantity) || 1) * (parseFloat(data.price_net) || 0)).toFixed(2);
-
-    div.innerHTML = `
-        <input type="text" class="glass-form-input item-desc" value="${data.description || ''}" placeholder="Bezeichnung" style="padding: 8px;">
-        <input type="number" step="0.01" class="glass-form-input item-qty" value="${data.quantity || 1}" placeholder="Menge" style="padding: 8px;" oninput="window.updateAccountingTotalFromItems()">
-        <input type="text" class="glass-form-input item-unit" value="${data.unit || 'Stk'}" placeholder="Einh." style="padding: 8px;">
-        <input type="number" step="0.01" class="glass-form-input item-price" value="${data.price_net || ''}" placeholder="Preis (€)" style="padding: 8px;" oninput="window.updateAccountingTotalFromItems()">
-        <div class="item-line-total" style="color: var(--color-primary-green); font-weight: 700; text-align: right; padding-right: 5px;">${initialLineTotal} €</div>
-        <select class="glass-form-input item-machine" style="padding: 8px; color: var(--color-primary-green); font-weight: 700;">
-            <option value="" style="color: #fff;">Keine Maschine</option>
-            ${machineOptions}
-        </select>
-        <button type="button" class="btn-icon-soft" onclick="document.getElementById('${rowId}').remove(); window.updateAccountingTotalFromItems();" style="color: #ef4444; padding: 5px;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
+    row.style.cssText = `
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.08);
+        border-radius: 14px;
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        margin-bottom: 12px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     `;
 
-    container.appendChild(div);
+    // Row Header (Description and Actions)
+    const header = document.createElement('div');
+    header.style.cssText = 'display: grid; grid-template-columns: 1fr 100px 100px 100px auto; gap: 12px; align-items: start;';
+    
+    header.innerHTML = `
+        <div class="form-group" style="margin: 0;">
+            <input type="text" class="item-desc glass-form-input" placeholder="Beschreibung der Position" value="${data.description || ''}" required style="font-weight: 600;">
+        </div>
+        <div class="form-group" style="margin: 0;">
+            <input type="number" step="0.01" class="item-qty glass-form-input" placeholder="Menge" value="${data.quantity || 1}" required style="text-align: center;" oninput="window.updateAccountingTotalFromItems()">
+        </div>
+        <div class="form-group" style="margin: 0;">
+            <input type="text" class="item-unit glass-form-input" placeholder="Einh." value="${data.unit || 'Stk'}" required style="text-align: center;">
+        </div>
+        <div class="form-group" style="margin: 0;">
+            <input type="number" step="0.01" class="item-price glass-form-input" placeholder="Preis Netto" value="${data.price_net || 0}" required style="text-align: right; color: var(--color-primary-green); font-weight: 700;" oninput="window.updateAccountingTotalFromItems()">
+        </div>
+        <button type="button" title="Position löschen" onclick="this.closest('.item-row').remove(); window.updateAccountingTotalFromItems();" 
+            style="width:42px; height:42px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
+            onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        </button>
+    `;
+    row.appendChild(header);
+
+    // Assignment Section
+    const assignmentBox = document.createElement('div');
+    assignmentBox.style.cssText = `
+        border-top: 1px solid rgba(255,255,255,0.06);
+        padding-top: 14px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    `;
+
+    // Assignment Type Toggle (Segmented Control style)
+    const typeLabel = document.createElement('div');
+    typeLabel.style.cssText = 'font-size: 0.75rem; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: 700; min-width: 80px;';
+    typeLabel.textContent = 'Zuordnung:';
+    assignmentBox.appendChild(typeLabel);
+
+    const typeToggleContainer = document.createElement('div');
+    typeToggleContainer.style.cssText = `
+        display: flex;
+        background: rgba(0,0,0,0.3);
+        padding: 4px;
+        border-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.05);
+    `;
+    
+    const isMachine = (data.assignment_type || 'machine') === 'machine';
+    
+    typeToggleContainer.innerHTML = `
+        <button type="button" class="type-btn mac ${isMachine ? 'active' : ''}" onclick="window.toggleAccAssignmentType('${rowId}', 'machine')" 
+            style="padding: 6px 14px; border-radius: 8px; border: none; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: 0.2s; 
+            ${isMachine ? 'background: var(--color-primary-green); color: white;' : 'background: transparent; color: rgba(255,255,255,0.4);'}">
+            Maschine
+        </button>
+        <button type="button" class="type-btn and ${!isMachine ? 'active' : ''}" onclick="window.toggleAccAssignmentType('${rowId}', 'other')" 
+            style="padding: 6px 14px; border-radius: 8px; border: none; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: 0.2s; 
+            ${!isMachine ? 'background: #6366f1; color: white;' : 'background: transparent; color: rgba(255,255,255,0.4);'}">
+            Andere
+        </button>
+    `;
+    assignmentBox.appendChild(typeToggleContainer);
+
+    // Dynamic UI Container
+    const dynamicUI = document.createElement('div');
+    dynamicUI.className = 'dynamic-assignment-ui';
+    dynamicUI.style.cssText = 'flex: 1; display: flex; align-items: center; gap: 12px;';
+    
+    // Machine Filter Toggle & Input
+    const machineUI = document.createElement('div');
+    machineUI.className = 'machine-ui' + (isMachine ? '' : ' hidden');
+    machineUI.style.cssText = 'display: flex; align-items: center; gap: 12px; flex: 1;';
+    
+    const filterToggle = document.createElement('div');
+    filterToggle.style.cssText = 'display: flex; background: rgba(255,255,255,0.05); padding: 3px; border-radius: 8px;';
+    const isAll = (data.machine_filter || 'all') === 'all';
+    filterToggle.innerHTML = `
+        <button type="button" class="filter-btn all ${isAll ? 'active' : ''}" onclick="window.toggleAccMachineFilter('${rowId}', 'all')" 
+            style="padding: 4px 10px; border-radius: 6px; border: none; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: 0.2s; ${isAll ? 'background: rgba(255,255,255,0.1); color: white;' : 'background: transparent; color: rgba(255,255,255,0.4);'}">Alle</button>
+        <button type="button" class="filter-btn wrk ${!isAll ? 'active' : ''}" onclick="window.toggleAccMachineFilter('${rowId}', 'workshop')" 
+            style="padding: 4px 10px; border-radius: 6px; border: none; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: 0.2s; ${!isAll ? 'background: rgba(255,255,255,0.1); color: white;' : 'background: transparent; color: rgba(255,255,255,0.4);'}">Werkstatt</button>
+    `;
+    machineUI.appendChild(filterToggle);
+
+    const machineSearchBox = document.createElement('div');
+    machineSearchBox.className = 'search-input-wrapper' + (!isAll ? ' hidden' : '');
+    machineSearchBox.style.cssText = 'position: relative; flex: 1;';
+    const initName = data.machine_id ? window.getMachineName(data.machine_id) : '';
+    machineSearchBox.innerHTML = `
+        <div style="position: relative;">
+            <svg style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.3);" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" class="item-machine-search glass-form-input" placeholder="Maschine suchen..." 
+                value="${initName}" oninput="window.filterAccMachineDropdown(this.value, '${rowId}')" 
+                onfocus="window.filterAccMachineDropdown(this.value, '${rowId}')"
+                style="padding: 0 12px 0 32px; font-size: 0.85rem; height: 36px; border-color: rgba(255,255,255,0.1);">
+        </div>
+    `;
+    machineUI.appendChild(machineSearchBox);
+
+    const workshopSelect = document.createElement('select');
+    workshopSelect.className = 'item-machine-workshop glass-form-input' + (isAll ? ' hidden' : '');
+    workshopSelect.style.cssText = 'flex: 1; font-size: 0.85rem; height: 36px; padding: 0 12px; border-color: rgba(255,255,255,0.1); color: var(--color-primary-green); font-weight: 600;';
+    workshopSelect.onchange = (e) => { row.dataset.machineId = e.target.value; };
+    const workshopMachines = (window.machineList || []).filter(m => m.is_in_workshop);
+    workshopSelect.innerHTML = '<option value="">Maschine wählen...</option>' + 
+        workshopMachines.map(m => `<option value="${m.id}" ${String(m.id) === String(data.machine_id) ? 'selected' : ''}>${window.getMachineName(m.id)}</option>`).join('');
+    machineUI.appendChild(workshopSelect);
+    
+    dynamicUI.appendChild(machineUI);
+
+    // Other Area Selection
+    const otherUI = document.createElement('div');
+    otherUI.className = 'other-ui' + (!isMachine ? '' : ' hidden');
+    otherUI.style.cssText = 'display: flex; align-items: center; gap: 12px; flex: 1;';
+    
+    const areaSelect = document.createElement('select');
+    areaSelect.className = 'item-area-select glass-form-input';
+    areaSelect.style.cssText = 'flex: 1; font-size: 0.85rem; height: 36px; padding: 0 12px; border-color: rgba(255,255,255,0.1); color: #fff;';
+    areaSelect.onchange = (e) => { row.dataset.assignmentArea = e.target.value; };
+    const areas = ['Lager', 'Werkstatt', 'Büro', 'Verkauf', 'Sonstiges'];
+    areaSelect.innerHTML = '<option value="">Bereich wählen...</option>' + 
+        areas.map(a => `<option value="${a}" ${a === data.assignment_area ? 'selected' : ''}>${a}</option>`).join('');
+    otherUI.appendChild(areaSelect);
+    
+    dynamicUI.appendChild(otherUI);
+    assignmentBox.appendChild(dynamicUI);
+    row.appendChild(assignmentBox);
+
+    container.appendChild(row);
 };
+
 
 window.updateAccountingTotalFromItems = function () {
     const rows = document.querySelectorAll('#accounting-items-container .item-row');
@@ -425,12 +766,11 @@ window.calculateGross = function () {
 };
 
 window.submitAccountingEntry = async function (event) {
-    if (event) event.preventDefault();
+    if (event && event.preventDefault) event.preventDefault();
     console.log('Accounting Module: submitting entry');
 
     try {
         const id = document.getElementById('accounting-id').value;
-        const machineVal = document.getElementById('acc-machine-id').value;
         const entryData = {
             type: document.getElementById('acc-type').value,
             invoice_number: document.getElementById('acc-invoice-number').value,
@@ -439,11 +779,10 @@ window.submitAccountingEntry = async function (event) {
             amount_net: parseFloat(document.getElementById('acc-amount-net').value),
             vat_rate: parseFloat(document.getElementById('acc-vat-rate').value),
             amount_gross: parseFloat(document.getElementById('acc-amount-gross').value),
-            machine_id: machineVal ? parseInt(machineVal, 10) : null,
-            comment: document.getElementById('acc-comment').value,
             due_date: document.getElementById('acc-due-date').value || null,
             discount_date: document.getElementById('acc-discount-date').value || null,
-            discount_amount: parseFloat(document.getElementById('acc-discount-amount').value) || null
+            discount_amount: parseFloat(document.getElementById('acc-discount-amount').value) || null,
+            is_paid: document.getElementById('acc-is-paid').checked
         };
 
         // Wenn created_by eine echte UUID ist (Länge > 30), mitsenden, sonst weglassen.
@@ -466,10 +805,13 @@ window.submitAccountingEntry = async function (event) {
         const items = Array.from(itemRows).map(row => ({
             accounting_id: accountingId,
             description: row.querySelector('.item-desc').value,
-            quantity: parseFloat(row.querySelector('.item-qty').value) || 1,
+            quantity: parseFloat(row.querySelector('.item-qty').value) || 0,
             unit: row.querySelector('.item-unit').value,
             price_net: parseFloat(row.querySelector('.item-price').value) || 0,
-            machine_id: row.querySelector('.item-machine').value ? parseInt(row.querySelector('.item-machine').value, 10) : null
+            machine_id: row.dataset.machineId ? parseInt(row.dataset.machineId) : null,
+            assignment_type: row.dataset.assignmentType || 'machine',
+            assignment_area: row.dataset.assignmentArea || null,
+            machine_filter: row.dataset.machineFilter || 'all'
         }));
 
         // Delete old items first if updating
@@ -504,13 +846,12 @@ window.editAccountingEntry = async function (id) {
     document.getElementById('acc-amount-net').value = entry.amount_net;
     document.getElementById('acc-vat-rate').value = entry.vat_rate;
     document.getElementById('acc-amount-gross').value = entry.amount_gross;
-    document.getElementById('acc-machine-id').value = entry.machine_id || '';
-    document.getElementById('acc-comment').value = entry.comment || '';
     document.getElementById('acc-due-date').value = entry.due_date || '';
     document.getElementById('acc-discount-date').value = entry.discount_date || '';
     document.getElementById('acc-discount-amount').value = entry.discount_amount || '';
 
-    document.getElementById('acc-discount-amount').value = entry.discount_amount || '';
+    const paidCheck = document.getElementById('acc-is-paid');
+    if (paidCheck) paidCheck.checked = !!entry.is_paid;
 
     // Fetch and render items
     try {
@@ -582,16 +923,21 @@ window.handleAccountingPDFUpload = async function (event) {
     try {
         const isImage = file.type.startsWith('image/');
         const systemPrompt = `Du bist ein präziser Buchhaltungs-Assistent für das Unternehmen 'Meetra'. Analysiere das Dokument und gib NUR valides JSON zurück. 
-Schlüssel: invoice_number, date (YYYY-MM-DD), net_amount (Zahl), vat_rate (Zahl), type (incoming/outgoing), entity (Geschäftspartner), due_date (YYYY-MM-DD), discount_amount (Zahl), positions (Array aus {description, quantity, unit, price_net}). 
+Schlüssel: invoice_number, date (YYYY-MM-DD), net_amount (Zahl), vat_rate (Zahl), type (incoming/outgoing), entity (Geschäftspartner), due_date (YYYY-MM-DD), discount_amount (Zahl), is_paid (boolean), positions (Array aus {description, quantity, unit, price_net}). 
 
 WICHTIG ZUR IDENTIFIKATION (entity):
 - 'Meetra' ist DEIN UNTERNEHMEN. Bei EINGANG (incoming) ist 'entity' der ABSENDER. 'Meetra' darf NIEMALS als 'entity' eingetragen werden.
+
+WICHTIG ZUR ZAHLUNG (is_paid):
+- Setze 'is_paid' auf true, wenn der Text Hinweise auf eine bereits erfolgte Zahlung enthält (z.B. "Amazon Pay vom", "bezahlt am", "Zahlung erhalten", "Betrag dankend erhalten", "Verrechnet mit", "Zahlung wurde bereits geleistet").
+
+WICHTIG ZUM FÄLLIGKEITSDATUM (due_date):
+- Suche gezielt nach Formulierungen wie "Begleichung bis zum [Datum]", "Bitte überweisen Sie bis zum [Datum]", "Zahlbar bis [Datum]", "Fällig am [Datum]". 
 
 WICHTIG ZU PREISEN (price_net):
 - 'price_net' MUSS der EINZELPREIS pro Einheit sein.
 - Falls Bezeichnungen wie '230/100' oder 'EUR/1000' klein dabeistehen: Das bedeutet der Preis gilt für 100 Einheiten. Rechne den Einzelpreis (1 Einheit) aus!
 - PRIORITÄT: Falls die Zeile einen GESAMTPREIS hat (z.B. rechts am Rand), nutze diesen als festen Anker. Wenn Einzelpreis * Menge nicht den Zeilengesamtpreis ergibt, korrigiere den 'price_net' (Einzelpreis = Gesamtpreis / Menge).
-- Achte auf klein gedruckte Divisoren oder Rabattspalten.
 Setze Unbekanntes auf null.`;
 
         let requestBody = {};
@@ -715,6 +1061,11 @@ Setze Unbekanntes auf null.`;
         if (parsedData.due_date) document.getElementById('acc-due-date').value = parsedData.due_date;
         if (parsedData.discount_date) document.getElementById('acc-discount-date').value = parsedData.discount_date;
         if (parsedData.discount_amount !== null) document.getElementById('acc-discount-amount').value = parseFloat(parsedData.discount_amount).toFixed(2);
+
+        if (parsedData.is_paid !== undefined) {
+            const paidCheck = document.getElementById('acc-is-paid');
+            if (paidCheck) paidCheck.checked = !!parsedData.is_paid;
+        }
 
         window.calculateGross();
 
@@ -961,6 +1312,24 @@ window.updateMachineEvaluation = async function () {
     const content = document.getElementById('machine-evaluation-content');
     if (!content) return;
 
+    const timeRange = document.getElementById('eval-time-range')?.value || 'last_3_months';
+    const now = new Date();
+    let startDate = null;
+    let endDate = null;
+
+    if (timeRange === 'current_month') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    } else if (timeRange === 'last_2_months') {
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    } else if (timeRange === 'last_3_months') {
+        startDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+    } else if (timeRange === 'current_year') {
+        startDate = new Date(now.getFullYear(), 0, 1);
+    } else if (timeRange === 'last_year') {
+        startDate = new Date(now.getFullYear() - 1, 0, 1);
+        endDate = new Date(now.getFullYear() - 1, 11, 31, 23, 59, 59);
+    }
+
     console.time('MachineEvaluation');
     content.innerHTML = '<div style="padding: 2rem; text-align: center; color: rgba(255,255,255,0.4);">Optimiere Datenzugriff...</div>';
 
@@ -974,11 +1343,12 @@ window.updateMachineEvaluation = async function () {
             .select(`
                 accounting_id, 
                 machine_id, 
+                assignment_type,
+                assignment_area,
                 price_net, 
                 quantity,
                 accounting ( id, date, type )
-            `)
-            .not('machine_id', 'is', null);
+            `);
 
         if (itemsError) throw itemsError;
         console.log(`Found ${items?.length || 0} items with machine assignment.`);
@@ -989,81 +1359,144 @@ window.updateMachineEvaluation = async function () {
             await window.fetchAccountingEntries();
         }
 
-        const grouped = {};
+        const groupedMachines = {};
+        const groupedAreas = {};
         const months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
         const itemAccountingIds = new Set();
 
         // 3. Process items O(N)
         (items || []).forEach(item => {
             const entry = item.accounting;
-            // Ignore items where parent accounting is deleted or not incoming
             if (!entry || entry.type !== 'incoming') return;
             
+            const date = new Date(entry.date);
+            if (startDate && date < startDate) return;
+            if (endDate && date > endDate) return;
+
             itemAccountingIds.add(item.accounting_id);
 
-            const date = new Date(entry.date);
             const monthYear = `${months[date.getMonth()]} ${date.getFullYear()}`;
+            const cost = (parseFloat(item.price_net) || 0) * (parseFloat(item.quantity) || 1);
 
-            if (!grouped[item.machine_id]) grouped[item.machine_id] = {};
-            if (!grouped[item.machine_id][monthYear]) grouped[item.machine_id][monthYear] = 0;
-            
-            grouped[item.machine_id][monthYear] += (parseFloat(item.price_net) || 0) * (parseFloat(item.quantity) || 1);
-        });
-
-        // 4. Process direct assignments O(M)
-        allAccountingEntries.forEach(entry => {
-            if (entry.machine_id && entry.type === 'incoming' && !itemAccountingIds.has(entry.id)) {
-                const date = new Date(entry.date);
-                const monthYear = `${months[date.getMonth()]} ${date.getFullYear()}`;
-                
-                if (!grouped[entry.machine_id]) grouped[entry.machine_id] = {};
-                if (!grouped[entry.machine_id][monthYear]) grouped[entry.machine_id][monthYear] = 0;
-                grouped[entry.machine_id][monthYear] += parseFloat(entry.amount_net) || 0;
+            if (item.assignment_type === 'machine' && item.machine_id) {
+                if (!groupedMachines[item.machine_id]) groupedMachines[item.machine_id] = {};
+                if (!groupedMachines[item.machine_id][monthYear]) groupedMachines[item.machine_id][monthYear] = 0;
+                groupedMachines[item.machine_id][monthYear] += cost;
+            } else if (item.assignment_type === 'other' && item.assignment_area) {
+                // Normalize area name
+                const area = item.assignment_area.charAt(0).toUpperCase() + item.assignment_area.slice(1);
+                if (!groupedAreas[area]) groupedAreas[area] = {};
+                if (!groupedAreas[area][monthYear]) groupedAreas[area][monthYear] = 0;
+                groupedAreas[area][monthYear] += cost;
             }
         });
 
-        const allMonths = [...new Set(Object.values(grouped).flatMap(Object.keys))].sort((a,b) => {
-             const partsA = a.split(' ');
-             const partsB = b.split(' ');
-             if (partsA.length < 2 || partsB.length < 2) return 0;
-             if (partsA[1] !== partsB[1]) return parseInt(partsB[1]) - parseInt(partsA[1]);
-             return months.indexOf(partsB[0]) - months.indexOf(partsA[0]);
+        // 4. Process direct assignments O(M) (Legacy support for entries with direct machine_id)
+        allAccountingEntries.forEach(entry => {
+            if (entry.machine_id && entry.type === 'incoming' && !itemAccountingIds.has(entry.id)) {
+                const date = new Date(entry.date);
+                if (startDate && date < startDate) return;
+                if (endDate && date > endDate) return;
+
+                const monthYear = `${months[date.getMonth()]} ${date.getFullYear()}`;
+                const cost = parseFloat(entry.amount_net) || 0;
+                
+                if (!groupedMachines[entry.machine_id]) groupedMachines[entry.machine_id] = {};
+                if (!groupedMachines[entry.machine_id][monthYear]) groupedMachines[entry.machine_id][monthYear] = 0;
+                groupedMachines[entry.machine_id][monthYear] += cost;
+            }
         });
 
-        if (Object.keys(grouped).length === 0) {
+        const sortMonths = (a, b) => {
+            const partsA = a.split(' ');
+            const partsB = b.split(' ');
+            if (partsA[1] !== partsB[1]) return parseInt(partsB[1]) - parseInt(partsA[1]);
+            return months.indexOf(partsB[0]) - months.indexOf(partsA[0]);
+        };
+
+        const allMonths = [...new Set([
+            ...Object.values(groupedMachines).flatMap(Object.keys),
+            ...Object.values(groupedAreas).flatMap(Object.keys)
+        ])].sort(sortMonths);
+
+        if (Object.keys(groupedMachines).length === 0 && Object.keys(groupedAreas).length === 0) {
             content.innerHTML = '<div style="padding: 4rem; text-align: center; color: rgba(255,255,255,0.2);">Keine Kosten-Zuordnungen gefunden.</div>';
             return;
         }
 
-        let html = `
-            <table class="data-table" style="width: 100%; border-collapse: collapse;">
-                <thead>
-                    <tr style="text-align: left; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase;">
-                        <th style="padding: 12px;">Maschine</th>
-                        ${allMonths.map(m => `<th style="padding: 12px; text-align: right;">${m}</th>`).join('')}
-                        <th style="padding: 12px; text-align: right;">Gesamt</th>
-                    </tr>
-                </thead>
-                <tbody>
-        `;
+        let html = '';
 
-        Object.keys(grouped).forEach(mId => {
-            const machineName = window.getMachineName(mId);
-            let machineTotal = 0;
+        // Render Machine Evaluation
+        if (Object.keys(groupedMachines).length > 0) {
             html += `
-                <tr style="border-top: 1px solid rgba(255,255,255,0.05);">
-                    <td style="padding: 12px; font-weight: 700; color: var(--color-primary-green);">${machineName}</td>
-                    ${allMonths.map(m => {
-                        const val = grouped[mId][m] || 0;
-                        machineTotal += val;
-                        return `<td style="padding: 12px; text-align: right; color: ${val > 0 ? '#fff' : 'rgba(255,255,255,0.1)'};">${val > 0 ? window.formatCurrency(val) : '-'}</td>`;
-                    }).join('')}
-                    <td style="padding: 12px; text-align: right; font-weight: 800; background: rgba(255,255,255,0.02);">${window.formatCurrency(machineTotal)}</td>
-                </tr>
+                <h3 style="color: #60a5fa; margin: 24px 0 12px 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                    Kosten-Auswertung (Maschinen)
+                </h3>
+                <table class="data-table" style="width: 100%; border-collapse: collapse; margin-bottom: 32px;">
+                    <thead>
+                        <tr style="text-align: left; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase;">
+                            <th style="padding: 12px;">Maschine</th>
+                            ${allMonths.map(m => `<th style="padding: 12px; text-align: right;">${m}</th>`).join('')}
+                            <th style="padding: 12px; text-align: right;">Gesamt</th>
+                        </tr>
+                    </thead>
+                    <tbody>
             `;
-        });
 
-        html += '</tbody></table>';
+            Object.keys(groupedMachines).forEach(mId => {
+                const machineName = window.getMachineName(mId);
+                let machineTotal = 0;
+                html += `
+                    <tr style="border-top: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 12px; font-weight: 700; color: var(--color-primary-green);">${machineName}</td>
+                        ${allMonths.map(m => {
+                            const val = groupedMachines[mId][m] || 0;
+                            machineTotal += val;
+                            return `<td style="padding: 12px; text-align: right; color: ${val > 0 ? '#fff' : 'rgba(255,255,255,0.1)'};">${val > 0 ? window.formatCurrency(val) : '-'}</td>`;
+                        }).join('')}
+                        <td style="padding: 12px; text-align: right; font-weight: 800; background: rgba(255,255,255,0.02);">${window.formatCurrency(machineTotal)}</td>
+                    </tr>
+                `;
+            });
+            html += '</tbody></table>';
+        }
+
+        // Render Area Evaluation
+        if (Object.keys(groupedAreas).length > 0) {
+            html += `
+                <h3 style="color: #6366f1; margin: 24px 0 12px 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    Bereichs-Auswertung (Andere)
+                </h3>
+                <table class="data-table" style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="text-align: left; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase;">
+                            <th style="padding: 12px;">Bereich</th>
+                            ${allMonths.map(m => `<th style="padding: 12px; text-align: right;">${m}</th>`).join('')}
+                            <th style="padding: 12px; text-align: right;">Gesamt</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            Object.keys(groupedAreas).forEach(area => {
+                let areaTotal = 0;
+                html += `
+                    <tr style="border-top: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 12px; font-weight: 700; color: #fff;">${area}</td>
+                        ${allMonths.map(m => {
+                            const val = groupedAreas[area][m] || 0;
+                            areaTotal += val;
+                            return `<td style="padding: 12px; text-align: right; color: ${val > 0 ? '#fff' : 'rgba(255,255,255,0.1)'};">${val > 0 ? window.formatCurrency(val) : '-'}</td>`;
+                        }).join('')}
+                        <td style="padding: 12px; text-align: right; font-weight: 800; background: rgba(255,255,255,0.02);">${window.formatCurrency(areaTotal)}</td>
+                    </tr>
+                `;
+            });
+            html += '</tbody></table>';
+        }
+
         content.innerHTML = html;
         console.timeEnd('MachineEvaluation');
 
@@ -1112,26 +1545,106 @@ window.toggleAccountingDetails = async function (id, btn) {
         }
 
         let itemsHtml = `
-            <div style="display: grid; grid-template-columns: 2fr 80px 80px 100px 100px 1.5fr; gap: 1rem; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <div style="display: grid; grid-template-columns: 2fr 80px 80px 100px 100px 1.5fr 40px; gap: 1rem; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
                 <div>Bezeichnung</div>
                 <div>Menge</div>
                 <div>Einh.</div>
                 <div style="text-align: right;">Preis (€)</div>
                 <div style="text-align: right;">Gesamt (€)</div>
-                <div style="padding-left: 1rem;">Maschine</div>
+                <div style="padding-left: 1rem;">Zuordnung</div>
+                <div style="text-align: center;">Split</div>
             </div>
         `;
 
-        items.forEach(item => {
-            const machineName = window.getMachineName(item.machine_id);
+        // Find items that represent a "split" (multiple items with same description and price in the same receipt)
+        const counts = {};
+        items.forEach(i => {
+            const key = i.description + '|' + i.price_net;
+            counts[key] = (counts[key] || 0) + 1;
+        });
+
+        // Sort so split items are grouped together
+        items.sort((a,b) => a.description.localeCompare(b.description));
+
+        // Keep track of which split group we are in and our index
+        let currentSplitKey = null;
+        let splitGroupIndex = 0;
+
+        items.forEach((item, i) => {
+            const qty = parseFloat(item.quantity) || 1;
+            const canSplit = qty > 1; // Nur Positionen mit Menge > 1 aufteilen
+            
+            const key = item.description + '|' + item.price_net;
+            const isSplitPart = counts[key] > 1;
+            const splitGroupTotal = isSplitPart ? counts[key] : 1;
+            
+            if (isSplitPart) {
+                if (key !== currentSplitKey) {
+                    currentSplitKey = key;
+                    splitGroupIndex = 0;
+                }
+                splitGroupIndex++;
+            } else {
+                currentSplitKey = null;
+                splitGroupIndex = 0;
+            }
+
+            const isFirstInGroup = isSplitPart && splitGroupIndex === 1;
+            const isLastInGroup = isSplitPart && splitGroupIndex === splitGroupTotal;
+            
+            let assignmentText = '-';
+            if (item.assignment_type === 'machine' && item.machine_id) {
+                assignmentText = window.getMachineName(item.machine_id);
+            } else if (item.assignment_type === 'filter' && item.assignment_area) {
+                assignmentText = item.assignment_area; // Simplied from "Bereich: Lager ..." to just "Lager"
+            } else if (item.machine_id) {
+                 assignmentText = window.getMachineName(item.machine_id); // legacy fallback
+            }
+
+            const splitBadge = isFirstInGroup ? `<span style="margin-left:8px; font-size:0.65rem; color:var(--color-primary-green); background:rgba(16,185,129,0.1); padding:2px 6px; border-radius:4px; border:1px solid rgba(16,185,129,0.2);">Aufgeteilt</span>` : '';
+
+            // Styling für die Rahmen-Gruppierung
+            let groupStyles = '';
+            if (isSplitPart) {
+                groupStyles = `background: rgba(16,185,129,0.08); padding: 0.5rem 8px; margin: 0 -8px; border-left: 1px solid rgba(255,255,255,0.15); border-right: 1px solid rgba(255,255,255,0.15);`;
+                if (isFirstInGroup) {
+                    groupStyles += ` border-top: 1px solid rgba(255,255,255,0.15); border-top-left-radius: 6px; border-top-right-radius: 6px; padding-top: 0.75rem;`;
+                }
+                if (isLastInGroup) {
+                    groupStyles += ` border-bottom: 1px solid rgba(255,255,255,0.15); border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; padding-bottom: 0.75rem;`;
+                } else if (!isFirstInGroup && !isLastInGroup) {
+                    // Middle items optionally get a very faint separator
+                    groupStyles += ` border-bottom: 1px solid rgba(255,255,255,0.05);`;
+                }
+            } else {
+               groupStyles = `border-bottom: 1px solid rgba(255,255,255,0.02);`;
+            }
+
             itemsHtml += `
-                <div style="display: grid; grid-template-columns: 2fr 80px 80px 100px 100px 1.5fr; gap: 1rem; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid rgba(255,255,255,0.02); font-size: 0.85rem;">
-                    <div style="font-weight: 600; color: #fff;">${item.description}</div>
-                    <div style="color: rgba(255,255,255,0.6);">${item.quantity || 1}</div>
+                <div style="display: grid; grid-template-columns: 2fr 80px 80px 100px 100px 1.5fr 40px; gap: 1rem; align-items: center; padding: 0.5rem 0; font-size: 0.85rem; ${groupStyles}">
+                    <div style="font-weight: 600; color: #fff; display: flex; align-items: center;">
+                        ${isFirstInGroup ? `<svg style="margin-right:6px; color:rgba(255,255,255,0.4);" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>` : (isSplitPart ? `<div style="width: 18px;"></div>` : '')}
+                        ${item.description} ${splitBadge}
+                    </div>
+                    <div style="color: rgba(255,255,255,0.6); font-weight: 700;">${qty}</div>
                     <div style="color: rgba(255,255,255,0.4);">${item.unit || '-'}</div>
                     <div style="text-align: right; font-weight: 700;">${window.formatCurrency(item.price_net)}</div>
-                    <div style="text-align: right; font-weight: 800; color: #fff;">${window.formatCurrency((parseFloat(item.price_net) || 0) * (parseFloat(item.quantity) || 1))}</div>
-                    <div style="padding-left: 1rem; color: var(--color-primary-green); font-weight: 600;">${machineName}</div>
+                    <div style="text-align: right; font-weight: 800; color: #fff;">${window.formatCurrency((parseFloat(item.price_net) || 0) * qty)}</div>
+                    <div style="padding-left: 1rem; color: var(--color-primary-green); font-weight: 600; font-size: 0.8rem; line-height: 1.2;">${assignmentText}</div>
+                    <div style="text-align: center;">
+                        ${isFirstInGroup ? `
+                        <button onclick='window.revertSplit(${JSON.stringify(item).replace(/'/g, "&#39;")})' title="Aufteilung rückgängig machen"
+                            style="width:28px; height:28px; border-radius:8px; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s; margin: auto;"
+                            onmouseover="this.style.background='rgba(239,68,68,0.3)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3l-3 2.7"/></svg>
+                        </button>
+                        ` : (isSplitPart ? '' : (canSplit ? `
+                        <button onclick='window.openSplitDialog(${JSON.stringify(item).replace(/'/g, "&#39;")})' title="Position aufteilen"
+                            style="width:28px; height:28px; border-radius:8px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: var(--color-primary-green); display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s; margin: auto;"
+                            onmouseover="this.style.background='rgba(16,185,129,0.3)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="8"/><path d="M12 8 L5 21"/><path d="M12 8 L19 21"/><circle cx="12" cy="3" r="2" fill="currentColor"/></svg>
+                        </button>` : ''))}
+                    </div>
                 </div>
             `;
         });
@@ -1141,5 +1654,418 @@ window.toggleAccountingDetails = async function (id, btn) {
     } catch (err) {
         console.error('Error loading details:', err);
         content.innerHTML = '<div style="color: #ef4444; font-size: 0.85rem;">Fehler beim Laden der Details.</div>';
+    }
+};
+
+// --- Split Position Logic ---
+let currentSplitItem = null;
+
+window.revertSplit = async function(item) {
+    if (!confirm('Möchten Sie die Aufteilung dieser Position wirklich rückgängig machen?\nAlle zusammengehörigen Positionen ("' + item.description + '") werden wieder zu einer einzigen Zeile zusammengefasst.')) return;
+
+    try {
+        // Find all split parts for this item
+        const { data: parts, error: fetchErr } = await window.supabaseClient
+            .from('accounting_items')
+            .select('*')
+            .eq('accounting_id', item.accounting_id)
+            .eq('description', item.description)
+            .eq('price_net', item.price_net);
+
+        if (fetchErr) throw fetchErr;
+        if (!parts || parts.length === 0) return;
+
+        let totalQty = 0;
+        const idsToDelete = [];
+        parts.forEach(p => {
+            totalQty += parseFloat(p.quantity) || 0;
+            idsToDelete.push(p.id);
+        });
+
+        // Delete all parts
+        const { error: delErr } = await window.supabaseClient
+            .from('accounting_items')
+            .delete()
+            .in('id', idsToDelete);
+        if (delErr) throw delErr;
+
+        // Insert single combined item
+        const newItem = {
+            accounting_id: item.accounting_id,
+            description: item.description,
+            quantity: totalQty,
+            unit: item.unit,
+            price_net: item.price_net,
+            assignment_type: null,
+            assignment_area: null,
+            machine_id: null,
+            machine_filter: 'all'
+        };
+
+        const { error: insErr } = await window.supabaseClient
+            .from('accounting_items')
+            .insert([newItem]);
+        if (insErr) throw insErr;
+
+        // Trigger detail reload
+        const detailsBtn = document.querySelector(`#row-${item.accounting_id} td[onclick]`);
+        if (detailsBtn) {
+            // Close details
+            await window.toggleAccountingDetails(item.accounting_id, detailsBtn);
+            // Open details again to fetch new rows
+            await window.toggleAccountingDetails(item.accounting_id, detailsBtn);
+        }
+
+    } catch (err) {
+        console.error('Error reverting split:', err);
+        alert('Fehler beim Rückgängigmachen der Aufteilung: ' + err.message);
+    }
+};
+
+window.openSplitDialog = function(item) {
+    currentSplitItem = item;
+    const modal = document.getElementById('split-item-modal');
+    const displayTotal = document.getElementById('split-total-display');
+    const infoDisplay = document.getElementById('split-item-info');
+    const rowsContainer = document.getElementById('split-rows');
+
+    if (!modal) return;
+
+    displayTotal.textContent = `${item.quantity} ${item.unit || 'Stk'}`;
+    infoDisplay.textContent = `${item.description} | ${window.formatCurrency(item.price_net)} / ${item.unit || 'Stk'}`;
+    
+    // Clear old rows
+    rowsContainer.innerHTML = '';
+    
+    // Default: split in 2 parts initially
+    window.addSplitRow({ qty: Math.floor((item.quantity / 2) * 100) / 100 });
+    window.addSplitRow({ qty: item.quantity - (Math.floor((item.quantity / 2) * 100) / 100) });
+
+    modal.classList.remove('hidden');
+    requestAnimationFrame(() => modal.classList.add('show'));
+};
+
+window.closeSplitDialog = function() {
+    const modal = document.getElementById('split-item-modal');
+    if (!modal) return;
+    modal.classList.remove('show');
+    currentSplitItem = null;
+    setTimeout(() => modal.classList.add('hidden'), 300);
+};
+
+window.addSplitRow = function(defaults = {}) {
+    const container = document.getElementById('split-rows');
+    const rowId = 'split-row-' + Math.random().toString(36).substr(2, 9);
+    const row = document.createElement('div');
+    row.id = rowId;
+    row.className = 'split-row';
+    row.dataset.assignmentType = 'machine';
+    row.dataset.machineId = '';
+    row.dataset.assignmentArea = '';
+    row.dataset.machineFilter = 'all';
+
+    row.style.cssText = 'display: grid; grid-template-columns: 80px 1fr 40px; gap: 10px; align-items: center; background: rgba(0,0,0,0.2); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);';
+
+    // Menge Input
+    const qtyHTML = `
+        <div>
+            <div style="font-size: 0.75rem; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Menge</div>
+            <input type="number" step="0.01" class="split-qty glass-form-input" value="${defaults.qty || 0}" style="text-align: center; font-weight: 700; height: 38px; width: 100%;" oninput="window.updateSplitTotal()">
+        </div>
+    `;
+
+    // Assignment UI (same as in addAccountingItemRow)
+    const workshopMachines = (window.machineList || []).filter(m => m.is_in_workshop);
+    let workshopOptions = '<option value="">Maschine wählen...</option>' + 
+        workshopMachines.map(m => `<option value="${m.id}">${window.getMachineName(m.id)}</option>`).join('');
+    
+    const areas = ['Lager', 'Werkstatt', 'Büro', 'Verkauf', 'Sonstiges'];
+    let areaOptions = '<option value="">Bereich wählen...</option>' + 
+        areas.map(a => `<option value="${a}">${a}</option>`).join('');
+
+    const assignHTML = `
+        <div>
+            <div style="font-size: 0.75rem; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Zuordnung</div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="display: flex; background: rgba(0,0,0,0.3); padding: 3px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                    <button type="button" class="type-btn mac active" onclick="window.toggleSplitAssignmentType('${rowId}', 'machine')" 
+                        style="padding: 5px 12px; border-radius: 6px; border: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: 0.2s; background: var(--color-primary-green); color: white;">
+                        Maschine
+                    </button>
+                    <button type="button" class="type-btn and" onclick="window.toggleSplitAssignmentType('${rowId}', 'other')" 
+                        style="padding: 5px 12px; border-radius: 6px; border: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: 0.2s; background: transparent; color: rgba(255,255,255,0.4);">
+                        Andere
+                    </button>
+                </div>
+                
+                <div class="dynamic-assignment-ui" style="flex: 1; display: flex; align-items: center; gap: 12px;">
+                    <div class="machine-ui" style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                        <div style="display: flex; background: rgba(255,255,255,0.05); padding: 2px; border-radius: 6px;">
+                            <button type="button" class="filter-btn all active" onclick="window.toggleSplitMachineFilter('${rowId}', 'all')" 
+                                style="padding: 4px 8px; border-radius: 4px; border: none; font-size: 0.7rem; font-weight: 600; cursor: pointer; transition: 0.2s; background: rgba(255,255,255,0.1); color: white;">Alle</button>
+                            <button type="button" class="filter-btn wrk" onclick="window.toggleSplitMachineFilter('${rowId}', 'workshop')" 
+                                style="padding: 4px 8px; border-radius: 4px; border: none; font-size: 0.7rem; font-weight: 600; cursor: pointer; transition: 0.2s; background: transparent; color: rgba(255,255,255,0.4);">Werkstatt</button>
+                        </div>
+                        <div class="search-input-wrapper" style="position: relative; flex: 1;">
+                            <svg style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.3);" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            <input type="text" class="split-machine-search glass-form-input" placeholder="Suchen..." oninput="window.filterSplitMachineDropdown(this.value, '${rowId}')" onfocus="window.filterSplitMachineDropdown(this.value, '${rowId}')" style="padding: 0 10px 0 28px; font-size: 0.8rem; height: 32px; border-color: rgba(255,255,255,0.1);">
+                        </div>
+                        <select class="split-machine-workshop glass-form-input hidden" onchange="document.getElementById('${rowId}').dataset.machineId = this.value" style="flex: 1; font-size: 0.8rem; height: 32px; padding: 0 10px; border-color: rgba(255,255,255,0.1); color: var(--color-primary-green); font-weight: 600;">
+                            ${workshopOptions}
+                        </select>
+                    </div>
+                    <div class="other-ui hidden" style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                        <select class="split-area-select glass-form-input" onchange="document.getElementById('${rowId}').dataset.assignmentArea = this.value" style="flex: 1; font-size: 0.8rem; height: 32px; padding: 0 10px; border-color: rgba(255,255,255,0.1); color: #fff;">
+                            ${areaOptions}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Delete Button
+    const btnHTML = `
+        <div style="display: flex; flex-direction: column; justify-content: flex-end; height: 100%;">
+            <div style="height: 16px;"></div>
+            <button onclick="document.getElementById('${rowId}').remove(); window.updateSplitTotal()" style="height: 38px; background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.3)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+    `;
+
+    row.innerHTML = qtyHTML + assignHTML + btnHTML;
+    container.appendChild(row);
+    window.updateSplitTotal();
+};
+
+window.toggleSplitAssignmentType = function (rowId, type) {
+    const row = document.getElementById(rowId);
+    if (!row) return;
+    row.dataset.assignmentType = type;
+    const isMachine = type === 'machine';
+    
+    // Update Tabs
+    const macBtn = row.querySelector('.type-btn.mac');
+    const andBtn = row.querySelector('.type-btn.and');
+    if (macBtn && andBtn) {
+        macBtn.className = 'type-btn mac ' + (isMachine ? 'active' : '');
+        macBtn.style.background = isMachine ? 'var(--color-primary-green)' : 'transparent';
+        macBtn.style.color = isMachine ? 'white' : 'rgba(255,255,255,0.4)';
+        
+        andBtn.className = 'type-btn and ' + (!isMachine ? 'active' : '');
+        andBtn.style.background = !isMachine ? '#6366f1' : 'transparent';
+        andBtn.style.color = !isMachine ? 'white' : 'rgba(255,255,255,0.4)';
+    }
+
+    // Update UI Panels
+    const machineUI = row.querySelector('.machine-ui');
+    const otherUI = row.querySelector('.other-ui');
+    if (machineUI) isMachine ? machineUI.classList.remove('hidden') : machineUI.classList.add('hidden');
+    if (otherUI) !isMachine ? otherUI.classList.remove('hidden') : otherUI.classList.add('hidden');
+};
+
+window.toggleSplitMachineFilter = function (rowId, filter) {
+    const row = document.getElementById(rowId);
+    if (!row) return;
+    row.dataset.machineFilter = filter;
+    const isAll = filter === 'all';
+    
+    const allBtn = row.querySelector('.filter-btn.all');
+    const wrkBtn = row.querySelector('.filter-btn.wrk');
+    if (allBtn && wrkBtn) {
+        allBtn.className = 'filter-btn all ' + (isAll ? 'active' : '');
+        allBtn.style.background = isAll ? 'rgba(255,255,255,0.1)' : 'transparent';
+        allBtn.style.color = isAll ? 'white' : 'rgba(255,255,255,0.4)';
+        
+        wrkBtn.className = 'filter-btn wrk ' + (!isAll ? 'active' : '');
+        wrkBtn.style.background = !isAll ? 'rgba(255,255,255,0.1)' : 'transparent';
+        wrkBtn.style.color = !isAll ? 'white' : 'rgba(255,255,255,0.4)';
+    }
+
+    const searchBox = row.querySelector('.search-input-wrapper');
+    const workshopSelect = row.querySelector('.split-machine-workshop');
+    
+    if (isAll) {
+        if(searchBox) searchBox.classList.remove('hidden');
+        if(workshopSelect) workshopSelect.classList.add('hidden');
+    } else {
+        if(searchBox) searchBox.classList.add('hidden');
+        if(workshopSelect) workshopSelect.classList.remove('hidden');
+    }
+};
+
+window.filterSplitMachineDropdown = function(term, rowId) {
+    const row = document.getElementById(rowId);
+    if (!row) return;
+
+    // Verwende ein Portal, um Clipping durch overflow:hidden oder z-index Konflikte in den Eltern-Containern zu entgehen
+    let list = document.getElementById('split-machine-dropdown-portal');
+    
+    if (!list) {
+        list = document.createElement('div');
+        list.id = 'split-machine-dropdown-portal';
+        list.style.cssText = 'position: fixed; max-height: 200px; overflow-y: auto; background: rgba(15,23,42,0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; z-index: 999999; box-shadow: 0 10px 40px rgba(0,0,0,0.5); padding: 5px;';
+        document.body.appendChild(list);
+    }
+    
+    const wrapper = row.querySelector('.search-input-wrapper');
+    if (!wrapper) return;
+
+    // Position the portal exactly below the input wrapper
+    const rect = wrapper.getBoundingClientRect();
+    list.style.top = (rect.bottom + 4) + 'px';
+    list.style.left = rect.left + 'px';
+    list.style.width = rect.width + 'px';
+    list.style.display = 'block';
+
+    // Close listener
+    const closeListener = (e) => {
+        if (!wrapper.contains(e.target) && !list.contains(e.target)) {
+            list.style.display = 'none';
+            document.removeEventListener('click', closeListener);
+        }
+    };
+    // Clean up old listener before adding new one
+    document.removeEventListener('click', window._splitDropdownCloseListener);
+    window._splitDropdownCloseListener = closeListener;
+    setTimeout(() => document.addEventListener('click', closeListener), 10);
+    
+    const lowerTerm = term.toLowerCase();
+    
+    const matches = (window.machineList || []).filter(m => 
+        (m.name || '').toLowerCase().includes(lowerTerm) || 
+        (m.manufacturer || '').toLowerCase().includes(lowerTerm) ||
+        (m.inventory_number || '').toLowerCase().includes(lowerTerm)
+    );
+    
+    if (matches.length > 0) {
+        list.innerHTML = matches.map(m => `
+            <div style="padding: 8px 12px; cursor: pointer; border-radius: 8px; font-size: 0.8rem; color: #fff;" 
+                 onmouseover="this.style.background='rgba(255,255,255,0.05)'" 
+                 onmouseout="this.style.background='transparent'"
+                 onclick="document.getElementById('${rowId}').dataset.machineId='${m.id}'; 
+                          document.getElementById('${rowId}').querySelector('.split-machine-search').value='${window.getMachineName(m.id).replace(/'/g, "\\'")}';
+                          document.getElementById('split-machine-dropdown-portal').style.display='none';">
+                <div style="font-weight: 600;">${m.manufacturer} ${m.name}</div>
+                ${m.inventory_number ? `<div style="font-size: 0.7rem; color: rgba(255,255,255,0.4);">${m.inventory_number}</div>` : ''}
+            </div>
+        `).join('');
+    } else {
+        list.innerHTML = '<div style="padding: 10px; color: rgba(255,255,255,0.4); font-size: 0.8rem; text-align: center;">Keine Maschinen gefunden</div>';
+    }
+};
+
+window.updateSplitTotal = function() {
+    if (!currentSplitItem) return;
+    
+    const rows = document.querySelectorAll('.split-qty');
+    let totalDistributed = 0;
+    
+    rows.forEach(input => {
+        totalDistributed += parseFloat(input.value) || 0;
+    });
+    
+    const remaining = (currentSplitItem.quantity - totalDistributed).toFixed(2);
+    
+    const distElement = document.getElementById('split-distributed-display');
+    const remElement = document.getElementById('split-remaining-display');
+    const btn = document.getElementById('split-confirm-btn');
+    
+    if (distElement) distElement.textContent = totalDistributed.toFixed(2);
+    if (remElement) {
+        remElement.textContent = remaining;
+        remElement.style.color = remaining == 0 ? 'var(--color-primary-green)' : '#f87171';
+    }
+    
+    if (btn) {
+        if (remaining == 0 && totalDistributed > 0 && rows.length > 0) {
+            btn.style.opacity = '1';
+            btn.style.cursor = 'pointer';
+            btn.disabled = false;
+        } else {
+            btn.style.opacity = '0.5';
+            btn.style.cursor = 'not-allowed';
+            btn.disabled = true;
+        }
+    }
+};
+
+window.submitSplit = async function() {
+    if (!currentSplitItem) return;
+    const btn = document.getElementById('split-confirm-btn');
+    if (btn.disabled) return;
+
+    btn.innerHTML = '<div class="spinner-small" style="display:inline-block; margin-right:8px;"></div> Speichere...';
+    btn.disabled = true;
+
+    try {
+        const rows = document.querySelectorAll('.split-row');
+        const newItems = [];
+
+        rows.forEach(row => {
+            const qty = parseFloat(row.querySelector('.split-qty').value) || 0;
+            if (qty <= 0) return;
+
+            const assignType = row.dataset.assignmentType || 'machine';
+            let assignArea = null;
+            let mId = null;
+
+            if (assignType === 'filter' || assignType === 'other') { // 'other' is used in UI
+                assignArea = row.dataset.assignmentArea || null;
+            } else if (assignType === 'machine') {
+                mId = (!row.dataset.machineId || row.dataset.machineId === 'undefined') ? null : parseInt(row.dataset.machineId);
+            }
+
+            // Omit brand and item_number because they do not exist in the schema 'accounting_items'
+            newItems.push({
+                accounting_id: currentSplitItem.accounting_id,
+                description: currentSplitItem.description,
+                quantity: qty,
+                unit: currentSplitItem.unit,
+                price_net: currentSplitItem.price_net,
+                machine_id: mId,
+                assignment_type: assignType === 'other' ? 'filter' : assignType, // DB expects 'filter' or 'machine', UI uses 'other'
+                assignment_area: assignArea,
+                machine_filter: (assignType === 'other' || assignType === 'filter') ? 'all' : (row.dataset.machineFilter || 'all')
+            });
+        });
+
+        if (newItems.length === 0) throw new Error("Keine validen Positionen.");
+
+        // 1. Original Item löschen
+        const { error: delErr } = await window.supabaseClient
+            .from('accounting_items')
+            .delete()
+            .eq('id', currentSplitItem.id);
+        if (delErr) throw delErr;
+
+        // 2. Neue Items einfügen
+        const { error: insErr } = await window.supabaseClient
+            .from('accounting_items')
+            .insert(newItems);
+        if (insErr) throw insErr;
+
+        const savedAccId = currentSplitItem.accounting_id;
+        window.closeSplitDialog();
+        
+        // Modal-Button zurücksetzen und das Haupt-Accounting-Listing neu laden um die Details zu refreshen
+        btn.innerHTML = 'Aufteilen bestätigen';
+        btn.disabled = false;
+        
+        // Trigger detail reload
+        const detailsBtn = document.querySelector(`#row-${savedAccId} td[onclick]`);
+        if (detailsBtn) {
+            // Close details
+            await window.toggleAccountingDetails(savedAccId, detailsBtn);
+            // Open details again to fetch new rows
+            await window.toggleAccountingDetails(savedAccId, detailsBtn);
+        }
+
+    } catch (err) {
+        console.error('Error splitting item:', err);
+        alert('Fehler beim Aufteilen der Position: ' + err.message);
+        btn.innerHTML = 'Aufteilen bestätigen';
+        btn.disabled = false;
     }
 };
