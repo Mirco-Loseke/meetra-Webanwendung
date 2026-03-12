@@ -63,6 +63,126 @@ window.toggleYearDropdown = function(e) {
     list.classList.toggle('hidden');
 };
 
+// --- Custom Glass Dropdown Utilities ---
+window.openGlassDropdown = function(anchorEl, options, onSelectCallback) {
+    let portal = document.getElementById('glass-dropdown-portal');
+    if (!portal) {
+        portal = document.createElement('div');
+        portal.id = 'glass-dropdown-portal';
+        portal.className = 'hide-scrollbar';
+        portal.style.cssText = 'position: fixed; max-height: 250px; overflow-y: auto; background: rgba(15,23,42,0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; z-index: 999999; box-shadow: 0 10px 40px rgba(0,0,0,0.5); padding: 5px;';
+        document.body.appendChild(portal);
+    }
+    
+    const rect = anchorEl.getBoundingClientRect();
+    portal.style.top = (rect.bottom + 4) + 'px';
+    portal.style.left = rect.left + 'px';
+    portal.style.width = Math.max(rect.width, 150) + 'px';
+    portal.style.display = 'block';
+
+    portal.innerHTML = options.map((opt, i) => `
+        <div style="padding: 10px 12px; cursor: pointer; border-radius: 8px; font-size: 0.85rem; color: ${opt.selected ? 'var(--color-primary-green)' : '#fff'}; display: flex; align-items: center; justify-content: space-between; transition: background 0.2s; font-weight: ${opt.selected ? '700' : '500'}; background: ${opt.selected ? 'rgba(16,185,129,0.1)' : 'transparent'};" 
+             onmouseover="if(!this.dataset.selected) this.style.background='rgba(255,255,255,0.05)'" 
+             onmouseout="if(!this.dataset.selected) this.style.background='transparent'"
+             data-selected="${opt.selected ? 'true' : ''}"
+             data-index="${i}">
+            ${opt.label}
+            ${opt.selected ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+        </div>
+    `).join('');
+
+    Array.from(portal.children).forEach((child) => {
+        child.onclick = (e) => {
+            e.stopPropagation();
+            portal.style.display = 'none';
+            const idx = parseInt(child.dataset.index);
+            onSelectCallback(options[idx].value, options[idx].label);
+            document.removeEventListener('click', window._glassDropdownCloseListener);
+        };
+    });
+
+    const closeListener = (e) => {
+        if (!anchorEl.contains(e.target) && !portal.contains(e.target)) {
+            portal.style.display = 'none';
+            document.removeEventListener('click', closeListener);
+        }
+    };
+    
+    document.removeEventListener('click', window._glassDropdownCloseListener);
+    window._glassDropdownCloseListener = closeListener;
+    setTimeout(() => document.addEventListener('click', closeListener), 10);
+};
+
+window.initGlassSelect = function(selectEl) {
+    if (!selectEl || selectEl.dataset.glassInitialized) return;
+    selectEl.dataset.glassInitialized = "true";
+    
+    const wrapper = document.createElement('div');
+    wrapper.className = selectEl.className;
+    wrapper.style.cssText = selectEl.style.cssText;
+    
+    if (!wrapper.classList.contains('hidden')) wrapper.style.display = 'flex';
+    wrapper.style.alignItems = 'center';
+    wrapper.style.cursor = 'pointer';
+    wrapper.style.position = 'relative'; 
+    wrapper.style.userSelect = 'none';
+    
+    selectEl.className = 'real-select-hidden';
+    selectEl.style.display = 'none';
+    
+    const textSpan = document.createElement('span');
+    textSpan.style.flex = '1';
+    textSpan.style.overflow = 'hidden';
+    textSpan.style.textOverflow = 'ellipsis';
+    textSpan.style.whiteSpace = 'nowrap';
+    textSpan.style.pointerEvents = 'none';
+    
+    const icon = document.createElement('div');
+    icon.style.pointerEvents = 'none';
+    icon.style.display = 'flex';
+    icon.style.marginLeft = '8px';
+    icon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: rgba(255,255,255,0.4);"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+    
+    wrapper.appendChild(textSpan);
+    wrapper.appendChild(icon);
+    
+    function updateText() {
+        if (selectEl.selectedIndex >= 0) {
+            const opt = selectEl.options[selectEl.selectedIndex];
+            textSpan.textContent = opt.text;
+            textSpan.style.color = opt.value ? (wrapper.style.color || '#fff') : 'rgba(255,255,255,0.4)';
+            if (wrapper.className.includes('machine-workshop') && opt.value) {
+                textSpan.style.color = 'var(--color-primary-green)';
+            }
+        } else {
+            textSpan.textContent = '';
+        }
+    }
+    updateText();
+    selectEl.addEventListener('change', updateText);
+
+    wrapper.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const validOptions = Array.from(selectEl.options).filter(o => !o.disabled);
+        const mappedOptions = validOptions.map(opt => ({
+             value: opt.value,
+             label: opt.text,
+             selected: opt.value === selectEl.value
+        }));
+
+        window.openGlassDropdown(wrapper, mappedOptions, (val, label) => {
+            selectEl.value = val;
+            updateText();
+            selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+    };
+
+    selectEl.parentNode.insertBefore(wrapper, selectEl);
+    wrapper.appendChild(selectEl); 
+};
+// ----------------------------------------
+
 // Close dropdown when clicking outside
 document.addEventListener('click', function() {
     const list = document.getElementById('acc-year-list');
@@ -349,10 +469,27 @@ window.renderQuarters = function () {
     grid.innerHTML = html;
 };
 
-window.openAccountingModal = function () {
-    console.log('Accounting Module: openAccountingModal called');
-    const modal = document.getElementById('accounting-modal');
+window.resetAccountingForm = function () {
     const form = document.getElementById('accounting-form');
+    if (form) form.reset();
+    document.getElementById('accounting-id').value = '';
+    
+    const typeSelect = document.getElementById('acc-type');
+    if (typeSelect) { typeSelect.value = 'incoming'; typeSelect.dispatchEvent(new Event('change')); }
+    
+    const vatSelect = document.getElementById('acc-vat-rate');
+    if (vatSelect) { vatSelect.value = '19'; vatSelect.dispatchEvent(new Event('change')); }
+    
+    document.getElementById('acc-date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('accounting-modal-title').textContent = 'Neuer Eintrag';
+    
+    document.getElementById('accounting-items-container').innerHTML = '';
+    window.updateAccountingEntityLabel();
+};
+
+window.openAccountingModal = function () {
+    window.resetAccountingForm();
+    const modal = document.getElementById('accounting-modal');
     if (!modal) {
         console.error('Accounting Modal not found!');
         return;
@@ -390,6 +527,13 @@ window.openAccountingModal = function () {
     // Clear Positions
     const itemsContainer = document.getElementById('accounting-items-container');
     if (itemsContainer) itemsContainer.innerHTML = '';
+
+    setTimeout(() => {
+        const typeSelect = document.getElementById('acc-type');
+        if (typeSelect) window.initGlassSelect(typeSelect);
+        const vatSelect = document.getElementById('acc-vat-rate');
+        if (vatSelect) window.initGlassSelect(vatSelect);
+    }, 0);
 
     console.log('Accounting Module: Modal shown');
 };
@@ -676,6 +820,7 @@ window.addAccountingItemRow = function (data = {}) {
     workshopSelect.innerHTML = '<option value="">Maschine wählen...</option>' + 
         workshopMachines.map(m => `<option value="${m.id}" ${String(m.id) === String(data.machine_id) ? 'selected' : ''}>${window.getMachineName(m.id)}</option>`).join('');
     machineUI.appendChild(workshopSelect);
+    setTimeout(() => window.initGlassSelect(workshopSelect), 0);
     
     dynamicUI.appendChild(machineUI);
 
@@ -692,6 +837,7 @@ window.addAccountingItemRow = function (data = {}) {
     areaSelect.innerHTML = '<option value="">Bereich wählen...</option>' + 
         areas.map(a => `<option value="${a}" ${a === data.assignment_area ? 'selected' : ''}>${a}</option>`).join('');
     otherUI.appendChild(areaSelect);
+    setTimeout(() => window.initGlassSelect(areaSelect), 0);
     
     dynamicUI.appendChild(otherUI);
     assignmentBox.appendChild(dynamicUI);
@@ -839,12 +985,18 @@ window.editAccountingEntry = async function (id) {
     window.openAccountingModal();
     document.getElementById('accounting-modal-title').textContent = 'Eintrag bearbeiten';
     document.getElementById('accounting-id').value = entry.id;
-    document.getElementById('acc-type').value = entry.type;
+    
+    const typeSelect = document.getElementById('acc-type');
+    if (typeSelect) { typeSelect.value = entry.type; typeSelect.dispatchEvent(new Event('change')); }
+    
     document.getElementById('acc-invoice-number').value = entry.invoice_number || '';
     document.getElementById('acc-date').value = entry.date;
     document.getElementById('acc-entity').value = entry.entity;
     document.getElementById('acc-amount-net').value = entry.amount_net;
-    document.getElementById('acc-vat-rate').value = entry.vat_rate;
+    
+    const vatSelect = document.getElementById('acc-vat-rate');
+    if (vatSelect) { vatSelect.value = entry.vat_rate; vatSelect.dispatchEvent(new Event('change')); }
+    
     document.getElementById('acc-amount-gross').value = entry.amount_gross;
     document.getElementById('acc-due-date').value = entry.due_date || '';
     document.getElementById('acc-discount-date').value = entry.discount_date || '';
@@ -1837,6 +1989,13 @@ window.addSplitRow = function(defaults = {}) {
     row.innerHTML = qtyHTML + assignHTML + btnHTML;
     container.appendChild(row);
     window.updateSplitTotal();
+
+    setTimeout(() => {
+        const wSelect = row.querySelector('.split-machine-workshop');
+        if (wSelect) window.initGlassSelect(wSelect);
+        const aSelect = row.querySelector('.split-area-select');
+        if (aSelect) window.initGlassSelect(aSelect);
+    }, 0);
 };
 
 window.toggleSplitAssignmentType = function (rowId, type) {
