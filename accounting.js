@@ -157,13 +157,19 @@ window.initGlassSelect = function(selectEl) {
                 if (opt.value) {
                     textSpan.style.color = 'var(--color-primary-green)';
                     textSpan.style.textAlign = 'left';
+                    textSpan.style.flex = '1';
+                    wrapper.style.justifyContent = 'flex-start';
                     icon.style.display = 'flex';
                 } else {
                     textSpan.style.textAlign = 'center';
+                    textSpan.style.flex = '0 1 auto'; // Let the wrapper center it
+                    wrapper.style.justifyContent = 'center';
                     icon.style.display = 'none';
                 }
             } else {
                 textSpan.style.textAlign = 'left';
+                textSpan.style.flex = '1';
+                wrapper.style.justifyContent = 'space-between';
                 icon.style.display = 'flex';
             }
         } else {
