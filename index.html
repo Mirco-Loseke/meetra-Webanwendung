@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Webapp meetra</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=12">
     <!-- Preloading standard fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,7 +22,7 @@
     <!-- jsPDF for PDF Generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-    <script src="vorlage_base64.js"></script>
+    <script src="vorlage_base64.js?v=12"></script>
 </head>
 
 <body>
@@ -253,18 +253,6 @@
                     </a>
 
                 </div>
-
-                <!-- Spacer to push right content -->
-                <div style="flex-grow: 1;"></div>
-
-                <!-- Settings Button (Global in Topbar) -->
-                <button class="btn-icon-soft" title="Einstellungen" onclick="openSettingsModal()"
-                    style="margin-right: 1.5rem; display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; color: rgba(255,255,255,0.8); cursor: pointer; transition: all 0.2s;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                        <path
-                            d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.23.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6S13.98 15.6 12 15.6z" />
-                    </svg>
-                </button>
 
                 <!-- User Profile Switcher (Top Right) -->
                 <div class="sidebar-user-profile" id="userProfileTrigger">
@@ -893,6 +881,64 @@
                             </div>
                         </div>
 
+                        <!-- AI Configuration Card -->
+                        <div class="settings-card" data-target="settings-ai">
+                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
+                                <div class="settings-icon-container" style="background: rgba(168, 85, 247, 0.1); color: #a855f7; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0;">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"></path>
+                                        <path d="M12 6a6 6 0 1 0 6 6 6 6 0 0 0-6-6zm0 10a4 4 0 1 1 4-4 4 4 0 0 1-4 4z"></path>
+                                        <circle cx="12" cy="12" r="2"></circle>
+                                    </svg>
+                                </div>
+                                <h2 style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">KI-Konfiguration</h2>
+                            </div>
+                            <div class="settings-content">
+                                <p style="font-size: 1rem;">Groq API-Key für Dokumentenauslese verwalten</p>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+                <!-- AI Settings View -->
+                <section id="settings-ai" class="view hidden">
+                    <div class="users-header-container">
+                        <h1>KI-Konfiguration</h1>
+                        <div class="users-header-actions">
+                            <button class="btn-back-custom" data-target="settings">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M19 12H5"></path>
+                                    <path d="M12 19l-7-7 7-7"></path>
+                                </svg>
+                                ZURÜCK
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="glass-card" style="max-width: 600px; margin-top: 2rem; padding: 2rem;">
+                         <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label style="color: rgba(255,255,255,0.7); font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Groq API-Key (Kostenlose KI)</label>
+                            <div style="font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-bottom: 15px; line-height: 1.4;">
+                                Wird verwendet für das extrem präzise und fehlerfreie Auslesen von Rechnungs-PDFs via KI. Der Key wird <strong style="color:white;">nur lokal in deinem Browser</strong> gespeichert.
+                            </div>
+                            <div style="position: relative;">
+                                <input type="password" id="settings-api-key-new" class="glass-input" placeholder="gsk_..." autocomplete="off" style="font-family: monospace; letter-spacing: 1px; width: 100%;">
+                                <button type="button" onclick="toggleApiKeyVisibilityNew()" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: rgba(255,255,255,0.5); cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">
+                                    <svg id="eye-icon-api-new" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div style="margin-top: 12px; font-size: 0.85rem;">
+                                <a href="https://console.groq.com/keys" target="_blank" style="color: #60a5fa; text-decoration: none; transition: color 0.2s;" onmouseover="this.style.color='#93c5fd'" onmouseout="this.style.color='#60a5fa'">Hier kannst du deinen API-Key erstellen &rarr;</a>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 2rem; display: flex; justify-content: flex-end;">
+                            <button class="btn-primary" onclick="saveSettingsNew()">Einstellungen speichern</button>
+                        </div>
                     </div>
                 </section>
                 <!-- Users View -->
@@ -1109,6 +1155,15 @@
                                 </h1>
                             </div>
                             <div class="view-header-right">
+                            <div id="acc-year-dropdown" style="position: relative; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.05); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); padding: 5px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); margin-right: 6px; cursor: pointer; user-select: none;" onclick="window.toggleYearDropdown(event)">
+                                    <span style="color: rgba(255,255,255,0.4); font-size: 0.8rem; font-weight: 600; white-space: nowrap;">Jahr:</span>
+                                    <span id="acc-year-display" style="color: #fff; font-size: 0.9rem; font-weight: 700; min-width: 40px;">—</span>
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                    <!-- Dropdown list -->
+                                    <div id="acc-year-list" class="hidden" style="position: absolute; top: calc(100% + 6px); left: 0; min-width: 130px; background: rgba(20,20,28,0.7); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; overflow: hidden; z-index: 9999; box-shadow: 0 8px 32px rgba(0,0,0,0.5);">
+                                        <!-- options populated via JS -->
+                                    </div>
+                                </div>
                                 <button onclick="window.openFinancialDashboard()" class="btn-icon-soft"
                                     style="padding: 10px; color: #fff; margin-right: 10px;" title="Finanz-Übersicht">
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1139,14 +1194,25 @@
                                 <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                                     <h2 style="margin: 0; display: flex; align-items: center; gap: 12px; font-size: 1.5rem;">
                                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
-                                        Maschinen-Kosten-Auswertung
+                                        Kosten-Auswertung
                                     </h2>
-                                    <button onclick="window.closeMachineEvaluation()" class="btn-icon-soft" style="color: #ef4444; padding: 5px;">
-                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
-                                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                                        </svg>
-                                    </button>
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <select id="eval-time-range" class="glass-form-input" 
+                                            style="padding: 4px 10px; width: 150px; border: 1px solid rgba(255,255,255,0.1); background: #1a1a1a; color: #fff; font-size: 0.85rem;"
+                                            onchange="window.updateMachineEvaluation()">
+                                            <option value="current_month">Aktueller Monat</option>
+                                            <option value="last_2_months">Letzte 2 Monate</option>
+                                            <option value="last_3_months" selected>Letzte 3 Monate</option>
+                                            <option value="current_year">Aktuelles Jahr</option>
+                                            <option value="last_year">Letztes Jahr</option>
+                                        </select>
+                                        <button onclick="window.closeMachineEvaluation()" class="btn-icon-soft" style="color: #ef4444; padding: 5px;">
+                                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div id="machine-evaluation-content">
                                     <!-- Dynamic Content via JS -->
@@ -1172,23 +1238,58 @@
                     </div>
 
                     <div id="accounting-quarters" style="margin-top: 3rem;">
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem;">
+                        <div style="margin-bottom: 1.5rem;">
                             <h2 style="color: #fff; margin: 0;">Quartals-Auswertung</h2>
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <label for="quarters-year-select" style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600;">Jahr:</label>
-                                <select id="quarters-year-select" onchange="window.switchQuartersYear(this.value)" 
-                                    style="background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 6px 12px; border-radius: 8px; font-size: 0.9rem; font-weight: 700; outline: none; cursor: pointer;">
-                                    <!-- Years will be populated dynamically -->
-                                </select>
-                            </div>
                         </div>
-                        <div id="quarters-grid"
-                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                        <div id="quarters-grid">
                             <!-- Quarters will be rendered here -->
                         </div>
                     </div>
                 </section>
             </main>
+
+            <!-- Split Position Modal -->
+            <div id="split-item-modal" class="modal-backdrop hidden">
+                <div class="modal-content" style="max-width: 850px; padding: 28px; border-radius: 20px; margin: auto;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+                        <div>
+                            <h2 style="margin: 0; font-size: 1.3rem; display: flex; align-items: center; gap: 10px;">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary-green)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="8"/><path d="M12 8 L5 21"/><path d="M12 8 L19 21"/><circle cx="12" cy="3" r="1.5" fill="var(--color-primary-green)"/></svg>
+                                Position aufteilen
+                            </h2>
+                            <div id="split-item-info" style="font-size: 0.85rem; color: rgba(255,255,255,0.4); margin-top: 6px;"></div>
+                        </div>
+                        <button onclick="window.closeSplitDialog()" class="btn-icon-soft" style="color:#ef4444; padding:5px; flex-shrink:0;">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        </button>
+                    </div>
+
+                    <!-- Validation bar -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px;">
+                        <span style="color: rgba(255,255,255,0.5); font-size: 0.8rem; font-weight: 600;">Gesamt:</span>
+                        <span id="split-total-display" style="font-weight: 800; font-size: 1rem; color: #fff;"></span>
+                        <span style="color: rgba(255,255,255,0.5); font-size: 0.8rem;">Verteilt:</span>
+                        <span id="split-distributed-display" style="font-weight: 800; font-size: 1rem; color: var(--color-primary-green);">0</span>
+                        <span style="color: rgba(255,255,255,0.5); font-size: 0.8rem;">Rest:</span>
+                        <span id="split-remaining-display" style="font-weight: 800; font-size: 1rem; color: #f87171;">0</span>
+                    </div>
+
+                    <!-- Split rows -->
+                    <div id="split-rows" style="display: flex; flex-direction: column; gap: 10px; max-height: 320px; overflow-y: auto; margin-bottom: 16px;"></div>
+
+                    <!-- Add row -->
+                    <button onclick="window.addSplitRow()" style="width: 100%; padding: 10px; background: rgba(255,255,255,0.04); border: 1px dashed rgba(255,255,255,0.15); border-radius: 10px; color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 20px;"
+                        onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.color='#fff';" onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.color='rgba(255,255,255,0.4)';">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Weitere Aufteilung hinzufügen
+                    </button>
+
+                    <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                        <button onclick="window.closeSplitDialog()" class="btn-secondary" style="padding: 10px 24px;">Abbrechen</button>
+                        <button onclick="window.submitSplit()" id="split-confirm-btn" class="btn-primary" style="padding: 10px 24px; opacity: 0.5; cursor: not-allowed;">Aufteilen bestätigen</button>
+                    </div>
+                </div>
+            </div>
 
             <!-- Accounting Modal -->
             <div id="accounting-modal" class="modal-backdrop hidden">
@@ -1235,7 +1336,7 @@
                     <form id="accounting-form" onsubmit="submitAccountingEntry(event)">
                         <input type="hidden" id="accounting-id">
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;">
                             <div class="form-group">
                                 <label for="acc-type">Typ</label>
                                 <select id="acc-type" class="glass-form-input" required
@@ -1251,7 +1352,7 @@
                             </div>
                         </div>
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;">
                             <div class="form-group">
                                 <label for="acc-date">Datum</label>
                                 <input type="date" id="acc-date" class="glass-form-input" required>
@@ -1263,7 +1364,7 @@
                             </div>
                         </div>
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1.5rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1rem;">
                             <div class="form-group">
                                 <label for="acc-due-date">Fällig am (Optional)</label>
                                 <input type="date" id="acc-due-date" class="glass-form-input">
@@ -1280,7 +1381,7 @@
                         </div>
 
                         <div
-                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-top: 2rem; background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
+                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1.5rem; margin-top: 1.25rem; background: rgba(255,255,255,0.03); padding: 1.25rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); align-items: end;">
                             <div class="form-group">
                                 <label for="acc-amount-net">Summe Netto (€)</label>
                                 <input type="number" step="0.01" id="acc-amount-net" class="glass-form-input" required
@@ -1299,10 +1400,30 @@
                                 <input type="number" step="0.01" id="acc-amount-gross" class="glass-form-input"
                                     required>
                             </div>
+                            <div class="form-group" style="display: flex; align-items: center; gap: 12px; height: 36px; padding-bottom: 2px;">
+                                <label style="position: relative; display: inline-block; width: 44px; height: 24px; margin: 0; cursor: pointer;">
+                                    <input type="checkbox" id="acc-is-paid" style="opacity: 0; width: 0; height: 0; position: absolute;">
+                                    <span style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); transition: .3s; border-radius: 24px;" class="toggle-slider">
+                                        <span style="position: absolute; height: 18px; width: 18px; left: 3px; bottom: 2px; background-color: rgba(255,255,255,0.5); transition: .3s; border-radius: 50%;" class="toggle-circle"></span>
+                                    </span>
+                                </label>
+                                <span style="font-size: 0.95rem; color: #fff; font-weight: 700; letter-spacing: 0.5px;">Bezahlt</span>
+                            </div>
                         </div>
 
+                        <style>
+                            #acc-is-paid:checked + .toggle-slider {
+                                background-color: var(--color-primary-green) !important;
+                                border-color: transparent !important;
+                            }
+                            #acc-is-paid:checked + .toggle-slider .toggle-circle {
+                                transform: translateX(20px);
+                                background-color: #fff !important;
+                            }
+                        </style>
+
                         <!-- Individual Positions Section -->
-                        <div style="margin-top: 2rem;">
+                        <div style="margin-top: 1.25rem;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                                 <h3 style="margin: 0; font-size: 1.1rem; color: #fff; display: flex; align-items: center; gap: 8px;">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
@@ -1317,20 +1438,6 @@
                             </div>
                         </div>
 
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
-                            <div class="form-group">
-                                <label for="acc-machine-id">Maschine (Optional)</label>
-                                <select id="acc-machine-id" class="glass-form-input" style="color: var(--color-primary-green); font-weight: 700;">
-                                    <option value="">Keine Zuordnung</option>
-                                    <!-- Populated by JS -->
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label for="acc-comment">Verwendungszweck / Kommentar</label>
-                                <input type="text" id="acc-comment" class="glass-form-input"
-                                    placeholder="Wofür war diese Rechnung?">
-                            </div>
-                        </div>
 
                         <div
                             style="margin-top: 3rem; display: flex; justify-content: flex-end; gap: 12px; padding-bottom: 10px;">
@@ -1634,6 +1741,11 @@
                     }
                     if (targetId === 'accounting' && typeof fetchAccountingEntries === 'function') {
                         fetchAccountingEntries();
+                    }
+                    if (targetId === 'settings-ai') {
+                        const input = document.getElementById('settings-api-key-new');
+                        const savedKey = localStorage.getItem('groq_api_key');
+                        if (input) input.value = savedKey || '';
                     }
 
                     if (!found) {
@@ -8162,94 +8274,34 @@
         };
     </script>
 
-    <!-- Settings Modal -->
-    <div id="settings-modal" class="modal-backdrop hidden"
-        style="z-index: 1200; display: none; align-items: center; justify-content: center;">
-        <div class="modal-content glass-card"
-            style="max-width: 500px; padding: 2rem; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 24px 64px rgba(0,0,0,0.5);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-                <h2 style="margin: 0; font-size: 1.4rem; color: white; display: flex; align-items: center; gap: 10px;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                        stroke-linecap="round" stroke-linejoin="round" style="color: #60a5fa;">
-                        <circle cx="12" cy="12" r="3"></circle>
-                        <path
-                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
-                        </path>
-                    </svg>
-                    App Einstellungen
-                </h2>
-                <button class="btn-close-modal" onclick="closeSettingsModal()">&times;</button>
-            </div>
-
-            <div class="form-group" style="margin-bottom: 1.5rem;">
-                <label
-                    style="color: rgba(255,255,255,0.7); font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Groq
-                    API-Key (Kostenlose KI)</label>
-                <div style="font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-bottom: 10px; line-height: 1.4;">
-                    Wird verwendet für das extrem präzise und fehlerfreie Auslesen von Rechnungs-PDFs via KI. Der Key
-                    wird <strong style="color:white;">nur lokal in deinem Browser</strong> gespeichert.
-                </div>
-                <div style="position: relative;">
-                    <input type="password" id="settings-api-key" class="glass-input" placeholder="gsk_..."
-                        autocomplete="off" style="font-family: monospace; letter-spacing: 1px;">
-                    <button type="button" onclick="toggleApiKeyVisibility()"
-                        style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: rgba(255,255,255,0.5); cursor: pointer; transition: color 0.2s;"
-                        onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">
-                        <svg id="eye-icon-api" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                    </button>
-                </div>
-                <div style="margin-top: 8px; font-size: 0.8rem;">
-                    <a href="https://console.groq.com/keys" target="_blank"
-                        style="color: #60a5fa; text-decoration: none; transition: color 0.2s;"
-                        onmouseover="this.style.color='#93c5fd'" onmouseout="this.style.color='#60a5fa'">Hier kannst du
-                        deinen API-Key erstellen &rarr;</a>
-                </div>
-            </div>
-
-            <div class="modal-actions" style="margin-top: 2.5rem; display: flex; justify-content: flex-end; gap: 1rem;">
-                <button class="btn-secondary" onclick="closeSettingsModal()">Abbrechen</button>
-                <button class="btn-primary" onclick="saveSettings()">Speichern</button>
-            </div>
-        </div>
-    </div>
 
     <script>
         window.openSettingsModal = function () {
-            const modal = document.getElementById('settings-modal');
+            window.switchView('settings-ai');
             const input = document.getElementById('settings-api-key');
-
-            // Lade vorhandenen Key (falls vorhanden)
             const savedKey = localStorage.getItem('groq_api_key');
             if (savedKey) {
                 input.value = savedKey;
             } else {
                 input.value = '';
             }
-
-            modal.style.display = 'flex';
-            modal.style.alignItems = 'center';
-            modal.style.justifyContent = 'center';
-            modal.classList.remove('hidden');
-            requestAnimationFrame(() => modal.classList.add('show'));
-            document.body.style.overflow = 'hidden';
         };
+        
+        // Initialize API key on load if section is entered
+        document.addEventListener('DOMContentLoaded', () => {
+            const gearBtn = document.querySelector('.btn-icon-soft[title="Einstellungen"]');
+            if (gearBtn) {
+                gearBtn.onclick = () => window.switchView('settings');
+            }
+        });
 
         window.closeSettingsModal = function () {
-            const modal = document.getElementById('settings-modal');
-            modal.classList.remove('show');
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                modal.style.display = 'none';
-                document.body.style.overflow = '';
-            }, 300);
+            // No longer needed but kept for safety if called elsewhere
+            window.switchView('settings');
         };
 
-        window.saveSettings = function () {
-            const key = document.getElementById('settings-api-key').value.trim();
+        window.saveSettingsNew = function () {
+            const key = document.getElementById('settings-api-key-new').value.trim();
             if (key) {
                 localStorage.setItem('groq_api_key', key);
                 alert('Einstellungen erfolgreich gespeichert.');
@@ -8257,12 +8309,11 @@
                 localStorage.removeItem('groq_api_key');
                 alert('API-Key entfernt.');
             }
-            window.closeSettingsModal();
         };
 
-        window.toggleApiKeyVisibility = function () {
-            const input = document.getElementById('settings-api-key');
-            const icon = document.getElementById('eye-icon-api');
+        window.toggleApiKeyVisibilityNew = function () {
+            const input = document.getElementById('settings-api-key-new');
+            const icon = document.getElementById('eye-icon-api-new');
             if (input.type === 'password') {
                 input.type = 'text';
                 icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
@@ -8271,6 +8322,10 @@
                 icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
             }
         };
+
+        // Redirection for compatibility
+        window.saveSettings = window.saveSettingsNew;
+        window.toggleApiKeyVisibility = window.toggleApiKeyVisibilityNew;
     </script>
 
     <!-- Mobile sidebar overlay backdrop -->
@@ -8316,7 +8371,7 @@
         }
     </script>
 
-    <script src="accounting.js?v=11"></script>
+    <script src="accounting.js?v=12"></script>
 </body>
 
 </html>
