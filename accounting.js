@@ -841,37 +841,14 @@ window.updateFinancialDashboard = function () {
         }
     });
 
-    const sumIncoming = incomingItems.reduce((sum, e) => sum + parseFloat(e.amount_gross), 0);
-    const sumSkontoSafe = skontoDeals.reduce((sum, e) => sum + (parseFloat(e.discount_amount) || 0), 0);
-    const sumOutgoing = outgoingItems.reduce((sum, e) => sum + parseFloat(e.amount_gross), 0);
-
-    let html = `
-        <div class="fin-total-banner">
-            <div>
-                <div style="font-size: 0.8rem; color: rgba(255,255,255,0.4); text-transform: uppercase;">Eingang (Offen)</div>
-                <div style="font-size: 1.5rem; font-weight: 800; color: #f87171;">${window.formatCurrency(sumIncoming)}</div>
-            </div>
-            <div style="border-left: 1px solid rgba(255,255,255,0.1);"></div>
-            <div>
-                <div style="font-size: 0.8rem; color: rgba(255,255,255,0.4); text-transform: uppercase;">Skonto Potenzial</div>
-                <div style="font-size: 1.5rem; font-weight: 800; color: #10b981;">${window.formatCurrency(sumSkontoSafe)}</div>
-            </div>
-            <div style="border-left: 1px solid rgba(255,255,255,0.1);"></div>
-            <div>
-                <div style="font-size: 0.8rem; color: rgba(255,255,255,0.4); text-transform: uppercase;">Ausgang (Erwartet)</div>
-                <div style="font-size: 1.5rem; font-weight: 800; color: #10b981;">${window.formatCurrency(sumOutgoing)}</div>
-            </div>
-        </div>
-    `;
-
     const overdueIncoming = overdueItems.filter(e => e.type === 'incoming');
     const overdueOutgoing = overdueItems.filter(e => e.type === 'outgoing');
 
-    const timeRangeLabel = direction === 'future' ? `(die nächsten ${days} Tage)` : `(die letzten ${days} Tage)`;
+    let html = '';
 
     // Sektionen
     if (overdueOutgoing.length > 0) {
-        html += renderDashboardSection('⚠️ Überfällig: Ausgang (Kunden)', overdueOutgoing, 'ef4444', 'due_date', false, '#ef4444', null, today);
+        html += renderDashboardSection('⚠️ Überfällig: Ausgang (Kunden)', overdueOutgoing, '10b981', 'due_date', false, '#10b981', null, today);
     }
     
     if (overdueIncoming.length > 0) {
@@ -879,11 +856,11 @@ window.updateFinancialDashboard = function () {
     }
 
     if (direction === 'future') {
-        html += renderDashboardSection('📥 Eingang: Demnächst fällig', incomingItems, 'f87171', 'due_date', false, null, timeRangeLabel, today);
-        html += renderDashboardSection('🏷️ Eingang: Skonto-Fristen', skontoDeals, 'facc15', 'discount_date', true, '#facc15', timeRangeLabel, today);
-        html += renderDashboardSection('📤 Ausgang: Erwartete Zahlungen', outgoingItems, '10b981', 'due_date', false, '#10b981', timeRangeLabel, today);
+        html += renderDashboardSection('📥 Eingang: Demnächst fällig', incomingItems, 'f87171', 'due_date', false, null, null, today);
+        html += renderDashboardSection('🏷️ Eingang: Skonto-Fristen', skontoDeals, 'facc15', 'discount_date', true, '#facc15', null, today);
+        html += renderDashboardSection('📤 Ausgang: Erwartete Zahlungen', outgoingItems, '10b981', 'due_date', false, '#10b981', null, today);
     } else {
-        html += renderDashboardSection('Rechnungen im gewählten Zeitraum', [...incomingItems, ...outgoingItems], '60a5fa', 'due_date', false, null, timeRangeLabel, today);
+        html += renderDashboardSection('Rechnungen im gewählten Zeitraum', [...incomingItems, ...outgoingItems], '60a5fa', 'due_date', false, null, null, today);
     }
 
     content.innerHTML = html;
@@ -906,7 +883,7 @@ function renderDashboardSection(title, items, color, dateField, showSkonto = fal
             </div>
             ${items.map(e => {
         const isOutgoing = e.type === 'outgoing';
-        const itemColor = isOutgoing ? '10b981' : (showSkonto ? '10b981' : color);
+        const itemColor = isOutgoing ? '10b981' : (showSkonto ? 'facc15' : color);
         const itemDate = e[dateField] ? new Date(e[dateField]) : null;
         const displayDate = itemDate ? itemDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
 
