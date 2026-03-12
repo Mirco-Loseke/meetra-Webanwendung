@@ -983,27 +983,33 @@ window.editAccountingEntry = async function (id) {
     if (!entry) return;
 
     window.openAccountingModal();
-    document.getElementById('accounting-modal-title').textContent = 'Eintrag bearbeiten';
-    document.getElementById('accounting-id').value = entry.id;
     
-    const typeSelect = document.getElementById('acc-type');
-    if (typeSelect) { typeSelect.value = entry.type; typeSelect.dispatchEvent(new Event('change')); }
-    
-    document.getElementById('acc-invoice-number').value = entry.invoice_number || '';
-    document.getElementById('acc-date').value = entry.date;
-    document.getElementById('acc-entity').value = entry.entity;
-    document.getElementById('acc-amount-net').value = entry.amount_net;
-    
-    const vatSelect = document.getElementById('acc-vat-rate');
-    if (vatSelect) { vatSelect.value = entry.vat_rate; vatSelect.dispatchEvent(new Event('change')); }
-    
-    document.getElementById('acc-amount-gross').value = entry.amount_gross;
-    document.getElementById('acc-due-date').value = entry.due_date || '';
-    document.getElementById('acc-discount-date').value = entry.discount_date || '';
-    document.getElementById('acc-discount-amount').value = entry.discount_amount || '';
+    // Wir müssen kurz warten, bis openAccountingModal (inkl. initGlassSelect in setTimeout) fertig ist.
+    setTimeout(() => {
+        document.getElementById('accounting-modal-title').textContent = 'Eintrag bearbeiten';
+        document.getElementById('accounting-id').value = entry.id;
+        
+        const typeSelect = document.getElementById('acc-type');
+        if (typeSelect) { typeSelect.value = entry.type; typeSelect.dispatchEvent(new Event('change')); }
+        
+        document.getElementById('acc-invoice-number').value = entry.invoice_number || '';
+        document.getElementById('acc-date').value = entry.date;
+        document.getElementById('acc-entity').value = entry.entity;
+        document.getElementById('acc-amount-net').value = entry.amount_net;
+        
+        const vatSelect = document.getElementById('acc-vat-rate');
+        if (vatSelect) { vatSelect.value = entry.vat_rate; vatSelect.dispatchEvent(new Event('change')); }
+        
+        document.getElementById('acc-amount-gross').value = entry.amount_gross;
+        document.getElementById('acc-due-date').value = entry.due_date || '';
+        document.getElementById('acc-discount-date').value = entry.discount_date || '';
+        document.getElementById('acc-discount-amount').value = entry.discount_amount || '';
 
-    const paidCheck = document.getElementById('acc-is-paid');
-    if (paidCheck) paidCheck.checked = !!entry.is_paid;
+        const paidCheck = document.getElementById('acc-is-paid');
+        if (paidCheck) paidCheck.checked = !!entry.is_paid;
+        
+        window.updateAccountingEntityLabel();
+    }, 10);
 
     // Fetch and render items
     try {
@@ -1022,8 +1028,6 @@ window.editAccountingEntry = async function (id) {
     } catch (err) {
         console.error('Error fetching accounting items:', err);
     }
-
-    window.updateAccountingEntityLabel();
 };
 
 window.deleteAccountingEntry = async function (id) {
