@@ -1578,7 +1578,7 @@
                 }
 
                 return `
-                    <tr style="cursor: pointer; border: 3px solid ${badgeColor}66; border-left: 7px solid ${badgeColor}; background: ${badgeColor}08;" onclick="${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')">
+                    <tr style="cursor: pointer; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 10px 30px rgba(0,0,0,0.4); border: 3px solid ${badgeColor}66; border-left: 7px solid ${badgeColor}; border-radius: 20px;" onclick="${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')">
                         <td data-label="Typ">
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: ${badgeColor}22; color: ${badgeColor};">
