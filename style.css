@@ -5879,7 +5879,7 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
 }
 
 @media (max-width: 768px) {
-    /* 1. Reset the underlying table container for full width on mobile */
+    /* 1. Ensure the container doesn't restrict width */
     #accounting-table-container {
         padding: 0 !important;
         overflow: visible !important;
@@ -5891,14 +5891,14 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         border-collapse: collapse !important;
     }
 
-    /* 2. Container for the details (the tr) - Absolute zero out */
+    /* 2. Neutralize the Detail TR - Remove ALL padding/margin inherited from general tr rules */
     .data-table tr[id^="details-"] {
         display: flex !important;
         flex-direction: column !important;
         width: 100% !important;
         background: transparent !important;
         border: none !important;
-        padding: 0 !important;
+        padding: 0 !important; /* CRITICAL: Remove tr padding */
         margin: 0 !important;
         backdrop-filter: none !important;
         border-radius: 0 !important;
@@ -5912,32 +5912,34 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         box-sizing: border-box !important;
     }
 
-    .acc-details-content {
-        width: 100% !important;
+    /* div#details-content-... (the inner one from renderAccounting) */
+    div[id^="details-content-"] {
         padding: 0 !important;
         margin: 0 !important;
+        width: 100% !important;
     }
 
     .acc-details-grid {
         display: none !important;
     }
 
-    /* 3. The individual position card - MATCH MAIN ROW EXACTLY */
+    /* 3. The individual position card - MUST BE IDENTICAL TO MAIN tr CARD */
     .acc-details-row {
         display: flex !important;
         flex-direction: column !important;
         gap: 0.75rem !important;
-        padding: 1.25rem !important; /* Identical to main rows */
+        padding: 1.25rem !important; /* Exact padding as main tr card */
         background: rgba(255, 255, 255, 0.05) !important;
         backdrop-filter: blur(24px) !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
         border-radius: 20px !important;
-        margin: 0 0 1rem 0 !important; /* No horizontal margin, 1rem gap below */
+        margin: 0 0 1rem 0 !important; /* 1rem gap to next card, no horizontal margin */
         width: 100% !important;
         box-sizing: border-box !important;
         position: relative !important;
     }
 
+    /* Match internal div appearance */
     .acc-details-row > div {
         display: flex !important;
         justify-content: space-between !important;
