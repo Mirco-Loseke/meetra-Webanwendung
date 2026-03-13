@@ -5821,6 +5821,16 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     .task-table td[data-label="Aktionen"] {
         justify-content: flex-end;
     }
+    /* Status Frames for Accounting */
+    .accounting-main-row.status-paid {
+        border: 2px solid rgba(74, 222, 128, 0.4) !important;
+        box-shadow: 0 0 15px rgba(74, 222, 128, 0.1);
+    }
+    
+    .accounting-main-row.status-unpaid {
+        border: 2px solid rgba(248, 113, 113, 0.4) !important;
+        box-shadow: 0 0 15px rgba(248, 113, 113, 0.1);
+    }
 }
 
 /* 3. Safe Area & Notch Support */

@@ -302,7 +302,7 @@ window.renderAccounting = function () {
 
         // Entry Rows
         html += grouped[monthName].map(e => `
-            <tr style="border-top: 1px solid rgba(255,255,255,0.03); transition: background 0.2s;" class="accounting-main-row" id="row-${e.id}">
+            <tr style="border-top: 1px solid rgba(255,255,255,0.03); transition: background 0.2s;" class="accounting-main-row ${e.is_paid ? 'status-paid' : 'status-unpaid'}" id="row-${e.id}">
                 <td data-label="Details" style="padding: 12px; text-align: center; cursor: pointer; color: var(--color-primary-green);" onclick="window.toggleAccountingDetails('${e.id}', this)">
                     <svg class="chevron-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.3s;"><path d="M9 18l6-6-6-6"></path></svg>
                 </td>
@@ -321,7 +321,7 @@ window.renderAccounting = function () {
                 <td data-label="Datum" style="padding: 10px 12px; font-size: 0.85rem; white-space: nowrap;">
                     <div style="font-weight: 600;">${new Date(e.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
                     ${e.is_paid ? 
-                        `<div style="font-size: 0.75rem; color: #4ade80; margin-top: 2px; font-weight: 700; white-space: nowrap;">Online bezahlt</div>` : 
+                        `<div style="font-size: 0.75rem; color: #f87171; margin-top: 2px; font-weight: 700; white-space: nowrap;">Online bezahlt</div>` : 
                         (e.due_date ? `<div style="font-size: 0.75rem; color: #f87171; margin-top: 2px; font-weight: 700; white-space: nowrap;">fällig: ${e.due_date === 'sofort' ? 'sofort' : new Date(e.due_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>` : '')
                     }
                 </td>
