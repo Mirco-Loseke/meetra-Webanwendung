@@ -1231,6 +1231,7 @@ Setze Unbekanntes auf null.`;
             const sel = document.getElementById('acc-type');
             if (sel) {
                 sel.value = parsedData.type;
+                sel.dispatchEvent(new Event('change', { bubbles: true }));
                 if (window.updateAccountingEntityLabel) window.updateAccountingEntityLabel();
             }
         }
@@ -1241,7 +1242,10 @@ Setze Unbekanntes auf null.`;
         
         if (parsedData.vat_rate !== null) {
             const vatSel = document.getElementById('acc-vat-rate');
-            if (vatSel) vatSel.value = parsedData.vat_rate.toString();
+            if (vatSel) {
+                vatSel.value = parsedData.vat_rate.toString();
+                vatSel.dispatchEvent(new Event('change', { bubbles: true }));
+            }
         }
 
         if (parsedData.due_date) document.getElementById('acc-due-date').value = parsedData.due_date;
