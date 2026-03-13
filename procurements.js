@@ -81,20 +81,19 @@ function renderProcurements(procurements) {
         tr.onclick = () => openProcurementModal(proc.id);
 
         tr.innerHTML = `
-            <td onclick="event.stopPropagation(); showStatusUpdateMenu('${proc.id}', this)" style="cursor:pointer;">
+            <td data-label="Status" onclick="event.stopPropagation(); showStatusUpdateMenu('${proc.id}', this)" style="cursor:pointer;">
                 <span class="status-pill" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 5px 12px; border-radius: 10px; font-size: 0.85rem; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
                     <span style="width: 10px; height: 10px; border-radius: 50%; background: ${status.iconColor}; box-shadow: 0 0 8px ${status.iconColor}88;"></span>
                     ${status.label}
                 </span>
             </td>
-            <td>${getCategoryBadge(proc.category)}</td>
-            <td>
+            <td data-label="Kategorie">${getCategoryBadge(proc.category)}</td>
+            <td data-label="Maschine">
                 <div style="font-size: 0.95rem; font-weight: 600; color: var(--color-primary-green);">
                     ${(() => {
                 if (!proc.location_ref || !window.machineList) return '-';
                 const machine = window.machineList.find(m => String(m.id) === String(proc.location_ref));
                 if (!machine) return proc.location_ref;
-
                 let parts = [
                     machine.manufacturer,
                     machine.name,
@@ -102,18 +101,17 @@ function renderProcurements(procurements) {
                     machine.serial ? '#' + machine.serial : null,
                     machine.year ? '(' + machine.year + ')' : null
                 ].filter(Boolean);
-
                 return parts.join(' ');
             })()}
                 </div>
             </td>
-            <td>
+            <td data-label="Titel">
                 <div style="display: flex; flex-direction: column; gap: 4px;">
                     <span style="font-weight: 600; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${proc.title}</span>
                     <span style="font-size: 0.82rem; color: rgba(255,255,255,0.5);">${proc.description ? proc.description.substring(0, 50) + (proc.description.length > 50 ? '...' : '') : ''}</span>
                 </div>
             </td>
-            <td>
+            <td data-label="Ersteller">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <div class="user-avatar-small" style="width: 24px; height: 24px; border-radius: 50%; background-color: ${color}; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: bold; color: white;">
                         ${initials}
@@ -121,8 +119,8 @@ function renderProcurements(procurements) {
                     <span>${creatorName}</span>
                 </div>
             </td>
-            <td style="color: rgba(255,255,255,0.6); font-size: 0.88rem;">${new Date(proc.created_at).toLocaleDateString('de-DE')}</td>
-            <td>
+            <td data-label="Datum" style="color: rgba(255,255,255,0.6); font-size: 0.88rem;">${new Date(proc.created_at).toLocaleDateString('de-DE')}</td>
+            <td data-label="Aktionen">
                 <div class="task-card-actions" style="display: flex; gap: 6px; align-items: center;">
                     <button onclick="event.stopPropagation(); openProcurementModal('${proc.id}')" title="Bearbeiten"
                         style="width:32px; height:32px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"

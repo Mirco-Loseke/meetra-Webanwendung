@@ -259,8 +259,8 @@
                 tr.classList.add(`status-${task.status}`);
             }
             tr.innerHTML = `
-                <td><span class="status-pill status-${task.status}">${formatStatus(task.status)}</span></td>
-                <td style="font-weight: 600; display:flex; align-items:flex-start; gap:8px;">
+                <td data-label="Status"><span class="status-pill status-${task.status}">${formatStatus(task.status)}</span></td>
+                <td data-label="Aufgabe" style="font-weight: 600; display:flex; align-items:flex-start; gap:8px;">
                     <div style="padding-top: 2px;">
                         <div class="task-quick-complete ${task.status === 'completed' ? 'completed' : ''}" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="${task.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -285,12 +285,12 @@
                         ` : ''}
                     </div>
                 </td>
-                <td>
+                <td data-label="Maschine">
                     ${task.machines ? `<span style="color: var(--color-primary-green); font-weight: 600;">${getMachineLabel(task.machines)}</span>` : '<span style="color: rgba(255,255,255,0.4)">-</span>'}
                 </td>
-                <td>${renderAvatars(task.assigned_to)}</td>
-                <td>${renderProgress(task)}</td>
-                <td>
+                <td data-label="Zuweisung">${renderAvatars(task.assigned_to)}</td>
+                <td data-label="Fortschritt">${renderProgress(task)}</td>
+                <td data-label="Aktionen">
                     <div style="display: flex; gap: 8px;">
                         <button onclick="event.stopPropagation(); window.openTaskModal('${task.id}')" title="Bearbeiten" style="width:36px; height:36px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>

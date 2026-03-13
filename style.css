@@ -5730,8 +5730,72 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         width: calc(100% + 2rem);
     }
 
-    .data-table, #procurement-table, .task-table {
-        min-width: 1100px; /* Keep one-line logic with horizontal scroll */
+    /* Table-to-Card Transformation for Mobile */
+    .task-table, #procurement-table, .data-table {
+        display: block !important;
+        min-width: 0 !important;
+        background: transparent !important;
+        border: none !important;
+    }
+
+    .task-table thead, #procurement-table thead, .data-table thead {
+        display: none !important; /* Hide headers on mobile */
+    }
+
+    .task-table tbody, #procurement-table tbody, .data-table tbody {
+        display: flex !important;
+        flex-direction: column;
+        gap: 1rem;
+        padding: 0.5rem;
+    }
+
+    .task-table tr, #procurement-table tr, .data-table tr {
+        display: flex !important;
+        flex-direction: column;
+        background: rgba(255, 255, 255, 0.05) !important;
+        backdrop-filter: blur(24px);
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 20px !important;
+        padding: 1.25rem !important;
+        gap: 0.75rem;
+        position: relative;
+        margin-bottom: 0 !important;
+    }
+
+    .task-table td, #procurement-table td, .data-table td {
+        display: flex !important;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 !important;
+        background: transparent !important;
+        border: none !important;
+        width: 100% !important;
+        white-space: normal !important;
+    }
+
+    /* Add labels for data on mobile */
+    .task-table td::before, #procurement-table td::before, .data-table td::before {
+        content: attr(data-label);
+        font-weight: 700;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.4);
+    }
+
+    /* Special handling for status & actions */
+    #procurement-table td:first-child, .task-table td:first-child {
+        justify-content: flex-start;
+        border-left: none !important;
+    }
+
+    #procurement-table td:last-child, .task-table td:last-child {
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding-top: 0.75rem !important;
+        margin-top: 0.25rem;
+    }
+
+    #procurement-table .status-pill {
+        width: auto !important;
     }
     
     /* Touch Target Optimization */
