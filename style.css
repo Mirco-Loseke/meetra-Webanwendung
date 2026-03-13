@@ -5873,7 +5873,7 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     margin: 0;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: flex-start;
     gap: 15px;
     font-weight: 800;
     font-family: 'Outfit', sans-serif;
