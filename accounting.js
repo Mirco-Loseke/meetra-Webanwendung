@@ -1108,10 +1108,12 @@ ERKENNUNG DES TYPS (type) & GESCHÄFTSPARTNERS (entity):
 1. 'outgoing' (Ausgangsrechnung): Wenn "Meetra" oder "meetra Recycling Maschinen" der ABSENDER (Sender/Issuer) ist und ein anderer Name bei "Rechnungsadresse", "Kundenadresse", "Invoice Address", "Sold to", "Bill to" oder "Customer" steht.
 2. 'incoming' (Eingangsrechnung): Wenn "Meetra" der EMPFÄNGER ist und ein anderer Name als Absender/Vendor/Supplier fungiert.
 3. STRIKTE VERBOTE: "Dietmar Meenken", "Mirco Loseke", "Simon Gabbert", "Meetra" dürfen NIEMALS die 'entity' sein. Die 'entity' ist immer der EXTERNE Partner.
-4. PRIORITÄT: Suche nach "sold to", "bill to", "customer", "verkauft durch", "vendor", "supplier".
+4. IGNORIEREN: Namen/Adressen, die unter "Lieferadresse", "Lieferanschrift", "Delivery Address" oder "Shipping Address" stehen, sind NICHT die 'entity' (Vertragspartner).
+5. PRIORITÄT: Suche nach "sold to", "bill to", "customer", "verkauft durch", "vendor", "supplier".
 
 STEUERSATZ (vat_rate):
-- Erkenne Steuerbefreiungen oder 0% Sätze (z.B. "Steuerfreie innergemeinschaftliche Lieferung", "Reverse Charge", "Tax Rate: 0%"). Setze in diesen Fällen 'vat_rate' auf 0.
+- Erkenne Steuerbefreiungen oder 0% Sätze (z.B. "Steuerfreie innergemeinschaftliche Lieferung", "Reverse Charge", "Tax Rate: 0%"). 
+- Suche gezielt nach dem Prozentsatz in der Nähe von "Tax", "Steuer", "VAT", "MwSt." oder "USt.". Wenn dort z.B. "incl. 19% Tax" oder "zzgl. 7% MwSt" steht, nutze 19 bzw 7.
 
 STATUS (is_paid & paid_at):
 - 'is_paid' = true bei "paid", "amount received", "bezahlt", "Amazon Pay".
