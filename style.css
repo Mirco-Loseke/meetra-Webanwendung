@@ -5868,6 +5868,10 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
 }
 
 @media (max-width: 768px) {
+    .acc-details-cell {
+        padding: 1rem !important;
+    }
+
     .acc-details-grid {
         display: none !important; /* Hide header on mobile */
     }
@@ -5916,16 +5920,11 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         font-size: 0.7rem;
     }
     
-    /* Center details container on tablet */
-    .view-content-layout {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
+    /* Center responsive wrapper on tablet */
     .table-responsive-wrapper {
         width: 100%;
-        display: flex;
-        justify-content: center;
+        max-width: 100%;
+        margin: 0 auto;
     }
 }
 
