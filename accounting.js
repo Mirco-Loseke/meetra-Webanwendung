@@ -1679,6 +1679,9 @@ window.updateMachineEvaluation = async function () {
 };
 
 window.toggleAccountingDetails = async function (id, btn) {
+    // Prevent event bubbling to parent tr which might also have an onclick
+    if (window.event) window.event.stopPropagation();
+    
     const detailsRow = document.getElementById(`details-${id}`);
     const mainRow = document.getElementById(`row-${id}`);
     const content = document.getElementById(`details-content-${id}`);
