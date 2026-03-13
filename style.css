@@ -5620,33 +5620,65 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     margin-bottom: 2rem;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .data-table, 
 #procurement-table,
 .task-table {
-    min-width: 900px; /* Ensure table doesn't squish on mobile */
-    table-layout: fixed;
-    width: 100%;
+    width: 100% !important;
+    min-width: 900px; 
+    table-layout: fixed !important;
+    border-collapse: collapse;
+}
+
+/* Force 100% width on Desktop/iPad to avoid scrolling if possible */
+@media (min-width: 769px) {
+    .data-table, 
+    #procurement-table,
+    .task-table {
+        min-width: 100% !important;
+    }
+}
+
+/* Font Scaling & Padding Refinement for iPad/Mobile */
+@media (max-width: 1024px) {
+    .data-table, 
+    #procurement-table,
+    .task-table {
+        font-size: 0.82rem !important;
+    }
+    .data-table th, .data-table td,
+    .task-table th, .task-table td {
+        padding: 10px 6px !important;
+    }
 }
 
 @media (max-width: 768px) {
     .data-table, 
     #procurement-table,
     .task-table {
-        min-width: 1100px; /* Even more room on very small screens */
+        min-width: 1100px; /* Force scroll on small phones to keep one-line */
     }
 }
 
-/* Base minimum widths for important columns to prevent wrapping */
-#procurement-table td:nth-child(4) div span:first-child { /* Title */
-    white-space: nowrap;
+/* Unified Month Header Row for Accounting */
+.accounting-month-header {
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
-#procurement-table td:nth-child(3) div { /* Machine */
-    white-space: nowrap;
+.accounting-month-header td {
+    padding: 1rem 1.5rem !important;
+}
+
+.accounting-month-header h3 {
+    color: var(--color-primary-green);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.1rem;
 }
 

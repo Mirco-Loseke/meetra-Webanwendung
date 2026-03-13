@@ -260,8 +260,24 @@ window.renderAccounting = function () {
         if (!grouped[groupName]) grouped[groupName] = [];
         grouped[groupName].push(entry);
     });
-
-    let html = '';
+    let html = `
+        <div class="table-responsive-wrapper">
+            <table class="data-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+                <thead>
+                    <tr style="text-align: left; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">
+                        <th style="padding: 12px; width: 40px;"></th>
+                        <th style="padding: 12px; width: 6%;">Blt.</th>
+                        <th style="padding: 12px; width: 13%;">Nr.</th>
+                        <th style="padding: 12px; width: 12%;">Datum</th>
+                        <th style="padding: 12px; width: 25%;">${currentAccountingType === 'incoming' ? 'Lieferant' : 'Kunde'}</th>
+                        <th style="padding: 12px; width: 10%;">Netto</th>
+                        <th style="padding: 12px; width: 6%;">MwSt.</th>
+                        <th style="padding: 12px; width: 14%;">Brutto</th>
+                        <th style="padding: 12px; width: 11%; text-align: center;">Aktion</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
 
     // Sort groups by Year descending, then Month descending
     const activeMonths = Object.keys(grouped).sort((a, b) => {
@@ -272,81 +288,72 @@ window.renderAccounting = function () {
     });
 
     activeMonths.forEach(monthName => {
+        // Month Header Row
         html += `
-            <div class="month-section" style="padding: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <h3 style="color: var(--color-primary-green); margin-bottom: 1rem; display: flex; align-items: center; gap: 10px; font-weight: 800; font-family: 'Outfit', sans-serif;">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                    ${monthName}
-                </h3>
-                <div class="table-responsive-wrapper">
-                    <table class="data-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
-                        <thead>
-                            <tr style="text-align: left; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">
-                                <th style="padding: 12px; width: 40px;"></th>
-                                <th style="padding: 12px; width: 60px;">Blt.</th>
-                                <th style="padding: 12px; width: 160px;">Nr.</th>
-                                <th style="padding: 12px; width: 140px;">Datum</th>
-                                <th style="padding: 12px; width: 250px;">${currentAccountingType === 'incoming' ? 'Lieferant' : 'Kunde'}</th>
-                                <th style="padding: 12px; width: 110px;">Netto</th>
-                                <th style="padding: 12px; width: 55px;">MwSt.</th>
-                                <th style="padding: 12px; width: 150px;">Brutto</th>
-                                <th style="padding: 12px; width: 120px; text-align: center;">Aktion</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        ${grouped[monthName].map(e => `
-                            <tr style="border-top: 1px solid rgba(255,255,255,0.03); transition: background 0.2s;" class="accounting-main-row" id="row-${e.id}">
-                                <td style="padding: 12px; text-align: center; cursor: pointer; color: var(--color-primary-green);" onclick="window.toggleAccountingDetails('${e.id}', this)">
-                                    <svg class="chevron-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.3s;"><path d="M9 18l6-6-6-6"></path></svg>
-                                </td>
-                                <td style="padding: 8px 12px; text-align: center; vertical-align: middle;">
-                                    <label style="position: relative; display: inline-block; width: 32px; height: 18px; margin: 0; cursor: pointer;" title="Bezahlt">
-                                        <input type="checkbox" ${e.is_paid ? 'checked' : ''} 
-                                            onchange="window.togglePaidStatus('${e.id}', this.checked)"
-                                            style="opacity: 0; width: 0; height: 0; position: absolute;">
-                                        <span style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: ${e.is_paid ? 'var(--color-primary-green)' : 'rgba(255,255,255,0.1)'}; border: 1px solid ${e.is_paid ? 'transparent' : 'rgba(255,255,255,0.2)'}; transition: .3s; border-radius: 20px;">
-                                            <span style="position: absolute; height: 12px; width: 12px; left: ${e.is_paid ? '18px' : '2px'}; top: 2px; background-color: ${e.is_paid ? '#fff' : 'rgba(255,255,255,0.5)'}; transition: .3s; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.3);"></span>
-                                        </span>
-                                    </label>
-                                    ${e.paid_at ? `<div style="font-size: 0.65rem; color: var(--color-primary-green); margin-top: 3px; font-weight: 600; opacity: 0.8; white-space: nowrap;">${new Date(e.paid_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}</div>` : ''}
-                                </td>
-                                <td style="padding: 10px 12px; font-weight: 600; font-size: 0.85rem;">${e.invoice_number || '-'}</td>
-                                <td style="padding: 10px 12px; font-size: 0.85rem; white-space: nowrap;">
-                                    <div style="font-weight: 600;">${new Date(e.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
-                                    ${e.due_date ? `<div style="font-size: 0.75rem; color: #f87171; margin-top: 2px; font-weight: 700; white-space: nowrap;">fällig: ${new Date(e.due_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>` : ''}
-                                </td>
-                                <td style="padding: 10px 12px; font-weight: 700; color: #fff; font-size: 0.85rem;">${e.entity}</td>
-                                <td style="padding: 10px 12px; font-size: 0.85rem;">${window.formatCurrency(e.amount_net)}</td>
-                                <td style="padding: 10px 12px; font-size: 0.75rem; color: rgba(255,255,255,0.5);">${e.vat_rate}%</td>
-                                <td style="padding: 10px 12px; font-size: 0.85rem;">
-                                    <div style="font-weight: 800; color: #fff;">${window.formatCurrency(e.amount_gross)}</div>
-                                    ${e.discount_amount && parseFloat(e.discount_amount) > 0 ? `
-                                        <div style="font-size: 0.7rem; color: #10b981; margin-top: 2px; display: flex; flex-direction: column; gap: 1px;">
-                                            <div style="display: flex; align-items: center; gap: 4px;">
-                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg> 
-                                                -${window.formatCurrency(e.discount_amount)} ${e.discount_date ? 'bis ' + new Date(e.discount_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }) : ''}
-                                            </div>
-                                            <div style="font-weight: 700; color: #fff; background: rgba(16, 185, 129, 0.2); padding: 1px 4px; border-radius: 3px; width: fit-content; font-size: 0.7rem;">
-                                                Zahlbetrag: ${window.formatCurrency(e.amount_gross - e.discount_amount)}
-                                            </div>
-                                        </div>` : ''}
-                                </td>
-                                <td style="padding: 10px 12px; text-align: center;">
-                                    <div style="display:flex; justify-content: center; gap: 8px;">
-                                        <button onclick="window.editAccountingEntry('${e.id}')" title="Bearbeiten"
-                                            style="width:30px; height:30px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
-                                            onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                        </button>
-                                        <button onclick="window.deleteAccountingEntry('${e.id}')" title="Löschen"
-                                            style="width:30px; height:30px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
-                                            onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
-                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                            <tr id="details-${e.id}" class="hidden" style="background: rgba(255,255,255,0.01);">
+            <tr class="accounting-month-header">
+                <td colspan="9">
+                    <h3>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                        ${monthName}
+                    </h3>
+                </td>
+            </tr>
+        `;
+
+        // Entry Rows
+        html += grouped[monthName].map(e => `
+            <tr style="border-top: 1px solid rgba(255,255,255,0.03); transition: background 0.2s;" class="accounting-main-row" id="row-${e.id}">
+                <td style="padding: 12px; text-align: center; cursor: pointer; color: var(--color-primary-green);" onclick="window.toggleAccountingDetails('${e.id}', this)">
+                    <svg class="chevron-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.3s;"><path d="M9 18l6-6-6-6"></path></svg>
+                </td>
+                <td style="padding: 8px 12px; text-align: center; vertical-align: middle;">
+                    <label style="position: relative; display: inline-block; width: 32px; height: 18px; margin: 0; cursor: pointer;" title="Bezahlt">
+                        <input type="checkbox" ${e.is_paid ? 'checked' : ''} 
+                            onchange="window.togglePaidStatus('${e.id}', this.checked)"
+                            style="opacity: 0; width: 0; height: 0; position: absolute;">
+                        <span style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: ${e.is_paid ? 'var(--color-primary-green)' : 'rgba(255,255,255,0.1)'}; border: 1px solid ${e.is_paid ? 'transparent' : 'rgba(255,255,255,0.2)'}; transition: .3s; border-radius: 20px;">
+                            <span style="position: absolute; height: 12px; width: 12px; left: ${e.is_paid ? '18px' : '2px'}; top: 2px; background-color: ${e.is_paid ? '#fff' : 'rgba(255,255,255,0.5)'}; transition: .3s; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,0.3);"></span>
+                        </span>
+                    </label>
+                    ${e.paid_at ? `<div style="font-size: 0.65rem; color: var(--color-primary-green); margin-top: 3px; font-weight: 600; opacity: 0.8; white-space: nowrap;">${new Date(e.paid_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: '2-digit' })}</div>` : ''}
+                </td>
+                <td style="padding: 10px 12px; font-weight: 600; font-size: 0.85rem;">${e.invoice_number || '-'}</td>
+                <td style="padding: 10px 12px; font-size: 0.85rem; white-space: nowrap;">
+                    <div style="font-weight: 600;">${new Date(e.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
+                    ${e.due_date ? `<div style="font-size: 0.75rem; color: #f87171; margin-top: 2px; font-weight: 700; white-space: nowrap;">fällig: ${new Date(e.due_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>` : ''}
+                </td>
+                <td style="padding: 10px 12px; font-weight: 700; color: #fff; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${e.entity}</td>
+                <td style="padding: 10px 12px; font-size: 0.85rem;">${window.formatCurrency(e.amount_net)}</td>
+                <td style="padding: 10px 12px; font-size: 0.75rem; color: rgba(255,255,255,0.5);">${e.vat_rate}%</td>
+                <td style="padding: 10px 12px; font-size: 0.85rem;">
+                    <div style="font-weight: 800; color: #fff;">${window.formatCurrency(e.amount_gross)}</div>
+                    ${e.discount_amount && parseFloat(e.discount_amount) > 0 ? `
+                        <div style="font-size: 0.7rem; color: #10b981; margin-top: 2px; display: flex; flex-direction: column; gap: 1px;">
+                            <div style="display: flex; align-items: center; gap: 4px;">
+                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg> 
+                                -${window.formatCurrency(e.discount_amount)} ${e.discount_date ? 'bis ' + new Date(e.discount_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }) : ''}
+                            </div>
+                            <div style="font-weight: 700; color: #fff; background: rgba(16, 185, 129, 0.2); padding: 1px 4px; border-radius: 3px; width: fit-content; font-size: 0.7rem;">
+                                Zahlbetrag: ${window.formatCurrency(e.amount_gross - e.discount_amount)}
+                            </div>
+                        </div>` : ''}
+                </td>
+                <td style="padding: 10px 12px; text-align: center;">
+                    <div style="display:flex; justify-content: center; gap: 8px;">
+                        <button onclick="window.editAccountingEntry('${e.id}')" title="Bearbeiten"
+                            style="width:30px; height:30px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
+                            onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        </button>
+                        <button onclick="window.deleteAccountingEntry('${e.id}')" title="Löschen"
+                            style="width:30px; height:30px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
+                            onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            <tr id="details-${e.id}" class="hidden" style="background: rgba(255,255,255,0.01);">
                                 <td colspan="9" style="padding: 0 1.5rem 1.5rem 3rem;">
                                     <div id="details-content-${e.id}" style="padding: 1.5rem; border: 1px solid rgba(255,255,255,0.05); border-top: none; border-radius: 0 0 16px 16px; background: rgba(0,0,0,0.2);">
                                         <div style="color: rgba(255,255,255,0.3); font-size: 0.85rem; display: flex; align-items: center; gap: 10px;">
@@ -356,14 +363,16 @@ window.renderAccounting = function () {
                                     </div>
                                 </td>
                             </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            </div>
-        `;
+        `).join('');
     });
 
-    if (html === '') {
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    if (activeMonths.length === 0) {
         html = `<div style="padding: 5rem 2rem; text-align: center; color: rgba(255,255,255,0.2); font-size: 1.1rem;">
                     <div style="margin-bottom: 1rem; opacity: 0.1;"><svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg></div>
                     Noch keine ${currentAccountingType === 'incoming' ? 'Eingangsrechnungen' : 'Ausgangsrechnungen'} vorhanden.
