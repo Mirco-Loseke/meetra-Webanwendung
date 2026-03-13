@@ -1578,7 +1578,7 @@
                 }
 
                 return `
-                    <tr style="cursor: pointer; border-left: 4px solid ${badgeColor}; background: ${badgeColor}08;" onclick="${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')">
+                    <tr style="cursor: pointer; border-left: 4px solid ${badgeColor}; border-top: 1px solid ${badgeColor}30; border-right: 1px solid ${badgeColor}30; border-bottom: 1px solid ${badgeColor}30; background: ${badgeColor}08;" onclick="${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')">
                         <td data-label="Typ">
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: ${badgeColor}22; color: ${badgeColor};">
@@ -1601,14 +1601,16 @@
                         </td>
                         <td data-label="Aktionen" onclick="event.stopPropagation()">
                             <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: flex-end;">
-                                <button class="btn-reports" title="Ansehen" onclick="event.stopPropagation(); ${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')" style="border-radius: 20px; padding: 0 16px; height: 38px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+                                <button onclick="event.stopPropagation(); ${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')" title="Ansehen"
+                                    style="width:36px; height:36px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
+                                    onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                    Ansehen
                                 </button>
                                 ${p.status === 'completed' ? `
-                                <button class="btn-reports-red" title="PDF öffnen" onclick="event.stopPropagation(); window.openProtocolPDF('${p.machine_id}', '${p.id}', '${p.type}')" style="border-radius: 20px; padding: 0 16px; height: 38px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="stroke: white;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                                    PDF
+                                <button onclick="event.stopPropagation(); window.openProtocolPDF('${p.machine_id}', '${p.id}', '${p.type}')" title="PDF öffnen"
+                                    style="width:36px; height:36px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
+                                    onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
                                 </button>` : ''}
                             </div>
                         </td>
