@@ -5879,22 +5879,24 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
 }
 
 @media (max-width: 768px) {
-    /* Prevent the details row itself from becoming a card */
+    /* Set the details row container to flex for better control */
     .data-table tr[id^="details-"] {
-        display: block !important;
+        display: flex !important;
+        flex-direction: column;
         background: transparent !important;
         border: none !important;
         padding: 0 !important;
-        backdrop-filter: none !important;
-        box-shadow: none !important;
+        margin-top: -0.5rem; /* Join slightly with main row */
     }
 
     .acc-details-cell {
-        padding: 0 !important;
+        padding: 0 0.5rem !important;
+        width: 100%;
+        box-sizing: border-box;
     }
 
     .acc-details-grid {
-        display: none !important; /* Hide header on mobile */
+        display: none !important;
     }
 
     .acc-details-row {
@@ -5902,13 +5904,11 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         flex-direction: column;
         gap: 0.5rem;
         padding: 1rem !important;
-        background: rgba(255, 255, 255, 0.03) !important;
-        border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
-        border-left: none !important;
-        border-right: none !important;
-        border-radius: 0 !important;
-        margin-bottom: 0 !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 16px;
+        margin-bottom: 0.75rem;
         width: 100% !important;
         box-sizing: border-box;
     }
