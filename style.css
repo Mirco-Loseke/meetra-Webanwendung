@@ -5890,7 +5890,7 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     }
 
     .acc-details-cell {
-        padding: 0 0.5rem !important;
+        padding: 0 !important; /* Remove horizontal padding so content can touch edges */
         width: 100%;
         box-sizing: border-box;
     }
@@ -5903,12 +5903,16 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         display: flex !important;
         flex-direction: column;
         gap: 0.5rem;
-        padding: 1rem !important;
-        background: rgba(255, 255, 255, 0.05) !important;
+        padding: 1.25rem !important;
+        background: rgba(255, 255, 255, 0.03) !important;
         backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 16px;
-        margin-bottom: 0.75rem;
+        /* Remove horizontal borders and radius to span full parent width */
+        border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+        border-left: none !important;
+        border-right: none !important;
+        border-radius: 0 !important;
+        margin-bottom: 0 !important;
         width: 100% !important;
         box-sizing: border-box;
     }
