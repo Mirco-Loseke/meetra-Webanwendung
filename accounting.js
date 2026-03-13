@@ -1018,6 +1018,7 @@ window.editAccountingEntry = async function (id) {
 
         const paidCheck = document.getElementById('acc-is-paid');
         if (paidCheck) paidCheck.checked = !!entry.is_paid;
+        document.getElementById('acc-paid-at').value = entry.paid_at || '';
         
         window.updateAccountingEntityLabel();
     }, 10);
