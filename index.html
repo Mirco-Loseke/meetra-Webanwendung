@@ -1450,8 +1450,8 @@
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-top: 1rem;">
                             <div class="form-group">
-                                <label for="acc-due-date">Fällig am (Optional)</label>
-                                <input type="date" id="acc-due-date" class="glass-form-input">
+                                <label for="acc-due-date">Fällig am (z.B. "sofort")</label>
+                                <input type="text" id="acc-due-date" class="glass-form-input" placeholder="YYYY-MM-DD oder sofort">
                             </div>
                             <div class="form-group">
                                 <label for="acc-discount-date">Skonto bis (Optional)</label>
@@ -1500,6 +1500,10 @@
                                 </label>
                                 <span
                                     style="font-size: 0.95rem; color: #fff; font-weight: 700; letter-spacing: 0.5px;">Bezahlt</span>
+                            </div>
+                            <div class="form-group">
+                                <label for="acc-paid-at">Bezahlt am</label>
+                                <input type="date" id="acc-paid-at" class="glass-form-input">
                             </div>
                         </div>
 
