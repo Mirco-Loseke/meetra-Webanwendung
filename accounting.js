@@ -1096,6 +1096,10 @@ window.handleAccountingPDFUpload = async function (event) {
         const systemPrompt = `Du bist ein präziser Buchhaltungs-Assistent für das Unternehmen 'Meetra'. Analysiere das Dokument und gib NUR valides JSON zurück. 
 Schlüssel: invoice_number, date (YYYY-MM-DD), net_amount (Zahl), vat_rate (Zahl), type (incoming/outgoing), entity (Geschäftspartner), due_date (YYYY-MM-DD oder "sofort"), paid_at (YYYY-MM-DD), discount_amount (Zahl), is_paid (boolean), positions (Array aus {description, quantity, unit, price_net}). 
 
+ERKENNUNG DES DATUMS (date):
+- PRIORITÄT: Das Rechnungsdatum steht meist OBEN RECHTS.
+- WARNUNG: Ein Datum, das direkt bei der "Auftragsnummer", "Bestellnummer" oder "Lieferdatum" steht, ist oft NICHT das Rechnungsdatum. Suche explizit nach "Rechnungsdatum" oder dem Datum im Briefkopf oben rechts.
+
 ERKENNUNG DES GESCHÄFTSPARTNERS (entity):
 1. STRIKTE VERBOTE: "Dietmar Meenken", "Mirco Loseke", "Simon Gabbert", "Meetra", "meetra Recycling Maschinen" dürfen NIEMALS die 'entity' sein.
 2. PRIORITÄT: Wenn "verkauft durch", "verkauf von", "Verkäufer", "Lieferant" oder "Absender" vorkommt, ist der Name dahinter die 'entity'.
