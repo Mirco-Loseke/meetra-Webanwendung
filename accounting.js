@@ -1091,19 +1091,23 @@ window.handleAccountingPDFUpload = async function (event) {
         const systemPrompt = `Du bist ein präziser Buchhaltungs-Assistent für das Unternehmen 'Meetra'. Analysiere das Dokument und gib NUR valides JSON zurück. 
 Schlüssel: invoice_number, date (YYYY-MM-DD), net_amount (Zahl), vat_rate (Zahl), type (incoming/outgoing), entity (Geschäftspartner), due_date (YYYY-MM-DD), discount_amount (Zahl), is_paid (boolean), positions (Array aus {description, quantity, unit, price_net}). 
 
-WICHTIG ZUR IDENTIFIKATION (entity):
-- 'Meetra' ist DEIN UNTERNEHMEN. Bei EINGANG (incoming) ist 'entity' der ABSENDER. 'Meetra' darf NIEMALS als 'entity' eingetragen werden.
+ERKENNUNG DES GESCHÄFTSPARTNERS (entity):
+1. STRIKTE VERBOTE: Folgende Namen sind INTERN (dein Unternehmen) und dürfen NIEMALS als 'entity' eingetragen werden:
+   - "Dietmar Meenken", "Mirco Loseke", "Simon Gabbert", "Meetra", "meetra Recycling Maschinen".
+2. PRIORITÄT (Verkäufer-Suche): Suche gezielt nach "verkauft durch", "verkauf von", "im Auftrag von", "Verkäufer", "Lieferant" oder "Absender". 
+   - Falls solche Begriffe vorkommen, ist der Name, der DIREKT DAHINTER oder DARUNTER steht, die 'entity' (sofern er nicht auf der Verbotsliste oben steht).
+3. TYP-KLASSIFIZIERUNG (incoming/outgoing):
+   - Wenn ein INTERNER Name (Meenken, Loseke, Gabbert, Meetra) im Logo oder Briefkopf steht, ist es eine EINGANGSRECHNUNG (type: 'incoming'). Der andere genannte Partner ist die 'entity'.
 
 WICHTIG ZUR ZAHLUNG (is_paid):
-- Setze 'is_paid' auf true, wenn der Text Hinweise auf eine bereits erfolgte Zahlung enthält (z.B. "Amazon Pay vom", "bezahlt am", "Zahlung erhalten", "Betrag dankend erhalten", "Verrechnet mit", "Zahlung wurde bereits geleistet").
+- Setze 'is_paid' auf true, wenn Hinweise auf Zahlung (Amazon Pay, "bezahlt", "Zahlung erhalten", "Verrechnet") vorhanden sind.
 
 WICHTIG ZUM FÄLLIGKEITSDATUM (due_date):
-- Suche gezielt nach Formulierungen wie "Begleichung bis zum [Datum]", "Bitte überweisen Sie bis zum [Datum]", "Zahlbar bis [Datum]", "Fällig am [Datum]". 
+- Suche nach "Begleichung bis", "überweisen bis", "Zahlbar bis", "Fällig am". 
 
-WICHTIG ZU PREISEN (price_net):
-- 'price_net' MUSS der EINZELPREIS pro Einheit sein.
-- Falls Bezeichnungen wie '230/100' oder 'EUR/1000' klein dabeistehen: Das bedeutet der Preis gilt für 100 Einheiten. Rechne den Einzelpreis (1 Einheit) aus!
-- PRIORITÄT: Falls die Zeile einen GESAMTPREIS hat (z.B. rechts am Rand), nutze diesen als festen Anker. Wenn Einzelpreis * Menge nicht den Zeilengesamtpreis ergibt, korrigiere den 'price_net' (Einzelpreis = Gesamtpreis / Menge).
+WICHTIG ZU PREISEN:
+- 'price_net' ist der EINZELPREIS pro Einheit. 
+- Korrigiere 'price_net' immer so, dass Menge * Einzelpreis = Zeilengesamtpreis ergibt.
 Setze Unbekanntes auf null.`;
 
         let requestBody = {};
