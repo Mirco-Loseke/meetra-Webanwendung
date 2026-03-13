@@ -5861,7 +5861,7 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
 .accounting-month-header {
     background: rgba(255, 255, 255, 0.03);
     border-bottom: 1px solid rgba(255,255,255,0.05);
-    border-left: 4px solid #fff !important;
+    border-left: 4px solid #94a3b8 !important;
 }
 
 .accounting-month-header td {
@@ -5869,7 +5869,7 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
 }
 
 .accounting-month-header h3 {
-    color: #fff;
+    color: #94a3b8;
     margin: 0;
     display: flex;
     align-items: center;
