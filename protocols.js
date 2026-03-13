@@ -1394,8 +1394,8 @@
         try {
             // Fetch both types
             const [intakeRes, acceptanceRes] = await Promise.all([
-                window.supabaseClient.from('intake_protocols').select('*, machines(manufacturer, name, serial, year, image_url)').order('created_at', { ascending: false }),
-                window.supabaseClient.from('acceptance_protocols').select('*, machines(manufacturer, name, serial, year, image_url)').order('created_at', { ascending: false })
+                window.supabaseClient.from('intake_protocols').select('*, machines(manufacturer, name, type, serial, serial_number, year, image_url)').order('created_at', { ascending: false }),
+                window.supabaseClient.from('acceptance_protocols').select('*, machines(manufacturer, name, type, serial, serial_number, year, image_url)').order('created_at', { ascending: false })
             ]);
 
             if (intakeRes.error) throw intakeRes.error;
@@ -1559,19 +1559,30 @@
                 const statusClass = p.status === 'completed' ? 'completed' : 'in-progress';
                 const isAcceptance = p.type === 'acceptance';
                 const typeLabel = isAcceptance ? 'Abnahmeprotokoll' : 'Eingangsprotokoll';
+                const badgeColor = p.status === 'completed' ? '#10b981' : '#f59e0b';
                 const iconPath = isAcceptance
                     ? '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M9 15l2 2 4-4"></path>'
                     : '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline>';
 
-                const tr = document.createElement('tr');
-                tr.style.cursor = 'pointer';
-                tr.onclick = () => isAcceptance ? window.openAcceptanceProtocol(p.machine_id, p.id) : window.openIntakeProtocol(p.machine_id, p.id);
+                // Build full machine name: manufacturer + name + type + serial + year
+                let machineName = 'Unbekannt';
+                if (p.machines) {
+                    const m = p.machines;
+                    const parts = [
+                        m.manufacturer,
+                        m.name,
+                        m.type,
+                        m.serial_number || m.serial ? `#${m.serial_number || m.serial}` : null,
+                        m.year ? `(${m.year})` : null
+                    ].filter(Boolean);
+                    machineName = parts.length > 0 ? parts.join(' ') : (m.name || 'Unbekannt');
+                }
 
                 return `
-                    <tr style="cursor: pointer;" onclick="${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')">
+                    <tr style="cursor: pointer; border-left: 4px solid ${badgeColor}; background: ${badgeColor}08;" onclick="${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')">
                         <td data-label="Typ">
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.05); color: #60a5fa;">
+                                <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: ${badgeColor}22; color: ${badgeColor};">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         ${iconPath}
                                     </svg>
@@ -1579,29 +1590,26 @@
                                 <span style="font-weight: 600; font-size: 0.95rem;">${typeLabel}</span>
                             </div>
                         </td>
-                        <td data-label="Maschine">${p.machines ? p.machines.name : 'Unbekannt'}</td>
-                        <td data-label="Titel">
-                            <span style="font-weight: 600;">${p.title}</span><br>
-                            <span style="font-size: 0.8rem; color: rgba(255,255,255,0.4);">${isAcceptance && p.work_performed ? p.work_performed.substring(0, 40) + '...' : ''}</span>
+                        <td data-label="Maschine" style="color: var(--color-primary-green); font-weight: 700; font-size: 0.98rem;">
+                            ${machineName}
                         </td>
                         <td data-label="Datum">
                             <div style="font-weight: 600;">${dateStr}</div>
                             <div style="font-size: 0.8rem; color: rgba(255,255,255,0.4);">${timeStr} Uhr</div>
                         </td>
                         <td data-label="Status">
-                            <span class="status-badge ${statusClass}">${statusLabel}</span>
+                            <span class="status-badge ${statusClass}" style="background: ${badgeColor}25; color: ${badgeColor}; border: 1px solid ${badgeColor}60; border-radius: 20px; padding: 4px 12px; font-size: 0.8rem; font-weight: 800;">${statusLabel}</span>
                         </td>
-                        <td data-label="Aktionen">
-                            <div style="display: flex; gap: 0.5rem;">
-                                <button class="btn-icon-soft" title="Öffnen" onclick="event.stopPropagation(); ${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                        <circle cx="12" cy="12" r="3"></circle>
-                                    </svg>
+                        <td data-label="Aktionen" onclick="event.stopPropagation()">
+                            <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: flex-end;">
+                                <button class="btn-reports" title="Ansehen" onclick="event.stopPropagation(); ${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')" style="border-radius: 20px; padding: 0 16px; height: 38px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    Ansehen
                                 </button>
                                 ${p.status === 'completed' ? `
-                                <button class="btn-icon-soft" title="PDF öffnen" onclick="event.stopPropagation(); window.openProtocolPDF('${p.machine_id}', '${p.id}', '${p.type}')" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2);">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                                <button class="btn-reports-red" title="PDF öffnen" onclick="event.stopPropagation(); window.openProtocolPDF('${p.machine_id}', '${p.id}', '${p.type}')" style="border-radius: 20px; padding: 0 16px; height: 38px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="stroke: white;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                                    PDF
                                 </button>` : ''}
                             </div>
                         </td>
@@ -1609,6 +1617,7 @@
                 `;
             }).join('');
         }
+
     }
 
     // Export fetch to global for view switching
