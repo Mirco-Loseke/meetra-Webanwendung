@@ -250,57 +250,72 @@
         const openTasks = tasks.filter(t => t.status !== 'completed');
         const completedTasks = tasks.filter(t => t.status === 'completed');
 
-        openTasks.forEach(task => {
-            const tr = document.createElement('tr');
-            if (task.status === 'completed') {
-                tr.classList.add('completed-task');
-            }
-            if (task.status) {
-                tr.classList.add(`status-${task.status}`);
-            }
-            tr.innerHTML = `
-                <td data-label="Status"><span class="status-pill status-${task.status}">${formatStatus(task.status)}</span></td>
-                <td data-label="Aufgabe" style="font-weight: 600; display:flex; align-items:flex-start; gap:8px;">
-                    <div style="padding-top: 2px;">
-                        <div class="task-quick-complete ${task.status === 'completed' ? 'completed' : ''}" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="${task.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            openTasks.forEach(task => {
+                const tr = document.createElement('tr');
+                const accentColor = '#3b82f6'; // Default blue for open
+                
+                tr.style.cursor = 'pointer';
+                tr.style.background = 'rgba(110, 122, 140, 0.45)';
+                tr.style.backdropFilter = 'blur(24px)';
+                tr.style.webkitBackdropFilter = 'blur(24px)';
+                tr.style.boxShadow = `inset 5px 0 0 0 ${accentColor}, inset 0 1.5px 0 0 ${accentColor}66, inset -1.5px 0 0 0 ${accentColor}66, inset 0 -1.5px 0 0 ${accentColor}66, 0 10px 30px rgba(0,0,0,0.4)`;
+                tr.style.borderRadius = '16px';
+                tr.style.overflow = 'hidden';
+
+                tr.innerHTML = `
+                    <td data-label="Status">
+                        <span class="status-badge status-${task.status}" style="background: ${accentColor}25; color: ${accentColor}; border: 1px solid ${accentColor}60; border-radius: 20px; padding: 4px 12px; font-size: 0.8rem; font-weight: 800;">${formatStatus(task.status)}</span>
+                    </td>
+                    <td data-label="Aufgabe" style="font-weight: 600; display:flex; align-items:flex-start; gap:12px;">
+                        <div style="padding-top: 4px;">
+                            <div class="task-quick-complete ${task.status === 'completed' ? 'completed' : ''}" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="${task.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </div>
                         </div>
-                    </div>
-                    <div style="display:flex; flex-direction:column; gap:4px;">
-                        <span style="font-size: clamp(1rem, 1.3vw, 1.2rem);">${task.title}</span>
-                        ${task.subtasks && task.subtasks.length > 0 ? `
-                        <div class="task-list-subtasks" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
-                            ${task.subtasks.map((sub, index) => `
-                                <div class="subtask-item" style="display:flex; align-items:center; gap: 6px;">
-                                    <div class="task-quick-complete ${sub.status === 'completed' ? 'completed' : ''}" 
-                                         onclick="event.stopPropagation(); window.toggleSubtaskStatus('${task.id}', ${index}, '${sub.status}')" 
-                                         style="width: 18px; height: 18px; min-width: 18px;"
-                                         title="${sub.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
-                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <span style="font-size: 1.1rem; font-weight: 700;">${task.title}</span>
+                            ${task.subtasks && task.subtasks.length > 0 ? `
+                            <div class="task-list-subtasks" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
+                                ${task.subtasks.map((sub, index) => `
+                                    <div class="subtask-item" style="display:flex; align-items:center; gap: 8px;">
+                                        <div class="task-quick-complete ${sub.status === 'completed' ? 'completed' : ''}" 
+                                             onclick="event.stopPropagation(); window.toggleSubtaskStatus('${task.id}', ${index}, '${sub.status}')" 
+                                             style="width: 18px; height: 18px; min-width: 18px;"
+                                             title="${sub.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
+                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                        </div>
+                                        <span style="font-size: 0.9rem; color: rgba(255,255,255,0.8);">${sub.title}</span>
                                     </div>
-                                    <span style="font-size: clamp(0.8rem, 1vw, 0.95rem); font-weight: 400; line-height: 1.3; color: rgba(255,255,255,0.8);">${sub.title}</span>
-                                </div>
-                            `).join('')}
+                                `).join('')}
+                            </div>
+                            ` : ''}
                         </div>
-                        ` : ''}
-                    </div>
-                </td>
-                <td data-label="Maschine">
-                    ${task.machines ? `<span style="color: var(--color-primary-green); font-weight: 600;">${getMachineLabel(task.machines)}</span>` : '<span style="color: rgba(255,255,255,0.4)">-</span>'}
-                </td>
-                <td data-label="Zuweisung">${renderAvatars(task.assigned_to)}</td>
-                <td data-label="Fortschritt">${renderProgress(task)}</td>
-                <td data-label="Aktionen">
-                    <div style="display: flex; gap: 8px;">
-                        <button onclick="event.stopPropagation(); window.openTaskModal('${task.id}')" title="Bearbeiten" style="width:36px; height:36px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                        </button>
-                        <button onclick="event.stopPropagation(); window.deleteTask('${task.id}')" title="Löschen" style="width:36px; height:36px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                        </button>
-                    </div>
-                </td>
-            `;
+                    </td>
+                    <td data-label="Maschine">
+                        ${task.machines ? `<span style="color: var(--color-primary-green); font-weight: 700; font-size: 0.98rem;">${getMachineLabel(task.machines)}</span>` : '<span style="color: rgba(255,255,255,0.4)">-</span>'}
+                    </td>
+                    <td data-label="Beteiligte">${renderAvatars(task.assigned_to)}</td>
+                    <td data-label="Fortschritt">${renderProgress(task)}</td>
+                    <td data-label="Aktionen" onclick="event.stopPropagation()">
+                        <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
+                            <button onclick="event.stopPropagation(); window.openTaskModal('${task.id}')" title="Bearbeiten"
+                                style="width:36px; height:36px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
+                                onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                    <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                </svg>
+                            </button>
+                            <button onclick="event.stopPropagation(); window.deleteTask('${task.id}')" title="Löschen"
+                                style="width:36px; height:36px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
+                                onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                            </button>
+                        </div>
+                `;
             tr.onclick = () => window.openTaskModal(task.id);
             tbody.appendChild(tr);
         });
@@ -327,27 +342,40 @@
             if (window.showCompletedTasks) {
                 completedTasks.forEach(task => {
                     const tr = document.createElement('tr');
-                    tr.classList.add('completed-task');
-                    if (task.status) {
-                        tr.classList.add(`status-${task.status}`);
-                    }
-                    tr.style.opacity = '0.6';
+                    const accentColor = '#10b981'; // Green for completed
+                    
+                    tr.style.cursor = 'pointer';
+                    tr.style.background = 'rgba(110, 122, 140, 0.45)';
+                    tr.style.backdropFilter = 'blur(24px)';
+                    tr.style.webkitBackdropFilter = 'blur(24px)';
+                    tr.style.boxShadow = `inset 5px 0 0 0 ${accentColor}, inset 0 1.5px 0 0 ${accentColor}66, inset -1.5px 0 0 0 ${accentColor}66, inset 0 -1.5px 0 0 ${accentColor}66, 0 10px 30px rgba(0,0,0,0.4)`;
+                    tr.style.borderRadius = '16px';
+                    tr.style.overflow = 'hidden';
+                    tr.style.opacity = '0.7';
+
                     tr.innerHTML = `
-                        <td data-label="Status"><span class="status-pill status-${task.status}">${formatStatus(task.status)}</span></td>
-                        <td data-label="Titel">
+                        <td data-label="Status">
+                            <span class="status-badge status-${task.status}" style="background: ${accentColor}25; color: ${accentColor}; border: 1px solid ${accentColor}60; border-radius: 20px; padding: 4px 12px; font-size: 0.8rem; font-weight: 800;">${formatStatus(task.status)}</span>
+                        </td>
+                        <td data-label="Aufgabe" style="font-weight: 600; display:flex; align-items:flex-start; gap:12px;">
+                            <div style="padding-top: 4px;">
+                                <div class="task-quick-complete ${task.status === 'completed' ? 'completed' : ''}" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="${task.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </div>
+                            </div>
                             <div style="display:flex; flex-direction:column; gap:4px;">
-                                <span style="font-size: clamp(1rem, 1.3vw, 1.2rem);">${task.title}</span>
+                                <span style="font-size: 1.1rem; font-weight: 700;">${task.title}</span>
                                 ${task.subtasks && task.subtasks.length > 0 ? `
                                 <div class="task-list-subtasks" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
                                     ${task.subtasks.map((sub, index) => `
-                                        <div class="subtask-item" style="display:flex; align-items:center; gap: 6px;">
+                                        <div class="subtask-item" style="display:flex; align-items:center; gap: 8px;">
                                             <div class="task-quick-complete ${sub.status === 'completed' ? 'completed' : ''}" 
                                                  onclick="event.stopPropagation(); window.toggleSubtaskStatus('${task.id}', ${index}, '${sub.status}')" 
                                                  style="width: 18px; height: 18px; min-width: 18px;"
                                                  title="${sub.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
                                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                             </div>
-                                            <span style="font-size: clamp(0.8rem, 1vw, 0.95rem); font-weight: 400; line-height: 1.3; color: rgba(255,255,255,0.8);">${sub.title}</span>
+                                            <span style="font-size: 0.9rem; color: rgba(255,255,255,0.8);">${sub.title}</span>
                                         </div>
                                     `).join('')}
                                 </div>
@@ -355,17 +383,27 @@
                             </div>
                         </td>
                         <td data-label="Maschine">
-                            ${task.machines ? `<span style="color: var(--color-primary-green); font-weight: 600;">${getMachineLabel(task.machines)}</span>` : '<span style="color: rgba(255,255,255,0.4)">-</span>'}
+                            ${task.machines ? `<span style="color: var(--color-primary-green); font-weight: 700; font-size: 0.98rem;">${getMachineLabel(task.machines)}</span>` : '<span style="color: rgba(255,255,255,0.4)">-</span>'}
                         </td>
                         <td data-label="Beteiligte">${renderAvatars(task.assigned_to)}</td>
                         <td data-label="Fortschritt">${renderProgress(task)}</td>
-                        <td data-label="Aktionen">
-                            <div style="display: flex; gap: 8px;">
-                                <button onclick="event.stopPropagation(); window.openTaskModal('${task.id}')" title="Bearbeiten" style="width:36px; height:36px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        <td data-label="Aktionen" onclick="event.stopPropagation()">
+                            <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
+                                <button onclick="event.stopPropagation(); window.openTaskModal('${task.id}')" title="Bearbeiten"
+                                    style="width:36px; height:36px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
+                                    onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                        <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                    </svg>
                                 </button>
-                                <button onclick="event.stopPropagation(); window.deleteTask('${task.id}')" title="Löschen" style="width:36px; height:36px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                <button onclick="event.stopPropagation(); window.deleteTask('${task.id}')" title="Löschen"
+                                    style="width:36px; height:36px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
+                                    onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                    </svg>
                                 </button>
                             </div>
                         </td>

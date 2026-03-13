@@ -74,63 +74,74 @@ function renderProcurements(procurements) {
         const status = statusMap[proc.status] || statusMap['new'];
 
         const tr = document.createElement('tr');
-        tr.className = status.class;
-
-
+        const accentColor = status.iconColor;
+        
         tr.style.cursor = 'pointer';
+        tr.style.background = 'rgba(110, 122, 140, 0.45)';
+        tr.style.backdropFilter = 'blur(24px)';
+        tr.style.webkitBackdropFilter = 'blur(24px)';
+        tr.style.boxShadow = `inset 5px 0 0 0 ${accentColor}, inset 0 1.5px 0 0 ${accentColor}66, inset -1.5px 0 0 0 ${accentColor}66, inset 0 -1.5px 0 0 ${accentColor}66, 0 10px 30px rgba(0,0,0,0.4)`;
+        tr.style.borderRadius = '16px';
+        tr.style.overflow = 'hidden';
         tr.onclick = () => openProcurementModal(proc.id);
 
         tr.innerHTML = `
             <td data-label="Status" onclick="event.stopPropagation(); showStatusUpdateMenu('${proc.id}', this)" style="cursor:pointer;">
-                <span class="status-pill" style="background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 5px 12px; border-radius: 10px; font-size: 0.85rem; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
-                    <span style="width: 10px; height: 10px; border-radius: 50%; background: ${status.iconColor}; box-shadow: 0 0 8px ${status.iconColor}88;"></span>
-                    ${status.label}
+                <span class="status-badge" style="background: ${accentColor}25; color: #fff; border: 1px solid ${accentColor}60; padding: 6px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 800; display: inline-flex; align-items: center; gap: 8px;">
+                    <span style="width: 10px; height: 10px; border-radius: 50%; background: ${accentColor}; box-shadow: 0 0 12px ${accentColor};"></span>
+                    ${status.label.toUpperCase()}
                 </span>
             </td>
             <td data-label="Kategorie">${getCategoryBadge(proc.category)}</td>
             <td data-label="Maschine">
-                <div style="font-size: 0.95rem; font-weight: 600; color: var(--color-primary-green);">
+                <div style="font-size: 0.98rem; font-weight: 700; color: var(--color-primary-green); line-height: 1.2;">
                     ${(() => {
-                if (!proc.location_ref || !window.machineList) return '-';
-                const machine = window.machineList.find(m => String(m.id) === String(proc.location_ref));
-                if (!machine) return proc.location_ref;
-                let parts = [
-                    machine.manufacturer,
-                    machine.name,
-                    machine.type,
-                    machine.serial ? '#' + machine.serial : null,
-                    machine.year ? '(' + machine.year + ')' : null
-                ].filter(Boolean);
-                return parts.join(' ');
-            })()}
+                        if (!proc.location_ref || !window.machineList) return '-';
+                        const machine = window.machineList.find(m => String(m.id) === String(proc.location_ref));
+                        if (!machine) return proc.location_ref;
+                        let parts = [
+                            machine.manufacturer,
+                            machine.name,
+                            machine.type,
+                            machine.serial ? '#' + machine.serial : null,
+                            machine.year ? '(' + machine.year + ')' : null
+                        ].filter(Boolean);
+                        return parts.join(' ');
+                    })()}
                 </div>
             </td>
             <td data-label="Titel">
                 <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <span style="font-weight: 600; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${proc.title}</span>
-                    <span style="font-size: 0.82rem; color: rgba(255,255,255,0.5);">${proc.description ? proc.description.substring(0, 50) + (proc.description.length > 50 ? '...' : '') : ''}</span>
+                    <span style="font-weight: 700; font-size: 1.05rem;">${proc.title}</span>
+                    <span style="font-size: 0.85rem; color: rgba(255,255,255,0.6);">${proc.description ? proc.description.substring(0, 60) + (proc.description.length > 60 ? '...' : '') : ''}</span>
                 </div>
             </td>
             <td data-label="Ersteller">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <div class="user-avatar-small" style="width: 24px; height: 24px; border-radius: 50%; background-color: ${color}; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: bold; color: white;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="user-avatar-small" style="width: 28px; height: 28px; border-radius: 50%; background-color: ${color}; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; color: white; border: 1px solid rgba(255,255,255,0.2);">
                         ${initials}
                     </div>
-                    <span>${creatorName}</span>
+                    <span style="font-weight: 500;">${creatorName}</span>
                 </div>
             </td>
-            <td data-label="Datum" style="color: rgba(255,255,255,0.6); font-size: 0.88rem;">${new Date(proc.created_at).toLocaleDateString('de-DE')}</td>
-            <td data-label="Aktionen">
-                <div class="task-card-actions" style="display: flex; gap: 6px; align-items: center;">
+            <td data-label="Datum" style="color: rgba(255,255,255,0.7); font-size: 0.9rem;">${new Date(proc.created_at).toLocaleDateString('de-DE')}</td>
+            <td data-label="Aktionen" onclick="event.stopPropagation()">
+                <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
                     <button onclick="event.stopPropagation(); openProcurementModal('${proc.id}')" title="Bearbeiten"
-                        style="width:32px; height:32px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
+                        style="width:36px; height:36px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
                         onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
                     </button>
                     <button onclick="event.stopPropagation(); deleteProcurement('${proc.id}')" title="Löschen"
-                        style="width:32px; height:32px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
+                        style="width:36px; height:36px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
                         onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
                     </button>
                 </div>
             </td>

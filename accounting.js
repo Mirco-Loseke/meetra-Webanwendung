@@ -1290,6 +1290,11 @@ window.openFinancialDashboard = function () {
         requestAnimationFrame(() => {
             modal.classList.add('show');
         });
+
+        // Initialize glass select for direction
+        const dirSelect = document.getElementById('fin-direction');
+        if (dirSelect) window.initGlassSelect(dirSelect);
+
         window.updateFinancialDashboard();
     }
 };
@@ -1307,18 +1312,26 @@ window.closeFinancialDashboard = function () {
 
 window.updateFinancialDashboard = function () {
     const direction = document.getElementById('fin-direction').value || 'future';
-    const days = parseInt(document.getElementById('fin-days').value) || 14;
+    const daysInput = document.getElementById('fin-days');
+    const days = parseInt(daysInput.value) || 14;
     const content = document.getElementById('financial-dashboard-content');
     if (!content) return;
 
+    // UI Handling: Hide days input wrapper if "all" is selected
+    const daysWrapper = document.getElementById('fin-days-wrapper');
+    if (direction === 'all') {
+        if (daysWrapper) daysWrapper.style.display = 'none';
+    } else {
+        if (daysWrapper) daysWrapper.style.display = 'flex';
+    }
+
     const now = new Date();
-    // Normalisiere heute auf Start des Tages für saubere Vergleiche
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     const limitDate = new Date(today);
     if (direction === 'future') {
         limitDate.setDate(today.getDate() + days);
-    } else {
+    } else if (direction === 'past') {
         limitDate.setDate(today.getDate() - days);
     }
 
@@ -1327,57 +1340,62 @@ window.updateFinancialDashboard = function () {
     let incomingItems = [];
     let outgoingItems = [];
     let skontoDeals = [];
-    let overdueItems = [];
+    let overdueIncoming = [];
+    let overdueOutgoing = [];
 
     unpaid.forEach(e => {
         const dueDate = e.due_date ? new Date(e.due_date) : null;
         const discDate = e.discount_date ? new Date(e.discount_date) : null;
 
-        // ÜBERFÄLLIG Logik (nur wenn fällig in der Vergangenheit)
-        if (dueDate && dueDate < today) {
-            overdueItems.push(e);
-        }
-
-        // ZUKÜNFTIG / VERGANGEN Filter
-        if (direction === 'future') {
-            // Zukünftig: Nur was ab HEUTE fällig wird (oder Skonto hat) bis zum Limit
+        if (direction === 'all') {
+            // INCLUDE EVERYTHING
+            if (dueDate && dueDate < today) {
+                if (e.type === 'incoming') overdueIncoming.push(e);
+                else overdueOutgoing.push(e);
+            } else {
+                if (e.type === 'incoming') incomingItems.push(e);
+                else outgoingItems.push(e);
+            }
+            if (e.type === 'incoming' && discDate && discDate >= today) {
+                skontoDeals.push(e);
+            }
+        } else if (direction === 'future') {
+            // ONLY FUTURE (Starting from today)
             if (dueDate && dueDate >= today && dueDate <= limitDate) {
                 if (e.type === 'incoming') incomingItems.push(e);
                 else outgoingItems.push(e);
             }
-            // Skonto Check
             if (e.type === 'incoming' && discDate && discDate >= today && discDate <= limitDate) {
                 skontoDeals.push(e);
             }
-        } else {
-            // Vergangen: Was im Zeitraum VOR heute liegt (bereits abgelaufen/vergangen)
+        } else if (direction === 'past') {
+            // ONLY PAST
             if (dueDate && dueDate < today && dueDate >= limitDate) {
-                if (e.type === 'incoming') incomingItems.push(e);
-                else outgoingItems.push(e);
+                if (e.type === 'incoming') overdueIncoming.push(e);
+                else overdueOutgoing.push(e);
             }
         }
     });
 
-    const overdueIncoming = overdueItems.filter(e => e.type === 'incoming');
-    const overdueOutgoing = overdueItems.filter(e => e.type === 'outgoing');
-
     let html = '';
 
-    // Sektionen
-    if (overdueOutgoing.length > 0) {
-        html += renderDashboardSection('⚠️ Überfällig: Ausgang (Kunden)', overdueOutgoing, '10b981', 'due_date', false, '#10b981', null, today);
-    }
-    
-    if (overdueIncoming.length > 0) {
-        html += renderDashboardSection('⚠️ Überfällig: Eingang (Lieferanten)', overdueIncoming, 'ea580c', 'due_date', false, '#ea580c', null, today);
-    }
-
-    if (direction === 'future') {
-        html += renderDashboardSection('📥 Eingang: Demnächst fällig', incomingItems, 'f87171', 'due_date', false, null, null, today);
+    if (direction === 'all') {
+        if (overdueOutgoing.length > 0) html += renderDashboardSection('⚠️ Überfällig: Ausgang (Kunden)', overdueOutgoing, '10b981', 'due_date', false, '#10b981', null, today);
+        if (overdueIncoming.length > 0) html += renderDashboardSection('⚠️ Überfällig: Eingang (Lieferanten)', overdueIncoming, 'ea580c', 'due_date', false, '#ea580c', null, today);
+        if (skontoDeals.length > 0) html += renderDashboardSection('🏷️ Eingang: Skonto-Fristen', skontoDeals, 'facc15', 'discount_date', true, '#facc15', null, today);
+        if (incomingItems.length > 0) html += renderDashboardSection('📥 Eingang: Zukünftig fällig', incomingItems, 'f87171', 'due_date', false, '#f87171', null, today);
+        if (outgoingItems.length > 0) html += renderDashboardSection('📤 Ausgang: Erwartete Zahlungen', outgoingItems, '10b981', 'due_date', false, '#10b981', null, today);
+    } else if (direction === 'future') {
+        html += renderDashboardSection('📥 Eingang: Demnächst fällig', incomingItems, 'f87171', 'due_date', false, '#f87171', null, today);
         html += renderDashboardSection('🏷️ Eingang: Skonto-Fristen', skontoDeals, 'facc15', 'discount_date', true, '#facc15', null, today);
         html += renderDashboardSection('📤 Ausgang: Erwartete Zahlungen', outgoingItems, '10b981', 'due_date', false, '#10b981', null, today);
-    } else {
-        html += renderDashboardSection('Rechnungen im gewählten Zeitraum', [...incomingItems, ...outgoingItems], '60a5fa', 'due_date', false, null, null, today);
+    } else if (direction === 'past') {
+        html += renderDashboardSection('Vergangene Ausgangsrechnungen (Kunden)', overdueOutgoing, '10b981', 'due_date', false, null, null, today);
+        html += renderDashboardSection('Vergangene Eingangsrechnungen (Lieferanten)', overdueIncoming, 'ea580c', 'due_date', false, null, null, today);
+    }
+
+    if (!html) {
+        html = `<div style="padding: 4rem 2rem; text-align: center; color: rgba(255,255,255,0.2);">Keine passenden Einträge gefunden.</div>`;
     }
 
     content.innerHTML = html;
