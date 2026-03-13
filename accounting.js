@@ -1097,28 +1097,31 @@ window.handleAccountingPDFUpload = async function (event) {
 
     try {
         const isImage = file.type.startsWith('image/');
-        const systemPrompt = `Du bist ein präziser Buchhaltungs-Assistent für das Unternehmen 'Meetra'. Analysiere das Dokument und gib NUR valides JSON zurück. 
+        const systemPrompt = `Du bist ein präziser Buchhaltungs-Assistent für das Unternehmen 'Meetra'. Analysiere das Dokument (Deutsch oder Englisch) und gib NUR valides JSON zurück. 
 Schlüssel: invoice_number, date (YYYY-MM-DD), net_amount (Zahl), vat_rate (Zahl), type (incoming/outgoing), entity (Geschäftspartner), due_date (YYYY-MM-DD oder "sofort"), paid_at (YYYY-MM-DD), discount_amount (Zahl), is_paid (boolean), positions (Array aus {description, quantity, unit, price_net}). 
 
 ERKENNUNG DES DATUMS (date):
-- PRIORITÄT: Das Rechnungsdatum steht meist OBEN RECHTS.
-- WARNUNG: Ein Datum, das direkt bei der "Auftragsnummer", "Bestellnummer" oder "Lieferdatum" steht, ist oft NICHT das Rechnungsdatum. Suche explizit nach "Rechnungsdatum" oder dem Datum im Briefkopf oben rechts.
+- PRIORITÄT: Das Rechnungsdatum ("Invoice Date") steht meist OBEN RECHTS.
+- WARNUNG: Ein Datum bei "Auftragsnummer", "Order Number", "Bestellnummer" oder "Lieferdatum" / "Delivery Date" ist meist FALSCH. Suche explizit nach "Rechnungsdatum" oder dem Datum im Briefkopf.
 
-ERKENNUNG DES GESCHÄFTSPARTNERS (entity):
-1. STRIKTE VERBOTE: "Dietmar Meenken", "Mirco Loseke", "Simon Gabbert", "Meetra", "meetra Recycling Maschinen" dürfen NIEMALS die 'entity' sein.
-2. PRIORITÄT: Wenn "verkauft durch", "verkauf von", "Verkäufer", "Lieferant" oder "Absender" vorkommt, ist der Name dahinter die 'entity'.
-3. TYP: Interner Name im Kopf = 'incoming'.
+ERKENNUNG DES TYPS (type) & GESCHÄFTSPARTNERS (entity):
+1. 'outgoing' (Ausgangsrechnung): Wenn "Meetra" oder "meetra Recycling Maschinen" der ABSENDER (Sender/Issuer) ist und ein anderer Name bei "Rechnungsadresse", "Kundenadresse", "Invoice Address", "Sold to", "Bill to" oder "Customer" steht.
+2. 'incoming' (Eingangsrechnung): Wenn "Meetra" der EMPFÄNGER ist und ein anderer Name als Absender/Vendor/Supplier fungiert.
+3. STRIKTE VERBOTE: "Dietmar Meenken", "Mirco Loseke", "Simon Gabbert", "Meetra" dürfen NIEMALS die 'entity' sein. Die 'entity' ist immer der EXTERNE Partner.
+4. PRIORITÄT: Suche nach "sold to", "bill to", "customer", "verkauft durch", "vendor", "supplier".
 
-WICHTIG ZUM STATUS (is_paid & paid_at):
-- Setze 'is_paid' auf true bei Hinweisen wie "bezahlt", "dankend erhalten", "Amazon Pay".
-- Suche nach dem ZAHLUNGSDATUM (paid_at). Falls im Text steht "bezahlt am 12.01.", nutze "2026-01-12".
-- Falls 'is_paid' true ist aber kein Datum da steht, nutze das Belegdatum (date) oder null.
+STEUERSATZ (vat_rate):
+- Erkenne Steuerbefreiungen oder 0% Sätze (z.B. "Steuerfreie innergemeinschaftliche Lieferung", "Reverse Charge", "Tax Rate: 0%"). Setze in diesen Fällen 'vat_rate' auf 0.
 
-WICHTIG ZUM FÄLLIGKEITSDATUM (due_date):
-- Falls im Text steht "Zahlbar sofort", "fällig sofort" oder ähnlich, setze 'due_date' auf "sofort". Ansonsten YYYY-MM-DD.
+STATUS (is_paid & paid_at):
+- 'is_paid' = true bei "paid", "amount received", "bezahlt", "Amazon Pay".
+- 'paid_at': Suche nach "paid on", "bezahlt am". Falls unklar aber bezahlt, nutze 'date'.
+
+FÄLLIGKEIT (due_date):
+- "Due immediately", "payable now", "sofort fällig" -> "sofort". Ansonsten YYYY-MM-DD.
 
 WICHTIG ZU PREISEN:
-- 'price_net' ist der EINZELPREIS. Korrigiere ihn, damit Menge * Einzelpreis = Zeilengesamtpreis ergibt.
+- 'price_net' ist der EINZELPREIS. Menge * Einzelpreis = Zeilengesamtpreis.
 Setze Unbekanntes auf null.`;
 
         let requestBody = {};

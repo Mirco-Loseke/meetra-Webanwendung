@@ -5826,24 +5826,24 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
 /* Global Status Stripes for Accounting */
 .accounting-main-row {
     position: relative;
-    border-left: 3px solid transparent !important;
+    border-left: 2px solid transparent !important;
 }
 
 .accounting-main-row.status-paid {
-    border-left: 3px solid #4ade80 !important;
+    border-left: 2px solid #4ade80 !important;
 }
 
 .accounting-main-row.status-unpaid {
-    border-left: 3px solid #f87171 !important;
+    border-left: 2px solid #f87171 !important;
 }
 
 /* Also apply to the details cells to maintain the stripe look when expanded */
 .accounting-main-row.status-paid + tr .acc-details-cell {
-    border-left: 3px solid #4ade80 !important;
+    border-left: 2px solid #4ade80 !important;
 }
 
 .accounting-main-row.status-unpaid + tr .acc-details-cell {
-    border-left: 3px solid #f87171 !important;
+    border-left: 2px solid #f87171 !important;
 }
 
 /* 3. Safe Area & Notch Support */
