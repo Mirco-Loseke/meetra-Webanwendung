@@ -4935,13 +4935,17 @@ tr.completed-task td {
 
 .task-table th {
     font-size: 1.05rem;
-    padding: 0 12px;
+    padding: 12px;
     color: #ffffff;
+    white-space: normal;
+    word-wrap: break-word;
 }
 
 .task-table td {
     font-size: 1rem;
     padding: 16px 12px;
+    white-space: normal;
+    word-wrap: break-word;
 }
 
 /* Quick-Complete Checkbox */
