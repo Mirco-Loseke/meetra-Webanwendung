@@ -5820,16 +5820,49 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     /* Prevent action buttons from stretching too much */
     .task-table td[data-label="Aktionen"] {
         justify-content: flex-end;
+}
+
+/* Global Status Frames for Accounting */
+.accounting-main-row.status-paid {
+    border: 2px solid rgba(74, 222, 128, 0.4) !important;
+    box-shadow: 0 0 15px rgba(74, 222, 128, 0.1);
+}
+
+.accounting-main-row.status-unpaid {
+    border: 2px solid rgba(248, 113, 113, 0.4) !important;
+    box-shadow: 0 0 15px rgba(248, 113, 113, 0.1);
+}
+
+/* On Desktop (Table mode), border on tr might need help */
+@media (min-width: 769px) {
+    .accounting-main-row.status-paid td {
+        border-top: 2px solid rgba(74, 222, 128, 0.4) !important;
+        border-bottom: 2px solid rgba(74, 222, 128, 0.4) !important;
     }
-    /* Status Frames for Accounting */
-    .accounting-main-row.status-paid {
-        border: 2px solid rgba(74, 222, 128, 0.4) !important;
-        box-shadow: 0 0 15px rgba(74, 222, 128, 0.1);
+    .accounting-main-row.status-paid td:first-child {
+        border-left: 2px solid rgba(74, 222, 128, 0.4) !important;
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
     }
-    
-    .accounting-main-row.status-unpaid {
-        border: 2px solid rgba(248, 113, 113, 0.4) !important;
-        box-shadow: 0 0 15px rgba(248, 113, 113, 0.1);
+    .accounting-main-row.status-paid td:last-child {
+        border-right: 2px solid rgba(74, 222, 128, 0.4) !important;
+        border-top-right-radius: 12px;
+        border-bottom-right-radius: 12px;
+    }
+
+    .accounting-main-row.status-unpaid td {
+        border-top: 2px solid rgba(248, 113, 113, 0.4) !important;
+        border-bottom: 2px solid rgba(248, 113, 113, 0.4) !important;
+    }
+    .accounting-main-row.status-unpaid td:first-child {
+        border-left: 2px solid rgba(248, 113, 113, 0.4) !important;
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+    }
+    .accounting-main-row.status-unpaid td:last-child {
+        border-right: 2px solid rgba(248, 113, 113, 0.4) !important;
+        border-top-right-radius: 12px;
+        border-bottom-right-radius: 12px;
     }
 }
 
