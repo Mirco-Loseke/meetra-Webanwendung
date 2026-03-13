@@ -5872,10 +5872,12 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     margin: 0;
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between;
+    gap: 15px;
     font-weight: 800;
     font-family: 'Outfit', sans-serif;
     font-size: 1.1rem;
+    width: 100%;
 }
 
 /* Responsive Accounting Details Items */
