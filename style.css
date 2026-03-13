@@ -1,4 +1,4 @@
-﻿:root {
+:root {
     /* Midnight Glass Color Palette */
     --midnight-deep: #0f172a;
     --midnight-blue: #1e293b;
@@ -629,8 +629,12 @@ body {
 
 
 .header-social-links {
-    display: contents;
-    /* This allows the <a> tags to become flex items of #topbar */
+    display: flex;
+    flex: 1;
+    justify-content: space-evenly;
+    gap: 3rem;
+    align-items: center;
+    margin: 0 2rem;
 }
 
 /* Sizing Logic: Normalizing container space but allowing images to be larger */
@@ -5609,3 +5613,77 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
   background-color: #1a1a24 !important;
   color: #ffffff !important;
 }
+
+/* Responsive Table Layouts (Bestellungen & Buchhaltung) */
+@media (max-width: 1024px) {
+    .data-table, 
+    #procurement-table,
+    .task-table {
+        display: block !important;
+        width: 100% !important;
+        margin-bottom: 2rem;
+    }
+    .data-table thead, 
+    #procurement-table thead,
+    .task-table thead {
+        display: none !important;
+    }
+    .data-table tbody, 
+    #procurement-table tbody,
+    .task-table tbody {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+    .data-table tr, 
+    #procurement-table tr,
+    .task-table tr {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        background: rgba(255, 255, 255, 0.02) !important;
+        border-radius: 16px !important;
+        padding: 16px !important;
+        border: 1px solid rgba(255,255,255,0.05) !important;
+        gap: 12px !important;
+    }
+    .data-table td, 
+    #procurement-table td,
+    .task-table td {
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        flex: 1 1 min(100%, 160px) !important; /* equal width, wrapping if <160px available */
+        min-width: 140px !important;
+        border: none !important;
+        padding: 4px 8px !important;
+        text-align: left !important;
+        width: auto !important;
+    }
+    
+    /* The actions columns usually should take full width to center or align right */
+    .data-table td:last-child, 
+    #procurement-table td:last-child,
+    .task-table td:last-child {
+        flex: 1 1 100% !important;
+        flex-direction: row !important;
+        align-items: center !important; 
+        justify-content: flex-end !important;
+        border-top: 1px dashed rgba(255,255,255,0.1) !important;
+        padding-top: 12px !important;
+        margin-top: 4px !important;
+    }
+    
+    /* Make sure specific width overrides don't break flex */
+    #procurement-table th:first-child, #procurement-table td:first-child,
+    #procurement-table th:nth-child(2), #procurement-table td:nth-child(2),
+    #procurement-table th:nth-child(3), #procurement-table td:nth-child(3),
+    #procurement-table th:nth-child(5), #procurement-table td:nth-child(5),
+    #procurement-table th:nth-child(6), #procurement-table td:nth-child(6),
+    #procurement-table th:nth-child(7), #procurement-table td:nth-child(7) {
+        width: auto !important;
+        padding-right: 8px !important;
+        padding-left: 8px !important;
+    }
+}
+
