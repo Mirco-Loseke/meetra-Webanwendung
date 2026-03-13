@@ -320,7 +320,10 @@ window.renderAccounting = function () {
                 <td data-label="Nummer" style="padding: 10px 12px; font-weight: 600; font-size: 0.85rem;">${e.invoice_number || '-'}</td>
                 <td data-label="Datum" style="padding: 10px 12px; font-size: 0.85rem; white-space: nowrap;">
                     <div style="font-weight: 600;">${new Date(e.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
-                    ${e.due_date ? `<div style="font-size: 0.75rem; color: #f87171; margin-top: 2px; font-weight: 700; white-space: nowrap;">fällig: ${e.due_date === 'sofort' ? 'sofort' : new Date(e.due_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>` : ''}
+                    ${e.is_paid ? 
+                        `<div style="font-size: 0.75rem; color: #4ade80; margin-top: 2px; font-weight: 700; white-space: nowrap;">Online bezahlt</div>` : 
+                        (e.due_date ? `<div style="font-size: 0.75rem; color: #f87171; margin-top: 2px; font-weight: 700; white-space: nowrap;">fällig: ${e.due_date === 'sofort' ? 'sofort' : new Date(e.due_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>` : '')
+                    }
                 </td>
                 <td data-label="${currentAccountingType === 'incoming' ? 'Lieferant' : 'Kunde'}" style="padding: 10px 12px; font-weight: 700; color: #fff; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${e.entity}</td>
                 <td data-label="Netto" style="padding: 10px 12px; font-size: 0.85rem;">${window.formatCurrency(e.amount_net)}</td>
