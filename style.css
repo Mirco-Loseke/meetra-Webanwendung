@@ -5823,48 +5823,27 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     }
 }
 
-/* Global Status Frames for Accounting */
+/* Global Status Stripes for Accounting */
+.accounting-main-row {
+    position: relative;
+    border-left: 5px solid transparent !important;
+}
+
 .accounting-main-row.status-paid {
-    border: 2px solid rgba(74, 222, 128, 0.4) !important;
-    box-shadow: 0 0 15px rgba(74, 222, 128, 0.1);
+    border-left: 6px solid #4ade80 !important;
 }
 
 .accounting-main-row.status-unpaid {
-    border: 2px solid rgba(248, 113, 113, 0.4) !important;
-    box-shadow: 0 0 15px rgba(248, 113, 113, 0.1);
+    border-left: 6px solid #f87171 !important;
 }
 
-/* On Desktop (Table mode), border on tr might need help */
-@media (min-width: 769px) {
-    .accounting-main-row.status-paid td {
-        border-top: 2px solid rgba(74, 222, 128, 0.4) !important;
-        border-bottom: 2px solid rgba(74, 222, 128, 0.4) !important;
-    }
-    .accounting-main-row.status-paid td:first-child {
-        border-left: 2px solid rgba(74, 222, 128, 0.4) !important;
-        border-top-left-radius: 12px;
-        border-bottom-left-radius: 12px;
-    }
-    .accounting-main-row.status-paid td:last-child {
-        border-right: 2px solid rgba(74, 222, 128, 0.4) !important;
-        border-top-right-radius: 12px;
-        border-bottom-right-radius: 12px;
-    }
+/* Also apply to the details cells to maintain the stripe look when expanded */
+.accounting-main-row.status-paid + tr .acc-details-cell {
+    border-left: 6px solid #4ade80 !important;
+}
 
-    .accounting-main-row.status-unpaid td {
-        border-top: 2px solid rgba(248, 113, 113, 0.4) !important;
-        border-bottom: 2px solid rgba(248, 113, 113, 0.4) !important;
-    }
-    .accounting-main-row.status-unpaid td:first-child {
-        border-left: 2px solid rgba(248, 113, 113, 0.4) !important;
-        border-top-left-radius: 12px;
-        border-bottom-left-radius: 12px;
-    }
-    .accounting-main-row.status-unpaid td:last-child {
-        border-right: 2px solid rgba(248, 113, 113, 0.4) !important;
-        border-top-right-radius: 12px;
-        border-bottom-right-radius: 12px;
-    }
+.accounting-main-row.status-unpaid + tr .acc-details-cell {
+    border-left: 6px solid #f87171 !important;
 }
 
 /* 3. Safe Area & Notch Support */
