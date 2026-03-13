@@ -5614,50 +5614,145 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
   color: #ffffff !important;
 }
 
-/* Responsive Table Layouts (Bestellungen & Buchhaltung) */
-.table-responsive-wrapper {
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    margin-bottom: 2rem;
-}
+/* ==========================================
+   GLOBAL RESPONSIVE OVERHAUL (Mobile & Tablet)
+   ========================================== */
 
-.data-table, 
-#procurement-table,
-.task-table {
-    width: 100% !important;
-    min-width: 900px; 
-    table-layout: fixed !important;
-    border-collapse: collapse;
-}
-
-/* Force 100% width on Desktop/iPad to avoid scrolling if possible */
-@media (min-width: 769px) {
-    .data-table, 
-    #procurement-table,
-    .task-table {
-        min-width: 100% !important;
-    }
-}
-
-/* Font Scaling & Padding Refinement for iPad/Mobile */
+/* 1. iPad Overrides (768px - 1024px) */
 @media (max-width: 1024px) {
-    .data-table, 
-    #procurement-table,
-    .task-table {
-        font-size: 0.82rem !important;
+    #sidebar {
+        width: 80px; /* Force collapsed on iPad */
     }
+    
+    #main-wrapper {
+        margin-left: 80px;
+        width: calc(100% - 80px);
+    }
+    
+    #sidebar-toggle {
+        display: none; /* Hide toggle on iPad, keep it simple */
+    }
+
+    .card-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+        gap: 1.5rem !important;
+    }
+
+    .view-header-layout h1 {
+        font-size: 1.5rem !important;
+    }
+    
+    .data-table, #procurement-table, .task-table {
+        font-size: 0.85rem !important;
+    }
+    
     .data-table th, .data-table td,
     .task-table th, .task-table td {
-        padding: 10px 6px !important;
+        padding: 12px 8px !important;
     }
 }
 
+/* 2. Mobile Overrides (< 768px) */
 @media (max-width: 768px) {
-    .data-table, 
-    #procurement-table,
-    .task-table {
-        min-width: 1100px; /* Force scroll on small phones to keep one-line */
+    #sidebar {
+        transform: translateX(-100%);
+        width: 280px !important;
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #sidebar.mobile-open {
+        transform: translateX(0);
+        box-shadow: 0 0 100px rgba(0,0,0,0.8);
+    }
+
+    /* Overlay for clicking away */
+    #sidebar-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        backdrop-filter: blur(4px);
+        z-index: 999;
+        display: none;
+        opacity: 0;
+        transition: opacity 0.4s ease;
+    }
+
+    #sidebar-overlay.active {
+        display: block;
+        opacity: 1;
+    }
+
+    #main-wrapper {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+
+    #mobile-sidebar-toggle {
+        display: flex !important; /* Show hamburger */
+    }
+
+    #topbar {
+        padding: 0 1rem;
+        height: 70px;
+    }
+
+    .header-social-links {
+        display: none; /* Hide social icons to save space on mobile */
+    }
+
+    .card-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+
+    .view-header-row-top, .view-header-row-bottom {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 1rem;
+    }
+
+    .view-header-right {
+        width: 100%;
+        justify-content: flex-start !important;
+    }
+
+    .custom-search-wrapper {
+        width: 100% !important;
+    }
+
+    .btn-add-bg, .btn-glass-add {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .table-responsive-wrapper {
+        margin: 0 -1rem; /* Full width bleed */
+        width: calc(100% + 2rem);
+    }
+
+    .data-table, #procurement-table, .task-table {
+        min-width: 1100px; /* Keep one-line logic with horizontal scroll */
+    }
+    
+    /* Touch Target Optimization */
+    .nav-link, .btn-icon-soft, .custom-filter-dropdown {
+        min-height: 44px;
+    }
+    
+    .glass-card {
+        border-radius: 16px;
+        padding: 1rem !important;
+    }
+}
+
+/* 3. Safe Area & Notch Support */
+@supports (padding: env(safe-area-inset-top)) {
+    #topbar {
+        padding-top: env(safe-area-inset-top);
+        height: calc(70px + env(safe-area-inset-top));
+    }
+    #sidebar {
+        padding-bottom: env(safe-area-inset-bottom);
     }
 }
 

@@ -13,19 +13,22 @@ This skill is dedicated to creating a seamless, high-performance experience on s
 - **Vertical Stack First**: Layouts should naturally stack vertically. Avoid horizontal multi-column grids unless they are strictly necessary and designed as "Mini-Cards".
 - **Intelligent Scrolling**: For complex data tables, use a `.table-responsive-wrapper` with forced minimum widths (e.g., `min-width: 1100px`) to preserve readability via horizontal scroll.
 - **Hamburger Navigation**: Ensure the sidebar toggles into a clean, smooth-sliding mobile menu.
+- **Landscape Support**: Always check how the app looks when rotated. Use `min-height` instead of fixed heights to allow for short viewports in landscape.
 
 ### 2. Thumb-Friendly Interaction
 - **Safe Zone Alignment**: Keep interactive elements away from the very edges of the screen where system gestures might interfere.
-- **Large Interaction Areas**: Every button or link should be easy to hit with a thumb. 
+- **Large Interaction Areas**: Every button or link should be easy to hit with a thumb (min 44x44px).
 - **Gestures**: Consider swipe gestures for closing modals or switching tabs if appropriate.
+- **Semantic Inputs**: Use correct `type` and `inputmode` (e.g., `type="tel"`, `inputmode="numeric"`) to trigger the optimal mobile keyboard.
 
 ### 3. Visual Compression
 - **Simplified UI**: Hide non-essential columns or decorative elements using `.hidden-mobile` to reduce clutter.
-- **High-Impact Typography**: Large enough for easy reading, but compact enough to fit titles within the width.
-- **Card-Based UX**: Instead of long rows, transform complex data into "Actionable Cards" when possible.
+- **High-Impact Typography**: Use `rem` or `clamp()` for fluid font sizes. Large enough for easy reading, but compact.
+- **Card-Based UX**: Instead of long rows, transform complex data into "Actionable Cards" for mobile viewports.
 
 ## 🛠️ Implementation Checklist
-- [ ] Check `style.css` for `@media (max-width: 768px)` or smaller.
+- [ ] Ensure `<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">` exists in the HTML.
+- [ ] Check `style.css` for `@media (max-width: 768px)` overrides.
 - [ ] Verify that all forms are single-column and labels are visible.
 - [ ] Ensure SVG icons are sharp and not too small (`24px` standard).
 - [ ] Test on Chrome DevTools with "iPhone 12 Pro" and "Pixel 7" presets.

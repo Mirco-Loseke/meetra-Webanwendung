@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Webapp meetra</title>
     <link rel="stylesheet" href="style.css?v=12">
     <!-- Preloading standard fonts -->
@@ -27,6 +27,8 @@
 
 <body>
     <div id="app-layout">
+        <!-- Overlay for mobile sidebar -->
+        <div id="sidebar-overlay" onclick="window.toggleMobileSidebar()"></div>
         <!-- Sidebar toggle button: OUTSIDE aside to avoid backdrop-filter stacking issues -->
         <button id="sidebar-toggle" title="Menü ein/ausklappen">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"

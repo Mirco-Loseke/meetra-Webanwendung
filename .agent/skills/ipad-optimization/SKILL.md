@@ -10,24 +10,25 @@ This skill ensures the application looks and functions like a premium tablet app
 ## 🎯 Core Objectives
 
 ### 1. Layout Stability & Width Control
-- **No Horizontal Scrolling**: The primary goal is to fit all critical content (tables, cards) within the screen width.
-- **Percentage-Based Grids**: Use flexible percentages (`width: 25%`) instead of fixed pixels (`width: 300px`) to handle the slight variations between iPad Mini, iPad Air, and iPad Pro.
-- **Fixed Table Layout**: Always use `table-layout: fixed` for data tables to prevent content from pushing the container wide.
+- **No Horizontal Scrolling**: Fit all critical content (tables, cards) within the screen width.
+- **Multitasking & Split View**: Handle varying widths (1/3, 1/2, 2/3) gracefully. Use relative units and avoid hardcoded viewport-based assumptions where possible.
+- **Percentage-Based Grids**: Use flexible percentages (`width: 33.3%`) or CSS Grid (`repeat(auto-fit, minmax(...))`) to handle iPad Mini to iPad Pro 12.9".
 
-### 2. Typography & Spacing Scaling
-- **Responsive Font Sizes**: Scale down fonts globally for viewports < 1024px (e.g., `font-size: 0.85rem`).
-- **Compact Padding**: Reduce generous desktop padding (`2rem` -> `1rem`) to reclaim screen real estate for content.
-- **Touch Targets**: Ensure buttons and interactive elements maintain a minimum hit area of `44x44px` for reliable touch interaction.
+### 2. Interaction & Spacing
+- **Pencil & Pointer**: iPadOS supports hover states via Apple Pencil or Trackpad. Keep subtle hover effects, but ensure they aren't critical for functionality.
+- **Safe Area Insets**: Use CSS variables like `env(safe-area-inset-bottom)` to avoid overlapping the home bar on newer iPads.
+- **Touch Targets**: Maintain a minimum hit area of `44x44px`.
 
-### 3. Premium Aesthetics (Tablet Edition)
-- **Glassmorphism**: Maintain 24px blur and borders, but ensure transparency doesn't compromise legibility on smaller screens.
-- **Micro-Animations**: Use subtle transitions that feel "alive" but don't lag on mobile processors.
+### 3. Premium Aesthetics
+- **Glassmorphism**: Maintain 24px blur, but ensure it performs well during scrolling on mobile chips.
+- **Retina Assets**: Use high-resolution SVGs or `srcset` for images to ensure crispness on high-DPI displays.
 
 ## 🛠️ Implementation Checklist
 - [ ] Check `style.css` for `@media (max-width: 1024px)` overrides.
-- [ ] Verify that tables are wrapped in a `.table-responsive-wrapper`.
-- [ ] Ensure navigation icons are properly sized and don't overlap.
-- [ ] Use DevTools to test specifically at `820px` (iPad Air) and `768px` (Standard iPad).
+- [ ] Verify that tables use `table-layout: fixed` when they shouldn't scroll.
+- [ ] Ensure navigation icons have sufficient spacing and don't overlap.
+- [ ] Test specifically at `820px` (iPad Air) and `768px` (Standard iPad).
+- [ ] Test Split View sizes in DevTools.
 
 ## 💡 Best Practices
 - **Prioritize Content**: If a column is too wide, hide less critical data on iPad using `.hidden-tablet`.
