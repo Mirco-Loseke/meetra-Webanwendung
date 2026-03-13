@@ -320,7 +320,7 @@ window.renderAccounting = function () {
                 <td data-label="Nummer" style="padding: 10px 12px; font-weight: 600; font-size: 0.85rem;">${e.invoice_number || '-'}</td>
                 <td data-label="Datum" style="padding: 10px 12px; font-size: 0.85rem; white-space: nowrap;">
                     <div style="font-weight: 600;">${new Date(e.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
-                    ${e.due_date ? `<div style="font-size: 0.75rem; color: #f87171; margin-top: 2px; font-weight: 700; white-space: nowrap;">fällig: ${new Date(e.due_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>` : ''}
+                    ${e.due_date ? `<div style="font-size: 0.75rem; color: #f87171; margin-top: 2px; font-weight: 700; white-space: nowrap;">fällig: ${e.due_date === 'sofort' ? 'sofort' : new Date(e.due_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>` : ''}
                 </td>
                 <td data-label="${currentAccountingType === 'incoming' ? 'Lieferant' : 'Kunde'}" style="padding: 10px 12px; font-weight: 700; color: #fff; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${e.entity}</td>
                 <td data-label="Netto" style="padding: 10px 12px; font-size: 0.85rem;">${window.formatCurrency(e.amount_net)}</td>
@@ -938,7 +938,8 @@ window.submitAccountingEntry = async function (event) {
             due_date: document.getElementById('acc-due-date').value || null,
             discount_date: document.getElementById('acc-discount-date').value || null,
             discount_amount: parseFloat(document.getElementById('acc-discount-amount').value) || null,
-            is_paid: document.getElementById('acc-is-paid').checked
+            is_paid: document.getElementById('acc-is-paid').checked,
+            paid_at: document.getElementById('acc-paid-at').value || null
         };
 
         // Wenn created_by eine echte UUID ist (Länge > 30), mitsenden, sonst weglassen.
@@ -1089,25 +1090,23 @@ window.handleAccountingPDFUpload = async function (event) {
     try {
         const isImage = file.type.startsWith('image/');
         const systemPrompt = `Du bist ein präziser Buchhaltungs-Assistent für das Unternehmen 'Meetra'. Analysiere das Dokument und gib NUR valides JSON zurück. 
-Schlüssel: invoice_number, date (YYYY-MM-DD), net_amount (Zahl), vat_rate (Zahl), type (incoming/outgoing), entity (Geschäftspartner), due_date (YYYY-MM-DD), discount_amount (Zahl), is_paid (boolean), positions (Array aus {description, quantity, unit, price_net}). 
+Schlüssel: invoice_number, date (YYYY-MM-DD), net_amount (Zahl), vat_rate (Zahl), type (incoming/outgoing), entity (Geschäftspartner), due_date (YYYY-MM-DD oder "sofort"), paid_at (YYYY-MM-DD), discount_amount (Zahl), is_paid (boolean), positions (Array aus {description, quantity, unit, price_net}). 
 
 ERKENNUNG DES GESCHÄFTSPARTNERS (entity):
-1. STRIKTE VERBOTE: Folgende Namen sind INTERN (dein Unternehmen) und dürfen NIEMALS als 'entity' eingetragen werden:
-   - "Dietmar Meenken", "Mirco Loseke", "Simon Gabbert", "Meetra", "meetra Recycling Maschinen".
-2. PRIORITÄT (Verkäufer-Suche): Suche gezielt nach "verkauft durch", "verkauf von", "im Auftrag von", "Verkäufer", "Lieferant" oder "Absender". 
-   - Falls solche Begriffe vorkommen, ist der Name, der DIREKT DAHINTER oder DARUNTER steht, die 'entity' (sofern er nicht auf der Verbotsliste oben steht).
-3. TYP-KLASSIFIZIERUNG (incoming/outgoing):
-   - Wenn ein INTERNER Name (Meenken, Loseke, Gabbert, Meetra) im Logo oder Briefkopf steht, ist es eine EINGANGSRECHNUNG (type: 'incoming'). Der andere genannte Partner ist die 'entity'.
+1. STRIKTE VERBOTE: "Dietmar Meenken", "Mirco Loseke", "Simon Gabbert", "Meetra", "meetra Recycling Maschinen" dürfen NIEMALS die 'entity' sein.
+2. PRIORITÄT: Wenn "verkauft durch", "verkauf von", "Verkäufer", "Lieferant" oder "Absender" vorkommt, ist der Name dahinter die 'entity'.
+3. TYP: Interner Name im Kopf = 'incoming'.
 
-WICHTIG ZUR ZAHLUNG (is_paid):
-- Setze 'is_paid' auf true, wenn Hinweise auf Zahlung (Amazon Pay, "bezahlt", "Zahlung erhalten", "Verrechnet") vorhanden sind.
+WICHTIG ZUM STATUS (is_paid & paid_at):
+- Setze 'is_paid' auf true bei Hinweisen wie "bezahlt", "dankend erhalten", "Amazon Pay".
+- Suche nach dem ZAHLUNGSDATUM (paid_at). Falls im Text steht "bezahlt am 12.01.", nutze "2026-01-12".
+- Falls 'is_paid' true ist aber kein Datum da steht, nutze das Belegdatum (date) oder null.
 
 WICHTIG ZUM FÄLLIGKEITSDATUM (due_date):
-- Suche nach "Begleichung bis", "überweisen bis", "Zahlbar bis", "Fällig am". 
+- Falls im Text steht "Zahlbar sofort", "fällig sofort" oder ähnlich, setze 'due_date' auf "sofort". Ansonsten YYYY-MM-DD.
 
 WICHTIG ZU PREISEN:
-- 'price_net' ist der EINZELPREIS pro Einheit. 
-- Korrigiere 'price_net' immer so, dass Menge * Einzelpreis = Zeilengesamtpreis ergibt.
+- 'price_net' ist der EINZELPREIS. Korrigiere ihn, damit Menge * Einzelpreis = Zeilengesamtpreis ergibt.
 Setze Unbekanntes auf null.`;
 
         let requestBody = {};
@@ -1236,6 +1235,7 @@ Setze Unbekanntes auf null.`;
             const paidCheck = document.getElementById('acc-is-paid');
             if (paidCheck) paidCheck.checked = !!parsedData.is_paid;
         }
+        if (parsedData.paid_at) document.getElementById('acc-paid-at').value = parsedData.paid_at;
 
         window.calculateGross();
 
