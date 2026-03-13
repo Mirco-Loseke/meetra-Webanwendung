@@ -5869,7 +5869,7 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
 
 @media (max-width: 768px) {
     .acc-details-cell {
-        padding: 1rem !important;
+        padding: 0.5rem 0 !important;
     }
 
     .acc-details-grid {
@@ -5880,11 +5880,13 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         display: flex !important;
         flex-direction: column;
         gap: 0.5rem;
-        padding: 1rem !important;
-        background: rgba(255, 255, 255, 0.03);
-        border-radius: 12px;
+        padding: 1.25rem !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 16px;
         margin-bottom: 0.75rem;
-        border-left: 2px solid var(--color-primary-green) !important;
+        width: 100% !important;
     }
 
     .acc-details-row > div {

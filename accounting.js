@@ -355,9 +355,9 @@ window.renderAccounting = function () {
             </tr>
                 </td>
             </tr>
-            <tr id="details-${e.id}" class="hidden" style="background: rgba(255,255,255,0.01);">
-                <td colspan="9" class="acc-details-cell" style="padding: 0 1.5rem 1.5rem 1.5rem;">
-                    <div id="details-content-${e.id}" style="padding: 1.5rem; border: 1px solid rgba(255,255,255,0.05); border-top: none; border-radius: 0 0 16px 16px; background: rgba(0,0,0,0.2);">
+            <tr id="details-${e.id}" class="hidden">
+                <td colspan="9" class="acc-details-cell" style="padding: 1rem 0;">
+                    <div id="details-content-${e.id}" style="width: 100%;">
                     </div>
                 </td>
             </tr>
