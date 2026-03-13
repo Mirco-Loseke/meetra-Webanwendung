@@ -1795,25 +1795,8 @@ window.toggleAccountingDetails = async function (id, btn) {
 
             const splitBadge = isFirstInGroup ? `<span style="margin-left:8px; font-size:0.65rem; color:var(--color-primary-green); background:rgba(16,185,129,0.1); padding:2px 6px; border-radius:4px; border:1px solid rgba(16,185,129,0.2);">Aufgeteilt</span>` : '';
 
-            // Styling für die Rahmen-Gruppierung
-            let groupStyles = '';
-            if (isSplitPart) {
-                groupStyles = `background: rgba(16,185,129,0.08); padding: 0.5rem 8px; margin: 0 -8px; border-left: 1px solid rgba(255,255,255,0.15); border-right: 1px solid rgba(255,255,255,0.15);`;
-                if (isFirstInGroup) {
-                    groupStyles += ` border-top: 1px solid rgba(255,255,255,0.15); border-top-left-radius: 6px; border-top-right-radius: 6px; padding-top: 0.75rem;`;
-                }
-                if (isLastInGroup) {
-                    groupStyles += ` border-bottom: 1px solid rgba(255,255,255,0.15); border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; padding-bottom: 0.75rem;`;
-                } else if (!isFirstInGroup && !isLastInGroup) {
-                    // Middle items optionally get a very faint separator
-                    groupStyles += ` border-bottom: 1px solid rgba(255,255,255,0.05);`;
-                }
-            } else {
-               groupStyles = `border-bottom: 1px solid rgba(255,255,255,0.02);`;
-            }
-
             itemsHtml += `
-                <div class="acc-details-row" style="${groupStyles}">
+                <div class="acc-details-row">
                     <div data-label="Bezeichnung" style="font-weight: 600; color: #fff; display: flex; align-items: center;">
                         ${isFirstInGroup ? `<svg style="margin-right:6px; color:rgba(255,255,255,0.4);" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>` : (isSplitPart ? `<div style="width: 18px;"></div>` : '')}
                         ${item.description} ${splitBadge}
