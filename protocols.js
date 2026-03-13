@@ -1578,7 +1578,7 @@
                 }
 
                 return `
-                    <tr style="cursor: pointer; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: inset 7px 0 0 0 ${badgeColor}, 0 0 0 2px ${badgeColor}66, 0 10px 30px rgba(0,0,0,0.4); border-radius: 16px; overflow: hidden;" onclick="${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')">
+                    <tr style="cursor: pointer; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: inset 5px 0 0 0 ${badgeColor}, 0 -2px 0 0 ${badgeColor}66, 2px 0 0 0 ${badgeColor}66, 0 2px 0 0 ${badgeColor}66, 0 10px 30px rgba(0,0,0,0.4); border-radius: 16px; overflow: hidden;" onclick="${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')">
                         <td data-label="Typ">
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: ${badgeColor}22; color: ${badgeColor};">
