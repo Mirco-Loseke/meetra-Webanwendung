@@ -5615,75 +5615,38 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
 }
 
 /* Responsive Table Layouts (Bestellungen & Buchhaltung) */
-@media (max-width: 1024px) {
+.table-responsive-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 2rem;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.data-table, 
+#procurement-table,
+.task-table {
+    min-width: 900px; /* Ensure table doesn't squish on mobile */
+    table-layout: fixed;
+    width: 100%;
+}
+
+@media (max-width: 768px) {
     .data-table, 
     #procurement-table,
     .task-table {
-        display: block !important;
-        width: 100% !important;
-        margin-bottom: 2rem;
+        min-width: 1100px; /* Even more room on very small screens */
     }
-    .data-table thead, 
-    #procurement-table thead,
-    .task-table thead {
-        display: none !important;
-    }
-    .data-table tbody, 
-    #procurement-table tbody,
-    .task-table tbody {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 16px !important;
-    }
-    .data-table tr, 
-    #procurement-table tr,
-    .task-table tr {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        align-items: center !important;
-        background: rgba(255, 255, 255, 0.02) !important;
-        border-radius: 16px !important;
-        padding: 16px !important;
-        border: 1px solid rgba(255,255,255,0.05) !important;
-        gap: 12px !important;
-    }
-    .data-table td, 
-    #procurement-table td,
-    .task-table td {
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: center !important;
-        flex: 1 1 min(100%, 160px) !important; /* equal width, wrapping if <160px available */
-        min-width: 140px !important;
-        border: none !important;
-        padding: 4px 8px !important;
-        text-align: left !important;
-        width: auto !important;
-    }
-    
-    /* The actions columns usually should take full width to center or align right */
-    .data-table td:last-child, 
-    #procurement-table td:last-child,
-    .task-table td:last-child {
-        flex: 1 1 100% !important;
-        flex-direction: row !important;
-        align-items: center !important; 
-        justify-content: flex-end !important;
-        border-top: 1px dashed rgba(255,255,255,0.1) !important;
-        padding-top: 12px !important;
-        margin-top: 4px !important;
-    }
-    
-    /* Make sure specific width overrides don't break flex */
-    #procurement-table th:first-child, #procurement-table td:first-child,
-    #procurement-table th:nth-child(2), #procurement-table td:nth-child(2),
-    #procurement-table th:nth-child(3), #procurement-table td:nth-child(3),
-    #procurement-table th:nth-child(5), #procurement-table td:nth-child(5),
-    #procurement-table th:nth-child(6), #procurement-table td:nth-child(6),
-    #procurement-table th:nth-child(7), #procurement-table td:nth-child(7) {
-        width: auto !important;
-        padding-right: 8px !important;
-        padding-left: 8px !important;
-    }
+}
+
+/* Base minimum widths for important columns to prevent wrapping */
+#procurement-table td:nth-child(4) div span:first-child { /* Title */
+    white-space: nowrap;
+}
+
+#procurement-table td:nth-child(3) div { /* Machine */
+    white-space: nowrap;
 }
 

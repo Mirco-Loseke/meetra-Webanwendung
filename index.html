@@ -347,22 +347,24 @@
 
                     <!-- Procurement List -->
                     <div class="glass-card" style="padding: 0; overflow: hidden;">
-                        <table class="task-table" id="procurement-table" style="table-layout: fixed; width: 100%;">
-                            <thead>
-                                <tr>
-                                    <th style="width: 12%;">Status</th>
-                                    <th style="width: 14%;">Kategorie</th>
-                                    <th style="width: 18%;">Maschine</th>
-                                    <th style="width: 24%;">Titel</th>
-                                    <th style="width: 14%;">Ersteller</th>
-                                    <th style="width: 10%;">Datum</th>
-                                    <th style="width: 8%;">Aktionen</th>
-                                </tr>
-                            </thead>
-                            <tbody id="procurement-list">
-                                <!-- Populated by JS -->
-                            </tbody>
-                        </table>
+                        <div class="table-responsive-wrapper">
+                            <table class="task-table" id="procurement-table" style="table-layout: fixed; width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 120px;">Status</th>
+                                        <th style="width: 150px;">Kategorie</th>
+                                        <th style="width: 250px;">Maschine</th>
+                                        <th style="width: 300px;">Titel</th>
+                                        <th style="width: 150px;">Ersteller</th>
+                                        <th style="width: 120px;">Datum</th>
+                                        <th style="width: 100px;">Aktionen</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="procurement-list">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
                         <div id="procurement-empty-state" class="empty-state hidden"
                             style="padding: 3rem; text-align: center;">
                             <p style="opacity: 0.6;">Keine Bestellungen gefunden.</p>

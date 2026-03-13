@@ -278,21 +278,22 @@ window.renderAccounting = function () {
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                     ${monthName}
                 </h3>
-                <table class="data-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
-                    <thead>
-                        <tr style="text-align: left; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">
-                            <th style="padding: 12px; width: 28px;"></th>
-                            <th style="padding: 12px; width: 60px;">Blt.</th>
-                            <th style="padding: 12px; width: 155px;">Nr.</th>
-                            <th style="padding: 12px; width: 140px;">Datum</th>
-                            <th style="padding: 12px;">${currentAccountingType === 'incoming' ? 'Lieferant' : 'Kunde'}</th>
-                            <th style="padding: 12px; width: 110px;">Netto</th>
-                            <th style="padding: 12px; width: 55px;">MwSt.</th>
-                            <th style="padding: 12px; width: 150px;">Brutto</th>
-                            <th style="padding: 12px; width: 85px; text-align: center;">Aktion</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                <div class="table-responsive-wrapper">
+                    <table class="data-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+                        <thead>
+                            <tr style="text-align: left; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">
+                                <th style="padding: 12px; width: 40px;"></th>
+                                <th style="padding: 12px; width: 60px;">Blt.</th>
+                                <th style="padding: 12px; width: 160px;">Nr.</th>
+                                <th style="padding: 12px; width: 140px;">Datum</th>
+                                <th style="padding: 12px; width: 250px;">${currentAccountingType === 'incoming' ? 'Lieferant' : 'Kunde'}</th>
+                                <th style="padding: 12px; width: 110px;">Netto</th>
+                                <th style="padding: 12px; width: 55px;">MwSt.</th>
+                                <th style="padding: 12px; width: 150px;">Brutto</th>
+                                <th style="padding: 12px; width: 120px; text-align: center;">Aktion</th>
+                            </tr>
+                        </thead>
+                        <tbody>
                         ${grouped[monthName].map(e => `
                             <tr style="border-top: 1px solid rgba(255,255,255,0.03); transition: background 0.2s;" class="accounting-main-row" id="row-${e.id}">
                                 <td style="padding: 12px; text-align: center; cursor: pointer; color: var(--color-primary-green);" onclick="window.toggleAccountingDetails('${e.id}', this)">
