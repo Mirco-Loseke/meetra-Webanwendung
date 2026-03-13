@@ -5820,6 +5820,7 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     /* Prevent action buttons from stretching too much */
     .task-table td[data-label="Aktionen"] {
         justify-content: flex-end;
+    }
 }
 
 /* Global Status Frames for Accounting */
