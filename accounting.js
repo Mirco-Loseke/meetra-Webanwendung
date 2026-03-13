@@ -353,16 +353,14 @@ window.renderAccounting = function () {
                     </div>
                 </td>
             </tr>
+                </td>
+            </tr>
             <tr id="details-${e.id}" class="hidden" style="background: rgba(255,255,255,0.01);">
-                                <td colspan="9" style="padding: 0 1.5rem 1.5rem 3rem;">
-                                    <div id="details-content-${e.id}" style="padding: 1.5rem; border: 1px solid rgba(255,255,255,0.05); border-top: none; border-radius: 0 0 16px 16px; background: rgba(0,0,0,0.2);">
-                                        <div style="color: rgba(255,255,255,0.3); font-size: 0.85rem; display: flex; align-items: center; gap: 10px;">
-                                            <div class="spinner-small"></div>
-                                            Lade Details...
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
+                <td colspan="9" class="acc-details-cell" style="padding: 0 1.5rem 1.5rem 3rem;">
+                    <div id="details-content-${e.id}" style="padding: 1.5rem; border: 1px solid rgba(255,255,255,0.05); border-top: none; border-radius: 0 0 16px 16px; background: rgba(0,0,0,0.2);">
+                    </div>
+                </td>
+            </tr>
         `).join('');
     });
 
@@ -1679,8 +1677,11 @@ window.updateMachineEvaluation = async function () {
 };
 
 window.toggleAccountingDetails = async function (id, btn) {
-    // Prevent event bubbling to parent tr which might also have an onclick
-    if (window.event) window.event.stopPropagation();
+    // Prevent event bubbling
+    if (window.event) {
+        window.event.preventDefault();
+        window.event.stopPropagation();
+    }
     
     const detailsRow = document.getElementById(`details-${id}`);
     const mainRow = document.getElementById(`row-${id}`);
@@ -1703,6 +1704,8 @@ window.toggleAccountingDetails = async function (id, btn) {
 
     // Lazy Load
     try {
+        content.innerHTML = '<div style="color: rgba(255,255,255,0.3); font-size: 0.85rem; display: flex; align-items: center; gap: 10px;"><div class="spinner-small"></div>Lade Details...</div>';
+        
         const { data: items, error } = await window.supabaseClient
             .from('accounting_items')
             .select('*')

@@ -5753,7 +5753,7 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         padding: 0.5rem;
     }
 
-    .task-table tr, #procurement-table tr, .data-table tr {
+    .task-table tr:not(.hidden), #procurement-table tr:not(.hidden), .data-table tr:not(.hidden) {
         display: flex !important;
         flex-direction: column;
         background: rgba(255, 255, 255, 0.05) !important;
@@ -5905,7 +5905,6 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     display: none !important; 
 }
 
-/* Tablet specific refinements for accounting details */
 @media (min-width: 769px) and (max-width: 1024px) {
     .acc-details-row {
         grid-template-columns: 1.5fr 60px 60px 90px 90px 1.2fr 40px;
@@ -5915,6 +5914,18 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     .acc-details-grid {
         grid-template-columns: 1.5fr 60px 60px 90px 90px 1.2fr 40px;
         font-size: 0.7rem;
+    }
+    
+    /* Center details container on tablet */
+    .view-content-layout {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .table-responsive-wrapper {
+        width: 100%;
+        display: flex;
+        justify-content: center;
     }
 }
 
