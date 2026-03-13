@@ -1394,8 +1394,8 @@
         try {
             // Fetch both types
             const [intakeRes, acceptanceRes] = await Promise.all([
-                window.supabaseClient.from('intake_protocols').select('*, machines(manufacturer, name, type, serial, serial_number, year, image_url)').order('created_at', { ascending: false }),
-                window.supabaseClient.from('acceptance_protocols').select('*, machines(manufacturer, name, type, serial, serial_number, year, image_url)').order('created_at', { ascending: false })
+                window.supabaseClient.from('intake_protocols').select('*, machines(manufacturer, name, serial, serial_number, year, image_url)').order('created_at', { ascending: false }),
+                window.supabaseClient.from('acceptance_protocols').select('*, machines(manufacturer, name, serial, serial_number, year, image_url)').order('created_at', { ascending: false })
             ]);
 
             if (intakeRes.error) throw intakeRes.error;
