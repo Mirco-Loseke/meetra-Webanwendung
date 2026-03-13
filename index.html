@@ -6493,19 +6493,19 @@
 
                             return `
                                 <tr onclick="openEditServicebericht(${e.id})" style="cursor: pointer; background: ${catColor}10;">
-                                    <td style="color: rgba(255,255,255,0.6); box-shadow: inset 4px 0 0 0 ${catColor}; border-top-left-radius: 12px; border-bottom-left-radius: 12px;">${dateStr}</td>
-                                    <td>
+                                    <td data-label="Datum" style="color: rgba(255,255,255,0.6); box-shadow: inset 4px 0 0 0 ${catColor}; border-top-left-radius: 12px; border-bottom-left-radius: 12px;">${dateStr}</td>
+                                    <td data-label="Kategorie">
                                         <div style="background: ${catColor}20; color: ${catColor}; border: 1px solid ${catColor}40; padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; display: inline-block;">
                                             ${catName}
                                         </div>
                                     </td>
-                                    <td style="color: var(--color-primary-green); font-weight: 600;">
+                                    <td data-label="Maschine" style="color: var(--color-primary-green); font-weight: 600;">
                                         ${machine ? [machine.manufacturer, machine.name, machine.serial_number || machine.serial ? `#${machine.serial_number || machine.serial}` : null, machine.year ? `(${machine.year})` : null].filter(Boolean).join(' ') : '-'}
                                     </td>
-                                    <td style="color: rgba(255,255,255,0.5); font-size: 0.9rem;">
+                                    <td data-label="Beschreibung" style="color: rgba(255,255,255,0.5); font-size: 0.9rem;">
                                         ${e.description.substring(0, 80)}${e.description.length > 80 ? '...' : ''}
                                     </td>
-                                    <td>
+                                    <td data-label="Aktionen">
                                         <div style="display: flex; gap: 8px;">
                                             <button class="btn-icon-soft edit" onclick="event.stopPropagation(); openEditServicebericht(${e.id})" title="Bearbeiten">
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">

@@ -5768,13 +5768,15 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
 
     .task-table td, #procurement-table td, .data-table td {
         display: flex !important;
-        align-items: center;
+        align-items: flex-start !important; /* Changed from center to handle multi-line content better */
         justify-content: space-between;
-        padding: 0 !important;
+        padding: 0.4rem 0 !important; /* Added some vertical padding between rows in card */
         background: transparent !important;
         border: none !important;
         width: 100% !important;
         white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
     }
 
     /* Add labels for data on mobile */
@@ -5784,6 +5786,10 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         font-size: 0.75rem;
         text-transform: uppercase;
         color: rgba(255, 255, 255, 0.4);
+        min-width: 100px; /* Ensure labels have enough space */
+        padding-right: 12px;
+        flex-shrink: 0;
+        text-align: left;
     }
 
     /* Special handling for status & actions - removed flex-start to prevent overlap with labels */
@@ -5808,7 +5814,12 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     
     .glass-card {
         border-radius: 16px;
-        padding: 1rem !important;
+        padding: 0.75rem !important;
+    }
+
+    /* Prevent action buttons from stretching too much */
+    .task-table td[data-label="Aktionen"] {
+        justify-content: flex-end;
     }
 }
 

@@ -1569,7 +1569,7 @@
 
                 return `
                     <tr style="cursor: pointer;" onclick="${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')">
-                        <td>
+                        <td data-label="Typ">
                             <div style="display: flex; align-items: center; gap: 8px;">
                                 <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: rgba(255,255,255,0.05); color: #60a5fa;">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1579,19 +1579,19 @@
                                 <span style="font-weight: 600; font-size: 0.95rem;">${typeLabel}</span>
                             </div>
                         </td>
-                        <td>${p.machines ? p.machines.name : 'Unbekannt'}</td>
-                        <td>
+                        <td data-label="Maschine">${p.machines ? p.machines.name : 'Unbekannt'}</td>
+                        <td data-label="Titel">
                             <span style="font-weight: 600;">${p.title}</span><br>
                             <span style="font-size: 0.8rem; color: rgba(255,255,255,0.4);">${isAcceptance && p.work_performed ? p.work_performed.substring(0, 40) + '...' : ''}</span>
                         </td>
-                        <td>
+                        <td data-label="Datum">
                             <div style="font-weight: 600;">${dateStr}</div>
                             <div style="font-size: 0.8rem; color: rgba(255,255,255,0.4);">${timeStr} Uhr</div>
                         </td>
-                        <td>
+                        <td data-label="Status">
                             <span class="status-badge ${statusClass}">${statusLabel}</span>
                         </td>
-                        <td>
+                        <td data-label="Aktionen">
                             <div style="display: flex; gap: 0.5rem;">
                                 <button class="btn-icon-soft" title="Öffnen" onclick="event.stopPropagation(); ${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
