@@ -262,7 +262,7 @@ window.renderAccounting = function () {
     });
     let html = `
         <div class="table-responsive-wrapper">
-            <table class="data-table" style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+            <table class="data-table" style="width: 100%; border-collapse: collapse; table-layout: auto;">
                 <thead>
                     <tr style="text-align: left; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">
                         <th style="padding: 12px; width: 40px;"></th>
@@ -1713,7 +1713,7 @@ window.toggleAccountingDetails = async function (id, btn) {
         }
 
         let itemsHtml = `
-            <div style="display: grid; grid-template-columns: 2fr 80px 80px 100px 100px 1.5fr 40px; gap: 1rem; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+            <div class="acc-details-grid">
                 <div>Bezeichnung</div>
                 <div>Menge</div>
                 <div>Einh.</div>
@@ -1789,17 +1789,17 @@ window.toggleAccountingDetails = async function (id, btn) {
             }
 
             itemsHtml += `
-                <div style="display: grid; grid-template-columns: 2fr 80px 80px 100px 100px 1.5fr 40px; gap: 1rem; align-items: center; padding: 0.5rem 0; font-size: 0.85rem; ${groupStyles}">
-                    <div style="font-weight: 600; color: #fff; display: flex; align-items: center;">
+                <div class="acc-details-row" style="${groupStyles}">
+                    <div data-label="Bezeichnung" style="font-weight: 600; color: #fff; display: flex; align-items: center;">
                         ${isFirstInGroup ? `<svg style="margin-right:6px; color:rgba(255,255,255,0.4);" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>` : (isSplitPart ? `<div style="width: 18px;"></div>` : '')}
                         ${item.description} ${splitBadge}
                     </div>
-                    <div style="color: rgba(255,255,255,0.6); font-weight: 700;">${qty}</div>
-                    <div style="color: rgba(255,255,255,0.4);">${item.unit || '-'}</div>
-                    <div style="text-align: right; font-weight: 700;">${window.formatCurrency(item.price_net)}</div>
-                    <div style="text-align: right; font-weight: 800; color: #fff;">${window.formatCurrency((parseFloat(item.price_net) || 0) * qty)}</div>
-                    <div style="padding-left: 1rem; color: var(--color-primary-green); font-weight: 600; font-size: 0.8rem; line-height: 1.2;">${assignmentText}</div>
-                    <div style="text-align: center;">
+                    <div data-label="Menge" style="color: rgba(255,255,255,0.6); font-weight: 700;">${qty}</div>
+                    <div data-label="Einheit" style="color: rgba(255,255,255,0.4);">${item.unit || '-'}</div>
+                    <div data-label="Preis" style="text-align: right; font-weight: 700;">${window.formatCurrency(item.price_net)}</div>
+                    <div data-label="Gesamt" style="text-align: right; font-weight: 800; color: #fff;">${window.formatCurrency((parseFloat(item.price_net) || 0) * qty)}</div>
+                    <div data-label="Zuordnung" style="padding-left: 1rem; color: var(--color-primary-green); font-weight: 600; font-size: 0.8rem; line-height: 1.2;">${assignmentText}</div>
+                    <div data-label="Split" style="text-align: center;">
                         ${isFirstInGroup ? `
                         <button onclick='window.revertSplit(${JSON.stringify(item).replace(/'/g, "&#39;")})' title="Aufteilung rückgängig machen"
                             style="width:28px; height:28px; border-radius:8px; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s; margin: auto;"

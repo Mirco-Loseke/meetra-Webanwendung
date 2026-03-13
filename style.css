@@ -5786,9 +5786,8 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         color: rgba(255, 255, 255, 0.4);
     }
 
-    /* Special handling for status & actions */
+    /* Special handling for status & actions - removed flex-start to prevent overlap with labels */
     #procurement-table td:first-child, .task-table td:first-child {
-        justify-content: flex-start;
         border-left: none !important;
     }
 
@@ -5843,5 +5842,60 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     font-weight: 800;
     font-family: 'Outfit', sans-serif;
     font-size: 1.1rem;
+}
+
+/* Responsive Accounting Details Items */
+.acc-details-grid {
+    display: grid;
+    grid-template-columns: 2fr 80px 80px 100px 100px 1.5fr 40px;
+    gap: 1rem;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.acc-details-row {
+    display: grid;
+    grid-template-columns: 2fr 80px 80px 100px 100px 1.5fr 40px;
+    gap: 1rem;
+    align-items: center;
+    padding: 0.5rem 0;
+    font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+    .acc-details-grid {
+        display: none !important; /* Hide header on mobile */
+    }
+
+    .acc-details-row {
+        display: flex !important;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 1rem !important;
+        background: rgba(255, 255, 255, 0.03);
+        border-radius: 12px;
+        margin-bottom: 0.75rem;
+        border-left: 2px solid var(--color-primary-green) !important;
+    }
+
+    .acc-details-row > div {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        text-align: left !important;
+    }
+
+    .acc-details-row > div::before {
+        content: attr(data-label);
+        font-weight: 700;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.3);
+    }
 }
 
