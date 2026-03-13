@@ -1394,8 +1394,8 @@
         try {
             // Fetch both types
             const [intakeRes, acceptanceRes] = await Promise.all([
-                window.supabaseClient.from('intake_protocols').select('*, machines(manufacturer, name, serial, serial_number, year, image_url)').order('created_at', { ascending: false }),
-                window.supabaseClient.from('acceptance_protocols').select('*, machines(manufacturer, name, serial, serial_number, year, image_url)').order('created_at', { ascending: false })
+                window.supabaseClient.from('intake_protocols').select('*, machines(manufacturer, name, serial, year, image_url)').order('created_at', { ascending: false }),
+                window.supabaseClient.from('acceptance_protocols').select('*, machines(manufacturer, name, serial, year, image_url)').order('created_at', { ascending: false })
             ]);
 
             if (intakeRes.error) throw intakeRes.error;
@@ -1564,15 +1564,14 @@
                     ? '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M9 15l2 2 4-4"></path>'
                     : '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline>';
 
-                // Build full machine name: manufacturer + name + type + serial + year
+                // Build full machine name: manufacturer + name + serial + year
                 let machineName = 'Unbekannt';
                 if (p.machines) {
                     const m = p.machines;
                     const parts = [
                         m.manufacturer,
                         m.name,
-                        m.type,
-                        m.serial_number || m.serial ? `#${m.serial_number || m.serial}` : null,
+                        m.serial ? `#${m.serial}` : null,
                         m.year ? `(${m.year})` : null
                     ].filter(Boolean);
                     machineName = parts.length > 0 ? parts.join(' ') : (m.name || 'Unbekannt');
