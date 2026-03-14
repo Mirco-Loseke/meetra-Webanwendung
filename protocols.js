@@ -1527,11 +1527,15 @@
                                 </div>
                             </div>
                             
-                            <!-- Third Row: Main Title -->
-                            <div style="min-width: 0;">
+                            <!-- Third Row: Main Title: Machine Name (Manufacturer + Type) -->
+                            <div style="min-width: 0; text-align: left; width: 100%;">
                                 <h2 style="margin: 0; font-size: clamp(0.95rem, 3.2vw, 1.6rem); color: var(--color-primary-green); font-weight: 900; line-height: 1.2; font-family: 'Outfit', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                     ${p.title}
                                 </h2>
+                                ${p.machines ? `
+                                <div style="color: var(--color-primary-green); font-size: 0.85rem; font-weight: 700; margin-top: 2px; opacity: 0.9;">
+                                    ${[p.machines.serial ? `#${p.machines.serial}` : null, p.machines.year ? `(${p.machines.year})` : null].filter(Boolean).join(' ')}
+                                </div>` : ''}
                             </div>
                             
                             <!-- Action buttons -->
@@ -1564,33 +1568,12 @@
                     ? '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M9 15l2 2 4-4"></path>'
                     : '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline>';
 
-                // Build full machine name: manufacturer + name + serial + year
-                let machineName = 'Unbekannt';
-                if (p.machines) {
-                    const m = p.machines;
-                    const parts = [
-                        m.manufacturer,
-                        m.name,
-                        m.serial ? `#${m.serial}` : null,
-                        m.year ? `(${m.year})` : null
-                    ].filter(Boolean);
-                    machineName = parts.length > 0 ? parts.join(' ') : (m.name || 'Unbekannt');
-                }
-
-                return `
-                    <tr style="cursor: pointer; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: inset 5px 0 0 0 ${badgeColor}, inset 0 1.5px 0 0 ${badgeColor}66, inset -1.5px 0 0 0 ${badgeColor}66, inset 0 -1.5px 0 0 ${badgeColor}66, 0 10px 30px rgba(0,0,0,0.4); border-radius: 16px; overflow: hidden;" onclick="${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')">
-                        <td data-label="Typ">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: ${badgeColor}22; color: ${badgeColor};">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        ${iconPath}
-                                    </svg>
-                                </div>
-                                <span style="font-weight: 600; font-size: 0.95rem;">${typeLabel}</span>
-                            </div>
-                        </td>
-                        <td data-label="Maschine" style="color: var(--color-primary-green); font-weight: 700; font-size: 0.98rem;">
-                            ${machineName}
+                        <td data-label="Maschine" style="color: var(--color-primary-green); font-weight: 700; font-size: 0.98rem; line-height: 1.3;">
+                            ${p.machines ? `
+                                <div>${[p.machines.manufacturer, p.machines.name].filter(Boolean).join(' ')}</div>
+                                <div style="font-size: 0.8rem; opacity: 0.8;">
+                                    ${[p.machines.serial ? `#${p.machines.serial}` : null, p.machines.year ? `(${p.machines.year})` : null].filter(Boolean).join(' ')}
+                                </div>` : 'Unbekannt'}
                         </td>
                         <td data-label="Datum">
                             <div style="font-weight: 600;">${dateStr}</div>

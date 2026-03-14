@@ -6395,3 +6395,30 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     }
 }
 
+
+/* Responsive Hiding for Tasks, Service, and Protocols */
+@media (max-width: 1024px) {
+    /* Hide List View Containers */
+    #tasks-list,
+    #service-entries-list-view,
+    #protocol-list-view {
+        display: none !important;
+    }
+
+    /* Hide List Switcher Buttons for Tasks (Tab remains for Board/Machines) */
+    #btn-view-list {
+        display: none !important;
+    }
+
+    /* Hide Complete View Switcher for Service & Protocols as requested */
+    #service .calendar-view-tabs,
+    #protocols .calendar-view-tabs {
+        display: none !important;
+    }
+
+    /* Ensure Board View is always centered and visible when switchers are gone */
+    #service-entries-board-view,
+    #protocol-board-view {
+        display: block !important;
+    }
+}
