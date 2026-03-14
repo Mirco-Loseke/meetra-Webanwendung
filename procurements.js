@@ -3,6 +3,13 @@
 let allProcurements = [];
 let currentProcurement = null;
 
+const statusMap = {
+    'new': { label: 'Offen', class: 'status-new', color: '#ef4444', step: 0 },
+    'in_progress': { label: 'In Bearbeitung', class: 'status-in-progress', color: '#3b82f6', step: 1 },
+    'ordered': { label: 'Bestellt', class: 'status-ordered', color: '#f59e0b', step: 2 },
+    'received': { label: 'Erhalten', class: 'status-received', color: '#10b981', step: 3 }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     // Initial fetch if the view is active or on load
     if (window.location.hash === '#procurements') {
@@ -35,201 +42,187 @@ async function fetchProcurements() {
     }
 }
 
+window.currentProcurementView = 'offen'; // 'offen' or 'erledigt'
+
 function renderProcurements(procurements) {
-    const listContainer = document.getElementById('procurement-list');
+    const boardContainer = document.getElementById('procurement-cards-unified');
     const emptyState = document.getElementById('procurement-empty-state');
+    
+    if (boardContainer) boardContainer.innerHTML = '';
 
-    if (!listContainer) return;
-
-    listContainer.innerHTML = '';
-
-    if (procurements.length === 0) {
-        emptyState.classList.remove('hidden');
-        return;
+    // Filter by view ('offen' vs 'erledigt')
+    let filtered = procurements;
+    if (window.currentProcurementView === 'offen') {
+        filtered = filtered.filter(p => p.status !== 'received');
     } else {
-        emptyState.classList.add('hidden');
+        filtered = filtered.filter(p => p.status === 'received');
     }
 
-    procurements.forEach(proc => {
-        // Find creator name
-        let creatorName = 'Unbekannt';
-        let color = 'var(--primary-red)';
-        let initials = '??';
+    if (!filtered || filtered.length === 0) {
+        if (emptyState) emptyState.classList.remove('hidden');
+        if (boardContainer) boardContainer.style.display = 'none';
+        return;
+    } else {
+        if (emptyState) emptyState.classList.add('hidden');
+        if (boardContainer) boardContainer.style.display = 'block';
+    }
 
-        if (window.userList) {
-            const creator = window.userList.find(u => u.id === proc.created_by || u.id === String(proc.created_by));
-            if (creator) {
-                creatorName = creator.name;
-                color = creator.color || color;
-                initials = creator.initials || creatorName.substring(0, 2).toUpperCase();
-            }
-        }
+    if (window.currentProcurementView === 'erledigt') {
+        const grid = document.createElement('div');
+        grid.className = 'procurement-unified-grid';
+        filtered.forEach(proc => {
+            grid.appendChild(renderProcurementCard(proc));
+        });
+        boardContainer.appendChild(grid);
+    } else {
+        // Grouped 'Offen' view
+        const groups = [
+            { id: 'new', label: 'Offen' },
+            { id: 'in_progress', label: 'In Bearbeitung' },
+            { id: 'ordered', label: 'Bestellt' }
+        ];
 
-        // Status mapping
-        const statusMap = {
-            'new': { label: 'Neu', class: 'status-new', iconColor: '#ef4444' },
-            'ordered': { label: 'Bestellt', class: 'status-ordered', iconColor: '#f59e0b' },
-            'received': { label: 'Erhalten', class: 'status-received', iconColor: '#10b981' }
-        };
-        const status = statusMap[proc.status] || statusMap['new'];
-
-        const tr = document.createElement('tr');
-        const accentColor = status.iconColor;
-        
-        tr.style.cursor = 'pointer';
-        tr.style.background = 'rgba(110, 122, 140, 0.45)';
-        tr.style.backdropFilter = 'blur(24px)';
-        tr.style.webkitBackdropFilter = 'blur(24px)';
-        tr.style.boxShadow = `inset 5px 0 0 0 ${accentColor}, inset 0 1.5px 0 0 ${accentColor}66, inset -1.5px 0 0 0 ${accentColor}66, inset 0 -1.5px 0 0 ${accentColor}66, 0 10px 30px rgba(0,0,0,0.4)`;
-        tr.style.borderRadius = '16px';
-        tr.style.overflow = 'hidden';
-        tr.onclick = () => openProcurementModal(proc.id);
-
-        tr.innerHTML = `
-            <td data-label="Status" onclick="event.stopPropagation(); showStatusUpdateMenu('${proc.id}', this)" style="cursor:pointer;">
-                <span class="status-badge" style="background: ${accentColor}25; color: #fff; border: 1px solid ${accentColor}60; padding: 6px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 800; display: inline-flex; align-items: center; gap: 8px;">
-                    <span style="width: 10px; height: 10px; border-radius: 50%; background: ${accentColor}; box-shadow: 0 0 12px ${accentColor};"></span>
-                    ${status.label.toUpperCase()}
-                </span>
-            </td>
-            <td data-label="Kategorie">${getCategoryBadge(proc.category)}</td>
-            <td data-label="Maschine">
-                <div style="font-size: 0.98rem; font-weight: 700; color: var(--color-primary-green); line-height: 1.2;">
-                    ${(() => {
-                        if (!proc.location_ref || !window.machineList) return '-';
-                        const machine = window.machineList.find(m => String(m.id) === String(proc.location_ref));
-                        if (!machine) return proc.location_ref;
-                        let parts = [
-                            machine.manufacturer,
-                            machine.name,
-                            machine.type,
-                            machine.serial ? '#' + machine.serial : null,
-                            machine.year ? '(' + machine.year + ')' : null
-                        ].filter(Boolean);
-                        return parts.join(' ');
-                    })()}
-                </div>
-            </td>
-            <td data-label="Titel">
-                <div style="display: flex; flex-direction: column; gap: 4px;">
-                    <span style="font-weight: 700; font-size: 1.05rem;">${proc.title}</span>
-                    <span style="font-size: 0.85rem; color: rgba(255,255,255,0.6);">${proc.description ? proc.description.substring(0, 60) + (proc.description.length > 60 ? '...' : '') : ''}</span>
-                </div>
-            </td>
-            <td data-label="Ersteller">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <div class="user-avatar-small" style="width: 28px; height: 28px; border-radius: 50%; background-color: ${color}; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; color: white; border: 1px solid rgba(255,255,255,0.2);">
-                        ${initials}
-                    </div>
-                    <span style="font-weight: 500;">${creatorName}</span>
-                </div>
-            </td>
-            <td data-label="Datum" style="color: rgba(255,255,255,0.7); font-size: 0.9rem;">${new Date(proc.created_at).toLocaleDateString('de-DE')}</td>
-            <td data-label="Aktionen" onclick="event.stopPropagation()">
-                <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
-                    <button onclick="event.stopPropagation(); openProcurementModal('${proc.id}')" title="Bearbeiten"
-                        style="width:36px; height:36px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
-                        onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                            <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                        </svg>
-                    </button>
-                    <button onclick="event.stopPropagation(); deleteProcurement('${proc.id}')" title="Löschen"
-                        style="width:36px; height:36px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
-                        onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="3 6 5 6 21 6"></polyline>
-                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                        </svg>
-                    </button>
-                </div>
-            </td>
-        `;
-
-        listContainer.appendChild(tr);
-    });
-}
-
-function showStatusUpdateMenu(procId, element) {
-    const proc = allProcurements.find(p => p.id === procId);
-    if (!proc) return;
-
-    // Remove any existing menu
-    const existingMenu = document.querySelector('.status-update-menu');
-    if (existingMenu) existingMenu.remove();
-
-    // Create status update menu
-    const menu = document.createElement('div');
-    menu.className = 'status-update-menu';
-    menu.style.cssText = `
-        position: absolute;
-        background: rgba(15, 23, 42, 0.98);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        border-radius: 12px;
-        padding: 8px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-        z-index: 10000;
-        backdrop-filter: blur(20px);
-        min-width: 140px;
-    `;
-
-    const statuses = [
-        { value: 'new', label: '🔴 Neu' },
-        { value: 'ordered', label: '🟠 Bestellt' },
-        { value: 'received', label: '🟢 Erhalten' }
-    ];
-
-    statuses.forEach(status => {
-        const btn = document.createElement('button');
-        btn.textContent = status.label;
-        btn.style.cssText = `
-            display: block;
-            width: 100%;
-            padding: 10px 14px;
-            margin: 2px 0;
-            background: ${proc.status === status.value ? 'rgba(255, 255, 255, 0.1)' : 'transparent'};
-            border: none;
-            border-radius: 8px;
-            color: white;
-            cursor: pointer;
-            text-align: left;
-            font-size: 0.95rem;
-            font-weight: 600;
-            transition: all 0.2s;
-        `;
-        btn.onmouseover = () => btn.style.background = 'rgba(255, 255, 255, 0.15)';
-        btn.onmouseout = () => btn.style.background = proc.status === status.value ? 'rgba(255, 255, 255, 0.1)' : 'transparent';
-        btn.onclick = (e) => {
-            e.stopPropagation();
-            updateProcurementStatus(procId, status.value);
-            menu.remove();
-        };
-        menu.appendChild(btn);
-    });
-
-    // Position menu directly below the clicked element
-    const rect = element.getBoundingClientRect();
-    menu.style.position = 'fixed';
-    menu.style.left = `${rect.left}px`;
-    menu.style.top = `${rect.bottom + 6}px`;
-    // Ensure it doesn't go off-screen right
-    menu.style.minWidth = '160px';
-
-    document.body.appendChild(menu);
-
-    // Close menu when clicking outside
-    setTimeout(() => {
-        document.addEventListener('click', function closeMenu(e) {
-            if (!menu.contains(e.target)) {
-                menu.remove();
-                document.removeEventListener('click', closeMenu);
+        groups.forEach(group => {
+            const groupItems = filtered.filter(p => p.status === group.id);
+            if (groupItems.length > 0) {
+                const groupSection = document.createElement('div');
+                groupSection.className = 'procurement-status-group';
+                
+                groupSection.innerHTML = `
+                    <h2 class="procurement-group-title">
+                        ${group.label} 
+                        <span class="group-count">${groupItems.length}</span>
+                    </h2>
+                    <div class="procurement-unified-grid"></div>
+                `;
+                
+                const grid = groupSection.querySelector('.procurement-unified-grid');
+                groupItems.forEach(proc => {
+                    grid.appendChild(renderProcurementCard(proc));
+                });
+                
+                boardContainer.appendChild(groupSection);
             }
         });
-    }, 10);
+    }
 }
 
-async function updateProcurementStatus(id, newStatus) {
+function renderProcurementCard(proc) {
+    const status = statusMap[proc.status] || statusMap['new'];
+    const accentColor = status.color;
+    let creatorName = 'Unbekannt';
+    let userColor = 'var(--primary-red)';
+    let initials = '??';
+
+    if (window.userList) {
+        const creator = window.userList.find(u => u.id === proc.created_by || u.id === String(proc.created_by));
+        if (creator) {
+            creatorName = creator.name;
+            userColor = creator.color || userColor;
+            initials = creator.initials || creatorName.substring(0, 2).toUpperCase();
+        }
+    }
+
+    const card = document.createElement('div');
+    card.className = 'procurement-card glass-card';
+    card.style.borderColor = accentColor;
+    card.onclick = () => openProcurementModal(proc.id);
+
+    card.innerHTML = `
+        <div class="card-status-glow" style="background: ${accentColor};"></div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; position: relative; z-index: 2;">
+            <span style="font-size: 0.65rem; color: rgba(255,255,255,0.4); font-weight: 700; background: rgba(0,0,0,0.2); padding: 2px 8px; border-radius: 4px;">${proc.order_number}</span>
+            ${getCategoryBadge(proc.category)}
+        </div>
+        
+        <h4 class="procurement-card-title">${proc.title}</h4>
+        
+        <div style="margin-bottom: 24px; position: relative; z-index: 2;">
+            ${renderStatusStepper(proc.status, proc.id)}
+        </div>
+
+        <div class="detailed-machine-label" style="font-weight: 700; color: var(--color-primary-green); margin-bottom: 20px; position: relative; z-index: 2;">
+            ${getMachineLabel(proc.location_ref)}
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.05); position: relative; z-index: 2;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="user-avatar-small" style="width: 20px; height: 20px; border-radius: 50%; background-color: ${userColor}; border: 1.5px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 0.60rem; font-weight: 800; color: white;">
+                    ${initials}
+                </div>
+                <span style="font-size: 0.70rem; opacity: 0.8; font-weight: 500;">${creatorName}</span>
+            </div>
+            <div style="font-size: 0.70rem; color: white; opacity: 0.8; font-weight: 600;">${new Date(proc.created_at).toLocaleDateString('de-DE')}</div>
+        </div>
+    `;
+    return card;
+}
+
+function renderStatusStepper(currentStatus, procId, mini = false) {
+    const statuses = ['new', 'in_progress', 'ordered', 'received'];
+    const currentIndex = statuses.indexOf(currentStatus || 'new');
+    
+    let html = `<div class="status-stepper ${mini ? 'mini' : ''}" onclick="event.stopPropagation()">`;
+    
+    statuses.forEach((s, idx) => {
+        const isActive = idx <= currentIndex;
+        const isCurrent = idx === currentIndex;
+        const color = statusMap[s].color;
+        const label = statusMap[s].label;
+        
+        html += `
+            <div class="stepper-item ${isActive ? 'active' : ''} ${isCurrent ? 'current' : ''}" 
+                 onclick="window.updateProcurementStatus('${procId}', '${s}')">
+                <div class="step-circle" style="
+                    border-color: ${isActive ? '#10b981' : 'rgba(255,255,255,0.2)'};
+                    background: ${isCurrent ? '#10b981' : (isActive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(255,255,255,0.05)')};
+                ">
+                    ${isActive ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+                </div>
+                ${!mini ? `<span class="step-label">${label}</span>` : ''}
+            </div>
+            ${idx < statuses.length - 1 ? `<div class="step-line ${idx < currentIndex ? 'active' : ''}"></div>` : ''}
+        `;
+    });
+    
+    html += `</div>`;
+    return html;
+}
+
+function getMachineLabel(ref) {
+    if (!ref || !window.machineList) return '-';
+    const machine = window.machineList.find(m => String(m.id) === String(ref));
+    if (!machine) return ref;
+    
+    const parts = [
+        machine.manufacturer,
+        machine.name,
+        machine.type,
+        machine.serial ? '#' + machine.serial : null,
+        machine.year ? '(' + machine.year + ')' : null
+    ].filter(Boolean);
+    
+    return parts.join(' ');
+}
+
+window.switchProcurementView = function(view) {
+    window.currentProcurementView = view;
+    
+    const btnOffen = document.getElementById('btn-procurement-view-offen');
+    const btnErledigt = document.getElementById('btn-procurement-view-erledigt');
+
+    if (view === 'offen') {
+        btnOffen.classList.add('active');
+        btnErledigt.classList.remove('active');
+    } else {
+        btnOffen.classList.remove('active');
+        btnErledigt.classList.add('active');
+    }
+    
+    renderProcurements(allProcurements);
+};
+
+window.updateProcurementStatus = async function(id, newStatus) {
     try {
         const { error } = await window.supabaseClient
             .from('procurements')
@@ -342,12 +335,13 @@ window.openProcurementModal = async function (id = null) {
 
             // Handle status label restoration
             if (proc.status && statusLabel) {
-                const statusMap = {
-                    'new': '🔴 Neu',
+                const labelMap = {
+                    'new': '🔴 Aufgegeben',
+                    'in_progress': '🔵 In Bearbeitung',
                     'ordered': '🟠 Bestellt',
                     'received': '🟢 Erhalten'
                 };
-                statusLabel.textContent = statusMap[proc.status] || '🔴 Neu';
+                statusLabel.textContent = labelMap[proc.status] || '🔴 Aufgegeben';
                 document.getElementById('proc-status').value = proc.status;
             }
 
@@ -511,7 +505,7 @@ window.filterProcurements = function (status) {
     // Update Dropdown UI
     const labelMap = {
         'all': 'Alle',
-        'new': 'Neu',
+        'new': 'Aufgegeben',
         'in_progress': 'In Bearbeitung',
         'ordered': 'Bestellt',
         'received': 'Erhalten'

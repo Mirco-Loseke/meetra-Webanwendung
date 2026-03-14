@@ -915,7 +915,12 @@
                         <!-- Bottom Row: Empty (Left) / Filters & Add Button (Right) -->
                         <div class="view-header-row-bottom">
                             <div class="view-header-left">
-                                <!-- No tabs here -->
+                                <div class="calendar-view-tabs" style="margin-bottom: 0;">
+                                    <button class="calendar-tab-btn active" id="btn-procurement-view-offen"
+                                        onclick="window.switchProcurementView('offen')">Offen</button>
+                                    <button class="calendar-tab-btn" id="btn-procurement-view-erledigt"
+                                        onclick="window.switchProcurementView('erledigt')">Erledigt</button>
+                                </div>
                             </div>
                             <div class="view-header-right">
                                 <!-- Procurement Status Filter Dropdown -->
@@ -949,27 +954,12 @@
                         </div>
                     </div>
 
-                    <!-- Procurement List -->
-                    <div id="procurements-list-view">
-                        <div class="glass-card"
-                            style="padding: 0.75rem; background: transparent; border: none; box-shadow: none;">
-                            <table class="task-table" style="border-collapse: separate; border-spacing: 0 10px;">
-                                <thead>
-                                    <tr>
-                                        <th>Status</th>
-                                        <th>Kategorie</th>
-                                        <th style="min-width: 200px;">Maschine</th>
-                                        <th>Titel</th>
-                                        <th>Ersteller</th>
-                                        <th>Datum</th>
-                                        <th style="text-align: right;">Aktionen</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="procurement-list">
-                                    <!-- Populated by JS -->
-                                </tbody>
-                            </table>
+                    <!-- Procurement Board View (Offen/Erledigt) -->
+                    <div id="procurement-board-view" class="procurement-board-container">
+                        <div id="procurement-cards-unified" class="procurement-unified-grid">
+                            <!-- Cards will be populated by JS -->
                         </div>
+
                         <div id="procurement-empty-state" class="empty-state hidden"
                             style="padding: 3rem; text-align: center;">
                             <p style="opacity: 0.6;">Keine Bestellungen gefunden.</p>
@@ -1369,7 +1359,15 @@
                                         onclick="window.switchProtocolView('list')">Liste</button>
                                 </div>
                             </div>
-                            <div class="view-header-right">
+                            <div class="view-header-right" style="gap: 16px;">
+                                <button class="btn-add-bg" onclick="openProtocolModal()">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                    Protokoll anlegen
+                                </button>
                                 <!-- Filter Group -->
                                 <div class="filter-group-glass"
                                     style="display: flex; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 4px;">
@@ -8628,30 +8626,13 @@
                         </div>
 
                         <!-- Row 3: Menge | Status -->
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 16px;">
+                        <div style="display: grid; grid-template-columns: 1fr; gap: 18px; margin-bottom: 16px;">
                             <div class="form-group" style="margin-bottom: 0;">
                                 <label>Menge</label>
                                 <input type="number" id="proc-quantity" class="glass-input" value="1" min="1" required>
                             </div>
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label>Status</label>
-                                <div class="custom-filter-dropdown" id="proc-status-dropdown" style="width: 100%;">
-                                    <span class="filter-label" id="proc-status-label">🔴 Neu</span>
-                                    <input type="hidden" id="proc-status" value="new">
-                                    <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                                        stroke-linejoin="round">
-                                        <polyline points="6 9 12 15 18 9"></polyline>
-                                    </svg>
-                                    <div class="custom-filter-menu">
-                                        <ul class="dropdown-options" onclick="selectProcurementStatus(event)">
-                                            <li data-value="new">🔴 Neu</li>
-                                            <li data-value="ordered">🟠 Bestellt</li>
-                                            <li data-value="received">🟢 Erhalten</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
+                            <!-- Status selection removed as requested -->
+                            <input type="hidden" id="proc-status" value="new">
                         </div>
 
 
