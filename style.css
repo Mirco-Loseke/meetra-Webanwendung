@@ -6495,55 +6495,61 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         /* Accounting Controls Row Distribution */
         #accounting .view-header-right {
             display: flex !important;
-            flex-direction: row !important;
-            flex-wrap: nowrap !important;
+            flex-direction: column !important;
             width: 100% !important;
-            justify-content: space-between !important;
-            align-items: center !important;
-            gap: 6px !important;
+            gap: 12px !important;
             padding: 0 !important;
             margin-top: 1rem !important;
         }
 
-        #accounting .view-header-right > *, 
+        #accounting .acc-header-controls-group {
+            display: flex !important;
+            flex-direction: row !important;
+            width: 100% !important;
+            justify-content: space-between !important;
+            align-items: center !important;
+            gap: 10px !important;
+        }
+
         #accounting #acc-year-dropdown {
             flex: 1 !important;
             margin-right: 0 !important;
             justify-content: center !important;
             min-width: 0 !important;
-            padding: 8px 4px !important;
         }
 
-        #accounting .view-header-right button.btn-primary {
-            flex: 2 !important; /* "Neuer Eintrag" slightly wider */
-            font-size: 0.8rem !important;
-            padding: 8px !important;
+        #accounting .acc-header-controls-group .btn-icon-soft {
+            flex: 0 0 calc(33% - 14px) !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            padding: 10px !important;
         }
 
-        /* Month Header Row - FORCE SHRINK ABSOLUTELY */
+        /* Month Header Row - ABSOLUTE VERTICAL COMPRESSION */
         .accounting-month-header {
             display: flex !important;
-            padding: 0.15rem 0.75rem !important; /* FORCED OVERRIDE of 1.25rem */
+            padding: 0 !important; /* NO PADDING AT ALL */
             min-height: 0 !important;
             background: rgba(255, 255, 255, 0.05) !important;
-            border-radius: 16px !important;
+            border-radius: 12px !important;
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            margin: 0.2rem 0.5rem 0.5rem 0.5rem !important;
+            margin: 0.15rem 0.5rem 0.5rem 0.5rem !important;
             align-items: center !important;
+            overflow: hidden !important;
         }
 
         .accounting-month-header td {
             display: block !important;
-            padding: 0 !important;
+            padding: 2px 8px !important; /* Minimal internal padding */
             background: transparent !important;
             border: none !important;
-            box-shadow: none !important;
             width: 100% !important;
         }
 
         .accounting-month-header h3 {
-            font-size: 2rem !important; /* Slightly smaller for better fit */
-            line-height: 0.9 !important; /* CROP empty vertical space */
+            font-size: 1.8rem !important; /* Size for better fit */
+            line-height: 0.85 !important; /* CROP ALL VERTICAL DEAD SPACE */
             color: #4ade80;
             margin: 0 !important;
             padding: 0;
@@ -6553,15 +6559,17 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         .acc-month-header-content {
             display: flex !important;
             flex-direction: column !important;
-            gap: 2px !important; /* Minimal gap */
+            gap: 2px !important;
+            padding: 0 !important;
         }
 
         .acc-month-header-right {
-            font-size: 0.95rem !important;
+            font-size: 0.9rem !important;
             color: #4ade80 !important;
             opacity: 0.8;
             font-weight: 600;
             margin: 0 !important;
+            padding-bottom: 2px !important;
         }
 
         /* Full-width View Switchers & Add Buttons on Mobile */
