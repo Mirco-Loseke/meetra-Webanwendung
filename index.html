@@ -26,6 +26,143 @@
 </head>
 
 <body>
+    <!-- Futuristic Login Screen (Nixon/Space Style) -->
+    <div id="profile-selection-screen" style="display: none; position: fixed; inset: 0; z-index: 999999; flex-direction: column; align-items: center; justify-content: center; color: white; overflow: hidden; background: #05070a;">
+        <!-- Nebula Background (Blue Shifted) -->
+        <div style="position: absolute; inset: 0; background: 
+            radial-gradient(circle at 50% 100%, rgba(30, 58, 138, 0.45) 0%, transparent 60%),
+            radial-gradient(circle at 10% 20%, rgba(23, 37, 84, 0.4) 0%, transparent 50%),
+            radial-gradient(circle at 90% 80%, rgba(30, 58, 138, 0.3) 0%, transparent 50%); width: 100%; height: 100%; pointer-events: none;"></div>
+        
+        <!-- CSS Star Field (Simulated) -->
+        <div class="stars-container" style="position: absolute; inset: 0; pointer-events: none; opacity: 0.5;">
+            <div style="position: absolute; top: 10%; left: 20%; width: 2px; height: 2px; background: #fff; border-radius: 50%; box-shadow: 0 0 10px #fff;"></div>
+            <div style="position: absolute; top: 30%; left: 80%; width: 1px; height: 1px; background: #fff; border-radius: 50%;"></div>
+            <div style="position: absolute; top: 70%; left: 40%; width: 2px; height: 2px; background: #fff; border-radius: 50%; box-shadow: 0 0 5px #fff;"></div>
+            <div style="position: absolute; top: 50%; left: 10%; width: 1px; height: 1px; background: #fff; border-radius: 50%;"></div>
+            <div style="position: absolute; top: 90%; left: 90%; width: 2px; height: 2px; background: #fff; border-radius: 50%;"></div>
+            <div style="position: absolute; top: 20%; left: 60%; width: 1px; height: 1px; background: #fff; border-radius: 50%;"></div>
+        </div>
+
+        <!-- Central Login Card (Ultra-Transparent Glass & Responsive) -->
+        <div class="nixon-card" style="
+            position: relative; 
+            width: 95%; 
+            max-width: 650px; 
+            background: transparent; 
+            backdrop-filter: blur(40px); 
+            border: 2.5px solid rgba(255, 255, 255, 0.15); 
+            border-radius: clamp(32px, 5vw, 56px); 
+            padding: clamp(2rem, 8vw, 5rem) clamp(1.5rem, 6vw, 4rem); 
+            box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.6); 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            max-height: 96vh;
+            transition: all 0.4s ease;
+        ">
+            
+            <!-- Vertical Branding Stack -->
+            <div style="width: 100%; display: flex; flex-direction: column; align-items: center; gap: 1.5rem; background: transparent; margin-bottom: clamp(2.5rem, 6vw, 4rem);">
+                <img src="meetra logo remove.png" alt="Logo" style="height: clamp(60px, 12vw, 100px); width: auto; opacity: 1; filter: drop-shadow(0 0 15px rgba(255,255,255,0.1));">
+                
+                <div style="display: flex; align-items: center; justify-content: center; gap: clamp(10px, 2vw, 15px); text-align: center;">
+                    <h2 style="font-size: clamp(1.5rem, 4vw, 2.4rem); font-weight: 700; margin: 0; color: #fff; letter-spacing: -1px; opacity: 0.95;">Willkommen bei Meetra</h2>
+                    <img src="meetra_arrows_icon.png" alt="Arrows" style="height: clamp(20px, 4vw, 32px); opacity: 0.85;">
+                </div>
+                
+                <p style="font-size: clamp(0.95rem, 2.5vw, 1.15rem); color: rgba(255,255,255,0.4); text-align: center; margin: 0; font-weight: 300; letter-spacing: 0.5px;">
+                    Bitte wähle dein Profil aus
+                </p>
+            </div>
+            <!-- Purple-to-Blue Radiant Gradient Glass User List Container -->
+            <div style="width: 100%; padding: clamp(1rem, 4vw, 2.5rem); background: linear-gradient(135deg, rgba(88, 28, 135, 0.2), rgba(30, 58, 138, 0.2)); border: 1.5px solid rgba(255, 255, 255, 0.1); border-radius: clamp(24px, 4vw, 44px); box-shadow: inset 0 0 40px rgba(0,0,0,0.5), 0 15px 50px rgba(0,0,0,0.2); position: relative; backdrop-filter: blur(25px);">
+                <div id="profile-selection-list" style="width: 100%; overflow-y: auto; padding-right: 8px; display: flex; flex-direction: column; gap: 1rem; max-height: 45vh;">
+                    <!-- Profiles injected here -->
+                </div>
+            </div>
+
+            <!-- Last Active Footer Selection -->
+            <div id="last-active-footer" style="margin-top: 4.5rem; padding-top: 3rem; border-top: 1px solid rgba(255,255,255,0.08); width: 100%; display: none;">
+                <h4 style="font-size: 0.95rem; text-transform: uppercase; letter-spacing: 4px; color: rgba(255,255,255,0.3); margin-bottom: 2rem; text-align: center; font-weight: 700;">Zuletzt angemeldet</h4>
+                <div id="footer-last-user-container" style="display: flex; justify-content: center;">
+                    <!-- Last user mini card injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Dynamic Star Animation -->
+        <style>
+            @keyframes pulse-star {
+                0%, 100% { transform: scale(1); opacity: 0.5; }
+                50% { transform: scale(1.2); opacity: 1; }
+            }
+            .stars-container div { animation: pulse-star 3s infinite ease-in-out; }
+            .stars-container div:nth-child(2n) { animation-delay: 1s; }
+            .stars-container div:nth-child(3n) { animation-delay: 2s; }
+            
+            #profile-selection-list::-webkit-scrollbar { width: 4px; }
+            #profile-selection-list::-webkit-scrollbar-track { background: transparent; }
+            #profile-selection-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        </style>
+    </div>
+
+    <!-- PIN Prompt Modal -->
+    <div id="pin-prompt-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999999; backdrop-filter: blur(10px); flex-direction: column; align-items: center; justify-content: center;">
+        <div class="glass-card" style="padding: 2.5rem; text-align: center; max-width: 400px; width: 90%;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: #f59e0b; margin-bottom: 1rem;">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <h2 style="margin-bottom: 0.5rem;">PIN Eingabe</h2>
+            <p id="pin-prompt-user-name" style="color: rgba(255,255,255,0.6); margin-bottom: 2rem;"></p>
+            <input type="password" id="pin-input" class="glass-input" placeholder="****" style="text-align: center; font-size: 2rem; letter-spacing: 0.5em; padding: 1rem;" maxlength="8" onkeyup="if(event.key === 'Enter') submitPinLogin()">
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button class="btn-secondary" onclick="cancelPinLogin()" style="flex: 1;">Abbrechen</button>
+                <button class="btn-primary" onclick="submitPinLogin()" style="flex: 1;">Weiter</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="user-edit-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999999; backdrop-filter: blur(10px); flex-direction: column; align-items: center; justify-content: center;">
+        <div class="glass-card" style="padding: 2.5rem; max-width: 500px; width: 90%; position: relative;">
+            <button onclick="closeEditUserModal()" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: white; cursor: pointer;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+            <h2 style="margin-bottom: 1.5rem;">Benutzer bearbeiten</h2>
+            <input type="hidden" id="edit-user-id">
+            
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="edit-user-name" class="glass-input">
+            </div>
+            
+            <div class="form-group">
+                <label>PIN (Optional, 4-8 Ziffern)</label>
+                <input type="text" id="edit-user-pin" class="glass-input" placeholder="Z.B. 1234 oder leer lassen">
+            </div>
+            
+            <div class="form-group" style="margin-top: 1.5rem;">
+                <label style="margin-bottom: 0.5rem; display: block; color: var(--color-primary-green);">Berechtigungen (Ansichten):</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 8px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-home" style="cursor: pointer;"> Startseite</label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-tasks" style="cursor: pointer;"> Aufgaben</label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-procurements" style="cursor: pointer;"> Bestellungen</label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-machines" style="cursor: pointer;"> Maschinen</label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-history" style="cursor: pointer;"> Historie</label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-accounting" style="cursor: pointer;"> Buchhaltung</label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-settings" style="cursor: pointer;"> Einstellungen</label>
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
+                <button class="btn-secondary" onclick="closeEditUserModal()">Abbrechen</button>
+                <button class="btn-primary" onclick="saveUserEdit()">Speichern</button>
+            </div>
+        </div>
+    </div>
+
     <div id="app-layout">
         <!-- Overlay for mobile sidebar -->
         <div id="sidebar-overlay" onclick="window.toggleMobileSidebar()"></div>
@@ -189,10 +326,6 @@
                             <span>Einstellungen</span>
                         </a>
                     </li>
-                    <!-- Hidden Link for Routing to Subviews -->
-                    <li style="display:none;">
-                        <a href="#users" class="nav-link" data-target="users">Benutzer</a>
-                    </li>
                 </ul>
 
 
@@ -273,9 +406,86 @@
             </header>
 
             <main id="main-content">
-                <!-- Home View -->
+                <!-- Home View (Premium Dashboard) -->
                 <section id="home" class="view active">
-                    <h1>Startseite</h1>
+                    <div class="dashboard-container" style="padding: 2rem; display: flex; flex-direction: column; gap: 3rem;">
+                        <!-- Welcome Header -->
+                        <div class="glass-card" style="padding: 2.5rem; display: flex; justify-content: space-between; align-items: center; border-radius: 32px; background: linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02)); border: 1px solid rgba(255,255,255,0.15);">
+                            <div>
+                                <p id="dashboard-date" style="font-size: 0.9rem; color: var(--color-primary-green); font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 0.5rem;"></p>
+                                <h1 id="dashboard-greeting" style="font-size: 2.5rem; margin: 0; font-weight: 300; letter-spacing: -0.5px;">Guten Tag</h1>
+                                <p style="color: rgba(255,255,255,0.5); margin-top: 0.5rem; font-size: 1.1rem;" id="dashboard-user-name">Laden...</p>
+                            </div>
+                            <div class="dashboard-weather" style="text-align: right;">
+                                <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🏗️</div>
+                                <div style="font-size: 0.8rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px;">Betriebsstatus: Aktiv</div>
+                            </div>
+                        </div>
+
+                        <!-- KPI Grid -->
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+                            <!-- Task KPI -->
+                            <div class="glass-card kpi-card" onclick="window.switchView('tasks')" style="padding: 2rem; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden;">
+                                <div style="position: absolute; top: -10px; right: -10px; font-size: 5rem; opacity: 0.05;">📋</div>
+                                <p style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,0.5); margin-bottom: 1rem;">Offene Aufgaben</p>
+                                <div style="display: flex; align-items: baseline; gap: 10px;">
+                                    <span id="kpi-tasks-count" style="font-size: 3rem; font-weight: 800; color: #fff;">0</span>
+                                    <span style="font-size: 1rem; color: rgba(255,255,255,0.3);">Einträge</span>
+                                </div>
+                            </div>
+
+                            <!-- Procurements KPI -->
+                            <div class="glass-card kpi-card" onclick="window.switchView('procurements')" style="padding: 2rem; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden;">
+                                <div style="position: absolute; top: -10px; right: -10px; font-size: 5rem; opacity: 0.05;">📦</div>
+                                <p style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,0.5); margin-bottom: 1rem;">Bestellungen (Neu/Offen)</p>
+                                <div style="display: flex; align-items: baseline; gap: 10px;">
+                                    <span id="kpi-orders-count" style="font-size: 3rem; font-weight: 800; color: var(--color-primary-green);">0</span>
+                                    <span style="font-size: 1rem; color: rgba(255,255,255,0.3);">Einträge</span>
+                                </div>
+                            </div>
+
+                            <!-- Machines KPI -->
+                            <div class="glass-card kpi-card" onclick="window.switchView('machines')" style="padding: 2rem; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden;">
+                                <div style="position: absolute; top: -10px; right: -10px; font-size: 5rem; opacity: 0.05;">🚜</div>
+                                <p style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,0.5); margin-bottom: 1rem;">Aktive Maschinen</p>
+                                <div style="display: flex; align-items: baseline; gap: 10px;">
+                                    <span id="kpi-machines-count" style="font-size: 3rem; font-weight: 800; color: #fff;">0</span>
+                                    <span style="font-size: 1rem; color: rgba(255,255,255,0.3);">Gesamt</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions & Info -->
+                        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+                            <!-- Activity Card -->
+                            <div class="glass-card" style="padding: 2rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                                    <h3 style="margin: 0; font-size: 1.2rem; font-weight: 600;">Schnellzugriff</h3>
+                                </div>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
+                                    <button class="btn-icon-soft" onclick="window.switchView('service')" style="height: 100px; display: flex; flex-direction: column; gap: 10px; justify-content: center; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
+                                        <span style="font-size: 1.5rem;">🛠️</span>
+                                        <span style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">Servicebericht</span>
+                                    </button>
+                                    <button class="btn-icon-soft" onclick="window.switchView('accounting')" style="height: 100px; display: flex; flex-direction: column; gap: 10px; justify-content: center; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
+                                        <span style="font-size: 1.5rem;">🧾</span>
+                                        <span style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">Rechnung hochladen</span>
+                                    </button>
+                                    <button class="btn-icon-soft" onclick="window.switchView('procurements')" style="height: 100px; display: flex; flex-direction: column; gap: 10px; justify-content: center; align-items: center; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
+                                        <span style="font-size: 1.5rem;">📦</span>
+                                        <span style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">Bestellung</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Branding/Logo Card -->
+                            <div class="glass-card" style="padding: 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: linear-gradient(135deg, rgba(190, 30, 45, 0.1), transparent);">
+                                <img src="meetra_arrows_icon.png" alt="meetra icon" style="width: 80px; margin-bottom: 1.5rem; opacity: 0.8;">
+                                <p style="font-weight: 800; letter-spacing: 2px; color: #fff; margin-bottom: 0.5rem;">MEETRA</p>
+                                <p style="font-size: 0.75rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px;">Recycling-Maschinen</p>
+                            </div>
+                        </div>
+                    </div>
                 </section>
 
                 <!-- PROCUREMENTS VIEW -->
@@ -348,7 +558,7 @@
                     </div>
 
                     <!-- Procurement List -->
-                    <div id="procurements-list-view" class="hidden">
+                    <div id="procurements-list-view">
                         <div class="glass-card"
                             style="padding: 0.75rem; background: transparent; border: none; box-shadow: none;">
                             <table class="task-table" style="border-collapse: separate; border-spacing: 0 10px;">
@@ -1989,10 +2199,144 @@
                         li.onclick = (e) => {
                             e.stopPropagation();
                             console.log('User clicked:', user.name);
-                            setActiveUser(user.id);
+                            attemptUserLogin(user.id);
                         };
                         dropdownList.appendChild(li);
                     });
+                }
+
+                // ==========================================
+                // PROFILE SELECTION & PIN LOGIC
+                // ==========================================
+                let pendingLoginUserId = null;
+
+                window.showProfileSelectionScreen = function() {
+                    const screen = document.getElementById('profile-selection-screen');
+                    const list = document.getElementById('profile-selection-list');
+                    const footer = document.getElementById('last-active-footer');
+                    const footerContainer = document.getElementById('footer-last-user-container');
+                    
+                    if (!screen || !list) return;
+                    
+                    list.innerHTML = '';
+                    if (footerContainer) footerContainer.innerHTML = '';
+                    if (footer) footer.style.display = 'none';
+                    
+                    const lastUserId = localStorage.getItem('lastActiveUserId');
+                    const lastUser = lastUserId ? userList.find(u => u.id === lastUserId) : null;
+                    
+                    if (lastUser && footer && footerContainer) {
+                        footer.style.display = 'block';
+                        const footerCard = createUserLoginCard(lastUser, true);
+                        footerContainer.appendChild(footerCard);
+                    }
+                    
+                    // Render all users in the main list
+                    userList.forEach(user => {
+                        const card = createUserLoginCard(user, false);
+                        list.appendChild(card);
+                    });
+                    
+                    screen.style.display = 'flex';
+                };
+
+                function createUserLoginCard(user, isFooterMini = false) {
+                    const card = document.createElement('div');
+                    card.style.cssText = `
+                        padding: ${isFooterMini ? '0.75rem 1rem' : '1.15rem 1.5rem'}; 
+                        cursor: pointer; 
+                        display: flex; 
+                        align-items: center; 
+                        gap: 1.5rem; 
+                        width: 100%; 
+                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                        background: rgba(255, 255, 255, 0.04);
+                        backdrop-filter: blur(15px);
+                        border-radius: 20px;
+                        border: 1px solid rgba(255, 255, 255, 0.08);
+                        position: relative;
+                        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                        ${isFooterMini ? 'max-width: 320px;' : ''}
+                    `;
+                    
+                    card.onmouseover = () => {
+                        card.style.background = 'rgba(255, 255, 255, 0.08)';
+                        card.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                        card.style.transform = 'translateY(-2px)';
+                        card.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)';
+                    };
+                    card.onmouseout = () => {
+                        card.style.background = 'rgba(255, 255, 255, 0.04)';
+                        card.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                        card.style.transform = 'translateY(0)';
+                        card.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)';
+                    };
+                    
+                    const initials = user.initials || user.name.substring(0, 2).toUpperCase();
+                    const color = user.color || 'var(--primary-red)';
+                    
+                    card.innerHTML = `
+                        <div style="width: ${isFooterMini ? '42px' : '56px'}; height: ${isFooterMini ? '42px' : '56px'}; border-radius: 14px; background: linear-gradient(135deg, ${color}, rgba(255,255,255,0.1)); display: flex; align-items: center; justify-content: center; font-size: ${isFooterMini ? '1rem' : '1.3rem'}; font-weight: bold; color: white; flex-shrink: 0; box-shadow: 0 6px 15px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15);">
+                            ${initials}
+                        </div>
+                        <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+                            <span style="font-size: ${isFooterMini ? '1.1rem' : '1.3rem'}; font-weight: ${isFooterMini ? '500' : '600'}; color: rgba(255,255,255,0.95);">${user.name}</span>
+                        </div>
+                        <svg width="${isFooterMini ? '16' : '22'}" height="${isFooterMini ? '16' : '22'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.25;">
+                            <polyline points="9 18 15 12 9 6"></polyline>
+                        </svg>
+                    `;
+                    
+                    card.onclick = () => attemptUserLogin(user.id);
+                    return card;
+                }
+
+                window.attemptUserLogin = function(userId) {
+                    const user = userList.find(u => u.id === userId);
+                    if (!user) return;
+                    
+                    if (user.pin && user.pin.trim() !== '') {
+                        // User has a PIN, show prompt
+                        pendingLoginUserId = userId;
+                        document.getElementById('pin-prompt-user-name').textContent = user.name;
+                        document.getElementById('pin-input').value = '';
+                        document.getElementById('pin-prompt-modal').style.display = 'flex';
+                        setTimeout(() => document.getElementById('pin-input').focus(), 100);
+                    } else {
+                        // No PIN, login directly
+                        executeLogin(userId);
+                    }
+                };
+
+                window.submitPinLogin = function() {
+                    if (!pendingLoginUserId) return;
+                    const user = userList.find(u => u.id === pendingLoginUserId);
+                    const enteredPin = document.getElementById('pin-input').value;
+                    
+                    if (user && user.pin === enteredPin) {
+                        document.getElementById('pin-prompt-modal').style.display = 'none';
+                        executeLogin(pendingLoginUserId);
+                        pendingLoginUserId = null;
+                    } else {
+                        alert('Falsche PIN!');
+                        document.getElementById('pin-input').value = '';
+                        document.getElementById('pin-input').focus();
+                    }
+                };
+
+                window.cancelPinLogin = function() {
+                    document.getElementById('pin-prompt-modal').style.display = 'none';
+                    pendingLoginUserId = null;
+                };
+
+                function executeLogin(userId) {
+                    const screen = document.getElementById('profile-selection-screen');
+                    if (screen) screen.style.display = 'none';
+                    
+                    // Remember this user for next time
+                    localStorage.setItem('lastActiveUserId', userId);
+                    
+                    setActiveUser(userId);
                 }
 
                 function setActiveUser(userId) {
@@ -2018,6 +2362,9 @@
                     // Save to LocalStorage
                     localStorage.setItem('activeUserId', userId);
 
+                    // Apply Permissions UI Filter
+                    applyUserPermissions(user);
+
                     // Re-render dropdown to update highlights
                     renderUserDropdown();
 
@@ -2028,10 +2375,90 @@
                     }
 
                     // Refresh dashboard if on home view
+                    renderDashboard();
+                }
+
+                window.renderDashboard = async function() {
                     const homeView = document.getElementById('home');
-                    if (homeView && !homeView.classList.contains('hidden')) {
-                        renderDashboard();
+                    if (!homeView || homeView.classList.contains('hidden')) return;
+
+                    console.log('Rendering Dashboard...');
+
+                    // 1. Update Greeting & Date
+                    const greetingEl = document.getElementById('dashboard-greeting');
+                    const nameEl = document.getElementById('dashboard-user-name');
+                    const dateEl = document.getElementById('dashboard-date');
+
+                    if (greetingEl) {
+                        const hour = new Date().getHours();
+                        let msg = "Guten Tag";
+                        if (hour < 11) msg = "Guten Morgen";
+                        else if (hour > 17) msg = "Guten Abend";
+                        greetingEl.textContent = msg;
                     }
+
+                    if (nameEl && window.activeUser) {
+                        nameEl.textContent = `Willkommen zurück, ${window.activeUser.name}! Schön Sie zu sehen.`;
+                    }
+
+                    if (dateEl) {
+                        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+                        dateEl.textContent = new Date().toLocaleDateString('de-DE', options);
+                    }
+
+                    // 2. Fetch Stats
+                    try {
+                        // Offene Aufgaben
+                        const { count: taskCount } = await supabaseClient
+                            .from('tasks')
+                            .select('*', { count: 'exact', head: true })
+                            .eq('status', 'open');
+                        
+                        document.getElementById('kpi-tasks-count').textContent = taskCount || 0;
+
+                        // Neue/Offene Bestellungen
+                        const { count: orderCount } = await supabaseClient
+                            .from('procurements')
+                            .select('*', { count: 'exact', head: true })
+                            .in('status', ['new', 'in_progress', 'ordered']);
+                        
+                        document.getElementById('kpi-orders-count').textContent = orderCount || 0;
+
+                        // Aktive Maschinen
+                        const { count: machineCount } = await supabaseClient
+                            .from('machines')
+                            .select('*', { count: 'exact', head: true });
+                        
+                        document.getElementById('kpi-machines-count').textContent = machineCount || 0;
+
+                    } catch (err) {
+                        console.error('Error fetching dashboard stats:', err);
+                    }
+                };
+
+                function applyUserPermissions(user) {
+                    // Default permissions if none set
+                    const defaultPerms = { home: true, tasks: true, procurements: true, machines: true, history: true, accounting: true, settings: true };
+                    const perms = (typeof user.permissions === 'object' && user.permissions !== null) ? user.permissions : defaultPerms;
+                    
+                    // Hide/Show sidebar links
+                    document.querySelectorAll('.sidebar-nav li a').forEach(link => {
+                        const target = link.getAttribute('data-target');
+                        if (!target) return;
+                        
+                        // home is always visible basically, but let's check anyway
+                        if (target !== 'home' && perms[target] === false) {
+                            link.parentElement.style.display = 'none';
+                            
+                            // If we are currently on this view, redirect to home
+                            const activeView = document.querySelector('.view.active');
+                            if (activeView && activeView.id === target) {
+                                switchView('home');
+                            }
+                        } else {
+                            link.parentElement.style.display = 'block';
+                        }
+                    });
                 }
 
                 async function updateLastViewed(machineId) {
@@ -2656,14 +3083,8 @@
                         renderTechDropdown();
                     }
 
-                    // Restore Active User
-                    const savedId = localStorage.getItem('activeUserId');
-                    if (savedId) {
-                        const user = userList.find(u => u.id == savedId);
-                        if (user) setActiveUser(user.id);
-                    } else if (userList.length > 0) {
-                        setActiveUser(userList[0].id);
-                    }
+                    // Always show profile selection on completely fresh load
+                    showProfileSelectionScreen();
 
                     // Re-render service entries if on that view, as they depend on userList for technicians dropdown
                     const serviceView = document.getElementById('service');
@@ -2749,32 +3170,71 @@
                     }
                 };
 
-                window.editUser = async function (id) {
+                window.editUser = function (id) {
                     if (!supabaseClient) { alert('Datenbank nicht verbunden'); return; }
                     const user = userList.find(u => u.id === id);
-                    if (user) {
-                        const newName = prompt('Name bearbeiten:', user.name);
-                        if (newName && newName !== user.name) {
-                            const initials = newName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                    if (!user) return;
+                    
+                    document.getElementById('edit-user-id').value = user.id;
+                    document.getElementById('edit-user-name').value = user.name || '';
+                    document.getElementById('edit-user-pin').value = user.pin || '';
+                    
+                    const defaultPerms = { home: true, tasks: true, procurements: true, machines: true, history: true, accounting: true, settings: true };
+                    const perms = (typeof user.permissions === 'object' && user.permissions !== null) ? user.permissions : defaultPerms;
+                    
+                    document.getElementById('perm-home').checked = perms.home !== false;
+                    document.getElementById('perm-tasks').checked = perms.tasks !== false;
+                    document.getElementById('perm-procurements').checked = perms.procurements !== false;
+                    document.getElementById('perm-machines').checked = perms.machines !== false;
+                    document.getElementById('perm-history').checked = perms.history !== false;
+                    document.getElementById('perm-accounting').checked = perms.accounting !== false;
+                    document.getElementById('perm-settings').checked = perms.settings !== false;
+                    
+                    document.getElementById('user-edit-modal').style.display = 'flex';
+                };
 
-                            console.log('Updating user name/initials:', { id, newName, initials });
-                            const { error } = await supabaseClient
-                                .from('users')
-                                .update({
-                                    name: newName,
-                                    initials: initials,
-                                    role: 'Kürzel: ' + initials
-                                })
-                                .eq('id', id);
+                window.closeEditUserModal = function() {
+                    document.getElementById('user-edit-modal').style.display = 'none';
+                };
 
-                            if (error) {
-                                console.error('Supabase Error (editUser):', error);
-                                alert('Fehler beim Aktualisieren: ' + (error.message || JSON.stringify(error)));
-                            } else {
-                                console.log('User updated successfully');
-                                fetchUsers();
-                            }
-                        }
+                window.saveUserEdit = async function() {
+                    const id = document.getElementById('edit-user-id').value;
+                    const newName = document.getElementById('edit-user-name').value;
+                    const newPin = document.getElementById('edit-user-pin').value;
+                    
+                    const newPerms = {
+                        home: document.getElementById('perm-home').checked,
+                        tasks: document.getElementById('perm-tasks').checked,
+                        procurements: document.getElementById('perm-procurements').checked,
+                        machines: document.getElementById('perm-machines').checked,
+                        history: document.getElementById('perm-history').checked,
+                        accounting: document.getElementById('perm-accounting').checked,
+                        settings: document.getElementById('perm-settings').checked
+                    };
+                    
+                    if (!newName || newName.trim() === '') {
+                        alert('Bitte einen Namen eingeben.');
+                        return;
+                    }
+
+                    const initials = newName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                    
+                    const { error } = await supabaseClient
+                        .from('users')
+                        .update({
+                            name: newName,
+                            initials: initials,
+                            role: 'Kürzel: ' + initials,
+                            pin: newPin,
+                            permissions: newPerms
+                        })
+                        .eq('id', id);
+
+                    if (error) {
+                        alert('Fehler beim Aktualisieren: ' + (error.message || JSON.stringify(error)));
+                    } else {
+                        closeEditUserModal();
+                        fetchUsers();
                     }
                 };
 
