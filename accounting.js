@@ -269,6 +269,9 @@ window.renderAccounting = function () {
                         <th style="padding: 12px; width: 6%;">Blt.</th>
                         <th style="padding: 12px; width: 13%;">Nr.</th>
                         <th style="padding: 12px; width: 12%;">Datum</th>
+                        <th class="acc-mobile-row" style="padding: 12px;">Fällig</th>
+                        <th class="acc-mobile-row" style="padding: 12px;">Skonto</th>
+                        <th class="acc-mobile-row" style="padding: 12px;">Zahlbetrag</th>
                         <th style="padding: 12px; width: 25%;">${currentAccountingType === 'incoming' ? 'Lieferant' : 'Kunde'}</th>
                         <th style="padding: 12px; width: 10%;">Netto</th>
                         <th style="padding: 12px; width: 6%;">MwSt.</th>
@@ -293,7 +296,7 @@ window.renderAccounting = function () {
         // Month Header Row
         html += `
             <tr class="accounting-month-header">
-                <td colspan="9">
+                <td colspan="12">
                     <h3>
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
@@ -305,7 +308,12 @@ window.renderAccounting = function () {
         `;
 
         // Entry Rows
-        html += grouped[monthName].map(e => `
+        html += grouped[monthName].map(e => {
+            const hasDiscount = e.discount_amount && parseFloat(e.discount_amount) > 0;
+            const discountDate = e.discount_date ? new Date(e.discount_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+            const finalAmount = e.amount_gross - (parseFloat(e.discount_amount) || 0);
+            
+            return `
             <tr style="border-top: 1px solid rgba(255,255,255,0.03); transition: background 0.2s;" class="accounting-main-row ${e.is_paid ? 'status-paid' : 'status-unpaid'}" id="row-${e.id}">
                 <td data-label="Details" style="padding: 12px; text-align: center; cursor: pointer; color: var(--color-primary-green);" onclick="window.toggleAccountingDetails('${e.id}', this, event)">
                     <svg class="chevron-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.3s;"><path d="M9 18l6-6-6-6"></path></svg>
@@ -326,16 +334,25 @@ window.renderAccounting = function () {
                     <div style="font-weight: 600;">${new Date(e.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
                     ${e.is_paid ? 
                         `<div style="font-size: 0.75rem; color: #f87171; margin-top: 2px; font-weight: 700; white-space: nowrap;">Online bezahlt</div>` : 
-                        (e.due_date ? `<div style="font-size: 0.75rem; color: #f87171; margin-top: 2px; font-weight: 700; white-space: nowrap;">fällig: ${e.due_date === 'sofort' ? 'sofort' : new Date(e.due_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>` : '')
+                        (e.due_date && window.innerWidth >= 1024 ? `<div style="font-size: 0.75rem; color: #f87171; margin-top: 2px; font-weight: 700; white-space: nowrap;">fällig: ${e.due_date === 'sofort' ? 'sofort' : new Date(e.due_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>` : '')
                     }
+                </td>
+                <td data-label="Fällig:" class="acc-mobile-row" style="padding: 10px 12px; font-size: 0.85rem; font-weight: 700; text-align: right;">
+                    ${e.due_date ? (e.due_date === 'sofort' ? 'sofort' : new Date(e.due_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })) : '-'}
+                </td>
+                <td data-label="Skonto:" class="acc-mobile-row" style="padding: 10px 12px; font-size: 0.85rem; color: var(--color-primary-green); font-weight: 700; text-align: right;">
+                    ${hasDiscount ? `${window.formatCurrency(e.discount_amount)} bis ${discountDate}` : '-'}
+                </td>
+                <td data-label="Zahlbetrag:" class="acc-mobile-row" style="padding: 10px 12px; font-size: 0.85rem; color: var(--color-primary-green); font-weight: 800; text-align: right;">
+                    ${hasDiscount ? window.formatCurrency(finalAmount) : '-'}
                 </td>
                 <td data-label="${currentAccountingType === 'incoming' ? 'Lieferant' : 'Kunde'}" style="padding: 10px 12px; font-weight: 700; color: #fff; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${e.entity}</td>
                 <td data-label="Netto" style="padding: 10px 12px; font-size: 0.85rem;">${window.formatCurrency(e.amount_net)}</td>
                 <td data-label="MwSt" style="padding: 10px 12px; font-size: 0.75rem; color: rgba(255,255,255,0.5);">${e.vat_rate}%</td>
                 <td data-label="Brutto" style="padding: 10px 12px; font-size: 0.85rem;">
                     <div style="font-weight: 800; color: #fff;">${window.formatCurrency(e.amount_gross)}</div>
-                    ${e.discount_amount && parseFloat(e.discount_amount) > 0 ? `
-                        <div style="font-size: 0.7rem; color: #10b981; margin-top: 2px; display: flex; flex-direction: column; gap: 1px;">
+                    ${hasDiscount ? `
+                        <div style="font-size: 0.7rem; color: #10b981; margin-top: 2px; display: flex; flex-direction: column; gap: 1px;" class="acc-desktop-only">
                             <div style="display: flex; align-items: center; gap: 4px;">
                                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg> 
                                 -${window.formatCurrency(e.discount_amount)} ${e.discount_date ? 'bis ' + new Date(e.discount_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }) : ''}
@@ -360,15 +377,14 @@ window.renderAccounting = function () {
                     </div>
                 </td>
             </tr>
-                </td>
-            </tr>
             <tr id="details-${e.id}" class="hidden">
-                <td colspan="9" class="acc-details-cell" style="padding: 1rem 0;">
+                <td colspan="12" class="acc-details-cell" style="padding: 1rem 0;">
                     <div id="details-content-${e.id}" style="width: 100%;">
                     </div>
                 </td>
             </tr>
-        `).join('');
+        `;
+        }).join('');
     });
 
     html += `

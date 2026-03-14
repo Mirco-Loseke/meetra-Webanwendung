@@ -6396,6 +6396,42 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
 }
 
 
+    /* Accounting Mobile Specifics */
+    .acc-mobile-row {
+        display: none !important;
+    }
+
+    @media (max-width: 1024px) {
+        .acc-mobile-row {
+            display: flex !important;
+        }
+        .acc-desktop-only {
+            display: none !important;
+        }
+        
+        /* Custom Label Colors for Accounting card */
+        .data-table td[data-label="Fällig:"]::before {
+            color: #f87171 !important; /* Red label */
+        }
+        .data-table td[data-label="Zahlbetrag:"]::before {
+            color: var(--color-primary-green) !important; /* Green label */
+        }
+        .data-table td[data-label="Skonto:"]::before {
+            color: rgba(255, 255, 255, 0.4) !important; /* Default label color */
+        }
+
+        /* Specific alignment for accounting rows */
+        .accounting-main-row td {
+            justify-content: space-between !important;
+        }
+
+        /* Ensure values are right-aligned or appropriately spaced */
+        .accounting-main-row td:not(::before) {
+            text-align: right;
+            width: auto !important;
+        }
+    }
+
 /* Responsive Hiding for Tasks, Service, and Protocols */
 @media (max-width: 1024px) {
     /* Hide List View Containers */
