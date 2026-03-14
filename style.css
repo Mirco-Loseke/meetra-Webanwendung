@@ -6494,24 +6494,35 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
 
         /* Month Header Refinement (No box, No icon, Slimmer) */
         .accounting-month-header {
-            display: table-row !important; /* Back to table-row but unstyled */
+            display: flex !important; /* Override table-row if needed */
             margin: 0 !important;
+            padding: 0.35rem 1rem !important; /* Significantly reduced tr padding */
+            min-height: auto !important;
+            background: rgba(255, 255, 255, 0.05) !important;
+            border-radius: 20px !important;
+            border: 1px solid rgba(255, 255, 255, 0.1) !important;
+            margin-bottom: 0.75rem !important;
+            margin-left: 0.5rem !important;
+            margin-right: 0.5rem !important;
         }
+
         .accounting-month-header td {
-            display: table-cell !important;
-            padding: 0.05rem 0.6rem !important; /* Ultra-compact vertical padding */
+            display: block !important;
+            padding: 0 !important; /* Padding moved to TR */
             background: transparent !important;
             border: none !important;
             box-shadow: none !important;
             backdrop-filter: none !important;
             -webkit-backdrop-filter: none !important;
+            width: 100% !important;
         }
+
         .accounting-month-header h3 {
             font-size: 2.2rem !important; /* Maximized font size */
-            line-height: 1.1 !important;
+            line-height: 1.0 !important; /* Tighter line height */
             white-space: nowrap;
             color: #4ade80;
-            margin: -2px 0 0 0 !important; /* Negative margin to pull up */
+            margin: 0 !important;
             padding: 0;
             font-weight: 800;
             font-family: 'Outfit', sans-serif;
@@ -6529,7 +6540,7 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
             display: flex !important;
             flex-direction: column !important;
             align-items: flex-start !important;
-            gap: 0px !important; /* Tightest gap */
+            gap: 4px !important; /* "Etwas Platz" between lines */
             color: #4ade80 !important;
         }
 
@@ -6541,12 +6552,12 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         }
 
         .acc-month-header-right {
-            font-size: 1.1rem !important;
-            padding-left: 26px !important;
+            font-size: 1.05rem !important;
+            padding-left: 0 !important; /* Aligned left with the title */
             color: #4ade80 !important;
-            opacity: 0.9;
+            opacity: 0.85;
             font-weight: 600;
-            margin-top: -4px !important; /* Pull up further */
+            margin: 0 !important;
         }
 
         /* Full-width View Switchers & Add Buttons on Mobile */
