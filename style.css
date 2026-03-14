@@ -5229,27 +5229,43 @@ VIEW HEADER RESPONSIVE LAYOUT (v2)
 }
 
 @media (max-width: 1024px) {
-    .view-header-layout {
-        display: grid !important;
-        grid-template-columns: 1fr auto !important;
-        grid-template-areas: 
-            'v-left v-switch'
-            'v-right v-right'
-            'v-filters v-filters' !important;
-        gap: 12px 16px !important;
+    .view-header-row-top,
+    .view-header-row-bottom {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.75rem !important;
     }
 
-    .view-header-row-top, .view-header-row-bottom {
-        display: contents !important;
+    .view-header-left,
+    .view-header-right {
+        width: 100% !important;
+        justify-content: flex-start !important;
     }
 
-    .view-header-row-top .view-header-left { grid-area: v-left !important; }
-    .view-header-row-bottom .view-header-left { grid-area: v-switch !important; display: flex !important; justify-content: flex-end; align-items: center; }
-    .view-header-row-top .view-header-right { grid-area: v-right !important; }
-    .view-header-row-bottom .view-header-right { grid-area: v-filters !important; }
-    
-    .view-header-layout h1 { font-size: clamp(1.2rem, 4.5vw, 1.8rem) !important; white-space: nowrap; }
-    .calendar-view-tabs { transform: scale(0.9); transform-origin: right; }
+    /* Make search and filters full width as requested */
+    .custom-search-wrapper,
+    .search-wrapper,
+    .custom-filter-dropdown,
+    .glass-select,
+    .filter-group-glass {
+        width: 100% !important;
+        max-width: none !important;
+        margin-right: 0 !important;
+    }
+
+    .filter-group-glass {
+        flex-direction: column !important;
+        gap: 8px !important;
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+    }
+
+    .btn-add-bg {
+        width: 100% !important;
+        justify-content: center !important;
+        margin-top: 0.5rem;
+    }
 }
 
 @media (max-width: 768px) {
