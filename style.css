@@ -6507,20 +6507,23 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
             width: 100% !important;
             justify-content: space-between !important;
             align-items: center !important;
-            gap: 8px !important;
+            gap: 10px !important;
         }
 
-        #accounting .acc-header-controls-group > * {
-            flex: 1 !important;
+        #accounting #acc-year-dropdown {
+            flex: 2.2 !important; /* Wider as requested */
             margin-right: 0 !important;
+            justify-content: flex-start !important; /* Keep text left within dropdown */
             min-width: 0 !important;
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
+            padding: 8px 12px !important;
         }
 
         #accounting .acc-header-controls-group .btn-icon-soft {
-            padding: 10px 0 !important; /* Distributed icons */
+            flex: 1 !important; /* Icons take less space */
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            padding: 10px !important;
         }
 
         /* Desktop Month Header: Stay Inline */
@@ -6548,31 +6551,32 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         .accounting-month-header td {
             display: flex !important;
             align-items: center !important;
-            padding: 2px 8px !important; /* Tightest internal space */
+            padding: 2px 10px !important; /* Minimal internal space */
             background: transparent !important;
             border: none !important;
             width: 100% !important;
         }
 
         .accounting-month-header h3 {
-            font-size: 1.8rem !important;
-            line-height: 0.85 !important; /* CROP ALL VERTICAL DEAD SPACE */
+            font-size: clamp(1.4rem, 6.5vw, 2.22rem) !important; /* FLUID SIZE */
+            line-height: 0.82 !important; /* CROP ALL VERTICAL DEAD SPACE */
             color: #4ade80;
             margin: 0 !important;
             padding: 0;
             font-weight: 800;
+            text-align: left;
         }
 
         @media (max-width: 1024px) {
             .acc-month-header-content {
                 flex-direction: column !important; /* Stacked on mobile */
                 align-items: flex-start !important;
-                gap: 2px !important;
+                gap: 6px !important; /* "Etwas mehr Platz" to the total sum below */
             }
         }
 
         .acc-month-header-right {
-            font-size: 0.9rem !important;
+            font-size: clamp(0.85rem, 3vw, 1.05rem) !important; /* FLUID SUM */
             color: #4ade80 !important;
             opacity: 0.8;
             font-weight: 600;
