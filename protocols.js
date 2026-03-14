@@ -1486,7 +1486,7 @@
                 const typeLabel = isAcceptance ? 'Abnahmeprotokoll' : 'Eingangsprotokoll';
 
                 return `
-                    <div class="card" onclick="${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')" style="font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); border: 3px solid ${badgeColor}66; border-top: 7px solid ${badgeColor}; border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative; padding-top: 35px;">
+                    <div class="card" onclick="${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')" style="font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); border: 3px solid ${badgeColor}66; border-top: 7px solid ${badgeColor}; border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative; padding-top: 35px; width: 100%; box-sizing: border-box; min-width: 0;">
                         
                         <!-- Premium Badge Top Right -->
                         <div style="position: absolute; top: -20px; right: 24px; left: auto; height: 40px; padding: 0 16px; background: ${badgeColor}D9; color: #ffffff; border-radius: 20px; font-size: 0.85rem; font-weight: 800; box-shadow: 0 4px 14px ${badgeColor}80; border: 2px solid rgba(255, 255, 255, 0.4); backdrop-filter: blur(12px); z-index: 10; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 8px;">
@@ -1494,10 +1494,10 @@
                         </div>
                         
                         <!-- Full-Width Machine Image Container -->
-                        <div style="position: relative; width: 100%; height: 300px; overflow: hidden; background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); display: flex; align-items: center; justify-content: center;">
+                        <div style="position: relative; width: 100%; height: var(--machine-image-height, 300px); overflow: hidden; background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); display: flex; align-items: center; justify-content: center;">
                             ${p.machines && p.machines.image_url ?
                         `<img src="${p.machines.image_url}" alt="${p.title}" style="width: 100%; height: 100%; object-fit: contain; display: block;">` :
-                        `<svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity: 0.15;">
+                        `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity: 0.15;">
                                     <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
                                     <circle cx="9" cy="9" r="2"/>
                                     <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
@@ -1536,12 +1536,12 @@
                             
                             <!-- Action buttons -->
                             <div class="card-actions" style="margin-top: auto; padding-top: 0.75rem; display: flex; gap: 8px; align-items: stretch;">
-                                <button class="btn-reports" style="flex: 1; border-radius: 20px;">
+                                <button class="btn-reports">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                                     Öffnen
                                 </button>
                                 ${p.status === 'completed' ? `
-                                <button class="btn-reports-red" onclick="event.stopPropagation(); window.openProtocolPDF('${p.machine_id}', '${p.id}', '${p.type}')" style="flex: 1.2; border-radius: 20px;">
+                                <button class="btn-reports-red" onclick="event.stopPropagation(); window.openProtocolPDF('${p.machine_id}', '${p.id}', '${p.type}')">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="stroke: white;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
                                     PDF öffnen
                                 </button>` : ''}

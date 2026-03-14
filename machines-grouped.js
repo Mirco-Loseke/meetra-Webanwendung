@@ -165,9 +165,9 @@
         const glassBg = 'background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);';
 
         if (catColor) {
-            card.style.cssText = `font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; ${glassBg} border: 3px solid ${catColor}66; border-top: 7px solid ${catColor}; border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative; padding-top: 35px;`;
+            card.style.cssText = `font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; ${glassBg} border: 3px solid ${catColor}66; border-top: 7px solid ${catColor}; border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative; padding-top: 35px; min-width: 0; width: 100%;`;
         } else {
-            card.style.cssText = `font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; ${glassBg} border: 3px solid rgba(255,255,255,0.3); border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative; padding-top: 35px;`;
+            card.style.cssText = `font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; ${glassBg} border: 3px solid rgba(255,255,255,0.3); border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative; padding-top: 35px; min-width: 0; width: 100%;`;
         }
 
         card.onclick = () => window.openEditStammdaten(machine.id);
@@ -175,10 +175,10 @@
         // Image logic
         let imageHtml = '';
         if (machine.image_url) {
-            imageHtml = `<img src="${machine.image_url.trim()}" alt="${machine.name}" style="width: 100%; height: 300px; object-fit: contain; display: block; object-position: center;">`;
+            imageHtml = `<img src="${machine.image_url.trim()}" alt="${machine.name}" style="width: 100%; height: var(--machine-image-height, 300px); object-fit: contain; display: block; object-position: center;">`;
         } else {
             imageHtml = `
-                <div class="card-image-placeholder" style="background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); color: rgba(255,255,255,0.2); height: 300px; display: flex; align-items: center; justify-content: center;">
+                <div class="card-image-placeholder" style="background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); color: rgba(255,255,255,0.2); height: var(--machine-image-height, 300px); display: flex; align-items: center; justify-content: center;">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.4;">
                         <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
                         <circle cx="9" cy="9" r="2"/>
@@ -297,7 +297,7 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 0.6rem; background: rgba(0,0,0,0.15); padding: 18px 1.25rem; border-radius: 14px; border: 1px solid rgba(255,255,255,0.06); margin-left: -1.25rem; margin-right: -1.25rem; position: relative;">
+                <div class="machine-info-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; margin-bottom: 0.6rem; background: rgba(0,0,0,0.15); padding: 18px 1.25rem; border-radius: 14px; border: 1px solid rgba(255,255,255,0.06); margin-left: -1.25rem; margin-right: -1.25rem; position: relative;">
                     <div style="border-right: 1px solid rgba(255,255,255,0.05); padding-right: 12px; display: flex; flex-direction: column; align-items: center; text-align: center;">
                         <div style="font-size: 0.85rem; color: rgba(255,255,255,0.4); margin-bottom: 5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; width: 100%;">Letzte Wartung</div>
                         <div style="font-size: 1.05rem; color: #fff; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 700; width: 100%;">

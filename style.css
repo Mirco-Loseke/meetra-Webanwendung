@@ -1358,7 +1358,7 @@ h1,
 /* Card Component */
 .card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
     gap: 2rem;
     margin-top: 2rem;
 }
@@ -1454,6 +1454,12 @@ h1,
     flex: 1;
     display: flex;
     flex-direction: column;
+}
+
+.quarters-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
 }
 
 .card-title,
@@ -1691,12 +1697,14 @@ h1,
 /* LIST CONTAINER */
 .user-list-container {
     padding: 0 0.5rem;
+    padding-top: 20px; /* EXTRA PADDING for top-most floating badge */
 }
 
 .user-list {
     display: flex;
     flex-direction: column;
     gap: 1.2rem;
+    overflow: visible; /* FIXED: Ensure floating badges aren't cut off */
 }
 
 /* CARD ITEM */
@@ -1710,7 +1718,7 @@ h1,
     align-items: center;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     position: relative;
-    overflow: hidden;
+    overflow: visible; /* FIXED: Ensure floating badges aren't cut off */
     /* For the left border stripe */
     min-height: 80px;
     transition: all 0.2s ease;
@@ -1829,6 +1837,68 @@ h1,
     color: #f87171;
     background: rgba(239, 68, 68, 0.15);
 }
+
+/* New Circular Icon Buttons for User Management (Matching Task List Exactly) */
+.btn-icon-circular {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+}
+
+.btn-icon-circular:hover {
+    transform: scale(1.1);
+}
+
+.btn-icon-circular.edit {
+    background: rgba(59, 130, 246, 0.2);
+    border: 1.5px solid rgba(59, 130, 246, 0.5);
+    color: #60a5fa;
+}
+
+.btn-icon-circular.edit:hover {
+    background: rgba(59, 130, 246, 0.4);
+}
+
+.btn-icon-circular.delete {
+    background: rgba(239, 68, 68, 0.2);
+    border: 1.5px solid rgba(239, 68, 68, 0.5);
+    color: #f87171;
+}
+
+.btn-icon-circular.delete:hover {
+    background: rgba(239, 68, 68, 0.4);
+}
+
+/* Admin Badge Style (Floating on Edge - Top Right - Refined Red Version) */
+.admin-badge {
+    position: absolute;
+    top: -14px;
+    right: 32px; /* Positioned above the action icons area */
+    background: linear-gradient(135deg, #a81c2a, #d32f2f); /* Less "leuchtend" red */
+    color: white;
+    font-size: 0.65rem;
+    font-weight: 800;
+    padding: 3px 12px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    z-index: 1000;
+    white-space: nowrap;
+}
+
 
 /* Category Group Titles */
 .category-group-title {
@@ -3487,9 +3557,11 @@ input[type="radio"] {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-/* ========================================== 
-   TASK MANAGEMENT STYLES 
-   ========================================== */
+.task-machine-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
 
 .kanban-board {
     display: grid;
@@ -3583,8 +3655,8 @@ tr.completed-task {
 /* Status-Based Background Colors */
 .task-card.status-open,
 tr.status-open td {
-    background: rgba(239, 68, 68, 0.20);
-    /* Brighter Light Red */
+    background: rgba(239, 68, 68, 0.15);
+    /* Subtle Red */
 }
 
 .task-card.status-open {
@@ -3802,7 +3874,35 @@ tr.completed-task td {
 
 .task-table td {
     padding: 15px 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+/* PREMIUM TASK LIST ROW */
+.task-list-row-premium {
+    background: rgba(110, 122, 140, 0.45) !important;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.task-list-row-premium.status-open {
+    background: rgba(239, 68, 68, 0.12) !important;
+    box-shadow: inset 5px 0 0 0 #ef4444, 0 10px 30px rgba(0,0,0,0.4);
+}
+
+.task-list-row-premium:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    transform: translateY(-2px);
+}
+
+.task-list-row-premium td:first-child {
+    border-top-left-radius: 16px;
+    border-bottom-left-radius: 16px;
+}
+
+.task-list-row-premium td:last-child {
+    border-top-right-radius: 16px;
+    border-bottom-right-radius: 16px;
 }
 
 .status-pill {
@@ -3834,29 +3934,29 @@ tr.completed-task td {
     margin: 0;
 }
 
-.task-user-list li {
-    padding: 10px 15px;
+.task-user-list li,
+.task-user-list-item {
+    padding: 12px 16px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border-radius: 12px;
 }
 
-.task-user-list li:hover {
-    background: rgba(255, 255, 255, 0.05);
+.task-user-list li:hover,
+.task-user-list-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateX(4px);
 }
 
-.task-user-list li input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
+.task-user-list li input[type="checkbox"],
+.task-user-list-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
     cursor: pointer;
-}
-
-.task-user-list li label {
-    cursor: pointer;
-    flex: 1;
-    font-size: 0.9rem;
+    accent-color: var(--color-primary-green);
 }
 
 /* RED ANIMATED CLOSE BUTTON */
@@ -4344,6 +4444,19 @@ tr.completed-task td {
     color: #ff4d4d;
     background: rgba(255, 77, 77, 0.15);
     border-color: rgba(255, 77, 77, 0.3);
+}
+
+.btn-meta-icon {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #ffffff;
+    font-size: 0.85rem;
+    font-weight: 700;
 }
 
 /* Custom Glass Checkbox */
@@ -5299,7 +5412,84 @@ MACHINE HISTORY TIMELINE
     /* ---- Card grid: 1 column ---- */
     .card-grid {
         grid-template-columns: 1fr !important;
-        gap: 1rem !important;
+        gap: 0.75rem !important;
+        padding: 0 !important;
+    }
+
+    .card {
+        padding: 1rem 0.75rem !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+        border-width: 2px !important;
+    }
+
+    .task-machine-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+    }
+
+    /* Task specific circle - even smaller for very narrow screens */
+    .task-quick-complete {
+        width: 18px !important;
+        height: 18px !important;
+        min-width: 18px !important;
+    }
+
+    .task-quick-complete svg {
+        width: 8px !important;
+        height: 8px !important;
+    }
+
+    /* Font scaling refinement */
+    .card h1, .card h2, .card-title, .task-card-title {
+        font-size: clamp(0.75rem, 3.5vw, 1.15rem) !important;
+    }
+
+    .card-content, .task-card-desc, .card-meta, #tasks-machines h3 {
+        font-size: clamp(0.7rem, 3vw, 0.9rem) !important;
+    }
+
+    /* Aggressive Icon & Button Scaling */
+    .btn-add-bg, .btn-glass-add, .btn-primary, .btn-secondary, .btn-reports, .btn-reports-red {
+        padding: 6px 12px !important;
+        font-size: 0.75rem !important;
+        border-radius: 12px !important;
+        height: auto !important;
+        min-height: 32px !important;
+    }
+
+    .btn-add-bg svg, .btn-glass-add svg, .btn-reports svg, .btn-reports-red svg {
+        width: 14px !important;
+        height: 14px !important;
+    }
+
+    .btn-icon-circular, .btn-icon-soft, .workshop-toggle, .task-card-actions button {
+        width: 28px !important;
+        height: 28px !important;
+        min-width: 28px !important;
+    }
+
+    .btn-icon-circular svg, .btn-icon-soft svg, .workshop-toggle svg, .task-card-actions button svg {
+        width: 14px !important;
+        height: 14px !important;
+    }
+
+    /* Task specific circle */
+    .task-quick-complete {
+        width: 22px !important;
+        height: 22px !important;
+        min-width: 22px !important;
+    }
+
+    .task-quick-complete svg {
+        width: 10px !important;
+        height: 10px !important;
+    }
+
+    /* Tags */
+    .project-tag, .card-badge, .badge-premium {
+        font-size: 0.7rem !important;
+        padding: 2px 8px !important;
     }
 
     /* ---- Dashboard inline grids (KPI 2-col) ---- */
@@ -5324,15 +5514,28 @@ MACHINE HISTORY TIMELINE
 
     /* ---- Kanban board: horizontal scroll ---- */
     .kanban-board {
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow-x: hidden !important;
         flex-wrap: nowrap !important;
-        padding-bottom: 1rem;
+        padding: 0 !important;
+        gap: 1.5rem !important;
     }
 
     .kanban-column {
-        min-width: 260px !important;
-        max-width: 85vw;
+        display: flex !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        min-height: auto !important;
+        padding: 0.75rem !important;
+    }
+
+    .column-title {
+        font-size: 0.9rem !important;
+        padding: 0.25rem 0 !important;
     }
 
     /* ---- Tables: horizontal scroll ---- */
@@ -5718,10 +5921,16 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     .view-header-right {
         width: 100%;
         justify-content: flex-start !important;
+        gap: 0.75rem !important;
     }
 
     .custom-search-wrapper {
         width: 100% !important;
+        height: 38px !important;
+    }
+
+    .custom-search-wrapper input {
+        font-size: 0.85rem !important;
     }
 
     .btn-add-bg, .btn-glass-add {
@@ -5729,12 +5938,130 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         justify-content: center;
     }
 
-    .table-responsive-wrapper {
-        margin: 0 -1rem; /* Full width bleed */
-        width: calc(100% + 2rem);
+    body, html, #app, #main-wrapper {
+        overflow-x: hidden !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        position: relative;
     }
 
-    /* Table-to-Card Transformation for Mobile */
+    .table-responsive-wrapper {
+        margin: 0 !important;
+        width: 100% !important;
+    }
+
+    .view-header-layout {
+        padding: 1rem !important;
+        background: transparent !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        margin-bottom: 1rem !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .view-header-layout h1 {
+        font-size: 1.5rem !important;
+    }
+
+    .view-header-layout h1 svg {
+        width: 22px !important;
+        height: 22px !important;
+    }
+
+    .btn-meta-icon {
+        padding: 4px 10px !important;
+        font-size: 0.75rem !important;
+        gap: 5px !important;
+    }
+
+    .btn-meta-icon svg {
+        width: 12px !important;
+        height: 12px !important;
+    }
+
+    .view-header-right {
+        width: 100% !important;
+        justify-content: flex-start !important;
+    }
+
+    .card-grid {
+        display: grid !important;
+        grid-template-columns: 1fr !important; /* Force 1 column on mobile */
+        gap: 1.25rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .quarters-stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important; /* Force 2 columns for accounting */
+        gap: 0.75rem !important;
+    }
+
+    .card {
+        padding: 20px !important;
+        min-height: auto !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Adaptive Image Height for compact cards */
+    :root {
+        --machine-image-height: 160px;
+        --btn-font-size: 0.8rem;
+        --icon-size: 18px;
+    }
+
+    /* Shrink Buttons & Icons Globally on Mobile */
+    .btn-add-bg, .btn-glass-add, .btn-primary, .btn-secondary, .btn-history, .btn-reports, .btn-reports-red {
+        padding: 8px 16px !important;
+        font-size: var(--btn-font-size) !important;
+        min-height: auto !important;
+    }
+
+    .btn-add-bg svg, .btn-glass-add svg, .btn-history svg, .btn-reports svg {
+        width: 16px !important;
+        height: 16px !important;
+    }
+
+    .btn-icon-soft, .btn-icon-circular {
+        width: 32px !important;
+        height: 32px !important;
+    }
+
+    .btn-icon-soft svg, .btn-icon-circular svg {
+        width: 14px !important;
+        height: 14px !important;
+    }
+
+    /* Shrink specific card elements */
+    .workshop-toggle {
+        width: 34px !important;
+        height: 34px !important;
+        top: -17px !important;
+    }
+
+    .workshop-toggle svg {
+        width: 18px !important;
+        height: 18px !important;
+    }
+
+    /* Order Number & Meta font scaling */
+    .machine-info-grid {
+        padding: 12px 1rem !important;
+        gap: 0.5rem !important;
+    }
+
+    .machine-info-grid div[style*="font-size: 1.05rem"] {
+        font-size: 0.9rem !important;
+    }
+
+    .machine-info-grid div[style*="font-size: 0.85rem"] {
+        font-size: 0.7rem !important;
+    }
+
+    /* Table-to-Card Transformation for Mobile (Restored) */
     .task-table, #procurement-table, .data-table {
         display: block !important;
         min-width: 0 !important;
@@ -5749,8 +6076,8 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     .task-table tbody, #procurement-table tbody, .data-table tbody {
         display: flex !important;
         flex-direction: column;
-        gap: 1rem;
-        padding: 0.5rem;
+        gap: 0.5rem;
+        padding: 0.25rem 0;
     }
 
     .task-table tr:not(.hidden), #procurement-table tr:not(.hidden), .data-table tr:not(.hidden) {
@@ -5763,7 +6090,21 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         padding: 1.25rem !important;
         gap: 0.75rem;
         position: relative;
-        margin-bottom: 0 !important;
+        margin-bottom: 0.75rem !important;
+        margin-left: 0.5rem !important;
+        margin-right: 0.5rem !important;
+    }
+
+    /* Edge-to-edge for Accounting on Mobile - RESTORED ROUNDING */
+    .data-table tr:not(.hidden) {
+        border-radius: 20px !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .task-table tr.status-open {
+        background: rgba(239, 68, 68, 0.12) !important;
+        border-color: rgba(239, 68, 68, 0.2) !important;
+        box-shadow: inset 4px 0 0 0 #ef4444 !important;
     }
 
     .task-table td, #procurement-table td, .data-table td {
@@ -5797,7 +6138,7 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         border-left: none !important;
     }
 
-    #procurement-table td:last-child, .task-table td:last-child {
+    #procurement-table td:last-child, .task-table td:last-child, .data-table td:last-child {
         border-top: 1px solid rgba(255, 255, 255, 0.1);
         padding-top: 0.75rem !important;
         margin-top: 0.25rem;
@@ -5922,18 +6263,25 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         border-collapse: collapse !important;
     }
 
-    /* 2. Neutralize the Detail TR - Remove ALL padding/margin inherited from general tr rules */
+    /* 2. Neutralize the Detail TR - Forced Full Width */
     .data-table tr[id^="details-"] {
         display: flex !important;
         flex-direction: column !important;
         width: 100% !important;
         background: transparent !important;
         border: none !important;
-        padding: 0 !important; /* CRITICAL: Remove tr padding */
+        padding: 0 !important;
         margin: 0 !important;
         backdrop-filter: none !important;
         border-radius: 0 !important;
         box-shadow: none !important;
+    }
+
+    .data-table tr[id^="details-"] td {
+        display: block !important;
+        padding: 0 !important;
+        width: 100% !important;
+        border: none !important;
     }
 
     .acc-details-cell {
@@ -5959,15 +6307,27 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         display: flex !important;
         flex-direction: column !important;
         gap: 0.75rem !important;
-        padding: 1.25rem !important; /* Exact padding as main tr card */
-        background: rgba(255, 255, 255, 0.05) !important;
+        padding: 1.25rem !important;
+        background: rgba(255, 255, 255, 0.06) !important;
         backdrop-filter: blur(24px) !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
-        border-radius: 20px !important;
-        margin: 0 0 1rem 0 !important; /* 1rem gap to next card, no horizontal margin */
-        width: 100% !important;
+        border-left: 4px solid #3b82f6 !important; /* Visual indicator for details */
+        border-radius: 16px !important;
+        margin: 0.5rem 0.5rem 0.75rem 0.5rem !important;
+        width: calc(100% - 1rem) !important;
         box-sizing: border-box !important;
         position: relative !important;
+    }
+
+    /* Forced Edge-to-Edge Container */
+    div[id^="details-content-"] {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 1px !important; /* Slim divider between sub-cards */
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        background: rgba(255,255,255,0.02) !important;
     }
 
     /* Match internal div appearance */
@@ -5990,11 +6350,30 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         padding-right: 12px !important;
         flex-shrink: 0 !important;
     }
+
+    /* Month Header Rounding */
+    .accounting-month-header {
+        display: block !important;
+        margin: 1.5rem 0.5rem 1rem 0.5rem !important;
+    }
+
+    .accounting-month-header td {
+        display: block !important;
+        padding: 1.25rem !important;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04)) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 16px !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
+    }
 }
 
 /* Ensure hidden rows are REALLY hidden, even against media query tr overrides */
 .hidden { 
     display: none !important; 
+}
+
+.data-table tr.hidden {
+    display: none !important;
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {

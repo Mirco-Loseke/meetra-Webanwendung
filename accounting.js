@@ -307,7 +307,7 @@ window.renderAccounting = function () {
         // Entry Rows
         html += grouped[monthName].map(e => `
             <tr style="border-top: 1px solid rgba(255,255,255,0.03); transition: background 0.2s;" class="accounting-main-row ${e.is_paid ? 'status-paid' : 'status-unpaid'}" id="row-${e.id}">
-                <td data-label="Details" style="padding: 12px; text-align: center; cursor: pointer; color: var(--color-primary-green);" onclick="window.toggleAccountingDetails('${e.id}', this)">
+                <td data-label="Details" style="padding: 12px; text-align: center; cursor: pointer; color: var(--color-primary-green);" onclick="window.toggleAccountingDetails('${e.id}', this, event)">
                     <svg class="chevron-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.3s;"><path d="M9 18l6-6-6-6"></path></svg>
                 </td>
                 <td data-label="Bezahlt" style="padding: 8px 12px; text-align: center; vertical-align: middle;">
@@ -460,7 +460,7 @@ window.renderQuarters = function () {
                 <span style="color: #fff;">${yr}</span>
                 <span style="display: inline-block; height: 1px; flex: 1; background: rgba(255,255,255,0.08);"></span>
             </div>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+            <div class="quarters-stats-grid">
         `;
 
         quarters.forEach(q => {
@@ -1719,11 +1719,10 @@ window.updateMachineEvaluation = async function () {
     }
 };
 
-window.toggleAccountingDetails = async function (id, btn) {
-    // Prevent event bubbling
-    if (window.event) {
-        window.event.preventDefault();
-        window.event.stopPropagation();
+window.toggleAccountingDetails = async function (id, btn, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
     }
     
     const detailsRow = document.getElementById(`details-${id}`);
@@ -1733,17 +1732,24 @@ window.toggleAccountingDetails = async function (id, btn) {
 
     if (!detailsRow || !content) return;
 
-    if (!detailsRow.classList.contains('hidden')) {
+    // Use a precise check for the hidden state
+    const currentlyHidden = detailsRow.classList.contains('hidden');
+    
+    if (!currentlyHidden) {
+        // Collapse
         detailsRow.classList.add('hidden');
         if (chevron) chevron.style.transform = 'rotate(0deg)';
         if (mainRow) mainRow.style.background = 'transparent';
         return;
     }
 
-    // Show and rotate
+    // Expand
     detailsRow.classList.remove('hidden');
     if (chevron) chevron.style.transform = 'rotate(90deg)';
     if (mainRow) mainRow.style.background = 'rgba(255,255,255,0.02)';
+
+    // If already has content, don't reload unless empty
+    if (content.children.length > 0 && !content.innerHTML.includes('Lade Details')) return;
 
     // Lazy Load
     try {

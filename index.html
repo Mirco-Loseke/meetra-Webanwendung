@@ -189,6 +189,240 @@
                 justify-content: center;
             }
 
+            /* History & Quick Entry Premium Styles */
+            .btn-icon-circular {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border: 1.5px solid rgba(255,255,255,0.1);
+                background: rgba(255,255,255,0.05);
+                color: white;
+                cursor: pointer;
+                transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                backdrop-filter: blur(10px);
+                padding: 0;
+            }
+            .btn-icon-circular svg {
+                width: 14px;
+                height: 14px;
+            }
+            .btn-icon-circular:hover {
+                transform: scale(1.15);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            }
+            .btn-icon-circular.edit {
+                background: rgba(59, 130, 246, 0.15);
+                border-color: rgba(59, 130, 246, 0.4);
+                color: #3b82f6;
+            }
+            .btn-icon-circular.edit:hover {
+                background: rgba(59, 130, 246, 0.25);
+                border-color: rgba(59, 130, 246, 0.6);
+                box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+            }
+            .btn-icon-circular.delete {
+                background: rgba(239, 68, 68, 0.15);
+                border-color: rgba(239, 68, 68, 0.4);
+                color: #ef4444;
+            }
+            .btn-icon-circular.delete:hover {
+                background: rgba(239, 68, 68, 0.25);
+                border-color: rgba(239, 68, 68, 0.6);
+                box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+            }
+
+            .history-tag-badge {
+                position: absolute;
+                top: -10px;
+                left: -10px;
+                padding: 4px 12px;
+                border-radius: 20px;
+                font-size: 0.6rem;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 1px;
+                backdrop-filter: blur(15px);
+                border: 1px solid rgba(255,255,255,0.15);
+                z-index: 5;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            }
+
+            .history-user-initials {
+                position: absolute;
+                right: -8px;
+                bottom: -8px;
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.6rem;
+                font-weight: 800;
+                color: white;
+                border: 2px solid rgba(0,0,0,0.2);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                z-index: 2;
+            }
+
+            .quick-entry-btn-premium {
+                background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+                border: 1px solid rgba(255,255,255,0.08);
+                color: rgba(255,255,255,0.9);
+                padding: 18px 12px;
+                border-radius: 24px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 12px;
+                transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+                cursor: pointer;
+                overflow: hidden;
+                position: relative;
+                backdrop-filter: blur(10px);
+            }
+            .quick-entry-btn-premium:hover {
+                background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+                border-color: rgba(255,255,255,0.2);
+                transform: translateY(-4px);
+                box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            }
+            .quick-entry-icon-ring {
+                width: 44px;
+                height: 44px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border: 2px solid currentColor;
+                background: rgba(0,0,0,0.25);
+                transition: all 0.3s ease;
+                margin-bottom: 2px;
+            }
+            .quick-entry-btn-premium:hover .quick-entry-icon-ring {
+                transform: scale(1.1);
+                background: currentColor;
+            }
+            .quick-entry-btn-premium:hover .quick-entry-icon-ring svg {
+                color: #0f172a;
+            }
+
+            .history-item-premium {
+                background: linear-gradient(165deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+                border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 20px;
+                padding: 1.25rem;
+                margin-bottom: 1.5rem;
+                position: relative;
+                backdrop-filter: blur(25px);
+                box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                transition: all 0.3s ease;
+            }
+            .history-item-premium:hover {
+                border-color: rgba(255,255,255,0.2);
+                background: linear-gradient(165deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%);
+                transform: translateY(-2px);
+                box-shadow: 0 15px 50px rgba(0,0,0,0.3);
+            }
+            .history-timeline-container {
+                position: relative;
+                padding-left: 20px !important;
+                margin-top: 1rem;
+            }
+            /* Vertical line between icons */
+            .history-icon-connector {
+                position: absolute;
+                left: 15px;
+                top: 0;
+                bottom: 0;
+                width: 2px;
+                background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.1) 5%, rgba(255,255,255,0.1) 95%, transparent);
+                z-index: 0;
+            }
+            .history-item-premium {
+                position: relative;
+                margin-left: 3rem !important; /* Move card right to make room for icon */
+                padding: 1.5rem;
+                background: linear-gradient(165deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%);
+                border: 1px solid rgba(255,255,255,0.1);
+                border-radius: 20px;
+                margin-bottom: 2rem;
+                backdrop-filter: blur(25px);
+                box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                transition: all 0.3s ease;
+            }
+            /* Horizontal connector from icon to card */
+            .history-icon::after {
+                content: '';
+                position: absolute;
+                right: -16px; /* Bridge the gap to the card */
+                top: 50%;
+                width: 16px;
+                height: 2px;
+                background: rgba(255,255,255,0.1);
+                z-index: -1;
+            }
+            .history-item-year {
+                background: rgba(255,255,255,0.03) !important;
+                border-color: rgba(255,255,255,0.05) !important;
+                text-align: center;
+                padding: 1rem !important;
+            }
+            .history-item-year h3 {
+                margin: 0;
+                color: #fff !important;
+                font-size: 1.5rem;
+                font-weight: 900;
+                letter-spacing: 5px;
+            }
+            .btn-close-premium {
+                background: rgba(239, 68, 68, 0.1) !important;
+                border: 1px solid rgba(239, 68, 68, 0.2) !important;
+                color: #ef4444 !important;
+                transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+            }
+            .btn-close-premium:hover {
+                background: #ef4444 !important;
+                color: white !important;
+                transform: rotate(90deg) scale(1.1);
+                box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+            }
+            .quick-entry-btn-premium::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+            .quick-entry-btn-premium:hover {
+                transform: translateY(-4px);
+                background: rgba(255,255,255,0.07);
+                border-color: rgba(255,255,255,0.2);
+                color: #fff;
+            }
+            .quick-entry-btn-premium:hover::before {
+                opacity: 1;
+            }
+            .quick-entry-btn-premium span:first-child {
+                font-size: 1.5rem;
+                filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+            }
+            .quick-entry-btn-premium span:last-child {
+                font-size: 0.8rem;
+                font-weight: 700;
+                letter-spacing: 0.5px;
+            }
+
+            /* User Management Circular Buttons (Compatibility) */
+            .user-actions .btn-icon-circular {
+                width: 32px;
+                height: 32px;
+            }
+
             /* LANDSCAPE OPTIMIZATIONS (iPad & Mobile) */
             @media (orientation: landscape) and (max-height: 650px) {
                 .login-card-responsive {
@@ -301,7 +535,7 @@
                 <input type="text" id="edit-user-pin" class="glass-input" placeholder="Z.B. 1234 oder leer lassen">
             </div>
             
-            <div class="form-group" style="margin-top: 1.5rem;">
+            <div id="edit-permissions-section" class="form-group" style="margin-top: 1.5rem;">
                 <label style="margin-bottom: 0.5rem; display: block; color: var(--color-primary-green);">Berechtigungen (Ansichten):</label>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 8px;">
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-home" style="cursor: pointer;"> Startseite</label>
@@ -812,7 +1046,6 @@
                             <table class="task-table" style="border-collapse: separate; border-spacing: 0 10px;">
                                 <thead>
                                     <tr>
-                                        <th style="width: 140px;">Status</th>
                                         <th>Aufgabe</th>
                                         <th style="min-width: 180px;">Maschine</th>
                                         <th>Beteiligte</th>
@@ -2526,6 +2759,11 @@
                     // Re-render dropdown to update highlights
                     renderUserDropdown();
 
+                    // Re-render user list to update permissions/icons immediately
+                    if (typeof renderUserList === 'function') {
+                        renderUserList();
+                    }
+
                     // Close dropdown
                     const dropdown = document.querySelector('.sidebar-user-profile .user-dropdown-menu');
                     if (dropdown) {
@@ -3257,15 +3495,53 @@
                     if (!listContainer) return;
 
                     listContainer.innerHTML = '';
+                    
+                        // 1. HARDENED ADMIN CHECK WITH STATE FALLBACK
+                        let activeUserObj = window.activeUser;
+                        
+                        // Fallback to localStorage if state is missing
+                        if (!activeUserObj) {
+                            const storedId = localStorage.getItem('activeUserId');
+                            if (storedId && typeof userList !== 'undefined') {
+                                activeUserObj = userList.find(u => String(u.id) === String(storedId));
+                            }
+                        }
+                        
+                        activeUserObj = activeUserObj || {};
+                        const currentName = (activeUserObj.name || "").toLowerCase().trim();
+                        // Extremely robust admin check - Mirco is always Admin
+                        const isAdmin = currentName.includes("mirco") && currentName.includes("loseke");
 
-                    userList.forEach(user => {
-                        const li = document.createElement('li');
-                        li.className = 'user-item';
-                        // Set CSS variable for the border and avatar color
-                        li.style.setProperty('--user-color', user.color || '#999');
+                        userList.forEach(user => {
+                            const li = document.createElement('li');
+                            li.className = 'user-item';
+                            li.style.setProperty('--user-color', user.color || '#999');
+
+                            const targetName = (user.name || "").toLowerCase().trim();
+                            const isTargetMirco = targetName.includes("mirco") && targetName.includes("loseke");
+                            
+                            // 2. HARDENED ID COMPARISON (Handles Numbers and UUIDs)
+                            const activeId = activeUserObj.id ? String(activeUserObj.id) : null;
+                            const targetId = user.id ? String(user.id) : null;
+                            const isSelf = activeId && targetId && activeId === targetId;
+
+                            // 3. PERMISSION LOGIC
+                            const canEdit = isAdmin || isSelf;
+                            const canDelete = isAdmin && !isTargetMirco; 
+                            
+                            const showPinInList = isAdmin;
+                            
+                            const adminBadgeHtml = isTargetMirco ? `
+                                <span class="admin-badge">
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                                    </svg>
+                                    Admin
+                                </span>` : '';
 
                         li.innerHTML = `
-                            <div class="user-item-content">
+                            <div class="user-item-content" style="position: relative; display: flex; align-items: center; justify-content: space-between;">
+                                ${adminBadgeHtml}
                                 <div class="user-info-group">
                                     <div class="user-avatar-large" style="position: relative; cursor: pointer;" onclick="document.getElementById('color-picker-${user.id}').click()" title="Farbe ändern">
                                         ${user.initials || user.name.substring(0, 2).toUpperCase()}
@@ -3274,23 +3550,34 @@
                                                value="${user.color || '#999999'}"
                                                onchange="updateUserColor(${user.id}, this.value)">
                                     </div>
-                                    <div class="user-details" style="display: flex; align-items: center;">
+                                    <div class="user-details" style="display: flex; align-items: center; margin-left: 10px;">
                                         <span class="user-name-link">${user.name}</span>
                                     </div>
                                 </div>
+
+                                <!-- Centered PIN (Exactly in the middle of the card) -->
+                                <div style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; display: flex; align-items: center; justify-content: center;">
+                                    ${showPinInList ? `<span style="pointer-events: auto; font-family: 'JetBrains Mono', monospace; color: rgba(255,255,255,0.5); font-size: 0.95rem; background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 8px;">
+                                        <span style="opacity: 0.7;">PIN:</span>
+                                        <span style="color: #60a5fa; font-weight: 800; letter-spacing: 1px;">${user.pin || '----'}</span>
+                                    </span>` : ''}
+                                </div>
+
                                 <div class="user-actions">
-                                    <button class="btn-icon-soft edit" onclick="editUser(${user.id})" title="Bearbeiten">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    ${canEdit ? `
+                                    <button class="btn-icon-circular edit" onclick="editUser('${user.id}')" title="Bearbeiten">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                         </svg>
-                                    </button>
-                                    <button class="btn-icon-soft delete" onclick="deleteUser(${user.id})" title="Löschen">
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M3 6h18"></path>
-                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path>
+                                    </button>` : ''}
+                                    ${canDelete ? `
+                                    <button class="btn-icon-circular delete" onclick="deleteUser('${user.id}')" title="Löschen">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                                         </svg>
-                                    </button>
+                                    </button>` : ''}
                                 </div>
                             </div>
                         `;
@@ -3330,12 +3617,43 @@
 
                 window.editUser = function (id) {
                     if (!supabaseClient) { alert('Datenbank nicht verbunden'); return; }
-                    const user = userList.find(u => u.id === id);
+                    
+                    // Robust lookup using string IDs
+                    const user = userList.find(u => String(u.id) === String(id));
                     if (!user) return;
+                    
+                    const activeUserObj = window.activeUser || {};
+                    const currentName = (activeUserObj.name || "").toLowerCase().trim();
+                    const isAdmin = currentName.includes("mirco") && currentName.includes("loseke");
+                    
+                    const activeId = activeUserObj.id ? String(activeUserObj.id) : null;
+                    const isSelf = activeId && String(user.id) === activeId;
+                    
+                    const targetName = (user.name || "").toLowerCase().trim();
+                    const isTargetMirco = targetName.includes("mirco") && targetName.includes("loseke");
                     
                     document.getElementById('edit-user-id').value = user.id;
                     document.getElementById('edit-user-name').value = user.name || '';
-                    document.getElementById('edit-user-pin').value = user.pin || '';
+                    
+                    // PIN Logic: Admin sees all, users see their own
+                    const pinInput = document.getElementById('edit-user-pin');
+                    if (pinInput) {
+                        const canSeePin = isAdmin || isSelf;
+                        pinInput.value = canSeePin ? (user.pin || '') : '****';
+                        pinInput.disabled = !canSeePin;
+                        pinInput.type = canSeePin ? 'text' : 'password';
+                    }
+                    
+                    const permSection = document.getElementById('edit-permissions-section');
+                    if (permSection) {
+                        permSection.style.display = isAdmin ? 'block' : 'none';
+                    }
+
+                    const nameInput = document.getElementById('edit-user-name');
+                    if (nameInput) {
+                        nameInput.disabled = isTargetMirco;
+                        nameInput.style.opacity = isTargetMirco ? '0.5' : '1';
+                    }
                     
                     const defaultPerms = { home: true, tasks: true, procurements: true, machines: true, history: true, accounting: true, settings: true };
                     const perms = (typeof user.permissions === 'object' && user.permissions !== null) ? user.permissions : defaultPerms;
@@ -3360,32 +3678,52 @@
                     const newName = document.getElementById('edit-user-name').value;
                     const newPin = document.getElementById('edit-user-pin').value;
                     
-                    const newPerms = {
-                        home: document.getElementById('perm-home').checked,
-                        tasks: document.getElementById('perm-tasks').checked,
-                        procurements: document.getElementById('perm-procurements').checked,
-                        machines: document.getElementById('perm-machines').checked,
-                        history: document.getElementById('perm-history').checked,
-                        accounting: document.getElementById('perm-accounting').checked,
-                        settings: document.getElementById('perm-settings').checked
-                    };
+                    const activeUserObj = window.activeUser || {};
+                    const currentName = (activeUserObj.name || "").toLowerCase().trim();
+                    const isAdmin = currentName.includes("mirco") && currentName.includes("loseke");
                     
+                    const userToUpdate = userList.find(u => String(u.id) === String(id));
+                    const isTargetMirco = userToUpdate && userToUpdate.name === 'Mirco Loseke';
+
+                    // Safety check: only admins can change permissions
+                    // If not admin, we use existing permissions
+                    let permsToSave;
+                    if (isAdmin) {
+                        permsToSave = {
+                            home: document.getElementById('perm-home').checked,
+                            tasks: document.getElementById('perm-tasks').checked,
+                            procurements: document.getElementById('perm-procurements').checked,
+                            machines: document.getElementById('perm-machines').checked,
+                            history: document.getElementById('perm-history').checked,
+                            accounting: document.getElementById('perm-accounting').checked,
+                            settings: document.getElementById('perm-settings').checked
+                        };
+                    } else {
+                        permsToSave = userToUpdate.permissions;
+                    }
+
                     if (!newName || newName.trim() === '') {
                         alert('Bitte einen Namen eingeben.');
                         return;
                     }
 
-                    const initials = newName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                    const initials = isTargetMirco ? userToUpdate.initials : newName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
                     
+                    const updatePayload = {
+                        pin: newPin,
+                        permissions: permsToSave
+                    };
+
+                    // Only update name/initials if not Mirco
+                    if (!isTargetMirco) {
+                        updatePayload.name = newName;
+                        updatePayload.initials = initials;
+                        updatePayload.role = 'Kürzel: ' + initials;
+                    }
+
                     const { error } = await supabaseClient
                         .from('users')
-                        .update({
-                            name: newName,
-                            initials: initials,
-                            role: 'Kürzel: ' + initials,
-                            pin: newPin,
-                            permissions: newPerms
-                        })
+                        .update(updatePayload)
                         .eq('id', id);
 
                     if (error) {
@@ -3398,20 +3736,26 @@
 
                 window.deleteUser = async function (id) {
                     if (!supabaseClient) { alert('Datenbank nicht verbunden'); return; }
-                    if (confirm('Benutzer wirklich löschen?')) {
-                        console.log('Deleting user:', id);
-                        const { error } = await supabaseClient
-                            .from('users')
-                            .delete()
-                            .eq('id', id);
+                    
+                    const user = userList.find(u => String(u.id) === String(id));
+                    if (!user) return;
 
-                        if (error) {
-                            console.error('Supabase Error (deleteUser):', error);
-                            alert('Fehler beim Löschen: ' + (error.message || JSON.stringify(error)));
-                        } else {
-                            console.log('User deleted successfully');
-                            fetchUsers();
-                        }
+                    if (!confirm(`Möchten Sie den Benutzer "${user.name}" wirklich unwiderruflich löschen?`)) {
+                        return;
+                    }
+
+                    console.log('Deleting user from Supabase:', id);
+                    const { error } = await supabaseClient
+                        .from('users')
+                        .delete()
+                        .eq('id', id);
+
+                    if (error) {
+                        console.error('Supabase Error (deleteUser):', error);
+                        alert('Fehler beim Löschen: ' + (error.message || JSON.stringify(error)));
+                    } else {
+                        console.log('User deleted successfully');
+                        fetchUsers();
                     }
                 };
 
@@ -5803,6 +6147,98 @@
 
             window.currentHistoryMachineId = null;
 
+            window.openSingleMachineEvaluation = async function (machineId) {
+                const modal = document.getElementById('single-machine-evaluation-modal');
+                const content = document.getElementById('single-machine-evaluation-content');
+                if (!modal || !content) return;
+
+                const machine = (window.machineList || []).find(m => String(m.id) === String(machineId));
+                console.log('[Evaluation] machineId:', machineId, 'found:', machine);
+                const machineTitle = machine
+                    ? [machine.manufacturer, machine.name, (machine.serial_number || machine.serial) ? `#${machine.serial_number || machine.serial}` : null, machine.year ? `(${machine.year})` : null].filter(Boolean).join(' ')
+                    : `Maschine #${machineId}`;
+
+                modal.classList.remove('hidden');
+                modal.style.display = 'flex';
+                requestAnimationFrame(() => modal.classList.add('show'));
+
+                content.innerHTML = '<div style="text-align: center; color: rgba(255,255,255,0.4); padding: 2rem;">Lade Auswertung...</div>';
+
+                try {
+                    // Fetch all items for this machine
+                    // Use machineId directly in eq filter
+                    const { data, error } = await window.supabaseClient
+                        .from('accounting_items')
+                        .select('*, accounting!inner(created_at, date, type)')
+                        .eq('machine_id', machineId);
+
+                    if (error) throw error;
+
+                    if (!data || data.length === 0) {
+                        content.innerHTML = '<div style="padding: 2rem; text-align: center; color: rgba(255,255,255,0.4);">Keine Buchungen für diese Maschine gefunden.</div>';
+                        return;
+                    }
+
+                    // Calculate total costs
+                    let totalCosts = 0;
+                    const monthlyBreakdown = {};
+
+                    data.forEach(item => {
+                        const price = parseFloat(item.price_net) || 0;
+                        const qty = parseFloat(item.quantity) || 1;
+                        const sum = price * qty;
+                        totalCosts += sum;
+
+                        // Use date if available, otherwise created_at
+                        const date = new Date(item.accounting.date || item.accounting.created_at);
+                        const monthKey = date.toLocaleString('de-DE', { month: 'long', year: 'numeric' });
+
+                        if (!monthlyBreakdown[monthKey]) monthlyBreakdown[monthKey] = 0;
+                        monthlyBreakdown[monthKey] += sum;
+                    });
+
+                    // Sort months (simplified)
+                    const sortedMonths = Object.keys(monthlyBreakdown).sort((a, b) => {
+                        const dateA = new Date(a.split(' ')[1], ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'].indexOf(a.split(' ')[0]));
+                        const dateB = new Date(b.split(' ')[1], ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'].indexOf(b.split(' ')[0]));
+                        return dateB - dateA;
+                    });
+
+                    let html = `
+                        <div style="margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 1rem;">
+                            <div style="font-size: 0.65rem; color: rgba(255,255,255,0.35); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.2rem;">Auswertung für</div>
+                            <div style="font-size: 0.95rem; font-weight: 700; color: var(--color-primary-green); line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${machineTitle}</div>
+                        </div>
+                        <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2); padding: 0.85rem 1.25rem; border-radius: 14px; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between;">
+                            <div style="font-size: 0.75rem; color: rgba(16, 185, 129, 0.7); font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">Gesamtkosten (Netto)</div>
+                            <div style="font-size: 1.5rem; font-weight: 800; color: white;">${totalCosts.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</div>
+                        </div>
+                        <div style="max-height: 300px; overflow-y: auto; padding-right: 4px;">
+                            <div style="font-size: 0.75rem; font-weight: 800; color: rgba(255,255,255,0.4); text-transform: uppercase; margin-bottom: 1rem; letter-spacing: 1px;">Monatliche Auflistung</div>
+                            ${sortedMonths.map(month => `
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; margin-bottom: 8px;">
+                                    <span style="color: rgba(255,255,255,0.8); font-weight: 600;">${month}</span>
+                                    <span style="color: white; font-weight: 800;">${monthlyBreakdown[month].toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    content.innerHTML = html;
+
+                } catch (error) {
+                    console.error("Error in machine evaluation:", error);
+                    content.innerHTML = '<div style="padding: 2rem; text-align: center; color: #ef4444;">Fehler beim Laden der Auswertung.</div>';
+                }
+            };
+
+            window.closeSingleMachineEvaluation = function () {
+                const modal = document.getElementById('single-machine-evaluation-modal');
+                if (modal) {
+                    modal.classList.remove('show');
+                    setTimeout(() => modal.classList.add('hidden'), 300);
+                }
+            };
+
             window.openHistoryModal = async function (machineId) {
                 window.currentHistoryMachineId = machineId;
                 window.toggleManualHistoryForm(null); // Reset form
@@ -5964,56 +6400,75 @@
                     }
 
                     let html = '';
+                    let lastYear = null;
+
                     historyItems.forEach(item => {
-                        const dateStr = item.date.toLocaleDateString('de-DE');
-                        const timeStr = item.date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                        const currentYear = item.date.getFullYear();
+                        if (lastYear !== currentYear) {
+                            html += `
+                                <div class="history-item-premium history-item-year">
+                                    <div class="history-icon" style="position: absolute; left: -48px; top: 1.25rem; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.05); border: 2.5px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 0.9rem; z-index: 2;">
+                                        📅
+                                    </div>
+                                    <div class="history-content-inner">
+                                        <h3>${currentYear}</h3>
+                                    </div>
+                                </div>
+                            `;
+                            lastYear = currentYear;
+                        }
+
+                        const dateStr = item.date.toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' });
 
                         const sourceTag = item.source === 'manuell'
-                            ? `<span style="background: rgba(16,185,129,0.15); color: #10b981; padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; border: 1px solid rgba(16,185,129,0.2); margin-left: 8px;">MANUELL</span>`
-                            : `<span style="background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.4); padding: 2px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; border: 1px solid rgba(255,255,255,0.1); margin-left: 8px;">SYSTEM</span>`;
+                            ? `<span class="history-tag-badge" style="background: rgba(16,185,129,0.15); color: #10b981; border-color: rgba(16,185,129,0.3);">MANUELL</span>`
+                            : `<span class="history-tag-badge" style="background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.4);">SYSTEM</span>`;
 
-                        let actionButtons = '';
+                        const isAdmin = window.activeUser && (window.activeUser.name === 'Mirco Loseke');
+                        // Use string comparison or conversion to avoid UUID type mismatch if table expects Integer
+                        const deleteBtn = (isAdmin && item.id) ? `
+                            <button onclick="window.deleteHistoryEntry('${item.id}', '${item.itemType || 'manual'}')" class="btn-icon-circular delete" title="Löschen">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </button>
+                        ` : '';
+
+                        let actionButtons = `<div style="display: flex; gap: 0.75rem; margin-top: 1rem; align-items: center;">`;
+                        
                         if (item.itemType === 'service') {
-                            actionButtons = `
-                                <button onclick="window.openEditServicebericht(${item.id})" class="history-action-btn">
-                                    <span>Öffnen</span>
+                            actionButtons += `
+                                <button onclick="window.openEditServicebericht(${item.id})" class="btn-icon-circular edit" title="Öffnen">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                 </button>
                             `;
                         } else if (item.itemType === 'intake' || item.itemType === 'acceptance') {
                             const openFn = item.itemType === 'intake' ? 'openIntakeProtocol' : 'openAcceptanceProtocol';
-                            const pdfBtn = item.status === 'completed' ? `
-                                <button onclick="window.openProtocolPDF(${item.machineId}, '${item.id}', '${item.itemType}')" class="history-action-btn pdf">
-                                    <span>PDF Öffnen</span>
+                            const pdfIcon = item.status === 'completed' ? `
+                                <button onclick="window.openProtocolPDF(${item.machineId}, '${item.id}', '${item.itemType}')" class="btn-icon-circular" style="background: rgba(236,72,153,0.15); border-color: rgba(236,72,153,0.4); color: #ec4899;" title="PDF Öffnen">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                                 </button>
                             ` : '';
 
-                            actionButtons = `
-                                <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
-                                    <button onclick="window.${openFn}(${item.machineId}, '${item.id}')" class="history-action-btn">
-                                        <span>Öffnen</span>
-                                    </button>
-                                    ${pdfBtn}
-                                </div>
+                            actionButtons += `
+                                <button onclick="window.${openFn}(${item.machineId}, '${item.id}')" class="btn-icon-circular edit" title="Öffnen">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                </button>
+                                ${pdfIcon}
                             `;
                         } else if (item.source === 'manuell') {
-                            actionButtons = `
-                                <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
-                                    <button onclick="window.editManualHistoryEntry('${item.id}')" class="history-action-btn">
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                        <span>Bearbeiten</span>
-                                    </button>
-                                </div>
+                            actionButtons += `
+                                <button onclick="window.editManualHistoryEntry('${item.id}')" class="btn-icon-circular edit" title="Bearbeiten">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                </button>
                             `;
                         }
+                        
+                        actionButtons += `${deleteBtn}</div>`;
 
                         let userBadge = '';
                         if (item.source === 'manuell' && item.user) {
                             userBadge = `
-                                <div style="position: absolute; right: 0; bottom: 0; display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
-                                    <div style="width: 20px; height: 20px; border-radius: 50%; background: ${item.user.color || '#3b82f6'}; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800; color: #fff;">
-                                        ${item.user.initials || '?'}
-                                    </div>
-                                    <span style="font-size: 0.7rem; color: rgba(255,255,255,0.5); font-weight: 600;">${item.user.name}</span>
+                                <div title="${item.user.name}" style="width: 32px; height: 32px; border-radius: 50%; background: ${item.user.color || '#3b82f6'}; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.7rem; flex-shrink: 0; box-shadow: 0 0 10px ${item.user.color || '#3b82f6'}60;">
+                                    ${item.user.initials || '?'}
                                 </div>
                             `;
                         }
@@ -6038,40 +6493,65 @@
                         }
 
                         html += `
-                            <div class="history-item" style="position: relative; padding: 1rem 0 1rem 1.5rem; border-left: 2px solid rgba(255,255,255,0.1); margin-left: 1rem;">
-                                <div class="history-icon" style="position: absolute; left: -16px; top: 1.25rem; width: 30px; height: 30px; border-radius: 50%; background: ${item.color}20; border: 2px solid ${item.color}; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; box-shadow: 0 0 10px ${item.color}40;">
+                            <div class="history-item-premium">
+                                <div class="history-icon" style="position: absolute; left: -48px; top: 1.25rem; width: 32px; height: 32px; border-radius: 50%; background: ${item.color}20; border: 2.5px solid ${item.color}; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; box-shadow: 0 0 15px ${item.color}40; z-index: 2;">
                                     ${item.icon}
                                 </div>
-                                <div class="history-content" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); padding: 1.25rem; border-radius: 16px;">
-                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; gap: 1rem;">
-                                        <div>
-                                            <div style="display: flex; align-items: center; margin-bottom: 0.25rem;">
-                                                <span style="font-size: 0.75rem; font-weight: 800; color: ${item.color}; text-transform: uppercase; letter-spacing: 1px;">${item.type}</span>
-                                                ${sourceTag}
-                                            </div>
-                                            <h4 style="margin: 0; color: #fff; font-size: 1.1rem; font-weight: 600;">${item.title}</h4>
+                                <div class="history-content-inner">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; gap: 0.5rem;">
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <span style="font-size: 0.7rem; font-weight: 900; color: ${item.color}; text-transform: uppercase; letter-spacing: 1.5px;">${item.type}</span>
                                         </div>
-                                        <div style="font-size: 0.8rem; color: rgba(255,255,255,0.5); font-weight: 600; text-align: right; background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 6px;">
-                                            <div>${dateStr}</div>
-                                            <div>${timeStr}</div>
+                                        <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                                            ${sourceTag}
+                                            ${item.source === 'manuell' ? `
+                                            <div style="position: relative; display: inline-flex; align-items: center;" title="Datum bearbeiten">
+                                                <div onclick="this.nextElementSibling.showPicker ? this.nextElementSibling.showPicker() : this.nextElementSibling.click()" style="font-size: clamp(0.6rem, 1.5vw, 0.75rem); color: rgba(255,255,255,0.6); font-weight: 700; text-align: right; background: rgba(16,185,129,0.06); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(16,185,129,0.2); white-space: nowrap; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.15)'; this.style.borderColor='rgba(16,185,129,0.4)'" onmouseout="this.style.background='rgba(16,185,129,0.06)'; this.style.borderColor='rgba(16,185,129,0.2)'">
+                                                    ✏️ ${dateStr}
+                                                </div>
+                                                <input type="date" value="${item.date.toISOString().split('T')[0]}" style="position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none;" onchange="window.updateManualEntryDate('${item.id}', this.value)">
+                                            </div>` : `
+                                            <div style="font-size: clamp(0.6rem, 1.5vw, 0.75rem); color: rgba(255,255,255,0.6); font-weight: 700; text-align: right; background: rgba(0,0,0,0.35); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); white-space: nowrap;">
+                                                ${dateStr}
+                                            </div>`}
                                         </div>
                                     </div>
-                                    ${item.description ? `<p style="margin: 0; color: ${item.itemType === 'workshop' ? '#fff' : 'rgba(255,255,255,0.6)'}; font-size: 0.95rem; line-height: 1.5; font-weight: ${item.itemType === 'workshop' ? '700' : '400'};">${item.description}</p>` : ''}
+                                    <h4 style="margin: 0 0 0.5rem 0; color: #fff; font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em;">${item.title}</h4>
+                                    ${item.description ? `<p style="margin: 0; color: ${item.itemType === 'workshop' ? '#fff' : 'rgba(255,255,255,0.7)'}; font-size: 0.95rem; line-height: 1.6; font-weight: ${item.itemType === 'workshop' ? '700' : '400'};">${item.description}</p>` : ''}
                                     ${photoGallery}
-                                    <div style="position: relative;">
-                                        ${actionButtons}
-                                        ${userBadge}
+                                    <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; align-items: center; width: 100%;">
+                                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                            ${actionButtons.replace(/<div style="display: flex; gap: 0.75rem; margin-top: 1rem; align-items: center;">/g, '').replace(/<\/div>$/g, '')}
+                                        </div>
+                                        <div style="margin-left: auto; display: flex; align-items: center; gap: 8px;">
+                                            ${userBadge}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         `;
                     });
 
-                    container.innerHTML = html;
+                    container.innerHTML = `<div class="history-icon-connector"></div>` + html;
 
                 } catch (error) {
                     console.error("Error loading machine history", error);
                     container.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 2rem;">Fehler beim Laden der Historie.</div>';
+                }
+            };
+
+            window.updateManualEntryDate = async function(id, newDate) {
+                if (!id || !newDate) return;
+                try {
+                    const { error } = await window.supabaseClient
+                        .from('manual_history_entries')
+                        .update({ created_at: new Date(newDate + 'T12:00:00').toISOString() })
+                        .eq('id', id);
+                    if (error) throw error;
+                    window.openHistoryModal(window.currentHistoryMachineId);
+                } catch (err) {
+                    console.error('Error updating date:', err);
+                    alert('Fehler beim Aktualisieren des Datums: ' + err.message);
                 }
             };
 
@@ -6128,7 +6608,14 @@
                         </div>
                     `;
                 }
-                fields.innerHTML = html;
+                const todayStr = new Date().toISOString().split('T')[0];
+                const dateRow = `
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.75rem;">
+                        <label style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; white-space: nowrap;">Datum</label>
+                        <input type="date" id="manual-entry-date" value="${todayStr}" class="glass-input" style="flex: 1; padding: 6px 12px; font-size: 0.85rem; color-scheme: dark;">
+                    </div>
+                `;
+                fields.innerHTML = dateRow + html;
 
                 // Scroll to form after a short delay to ensure rendering
                 setTimeout(() => {
@@ -6205,6 +6692,11 @@
                     if (document.getElementById('manual-content')) {
                         document.getElementById('manual-content').value = entry.content;
                     }
+                    // Prefill the date from the entry's created_at
+                    const dateInput = document.getElementById('manual-entry-date');
+                    if (dateInput && entry.created_at) {
+                        dateInput.value = new Date(entry.created_at).toISOString().split('T')[0];
+                    }
 
                     // 4.5 Change button text and show delete button
                     const saveBtn = document.querySelector('#manual-history-form-container .btn-primary');
@@ -6254,6 +6746,8 @@
                 const title = document.getElementById('manual-title').value;
                 const content = document.getElementById('manual-content') ? document.getElementById('manual-content').value : '';
                 const machineId = window.currentHistoryMachineId;
+                const entryDateInput = document.getElementById('manual-entry-date');
+                const entryDate = entryDateInput ? entryDateInput.value : null;
 
                 if (!title) {
                     alert('Bitte geben Sie einen Titel/Betreff ein.');
@@ -6297,28 +6791,31 @@
 
                     if (id) {
                         // UPDATE existing entry
+                        const updatePayload = {
+                            title: title,
+                            content: content,
+                            files: filesArray,
+                            updated_at: new Date()
+                        };
+                        if (entryDate) updatePayload.created_at = new Date(entryDate + 'T12:00:00').toISOString();
                         const { error } = await window.supabaseClient
                             .from('manual_history_entries')
-                            .update({
-                                title: title,
-                                content: content,
-                                files: filesArray,
-                                updated_at: new Date()
-                            })
+                            .update(updatePayload)
                             .eq('id', id);
                         if (error) throw error;
                     } else {
-                        // CREATE new entry
+                        const insertPayload = {
+                            machine_id: machineId,
+                            type: type,
+                            title: title,
+                            content: content,
+                            files: filesArray,
+                            created_by: window.activeUser?.id
+                        };
+                        if (entryDate) insertPayload.created_at = new Date(entryDate + 'T12:00:00').toISOString();
                         const { error } = await window.supabaseClient
                             .from('manual_history_entries')
-                            .insert([{
-                                machine_id: machineId,
-                                type: type,
-                                title: title,
-                                content: content,
-                                files: filesArray,
-                                created_by: window.activeUser?.id // Use the active user ID from switcher
-                            }]);
+                            .insert([insertPayload]);
                         if (error) throw error;
                     }
 
@@ -6347,21 +6844,34 @@
             window.deleteManualHistoryEntry = async function () {
                 const id = document.getElementById('manual-history-id').value;
                 if (!id) return;
+                await window.deleteHistoryEntry(id, 'manual');
+            };
 
+            window.deleteHistoryEntry = async function (id, type) {
                 if (!confirm('Soll dieser Eintrag wirklich gelöscht werden?')) return;
 
                 try {
+                    let table = 'manual_history_entries';
+                    if (type === 'service' || type === 'workshop') table = 'service_entries';
+                    else if (type === 'intake') table = 'intake_protocols';
+                    else if (type === 'acceptance') table = 'acceptance_protocols';
+
                     const { error } = await window.supabaseClient
-                        .from('manual_history_entries')
+                        .from(table)
                         .delete()
                         .eq('id', id);
 
                     if (error) throw error;
 
-                    window.toggleManualHistoryForm(null);
-                    window.openHistoryModal(window.currentHistoryMachineId); // Refresh
+                    // Close manual form if open
+                    if (type === 'manual') {
+                        window.toggleManualHistoryForm(null);
+                    }
+                    
+                    // Refresh view
+                    window.openHistoryModal(window.currentHistoryMachineId);
                 } catch (err) {
-                    console.error('Error deleting manual entry:', err);
+                    console.error('Error deleting history entry:', err);
                     alert('Fehler beim Löschen des Eintrags: ' + err.message);
                 }
             };
@@ -7139,7 +7649,7 @@
                             }
 
                             return `
-                                <div class="card" style="font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); border: 3px solid ${primaryCatColor}66; border-top: 7px solid ${primaryCatColor}; border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); position: relative; padding-top: 35px;">
+                                <div class="card" style="font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); border: 3px solid ${primaryCatColor}66; border-top: 7px solid ${primaryCatColor}; border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); position: relative; padding-top: 35px; width: 100%; box-sizing: border-box; min-width: 0;">
 
                                     <!-- Category Badges on Top-Right Border (Premium Button Style) -->
                                     <div style="position: absolute; top: -26px; right: 24px; left: auto; display: flex; flex-direction: row-reverse; gap: 8px; z-index: 10;">
@@ -7154,14 +7664,14 @@
                                     </div>
 
                                     <!-- Full-Width Machine Image -->
-                                    <div style="position: relative; width: 100%; height: 300px; overflow: hidden; background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));">
+                                    <div style="position: relative; width: 100%; height: var(--machine-image-height, 300px); overflow: hidden; background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));">
                                         <div onclick="openPhotosLightbox([${machineImg ? `'${machineImg}'` : ''}], 0)"
                                              style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; cursor: ${machineImg ? 'pointer' : 'default'};"
                                              onmouseover="${machineImg ? "this.style.opacity='0.9'" : ''}"
                                              onmouseout="${machineImg ? "this.style.opacity='1'" : ''}">
                                             ${machineImg
                                     ? `<img src="${machineImg}" style="width: 100%; height: 100%; object-fit: contain; display: block;">`
-                                    : `<svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity: 0.15;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>`
+                                    : `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity: 0.15;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>`
                                 }
                                         </div>
                                     </div>
@@ -7204,8 +7714,8 @@
                                         ${(images.length > 0 || docs.length > 0) ? `
                                         <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 8px; margin-top: 0.5rem; text-align: left;">
                                             ${images.length > 0 ? `
-                                            <div onclick="openPhotosLightbox(${JSON.stringify(images).replace(/"/g, '&quot;')}, 0)" title="Bilder ansehen"
-                                                 style="display: flex; align-items: center; gap: 7px; background: rgba(168, 85, 247, 0.15); border: 1.5px solid rgba(168, 85, 247, 0.6); padding: 6px 12px; border-radius: 20px; cursor: pointer; transition: all 0.2s; color: #ffffff; font-size: 0.85rem; font-weight: 700; box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);"
+                                            <div class="btn-meta-icon" onclick="openPhotosLightbox(${JSON.stringify(images).replace(/"/g, '&quot;')}, 0)" title="Bilder ansehen"
+                                                 style="background: rgba(168, 85, 247, 0.15); border: 1.5px solid rgba(168, 85, 247, 0.6); box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);"
                                                  onmouseover="this.style.background='rgba(168, 85, 247, 0.25)'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 0 18px rgba(168, 85, 247, 0.6)'"
                                                  onmouseout="this.style.background='rgba(168, 85, 247, 0.15)'; this.style.transform='translateY(0)'; this.style.boxShadow='0 0 12px rgba(168, 85, 247, 0.4)'">
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
@@ -7213,10 +7723,10 @@
                                             </div>` : ''}
                                             
                                             ${docs.length > 0 ? `
-                                            <div onclick="window.openDocumentsModal(this)" 
+                                            <div class="btn-meta-icon" onclick="window.openDocumentsModal(this)" 
                                                  data-docs="${encodeURIComponent(JSON.stringify(docs))}" 
                                                  title="Dokumente ansehen"
-                                                 style="display: flex; align-items: center; gap: 7px; background: rgba(239, 68, 68, 0.15); border: 1.5px solid rgba(239, 68, 68, 0.6); padding: 6px 12px; border-radius: 20px; cursor: pointer; transition: all 0.2s; color: #ffffff; font-size: 0.85rem; font-weight: 700; box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);"
+                                                 style="background: rgba(239, 68, 68, 0.15); border: 1.5px solid rgba(239, 68, 68, 0.6); box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);"
                                                  onmouseover="this.style.background='rgba(239, 68, 68, 0.25)'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 0 18px rgba(239, 68, 68, 0.6)'"
                                                  onmouseout="this.style.background='rgba(239, 68, 68, 0.15)'; this.style.transform='translateY(0)'; this.style.boxShadow='0 0 12px rgba(239, 68, 68, 0.4)'">
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
@@ -7225,15 +7735,15 @@
                                         </div>` : ''}
 
                                         <div style="margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); margin-left: -0.25rem; margin-right: -0.25rem;">
-                                            <button onclick="openEditServicebericht(${e.id})" title="Bearbeiten"
-                                                style="height: 40px; min-height: auto; flex: 1; background: rgba(59, 130, 246, 0.85); color: #ffffff; border: 2.5px solid rgba(147, 197, 253, 0.8); border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 18px rgba(59, 130, 246, 0.6); backdrop-filter: blur(12px); padding: 0 16px; font-weight: 700; font-size: 0.9rem; font-family: 'Inter', sans-serif;"
+                                            <button class="btn-primary" onclick="openEditServicebericht(${e.id})" title="Bearbeiten"
+                                                style="flex: 1; background: rgba(59, 130, 246, 0.85); color: #ffffff; border: 2.5px solid rgba(147, 197, 253, 0.8); border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 18px rgba(59, 130, 246, 0.6); backdrop-filter: blur(12px); padding: 0 16px; font-weight: 700; font-family: 'Inter', sans-serif;"
                                                 onmouseover="this.style.transform='scale(1.12)'; this.style.background='rgba(59, 130, 246, 0.95)'; this.style.boxShadow='0 4px 24px rgba(59, 130, 246, 0.7)'; this.style.borderColor='rgba(147, 197, 253, 1)'"
                                                 onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(59, 130, 246, 0.85)'; this.style.boxShadow='0 4px 18px rgba(59, 130, 246, 0.6)'; this.style.borderColor='rgba(147, 197, 253, 0.8)'">
                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                                 Bearbeiten
                                             </button>
-                                            <button onclick="deleteServiceEntry(${e.id})" title="Löschen"
-                                                style="width: 40px; height: 40px; min-height: auto; flex: none; display: flex; align-items: center; justify-content: center; background: rgba(239, 68, 68, 0.85); border: 2.5px solid rgba(252, 165, 165, 0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 18px rgba(239, 68, 68, 0.6); backdrop-filter: blur(12px); padding: 0;"
+                                            <button class="btn-icon-circular delete" onclick="deleteServiceEntry(${e.id})" title="Löschen"
+                                                style="flex: none; display: flex; align-items: center; justify-content: center; background: rgba(239, 68, 68, 0.85); border: 2.5px solid rgba(252, 165, 165, 0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 18px rgba(239, 68, 68, 0.6); backdrop-filter: blur(12px); padding: 0;"
                                                 onmouseover="this.style.transform='scale(1.12)'; this.style.background='rgba(239, 68, 68, 0.95)'; this.style.boxShadow='0 4px 24px rgba(239, 68, 68, 0.7)'; this.style.borderColor='rgba(252, 165, 165, 1)'"
                                                 onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(239, 68, 68, 0.85)'; this.style.boxShadow='0 4px 18px rgba(239, 68, 68, 0.6)'; this.style.borderColor='rgba(252, 165, 165, 0.8)'">
                                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -7954,43 +8464,47 @@
                     </svg>
                 </button>
                 <div class="modal-body">
-                    <!-- Main 2-column grid -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px 24px;">
+                    <!-- Optimized Multi-column grid -->
+                    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; align-items: start;">
                         <!-- Row 1 Left: Titel -->
                         <div class="form-group" style="margin-bottom: 0;">
                             <label>Titel</label>
-                            <input type="text" id="task-title" class="glass-input" placeholder="Titel der Aufgabe">
+                            <input type="text" id="task-title" class="glass-input" placeholder="Titel der Aufgabe" style="font-size: 1.1rem; font-weight: 700;">
                         </div>
+                        
                         <!-- Row 1 Right: Maschine -->
                         <div class="form-group" style="margin-bottom: 0; position: relative;">
                             <label style="color: var(--color-primary-green);">Maschine</label>
-                            <!-- Hidden ID field that saveTask reads -->
                             <input type="hidden" id="task-machine">
-                            <!-- Visible search/filter input -->
                             <input type="text" id="task-machine-search" class="glass-input"
-                                placeholder="Suche nach Name, Seriennr., Typ..." autocomplete="off"
+                                placeholder="Maschine suchen..." autocomplete="off"
                                 oninput="filterMachineDropdown(this.value)" onfocus="showMachineDropdown()"
-                                style="color: var(--color-primary-green);">
+                                style="color: var(--color-primary-green); font-weight: 600;">
                             <div id="task-machine-dropdown" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:9999;
                                         background: rgba(15,23,42,0.98); border:1px solid rgba(255,255,255,0.12);
                                         border-radius:12px; max-height:250px; overflow-y:auto; margin-top:4px;
                                         box-shadow: 0 12px 40px rgba(0,0,0,0.6);">
                             </div>
                         </div>
-                        <!-- Row 2 Left: Beschreibung -->
-                        <div class="form-group" style="margin-bottom: 0;">
+
+                        <!-- Row 2: Beschreibung (Full Width) -->
+                        <div class="form-group" style="grid-column: 1 / -1; margin-bottom: 0;">
                             <label>Beschreibung</label>
-                            <textarea id="task-description" class="glass-input" rows="5"
-                                placeholder="Details zur Aufgabe..."></textarea>
+                            <textarea id="task-description" class="glass-input" rows="4"
+                                placeholder="Details zur Aufgabe..." style="line-height: 1.6;"></textarea>
                         </div>
-                        <!-- Row 2 Right: Zuständig -->
-                        <div class="form-group" style="margin-bottom: 0;">
+
+                        <!-- Row 3: Zuständig (Full Width / Refined) -->
+                        <div class="form-group" style="grid-column: 1 / -1; margin-bottom: 0;">
                             <label>Zuständig</label>
-                            <div class="custom-filter-dropdown" id="task-user-select-trigger" style="width: 100%;">
-                                <span class="filter-label" id="task-assigned-users-label">Niemand zugewiesen</span>
-                                <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            <div class="custom-filter-dropdown" id="task-user-select-trigger" 
+                                 style="width: 100%; min-height: 60px; padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px;">
+                                <div id="task-assigned-users-label" style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                                    <span style="color: rgba(255,255,255,0.4);">Niemand zugewiesen</span>
+                                </div>
+                                <svg class="filter-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
                                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                                    stroke-linejoin="round">
+                                    stroke-linejoin="round" style="opacity: 0.5;">
                                     <polyline points="6 9 12 15 18 9"></polyline>
                                 </svg>
                                 <div class="custom-filter-menu" id="task-user-select-menu"
@@ -8313,16 +8827,36 @@
         <div class="modal-content glass-card"
             style="max-width: 600px; width: 90%; padding: 2rem; max-height: 90vh; display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 24px 64px rgba(0,0,0,0.5); position: relative; overflow: hidden;">
             <div
-                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-shrink: 0;">
-                <h2 style="margin: 0; font-size: 1.5rem; color: white;">Historie</h2>
-                <button class="btn-icon-soft" onclick="window.closeHistoryModal()"
-                    style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 8px;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-shrink: 0; padding-right: 8px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
                     </svg>
-                </button>
+                    <h2 style="margin: 0; font-size: 1.5rem; color: white; display: flex; align-items: center; gap: 10px;">Historie</h2>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <button class="btn-icon-soft" onclick="window.openSingleMachineEvaluation(window.currentHistoryMachineId)"
+                        title="Maschinen Auswertung"
+                        style="background: transparent; border: 2px solid rgba(255,255,255,0.2); color: white; width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M12 2v10h10"></path>
+                            <path d="M9 9l6 6m0-6l-6 6"></path>
+                        </svg>
+                    </button>
+                    <button class="btn-icon-soft btn-close-premium" onclick="window.closeHistoryModal()"
+                        style="border-radius: 12px; padding: 8px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             <div
@@ -8349,21 +8883,27 @@
 
                     <div id="schnelleintrag-content"
                         style="display: none; padding: 1.25rem; border-top: 1px solid rgba(255,255,255,0.05);">
-                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
-                            <button class="quick-entry-btn" onclick="window.toggleManualHistoryForm('phone')"
-                                style="background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.2); color: #10b981; padding: 10px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.2s;">
-                                <span style="font-size: 1.2rem;">📞</span>
-                                <span style="font-size: 0.75rem; font-weight: 700;">Telefon</span>
+                        <div style="display: flex; justify-content: space-around; align-items: center; padding: 0.5rem 0;">
+                            <!-- Telefon -->
+                            <button onclick="window.toggleManualHistoryForm('phone')" style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0.5rem;">
+                                <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(16,185,129,0.12); border: 1.5px solid rgba(16,185,129,0.5); display: flex; align-items: center; justify-content: center; color: #10b981; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 0 14px rgba(16,185,129,0.35), 0 0 28px rgba(16,185,129,0.15);" onmouseover="this.style.transform='scale(1.15)'; this.style.background='rgba(16,185,129,0.22)'; this.style.boxShadow='0 0 24px rgba(16,185,129,0.6), 0 0 48px rgba(16,185,129,0.3)'" onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(16,185,129,0.12)'; this.style.boxShadow='0 0 14px rgba(16,185,129,0.35), 0 0 28px rgba(16,185,129,0.15)'">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l2.19-2.19a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                                </div>
+                                <span style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.3px;">Telefon</span>
                             </button>
-                            <button class="quick-entry-btn" onclick="window.toggleManualHistoryForm('note')"
-                                style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.2); color: #f59e0b; padding: 10px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.2s;">
-                                <span style="font-size: 1.2rem;">📝</span>
-                                <span style="font-size: 0.75rem; font-weight: 700;">Bemerkung</span>
+                            <!-- Bemerkung -->
+                            <button onclick="window.toggleManualHistoryForm('note')" style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0.5rem;">
+                                <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(245,158,11,0.12); border: 1.5px solid rgba(245,158,11,0.5); display: flex; align-items: center; justify-content: center; color: #f59e0b; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 0 14px rgba(245,158,11,0.35), 0 0 28px rgba(245,158,11,0.15);" onmouseover="this.style.transform='scale(1.15)'; this.style.background='rgba(245,158,11,0.22)'; this.style.boxShadow='0 0 24px rgba(245,158,11,0.6), 0 0 48px rgba(245,158,11,0.3)'" onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(245,158,11,0.12)'; this.style.boxShadow='0 0 14px rgba(245,158,11,0.35), 0 0 28px rgba(245,158,11,0.15)'">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                </div>
+                                <span style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.3px;">Bemerkung</span>
                             </button>
-                            <button class="quick-entry-btn" onclick="window.toggleManualHistoryForm('photo')"
-                                style="background: rgba(139,92,246,0.1); border: 1px solid rgba(139,92,246,0.2); color: #8b5cf6; padding: 10px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.2s;">
-                                <span style="font-size: 1.2rem;">📸</span>
-                                <span style="font-size: 0.75rem; font-weight: 700;">Foto</span>
+                            <!-- Foto -->
+                            <button onclick="window.toggleManualHistoryForm('photo')" style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0.5rem;">
+                                <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(139,92,246,0.12); border: 1.5px solid rgba(139,92,246,0.5); display: flex; align-items: center; justify-content: center; color: #8b5cf6; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 0 14px rgba(139,92,246,0.35), 0 0 28px rgba(139,92,246,0.15);" onmouseover="this.style.transform='scale(1.15)'; this.style.background='rgba(139,92,246,0.22)'; this.style.boxShadow='0 0 24px rgba(139,92,246,0.6), 0 0 48px rgba(139,92,246,0.3)'" onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(139,92,246,0.12)'; this.style.boxShadow='0 0 14px rgba(139,92,246,0.35), 0 0 28px rgba(139,92,246,0.15)'">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                                </div>
+                                <span style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.3px;">Foto</span>
                             </button>
                         </div>
 
@@ -8391,20 +8931,11 @@
                                         <polyline points="17 21 17 13 7 13 7 21"></polyline>
                                         <polyline points="7 3 7 8 15 8"></polyline>
                                     </svg>
-                                    Eintrag speichern
+                                    <span>Speichern</span>
                                 </button>
-                                <button onclick="window.deleteManualHistoryEntry()" id="btn-delete-manual"
-                                    style="flex: 1; padding: 12px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #ef4444; border-radius: 12px; cursor: pointer; transition: all 0.2s; display: none; align-items: center; justify-content: center; gap: 6px; font-weight: 600;"
-                                    onmouseover="this.style.background='rgba(239, 68, 68, 0.3)'"
-                                    onmouseout="this.style.background='rgba(239, 68, 68, 0.2)'">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M3 6h18"></path>
-                                        <path
-                                            d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2">
-                                        </path>
-                                    </svg>
-                                    Löschen
+                                <button onclick="window.deleteManualHistoryEntry()" id="btn-delete-manual" class="btn-icon-circular delete"
+                                    style="display: none; width: 48px; height: 48px;" title="Eintrag löschen">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                                 </button>
                                 <button onclick="window.toggleManualHistoryForm(null)" class="btn-secondary"
                                     style="flex: 1; padding: 12px;">Abbrechen</button>
@@ -9143,6 +9674,25 @@
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
         }
     </script>
+
+    <!-- Single Machine Evaluation Modal (Sub-Modal) -->
+    <div id="single-machine-evaluation-modal" class="modal-backdrop hidden" style="z-index: 1200; background: rgba(0,0,0,0.85);">
+        <div class="modal-content glass-card" style="max-width: 500px; width: 90%; padding: 2rem; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(30px);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="margin: 0; color: white; display: flex; align-items: center; gap: 10px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary-green)" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+                    Kosten-Auswertung
+                </h3>
+                <button class="btn-icon-soft btn-close-premium" onclick="window.closeSingleMachineEvaluation()" style="padding: 5px; border-radius: 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div id="single-machine-evaluation-content">
+                <!-- Data populated via JS -->
+                 <div style="padding: 2rem; text-align: center; color: rgba(255,255,255,0.4);">Lade Daten...</div>
+            </div>
+        </div>
+    </div>
 
     <script src="accounting.js?v=38"></script>
 </body>

@@ -252,20 +252,13 @@
 
             openTasks.forEach(task => {
                 const tr = document.createElement('tr');
-                const accentColor = '#3b82f6'; // Default blue for open
+                const accentColor = '#ef4444'; // Red for open
                 
+                tr.className = 'task-list-row-premium status-open';
                 tr.style.cursor = 'pointer';
-                tr.style.background = 'rgba(110, 122, 140, 0.45)';
-                tr.style.backdropFilter = 'blur(24px)';
-                tr.style.webkitBackdropFilter = 'blur(24px)';
-                tr.style.boxShadow = `inset 5px 0 0 0 ${accentColor}, inset 0 1.5px 0 0 ${accentColor}66, inset -1.5px 0 0 0 ${accentColor}66, inset 0 -1.5px 0 0 ${accentColor}66, 0 10px 30px rgba(0,0,0,0.4)`;
-                tr.style.borderRadius = '16px';
                 tr.style.overflow = 'hidden';
 
                 tr.innerHTML = `
-                    <td data-label="Status">
-                        <span class="status-badge status-${task.status}" style="background: ${accentColor}25; color: ${accentColor}; border: 1px solid ${accentColor}60; border-radius: 20px; padding: 4px 12px; font-size: 0.8rem; font-weight: 800;">${formatStatus(task.status)}</span>
-                    </td>
                     <td data-label="Aufgabe" style="font-weight: 600; display:flex; align-items:flex-start; gap:12px;">
                         <div style="padding-top: 4px;">
                             <div class="task-quick-complete ${task.status === 'completed' ? 'completed' : ''}" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="${task.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
@@ -354,9 +347,6 @@
                     tr.style.opacity = '0.7';
 
                     tr.innerHTML = `
-                        <td data-label="Status">
-                            <span class="status-badge status-${task.status}" style="background: ${accentColor}25; color: ${accentColor}; border: 1px solid ${accentColor}60; border-radius: 20px; padding: 4px 12px; font-size: 0.8rem; font-weight: 800;">${formatStatus(task.status)}</span>
-                        </td>
                         <td data-label="Aufgabe" style="font-weight: 600; display:flex; align-items:flex-start; gap:12px;">
                             <div style="padding-top: 4px;">
                                 <div class="task-quick-complete ${task.status === 'completed' ? 'completed' : ''}" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="${task.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
@@ -547,8 +537,7 @@
             header.innerHTML = `${mLabel} <span class="task-count" style="margin-left:10px; background: rgba(255,255,255,0.1); padding: 2px 8px; border-radius: 6px; font-size: 0.85rem;">${mTasks.length}</span>`;
 
             const grid = document.createElement('div');
-            grid.style.display = 'grid';
-            grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(calc(50% - 15px), 1fr))';
+            grid.className = 'task-machine-grid';
             grid.style.gap = '15px';
 
             mTasks.forEach(task => {
@@ -1032,27 +1021,33 @@
     // ==========================================
     function renderAssignedUsers(assignedIds) {
         const container = document.getElementById('task-user-options');
-        const label = document.getElementById('task-assigned-users-label');
-        if (!container || !label) return;
+        const labelContainer = document.getElementById('task-assigned-users-label');
+        if (!container || !labelContainer) return;
 
         container.innerHTML = '';
         if (window.userList && window.userList.length > 0) {
             window.userList.forEach(user => {
                 const isChecked = assignedIds.includes(user.id);
                 const li = document.createElement('li');
+                li.className = 'task-user-list-item';
                 li.style.display = 'flex';
                 li.style.alignItems = 'center';
                 li.style.gap = '12px';
-                li.style.padding = '10px 15px';
+                li.style.padding = '12px 16px';
                 li.style.cursor = 'pointer';
+                li.style.transition = 'background 0.2s';
+                li.style.borderRadius = '10px';
 
                 li.innerHTML = `
-                    <input type="checkbox" id="user-cb-${user.id}" ${isChecked ? 'checked' : ''} style="pointer-events: none;">
-                    <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
-                        <span class="avatar-mini" style="background: ${getUserColor(user)}; width: 24px; height: 24px; font-size: 0.7rem; flex-shrink: 0;" title="${user.name}">
+                    <input type="checkbox" id="user-cb-${user.id}" ${isChecked ? 'checked' : ''} style="pointer-events: none; accent-color: var(--color-primary-green); width: 18px; height: 18px;">
+                    <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                        <span class="avatar-mini" style="background: ${getUserColor(user)}; width: 32px; height: 32px; font-size: 0.8rem; flex-shrink: 0; border: 2px solid rgba(255,255,255,0.1);" title="${user.name}">
                             ${getUserInitials(user)}
                         </span>
-                        <label style="margin: 0; cursor: pointer; line-height: 1;">${user.name}</label>
+                        <div style="display: flex; flex-direction: column;">
+                            <span style="font-weight: 600; color: white; font-size: 0.95rem;">${user.name}</span>
+                            <span style="font-size: 0.75rem; color: rgba(255,255,255,0.4);">${user.initials || ''}</span>
+                        </div>
                     </div>
                 `;
 
@@ -1063,9 +1058,28 @@
                 container.appendChild(li);
             });
 
-            // Update label
-            const assignedNames = assignedIds.map(uid => window.userList.find(u => u.id === uid)?.name).filter(Boolean);
-            label.textContent = assignedNames.length > 0 ? assignedNames.join(', ') : 'Niemand zugewiesen';
+            // Update label area with Avatars instead of text
+            labelContainer.innerHTML = '';
+            if (assignedIds.length > 0) {
+                assignedIds.forEach(uid => {
+                    const user = window.userList.find(u => u.id === uid);
+                    if (user) {
+                        const avatar = document.createElement('span');
+                        avatar.className = 'avatar-mini';
+                        avatar.style.background = getUserColor(user);
+                        avatar.style.width = '32px';
+                        avatar.style.height = '32px';
+                        avatar.style.fontSize = '0.8rem';
+                        avatar.style.border = '2px solid rgba(15,23,42,0.8)';
+                        avatar.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+                        avatar.title = user.name;
+                        avatar.textContent = getUserInitials(user);
+                        labelContainer.appendChild(avatar);
+                    }
+                });
+            } else {
+                labelContainer.innerHTML = '<span style="color: rgba(255,255,255,0.4);">Niemand zugewiesen</span>';
+            }
         } else {
             container.innerHTML = '<li style="padding: 10px; opacity: 0.5;">Keine Benutzer gefunden</li>';
         }
