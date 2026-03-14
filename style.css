@@ -6499,7 +6499,7 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         }
         .accounting-month-header td {
             display: table-cell !important;
-            padding: 0.15rem 0.6rem !important; /* Shrunk box further */
+            padding: 0.05rem 0.6rem !important; /* Ultra-compact vertical padding */
             background: transparent !important;
             border: none !important;
             box-shadow: none !important;
@@ -6507,14 +6507,15 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
             -webkit-backdrop-filter: none !important;
         }
         .accounting-month-header h3 {
-            font-size: 1.8rem !important; /* Significantly larger */
+            font-size: 2.2rem !important; /* Maximized font size */
+            line-height: 1.1 !important;
             white-space: nowrap;
             color: #4ade80;
-            margin: 0;
+            margin: -2px 0 0 0 !important; /* Negative margin to pull up */
             padding: 0;
             font-weight: 800;
             font-family: 'Outfit', sans-serif;
-            letter-spacing: -0.01em;
+            letter-spacing: -0.02em;
         }
 
         .accounting-month-header div {
@@ -6528,7 +6529,7 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
             display: flex !important;
             flex-direction: column !important;
             align-items: flex-start !important;
-            gap: 2px !important;
+            gap: 0px !important; /* Tightest gap */
             color: #4ade80 !important;
         }
 
@@ -6540,14 +6541,15 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         }
 
         .acc-month-header-right {
-            font-size: 1rem !important; /* Slightly larger total */
+            font-size: 1.1rem !important;
             padding-left: 26px !important;
             color: #4ade80 !important;
             opacity: 0.9;
             font-weight: 600;
+            margin-top: -4px !important; /* Pull up further */
         }
 
-        /* Full-width View Switchers on Mobile */
+        /* Full-width View Switchers & Add Buttons on Mobile */
         .calendar-view-tabs, .view-switch-container {
             width: 100% !important;
             display: flex !important;
@@ -6556,6 +6558,14 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
             padding: 4px !important;
             border-radius: 14px !important;
             margin-bottom: 12px !important;
+            gap: 4px !important;
+        }
+
+        /* Accounting "Neuer Eintrag" full width */
+        #accounting .btn-primary {
+            width: 100% !important;
+            justify-content: center !important;
+            margin-bottom: 1rem !important;
         }
 
         .calendar-tab-btn, .view-switch-btn, .calendar-view-tabs button {
@@ -6566,33 +6576,36 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
             font-size: 0.85rem !important;
         }
 
-        /* Hide specific view switchers for Service and Protocols on Mobile */
-        #service-reports-view .calendar-view-tabs,
-        #protocol-view .calendar-view-tabs {
+        /* Hide specific view switchers for Service and Protocols on Mobile/Tablet */
+        #service .calendar-view-tabs,
+        #protocols .calendar-view-tabs,
+        #service-view-tabs,
+        #protocol-view-tabs {
             display: none !important;
         }
 
-        /* Improved Filter Animations (Protocol etc.) */
+        /* Premium Filter Animations (Protocol etc.) */
         .filter-btn {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
             position: relative;
-            overflow: hidden;
+            border: 1px solid transparent !important;
         }
 
         .filter-btn:hover {
-            background: rgba(255, 255, 255, 0.1) !important;
-            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.08) !important;
+            transform: scale(1.05);
         }
 
         .filter-btn.active {
             background: var(--color-primary-green) !important;
             color: #000 !important;
-            box-shadow: 0 4px 15px rgba(74, 222, 128, 0.4) !important;
-            font-weight: 700 !important;
-            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.3), inset 0 0 10px rgba(255,255,255,0.4) !important;
+            font-weight: 800 !important;
+            transform: scale(1.08);
+            border-color: rgba(255,255,255,0.2) !important;
         }
 
-        /* Restore view switchers handled above */
+        /* Restore view switchers */
         #tasks-list, #service-entries-list-view, #protocol-list-view, #btn-view-list {
             display: none !important;
         }
