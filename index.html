@@ -52,7 +52,7 @@
                 <img src="meetra logo remove.png" alt="Logo" class="logo-responsive">
                 
                 <div class="headline-container-responsive">
-                    <h2 class="title-responsive">Willkommen bei Meetra</h2>
+                    <h2 class="title-responsive">Willkommen bei meetra</h2>
                     <img src="meetra_arrows_icon.png" alt="Arrows" class="arrows-responsive">
                 </div>
                 
@@ -113,8 +113,17 @@
                 filter: drop-shadow(0 0 15px rgba(255,255,255,0.1));
             }
 
+            .headline-container-responsive {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px; /* Reduced gap to "glue" the arrow */
+                white-space: nowrap; /* Prevent line break */
+                width: 100%;
+            }
+
             .title-responsive {
-                font-size: clamp(1.5rem, 4vw, 2.4rem);
+                font-size: clamp(1.4rem, 4.5vw, 2.4rem); /* Slightly smaller start to ensure single line */
                 font-weight: 700;
                 margin: 0;
                 color: #fff;
