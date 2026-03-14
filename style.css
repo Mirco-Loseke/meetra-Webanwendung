@@ -718,7 +718,7 @@ body {
 }
 
 /* ==========================================
-   SERVICEEINSÄTZE & REPORT MODALS
+   SERVICEEINSÃ„TZE & REPORT MODALS
    ========================================== */
 
 .report-type-btn {
@@ -1998,11 +1998,11 @@ h1,
     width: 100vw;
     height: 100vh;
     background-color: rgba(15, 23, 42, 0.8);
-    /* Bläulicher, dunkler Glass-Hintergrund für die App */
+    /* BlÃ¤ulicher, dunkler Glass-Hintergrund fÃ¼r die App */
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    /* Erlaubt natürliches Scrollen, wenn Modal größer als Bildschirm */
+    /* Erlaubt natÃ¼rliches Scrollen, wenn Modal grÃ¶ÃŸer als Bildschirm */
     z-index: 9999;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -4713,7 +4713,7 @@ tr.completed-task td {
 }
 
 .protocol-single-checkbox::after {
-    content: '✓';
+    content: 'âœ“';
     color: #fff;
     font-size: 18px;
     font-weight: 900;
@@ -5224,12 +5224,32 @@ VIEW HEADER RESPONSIVE LAYOUT (v2)
     align-items: center;
     gap: 1rem;
     justify-content: flex-end;
-    /* Gleichmäßige Aufteilung auf restliche Breite */
+    /* GleichmÃ¤ÃŸige Aufteilung auf restliche Breite */
     flex: 1;
 }
 
 @media (max-width: 1024px) {
-    /* No longer needed, padding-right was removed globally from .view-header-row-top */
+    .view-header-layout {
+        display: grid !important;
+        grid-template-columns: 1fr auto !important;
+        grid-template-areas: 
+            'v-left v-switch'
+            'v-right v-right'
+            'v-filters v-filters' !important;
+        gap: 12px 16px !important;
+    }
+
+    .view-header-row-top, .view-header-row-bottom {
+        display: contents !important;
+    }
+
+    .view-header-row-top .view-header-left { grid-area: v-left !important; }
+    .view-header-row-bottom .view-header-left { grid-area: v-switch !important; display: flex !important; justify-content: flex-end; align-items: center; }
+    .view-header-row-top .view-header-right { grid-area: v-right !important; }
+    .view-header-row-bottom .view-header-right { grid-area: v-filters !important; }
+    
+    .view-header-layout h1 { font-size: clamp(1.2rem, 4.5vw, 1.8rem) !important; white-space: nowrap; }
+    .calendar-view-tabs { transform: scale(0.9); transform-origin: right; }
 }
 
 @media (max-width: 768px) {
@@ -5286,10 +5306,10 @@ MACHINE HISTORY TIMELINE
 
 /* =======================================================
    COMPREHENSIVE RESPONSIVE DESIGN
-   Desktop first — everything scales down gracefully
+   Desktop first â€” everything scales down gracefully
    ======================================================= */
 
-/* ---- Large screens / minor adjustments ≤ 1280px ---- */
+/* ---- Large screens / minor adjustments â‰¤ 1280px ---- */
 @media (max-width: 1280px) {
 
     /* KPI strip: allow wrapping to 2 per row */
@@ -5299,7 +5319,7 @@ MACHINE HISTORY TIMELINE
     }
 }
 
-/* ---- Tablet / iPad  ≤ 1100px layout adjustments ---- */
+/* ---- Tablet / iPad  â‰¤ 1100px layout adjustments ---- */
 @media (max-width: 1100px) {
 
     /* Card grid: max 2 columns on tablet */
@@ -5333,7 +5353,7 @@ MACHINE HISTORY TIMELINE
     }
 }
 
-/* ---- Tablet portrait / large phone  ≤ 768px ---- */
+/* ---- Tablet portrait / large phone  â‰¤ 768px ---- */
 @media (max-width: 768px) {
 
     /* Sidebar: hidden off-screen, opened by hamburger */
@@ -5609,7 +5629,7 @@ MACHINE HISTORY TIMELINE
     }
 }
 
-/* ---- Small phones ≤ 480px ---- */
+/* ---- Small phones â‰¤ 480px ---- */
 @media (max-width: 480px) {
 
     .view {
@@ -6449,7 +6469,7 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         }
 
         /* Custom Label Colors */
-        .data-table td[data-label="Fällig:"]::before {
+        .data-table td[data-label="FÃ¤llig:"]::before {
             color: #f87171 !important; /* Red */
         }
         .data-table td[data-label="Zahlbetrag:"]::before {
@@ -6487,9 +6507,8 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
             border: none !important;
         }
 
-        /* Hide specific elements as requested */
-        #tasks-list, #service-entries-list-view, #protocol-list-view, #btn-view-list,
-        #service .calendar-view-tabs, #protocols .calendar-view-tabs {
+        /* Restore view switchers as they are now positioned at the top on mobile/tablet */
+        #tasks-list, #service-entries-list-view, #protocol-list-view, #btn-view-list {
             display: none !important;
         }
         #service-entries-board-view, #protocol-board-view {
@@ -6577,14 +6596,7 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     box-shadow: 0 20px 60px rgba(0,0,0,0.5);
 }
 
-.card-status-glow {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 3.5px; /* Thinned from 6px */
-    height: 100%;
-    opacity: 0.8;
-}
+/* Removed .card-status-glow as procurement cards now use thick borders */
 
 .procurement-card-title {
     font-size: clamp(0.72rem, 1.3vw, 0.88rem); /* Even smaller as requested */

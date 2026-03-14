@@ -125,11 +125,10 @@ function renderProcurementCard(proc) {
 
     const card = document.createElement('div');
     card.className = 'procurement-card glass-card';
-    card.style.borderColor = accentColor;
+    card.style.cssText = `border: 2px solid ${accentColor}44; border-left: 6.5px solid ${accentColor};`;
     card.onclick = () => openProcurementModal(proc.id);
 
     card.innerHTML = `
-        <div class="card-status-glow" style="background: ${accentColor};"></div>
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; position: relative; z-index: 2;">
             <span style="font-size: 0.65rem; color: rgba(255,255,255,0.4); font-weight: 700; background: rgba(0,0,0,0.2); padding: 2px 8px; border-radius: 4px;">${proc.order_number}</span>
             ${getCategoryBadge(proc.category)}
