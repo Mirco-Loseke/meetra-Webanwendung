@@ -6528,18 +6528,21 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
             flex-direction: column !important;
             align-items: flex-start !important;
             gap: 2px !important;
+            color: #4ade80 !important; /* Force green color */
         }
 
         .acc-month-header-left {
             display: flex !important;
             align-items: center !important;
             gap: 8px !important;
+            color: #4ade80 !important;
         }
 
         .acc-month-header-right {
             font-size: 0.8rem !important;
             padding-left: 26px !important; /* Offset for the icon */
-            opacity: 0.8;
+            color: #4ade80 !important;
+            opacity: 0.9;
         }
 
         /* Restore view switchers as they are now positioned at the top on mobile/tablet */

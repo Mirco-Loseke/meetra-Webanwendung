@@ -296,6 +296,7 @@ window.renderAccounting = function () {
         // Month Header Row
         html += `
             <tr class="accounting-month-header">
+                <td colspan="12">
                     <h3>
                         <div class="acc-month-header-content">
                             <div class="acc-month-header-left">
@@ -307,6 +308,7 @@ window.renderAccounting = function () {
                             </div>
                         </div>
                     </h3>
+                </td>
             </tr>
         `;
 
