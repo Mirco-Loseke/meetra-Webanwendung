@@ -6492,7 +6492,7 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
             color: var(--color-primary-green) !important; /* Green */
         }
 
-        /* Accounting Controls Row Distribution */
+        /* Accounting Controls Distribution */
         #accounting .view-header-right {
             display: flex !important;
             flex-direction: column !important;
@@ -6504,51 +6504,58 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
 
         #accounting .acc-header-controls-group {
             display: flex !important;
-            flex-direction: row !important;
             width: 100% !important;
             justify-content: space-between !important;
             align-items: center !important;
-            gap: 10px !important;
+            gap: 8px !important;
         }
 
-        #accounting #acc-year-dropdown {
+        #accounting .acc-header-controls-group > * {
             flex: 1 !important;
             margin-right: 0 !important;
-            justify-content: center !important;
             min-width: 0 !important;
-        }
-
-        #accounting .acc-header-controls-group .btn-icon-soft {
-            flex: 0 0 calc(33% - 14px) !important;
             display: flex !important;
             justify-content: center !important;
             align-items: center !important;
-            padding: 10px !important;
+        }
+
+        #accounting .acc-header-controls-group .btn-icon-soft {
+            padding: 10px 0 !important; /* Distributed icons */
+        }
+
+        /* Desktop Month Header: Stay Inline */
+        .acc-month-header-content {
+            display: flex !important;
+            flex-direction: row !important; /* INLINE ON DESKTOP */
+            align-items: center !important;
+            gap: 12px !important;
+            color: #4ade80 !important;
         }
 
         /* Month Header Row - ABSOLUTE VERTICAL COMPRESSION */
         .accounting-month-header {
             display: flex !important;
-            padding: 0 !important; /* NO PADDING AT ALL */
+            padding: 0 !important; /* NO PADDING */
             min-height: 0 !important;
             background: rgba(255, 255, 255, 0.05) !important;
             border-radius: 12px !important;
             border: 1px solid rgba(255, 255, 255, 0.1) !important;
-            margin: 0.15rem 0.5rem 0.5rem 0.5rem !important;
+            margin: 0.1rem 0.5rem 0.5rem 0.5rem !important;
             align-items: center !important;
             overflow: hidden !important;
         }
 
         .accounting-month-header td {
-            display: block !important;
-            padding: 2px 8px !important; /* Minimal internal padding */
+            display: flex !important;
+            align-items: center !important;
+            padding: 2px 8px !important; /* Tightest internal space */
             background: transparent !important;
             border: none !important;
             width: 100% !important;
         }
 
         .accounting-month-header h3 {
-            font-size: 1.8rem !important; /* Size for better fit */
+            font-size: 1.8rem !important;
             line-height: 0.85 !important; /* CROP ALL VERTICAL DEAD SPACE */
             color: #4ade80;
             margin: 0 !important;
@@ -6556,11 +6563,12 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
             font-weight: 800;
         }
 
-        .acc-month-header-content {
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 2px !important;
-            padding: 0 !important;
+        @media (max-width: 1024px) {
+            .acc-month-header-content {
+                flex-direction: column !important; /* Stacked on mobile */
+                align-items: flex-start !important;
+                gap: 2px !important;
+            }
         }
 
         .acc-month-header-right {
