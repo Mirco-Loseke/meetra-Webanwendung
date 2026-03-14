@@ -6523,6 +6523,25 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
             border: none !important;
         }
 
+        .acc-month-header-content {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 2px !important;
+        }
+
+        .acc-month-header-left {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+        }
+
+        .acc-month-header-right {
+            font-size: 0.8rem !important;
+            padding-left: 26px !important; /* Offset for the icon */
+            opacity: 0.8;
+        }
+
         /* Restore view switchers as they are now positioned at the top on mobile/tablet */
         #tasks-list, #service-entries-list-view, #protocol-list-view, #btn-view-list {
             display: none !important;

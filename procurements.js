@@ -303,7 +303,7 @@ window.openProcurementModal = async function (id = null) {
     // Reset status dropdown
     const statusLabel = document.getElementById('proc-status-label');
     if (statusLabel) {
-        statusLabel.textContent = '🔴 Neu';
+        statusLabel.textContent = '🔴 Offen';
         document.getElementById('proc-status').value = 'new';
     }
 
@@ -335,12 +335,12 @@ window.openProcurementModal = async function (id = null) {
             // Handle status label restoration
             if (proc.status && statusLabel) {
                 const labelMap = {
-                    'new': '🔴 Aufgegeben',
+                    'new': '🔴 Offen',
                     'in_progress': '🔵 In Bearbeitung',
                     'ordered': '🟠 Bestellt',
                     'received': '🟢 Erhalten'
                 };
-                statusLabel.textContent = labelMap[proc.status] || '🔴 Aufgegeben';
+                statusLabel.textContent = labelMap[proc.status] || '🔴 Offen';
                 document.getElementById('proc-status').value = proc.status;
             }
 
