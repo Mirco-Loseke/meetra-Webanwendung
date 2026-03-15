@@ -191,7 +191,7 @@
         const isInWorkshop = machine.is_in_workshop === true;
         const workshopIcon = `
             <div class="workshop-toggle ${isInWorkshop ? 'active' : ''}" 
-                 onclick="event.stopPropagation(); window.toggleWorkshopStatus(${machine.id}, ${isInWorkshop})"
+                 onclick="if(typeof event !== 'undefined' && event.stopPropagation) event.stopPropagation(); window.toggleWorkshopStatus('${machine.id}', ${isInWorkshop})"
                  title="${isInWorkshop ? 'Aus Werkstatt entfernen' : 'In Werkstatt verschieben'}"
                  style="position: absolute; top: -20px; right: 10px;
                         width: 40px; height: 40px; border-radius: 50%;
@@ -211,6 +211,31 @@
                 </svg>
             </div>
         `;
+
+
+
+         // Workshop Photo Icon
+        const photoIcon = isInWorkshop ? `
+            <div class="workshop-photo-btn"
+                 onclick="if(typeof event !== 'undefined' && event.stopPropagation) event.stopPropagation(); window.openWorkshopPhotoModal('${machine.id}')"
+                 title="Werkstatt-Fotos verwalten"
+                 style="position: absolute; top: -20px; right: 58px;
+                        width: 40px; height: 40px; border-radius: 50%;
+                        display: flex; align-items: center; justify-content: center;
+                        z-index: 20; cursor: pointer;
+                        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                        background: rgba(139, 92, 246, 0.92);
+                        border: 2px solid rgba(200,170,255,0.4);
+                        box-shadow: 0 4px 18px rgba(139, 92, 246, 0.5);
+                        backdrop-filter: blur(12px);"
+                 onmouseover="this.style.transform='scale(1.12)'"
+                 onmouseout="this.style.transform='scale(1)'">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                    <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+            </div>
+        ` : '';
 
         // Maintenance logic
         const lastMaintDate = machine.last_maintenance ? new Date(machine.last_maintenance).toLocaleDateString('de-DE') : '/';
@@ -251,29 +276,6 @@
             <div style="position: absolute; top: -20px; left: 24px; height: 40px; padding: 0 16px; background: ${workshopColor}e6; color: #ffffff; border-radius: 20px; font-size: 0.85rem; font-weight: 800; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.4); border: 2px solid rgba(255, 220, 100, 0.6); backdrop-filter: blur(12px); z-index: 10; letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 8px;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
                 ${machine.workshop_order_number}
-            </div>
-        ` : '';
-
-        // Workshop Photo Icon
-        const photoIcon = isInWorkshop ? `
-            <div class="workshop-photo-btn"
-                 onclick="event.stopPropagation(); window.openWorkshopPhotoModal(${machine.id})"
-                 title="Werkstatt-Fotos verwalten"
-                 style="position: absolute; top: -20px; right: 58px;
-                        width: 40px; height: 40px; border-radius: 50%;
-                        display: flex; align-items: center; justify-content: center;
-                        z-index: 20; cursor: pointer;
-                        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-                        background: rgba(139, 92, 246, 0.92);
-                        border: 2px solid rgba(200,170,255,0.4);
-                        box-shadow: 0 4px 18px rgba(139, 92, 246, 0.5);
-                        backdrop-filter: blur(12px);"
-                 onmouseover="this.style.transform='scale(1.12)'"
-                 onmouseout="this.style.transform='scale(1)'">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                    <circle cx="12" cy="13" r="4"></circle>
-                </svg>
             </div>
         ` : '';
 
@@ -322,18 +324,18 @@
                     ` : ''}
                 </div>
 
-                <div class="card-actions" style="margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); margin-left: -0.25rem; margin-right: -0.25rem;">
-                    <button class="btn-reports" onclick="window.openServiceActionsModal(event, ${machine.id})" title="Berichte & Protokolle">
+                <div class="card-actions" style="margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); margin-left: -1.25rem; margin-right: -1.25rem;">
+                    <button class="btn-reports" onclick="if(typeof event !== 'undefined' && event.stopPropagation) event.stopPropagation(); window.openServiceActionsModal(event, '${machine.id}')" title="Berichte & Protokolle">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                         Protokolle
                     </button>
                     
-                    <button class="btn-history" style="flex: 1 !important;" onclick="event.stopPropagation(); window.openHistoryModal ? window.openHistoryModal(${machine.id}) : alert('Historie für ' + ${machine.id})" title="Historie">
+                    <button class="btn-history" style="flex: 1 !important;" onclick="if(typeof event !== 'undefined' && event.stopPropagation) event.stopPropagation(); window.openHistoryModal ? window.openHistoryModal('${machine.id}') : alert('Historie für ' + '${machine.id}')" title="Historie">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                         Historie
                     </button>
 
-                    <button class="btn-delete-card" onclick="event.stopPropagation(); deleteMachine(${machine.id})" title="Maschine löschen">
+                    <button class="btn-delete-card" onclick="if(typeof event !== 'undefined' && event.stopPropagation) event.stopPropagation(); deleteMachine('${machine.id}')" title="Maschine löschen">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M3 6h18"></path>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path>

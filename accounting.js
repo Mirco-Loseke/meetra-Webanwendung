@@ -31,22 +31,25 @@ window.fetchAccountingEntries = async function () {
         allAccountingEntries = data || [];
         
         // Jahr-Dropdown befüllen (custom)
-        const yearDisplay = document.getElementById('acc-year-display');
-        const yearList = document.getElementById('acc-year-list');
-        if (yearDisplay && yearList) {
+        const yearLabels = document.querySelectorAll('.acc-year-display-label');
+        const yearLists = document.querySelectorAll('.acc-year-list-shared');
+        
+        if (yearLists.length > 0) {
             const years = [...new Set(allAccountingEntries.map(e => new Date(e.date).getFullYear()))].sort((a, b) => b - a);
             const currentYear = new Date().getFullYear();
             if (!years.includes(currentYear)) years.unshift(currentYear);
             if (selectedAccountingYear === null) selectedAccountingYear = currentYear;
 
             const options = [{ value: 'alle', label: 'Alle' }, ...years.map(y => ({ value: y, label: String(y) }))];
-            yearList.innerHTML = options.map(opt => `
+            const listHtml = options.map(opt => `
                 <div onclick="event.stopPropagation(); window.filterAccountingByYear('${opt.value}')"
                     style="padding: 8px 16px; font-size: 0.9rem; font-weight: 700; color: ${String(opt.value) === String(selectedAccountingYear) ? 'var(--color-primary-green)' : '#fff'}; cursor: pointer; transition: background 0.15s; white-space: nowrap;"
                     onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'">
                     ${opt.label}
                 </div>`).join('');
-            yearDisplay.textContent = selectedAccountingYear === 'alle' ? 'Alle' : selectedAccountingYear;
+            
+            yearLists.forEach(list => list.innerHTML = listHtml);
+            yearLabels.forEach(label => label.textContent = selectedAccountingYear === 'alle' ? 'Alle' : selectedAccountingYear);
         }
 
         renderAccounting();
@@ -56,10 +59,16 @@ window.fetchAccountingEntries = async function () {
     }
 };
 
-window.toggleYearDropdown = function(e) {
-    e.stopPropagation();
-    const list = document.getElementById('acc-year-list');
+window.toggleYearDropdown = function(e, listId) {
+    if (e) e.stopPropagation();
+    const list = document.getElementById(listId);
     if (!list) return;
+    
+    // Close other dropdowns first
+    document.querySelectorAll('.acc-year-list-shared').forEach(l => {
+        if(l.id !== listId) l.classList.add('hidden');
+    });
+    
     list.classList.toggle('hidden');
 };
 
@@ -152,18 +161,16 @@ window.initGlassSelect = function(selectEl) {
             textSpan.textContent = opt.text;
             textSpan.style.color = opt.value ? (wrapper.style.color || '#fff') : 'rgba(255,255,255,0.4)';
             
-            // Special styling for workshop machine dropdown placeholders
-            if (wrapper.className.includes('machine-workshop')) {
+            // Special styling for workshop machine dropdown placeholders or centered selects
+            if (wrapper.className.includes('machine-workshop') || wrapper.className.includes('centered-select')) {
+                textSpan.style.flex = '1';
+                textSpan.style.textAlign = 'center';
+                wrapper.style.justifyContent = 'center';
+                
                 if (opt.value) {
                     textSpan.style.color = 'var(--color-primary-green)';
-                    textSpan.style.textAlign = 'left';
-                    textSpan.style.flex = '1';
-                    wrapper.style.justifyContent = 'flex-start';
                     icon.style.display = 'flex';
                 } else {
-                    textSpan.style.textAlign = 'center';
-                    textSpan.style.flex = '0 1 auto'; // Let the wrapper center it
-                    wrapper.style.justifyContent = 'center';
                     icon.style.display = 'none';
                 }
             } else {
@@ -203,25 +210,26 @@ window.initGlassSelect = function(selectEl) {
 
 // Close dropdown when clicking outside
 document.addEventListener('click', function() {
-    const list = document.getElementById('acc-year-list');
-    if (list) list.classList.add('hidden');
+    document.querySelectorAll('.acc-year-list-shared').forEach(list => list.classList.add('hidden'));
 });
 
 window.filterAccountingByYear = function(year) {
     selectedAccountingYear = year === 'alle' ? 'alle' : parseInt(year);
 
-    // Update custom dropdown display
-    const yearDisplay = document.getElementById('acc-year-display');
-    const yearList = document.getElementById('acc-year-list');
-    if (yearDisplay) yearDisplay.textContent = selectedAccountingYear === 'alle' ? 'Alle' : selectedAccountingYear;
-    if (yearList) {
+    // Update custom dropdown displays
+    const yearLabels = document.querySelectorAll('.acc-year-display-label');
+    const yearLists = document.querySelectorAll('.acc-year-list-shared');
+    
+    yearLabels.forEach(label => label.textContent = selectedAccountingYear === 'alle' ? 'Alle' : selectedAccountingYear);
+    
+    yearLists.forEach(list => {
         // Refresh active highlight
-        yearList.querySelectorAll('div').forEach(div => {
+        list.querySelectorAll('div').forEach(div => {
             const val = div.getAttribute('onclick').match(/'([^']+)'\)/)?.[1];
             div.style.color = val && String(val) === String(selectedAccountingYear) ? 'var(--color-primary-green)' : '#fff';
         });
-        yearList.classList.add('hidden');
-    }
+        list.classList.add('hidden');
+    });
 
     renderAccounting();
     window.renderQuarters();
@@ -229,9 +237,13 @@ window.filterAccountingByYear = function(year) {
 
 window.switchAccountingTab = function (type) {
     currentAccountingType = type;
-    document.querySelectorAll('.calendar-tab-btn').forEach(btn => btn.classList.remove('active'));
-    const targetBtn = document.getElementById(`tab-${type}`);
-    if (targetBtn) targetBtn.classList.add('active');
+    document.querySelectorAll('.calendar-tab-btn').forEach(btn => {
+        if (btn.id === `tab-${type}` || btn.id === `tab-${type}-desktop`) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
     renderAccounting();
 };
 
@@ -269,9 +281,6 @@ window.renderAccounting = function () {
                         <th style="padding: 12px; width: 6%;">Blt.</th>
                         <th style="padding: 12px; width: 13%;">Nr.</th>
                         <th style="padding: 12px; width: 12%;">Datum</th>
-                        <th class="acc-mobile-row" style="padding: 12px;">Fällig</th>
-                        <th class="acc-mobile-row" style="padding: 12px;">Skonto</th>
-                        <th class="acc-mobile-row" style="padding: 12px;">Zahlbetrag</th>
                         <th style="padding: 12px; width: 25%;">${currentAccountingType === 'incoming' ? 'Lieferant' : 'Kunde'}</th>
                         <th style="padding: 12px; width: 10%;">Netto</th>
                         <th style="padding: 12px; width: 6%;">MwSt.</th>
@@ -297,17 +306,14 @@ window.renderAccounting = function () {
         html += `
             <tr class="accounting-month-header">
                 <td colspan="12">
-                    <h3>
-                        <div class="acc-month-header-content">
-                            <div class="acc-month-header-left">
-                                <svg class="acc-month-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                                <span>${monthName}</span>
+                        <h3 class="acc-month-header-content" style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start; padding: 10px 15px;">
+                            <div class="acc-month-name" style="font-weight: 800; font-size: 1.15rem; white-space: nowrap; line-height: 1;">
+                                ${monthName}
                             </div>
-                            <div class="acc-month-header-right">
-                                (Gesamt: ${window.formatCurrency(monthSum)})
+                            <div style="font-size: 0.95rem; font-weight: 800; color: #fff; white-space: nowrap; line-height: 1.2;">
+                                Gesamt: ${window.formatCurrency(monthSum)}
                             </div>
-                        </div>
-                    </h3>
+                        </h3>
                 </td>
             </tr>
         `;
@@ -337,19 +343,17 @@ window.renderAccounting = function () {
                 <td data-label="Nummer" style="padding: 10px 12px; font-weight: 600; font-size: 0.85rem;">${e.invoice_number || '-'}</td>
                 <td data-label="Datum" style="padding: 10px 12px; font-size: 0.85rem; white-space: nowrap;">
                     <div style="font-weight: 600;">${new Date(e.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
-                    ${e.is_paid ? 
-                        `<div style="font-size: 0.75rem; color: #f87171; margin-top: 2px; font-weight: 700; white-space: nowrap;">Online bezahlt</div>` : 
-                        (e.due_date && window.innerWidth >= 1024 ? `<div style="font-size: 0.75rem; color: #f87171; margin-top: 2px; font-weight: 700; white-space: nowrap;">fällig: ${e.due_date === 'sofort' ? 'sofort' : new Date(e.due_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>` : '')
+                    ${e.is_debited ? 
+                        `<div style="font-size: 0.75rem; color: #ef4444; margin-top: 2px; font-weight: 700; white-space: nowrap;">Konto abgebucht</div>` :
+                        (e.is_paid ? 
+                            `<div style="font-size: 0.75rem; color: #be1e2d; margin-top: 2px; font-weight: 700; white-space: nowrap;">Online bezahlt</div>` : 
+                            (e.due_date && window.innerWidth >= 1024 ? 
+                                `<div style="font-size: 0.75rem; margin-top: 2px; font-weight: 700; white-space: nowrap;">
+                                    <span style="color: #f87171;">fällig:</span> 
+                                    <span style="color: ${e.due_date === 'sofort' ? '#be1e2d' : '#f87171'};">${e.due_date === 'sofort' ? 'sofort' : new Date(e.due_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                                </div>` : '')
+                        )
                     }
-                </td>
-                <td data-label="Fällig:" class="acc-mobile-row" style="padding: 10px 12px; font-size: 0.85rem; font-weight: 700; text-align: right;">
-                    ${e.due_date ? (e.due_date === 'sofort' ? 'sofort' : new Date(e.due_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })) : '-'}
-                </td>
-                <td data-label="Skonto:" class="acc-mobile-row" style="padding: 10px 12px; font-size: 0.85rem; color: var(--color-primary-green); font-weight: 700; text-align: right;">
-                    ${hasDiscount ? `${window.formatCurrency(e.discount_amount)} bis ${discountDate}` : '-'}
-                </td>
-                <td data-label="Zahlbetrag:" class="acc-mobile-row" style="padding: 10px 12px; font-size: 0.85rem; color: var(--color-primary-green); font-weight: 800; text-align: right;">
-                    ${hasDiscount ? window.formatCurrency(finalAmount) : '-'}
                 </td>
                 <td data-label="${currentAccountingType === 'incoming' ? 'Lieferant' : 'Kunde'}" style="padding: 10px 12px; font-weight: 700; color: #fff; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${e.entity}</td>
                 <td data-label="Netto" style="padding: 10px 12px; font-size: 0.85rem;">${window.formatCurrency(e.amount_net)}</td>
@@ -566,6 +570,9 @@ window.openAccountingModal = function () {
     const itemsContainer = document.getElementById('accounting-items-container');
     if (itemsContainer) itemsContainer.innerHTML = '';
 
+    // Reset Global Assignment
+    if (window.resetGlobalAssignment) window.resetGlobalAssignment();
+
     setTimeout(() => {
         const typeSelect = document.getElementById('acc-type');
         if (typeSelect) window.initGlassSelect(typeSelect);
@@ -750,8 +757,10 @@ window.addAccountingItemRow = function (data = {}) {
 
     // Row Header (Description and Actions)
     const header = document.createElement('div');
+    header.className = 'item-row-header';
     header.style.cssText = 'display: grid; grid-template-columns: 1fr 100px 100px 100px auto; gap: 12px; align-items: start;';
     
+    // Note: The grid layout is overridden by CSS (style.css) for mobile and tablet to stack vertically.
     header.innerHTML = `
         <div class="form-group" style="margin: 0;">
             <input type="text" class="item-desc glass-form-input" placeholder="Beschreibung der Position" value="${data.description || ''}" required style="font-weight: 600;">
@@ -782,6 +791,7 @@ window.addAccountingItemRow = function (data = {}) {
         align-items: center;
         gap: 16px;
     `;
+    assignmentBox.className = 'acc-assignment-box';
 
     // Assignment Type Toggle (Segmented Control style)
     const typeLabel = document.createElement('div');
@@ -817,7 +827,7 @@ window.addAccountingItemRow = function (data = {}) {
     // Dynamic UI Container
     const dynamicUI = document.createElement('div');
     dynamicUI.className = 'dynamic-assignment-ui';
-    dynamicUI.style.cssText = 'flex: 1; display: flex; align-items: center; gap: 12px;';
+    dynamicUI.style.cssText = 'flex: 1; display: flex; align-items: center; gap: 12px; min-width: 0;';
     
     // Machine Filter Toggle & Input
     const machineUI = document.createElement('div');
@@ -920,6 +930,140 @@ window.closeAccountingModal = function () {
     }
 };
 
+// --- Global Assignment Controls ---
+window._globalAssignmentType = 'machine';
+window._globalMachineFilter = 'all';
+
+window.toggleGlobalAssignmentType = function (type) {
+    window._globalAssignmentType = type;
+    const machineBtn = document.getElementById('acc-global-type-machine');
+    const otherBtn = document.getElementById('acc-global-type-other');
+    const machineUI = document.getElementById('acc-global-machine-ui');
+    const otherUI = document.getElementById('acc-global-other-ui');
+    if (machineBtn) {
+        machineBtn.style.background = type === 'machine' ? 'var(--color-primary-green)' : 'transparent';
+        machineBtn.style.color = type === 'machine' ? 'white' : 'rgba(255,255,255,0.4)';
+    }
+    if (otherBtn) {
+        otherBtn.style.background = type === 'other' ? '#6366f1' : 'transparent';
+        otherBtn.style.color = type === 'other' ? 'white' : 'rgba(255,255,255,0.4)';
+    }
+    if (machineUI) machineUI.style.display = type === 'machine' ? 'flex' : 'none';
+    if (otherUI) otherUI.style.display = type === 'other' ? 'flex' : 'none';
+};
+
+window.toggleGlobalMachineFilter = function (filter) {
+    window._globalMachineFilter = filter;
+    const allBtn = document.getElementById('acc-global-filter-all');
+    const wrkBtn = document.getElementById('acc-global-filter-workshop');
+    const searchWrapper = document.getElementById('acc-global-machine-search-wrapper');
+    const workshopDropdown = document.getElementById('acc-global-workshop-dropdown');
+    if (allBtn) { allBtn.style.background = filter === 'all' ? 'rgba(255,255,255,0.1)' : 'transparent'; allBtn.style.color = filter === 'all' ? 'white' : 'rgba(255,255,255,0.4)'; }
+    if (wrkBtn) { wrkBtn.style.background = filter === 'workshop' ? 'rgba(255,255,255,0.1)' : 'transparent'; wrkBtn.style.color = filter === 'workshop' ? 'white' : 'rgba(255,255,255,0.4)'; }
+    if (searchWrapper) searchWrapper.style.display = filter === 'all' ? 'block' : 'none';
+    if (workshopDropdown) {
+        workshopDropdown.style.display = filter === 'workshop' ? 'flex' : 'none';
+        if (filter === 'workshop') {
+            // Populate workshop dropdown
+            const sel = document.getElementById('acc-global-workshop-machine');
+            if (sel) {
+                const machines = (window.machineList || []).filter(m => m.is_in_workshop);
+                sel.innerHTML = '<option value="">-- Maschine wählen --</option>' +
+                    machines.map(m => `<option value="${m.id}">${window.getMachineName(m.id)}</option>`).join('');
+                
+                // Ensure Glass-Select is initialized (it won't re-initialize if dataset.glassInitialized is set)
+                if (window.initGlassSelect) window.initGlassSelect(sel);
+                // Trigger change to update display text
+                sel.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+    }
+};
+
+window.filterGlobalMachineDropdown = function (query) {
+    const machines = window.machineList || [];
+    const tokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+    const filtered = machines.filter(m => {
+        const searchable = [m.manufacturer || '', m.name || '', m.serial || '', m.year ? String(m.year) : ''].join(' ').toLowerCase();
+        return tokens.length === 0 || tokens.every(t => searchable.includes(t));
+    });
+
+    let dropdown = document.getElementById('acc-global-machine-dropdown-portal');
+    if (!dropdown) {
+        dropdown = document.createElement('div');
+        dropdown.id = 'acc-global-machine-dropdown-portal';
+        dropdown.style.cssText = 'position:fixed;z-index:999999;background:rgba(15,23,42,0.98);border:1px solid rgba(255,255,255,0.15);border-radius:12px;max-height:260px;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,0.7);display:none;min-width:200px;';
+        document.body.appendChild(dropdown);
+    }
+    const searchInput = document.getElementById('acc-global-machine-search');
+    if (searchInput) {
+        const rect = searchInput.getBoundingClientRect();
+        dropdown.style.top = (rect.bottom + 4) + 'px';
+        dropdown.style.left = rect.left + 'px';
+        dropdown.style.width = rect.width + 'px';
+    }
+    dropdown.innerHTML = '';
+    const noneItem = document.createElement('div');
+    noneItem.textContent = 'Keine Maschine';
+    noneItem.style.cssText = 'padding:10px 14px;cursor:pointer;color:rgba(255,255,255,0.6);font-size:0.9rem;';
+    noneItem.onmousedown = (e) => { e.preventDefault(); window.selectGlobalMachine('', ''); };
+    noneItem.onmouseover = () => { noneItem.style.background = 'rgba(255,255,255,0.08)'; };
+    noneItem.onmouseout = () => { noneItem.style.background = ''; };
+    dropdown.appendChild(noneItem);
+    filtered.forEach(m => {
+        const label = window.getMachineName(m.id);
+        const item = document.createElement('div');
+        item.style.cssText = 'padding:10px 14px;cursor:pointer;font-size:0.9rem;border-top:1px solid rgba(255,255,255,0.05);';
+        item.innerHTML = `<span style="color:var(--color-primary-green);font-weight:600;">${label}</span>`;
+        item.onmousedown = (e) => { e.preventDefault(); window.selectGlobalMachine(m.id, label); };
+        item.onmouseover = () => { item.style.background = 'rgba(255,255,255,0.06)'; };
+        item.onmouseout = () => { item.style.background = ''; };
+        dropdown.appendChild(item);
+    });
+    dropdown.style.display = 'block';
+    document.addEventListener('click', function closeGlobal(e) {
+        if (!dropdown.contains(e.target) && e.target.id !== 'acc-global-machine-search') {
+            dropdown.style.display = 'none';
+            document.removeEventListener('click', closeGlobal);
+        }
+    });
+};
+
+window.selectGlobalMachine = function (id, label) {
+    const searchInput = document.getElementById('acc-global-machine-search');
+    const hiddenInput = document.getElementById('acc-global-machine-id');
+    if (searchInput) { searchInput.value = label; searchInput.style.color = id ? 'var(--color-primary-green)' : ''; }
+    if (hiddenInput) hiddenInput.value = id;
+    const dropdown = document.getElementById('acc-global-machine-dropdown-portal');
+    if (dropdown) dropdown.style.display = 'none';
+};
+
+window.selectGlobalWorkshopMachine = function (id) {
+    const machineId = parseInt(id) || null;
+    const label = machineId ? window.getMachineName(machineId) : '';
+    const hiddenInput = document.getElementById('acc-global-machine-id');
+    if (hiddenInput) hiddenInput.value = id;
+    // Update search box for consistency
+    const searchInput = document.getElementById('acc-global-machine-search');
+    if (searchInput) { searchInput.value = label; searchInput.style.color = id ? 'var(--color-primary-green)' : ''; }
+};
+
+window.resetGlobalAssignment = function () {
+    window._globalAssignmentType = 'machine';
+    window._globalMachineFilter = 'all';
+    window.toggleGlobalAssignmentType('machine');
+    window.toggleGlobalMachineFilter('all');
+    const searchInput = document.getElementById('acc-global-machine-search');
+    if (searchInput) { searchInput.value = ''; searchInput.style.color = ''; }
+    const hiddenInput = document.getElementById('acc-global-machine-id');
+    if (hiddenInput) hiddenInput.value = '';
+    const areaInput = document.getElementById('acc-global-assignment-area');
+    if (areaInput) areaInput.value = '';
+    const applyCheck = document.getElementById('acc-global-apply-to-items');
+    if (applyCheck) applyCheck.checked = true;
+};
+
+
 window.updateAccountingEntityLabel = function () {
     const typeField = document.getElementById('acc-type');
     if (!typeField) return;
@@ -949,12 +1093,36 @@ window.calculateGross = function () {
     grossInput.value = gross.toFixed(2);
 };
 
+window.syncAccountDebitedStatus = function() {
+    const debitedCheck = document.getElementById('acc-is-debited');
+    if (!debitedCheck) return;
+    
+    if (debitedCheck.checked) {
+        const paidCheck = document.getElementById('acc-is-paid');
+        const paidAt = document.getElementById('acc-paid-at');
+        const invoiceDate = document.getElementById('acc-date').value;
+        
+        if (paidCheck) paidCheck.checked = true;
+        if (paidAt && invoiceDate) {
+            paidAt.value = invoiceDate;
+        }
+    }
+};
+
 window.submitAccountingEntry = async function (event) {
     if (event && event.preventDefault) event.preventDefault();
     console.log('Accounting Module: submitting entry');
 
     try {
         const id = document.getElementById('accounting-id').value;
+
+        // Read global assignment values
+        const globalType = window._globalAssignmentType || 'machine';
+        const globalMachineId = parseInt(document.getElementById('acc-global-machine-id')?.value) || null;
+        const globalArea = document.getElementById('acc-global-assignment-area')?.value || null;
+        const globalMachineFilter = window._globalMachineFilter || 'all';
+        const applyToItems = document.getElementById('acc-global-apply-to-items')?.checked ?? true;
+
         const entryData = {
             type: document.getElementById('acc-type').value,
             invoice_number: document.getElementById('acc-invoice-number').value,
@@ -967,7 +1135,12 @@ window.submitAccountingEntry = async function (event) {
             discount_date: document.getElementById('acc-discount-date').value || null,
             discount_amount: parseFloat(document.getElementById('acc-discount-amount').value) || null,
             is_paid: document.getElementById('acc-is-paid').checked,
-            paid_at: document.getElementById('acc-paid-at').value || null
+            paid_at: document.getElementById('acc-paid-at').value || null,
+            is_debited: document.getElementById('acc-is-debited')?.checked || false,
+            global_assignment_type: globalType,
+            global_assignment_machine_id: globalType === 'machine' ? globalMachineId : null,
+            global_assignment_area: globalType === 'other' ? globalArea : null,
+            global_machine_filter: globalMachineFilter
         };
 
         // Wenn created_by eine echte UUID ist (Länge > 30), mitsenden, sonst weglassen.
@@ -987,17 +1160,32 @@ window.submitAccountingEntry = async function (event) {
 
         // Save Items
         const itemRows = document.querySelectorAll('#accounting-items-container .item-row');
-        const items = Array.from(itemRows).map(row => ({
-            accounting_id: accountingId,
-            description: row.querySelector('.item-desc').value,
-            quantity: parseFloat(row.querySelector('.item-qty').value) || 0,
-            unit: row.querySelector('.item-unit').value,
-            price_net: parseFloat(row.querySelector('.item-price').value) || 0,
-            machine_id: row.dataset.machineId ? parseInt(row.dataset.machineId) : null,
-            assignment_type: row.dataset.assignmentType || 'machine',
-            assignment_area: row.dataset.assignmentArea || null,
-            machine_filter: row.dataset.machineFilter || 'all'
-        }));
+        const items = Array.from(itemRows).map(row => {
+            // Optional: override per-item assignment with global values
+            let machineId = row.dataset.machineId ? parseInt(row.dataset.machineId) : null;
+            let assignmentType = row.dataset.assignmentType || 'machine';
+            let assignmentArea = row.dataset.assignmentArea || null;
+            let machineFilter = row.dataset.machineFilter || 'all';
+
+            if (applyToItems) {
+                assignmentType = globalType;
+                machineId = globalType === 'machine' ? globalMachineId : null;
+                assignmentArea = globalType === 'other' ? globalArea : null;
+                machineFilter = globalMachineFilter;
+            }
+
+            return {
+                accounting_id: accountingId,
+                description: row.querySelector('.item-desc').value,
+                quantity: parseFloat(row.querySelector('.item-qty').value) || 0,
+                unit: row.querySelector('.item-unit').value,
+                price_net: parseFloat(row.querySelector('.item-price').value) || 0,
+                machine_id: machineId,
+                assignment_type: assignmentType,
+                assignment_area: assignmentArea,
+                machine_filter: machineFilter
+            };
+        });
 
         // Delete old items first if updating
         if (id) {
@@ -1016,6 +1204,7 @@ window.submitAccountingEntry = async function (event) {
         alert('Fehler beim Speichern: ' + err.message);
     }
 };
+
 
 window.editAccountingEntry = async function (id) {
     const entry = allAccountingEntries.find(e => e.id === id);
@@ -1047,6 +1236,25 @@ window.editAccountingEntry = async function (id) {
         const paidCheck = document.getElementById('acc-is-paid');
         if (paidCheck) paidCheck.checked = !!entry.is_paid;
         document.getElementById('acc-paid-at').value = entry.paid_at || '';
+
+        const debitedCheck = document.getElementById('acc-is-debited');
+        if (debitedCheck) debitedCheck.checked = !!entry.is_debited;
+
+        // Restore global assignment
+        const globalType = entry.global_assignment_type || 'machine';
+        window.toggleGlobalAssignmentType(globalType);
+        const globalMachineFilter = entry.global_machine_filter || 'all';
+        window.toggleGlobalMachineFilter(globalMachineFilter);
+        if (globalType === 'machine' && entry.global_assignment_machine_id) {
+            const machineName = window.getMachineName(entry.global_assignment_machine_id);
+            const searchInput = document.getElementById('acc-global-machine-search');
+            const hiddenInput = document.getElementById('acc-global-machine-id');
+            if (searchInput) { searchInput.value = machineName; searchInput.style.color = 'var(--color-primary-green)'; }
+            if (hiddenInput) hiddenInput.value = entry.global_assignment_machine_id;
+        } else if (globalType === 'other') {
+            const areaInput = document.getElementById('acc-global-assignment-area');
+            if (areaInput) areaInput.value = entry.global_assignment_area || '';
+        }
         
         window.updateAccountingEntityLabel();
     }, 10);
@@ -1119,7 +1327,7 @@ window.handleAccountingPDFUpload = async function (event) {
     try {
         const isImage = file.type.startsWith('image/');
         const systemPrompt = `Du bist ein präziser Buchhaltungs-Assistent für das Unternehmen 'Meetra'. Analysiere das Dokument (Deutsch oder Englisch) und gib NUR valides JSON zurück. 
-Schlüssel: invoice_number, date (YYYY-MM-DD), net_amount (Zahl), vat_rate (Zahl), type (incoming/outgoing), entity (Geschäftspartner), due_date (YYYY-MM-DD oder "sofort"), paid_at (YYYY-MM-DD), discount_amount (Zahl), is_paid (boolean), positions (Array aus {description, quantity, unit, price_net}). 
+Schlüssel: invoice_number, date (YYYY-MM-DD), net_amount (Zahl), vat_rate (Zahl), type (incoming/outgoing), entity (Geschäftspartner), due_date (YYYY-MM-DD oder "sofort"), paid_at (YYYY-MM-DD), discount_amount (Zahl), is_paid (boolean), is_debited (boolean), positions (Array aus {description, quantity, unit, price_net}). 
 
 ERKENNUNG DES DATUMS (date):
 - PRIORITÄT: Das Rechnungsdatum ("Invoice Date") steht meist OBEN RECHTS.
@@ -1143,6 +1351,10 @@ STATUS (is_paid & paid_at):
 FÄLLIGKEIT (due_date):
 - "Due immediately", "payable now", "sofort fällig" -> "sofort". Ansonsten YYYY-MM-DD.
 
+KONTO ABBUCHUNG (is_debited):
+- Setze 'is_debited' = true, wenn auf der Rechnung steht, dass der Betrag automatisch vom Konto abgebucht wird: z.B. "wird von folgendem Konto abgebucht", "Einzugsermächtigung", "SEPA-Lastschrift", "Lastschrift", "wird automatisch abgebucht", "direct debit", "charged to your account", "wird abgebucht", "Abbuchung", "Bankeinzug".
+- Falls 'is_debited' = true: Setze 'due_date' = "sofort" (außer es ist explizit ein anderes Datum angegeben).
+
 WICHTIG ZU PREISEN:
 - 'price_net' ist der EINZELPREIS. Menge * Einzelpreis = Zeilengesamtpreis.
 Setze Unbekanntes auf null.`;
@@ -1151,12 +1363,12 @@ Setze Unbekanntes auf null.`;
 
         if (isImage) {
             updateStatus('Lese Bilddaten...');
-            const base64Image = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = () => reject(new Error('Fehler beim Lesen der Bilddatei.'));
-                reader.readAsDataURL(file);
-            });
+            // Use arrayBuffer() for reliable, synchronous-style access without FileReader timing issues
+            const arrayBuf = await file.arrayBuffer();
+            const bytes = new Uint8Array(arrayBuf);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+            const base64Image = `data:${file.type};base64,${btoa(binary)}`;
 
             requestBody = {
                 model: "meta-llama/llama-4-scout-17b-16e-instruct",
@@ -1172,45 +1384,30 @@ Setze Unbekanntes auf null.`;
             };
         } else {
             updateStatus('Lese PDF aus...');
-            const base64Images = await new Promise((resolve, reject) => {
-                try {
-                    const reader = new FileReader();
-                    reader.onload = async function() {
-                        try {
-                            const typedarray = new Uint8Array(this.result);
-                            const loadingTask = window.pdfjsLib.getDocument(typedarray);
-                            const pdfDocument = await loadingTask.promise;
-                            
-                            // Max 3 pages to prevent payload size issues/rate limits
-                            const numPages = Math.min(pdfDocument.numPages, 3);
-                            let images = [];
-                            
-                            for (let i = 1; i <= numPages; i++) {
-                                const page = await pdfDocument.getPage(i);
-                                const viewport = page.getViewport({ scale: 3.0 }); // Even higher scale for razor-sharp OCR of tiny text (230/100 etc)
-                                const canvas = document.createElement('canvas');
-                                const context = canvas.getContext('2d');
-                                canvas.height = viewport.height;
-                                canvas.width = viewport.width;
-                                await page.render({ canvasContext: context, viewport: viewport }).promise;
-                                images.push(canvas.toDataURL('image/jpeg', 0.95));
-                            }
-                            resolve(images);
-                        } catch (e) {
-                            reject(new Error('Fehler beim Rendern der PDF: ' + e.message));
-                        }
-                    };
-                    reader.onerror = () => {
-                        const errName = reader.error ? reader.error.name : 'UnknownError';
-                        const errMsg = reader.error ? reader.error.message : 'No detailed message available';
-                        console.error('FileReader Error:', reader.error);
-                        reject(new Error(`Fehler beim Einlesen der PDF-Datei (${errName}: ${errMsg}).`));
-                    };
-                    reader.readAsArrayBuffer(file);
-                } catch (err) {
-                    reject(new Error('Unerwarteter Fehler beim Dateizugriff: ' + err.message));
+            const base64Images = [];
+            try {
+                // Use file.arrayBuffer() instead of FileReader to avoid NotReadableError
+                const arrayBuf = await file.arrayBuffer();
+                const typedarray = new Uint8Array(arrayBuf);
+                const loadingTask = window.pdfjsLib.getDocument({ data: typedarray });
+                const pdfDocument = await loadingTask.promise;
+
+                // Max 3 pages to prevent payload size issues/rate limits
+                const numPages = Math.min(pdfDocument.numPages, 3);
+
+                for (let i = 1; i <= numPages; i++) {
+                    const page = await pdfDocument.getPage(i);
+                    const viewport = page.getViewport({ scale: 3.0 });
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+                    base64Images.push(canvas.toDataURL('image/jpeg', 0.95));
                 }
-            });
+            } catch (pdfErr) {
+                throw new Error('Fehler beim Rendern der PDF: ' + pdfErr.message);
+            }
 
             const contentArray = [ { type: "text", text: systemPrompt } ];
             base64Images.forEach(b64 => {
@@ -1273,11 +1470,19 @@ Setze Unbekanntes auf null.`;
         if (parsedData.discount_date) document.getElementById('acc-discount-date').value = parsedData.discount_date;
         if (parsedData.discount_amount !== null) document.getElementById('acc-discount-amount').value = parseFloat(parsedData.discount_amount).toFixed(2);
 
-        if (parsedData.is_paid !== undefined) {
+        if (parsedData.is_debited !== undefined) {
+            const debitedCheck = document.getElementById('acc-is-debited');
+            if (debitedCheck) {
+                debitedCheck.checked = !!parsedData.is_debited;
+                if (debitedCheck.checked) window.syncAccountDebitedStatus();
+            }
+        }
+
+        if (parsedData.is_paid !== undefined && !parsedData.is_debited) {
             const paidCheck = document.getElementById('acc-is-paid');
             if (paidCheck) paidCheck.checked = !!parsedData.is_paid;
         }
-        if (parsedData.paid_at) document.getElementById('acc-paid-at').value = parsedData.paid_at;
+        if (parsedData.paid_at && !parsedData.is_debited) document.getElementById('acc-paid-at').value = parsedData.paid_at;
 
         window.calculateGross();
 
@@ -1523,6 +1728,11 @@ window.openMachineEvaluation = function () {
         requestAnimationFrame(() => {
             modal.classList.add('show');
         });
+
+        // Initialize glass select for time range
+        const rangeSelect = document.getElementById('eval-time-range');
+        if (rangeSelect) window.initGlassSelect(rangeSelect);
+
         window.updateMachineEvaluation();
     }
 };
@@ -1661,7 +1871,7 @@ window.updateMachineEvaluation = async function () {
             html += `
                 <h3 style="color: #60a5fa; margin: 24px 0 12px 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
-                    Kosten-Auswertung (Maschinen)
+                    Auswertung (Maschinen)
                 </h3>
                 <table class="data-table" style="width: 100%; border-collapse: collapse; margin-bottom: 32px;">
                     <thead>
@@ -1697,7 +1907,7 @@ window.updateMachineEvaluation = async function () {
             html += `
                 <h3 style="color: #6366f1; margin: 24px 0 12px 0; font-size: 1.1rem; display: flex; align-items: center; gap: 8px;">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                    Bereichs-Auswertung (Andere)
+                    Auswertung (Bereich)
                 </h3>
                 <table class="data-table" style="width: 100%; border-collapse: collapse;">
                     <thead>

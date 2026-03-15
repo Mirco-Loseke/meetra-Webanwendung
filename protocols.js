@@ -140,25 +140,23 @@
                         <h3 class="protocol-section-title">🕒 Bearbeitungshistorie</h3>
                         <div id="edit-history-list"></div>
                     </div>
-                </div>
 
-                <div class="protocol-modal-actions">
-                    <button onclick="window.closeProtocolModal()" class="btn-modal-base btn-modal-cancel">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                        Abbrechen
-                    </button>
-                    <button onclick="window.saveProtocol()" class="btn-modal-base btn-modal-save">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                        Speichern
-                    </button>
-                    <button onclick="window.completeProtocol()" id="complete-protocol-btn" class="btn-modal-base btn-modal-complete">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                        Abschließen
-                    </button>
-                    <button onclick="window.generateProtocolPDF()" id="generate-pdf-btn" class="btn-modal-base btn-modal-pdf" style="display: none;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                        PDF erstellen
-                    </button>
+                    <!-- Action Buttons at the very bottom of scrollable content -->
+                    <div class="protocol-modal-actions" style="margin-top: 4rem; border-top: 1px solid rgba(255,255,255,0.05);">
+                        <button onclick="window.closeProtocolModal()" class="btn-modal-base btn-modal-cancel">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            Abbrechen
+                        </button>
+                        <button onclick="window.saveProtocol()" class="btn-modal-base btn-modal-save">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                            Speichern
+                        </button>
+                        <button onclick="window.completeProtocol()" id="complete-protocol-btn" class="btn-modal-base btn-modal-complete">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Abschließen
+                        </button>
+                    </div>
+
                 </div>
             </div>
         `;
@@ -278,10 +276,10 @@
         // Update status badge
         updateStatusBadge();
 
-        // Show/hide PDF button
+        // Hide "Abschließen" button for completed protocols
         if (currentProtocol.status === 'completed') {
-            document.getElementById('generate-pdf-btn').style.display = 'flex';
-            document.getElementById('complete-protocol-btn').style.display = 'none';
+            const completeBtn = document.getElementById('complete-protocol-btn');
+            if (completeBtn) completeBtn.style.display = 'none';
         }
 
         // Show modal
@@ -900,8 +898,8 @@
 
         // Update UI
         updateStatusBadge();
-        document.getElementById('generate-pdf-btn').style.display = 'flex';
-        document.getElementById('complete-protocol-btn').style.display = 'none';
+        const completeBtn = document.getElementById('complete-protocol-btn');
+        if (completeBtn) completeBtn.style.display = 'none';
         renderEditHistory();
     };
 
@@ -1047,7 +1045,8 @@
 
         // Edit history
         if (currentProtocol.edit_history && currentProtocol.edit_history.length > 0) {
-            [...currentProtocol.edit_history].reverse().forEach(edit => {
+            // Limit to the 5 most recent entries
+            [...currentProtocol.edit_history].reverse().slice(0, 5).forEach(edit => {
                 const editDate = new Date(edit.edited_at).toLocaleString('de-DE');
                 const editorUser = window.userList?.find(u => u.id === edit.edited_by);
                 const editorName = editorUser ? editorUser.name : (edit.edited_by_name || 'Unbekannt');
@@ -1423,7 +1422,7 @@
         protocolFilterType = type;
 
         // Update UI active state
-        document.querySelectorAll('.filter-btn').forEach(btn => {
+        document.querySelectorAll('#protocols .calendar-tab-btn').forEach(btn => {
             btn.classList.toggle('active', btn.id === `filter-${type}`);
         });
 
@@ -1529,11 +1528,11 @@
                             
                             <!-- Third Row: Main Title: Machine Name (Manufacturer + Type) -->
                             <div style="min-width: 0; text-align: left; width: 100%;">
-                                <h2 style="margin: 0; font-size: clamp(0.95rem, 3.2vw, 1.6rem); color: var(--color-primary-green); font-weight: 900; line-height: 1.2; font-family: 'Outfit', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                    ${p.title}
+                                <h2 style="margin: 0; font-size: clamp(0.95rem, 3.2vw, 1.75rem); color: var(--color-primary-green); font-weight: 900; line-height: 1.2; font-family: 'Outfit', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    ${p.machines ? [p.machines.manufacturer, p.machines.name].filter(Boolean).join(' ') : p.title}
                                 </h2>
                                 ${p.machines ? `
-                                <div style="color: var(--color-primary-green); font-size: 0.85rem; font-weight: 700; margin-top: 2px; opacity: 0.9;">
+                                <div style="color: var(--color-primary-green); font-size: clamp(0.9rem, 3vw, 1.25rem); font-weight: 700; margin-top: 4px; opacity: 0.8; text-transform: uppercase;">
                                     ${[p.machines.serial ? `#${p.machines.serial}` : null, p.machines.year ? `(${p.machines.year})` : null].filter(Boolean).join(' ')}
                                 </div>` : ''}
                             </div>
@@ -1582,8 +1581,8 @@
                         </td>
                         <td data-label="Maschine" style="color: var(--color-primary-green); font-weight: 700; font-size: 0.98rem; line-height: 1.3;">
                             ${p.machines ? `
-                                <div>${[p.machines.manufacturer, p.machines.name].filter(Boolean).join(' ')}</div>
-                                <div style="font-size: 0.8rem; opacity: 0.8;">
+                                <div style="font-weight: 900; font-family: 'Outfit', sans-serif; font-size: 1.1rem;">${[p.machines.manufacturer, p.machines.name].filter(Boolean).join(' ')}</div>
+                                <div style="font-size: 0.85rem; opacity: 0.8; text-transform: uppercase;">
                                     ${[p.machines.serial ? `#${p.machines.serial}` : null, p.machines.year ? `(${p.machines.year})` : null].filter(Boolean).join(' ')}
                                 </div>` : 'Unbekannt'}
                         </td>
