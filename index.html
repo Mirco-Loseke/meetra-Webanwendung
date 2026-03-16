@@ -786,6 +786,16 @@
                         </a>
                     </li>
                     <li>
+                        <a href="#documents" class="nav-link" data-target="documents">
+                            <!-- Folders / Documents Icon -->
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                            <span>Dokumente</span>
+                        </a>
+                    </li>
+                    <li>
                         <a href="#accounting" class="nav-link" data-target="accounting">
                             <!-- Receipt / Accounting Icon -->
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1110,6 +1120,86 @@
                             style="padding: 3rem; text-align: center;">
                             <p style="opacity: 0.6;">Keine Bestellungen gefunden.</p>
                         </div>
+                    </div>
+                </section>
+
+                <section id="documents" class="view hidden">
+                    <div class="view-header-layout">
+                        <!-- Top Row: Title (Left) / Search (Right) -->
+                        <div class="view-header-row-top">
+                            <div class="view-header-left">
+                                <h1 style="margin: 0; display:flex; align-items:center; gap:12px;">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                                    </svg>
+                                    Dokumente
+                                </h1>
+                            </div>
+                            <div class="view-header-right">
+                                <div class="custom-search-wrapper" style="width: 250px;">
+                                    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="11" cy="11" r="8"></circle>
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                    </svg>
+                                    <input type="text" id="doc-search-input" placeholder="Dokument suchen..." autocomplete="off" oninput="window.filterDocuments()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bottom Row: Filters (Left) / Upload Button (Right) -->
+                        <div class="view-header-row-bottom">
+                            <div class="view-header-left" style="display: flex; gap: 12px; align-items: center;">
+                                <div class="custom-filter-dropdown" id="doc-category-dropdown" onclick="window.toggleDocCategoryDropdown(event)">
+                                    <span class="filter-label" id="selected-categories-label">Alle Typen</span>
+                                    <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                    <div class="custom-filter-menu">
+                                        <ul class="dropdown-options" id="doc-category-options">
+                                            <!-- dynamically populated by documents.js -->
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="view-header-right" style="display: flex; gap: 10px;">
+                                <button id="btn-new-folder" class="btn-primary btn-red-animated" onclick="window.handleNewFolderClick()" style="display: flex; align-items: center; gap: 8px; background: #ef4444; border-color: #ef4444;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                                        <line x1="12" y1="11" x2="12" y2="17"></line>
+                                        <line x1="9" y1="14" x2="15" y2="14"></line>
+                                    </svg>
+                                    <span class="btn-text">Neuer Ordner</span>
+                                </button>
+                                <button class="btn-primary" onclick="window.openDocumentUploadModal()" style="display: flex; align-items: center; gap: 8px;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                    Hochladen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Breadcrumbs -->
+                    <div id="doc-breadcrumbs" class="doc-breadcrumbs" style="padding: 10px 0; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; opacity: 0.8;">
+                        <span class="breadcrumb-item" style="cursor: pointer; color: var(--accent-color);" onclick="window.navigateToFolder(null)">Alle Dokumente</span>
+                    </div>
+
+                    <div id="documents-grid" class="documents-unified-grid">
+                        <!-- Cards will be populated by JS -->
+                    </div>
+
+                    <div id="documents-empty-state" class="empty-state hidden" style="padding: 5rem 2rem; text-align: center;">
+                        <div style="margin-bottom: 1.5rem; opacity: 0.1;">
+                            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                        </div>
+                        <h3 style="color: white; margin-bottom: 0.5rem;">Keine Dokumente gefunden</h3>
+                        <p style="color: rgba(255,255,255,0.4);">Lade dein erstes technisches Dokument hoch.</p>
                     </div>
                 </section>
 
@@ -1828,6 +1918,29 @@
                                 </h3>
                                 <ul id="category-list-contact" class="user-list">
                                     <!-- Contact Categories rendered here -->
+                                </ul>
+                            </div>
+
+                            <div class="category-group">
+                                <h3 class="category-group-title">
+                                    <div class="group-icon-wrapper" id="icon-group-document"
+                                        onclick="document.getElementById('color-document').click()" title="Farbe ändern">
+                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                            <polyline points="14 2 14 8 20 8"></polyline>
+                                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                                            <polyline points="10 9 9 9 8 9"></polyline>
+                                        </svg>
+                                    </div>
+                                    <input type="color" id="color-document" class="hidden-color-input"
+                                        onchange="updateGroupColor('document', this.value)">
+                                    <span>Dokumententyp</span>
+                                </h3>
+                                <ul id="category-list-document" class="user-list">
+                                    <!-- Document Type Categories rendered here -->
                                 </ul>
                             </div>
                         </div>
@@ -2768,6 +2881,9 @@
                     }
                     if (targetId === 'accounting' && typeof fetchAccountingEntries === 'function') {
                         fetchAccountingEntries();
+                    }
+                    if (targetId === 'documents' && typeof window.fetchDocuments === 'function') {
+                        window.fetchDocuments();
                     }
                     if (targetId === 'settings-ai') {
                         const input = document.getElementById('settings-api-key-new');
@@ -4248,6 +4364,7 @@
                 const listMachine = document.getElementById('category-list-machine');
                 const listService = document.getElementById('category-list-service');
                 const listContact = document.getElementById('category-list-contact');
+                const listDocument = document.getElementById('category-list-document');
 
                 // Safety check
                 if (!listMachine || !listService) return;
@@ -4255,6 +4372,7 @@
                 listMachine.innerHTML = '';
                 listService.innerHTML = '';
                 if (listContact) listContact.innerHTML = '';
+                if (listDocument) listDocument.innerHTML = '';
 
                 // Populate custom machine category filter dropdown
                 const filterOptionsList = document.getElementById('machine-category-filter-options');
@@ -4339,7 +4457,8 @@
                     const colors = {
                         machine: '#e67e22',
                         service: '#2980b9',
-                        contact: '#9b59b6'
+                        contact: '#9b59b6',
+                        document: '#f97316'
                     };
 
                     const type = cat.type || 'machine';
@@ -4373,6 +4492,8 @@
                         listService.appendChild(li);
                     } else if (type === 'contact' && listContact) {
                         listContact.appendChild(li);
+                    } else if (type === 'document' && listDocument) {
+                        listDocument.appendChild(li);
                     }
                 });
             }
@@ -10098,7 +10219,118 @@
         </div>
     </div>
 
+    <!-- Document Upload Modal -->
+    <div id="document-upload-modal" class="modal-backdrop hidden" style="z-index: 1200; align-items: center; justify-content: center;">
+        <div class="modal-content glass-card" style="max-width: 500px; width: 95%; padding: 2.5rem; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 24px 64px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 style="margin: 0; font-size: 1.5rem; color: white;">Dokument hochladen</h2>
+                <button class="btn-close-modal" onclick="window.closeDocumentUploadModal()">&times;</button>
+            </div>
+            
+            <form id="document-upload-form" onsubmit="window.saveDocument(event)">
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Name des Dokuments</label>
+                    <input type="text" id="doc-upload-name" class="glass-input" placeholder="z.B. Datenblatt Motor" required>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Dokumententyp</label>
+                    <div class="custom-filter-dropdown" id="doc-upload-type-dropdown" onclick="window.toggleDocUploadTypeDropdown(event)" style="width: 100%;">
+                        <span class="filter-label" id="doc-upload-type-label">Dokumententyp wählen...</span>
+                        <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                        <input type="hidden" id="doc-upload-category" value="">
+                        <div class="custom-filter-menu">
+                            <ul class="dropdown-options" id="doc-upload-type-options">
+                                <!-- dynamically populated by documents.js -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+
+                <div class="form-group" style="margin-bottom: 2rem;">
+                    <div id="doc-dropzone" class="file-drop-zone" onclick="document.getElementById('doc-file-input').click()">
+                        <input type="file" id="doc-file-input" accept=".pdf,image/*" class="hidden-file-input" onchange="window.handleDocFileSelection(event)">
+                        <div class="drop-zone-content">
+                            <span class="icon">📄</span>
+                            <p id="doc-file-name">Klicken oder Datei hierher ziehen</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 15px; justify-content: flex-end;">
+                    <button type="button" class="btn-secondary" onclick="window.closeDocumentUploadModal()">Abbrechen</button>
+                    <button type="submit" id="btn-save-doc" class="btn-primary" style="padding: 12px 24px;">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Document Preview Modal (Full Screen Content) -->
+    <div id="document-preview-modal" class="modal-backdrop hidden" style="z-index: 1300; align-items: center; justify-content: center; background: rgba(0,0,0,0.9);">
+        <div class="modal-content glass-card" style="max-width: 90vw; width: 1200px; height: 90vh; padding: 1rem; display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0.5rem 1rem;">
+                <h2 id="doc-preview-title" style="margin: 0; font-size: 1.2rem; color: white;">Vorschau</h2>
+                <div style="display: flex; gap: 15px;">
+                    <button class="btn-icon-soft" id="btn-doc-download" onclick="window.downloadCurrentDoc()" title="Herunterladen">
+                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    </button>
+                    <button class="btn-close-modal" onclick="window.closeDocumentPreviewModal()">&times;</button>
+                </div>
+            </div>
+            <div id="doc-preview-container" style="flex: 1; background: rgba(0,0,0,0.2); border-radius: 12px; position: relative; overflow-y: auto;">
+                 <!-- File content (img or iframe) -->
+            </div>
+        </div>
+    </div>
+    <!-- Document Folder Modal -->
+    <div id="document-folder-modal" class="modal-backdrop hidden" style="z-index: 1250; align-items: center; justify-content: center;">
+        <div class="modal-content glass-card" style="max-width: 400px; width: 95%; padding: 2.5rem; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 24px 64px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 id="folder-modal-title" style="margin: 0; font-size: 1.5rem; color: white;">Neuer Ordner</h2>
+                <button class="btn-close-modal" onclick="window.closeFolderModal()">&times;</button>
+            </div>
+            
+            <form id="folder-form" onsubmit="window.saveFolder(event)">
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Ordnername</label>
+                    <input type="text" id="folder-name-input" class="glass-input" placeholder="z.B. Wartungsberichte" required>
+                </div>
+                
+                
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button type="button" class="btn-secondary" onclick="window.closeFolderModal()" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 0.8rem 1.5rem; border-radius: 12px; cursor: pointer;">Abbrechen</button>
+                    <button type="submit" class="btn-primary" id="save-folder-btn" style="background: var(--accent-color); border: none; color: black; font-weight: 600; padding: 0.8rem 2rem; border-radius: 12px; cursor: pointer;">Erstellen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script src="accounting.js?v=41"></script>
+    <script src="documents.js?v=2"></script>
+    <!-- Renaming Modal -->
+    <div id="document-rename-modal" class="modal-backdrop hidden" style="z-index: 1300; align-items: center; justify-content: center;">
+        <div class="modal-content glass-card" style="max-width: 400px; width: 95%; padding: 2.5rem; border: 1px solid rgba(255,255,255,0.12);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 id="rename-modal-title" style="margin: 0; font-size: 1.5rem; color: white;">Umbennenen</h2>
+                <button class="btn-close-modal" onclick="window.closeRenameModal()">&times;</button>
+            </div>
+            <form id="doc-rename-form" onsubmit="window.saveRename(event)">
+                <div class="form-group" style="margin-bottom: 2rem;">
+                    <label style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Neuer Name</label>
+                    <input type="text" id="rename-input" class="glass-input" required placeholder="Name eingeben...">
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <button type="button" class="btn-secondary" onclick="window.closeRenameModal()" style="flex: 1;">Abbrechen</button>
+                    <button type="submit" class="btn-primary" id="btn-save-rename" style="flex: 1; background: var(--accent-color); border-color: var(--accent-color);">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Hidden Folder Cover Input -->
+    <input type="file" id="folder-cover-input" class="hidden" accept="image/*" onchange="window.handleFolderCoverUpload(event)">
 </body>
 
 </html>

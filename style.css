@@ -1510,9 +1510,22 @@ h1,
     background: linear-gradient(135deg, #FFFFFF, #F0F0F0);
 }
 
-.btn-primary {
-    background: linear-gradient(135deg, var(--color-primary-red), #b71c1c);
-    color: white;
+.doc-card {
+    border: 2px solid rgba(249, 115, 22, 0.2) !important; /* side/bottom orange */
+    border-top: 4px solid rgba(249, 115, 22, 1) !important; /* top orange */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.folder-card {
+    border: 2px solid rgba(239, 68, 68, 0.2) !important; /* side/bottom red */
+    border-top: 4px solid rgba(239, 68, 68, 1) !important; /* top red */
+    background: rgba(var(--accent-rgb), 0.1) !important;
+}
+
+.doc-thumb, .folder-thumb {
+    border: none !important;
+    background: rgba(0,0,0,0.1);
 }
 
 .btn-primary:hover {
@@ -1629,6 +1642,7 @@ h1,
 #calendar h1,
 #workshop h1,
 #procurements h1,
+#documents h1,
 #protocols h1 {
     font-size: 2.2rem;
     font-weight: 700;
@@ -5494,6 +5508,7 @@ MACHINE HISTORY TIMELINE
     #calendar h1,
     #workshop h1,
     #procurements h1,
+    #documents h1,
     #protocols h1 {
         font-size: 1.6rem !important;
     }
@@ -7407,3 +7422,340 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     color: rgba(255, 255, 255, 0.15);
     letter-spacing: normal;
 }
+
+/* ==========================================
+   DOKUMENTATIONS-MODUL STYLES
+   ========================================== */
+
+.documents-unified-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    padding: 1rem 0;
+}
+
+.doc-card {
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    backdrop-filter: blur(25px);
+}
+
+.doc-card:hover {
+    transform: translateY(-5px);
+    border-color: rgba(var(--accent-rgb), 0.3);
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+}
+
+.folder-card .folder-thumb {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    padding-top: 1.5rem !important;
+}
+
+.folder-thumb {
+    border: none !important; /* Remove internal border */
+}
+
+.folder-card .doc-title {
+    font-size: 1.25rem !important;
+    font-weight: 800 !important;
+    color: var(--accent-color) !important;
+    order: -2;
+    margin-bottom: 0.5rem;
+    padding: 0 1.5rem;
+}
+
+.folder-card .doc-info {
+    order: -1;
+    padding: 0 1.5rem;
+}
+
+.folder-thumb {
+    width: 90% !important;
+    margin: 0 auto !important;
+    background: transparent !important;
+    border: none !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.folder-thumb:hover {
+    opacity: 0.85;
+}
+
+.folder-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain !important; /* Ensure image is fully visible */
+}
+
+.folder-thumb .upload-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.folder-thumb:hover .upload-overlay {
+    opacity: 1;
+}
+
+.folder-card:hover .folder-thumb svg {
+    transform: scale(1.1);
+    transition: transform 0.3s ease;
+}
+
+/* Drag & Drop Styles */
+.doc-card.dragging {
+    opacity: 0.5;
+    transform: scale(0.95);
+}
+
+.folder-card.drag-over {
+    background: rgba(var(--accent-rgb), 0.15) !important;
+    border-color: var(--accent-color) !important;
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(var(--accent-rgb), 0.3);
+}
+
+/* Breadcrumbs */
+.doc-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 0;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.breadcrumb-item {
+    transition: all 0.2s ease;
+}
+
+.breadcrumb-item:hover {
+    opacity: 1 !important;
+    text-decoration: underline;
+}
+
+/* Red-to-Green Button Animation */
+.btn-red-animated {
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-success-animation {
+    background: #10b981 !important;
+    border-color: #10b981 !important;
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.4);
+}
+
+/* Custom Multi-select Dropdown */
+.custom-dropdown .dropdown-trigger:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.dropdown-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.checkbox-box {
+    transition: all 0.2s ease;
+}
+
+.checkbox-box svg {
+    transition: opacity 0.2s ease;
+}
+
+.doc-thumb {
+    width: 100%;
+    aspect-ratio: 4/5;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.doc-thumb img,
+.pdf-thumbnail-canvas {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.pdf-thumbnail-canvas {
+    object-fit: contain;
+    background: white;
+    display: none;
+}
+
+.pdf-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.doc-type-icon {
+    font-size: 2rem;
+    font-weight: 800;
+    opacity: 0.5;
+    letter-spacing: 1px;
+}
+
+.doc-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.doc-title {
+    color: white;
+    font-weight: 700;
+    font-size: 1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.doc-meta {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.4);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.doc-category-badge {
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.doc-card .doc-actions {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.doc-card:hover .doc-actions {
+    opacity: 1;
+}
+
+.btn-doc-action {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-doc-action:hover {
+    background: var(--primary-red);
+    border-color: var(--primary-red);
+}
+
+.filter-chip {
+    padding: 8px 16px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.filter-chip:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+.filter-chip.active {
+    background: var(--color-primary-green);
+    color: white;
+    border-color: var(--color-primary-green);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+/* File Drop Zone (Custom) */
+.file-drop-zone {
+    border: 2px dashed rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.file-drop-zone:hover, .file-drop-zone.dragover {
+    border-color: var(--color-primary-green);
+    background: rgba(16, 185, 129, 0.05);
+}
+
+.file-drop-zone .icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+.file-drop-zone p {
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    .documents-unified-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
