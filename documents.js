@@ -444,24 +444,30 @@ window.closeDocumentUploadModal = function() {
     }, 300);
 };
 
+let selectedDocFiles = []; // Changed from single selectedDocFile
+
 window.handleDocFileSelection = function(event) {
-    const file = event.target.files[0];
-    if (file) {
-        selectedDocFile = file;
-        document.getElementById('doc-file-name').textContent = file.name;
-        
-        // Auto-fill name if empty
-        const nameInput = document.getElementById('doc-upload-name');
-        if (!nameInput.value) {
-            nameInput.value = file.name.split('.').slice(0, -1).join('.');
+    const files = Array.from(event.target.files);
+    if (files.length > 0) {
+        selectedDocFiles = files;
+        const fileNameLabel = document.getElementById('doc-file-name');
+        if (files.length === 1) {
+            fileNameLabel.textContent = files[0].name;
+            const nameInput = document.getElementById('doc-upload-name');
+            if (!nameInput.value) {
+                nameInput.value = files[0].name.split('.').slice(0, -1).join('.');
+            }
+        } else {
+            fileNameLabel.textContent = `${files.length} Dateien ausgewählt`;
+            document.getElementById('doc-upload-name').value = "Mehrere Dokumente";
         }
     }
 };
 
 window.saveDocument = async function(event) {
     event.preventDefault();
-    if (!selectedDocFile) {
-        alert('Bitte wähle eine Datei aus.');
+    if (selectedDocFiles.length === 0) {
+        alert('Bitte wähle mindestens eine Datei aus.');
         return;
     }
 
@@ -470,58 +476,46 @@ window.saveDocument = async function(event) {
     btn.textContent = 'Lädt hoch...';
 
     try {
-        const name = document.getElementById('doc-upload-name').value;
+        const baseName = document.getElementById('doc-upload-name').value;
         const category = document.getElementById('doc-upload-category').value;
-        const machineId = document.getElementById('doc-upload-machine').value || null;
+        const machineId = document.getElementById('doc-upload-machine')?.value || null;
         
-        // 1. Upload to Storage
-        const fileExt = selectedDocFile.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
-        const filePath = `documents/${fileName}`;
+        const pathGenerator = (file, i) => {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+            return `documents/${fileName}`;
+        };
 
-        console.log('Attempting upload to storage:', filePath);
-        const { data: uploadData, error: uploadError } = await window.supabaseClient.storage
-            .from('accounting-documents')
-            .upload(filePath, selectedDocFile);
+        console.log(`Starting parallel upload of ${selectedDocFiles.length} files...`);
+        const uploadResults = await window.FileUploadService.uploadFiles(
+            selectedDocFiles,
+            pathGenerator,
+            { bucket: 'accounting-documents', compress: true, concurrency: 5 }
+        );
 
-        if (uploadError) {
-            console.error('Storage upload error:', uploadError);
-            throw new Error(`Storage Fehler: ${uploadError.message || JSON.stringify(uploadError)}`);
-        }
+        // 3. Save all to Database
+        const dbEntries = uploadResults.map((res, i) => ({
+            name: selectedDocFiles.length === 1 ? baseName : (selectedDocFiles[i].name.split('.').slice(0, -1).join('.') || baseName),
+            category: category,
+            machine_id: machineId,
+            url: res.url,
+            file_path: res.path,
+            size: res.size,
+            mime_type: res.type,
+            folder_id: currentFolderId
+        }));
 
-        console.log('Upload successful, getting public URL...');
-        // 2. Get Public URL
-        const { data: urlData } = window.supabaseClient.storage
-            .from('accounting-documents')
-            .getPublicUrl(filePath);
-        
-        const publicUrl = urlData.publicUrl;
-
-        console.log('Saving to database:', { name, category, machineId, publicUrl });
-        // 3. Save to Database
         const { error: dbError } = await window.supabaseClient
             .from('documents')
-            .insert([{
-                name: name,
-                category: category,
-                machine_id: machineId,
-                url: publicUrl,
-                file_path: filePath,
-                size: selectedDocFile.size,
-                mime_type: selectedDocFile.type,
-                folder_id: currentFolderId
-            }]);
+            .insert(dbEntries);
 
-        if (dbError) {
-            console.error('Database insert error:', dbError);
-            throw new Error(`Datenbank Fehler: ${dbError.message || JSON.stringify(dbError)}`);
-        }
+        if (dbError) throw dbError;
 
         window.closeDocumentUploadModal();
         window.fetchDocuments();
     } catch (err) {
-        console.error('Full upload process error:', err);
-        alert(`Fehler beim Hochladen des Dokuments: ${err.message}`);
+        console.error('Upload process error:', err);
+        alert(`Fehler beim Hochladen: ${err.message}`);
     } finally {
         btn.disabled = false;
         btn.textContent = 'Speichern';

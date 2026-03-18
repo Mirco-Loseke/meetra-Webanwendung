@@ -1140,7 +1140,8 @@ window.submitAccountingEntry = async function (event) {
             global_assignment_type: globalType,
             global_assignment_machine_id: globalType === 'machine' ? globalMachineId : null,
             global_assignment_area: globalType === 'other' ? globalArea : null,
-            global_machine_filter: globalMachineFilter
+            global_machine_filter: globalMachineFilter,
+            document_url: document.getElementById('acc-document-url')?.value || null
         };
 
         // Wenn created_by eine echte UUID ist (Länge > 30), mitsenden, sonst weglassen.
@@ -1232,6 +1233,7 @@ window.editAccountingEntry = async function (id) {
         document.getElementById('acc-due-date').value = entry.due_date || '';
         document.getElementById('acc-discount-date').value = entry.discount_date || '';
         document.getElementById('acc-discount-amount').value = entry.discount_amount || '';
+        document.getElementById('acc-document-url').value = entry.document_url || '';
 
         const paidCheck = document.getElementById('acc-is-paid');
         if (paidCheck) paidCheck.checked = !!entry.is_paid;
@@ -1325,6 +1327,21 @@ window.handleAccountingPDFUpload = async function (event) {
     };
 
     try {
+        // --- NEW: Upload File to Supabase Storage ---
+        updateStatus('Datei wird hochgeladen...');
+        const path = `accounting/${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+        const uploadResult = await window.FileUploadService.uploadFile(file, {
+            bucket: 'accounting-documents',
+            path: path,
+            compress: true
+        });
+        
+        // Save URL in hidden input
+        const urlInput = document.getElementById('acc-document-url');
+        if (urlInput) urlInput.value = uploadResult.url;
+        console.log('File uploaded safely to:', uploadResult.url);
+        // ---------------------------------------------
+
         const isImage = file.type.startsWith('image/');
         const systemPrompt = `Du bist ein präziser Buchhaltungs-Assistent für das Unternehmen 'Meetra'. Analysiere das Dokument (Deutsch oder Englisch) und gib NUR valides JSON zurück. 
 Schlüssel: invoice_number, date (YYYY-MM-DD), net_amount (Zahl), vat_rate (Zahl), type (incoming/outgoing), entity (Geschäftspartner), due_date (YYYY-MM-DD oder "sofort"), paid_at (YYYY-MM-DD), discount_amount (Zahl), is_paid (boolean), is_debited (boolean), positions (Array aus {description, quantity, unit, price_net}). 

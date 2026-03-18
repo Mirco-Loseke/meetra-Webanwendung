@@ -1713,27 +1713,23 @@
                             </div>
                         </div>
 
-                        <!-- AI Configuration Card -->
-                        <div class="settings-card" data-target="settings-ai">
+                        </div>
+                        
+                        <!-- Google Drive Configuration Card -->
+                        <div class="settings-card" data-target="settings-google-drive">
                             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
                                 <div class="settings-icon-container"
-                                    style="background: rgba(168, 85, 247, 0.1); color: #a855f7; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0;">
-                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path
-                                            d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z">
-                                        </path>
-                                        <path d="M12 6a6 6 0 1 0 6 6 6 6 0 0 0-6-6zm0 10a4 4 0 1 1 4-4 4 4 0 0 1-4 4z">
-                                        </path>
-                                        <circle cx="12" cy="12" r="2"></circle>
+                                    style="background: rgba(66, 133, 244, 0.1); color: #4285f4; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0;">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M15.43,15.48 L15.43,15.48 L10.66,23.75 L1.7,23.75 L6.47,15.48 L15.43,15.48 Z M22.3,14.63 L17.52,22.9 L12.75,22.9 L17.53,14.63 L22.3,14.63 Z M16.48,13.66 L7.52,13.66 L2.75,5.39 L11.71,5.39 L16.48,13.66 Z M8.52,12.68 L13.29,4.41 L18.06,4.41 L13.29,12.68 L8.52,12.68 Z M9.53,3.43 L9.53,3.43 L14.3,3.43 L14.3,3.43 L11.9,7.6 L9.53,3.43 Z M3.52,14.63 L8.29,6.36 L10.66,10.53 L5.89,18.8 L3.52,14.63 Z"/>
                                     </svg>
                                 </div>
                                 <h2
                                     style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">
-                                    KI-Konfiguration</h2>
+                                    Google Drive</h2>
                             </div>
                             <div class="settings-content">
-                                <p style="font-size: 1rem;">Groq API-Key für Dokumentenauslese verwalten</p>
+                                <p style="font-size: 1rem;" id="gd-status-text">Status: Nicht verbunden</p>
                             </div>
                         </div>
 
@@ -1794,6 +1790,40 @@
 
                         <div style="margin-top: 2rem; display: flex; justify-content: flex-end;">
                             <button class="btn-primary" onclick="saveSettingsNew()">Einstellungen speichern</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Google Drive Settings View -->
+                <section id="settings-google-drive" class="view hidden">
+                    <div class="users-header-container">
+                        <h1>Google Drive Integration</h1>
+                        <div class="users-header-actions">
+                            <button class="btn-back-custom" data-target="settings">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M19 12H5"></path>
+                                    <path d="M12 19l-7-7 7-7"></path>
+                                </svg>
+                                ZURÜCK
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="glass-card" style="max-width: 600px; margin-top: 2rem; padding: 2rem;">
+                        <h3 style="color: white; margin-bottom: 1rem;">Speicher-Integration</h3>
+                        <p style="color: rgba(255,255,255,0.6); font-size: 0.9rem; line-height: 1.5; margin-bottom: 2rem;">
+                            Verbinde deinen Google Drive Account, um Bilder und Dokumente direkt in deinem eigenen Cloud-Speicher ablegen zu lassen. Meetra erstellt automatisch eine übersichtliche Ordnerstruktur.
+                        </p>
+                        
+                        <div id="gd-central-info">
+                            <div style="background: rgba(var(--color-primary-green-rgb), 0.1); border: 1px solid var(--color-primary-green); padding: 1rem; border-radius: 12px; display: flex; align-items: center; gap: 12px; margin-bottom: 2rem;">
+                                <div style="color: var(--color-primary-green);">
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </div>
+                                <div style="color: white; font-weight: 500;">Zentraler Google Drive Speicher ist aktiv.</div>
+                            </div>
+                            <p style="font-size: 0.85rem; color: rgba(255,255,255,0.4);">Dateien werden automatisch im Firmen-Drive abgelegt. Kein Nutzer-Login erforderlich.</p>
                         </div>
                     </div>
                 </section>
@@ -2326,6 +2356,7 @@
 
                     <form id="accounting-form" onsubmit="submitAccountingEntry(event)">
                         <input type="hidden" id="accounting-id">
+                        <input type="hidden" id="acc-document-url">
 
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem;">
                             <div class="form-group">
@@ -7218,28 +7249,16 @@
                         });
                     }
 
-                    // 2. Upload new photos
+                    // 2. Upload new photos (Parallel & Compressed)
                     const photoInput = document.getElementById('manual-photos');
                     if (photoInput && photoInput.files && photoInput.files.length > 0) {
-                        for (let i = 0; i < photoInput.files.length; i++) {
-                            const file = photoInput.files[i];
-                            const ext = file.name.split('.').pop();
-                            const path = `manual-history/${machineId}/${Date.now()}-${i}.${ext}`;
-
-                            const { error: uploadError } = await window.supabaseClient.storage
-                                .from('machine-images')
-                                .upload(path, file);
-
-                            if (uploadError) {
-                                console.error('Fehler beim Foto-Upload:', uploadError);
-                                alert('Ein Foto konnte nicht hochgeladen werden: ' + uploadError.message);
-                            } else {
-                                const { data: { publicUrl } } = window.supabaseClient.storage
-                                    .from('machine-images')
-                                    .getPublicUrl(path);
-                                filesArray.push(publicUrl);
-                            }
-                        }
+                        const pathGenerator = (file, i) => `manual-history/${machineId}/${Date.now()}-${i}.${file.name.split('.').pop()}`;
+                        const uploadResults = await window.FileUploadService.uploadFiles(
+                            Array.from(photoInput.files),
+                            pathGenerator,
+                            { bucket: 'machine-images', compress: true, concurrency: 5 }
+                        );
+                        uploadResults.forEach(res => filesArray.push(res.url));
                     }
 
                     if (id) {
@@ -10155,6 +10174,17 @@
         }
     </script>
 
+    <!-- Image Compression & Upload Service -->
+    <script src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
+    <script src="file-upload-service.js?v=6"></script>
+    <script>
+        // Update UI states
+        document.addEventListener('DOMContentLoaded', () => {
+            const statusText = document.getElementById('gd-status-text');
+            if (statusText) statusText.textContent = 'Status: Zentral aktiv';
+        });
+    </script>
+
     <!-- Workshop Order Number Modal (Styled) -->
     <div id="workshop-order-modal" class="modal-backdrop hidden" style="z-index: 1500; background: rgba(0,0,0,0.85);">
         <div class="modal-content glass-card" style="max-width: 400px; width: 90%; padding: 2.5rem; text-align: center;">
@@ -10252,7 +10282,7 @@
 
                 <div class="form-group" style="margin-bottom: 2rem;">
                     <div id="doc-dropzone" class="file-drop-zone" onclick="document.getElementById('doc-file-input').click()">
-                        <input type="file" id="doc-file-input" accept=".pdf,image/*" class="hidden-file-input" onchange="window.handleDocFileSelection(event)">
+                        <input type="file" id="doc-file-input" accept=".pdf,image/*" multiple class="hidden-file-input" onchange="window.handleDocFileSelection(event)">
                         <div class="drop-zone-content">
                             <span class="icon">📄</span>
                             <p id="doc-file-name">Klicken oder Datei hierher ziehen</p>
