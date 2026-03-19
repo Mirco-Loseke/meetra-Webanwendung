@@ -6709,6 +6709,9 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         color: rgba(255, 255, 255, 0.4) !important;
         min-width: 100px !important;
         padding-right: 12px !important;
+        flex-shrink: 0 !important;
+    }
+
     /* Match internal div appearance */
     .glass-card {
         border-radius: 16px;
@@ -6719,7 +6722,6 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     .task-table td[data-label="Aktionen"] {
         justify-content: flex-end;
     }
-}
 
     /* Accounting Mobile Specifics */
     .acc-mobile-row {
@@ -6729,8 +6731,9 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     #accounting-table-container {
         margin-top: 1rem !important; /* Reduced margin between tabs and list */
     }
+}
 
-    @media (max-width: 1024px) {
+@media (max-width: 1024px) {
         /* General Mobile Table-to-Card Transformation */
         .task-table, #procurement-table, .data-table {
             display: block !important;
