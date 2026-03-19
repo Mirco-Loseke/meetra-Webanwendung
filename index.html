@@ -5504,12 +5504,12 @@
             // Submit Logic
             // Submit Logic
             window.submitNewMachine = async function () {
-                console.log('--- Start: submitNewMachine ---');
                 const submitBtn = document.querySelector('button[onclick="submitNewMachine()"]');
-                const originalBtnText = submitBtn ? submitBtn.textContent : 'Speichern';
                 if (submitBtn) {
+                    if (submitBtn.disabled) return;
                     submitBtn.disabled = true;
-                    submitBtn.textContent = 'Speichere...';
+                    submitBtn.dataset.originalText = submitBtn.textContent;
+                    submitBtn.textContent = 'Speichert...';
                 }
 
                 try {
@@ -5620,8 +5620,10 @@
                     const errorMsg = err.message || err.error_description || JSON.stringify(err);
                     alert('Fehler beim Speichern: ' + errorMsg);
                 } finally {
-                    submitBtn.textContent = originalBtnText;
-                    submitBtn.disabled = false;
+                    if (submitBtn) {
+                        submitBtn.textContent = submitBtn.dataset.originalText || 'Speichern';
+                        submitBtn.disabled = false;
+                    }
                 }
             };
 
@@ -5881,30 +5883,19 @@
         // Replaces uploadImageToSupabase with uploadMachineFiles
         async function uploadMachineFiles() {
             const uploadedFiles = [];
-
-            console.log(`Starting upload for ${machineFiles.length} files to meetra - storage...`);
-
-            // Upload new files
-            for (const file of machineFiles) {
-                const cleanName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-                const fileName = `machines/${Date.now()}-${cleanName}`;
-                console.log(`Uploading file: ${file.name} to path: ${fileName}`);
-
-                const { data, error } = await supabaseClient.storage.from('meetra-storage').upload(fileName, file);
-
-                if (error) {
-                    console.error('Upload error detail:', error);
-                    throw error;
-                }
-
-                const { data: pubData } = supabaseClient.storage.from('meetra-storage').getPublicUrl(fileName);
-                uploadedFiles.push({
-                    name: file.name,
-                    type: file.type,
-                    url: pubData.publicUrl
-                });
+            if (machineFiles.length > 0) {
+                const pathGenerator = (file, i) => `machines/${Date.now()}-${i}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_')}`;
+                const uploadResults = await window.FileUploadService.uploadFiles(
+                    machineFiles,
+                    pathGenerator,
+                    { bucket: 'meetra-storage', compress: true, concurrency: 5 }
+                );
+                uploadResults.forEach(res => uploadedFiles.push({
+                    name: res.name,
+                    type: res.type,
+                    url: res.url
+                }));
             }
-
             return uploadedFiles;
         }
 
@@ -7243,7 +7234,27 @@
             }
         };
 
+
+        window.openImageViewer = function (url) {
+            console.log('Opening images viewer:', url);
+            if (typeof window.openPhotosLightbox === 'function') {
+                const images = Array.isArray(url) ? url : [url];
+                if (images.length === 0 || !images[0]) return;
+                window.openPhotosLightbox(images, 0);
+            } else {
+                window.open(Array.isArray(url) ? url[0] : url, '_blank');
+            }
+        };
+
         window.saveManualHistoryEntry = async function () {
+            const submitBtn = document.querySelector('.btn-modal-save');
+            if (submitBtn) {
+                if (submitBtn.disabled) return;
+                submitBtn.disabled = true;
+                submitBtn.dataset.originalText = submitBtn.textContent;
+                submitBtn.textContent = 'Speichert...';
+            }
+
             const id = document.getElementById('manual-history-id').value;
             const type = document.getElementById('manual-history-type').value;
             const title = document.getElementById('manual-title').value;
@@ -7316,6 +7327,11 @@
                 console.error('Error saving manual entry:', err);
                 const errorMsg = err.message || (err.error ? err.error.message : 'Unbekannter Fehler');
                 alert('Fehler beim Speichern des Eintrags: ' + errorMsg);
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = submitBtn.dataset.originalText || 'Speichern';
+                }
             }
         };
 
