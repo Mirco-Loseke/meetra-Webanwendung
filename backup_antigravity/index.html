@@ -5,7 +5,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Webapp meetra</title>
-    <link rel="icon" type="image/png" href="meetra_arrows_icon.png">
     <link rel="stylesheet" href="style.css?v=39">
     <!-- Preloading standard fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,6 +13,15 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
+    <!-- Leaflet CSS for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- jsPDF for PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
     <script src="vorlage_base64.js?v=38"></script>
 </head>
 
@@ -1066,7 +1074,7 @@
                             <div class="view-header-right" style="display: flex; gap: 10px;">
                                 <button id="btn-new-folder" class="btn-primary btn-red-animated"
                                     onclick="window.handleNewFolderClick()"
-                                    style="display: flex; align-items: center; gap: 8px;">
+                                    style="display: flex; align-items: center; gap: 8px; background: #ef4444; border-color: #ef4444;">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                         <path
@@ -1077,7 +1085,7 @@
                                     </svg>
                                     <span class="btn-text">Neuer Ordner</span>
                                 </button>
-                                <button class="btn-primary btn-red-animated" onclick="window.openDocumentUploadModal()"
+                                <button class="btn-primary" onclick="window.openDocumentUploadModal()"
                                     style="display: flex; align-items: center; gap: 8px;">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -1260,93 +1268,36 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="view-header-row-bottom" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; width: 100%; position: relative; z-index: 1000;">
-                            <div class="view-header-left" style="display: flex; gap: 16px; align-items: center;">
-                                <div class="calendar-view-tabs" style="margin-bottom: 0;">
-                                    <button class="calendar-tab-btn active" id="btn-events-view-calendar" onclick="window.switchEventsSubView('calendar')">Wartung</button>
-                                    <button class="calendar-tab-btn" id="btn-events-view-processes" onclick="window.switchEventsSubView('processes')">Vorgänge</button>
-                                </div>
-
-                                <!-- Filter for Machine Categories in Events (Only visible for calendar view) -->
-                                <div class="custom-filter-dropdown" id="calendar-category-filter-trigger" style="position: relative;">
-                                    <span class="filter-label" id="calendar-current-category-name">Kategorien</span>
-                                    <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                                        stroke-linejoin="round">
-                                        <polyline points="6 9 12 15 18 9"></polyline>
-                                    </svg>
-                                    <div class="custom-filter-menu" id="calendar-category-filter-menu" style="position: absolute; z-index: 10000; background: #1a2230; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-                                        <ul id="calendar-category-filter-options">
-                                            <!-- Dynamically populated -->
-                                        </ul>
+                                <div class="view-header-left" style="display: flex; gap: 12px; align-items: center;">
+                                    <!-- Filter for Machine Categories in Events -->
+                                    <div class="custom-filter-dropdown" id="calendar-category-filter-trigger">
+                                        <span class="filter-label" id="calendar-current-category-name">Kategorien</span>
+                                        <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                        <div class="custom-filter-menu" id="calendar-category-filter-menu">
+                                            <ul id="calendar-category-filter-options">
+                                                <!-- Dynamically populated -->
+                                            </ul>
+                                        </div>
                                     </div>
                                 </div>
-
-                                <!-- Filter for Processes (Only visible for processes view) -->
-                                <div class="custom-filter-dropdown" id="process-status-filter-trigger" style="position: relative; display: none;">
-                                    <span class="filter-label" id="process-current-status-name">Status: Alle</span>
-                                    <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
-                                        stroke-linejoin="round">
-                                        <polyline points="6 9 12 15 18 9"></polyline>
-                                    </svg>
-                                    <div class="custom-filter-menu" id="process-status-filter-menu" style="position: absolute; z-index: 10000; background: #1a2230; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
-                                        <ul id="process-status-filter-options">
-                                            <li class="selected" onclick="window.setProcessStatusFilter('all')">Status: Alle</li>
-                                            <li onclick="window.setProcessStatusFilter('offen')">Offen</li>
-                                            <li onclick="window.setProcessStatusFilter('in_bearbeitung')">In Bearbeitung</li>
-                                            <li onclick="window.setProcessStatusFilter('erledigt')">Erledigt</li>
-                                        </ul>
-                                    </div>
+                                <div class="view-header-right">
+                                    <button class="btn-add-bg" onclick="window.openCreateEventModal()">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                                        </svg>
+                                        Ereignis erstellen
+                                    </button>
                                 </div>
-                            </div>
-                            <div class="view-header-right">
-                                <button class="btn-add-bg" id="btn-add-event-action" onclick="window.openCreateEventModal()">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                                    </svg>
-                                    Ereignis erstellen
-                                </button>
-                                <button class="btn-add-bg btn-red-animated" id="btn-import-email-action" style="display: none;" onclick="window.openEmailImportModal()">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                                        <polyline points="22,6 12,13 2,6"></polyline>
-                                    </svg>
-                                    E-Mail importieren
-                                </button>
-                            </div>
-                        </div>
                     </div>
 
-                    <!-- Subview 1: Calendar/Events -->
-                    <div id="events-calendar-subview">
-                        <div id="events-list-container" style="display: flex; flex-direction: column; gap: 15px; min-height: 400px;">
-                            <!-- Events will be rendered as a list here -->
-                        </div>
-                    </div>
-
-                    <!-- Subview 2: Internal Processes -->
-                    <div id="events-processes-subview" style="display: none;">
-                        <div class="glass-card" style="padding: 0; background: transparent; border: none; box-shadow: none; min-height: 400px; overflow-x: auto;">
-                            <table class="task-table" style="width: 100%; border-collapse: separate; border-spacing: 0 12px;">
-                                <thead>
-                                    <tr>
-                                        <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: left; padding: 0 16px 8px 16px; text-transform: uppercase; width: 60px;">Typ</th>
-                                        <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: left; padding: 0 16px 8px 16px; text-transform: uppercase;">Betreff / Titel</th>
-                                        <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: left; padding: 0 16px 8px 16px; text-transform: uppercase;">Maschine</th>
-                                        <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: left; padding: 0 16px 8px 16px; text-transform: uppercase; width: 140px;">Datum</th>
-                                        <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: center; padding: 0 16px 8px 16px; text-transform: uppercase; width: 150px;">Status</th>
-                                        <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: right; padding: 0 16px 8px 16px; text-transform: uppercase; width: 100px;">Aktionen</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="processes-table-body">
-                                    <!-- Processes will be rendered dynamically here -->
-                                </tbody>
-                            </table>
-                        </div>
+                    <div id="events-list-container" style="display: flex; flex-direction: column; gap: 15px; min-height: 400px;">
+                        <!-- Events will be rendered as a list here -->
                     </div>
                 </section>
 
@@ -1734,215 +1685,9 @@
                             </div>
                         </div>
 
-                        <!-- Firmeneinstellungen Card -->
-                        <div class="settings-card" data-target="settings-firmeneinstellungen">
-                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
-                                <div class="settings-icon-container"
-                                    style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0;">
-                                    <!-- Briefcase Icon -->
-                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-                                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-                                    </svg>
-                                </div>
-                                <h2
-                                    style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">
-                                    Firmeneinstellungen</h2>
-                            </div>
-                            <div class="settings-content">
-                                <p style="font-size: 1rem;">Firmendaten &amp; Kunden-Adressimport (Sage 100)</p>
-                            </div>
-                        </div>
-                        
-                        <!-- Groq API Key Card -->
-                        <div class="settings-card" data-target="settings-ai">
-                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
-                                <div class="settings-icon-container"
-                                    style="background: rgba(147, 197, 253, 0.1); color: #93c5fd; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0;">
-                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
-                                        <rect x="9" y="9" width="6" height="6"></rect>
-                                        <line x1="9" y1="1" x2="9" y2="4"></line>
-                                        <line x1="15" y1="1" x2="15" y2="4"></line>
-                                        <line x1="9" y1="20" x2="9" y2="23"></line>
-                                        <line x1="15" y1="20" x2="15" y2="23"></line>
-                                        <line x1="20" y1="9" x2="23" y2="9"></line>
-                                        <line x1="20" y1="15" x2="23" y2="15"></line>
-                                        <line x1="1" y1="9" x2="4" y2="9"></line>
-                                        <line x1="1" y1="15" x2="4" y2="15"></line>
-                                    </svg>
-                                </div>
-                                <h2
-                                    style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">
-                                    Groq API Key</h2>
-                            </div>
-                            <div class="settings-content">
-                                <p style="font-size: 1rem;">API-Key für die kostenlose KI-Buchhaltung verwalten</p>
-                            </div>
-                        </div>
-
                     </div>
 
 
-        </section>
-
-        <!-- Firmeneinstellungen Settings View -->
-        <section id="settings-firmeneinstellungen" class="view hidden">
-            <div class="users-header-container">
-                <h1>Firmeneinstellungen</h1>
-                <div class="users-header-actions">
-                    <button class="btn-back-custom" data-target="settings">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M19 12H5"></path>
-                            <path d="M12 19l-7-7 7-7"></path>
-                        </svg>
-                        ZURÜCK
-                    </button>
-                </div>
-            </div>
-
-            <div class="settings-tabs-container" style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
-                <div class="settings-tabs" style="display: flex; gap: 20px; overflow-x: auto; padding-bottom: 0; border-bottom: none; margin: 0;">
-                    <button class="settings-tab active" data-tab="firmendaten" onclick="switchFirmeneinstellungenTab('firmendaten')">Firmendaten</button>
-                    <button class="settings-tab" data-tab="adressimport" onclick="switchFirmeneinstellungenTab('adressimport')">Adressimport</button>
-                </div>
-            </div>
-
-            <!-- Tab: Firmendaten -->
-            <div id="firmendaten-tab-content" class="tab-content active">
-                <div class="glass-card" style="padding: 2rem;">
-                    <h3 style="margin-bottom: 1.5rem; color: #fff;">Eigene Firmendaten</h3>
-                    <p style="font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-bottom: 1.5rem;">
-                        Geben Sie hier die Adresse Ihres Hauptquartiers ein. Diese Adresse dient als Ausgangspunkt für die Google Maps Routenplanung zu den Maschinenstandorten.
-                    </p>
-                    <form id="firmendaten-form" onsubmit="saveFirmendaten(event)">
-                        <div class="form-group" style="margin-bottom: 1.25rem;">
-                            <label for="company-hq-name">Firmenname</label>
-                            <input type="text" id="company-hq-name" class="glass-form-input" placeholder="z.B. Meetra GmbH" required>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 1.25rem;">
-                            <label for="company-hq-street">Straße &amp; Hausnummer</label>
-                            <input type="text" id="company-hq-street" class="glass-form-input" placeholder="Musterstraße 12" required>
-                        </div>
-                        <div class="form-row" style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-                            <div class="form-group">
-                                <label for="company-hq-zip">PLZ</label>
-                                <input type="text" id="company-hq-zip" class="glass-form-input" placeholder="12345" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="company-hq-city">Ort</label>
-                                <input type="text" id="company-hq-city" class="glass-form-input" placeholder="Musterstadt" required>
-                            </div>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 1.5rem;">
-                            <label for="company-hq-country">Land</label>
-                            <input type="text" id="company-hq-country" class="glass-form-input" value="Deutschland" placeholder="Deutschland" required>
-                        </div>
-                        <button type="submit" class="btn-primary" style="padding: 12px 24px; font-weight: 700;">Einstellungen speichern</button>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Tab: Adressimport -->
-            <div id="adressimport-tab-content" class="tab-content hidden">
-                <div class="glass-card" style="padding: 2rem;">
-                    <h3 style="margin-bottom: 0.5rem; color: #fff;">Sage 100 Kunden- &amp; Adressimport</h3>
-                    <p style="font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-bottom: 1.5rem;">
-                        Importieren Sie Kundenadressen direkt aus Excel (.xlsx, .xls) oder CSV (.csv). Das System aktualisiert bestehende Adressen anhand der Kundennummer und fügt neue hinzu.
-                    </p>
-
-                    <!-- File Dropzone -->
-                    <div class="file-drop-zone" id="customer-import-dropzone" style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 16px; padding: 2.5rem; text-align: center; background: rgba(255,255,255,0.02); cursor: pointer; transition: all 0.3s ease;">
-                        <input type="file" id="customer-import-input" accept=".csv, .xls, .xlsx" class="hidden-file-input" style="display: none;">
-                        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
-                            <span style="font-size: 3rem;">📥</span>
-                            <span style="font-weight: 700; color: #fff; font-size: 1.1rem;">Datei auswählen oder hierher ziehen</span>
-                            <span style="font-size: 0.85rem; color: rgba(255,255,255,0.4);">Unterstützte Formate: Excel (.xlsx, .xls) oder CSV (.csv)</span>
-                        </div>
-                    </div>
-
-                    <!-- Import Configuration Section (Hidden by default) -->
-                    <div id="import-config-section" class="hidden" style="margin-top: 2rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 1.5rem;">
-                        <h4 style="color: #fff; margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; display: flex; align-items: center; gap: 10px;">
-                            <span>⚙️</span> Spaltenzuordnung (Mapping)
-                        </h4>
-                        <p style="font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-bottom: 1.5rem;">
-                            Bitte weisen Sie den Datenbankfeldern die Spalten aus Ihrer Datei zu:
-                        </p>
-                        
-                        <div class="mapping-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
-                            <div class="form-group">
-                                <label for="map-cust-num" style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">Kundennummer *</label>
-                                <select id="map-cust-num" class="glass-form-input" style="cursor: pointer;" required></select>
-                            </div>
-                            <div class="form-group">
-                                <label for="map-matchcode" style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">Matchcode (Suchbegriff)</label>
-                                <select id="map-matchcode" class="glass-form-input" style="cursor: pointer;"></select>
-                            </div>
-                            <div class="form-group">
-                                <label for="map-name" style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">Firmenname / Kundenname *</label>
-                                <select id="map-name" class="glass-form-input" style="cursor: pointer;" required></select>
-                            </div>
-                            <div class="form-group">
-                                <label for="map-street" style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">Straße &amp; Hausnummer</label>
-                                <select id="map-street" class="glass-form-input" style="cursor: pointer;"></select>
-                            </div>
-                            <div class="form-group">
-                                <label for="map-zip" style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">PLZ</label>
-                                <select id="map-zip" class="glass-form-input" style="cursor: pointer;"></select>
-                            </div>
-                            <div class="form-group">
-                                <label for="map-city" style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">Ort</label>
-                                <select id="map-city" class="glass-form-input" style="cursor: pointer;"></select>
-                            </div>
-                            <div class="form-group">
-                                <label for="map-country" style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">Land</label>
-                                <select id="map-country" class="glass-form-input" style="cursor: pointer;"></select>
-                            </div>
-                            <div class="form-group">
-                                <label for="map-phone" style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">Telefon</label>
-                                <select id="map-phone" class="glass-form-input" style="cursor: pointer;"></select>
-                            </div>
-                            <div class="form-group">
-                                <label for="map-email" style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">E-Mail</label>
-                                <select id="map-email" class="glass-form-input" style="cursor: pointer;"></select>
-                            </div>
-                        </div>
-
-                        <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 1.5rem;">
-                            <span id="import-stats" style="font-size: 0.9rem; color: rgba(255,255,255,0.6); font-weight: 600;"></span>
-                            <div style="display: flex; gap: 1rem;">
-                                <button type="button" class="btn-secondary" onclick="cancelImport()">Abbrechen</button>
-                                <button type="button" class="btn-primary" id="btn-execute-import" onclick="executeImport()" style="padding: 12px 24px; font-weight: 700;">Import starten</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Progress Indicator -->
-                    <div id="import-progress-section" class="hidden" style="margin-top: 2rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 1.5rem; text-align: center;">
-                        <h4 id="import-progress-status" style="color: #fff; margin-top: 0; margin-bottom: 1rem;">Import läuft...</h4>
-                        <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-bottom: 1rem;">
-                            <div id="import-progress-bar" style="width: 0%; height: 100%; background: var(--color-primary-green); transition: width 0.1s ease; border-radius: 4px;"></div>
-                        </div>
-                        <span id="import-progress-details" style="font-size: 0.85rem; color: rgba(255,255,255,0.4);">0 von 0 verarbeitet...</span>
-                    </div>
-
-                    <!-- Import Log / Feedback -->
-                    <div id="import-result-section" class="hidden" style="margin-top: 2rem; background: rgba(0, 150, 64, 0.1); border: 1px solid var(--color-primary-green); border-radius: 16px; padding: 1.5rem;">
-                        <div style="display: flex; align-items: flex-start; gap: 1rem;">
-                            <span style="font-size: 2rem;">✅</span>
-                            <div>
-                                <h4 style="color: #fff; margin-top: 0; margin-bottom: 0.5rem; font-size: 1.1rem;">Import erfolgreich abgeschlossen</h4>
-                                <p id="import-result-message" style="margin: 0; font-size: 0.95rem; color: rgba(255,255,255,0.85); line-height: 1.5;"></p>
-                                <button type="button" class="btn-primary" onclick="resetImportUI()" style="margin-top: 1rem; padding: 10px 20px; font-weight: 700;">Weitere Datei importieren</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </section>
 
         <!-- Textbausteine Settings View -->
@@ -2973,6 +2718,8 @@
     <!-- ================== JAVASCRIPT LOGIK ===================== -->
     <!-- ========================================================= -->
     <!-- ========================================================= -->
+    <!-- AWS SDK for Cloudflare R2 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/aws-sdk/2.1390.0/aws-sdk.min.js"></script>
     
     <!-- Supabase JS -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
@@ -3091,6 +2838,9 @@
                     window.machineSearchFilter = '';
                     const searchInput = document.getElementById('machine-search-input');
                     if (searchInput) searchInput.value = '';
+                    if (typeof window.renderMachines === 'function' && document.getElementById('machines') && document.getElementById('machines').classList.contains('active')) {
+                        window.renderMachines('machine-list-container');
+                    }
                 }
                 window.switchView(targetId);
             };
@@ -3122,30 +2872,9 @@
                     }
                 });
 
-                // Update sidebar active states (including settings sub-views)
+                // Update sidebar active states
                 navLinks.forEach(link => {
-                    const target = link.getAttribute('data-target');
-                    let isActive = false;
-
-                    if (target === targetId) {
-                        isActive = true;
-                    } else if (target === 'settings') {
-                        const settingsSubViews = [
-                            'settings',
-                            'settings-firmeneinstellungen',
-                            'settings-textbausteine',
-                            'settings-ai',
-                            'users',
-                            'categories',
-                            'protocol-templates',
-                            'protocol-template-editor'
-                        ];
-                        if (settingsSubViews.includes(targetId)) {
-                            isActive = true;
-                        }
-                    }
-
-                    if (isActive) {
+                    if (link.getAttribute('data-target') === targetId) {
                         link.classList.add('active');
                     } else {
                         link.classList.remove('active');
@@ -3157,48 +2886,30 @@
                     history.replaceState(null, '', '#' + targetId);
                 }
 
-                // Synchronize tracker variable
-                window.currentActiveView = targetId;
-
-                // Special logic for specific views (trigger data rendering/fetching immediately)
+                // Special logic for specific views
                 if (targetId === 'home') {
                     renderDashboard();
-                } else if (targetId === 'machines') {
-                    if (typeof window.renderMachines === 'function') {
-                        window.renderMachines('machine-list-container');
-                    }
-                } else if (targetId === 'tasks') {
-                    if (typeof window.fetchTasks === 'function') {
-                        window.fetchTasks();
-                    }
-                    if (typeof window.fetchMachinesForTasks === 'function') {
-                        window.fetchMachinesForTasks();
-                    }
-                } else if (targetId === 'workshop') {
-                    if (typeof window.renderMachines === 'function') {
-                        window.renderMachines('workshop-machines-container');
-                    }
-                } else if (targetId === 'service') {
-                    if (typeof fetchServiceEntries === 'function') {
-                        fetchServiceEntries();
-                    }
-                } else if (targetId === 'protocols') {
-                    if (typeof window.fetchProtocols === 'function') {
-                        window.fetchProtocols();
-                    }
-                } else if (targetId === 'accounting') {
-                    if (typeof fetchAccountingEntries === 'function') {
-                        fetchAccountingEntries();
-                    }
-                } else if (targetId === 'documents') {
-                    if (typeof window.fetchDocuments === 'function') {
-                        window.fetchDocuments();
-                    }
-                } else if (targetId === 'calendar') {
-                    if (typeof window.renderEvents === 'function') {
-                        window.renderEvents();
-                    }
-                } else if (targetId === 'settings-ai') {
+                }
+                if (targetId === 'service' && typeof fetchServiceEntries === 'function') {
+                    fetchServiceEntries();
+                }
+                if (targetId === 'protocols' && typeof window.fetchProtocols === 'function') {
+                    window.fetchProtocols();
+                }
+                if (targetId === 'calendar' && typeof renderCalendar === 'function') {
+                    renderCalendar();
+                }
+
+                if (targetId === 'workshop') {
+                    renderMachines('workshop-machines-container');
+                }
+                if (targetId === 'accounting' && typeof fetchAccountingEntries === 'function') {
+                    fetchAccountingEntries();
+                }
+                if (targetId === 'documents' && typeof window.fetchDocuments === 'function') {
+                    window.fetchDocuments();
+                }
+                if (targetId === 'settings-ai') {
                     const input = document.getElementById('settings-api-key-new');
                     const savedKey = localStorage.getItem('groq_api_key');
                     if (input) input.value = savedKey || '';
@@ -3634,16 +3345,18 @@
                 btn.disabled = true;
 
                 try {
-                    console.log('Starting file upload to R2:', fileName);
-                    const r2Path = `Dateien/Uploads/${fileName}`;
-                    const uploadResult = await window.FileUploadService.uploadFile(file, {
-                        bucket: 'dateien',
-                        path: r2Path,
-                        compress: true,
-                        provider: 'cloudflare-r2'
-                    });
+                    console.log('Starting file upload to protocols bucket:', fileName);
+                    const { data, error } = await supabaseClient
+                        .storage
+                        .from('files')
+                        .upload(fileName, file);
 
-                    console.log('File uploaded successfully:', uploadResult);
+                    if (error) {
+                        console.error('Supabase Storage Error (Protocols):', error);
+                        throw error;
+                    }
+
+                    console.log('File uploaded successfully:', data);
                     alert('Datei erfolgreich hochgeladen!');
 
                     // Reset input
@@ -4664,11 +4377,6 @@
                 if (typeof renderMachines === 'function') {
                     renderMachines();
                 }
-
-                // Populate document type dropdowns if documents module is loaded
-                if (typeof window.populateDocumentTypeDropdowns === 'function') {
-                    window.populateDocumentTypeDropdowns();
-                }
             }
 
             window.renderCategoryList = function () {
@@ -5190,7 +4898,7 @@
                     m.files = updatedFiles;
 
                     // Re-render
-                    if (typeof window.renderEvents === 'function') window.renderEvents();
+                    if (typeof renderCalendar === 'function') renderCalendar();
                     if (typeof renderMachines === 'function') renderMachines();
 
                     // Also update dashboard if visible
@@ -5256,8 +4964,8 @@
                 }
 
                 // Refresh calendar as well
-                if (typeof window.renderEvents === 'function') {
-                    window.renderEvents();
+                if (typeof renderCalendar === 'function') {
+                    renderCalendar();
                 }
             }
             function getStatusColor(status) {
@@ -5398,7 +5106,7 @@
                     machineMainImage = editData ? (editData.image_url || null) : null;
                     renderMachineFilePreviews();
 
-                                        // Reset fields or populate with editData
+                    // Reset fields or populate with editData
                     document.getElementById('machine-name').value = editData ? (editData.name || '') : '';
                     document.getElementById('machine-manufacturer').value = editData ? (editData.manufacturer || '') : '';
                     document.getElementById('machine-serial').value = editData ? (editData.serial || '') : '';
@@ -5409,55 +5117,6 @@
                     document.getElementById('machine-last-maintenance').value = editData ? (editData.last_maintenance || '') : '';
                     document.getElementById('machine-next-maintenance').value = editData ? (editData.next_maintenance || '') : '';
                     document.getElementById('machine-image-url').value = editData ? (editData.image_url || '') : '';
-
-                    // Populating in_workshop status
-                    const inWorkshopVal = editData ? (editData.in_workshop || false) : false;
-                    const cbInWorkshop = document.getElementById('machine-in-workshop');
-                    if (cbInWorkshop) {
-                        cbInWorkshop.checked = inWorkshopVal;
-                        if (typeof window.toggleMachineWorkshopUI === 'function') {
-                            window.toggleMachineWorkshopUI(inWorkshopVal);
-                        }
-                    }
-
-                    // Populating split address fields
-                    document.getElementById('machine-customer-id').value = editData ? (editData.customer_id || '') : '';
-                    document.getElementById('machine-customer-number').value = editData ? (editData.customer_number || '') : '';
-                    document.getElementById('machine-operator-street').value = editData ? (editData.operator_street || '') : '';
-                    document.getElementById('machine-operator-zip').value = editData ? (editData.operator_zip || '') : '';
-                    document.getElementById('machine-operator-city').value = editData ? (editData.operator_city || '') : '';
-                    document.getElementById('machine-operator-country').value = editData ? (editData.operator_country || 'Deutschland') : 'Deutschland';
-
-                    document.getElementById('machine-location-street').value = editData ? (editData.location_street || '') : '';
-                    document.getElementById('machine-location-zip').value = editData ? (editData.location_zip || '') : '';
-                    document.getElementById('machine-location-city').value = editData ? (editData.location_city || '') : '';
-                    document.getElementById('machine-location-country').value = editData ? (editData.location_country || 'Deutschland') : 'Deutschland';
-
-                    // Update customer search UI
-                    if (editData && editData.customer_id) {
-                        try {
-                            const { data: custData, error: custErr } = await window.supabaseClient
-                                .from('customers')
-                                .select('name, matchcode')
-                                .eq('id', editData.customer_id)
-                                .single();
-                            if (custData && !custErr) {
-                                document.getElementById('machine-customer-search').value = custData.matchcode ? `[${custData.matchcode}] ${custData.name}` : custData.name;
-                                document.getElementById('machine-customer-search').disabled = true;
-                                document.getElementById('btn-clear-customer').style.display = 'block';
-                            } else {
-                                document.getElementById('machine-customer-search').value = '';
-                                document.getElementById('machine-customer-search').disabled = false;
-                                document.getElementById('btn-clear-customer').style.display = 'none';
-                            }
-                        } catch (err) {
-                            console.error('Error fetching customer details:', err);
-                        }
-                    } else {
-                        document.getElementById('machine-customer-search').value = '';
-                        document.getElementById('machine-customer-search').disabled = false;
-                        document.getElementById('btn-clear-customer').style.display = 'none';
-                    }
 
                     // Handle Auto Badge in Modal
                     const badge = document.getElementById('maint-auto-badge');
@@ -5512,31 +5171,24 @@
                     if (contactInput) contactInput.value = '';
                     checkboxes.forEach(cb => cb.checked = false);
 
-                    // Initialize Map dynamically if not already done
-                    if (!map) {
-                        try {
-                            await window.loadLeaflet();
-                            setTimeout(() => {
-                                try {
-                                    if (map) return; // Prevent double initialization
-                                    map = L.map('machine-map').setView([51.1657, 10.4515], 6); // Center of Germany
-                                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                                        attribution: '&copy; OpenStreetMap contributors'
-                                    }).addTo(map);
+                    // Initialize Map if not already done
+                    if (!map && typeof L !== 'undefined') {
+                        setTimeout(() => {
+                            try {
+                                map = L.map('machine-map').setView([51.1657, 10.4515], 6); // Center of Germany
+                                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                    attribution: '&copy; OpenStreetMap contributors'
+                                }).addTo(map);
 
-                                    // Click to set pin
-                                    map.on('click', function (e) {
-                                        setMapPin(e.latlng.lat, e.latlng.lng);
-                                    });
-                                } catch (err) {
-                                    console.error('Map init error:', err);
-                                    document.getElementById('machine-map').innerHTML = '<p style="color:white; padding:10px;">Karte konnte nicht geladen werden.</p>';
-                                }
-                            }, 300); // Small delay for modal transition
-                        } catch (err) {
-                            console.error('Leaflet loading failed:', err);
-                            document.getElementById('machine-map').innerHTML = '<p style="color:white; padding:10px;">Karte konnte nicht geladen werden (Verbindungsfehler).</p>';
-                        }
+                                // Click to set pin
+                                map.on('click', function (e) {
+                                    setMapPin(e.latlng.lat, e.latlng.lng);
+                                });
+                            } catch (err) {
+                                console.error('Map init error:', err);
+                                document.getElementById('machine-map').innerHTML = '<p style="color:white; padding:10px;">Karte konnte nicht geladen werden.</p>';
+                            }
+                        }, 300); // Small delay for modal transition
                     }
 
                     // POPULATE Categories
@@ -5820,16 +5472,6 @@
 
             // Submit Logic
             // Submit Logic
-            
-            // Helper to generate machine folder name in R2
-            window.getMachineFolderName = function (id, manufacturer, name, serial, year) {
-                const cleanMan = (manufacturer || '').trim().replace(/[^a-zA-Z0-9_\-]/g, '_');
-                const cleanName = (name || '').trim().replace(/[^a-zA-Z0-9_\-]/g, '_');
-                const serialStr = serial ? `_${(serial || '').trim().replace(/[^a-zA-Z0-9_\-]/g, '_')}` : '';
-                const yearStr = year ? `_Baujahr_${year}` : '';
-                return `Maschinen/${id}_${cleanMan}_${cleanName}${serialStr}${yearStr}`;
-            }
-
             window.submitNewMachine = async function () {
                 const submitBtn = document.querySelector('button[onclick="submitNewMachine()"]');
                 if (submitBtn) {
@@ -5842,7 +5484,7 @@
                 try {
                     if (!supabaseClient) throw new Error('Supabase ist nicht initialisiert!');
 
-                                        // 1. Gather Data
+                    // 1. Gather Data
                     const categoryId = document.getElementById('machine-category').value;
                     const manufacturer = document.getElementById('machine-manufacturer').value;
                     const name = document.getElementById('machine-name').value;
@@ -5851,168 +5493,86 @@
                     const contactType = document.getElementById('machine-contact-type').value; // JSON string
                     const lastMaintenance = document.getElementById('machine-last-maintenance').value;
                     const nextMaintenance = document.getElementById('machine-next-maintenance').value;
-                    
-                    const inWorkshop = document.getElementById('machine-in-workshop')?.checked || false;
-
-                    // Split fields
-                    const customerId = inWorkshop ? null : (document.getElementById('machine-customer-id').value || null);
-                    const customerNumber = inWorkshop ? null : (document.getElementById('machine-customer-number').value.trim() || null);
-                    const owner = inWorkshop ? '' : document.getElementById('machine-owner').value.trim();
-                    const operatorStreet = inWorkshop ? null : (document.getElementById('machine-operator-street').value.trim() || null);
-                    const operatorZip = inWorkshop ? null : (document.getElementById('machine-operator-zip').value.trim() || null);
-                    const operatorCity = inWorkshop ? null : (document.getElementById('machine-operator-city').value.trim() || null);
-                    const operatorCountry = inWorkshop ? 'Deutschland' : (document.getElementById('machine-operator-country').value.trim() || 'Deutschland');
-                    
-                    const locationStreet = inWorkshop ? null : (document.getElementById('machine-location-street').value.trim() || null);
-                    const locationZip = inWorkshop ? null : (document.getElementById('machine-location-zip').value.trim() || null);
-                    const locationCity = inWorkshop ? null : (document.getElementById('machine-location-city').value.trim() || null);
-                    const locationCountry = inWorkshop ? 'Deutschland' : (document.getElementById('machine-location-country').value.trim() || 'Deutschland');
-
-                    // Combined hidden fields
-                    const operatorAddress = [operatorStreet, [operatorZip, operatorCity].filter(Boolean).join(' '), operatorCountry].filter(Boolean).join(', ');
-                    const locationAddress = [locationStreet, [locationZip, locationCity].filter(Boolean).join(' '), locationCountry].filter(Boolean).join(', ');
+                    const owner = document.getElementById('machine-owner').value;
+                    const operatorAddress = document.getElementById('machine-address-input').value;
+                    const locationAddress = document.getElementById('machine-location-input').value;
 
                     // Basic Validation
                     if (!categoryId) {
-                        throw new Error('Bitte eine Kategorie wÃ¤hlen.');
+                        throw new Error('Bitte eine Kategorie wählen.');
                     }
                     if (!name) {
                         throw new Error('Bitte eine Typbezeichnung angeben.');
                     }
 
+                    // 2. Handle Files (Upload New & Combine with Existing)
                     const isAuto = !document.getElementById('maint-auto-badge').classList.contains('hidden');
-                    let machineId = currentEditingId;
+                    let finalFiles = [...existingMachineFiles];
 
-                    if (machineId) {
-                        // 1. Upload files first since we have the ID
-                        let finalFiles = [...existingMachineFiles];
-                        finalFiles = finalFiles.filter(f => f.type !== 'meta' || f.key !== 'is_next_maintenance_auto');
-                        if (isAuto) {
-                            finalFiles.push({ type: 'meta', key: 'is_next_maintenance_auto', property: 'true' });
-                        }
+                    // Remove old meta if exists
+                    finalFiles = finalFiles.filter(f => f.type !== 'meta' || f.key !== 'is_next_maintenance_auto');
+                    if (isAuto) {
+                        finalFiles.push({ type: 'meta', key: 'is_next_maintenance_auto', property: 'true' });
+                    }
 
-                        if (machineFiles.length > 0) {
-                            const newUploaded = await uploadMachineFiles(machineId, manufacturer, name, serial, year);
-                            finalFiles = [...finalFiles, ...newUploaded];
-                        }
+                    if (machineFiles.length > 0) {
+                        const newUploaded = await uploadMachineFiles();
+                        finalFiles = [...finalFiles, ...newUploaded];
+                    }
 
-                        // Determine main image_url
-                        let mainImageUrl = machineMainImage;
+                    // Determine main image_url
+                    let mainImageUrl = machineMainImage;
 
-                        // If machineMainImage is still a DataURL (newly added but not yet mapped),
-                        // or if it's null but we have images, pick the first available image.
-                        if (!mainImageUrl || mainImageUrl.startsWith('data:')) {
-                            const firstImage = finalFiles.find(f => (f.type && f.type.startsWith('image/')) || (f.url && f.url.match(/\.(jpg|jpeg|png|gif|webp|bmp|tif|tiff)(\?.*)?$/i)));
-                            if (firstImage) {
-                                mainImageUrl = firstImage.url;
-                            } else {
-                                mainImageUrl = null;
-                            }
-                        }
-
-                        // 2. Update Database Record
-                        const machineData = {
-                            name: name,
-                            category_id: parseInt(categoryId),
-                            manufacturer: manufacturer,
-                            serial: serial,
-                            year: year ? parseInt(year) : null,
-                            contact_type: (contactType && contactType.trim() !== '') ? JSON.parse(contactType) : [],
-                            last_maintenance: lastMaintenance || null,
-                            next_maintenance: nextMaintenance || null,
-                            company: owner,
-                            operator_address: operatorAddress,
-                            operator_street: operatorStreet,
-                            operator_zip: operatorZip,
-                            operator_city: operatorCity,
-                            operator_country: operatorCountry,
-                            location: locationAddress,
-                            location_street: locationStreet,
-                            location_zip: locationZip,
-                            location_city: locationCity,
-                            location_country: locationCountry,
-                            customer_id: customerId,
-                            customer_number: customerNumber,
-                            image_url: mainImageUrl, // Main image
-                            files: finalFiles,      // All files including docs
-                            status: 'Betriebsbereit', // Default
-                            in_workshop: inWorkshop
-                        };
-
-                        const updateResult = await supabaseClient
-                            .from('machines')
-                            .update(machineData)
-                            .eq('id', machineId);
-
-                        if (updateResult.error) throw updateResult.error;
-                    } else {
-                        // NEW MACHINE
-                        // 1. Insert temporary record first to get ID
-                        const tempMachineData = {
-                            name: name,
-                            category_id: parseInt(categoryId),
-                            manufacturer: manufacturer,
-                            serial: serial,
-                            year: year ? parseInt(year) : null,
-                            contact_type: (contactType && contactType.trim() !== '') ? JSON.parse(contactType) : [],
-                            last_maintenance: lastMaintenance || null,
-                            next_maintenance: nextMaintenance || null,
-                            company: owner,
-                            operator_address: operatorAddress,
-                            operator_street: operatorStreet,
-                            operator_zip: operatorZip,
-                            operator_city: operatorCity,
-                            operator_country: operatorCountry,
-                            location: locationAddress,
-                            location_street: locationStreet,
-                            location_zip: locationZip,
-                            location_city: locationCity,
-                            location_country: locationCountry,
-                            customer_id: customerId,
-                            customer_number: customerNumber,
-                            image_url: null,
-                            files: [],
-                            status: 'Betriebsbereit',
-                            in_workshop: inWorkshop
-                        };
-
-                        const insertResult = await supabaseClient
-                            .from('machines')
-                            .insert([tempMachineData])
-                            .select('id');
-
-                        if (insertResult.error) throw insertResult.error;
-                        machineId = insertResult.data[0].id;
-
-                        // 2. Upload files with the newly created ID
-                        let finalFiles = [];
-                        if (isAuto) {
-                            finalFiles.push({ type: 'meta', key: 'is_next_maintenance_auto', property: 'true' });
-                        }
-
-                        if (machineFiles.length > 0) {
-                            const newUploaded = await uploadMachineFiles(machineId, manufacturer, name, serial, year);
-                            finalFiles = [...finalFiles, ...newUploaded];
-                        }
-
-                        // Determine main image_url
-                        let mainImageUrl = null;
+                    // If machineMainImage is still a DataURL (newly added but not yet mapped),
+                    // or if it's null but we have images, pick the first available image.
+                    if (!mainImageUrl || mainImageUrl.startsWith('data:')) {
+                        // Find the image object in finalFiles that has this DataURL as its URL if it's a new upload
+                        // This is slightly complex since new uploads have public URLs already.
+                        // If machineMainImage is a DataURL, it means a NEW file was starred.
+                        // The simplest robust way: if there's only one NEW image, it's probably that one.
+                        // If there are multiple, it should have been mapped.
+                        // For now, let's just make sure we pick a valid URL from finalFiles.
                         const firstImage = finalFiles.find(f => (f.type && f.type.startsWith('image/')) || (f.url && f.url.match(/\.(jpg|jpeg|png|gif|webp|bmp|tif|tiff)(\?.*)?$/i)));
                         if (firstImage) {
                             mainImageUrl = firstImage.url;
+                        } else {
+                            mainImageUrl = null;
                         }
-
-                        // 3. Update the record with files and image_url
-                        const updateResult = await supabaseClient
-                            .from('machines')
-                            .update({
-                                files: finalFiles,
-                                image_url: mainImageUrl
-                            })
-                            .eq('id', machineId);
-
-                        if (updateResult.error) throw updateResult.error;
                     }
+
+                    // 3. Insert or Update Database
+                    const machineData = {
+                        name: name,
+                        category_id: parseInt(categoryId),
+                        manufacturer: manufacturer,
+                        serial: serial,
+                        year: year ? parseInt(year) : null,
+                        contact_type: (contactType && contactType.trim() !== '') ? JSON.parse(contactType) : [],
+                        last_maintenance: lastMaintenance || null,
+                        next_maintenance: nextMaintenance || null,
+                        company: owner,
+                        operator_address: operatorAddress,
+                        location: locationAddress,
+                        image_url: mainImageUrl, // Main image
+                        files: finalFiles,      // All files including docs
+                        status: 'Betriebsbereit' // Default
+                    };
+
+                    console.log('Sending machine data to Supabase:', machineData);
+
+                    let result;
+                    if (typeof currentEditingId !== 'undefined' && currentEditingId) {
+                        result = await supabaseClient
+                            .from('machines')
+                            .update(machineData)
+                            .eq('id', currentEditingId);
+                    } else {
+                        result = await supabaseClient
+                            .from('machines')
+                            .insert([machineData]);
+                    }
+
+                    if (result.error) throw result.error;
 
                     // Success
                     alert(typeof currentEditingId !== 'undefined' && currentEditingId ? 'Maschine aktualisiert!' : 'Maschine erfolgreich angelegt!');
@@ -6039,8 +5599,7 @@
             // Close suggestions on click outside
             document.addEventListener('click', function (e) {
                 if (!e.target.closest('.form-group')) {
-                    const suggs = document.getElementById('address-suggestions');
-                    if (suggs) suggs.style.display = 'none';
+                    document.getElementById('address-suggestions').style.display = 'none';
                 }
             });
 
@@ -6106,7 +5665,7 @@
             // --- Initial View Activation ---
             // Read the URL hash to determine the starting view, default to 'home'
             const initialHash = window.location.hash ? window.location.hash.replace('#', '') : 'home';
-            const validTargets = Array.from(document.querySelectorAll('.view')).map(v => v.id).filter(Boolean);
+            const validTargets = Array.from(document.querySelectorAll('.nav-link')).map(l => l.getAttribute('data-target')).filter(Boolean);
             const startView = validTargets.includes(initialHash) ? initialHash : 'home';
             window.switchView(startView);
 
@@ -6119,20 +5678,6 @@
         let machineFiles = [];
         let existingMachineFiles = [];
         let machineMainImage = null;
-
-        /**
-         * Derives a thumbnail URL from a full image URL.
-         * Convention: thumbnails are stored in a /thumbs/ subfolder within /Vorschaubilder/.
-         * Falls back to the original URL if it doesn't match the convention.
-         */
-        window.getMachineThumbnailUrl = function(imageUrl) {
-            if (!imageUrl) return null;
-            // Only R2 URLs with /Vorschaubilder/ get thumbnail treatment
-            if (imageUrl.includes('/Vorschaubilder/') && !imageUrl.includes('/Vorschaubilder/thumbs/')) {
-                return imageUrl.replace('/Vorschaubilder/', '/Vorschaubilder/thumbs/');
-            }
-            return imageUrl; // Fallback: use original
-        };
 
         function handleMachineFiles(files) {
             Array.from(files).forEach(file => {
@@ -6305,53 +5850,20 @@
         };
 
         // Replaces uploadImageToSupabase with uploadMachineFiles
-        // Now also generates thumbnails for image files
-        async function uploadMachineFiles(machineId, manufacturer, name, serial, year) {
+        async function uploadMachineFiles() {
             const uploadedFiles = [];
             if (machineFiles.length > 0) {
-                const folderName = getMachineFolderName(machineId, manufacturer, name, serial, year);
-
-                const pathGenerator = (file, i) => {
-                    const isImg = file.type && file.type.startsWith('image/');
-                    const subfolder = isImg ? 'Vorschaubilder' : 'Dokumente';
-                    const fileExt = file.name.split('.').pop();
-                    const cleanName = file.name.split('.').slice(0, -1).join('.').replace(/[^a-zA-Z0-9_\- ]/g, '_');
-                    return `${folderName}/${subfolder}/${cleanName}_${Date.now()}-${i}.${fileExt}`;
-                };
-
+                const pathGenerator = (file, i) => `machines/${Date.now()}-${i}_${file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_')}`;
                 const uploadResults = await window.FileUploadService.uploadFiles(
                     machineFiles,
                     pathGenerator,
-                    { bucket: 'dateien', compress: true, concurrency: 5, provider: 'cloudflare-r2' }
+                    { bucket: 'meetra-storage', compress: true, concurrency: 5 }
                 );
-
-                // For each uploaded file, generate thumbnail if it's an image
-                for (let i = 0; i < uploadResults.length; i++) {
-                    const res = uploadResults[i];
-                    const originalFile = machineFiles[i];
-                    const fileEntry = { name: res.name, type: res.type, url: res.url };
-
-                    if (originalFile.type && originalFile.type.startsWith('image/') && res.path) {
-                        try {
-                            const thumbFile = await window.FileUploadService.generateThumbnail(originalFile);
-                            if (thumbFile) {
-                                const thumbPath = res.path.replace('/Vorschaubilder/', '/Vorschaubilder/thumbs/');
-                                const thumbResult = await window.FileUploadService.uploadFile(thumbFile, {
-                                    bucket: 'dateien',
-                                    path: thumbPath,
-                                    compress: false,
-                                    provider: 'cloudflare-r2'
-                                });
-                                fileEntry.thumbnail_url = thumbResult.url;
-                                console.log(`Thumbnail uploaded: ${thumbResult.url}`);
-                            }
-                        } catch (thumbErr) {
-                            console.warn('Thumbnail generation failed for', originalFile.name, thumbErr);
-                        }
-                    }
-
-                    uploadedFiles.push(fileEntry);
-                }
+                uploadResults.forEach(res => uploadedFiles.push({
+                    name: res.name,
+                    type: res.type,
+                    url: res.url
+                }));
             }
             return uploadedFiles;
         }
@@ -6441,7 +5953,7 @@
                     onclick="selectServiceMachine(${m.id}, '${m.manufacturer}', '${m.name}', '${m.serial || ''}', '${m.image_url || ''}', '${catName}', '${m.year || ''}')"
                     id="machine-item-${m.id}" style="font-family: 'Inter', sans-serif;">
             <div class="premium-item-img">
-                ${m.image_url ? `<img src="${window.getMachineThumbnailUrl ? window.getMachineThumbnailUrl(m.image_url) : m.image_url}" loading="lazy" onerror="this.onerror=null;this.src='${m.image_url}';">` : `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                ${m.image_url ? `<img src="${m.image_url}" loading="lazy">` : `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="12" cy="12" r="3"></circle>
                                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
                 </svg>`}
@@ -6489,7 +6001,7 @@
                 if (imageUrl && imageUrl !== 'undefined' && imageUrl !== 'null') {
                     previewImg.innerHTML = `<img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: cover;">`;
                 } else {
-                                        previewImg.innerHTML = `<div
+                    previewImg.innerHTML = `<div
             style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;"><svg
                 width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round">
@@ -6498,135 +6010,6 @@
                     d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
                 </path>
             </svg></div>`;
-                }
-
-                // Load associated customer details
-                if (typeof window.updateServiceCustomerPreview === 'function') {
-                    window.updateServiceCustomerPreview(id);
-                }
-            }
-        };
-
-        // Update customer details in Servicebericht modal
-        window.updateServiceCustomerPreview = async function (machineId) {
-            const custPreview = document.getElementById('selected-machine-customer-preview');
-            const custNameEl = document.getElementById('service-customer-name');
-            const custAddrEl = document.getElementById('service-customer-address');
-            const custRouteEl = document.getElementById('service-customer-route');
-            const custRouteLink = document.getElementById('service-customer-route-link');
-
-            if (!custPreview) return;
-
-            const machine = (window.machineList || []).find(m => m.id == machineId);
-            if (!machine) {
-                custPreview.classList.add('hidden');
-                custPreview.style.display = 'none';
-                return;
-            }
-
-            if (machine.customer_id) {
-                custPreview.classList.remove('hidden');
-                custPreview.style.display = 'block';
-                custNameEl.textContent = 'Lade Kundendaten...';
-                custAddrEl.textContent = '';
-                if (custRouteEl) custRouteEl.style.display = 'none';
-
-                try {
-                    const { data: cust, error } = await window.supabaseClient
-                        .from('customers')
-                        .select('id, name, matchcode, customer_number, street, zip_code, city, country')
-                        .eq('id', machine.customer_id)
-                        .single();
-
-                    if (!error && cust) {
-                        const codeStr = cust.customer_number ? ` (Kundennummer: ${cust.customer_number})` : '';
-                        custNameEl.textContent = cust.matchcode ? `[${cust.matchcode}] ${cust.name}${codeStr}` : `${cust.name}${codeStr}`;
-                        
-                        const addrParts = [cust.street, [cust.zip_code, cust.city].filter(Boolean).join(' '), cust.country].filter(Boolean);
-                        custAddrEl.innerHTML = addrParts.join('<br>');
-
-                        // Setup route planning link
-                        if (custRouteEl && custRouteLink) {
-                            custRouteEl.style.display = 'block';
-                            const destination = addrParts.join(', ');
-                            
-                            // Fetch own HQ address from app_settings
-                            let origin = '';
-                            try {
-                                const { data: hqData } = await window.supabaseClient
-                                    .from('app_settings')
-                                    .select('value')
-                                    .eq('key', 'company_hq')
-                                    .single();
-                                if (hqData && hqData.value) {
-                                    const hq = hqData.value;
-                                    origin = [hq.street, [hq.zip, hq.city].filter(Boolean).join(' '), hq.country].filter(Boolean).join(', ');
-                                }
-                            } catch(e){}
-
-                            // Fallback to local cache if offline
-                            if (!origin) {
-                                const cached = localStorage.getItem('meetra_company_hq');
-                                if (cached) {
-                                    try {
-                                        const hq = JSON.parse(cached);
-                                        origin = [hq.street, [hq.zip, hq.city].filter(Boolean).join(' '), hq.country].filter(Boolean).join(', ');
-                                    } catch(e){}
-                                }
-                            }
-
-                            custRouteLink.href = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`;
-                        }
-                    } else {
-                        useMachineAddressFallback(machine);
-                    }
-                } catch (err) {
-                    console.error('Failed to fetch customer for service preview:', err);
-                    useMachineAddressFallback(machine);
-                }
-            } else if (machine.company || machine.operator_street) {
-                useMachineAddressFallback(machine);
-            } else {
-                custPreview.classList.add('hidden');
-                custPreview.style.display = 'none';
-            }
-
-            async function useMachineAddressFallback(m) {
-                custPreview.classList.remove('hidden');
-                custPreview.style.display = 'block';
-                
-                const company = m.company || 'Unbekannter Betreiber';
-                const codeStr = m.customer_number ? ` (Kundennummer: ${m.customer_number})` : '';
-                custNameEl.textContent = company + codeStr;
-
-                const addrParts = [
-                    m.operator_street,
-                    [m.operator_zip, m.operator_city].filter(Boolean).join(' '),
-                    m.operator_country
-                ].filter(Boolean);
-
-                if (addrParts.length > 0) {
-                    custAddrEl.innerHTML = addrParts.join('<br>');
-                    
-                    // Setup route planning link
-                    if (custRouteEl && custRouteLink) {
-                        custRouteEl.style.display = 'block';
-                        const destination = addrParts.join(', ');
-                        
-                        let origin = '';
-                        const cached = localStorage.getItem('meetra_company_hq');
-                        if (cached) {
-                            try {
-                                const hq = JSON.parse(cached);
-                                origin = [hq.street, [hq.zip, hq.city].filter(Boolean).join(' '), hq.country].filter(Boolean).join(', ');
-                            } catch(e){}
-                        }
-                        
-                        custRouteLink.href = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`;
-                    }
-                } else {
-                    custAddrEl.textContent = 'Keine Adresse hinterlegt.';
-                    if (custRouteEl) custRouteEl.style.display = 'none';
                 }
             }
         };
@@ -6835,26 +6218,25 @@
                 // 1. Prepare Final Files Array
                 const finalFiles = [...existingServiceFiles];
 
-                // 2. Upload New Files via Cloudflare R2
+                // 2. Upload New Files
                 for (const file of serviceFiles) {
                     const cleanName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-                    // Build structured R2 path using machine folder
-                    const machine = (window.machineList || []).find(m => m.id == machineId);
-                    const folderName = machine ? window.getMachineFolderName(machine.id, machine.manufacturer, machine.name, machine.serial || machine.serial_number, machine.year) : `Maschinen/${machineId}`;
-                    const filePath = `${folderName}/Serviceberichte/${Date.now()}-${cleanName}`;
-                    console.log('Uploading service file to R2:', file.name, 'as', filePath);
+                    const fileName = `Servicebericht/${Date.now()}-service-${cleanName}`;
+                    console.log('Uploading service file:', file.name, 'as', fileName);
 
-                    const result = await window.FileUploadService.uploadFile(file, {
-                        bucket: 'dateien',
-                        path: filePath,
-                        compress: true,
-                        provider: 'cloudflare-r2'
-                    });
+                    const { data: uploadData, error: uploadError } = await supabaseClient.storage.from('meetra-storage').upload(fileName, file);
+
+                    if (uploadError) {
+                        console.error('Upload error detail (Service):', uploadError);
+                        throw uploadError;
+                    }
+
+                    const { data: pubData } = supabaseClient.storage.from('meetra-storage').getPublicUrl(fileName);
 
                     finalFiles.push({
                         name: file.name,
                         type: file.type,
-                        url: result.url
+                        url: pubData.publicUrl
                     });
                 }
 
@@ -7335,7 +6717,7 @@
                     acceptanceRes
                 ] = await Promise.all([
                     window.supabaseClient.from('service_entries').select('*').eq('machine_id', machineId),
-                    window.supabaseClient.from('tasks').select('*').eq('machine_id', machineId),
+
                     window.supabaseClient.from('calendar_events').select('*').eq('machine_id', machineId),
                     window.supabaseClient.from('intake_protocols').select('*').eq('machine_id', machineId),
                     window.supabaseClient.from('acceptance_protocols').select('*').eq('machine_id', machineId)
@@ -7371,11 +6753,11 @@
                             id: p.id,
                             machineId: machineId,
                             date: new Date(p.created_at),
-                            type: 'Aufgabe',
+                            type: 'Bestellung/Aufgabe',
                             title: p.title || p.task || 'Aufgabe',
                             description: p.description || p.status || '',
                             color: '#f59e0b',
-                            icon: '📋',
+                            icon: '🛒',
                             itemType: 'procurement'
                         });
                     });
@@ -7530,12 +6912,6 @@
                                 ${pdfIcon}
                             `;
 
-                    } else if (item.itemType === 'procurement') {
-                        actionButtons += `
-                                <button onclick="window.navigateToTask('${item.id}')" class="btn-icon-circular edit" title="Aufgabe öffnen">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                                </button>
-                            `;
                     } else if (item.source === 'manuell') {
                         actionButtons += `
                                 <button onclick="window.editManualHistoryEntry('${item.id}')" class="btn-icon-circular edit" title="Bearbeiten">
@@ -7619,39 +6995,6 @@
             } catch (error) {
                 console.error("Error loading machine history", error);
                 container.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 2rem;">Fehler beim Laden der Historie.</div>';
-            }
-        };
-
-        window.navigateToTask = async function (taskId) {
-            if (!taskId) return;
-            try {
-                window.closeHistoryModal();
-                if (typeof window.switchView === 'function') {
-                    window.switchView('tasks');
-                }
-
-                // Check if task is completed via Supabase to expand completed tasks view
-                if (window.supabaseClient) {
-                    const { data: taskData } = await window.supabaseClient
-                        .from('tasks')
-                        .select('status')
-                        .eq('id', taskId)
-                        .single();
-
-                    if (taskData && taskData.status === 'completed') {
-                        window.showCompletedTasks = true;
-                    }
-                }
-
-                if (typeof window.fetchTasks === 'function') {
-                    await window.fetchTasks();
-                }
-
-                if (typeof window.openTaskModal === 'function') {
-                    window.openTaskModal(taskId);
-                }
-            } catch (err) {
-                console.error('Error navigating to task:', err);
             }
         };
 
@@ -7903,13 +7246,11 @@
                 // 2. Upload new photos (Parallel & Compressed)
                 const photoInput = document.getElementById('manual-photos');
                 if (photoInput && photoInput.files && photoInput.files.length > 0) {
-                    const machine = (window.machineList || []).find(m => m.id == machineId);
-                    const mFolder = machine ? window.getMachineFolderName(machine.id, machine.manufacturer, machine.name, machine.serial || machine.serial_number, machine.year) : `Maschinen/${machineId}`;
-                    const pathGenerator = (file, i) => `${mFolder}/Verlauf/${Date.now()}-${i}.${file.name.split('.').pop()}`;
+                    const pathGenerator = (file, i) => `manual-history/${machineId}/${Date.now()}-${i}.${file.name.split('.').pop()}`;
                     const uploadResults = await window.FileUploadService.uploadFiles(
                         Array.from(photoInput.files),
                         pathGenerator,
-                        { bucket: 'dateien', compress: true, concurrency: 5, provider: 'cloudflare-r2' }
+                        { bucket: 'machine-images', compress: true, concurrency: 5 }
                     );
                     uploadResults.forEach(res => filesArray.push(res.url));
                 }
@@ -8142,10 +7483,11 @@
                 .from('maintenance_events')
                 .select('*, machines(name, manufacturer, serial, year)');
 
-            // Fetch ALL machines to find those without maintenance
+            // Fetch calculated events from machines (next maintenance)
             const { data: machines, error: e2 } = await supabaseClient
                 .from('machines')
-                .select('id, name, manufacturer, next_maintenance, serial, year');
+                .select('id, name, manufacturer, next_maintenance, serial, year')
+                .not('next_maintenance', 'is', null);
 
             let allEvents = [];
 
@@ -8184,36 +7526,19 @@
 
                     const fullTitle = (titleParts.length > 0 ? titleParts.join(' ') : 'Wartung') + ' (Geplant)';
 
-                    if (m.next_maintenance) {
-                        allEvents.push({
-                            id: 'maint-' + m.id,
-                            title: fullTitle,
-                            date: new Date(m.next_maintenance),
-                            type: 'automatic',
-                            machineId: m.id,
-                            status: 'automatisch'
-                        });
-                    } else {
-                        // Push a special event for missing maintenance date
-                        allEvents.push({
-                            id: 'maint-missing-' + m.id,
-                            title: (titleParts.length > 0 ? titleParts.join(' ') : 'Unbekannte Maschine') + ' (Kein Termin)',
-                            date: null,
-                            type: 'missing',
-                            machineId: m.id,
-                            status: 'fehlend'
-                        });
-                    }
+                    allEvents.push({
+                        id: 'maint-' + m.id,
+                        title: fullTitle,
+                        date: new Date(m.next_maintenance),
+                        type: 'automatic',
+                        machineId: m.id,
+                        status: 'automatisch'
+                    });
                 });
             }
 
-            // Sort by date descending (null dates will be handled in rendering separately, but we keep this for planned events)
-            allEvents.sort((a, b) => {
-                if (!a.date && !b.date) return 0;
-                if (!a.date) return 1;
-                if (!b.date) return -1;
-                return b.date - a.date;
-            });
+            // Sort by date descending
+            allEvents.sort((a, b) => b.date - a.date);
 
             return allEvents;
         }
@@ -8253,107 +7578,43 @@
                 return;
             }
 
-            // Split into "missing" and "planned"
-            const missingEvents = filteredEvents.filter(e => e.type === 'missing');
-            const plannedEvents = filteredEvents.filter(e => e.type !== 'missing');
-
-            let html = '';
-
-            // Render planned events FIRST
-            if (plannedEvents.length > 0) {
-                html += `
-                    <h3 style="color: #fff; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                        Geplante & Historische Ereignisse
-                    </h3>
-                    <div class="glass-card" style="padding: 0; background: transparent; border: none; box-shadow: none; margin-bottom: 3rem;">
-                        <table style="width: 100%; border-collapse: separate; border-spacing: 0 12px;">
-                            <thead>
-                                <tr>
-                                    <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: left; padding: 0 16px 8px 16px; text-transform: uppercase;">Maschine</th>
-                                    <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: left; padding: 0 16px 8px 16px; text-transform: uppercase;">Letzte Wartung</th>
-                                    <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: left; padding: 0 16px 8px 16px; text-transform: uppercase;">Nächste Wartung</th>
-                                    <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: right; padding: 0 16px 8px 16px; text-transform: uppercase;">Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                `;
-
-                plannedEvents.forEach(ev => {
-                    const m = (window.machineList || []).find(mm => mm.id === ev.machineId);
-                    const machineLabel = m ? [m.manufacturer, m.name, (m.serial || m.serial_number) ? `#${m.serial || m.serial_number}` : null, m.year ? `(${m.year})` : null].filter(Boolean).join(' ') : 'Unbekannte Maschine';
-                    
-                    const lastMaintStr = (m && m.last_maintenance) ? new Date(m.last_maintenance).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
-                    const nextMaintStr = (ev.date) ? new Date(ev.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
-                    
-                    const isAutomatic = ev.type === 'automatic';
-                    const statusBadge = isAutomatic 
-                        ? `<span style="font-size: 0.75rem; padding: 4px 12px; border-radius: 8px; background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.6); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 800; border: 1px solid rgba(255,255,255,0.1);">Automatisch</span>`
-                        : `<span style="font-size: 0.75rem; padding: 4px 12px; border-radius: 8px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 800; border: 1px solid rgba(59, 130, 246, 0.3);">Manuell</span>`;
-
-                    html += `
-                        <tr style="background: rgba(255,255,255,0.02); transition: all 0.2s ease;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
-                            <td style="padding: 16px; border-top-left-radius: 12px; border-bottom-left-radius: 12px; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); border-left: 1px solid rgba(255,255,255,0.05);">
-                                <span style="color: var(--color-primary-green); font-weight: 800; font-size: 1.05rem;">${machineLabel}</span>
-                            </td>
-                            <td style="padding: 16px; color: rgba(255,255,255,0.8); font-weight: 600; font-size: 0.95rem; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);">
-                                ${lastMaintStr}
-                            </td>
-                            <td style="padding: 16px; color: rgba(255,255,255,0.8); font-weight: 600; font-size: 0.95rem; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);">
-                                ${nextMaintStr}
-                            </td>
-                            <td style="padding: 16px; text-align: right; border-top-right-radius: 12px; border-bottom-right-radius: 12px; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); border-right: 1px solid rgba(255,255,255,0.05);">
-                                ${statusBadge}
-                            </td>
-                        </tr>
-                    `;
-                });
-
-                html += `
-                            </tbody>
-                        </table>
+            container.innerHTML = filteredEvents.map(ev => {
+                const dateStr = ev.date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                const isAutomatic = ev.type === 'automatic';
+                
+                return `
+                    <div class="glass-card event-list-item" style="padding: 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 20px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: default; border-radius: 20px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
+                        <div style="display: flex; align-items: center; gap: 20px; flex: 1;">
+                            <div style="width: 50px; height: 50px; border-radius: 14px; background: ${isAutomatic ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)'}; color: ${isAutomatic ? '#60a5fa' : '#34d399'}; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; box-shadow: inset 0 0 15px ${isAutomatic ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)'};">
+                                ${isAutomatic ? '⚙️' : '🔔'}
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                                    <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: #fff;">${ev.title}</h3>
+                                    <span style="font-size: 0.7rem; padding: 2px 8px; border-radius: 6px; background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 800; border: 1px solid rgba(255,255,255,0.1);">${ev.status}</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 15px; color: rgba(255,255,255,0.4); font-size: 0.85rem;">
+                                    <div style="display: flex; align-items: center; gap: 5px;">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15.5a5 5 0 1 1-7 0a5 5 0 1 1 7 0z"></path><path d="M7 7l5 5-5 5"></path></svg>
+                                        ${dateStr}
+                                    </div>
+                                    ${ev.description ? `<div style="display: flex; align-items: center; gap: 5px; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                                        ${ev.description}
+                                    </div>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            ${!isAutomatic ? `
+                                <button onclick="window.deleteEvent('${ev.id}')" class="btn-icon-soft" style="color: #ef4444; background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.1);">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                </button>
+                            ` : ''}
+                        </div>
                     </div>
                 `;
-            }
-
-            // Render missing events SECOND
-            if (missingEvents.length > 0) {
-                html += `
-                    <h3 style="color: #F87171; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-                        Aktion erforderlich: Kein Termin hinterlegt
-                    </h3>
-                    <div class="glass-card" style="padding: 0; background: transparent; border: none; box-shadow: none;">
-                        <table style="width: 100%; border-collapse: separate; border-spacing: 0 12px;">
-                            <tbody>
-                `;
-
-                missingEvents.forEach(ev => {
-                    const m = (window.machineList || []).find(mm => mm.id === ev.machineId);
-                    const machineLabel = m ? [m.manufacturer, m.name, (m.serial || m.serial_number) ? `#${m.serial || m.serial_number}` : null, m.year ? `(${m.year})` : null].filter(Boolean).join(' ') : 'Unbekannte Maschine';
-                    
-                    const statusBadge = `<span style="font-size: 0.75rem; padding: 4px 12px; border-radius: 8px; background: rgba(248, 113, 113, 0.15); color: #F87171; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 800; border: 1px solid rgba(248, 113, 113, 0.3);">Termin fehlt</span>`;
-
-                    html += `
-                        <tr style="background: rgba(255,255,255,0.02); transition: all 0.2s ease;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
-                            <td style="padding: 16px; border-top-left-radius: 12px; border-bottom-left-radius: 12px; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); border-left: 1px solid rgba(255,255,255,0.05);">
-                                <span style="color: var(--color-primary-green); font-weight: 700; font-size: 1.05rem;">${machineLabel}</span>
-                            </td>
-                            <td style="padding: 16px; text-align: right; border-top-right-radius: 12px; border-bottom-right-radius: 12px; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); border-right: 1px solid rgba(255,255,255,0.05);">
-                                ${statusBadge}
-                            </td>
-                        </tr>
-                    `;
-                });
-
-                html += `
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-            }
-
-            container.innerHTML = html;
+            }).join('');
         };
 
         window.openCreateEventModal = function() {
@@ -8436,13 +7697,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             const searchInput = document.getElementById('calendar-search-input');
             if (searchInput) {
-                searchInput.addEventListener('input', () => {
-                    if (window.eventsState && window.eventsState.currentSubView === 'processes') {
-                        window.renderProcesses();
-                    } else {
-                        window.renderEvents();
-                    }
-                });
+                searchInput.addEventListener('input', () => window.renderEvents());
             }
 
             const filterTrigger = document.getElementById('calendar-category-filter-trigger');
@@ -8453,55 +7708,6 @@
                     if (menu) {
                         menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
                         if (menu.style.display === 'block') populateCalendarCategoryFilter();
-                    }
-                });
-            }
-
-            const processFilterTrigger = document.getElementById('process-status-filter-trigger');
-            if (processFilterTrigger) {
-                processFilterTrigger.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    const menu = document.getElementById('process-status-filter-menu');
-                    if (menu) {
-                        menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-                    }
-                });
-            }
-
-            // Global click handler to close dropdowns when clicking outside
-            document.addEventListener('click', (e) => {
-                const processMenu = document.getElementById('process-status-filter-menu');
-                const processTrigger = document.getElementById('process-status-filter-trigger');
-                if (processMenu && processMenu.style.display === 'block' && 
-                    processTrigger && !processTrigger.contains(e.target) && !processMenu.contains(e.target)) {
-                    processMenu.style.display = 'none';
-                }
-                
-                const calendarMenu = document.getElementById('calendar-category-filter-menu');
-                const calendarTrigger = document.getElementById('calendar-category-filter-trigger');
-                if (calendarMenu && calendarMenu.style.display === 'block' && 
-                    calendarTrigger && !calendarTrigger.contains(e.target) && !calendarMenu.contains(e.target)) {
-                    calendarMenu.style.display = 'none';
-                }
-            });
-
-            // Paste / input listener for email importer
-            const pasteArea = document.getElementById('email-paste-area');
-            if (pasteArea) {
-                pasteArea.addEventListener('input', (e) => {
-                    window.processPastedEmail(e.target.value);
-                });
-            }
-
-            const senderInput = document.getElementById('email-sender-input');
-            if (senderInput) {
-                senderInput.addEventListener('change', (e) => {
-                    const val = e.target.value;
-                    let email = '';
-                    const emailMatch = val.match(/<([^>]+)>/) || val.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-                    if (emailMatch) email = emailMatch[1] || emailMatch[0];
-                    if (email) {
-                        window.runSmartCustomerMatching(email, document.getElementById('email-paste-area')?.value || '');
                     }
                 });
             }
@@ -8536,676 +7742,16 @@
             window.renderEvents();
         };
 
-        // --- INTERNAL PROCESSES (EREIGNISSE SUB-TAB) SYSTEM ---
-        window.eventsState.currentSubView = 'calendar';
-        window.eventsState.processStatusFilter = 'all';
-        window.eventsState.processes = [];
-
-        window.switchEventsSubView = function(view) {
-            window.eventsState.currentSubView = view;
-            const btnCalendar = document.getElementById('btn-events-view-calendar');
-            const btnProcesses = document.getElementById('btn-events-view-processes');
-            const subviewCalendar = document.getElementById('events-calendar-subview');
-            const subviewProcesses = document.getElementById('events-processes-subview');
-            
-            const filterCategory = document.getElementById('calendar-category-filter-trigger');
-            const filterProcessStatus = document.getElementById('process-status-filter-trigger');
-            
-            const btnAddEvent = document.getElementById('btn-add-event-action');
-            const btnImportEmail = document.getElementById('btn-import-email-action');
-            
-            const searchInput = document.getElementById('calendar-search-input');
-            
-            if (view === 'processes') {
-                if (btnCalendar) btnCalendar.classList.remove('active');
-                if (btnProcesses) btnProcesses.classList.add('active');
-                if (subviewCalendar) subviewCalendar.style.display = 'none';
-                if (subviewProcesses) subviewProcesses.style.display = 'block';
-                
-                if (filterCategory) filterCategory.style.display = 'none';
-                if (filterProcessStatus) filterProcessStatus.style.display = 'block';
-                
-                if (btnAddEvent) btnAddEvent.style.display = 'none';
-                if (btnImportEmail) btnImportEmail.style.display = 'inline-flex';
-                
-                if (searchInput) {
-                    searchInput.value = '';
-                    searchInput.placeholder = "Vorgänge suchen...";
-                }
-                
-                window.fetchProcesses();
-            } else {
-                if (btnCalendar) btnCalendar.classList.add('active');
-                if (btnProcesses) btnProcesses.classList.remove('active');
-                if (subviewCalendar) subviewCalendar.style.display = 'block';
-                if (subviewProcesses) subviewProcesses.style.display = 'none';
-                
-                if (filterCategory) filterCategory.style.display = 'block';
-                if (filterProcessStatus) filterProcessStatus.style.display = 'none';
-                
-                if (btnAddEvent) btnAddEvent.style.display = 'inline-flex';
-                if (btnImportEmail) btnImportEmail.style.display = 'none';
-                
-                if (searchInput) {
-                    searchInput.value = '';
-                    searchInput.placeholder = "Ereignisse suchen...";
-                }
-                
-                window.renderEvents();
-            }
-        };
-
-        window.setProcessStatusFilter = function(status) {
-            window.eventsState.processStatusFilter = status;
-            
-            const labelEl = document.getElementById('process-current-status-name');
-            if (labelEl) {
-                if (status === 'all') labelEl.textContent = 'Status: Alle';
-                else if (status === 'offen') labelEl.textContent = 'Status: Offen';
-                else if (status === 'in_bearbeitung') labelEl.textContent = 'Status: In Bearbeitung';
-                else if (status === 'erledigt') labelEl.textContent = 'Status: Erledigt';
-            }
-            
-            const options = document.querySelectorAll('#process-status-filter-options li');
-            options.forEach(li => {
-                const onclickStr = li.getAttribute('onclick') || '';
-                if (onclickStr.includes(`'${status}'`)) {
-                    li.classList.add('selected');
-                } else {
-                    li.classList.remove('selected');
-                }
-            });
-            
-            const menu = document.getElementById('process-status-filter-menu');
-            if (menu) menu.style.display = 'none';
-            
-            window.renderProcesses();
-        };
-
-        window.openEmailImportModal = function() {
-            const modal = document.getElementById('email-import-modal');
-            if (!modal) return;
-            
-            modal.classList.remove('hidden');
-            modal.style.display = 'flex';
-            requestAnimationFrame(() => {
-                modal.classList.add('show');
-            });
-            
-            // Reset fields
-            document.getElementById('email-paste-area').value = '';
-            document.getElementById('email-title-input').value = '';
-            document.getElementById('email-sender-input').value = '';
-            document.getElementById('email-recipient-input').value = '';
-            document.getElementById('email-body-input').value = '';
-            document.getElementById('email-type-select').value = 'email_incoming';
-            document.getElementById('email-status-select').value = 'offen';
-            
-            // Set default date to now
-            const now = new Date();
-            const tzOffset = now.getTimezoneOffset() * 60000;
-            const localISOTime = (new Date(now.getTime() - tzOffset)).toISOString().slice(0, 16);
-            document.getElementById('email-date-input').value = localISOTime;
-            
-            // Populate machine list
-            const select = document.getElementById('email-machine-select');
-            if (select) {
-                select.innerHTML = '<option value="">Keine Maschine zugeordnet</option>' +
-                                  '<optgroup id="email-recommended-machines" label="Empfohlene Maschinen" style="display:none;"></optgroup>' +
-                                  '<optgroup id="email-all-machines" label="Alle Maschinen"></optgroup>';
-                
-                const allGroup = document.getElementById('email-all-machines');
-                if (allGroup) {
-                    (window.machineList || []).forEach(m => {
-                        const opt = document.createElement('option');
-                        opt.value = m.id;
-                        opt.textContent = `${m.manufacturer} ${m.name} (#${m.serial || '?'})`;
-                        allGroup.appendChild(opt);
-                    });
-                }
-            }
-        };
-
-        window.closeEmailImportModal = function() {
-            const modal = document.getElementById('email-import-modal');
-            if (modal) {
-                modal.classList.remove('show');
-                setTimeout(() => {
-                    modal.classList.add('hidden');
-                    modal.style.display = 'none';
-                }, 300);
-            }
-        };
-
-        window.openEditProcessModal = function(id) {
-            const proc = (window.eventsState.processes || []).find(p => p.id === id);
-            if (!proc) return;
-            
-            const modal = document.getElementById('process-edit-modal');
-            if (!modal) return;
-            
-            modal.classList.remove('hidden');
-            modal.style.display = 'flex';
-            requestAnimationFrame(() => {
-                modal.classList.add('show');
-            });
-            
-            document.getElementById('edit-process-id').value = proc.id;
-            document.getElementById('edit-process-type-select').value = proc.process_type || 'email_incoming';
-            document.getElementById('edit-process-title-input').value = proc.title || '';
-            document.getElementById('edit-process-sender-input').value = proc.sender || '';
-            document.getElementById('edit-process-recipient-input').value = proc.recipient || '';
-            document.getElementById('edit-process-status-select').value = proc.status || 'offen';
-            document.getElementById('edit-process-body-input').value = proc.description || '';
-            
-            if (proc.process_date) {
-                const date = new Date(proc.process_date);
-                const tzOffset = date.getTimezoneOffset() * 60000;
-                const localISOTime = (new Date(date.getTime() - tzOffset)).toISOString().slice(0, 16);
-                document.getElementById('edit-process-date-input').value = localISOTime;
-            } else {
-                document.getElementById('edit-process-date-input').value = '';
-            }
-            
-            // Populate machine list
-            const select = document.getElementById('edit-process-machine-select');
-            if (select) {
-                select.innerHTML = '<option value="">Keine Maschine zugeordnet</option>';
-                (window.machineList || []).forEach(m => {
-                    const opt = document.createElement('option');
-                    opt.value = m.id;
-                    opt.textContent = `${m.manufacturer} ${m.name} (#${m.serial || '?'})`;
-                    if (proc.machine_id && String(m.id) === String(proc.machine_id)) {
-                        opt.selected = true;
-                    }
-                    select.appendChild(opt);
-                });
-            }
-        };
-
-        window.closeEditProcessModal = function() {
-            const modal = document.getElementById('process-edit-modal');
-            if (modal) {
-                modal.classList.remove('show');
-                setTimeout(() => {
-                    modal.classList.add('hidden');
-                    modal.style.display = 'none';
-                }, 300);
-            }
-        };
-
-        function tryParseEmailDate(dateStr) {
-            if (!dateStr) return null;
-            dateStr = dateStr.trim();
-            
-            // Format: dd.mm.yyyy hh:mm or d.m.yyyy hh:mm
-            const deMatch = dateStr.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{2})/);
-            if (deMatch) {
-                return new Date(parseInt(deMatch[3]), parseInt(deMatch[2]) - 1, parseInt(deMatch[1]), parseInt(deMatch[4]), parseInt(deMatch[5]));
-            }
-            
-            // Month mappings for German text parsing
-            const deMonths = {
-                'januar': 0, 'februar': 1, 'märz': 2, 'april': 3, 'mai': 4, 'juni': 5,
-                'juli': 6, 'august': 7, 'september': 8, 'oktober': 9, 'november': 10, 'dezember': 11,
-                'jan': 0, 'feb': 1, 'mrz': 2, 'apr': 3, 'jun': 5, 'jul': 6, 'aug': 7, 'sep': 8, 'okt': 9, 'nov': 10, 'dez': 11
-            };
-            
-            // Format: 28. Mai 2026 14:32 or similar
-            const deMonthMatch = dateStr.match(/(\d{1,2})\.?\s+([a-zA-ZäÄöÖüÜß]+)\s+(\d{4})\s+(\d{1,2}):(\d{2})/);
-            if (deMonthMatch) {
-                const monthName = deMonthMatch[2].toLowerCase();
-                if (deMonths[monthName] !== undefined) {
-                    return new Date(parseInt(deMonthMatch[3]), deMonths[monthName], parseInt(deMonthMatch[1]), parseInt(deMonthMatch[4]), parseInt(deMonthMatch[5]));
-                }
-            }
-            
-            // Standard JS Date parsing
-            const parsed = Date.parse(dateStr);
-            if (!isNaN(parsed)) {
-                return new Date(parsed);
-            }
-            
-            return null;
-        }
-
-        function formatDateToLocalInput(date) {
-            if (!date) date = new Date();
-            const tzOffset = date.getTimezoneOffset() * 60000;
-            return (new Date(date.getTime() - tzOffset)).toISOString().slice(0, 16);
-        }
-
-        window.processPastedEmail = function(text) {
-            const lines = text.split('\n');
-            let title = '';
-            let sender = '';
-            let recipient = '';
-            let dateVal = null;
-            
-            let headerLinesCount = 0;
-            let foundHeaders = false;
-            
-            for (let i = 0; i < Math.min(lines.length, 15); i++) {
-                const line = lines[i].trim();
-                
-                const senderMatch = line.match(/^(Von|From):\s*(.*)$/i);
-                if (senderMatch) {
-                    sender = senderMatch[2].trim();
-                    headerLinesCount = i + 1;
-                    foundHeaders = true;
-                    continue;
-                }
-                
-                const recipientMatch = line.match(/^(An|To):\s*(.*)$/i);
-                if (recipientMatch) {
-                    recipient = recipientMatch[2].trim();
-                    headerLinesCount = i + 1;
-                    foundHeaders = true;
-                    continue;
-                }
-                
-                const subjectMatch = line.match(/^(Betreff|Subject):\s*(.*)$/i);
-                if (subjectMatch) {
-                    title = subjectMatch[2].trim();
-                    headerLinesCount = i + 1;
-                    foundHeaders = true;
-                    continue;
-                }
-                
-                const dateMatch = line.match(/^(Gesendet|Sent|Datum|Date):\s*(.*)$/i);
-                if (dateMatch) {
-                    dateVal = tryParseEmailDate(dateMatch[2]);
-                    headerLinesCount = i + 1;
-                    foundHeaders = true;
-                    continue;
-                }
-            }
-            
-            let body = '';
-            if (foundHeaders && headerLinesCount > 0) {
-                body = lines.slice(headerLinesCount).join('\n').trim();
-            } else {
-                body = text.trim();
-            }
-            
-            if (!title && lines[0]) {
-                title = lines[0].trim().substring(0, 100);
-            }
-            
-            if (title) document.getElementById('email-title-input').value = title;
-            if (sender) document.getElementById('email-sender-input').value = sender;
-            if (recipient) document.getElementById('email-recipient-input').value = recipient;
-            if (body) document.getElementById('email-body-input').value = body;
-            if (dateVal) document.getElementById('email-date-input').value = formatDateToLocalInput(dateVal);
-            
-            // Auto determine incoming or outgoing
-            if (sender && (sender.toLowerCase().includes('meetra') || sender.toLowerCase().includes('birco') || sender.toLowerCase().includes('info@') || sender.toLowerCase().includes('sales@'))) {
-                document.getElementById('email-type-select').value = 'email_outgoing';
-            } else {
-                document.getElementById('email-type-select').value = 'email_incoming';
-            }
-            
-            // Smart matching trigger
-            let senderEmail = '';
-            const emailMatch = sender.match(/<([^>]+)>/) || sender.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-            if (emailMatch) {
-                senderEmail = emailMatch[1] || emailMatch[0];
-            }
-            
-            if (senderEmail) {
-                window.runSmartCustomerMatching(senderEmail, text);
-            } else {
-                window.runSerialNumberMatching(text, null);
-            }
-        };
-
-        window.runSmartCustomerMatching = async function(senderEmail, text) {
-            const genericDomains = ['gmail.com', 'googlemail.com', 'gmx.de', 'gmx.net', 'web.de', 't-online.de', 'outlook.com', 'outlook.de', 'hotmail.com', 'hotmail.de', 'yahoo.com', 'yahoo.de', 'aol.com', 'icloud.com', 'mail.ru', 'freenet.de', 'directbox.com', 'posteo.de', 'gmx.at', 'gmx.ch'];
-            
-            if (!supabaseClient) return;
-            
-            try {
-                let customer = null;
-                
-                // 1. Exact match
-                const { data: exactCust } = await supabaseClient
-                    .from('customers')
-                    .select('id, name')
-                    .eq('email', senderEmail)
-                    .maybeSingle();
-                    
-                if (exactCust) {
-                    customer = exactCust;
-                } else {
-                    // 2. Domain match
-                    const domain = senderEmail.split('@')[1];
-                    if (domain && !genericDomains.includes(domain.toLowerCase())) {
-                        const { data: domainCusts } = await supabaseClient
-                            .from('customers')
-                            .select('id, name')
-                            .ilike('email', `%@${domain}`)
-                            .limit(1);
-                        if (domainCusts && domainCusts.length > 0) {
-                            customer = domainCusts[0];
-                        }
-                    }
-                }
-                
-                const recGroup = document.getElementById('email-recommended-machines');
-                if (customer && recGroup) {
-                    const machines = (window.machineList || []).filter(m => m.customer_id === customer.id);
-                    if (machines.length > 0) {
-                        recGroup.innerHTML = '';
-                        recGroup.label = `Empfohlene Maschinen (${customer.name})`;
-                        recGroup.style.display = 'block';
-                        
-                        machines.forEach(m => {
-                            const opt = document.createElement('option');
-                            opt.value = m.id;
-                            opt.textContent = `${m.manufacturer} ${m.name} (#${m.serial || '?'})`;
-                            recGroup.appendChild(opt);
-                        });
-                        
-                        window.runSerialNumberMatching(text, recGroup.firstElementChild ? recGroup.firstElementChild.value : null);
-                        return;
-                    }
-                }
-                
-                if (recGroup) {
-                    recGroup.style.display = 'none';
-                    recGroup.innerHTML = '';
-                }
-                window.runSerialNumberMatching(text, null);
-                
-            } catch (e) {
-                console.error("Error in Smart Customer Matching:", e);
-                window.runSerialNumberMatching(text, null);
-            }
-        };
-
-        window.runSerialNumberMatching = function(text, defaultMachineId) {
-            const select = document.getElementById('email-machine-select');
-            if (!select) return;
-            
-            let matchedMachineId = null;
-            
-            // Scan for serials
-            for (const m of (window.machineList || [])) {
-                if (m.serial && m.serial.length >= 3) {
-                    const escaped = m.serial.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-                    const regex = new RegExp('\\b' + escaped + '\\b', 'i');
-                    if (regex.test(text)) {
-                        matchedMachineId = m.id;
-                        break;
-                    }
-                }
-            }
-            
-            if (matchedMachineId) {
-                select.value = matchedMachineId;
-            } else if (defaultMachineId) {
-                select.value = defaultMachineId;
-            } else {
-                select.value = '';
-            }
-        };
-
-        window.fetchProcesses = async function() {
-            if (!supabaseClient) return;
-            
-            try {
-                const { data, error } = await supabaseClient
-                    .from('internal_processes')
-                    .select('*, machines(id, name, manufacturer, serial)')
-                    .order('process_date', { ascending: false });
-                    
-                if (error) throw error;
-                
-                window.eventsState.processes = data || [];
-                window.renderProcesses();
-            } catch (err) {
-                console.error("Error loading internal processes:", err);
-                const tableBody = document.getElementById('processes-table-body');
-                if (tableBody) {
-                    tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color: #f87171; padding: 2rem;">Fehler beim Laden der Vorgänge: ${err.message}</td></tr>`;
-                }
-            }
-        };
-
-        window.renderProcesses = function() {
-            const tableBody = document.getElementById('processes-table-body');
-            if (!tableBody) return;
-            
-            const searchQuery = (document.getElementById('calendar-search-input')?.value || '').toLowerCase();
-            const statusFilter = window.eventsState.processStatusFilter;
-            
-            let filtered = window.eventsState.processes || [];
-            
-            // Apply Status Filter
-            if (statusFilter !== 'all') {
-                filtered = filtered.filter(p => p.status === statusFilter);
-            }
-            
-            // Apply Search Query
-            if (searchQuery) {
-                filtered = filtered.filter(p => 
-                    (p.title && p.title.toLowerCase().includes(searchQuery)) ||
-                    (p.sender && p.sender.toLowerCase().includes(searchQuery)) ||
-                    (p.recipient && p.recipient.toLowerCase().includes(searchQuery)) ||
-                    (p.description && p.description.toLowerCase().includes(searchQuery))
-                );
-            }
-            
-            if (filtered.length === 0) {
-                tableBody.innerHTML = `
-                    <tr>
-                        <td colspan="6" style="padding: 4rem 2rem; text-align: center; border-radius: 12px; background: rgba(255,255,255,0.01); border: 1px dashed rgba(255,255,255,0.08);">
-                            <p style="color: rgba(255,255,255,0.4); font-size: 1.1rem; margin: 0;">Keine internen Vorgänge gefunden.</p>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            let html = '';
-            filtered.forEach(p => {
-                // Type Icon & Text
-                let typeHtml = '';
-                if (p.process_type === 'email_incoming') {
-                    typeHtml = `<span title="E-Mail Eingang" style="color: #60a5fa; display: inline-flex; align-items: center; justify-content: center; background: rgba(59, 130, 246, 0.15); width: 36px; height: 36px; border-radius: 10px; border: 1px solid rgba(59, 130, 246, 0.3);">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                    </span>`;
-                } else if (p.process_type === 'email_outgoing') {
-                    typeHtml = `<span title="E-Mail Ausgang" style="color: #a78bfa; display: inline-flex; align-items: center; justify-content: center; background: rgba(167, 139, 250, 0.15); width: 36px; height: 36px; border-radius: 10px; border: 1px solid rgba(167, 139, 250, 0.3);">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                    </span>`;
-                } else if (p.process_type === 'note') {
-                    typeHtml = `<span title="Interne Notiz" style="color: #fbbf24; display: inline-flex; align-items: center; justify-content: center; background: rgba(251, 191, 36, 0.15); width: 36px; height: 36px; border-radius: 10px; border: 1px solid rgba(251, 191, 36, 0.3);">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                    </span>`;
-                } else {
-                    typeHtml = `<span title="Manuell" style="color: #94a3b8; display: inline-flex; align-items: center; justify-content: center; background: rgba(148, 163, 184, 0.15); width: 36px; height: 36px; border-radius: 10px; border: 1px solid rgba(148, 163, 184, 0.3);">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="12" y2="12"></line></svg>
-                    </span>`;
-                }
-                
-                // Status Badge styling
-                let statusBadge = '';
-                if (p.status === 'offen') {
-                    statusBadge = `<span style="font-size: 0.75rem; padding: 6px 14px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Offen</span>`;
-                } else if (p.status === 'in_bearbeitung') {
-                    statusBadge = `<span style="font-size: 0.75rem; padding: 6px 14px; border-radius: 8px; background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">In Arbeit</span>`;
-                } else {
-                    statusBadge = `<span style="font-size: 0.75rem; padding: 6px 14px; border-radius: 8px; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Erledigt</span>`;
-                }
-                
-                // Machine info
-                let machineCell = '<span style="color: rgba(255,255,255,0.3); font-style: italic;">Nicht verknüpft</span>';
-                if (p.machines) {
-                    const m = p.machines;
-                    machineCell = `<span class="machine-link-btn" onclick="window.switchView('machines'); window.openEditStammdaten(${m.id});" style="color: #34d399; font-weight: 700; cursor: pointer; text-decoration: underline; transition: color 0.2s;" onmouseover="this.style.color='#10b981'" onmouseout="this.style.color='#34d399'">
-                        ${m.manufacturer} ${m.name} (#${m.serial || '?'})
-                    </span>`;
-                }
-                
-                // Format Date
-                let dateStr = '-';
-                if (p.process_date) {
-                    const d = new Date(p.process_date);
-                    dateStr = d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-                }
-                
-                // Format title / details
-                const cleanTitle = p.title || 'Unbenannter Vorgang';
-                let senderRecText = '';
-                if (p.sender) senderRecText += `Von: ${p.sender}`;
-                if (p.recipient) senderRecText += (senderRecText ? ' | ' : '') + `An: ${p.recipient}`;
-                
-                html += `
-                    <tr class="task-list-row-premium" style="background: rgba(255,255,255,0.02); transition: all 0.2s ease;">
-                        <td style="padding: 18px 16px; border-top-left-radius: 12px; border-bottom-left-radius: 12px; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); border-left: 1px solid rgba(255,255,255,0.05); text-align: center; vertical-align: middle;">
-                            ${typeHtml}
-                        </td>
-                        <td style="padding: 18px 16px; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: middle;">
-                            <div style="font-weight: 700; color: #fff; font-size: 1.05rem;">${cleanTitle}</div>
-                            ${senderRecText ? `<div style="font-size: 0.8rem; color: rgba(255,255,255,0.4); margin-top: 4px;">${senderRecText}</div>` : ''}
-                        </td>
-                        <td style="padding: 18px 16px; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: middle;">
-                            ${machineCell}
-                        </td>
-                        <td style="padding: 18px 16px; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); color: rgba(255,255,255,0.6); font-size: 0.9rem; vertical-align: middle;">
-                            ${dateStr}
-                        </td>
-                        <td style="padding: 18px 16px; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; vertical-align: middle;">
-                            ${statusBadge}
-                        </td>
-                        <td style="padding: 18px 16px; border-top-right-radius: 12px; border-bottom-right-radius: 12px; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); border-right: 1px solid rgba(255,255,255,0.05); text-align: right; vertical-align: middle;">
-                            <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                                <button onclick="window.openEditProcessModal('${p.id}')" class="btn-icon-soft" title="Bearbeiten" style="background: rgba(255,255,255,0.05); color: #60a5fa; border: 1px solid rgba(255,255,255,0.1); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"></path></svg>
-                                </button>
-                                <button onclick="window.deleteProcess('${p.id}')" class="btn-icon-soft" title="Löschen" style="background: rgba(255,255,255,0.05); color: #ef4444; border: 1px solid rgba(255,255,255,0.1); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
-            
-            tableBody.innerHTML = html;
-        };
-
-        window.saveImportedEmail = async function(event) {
-            if (event) event.preventDefault();
-            if (!supabaseClient) return;
-            
-            try {
-                const title = document.getElementById('email-title-input').value;
-                const type = document.getElementById('email-type-select').value;
-                const date = document.getElementById('email-date-input').value;
-                const sender = document.getElementById('email-sender-input').value;
-                const recipient = document.getElementById('email-recipient-input').value;
-                const machineId = document.getElementById('email-machine-select').value;
-                const status = document.getElementById('email-status-select').value;
-                const description = document.getElementById('email-body-input').value;
-                
-                const processDate = date ? new Date(date).toISOString() : new Date().toISOString();
-                
-                const { error } = await supabaseClient
-                    .from('internal_processes')
-                    .insert([{
-                        title: title,
-                        process_type: type,
-                        process_date: processDate,
-                        sender: sender || null,
-                        recipient: recipient || null,
-                        machine_id: machineId ? parseInt(machineId) : null,
-                        status: status,
-                        description: description || null,
-                        user_id: window.currentUser?.id
-                    }]);
-                    
-                if (error) throw error;
-                
-                window.closeEmailImportModal();
-                window.fetchProcesses();
-            } catch (err) {
-                console.error("Error saving imported email:", err);
-                alert("Fehler beim Speichern: " + err.message);
-            }
-        };
-
-        window.updateProcess = async function(event) {
-            if (event) event.preventDefault();
-            if (!supabaseClient) return;
-            
-            try {
-                const id = document.getElementById('edit-process-id').value;
-                const title = document.getElementById('edit-process-title-input').value;
-                const type = document.getElementById('edit-process-type-select').value;
-                const date = document.getElementById('edit-process-date-input').value;
-                const sender = document.getElementById('edit-process-sender-input').value;
-                const recipient = document.getElementById('edit-process-recipient-input').value;
-                const machineId = document.getElementById('edit-process-machine-select').value;
-                const status = document.getElementById('edit-process-status-select').value;
-                const description = document.getElementById('edit-process-body-input').value;
-                
-                const processDate = date ? new Date(date).toISOString() : new Date().toISOString();
-                
-                const { error } = await supabaseClient
-                    .from('internal_processes')
-                    .update({
-                        title: title,
-                        process_type: type,
-                        process_date: processDate,
-                        sender: sender || null,
-                        recipient: recipient || null,
-                        machine_id: machineId ? parseInt(machineId) : null,
-                        status: status,
-                        description: description || null
-                    })
-                    .eq('id', id);
-                    
-                if (error) throw error;
-                
-                window.closeEditProcessModal();
-                window.fetchProcesses();
-            } catch (err) {
-                console.error("Error updating process:", err);
-                alert("Fehler beim Aktualisieren: " + err.message);
-            }
-        };
-
-        window.deleteProcess = async function(id) {
-            if (!confirm("Diesen Vorgang wirklich unwiderruflich löschen?")) return;
-            if (!supabaseClient) return;
-            
-            try {
-                const { error } = await supabaseClient
-                    .from('internal_processes')
-                    .delete()
-                    .eq('id', id);
-                    
-                if (error) throw error;
-                
-                window.fetchProcesses();
-            } catch (err) {
-                console.error("Error deleting process:", err);
-                alert("Fehler beim Löschen: " + err.message);
-            }
-        };
-
         async function fetchServiceEntries() {
             if (!supabaseClient) return;
 
             const list = document.getElementById('service-entries-list');
             if (list) list.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: white;">Lade Serviceeinsätze...</div>';
 
-                          const { data, error } = await supabaseClient
-                  .from('service_entries')
-                  .select('id, machine_id, category_id, category_ids, title, date, datum_von, datum_bis, hours, technicians')
-                  .order('date', { ascending: false });
+            const { data, error } = await supabaseClient
+                .from('service_entries')
+                .select('*')
+                .order('date', { ascending: false });
 
             if (error) {
                 console.error('Error fetching service entries:', error);
@@ -9219,29 +7765,12 @@
             renderServiceEntries();
         }
 
-                window.openEditServicebericht = async function (id) {
-            const entryHeader = allServiceEntries.find(e => e.id === id);
-            if (!entryHeader) return;
+        window.openEditServicebericht = function (id) {
+            // Find entry (if not passed directly, though openEditServicebericht is usually called with ID)
+            const entry = allServiceEntries.find(e => e.id === id);
+            if (!entry) return;
 
-            try {
-                // Show temporary cursor loader
-                document.body.style.cursor = 'wait';
-                const { data, error } = await supabaseClient
-                    .from('service_entries')
-                    .select('*')
-                    .eq('id', id)
-                    .single();
-                document.body.style.cursor = 'default';
-
-                if (error) throw error;
-                if (data) {
-                    openServiceberichtModal(data);
-                }
-            } catch (err) {
-                document.body.style.cursor = 'default';
-                console.error('Failed to load service entry details:', err);
-                alert('Verbindungsfehler: Details des Berichts konnten nicht geladen werden.');
-            }
+            openServiceberichtModal(entry); // Prepare modal
         };
 
         // Existing function needs update to handle files
@@ -9265,14 +7794,8 @@
                     const form = document.getElementById('servicebericht-form');
                     if (form) form.reset();
 
-                                        const selectedMachineId = document.getElementById('selected-machine-id');
+                    const selectedMachineId = document.getElementById('selected-machine-id');
                     if (selectedMachineId) selectedMachineId.value = '';
-
-                    const custPreview = document.getElementById('selected-machine-customer-preview');
-                    if (custPreview) {
-                        custPreview.classList.add('hidden');
-                        custPreview.style.display = 'none';
-                    }
 
                     if (previewArea) {
                         previewArea.classList.add('hidden');
@@ -9444,8 +7967,7 @@
                     list.innerHTML = entries.map(e => {
                         const machines = window.machineList || [];
                         const machine = machines.find(m => m.id === e.machine_id);
-                        const machineImgFull = machine ? (machine.image_url || '') : '';
-                        const machineImg = machineImgFull && window.getMachineThumbnailUrl ? window.getMachineThumbnailUrl(machineImgFull) : machineImgFull;
+                        const machineImg = machine ? (machine.image_url || '') : '';
                         const dateObj = new Date(e.date);
                         const dateStr = dateObj.toLocaleDateString('de-DE');
 
@@ -9549,12 +8071,12 @@
 
                                     <!-- Full-Width Machine Image -->
                                     <div style="position: relative; width: 100%; height: var(--machine-image-height, 300px); overflow: hidden; background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));">
-                                        <div onclick="openPhotosLightbox([${machineImgFull ? `'${machineImgFull}'` : ''}], 0)"
+                                        <div onclick="openPhotosLightbox([${machineImg ? `'${machineImg}'` : ''}], 0)"
                                              style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; cursor: ${machineImg ? 'pointer' : 'default'};"
                                              onmouseover="${machineImg ? "this.style.opacity='0.9'" : ''}"
                                              onmouseout="${machineImg ? "this.style.opacity='1'" : ''}">
                                             ${machineImg
-                                ? `<img src="${machineImg}" loading="lazy" onerror="if(this.src!=='${machineImgFull}'){this.onerror=null;this.src='${machineImgFull}';}" style="width: 100%; height: 100%; object-fit: contain; display: block;">`
+                                ? `<img src="${machineImg}" loading="lazy" style="width: 100%; height: 100%; object-fit: contain; display: block;">`
                                 : `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity: 0.15;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>`
                             }
                                         </div>
@@ -10223,7 +8745,6 @@
                     </div>
                 </div>
 
-                <!-- Section 2: Wartung -->
                 <div class="collapsible-section" style="margin-top: 2rem;">
                     <div class="section-header" onclick="toggleAddMachineSection(this)"
                         style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 12px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 1rem; transition: all 0.2s;"
@@ -10231,8 +8752,10 @@
                         onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <h3 class="section-title"
-                                style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">2. Wartung</h3>
-                            <span style="font-size: 0.75rem; opacity: 0.4; font-weight: 500;">(Klicken zum Ausklappen)</span>
+                                style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">2.
+                                Wartung</h3>
+                            <span style="font-size: 0.75rem; opacity: 0.4; font-weight: 500;">(Klicken zum
+                                Ausklappen)</span>
                         </div>
                         <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
@@ -10258,7 +8781,6 @@
                     </div>
                 </div>
 
-                <!-- Section 3: Standort & Besitzer -->
                 <div class="collapsible-section" style="margin-top: 2rem;">
                     <div class="section-header" onclick="toggleAddMachineSection(this)"
                         style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 12px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 1rem; transition: all 0.2s;"
@@ -10266,8 +8788,10 @@
                         onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <h3 class="section-title"
-                                style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">3. Standort &amp; Besitzer</h3>
-                            <span style="font-size: 0.75rem; opacity: 0.4; font-weight: 500;">(Klicken zum Ausklappen)</span>
+                                style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">3.
+                                Standort & Besitzer</h3>
+                            <span style="font-size: 0.75rem; opacity: 0.4; font-weight: 500;">(Klicken zum
+                                Ausklappen)</span>
                         </div>
                         <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
@@ -10275,110 +8799,35 @@
                             <polyline points="6 9 12 15 18 9"></polyline>
                         </svg>
                     </div>
+
                     <div class="section-content" style="display: none; transition: all 0.3s ease;">
-                        <!-- Hidden fields -->
-                        <input type="hidden" id="machine-customer-id">
-                        <input type="hidden" id="machine-address-input">
-                        <input type="hidden" id="machine-location-input">
-
-                        <!-- Bei Meetra in der Werkstatt Checkbox -->
-                        <div class="form-group" style="margin-bottom: 1.5rem; display: flex; align-items: center;">
-                            <label for="machine-in-workshop" style="display: flex; align-items: center; gap: 12px; cursor: pointer; color: #fff; font-weight: 600; font-size: 1rem; user-select: none;">
-                                <input type="checkbox" id="machine-in-workshop" onchange="toggleMachineWorkshopUI(this.checked)">
-                                Bei Meetra in der Werkstatt
-                            </label>
+                        <div class="form-group">
+                            <label>Firma / Besitzer / Verantwortliche</label>
+                            <input type="text" id="machine-owner" placeholder="Name des Besitzers">
                         </div>
 
-                        <!-- Meetra Address Display (Visible when checked) -->
-                        <div id="machine-meetra-address-display" class="hidden" style="
-                            display: none;
-                            padding: 1.5rem;
-                            background: rgba(255, 255, 255, 0.03);
-                            border: 1px solid rgba(255, 255, 255, 0.1);
-                            border-radius: 12px;
-                            margin-bottom: 1.5rem;
-                            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-                        ">
-                            <h4 style="color: #10b981; margin: 0 0 0.5rem 0; font-size: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Werkstatt-Standort (Meetra HQ)</h4>
-                            <div id="machine-meetra-address-text" style="color: rgba(255,255,255,0.85); font-size: 0.95rem; line-height: 1.5; font-family: 'Inter', sans-serif;">
-                                Lade Adresse...
+                        <div class="form-group">
+                            <label>Betreiberstandort (Karte öffnen)</label>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="machine-address-input" placeholder="Straße, PLZ, Stadt, Land"
+                                    style="flex:1;"
+                                    oninput="debounceSearchAddress('machine-address-input', 'address-suggestions')">
+                                <button type="button" class="btn-secondary"
+                                    onclick="openGoogleMaps('machine-address-input')">Karte öffnen</button>
                             </div>
+                            <div id="address-suggestions" class="suggestions-box" style="display:none;"></div>
                         </div>
 
-                        <div id="machine-customer-search-group">
-                            <!-- Intelligent Customer Search -->
-                            <div class="form-group" style="position: relative; margin-bottom: 1.5rem;">
-                                <label>Kunde suchen (Sage 100 / Matchcode / Name)</label>
-                                <div style="display: flex; gap: 10px;">
-                                    <input type="text" id="machine-customer-search" class="glass-input" style="border: 2px solid #ffffff !important; box-shadow: 0 0 10px rgba(255,255,255,0.15);" placeholder="z.B. Müller, 10034..." oninput="searchCustomersForMachine()">
-                                    <button type="button" class="btn-secondary" onclick="clearSelectedCustomerForMachine()" id="btn-clear-customer" style="display: none;">Entfernen</button>
-                                </div>
-                                <div id="machine-customer-suggestions" class="suggestions-box" style="display:none; position: absolute; width: 100%; z-index: 100; max-height: 200px; overflow-y: auto;"></div>
+                        <div class="form-group">
+                            <label>Maschinenstandort (Karte öffnen)</label>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="machine-location-input" placeholder="Straße, PLZ, Stadt, Land"
+                                    style="flex:1;"
+                                    oninput="debounceSearchAddress('machine-location-input', 'location-suggestions')">
+                                <button type="button" class="btn-secondary"
+                                    onclick="openGoogleMaps('machine-location-input')">Karte öffnen</button>
                             </div>
-                        </div>
-
-                        <div id="machine-operator-address-group">
-                            <!-- Split Betreiber Fields -->
-                            <h4 style="color: #fff; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;">Betreiber / Rechnungsadresse</h4>
-                            
-                            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 1rem;">
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <label>Kundennummer</label>
-                                    <input type="text" id="machine-customer-number" placeholder="z.B. 10423">
-                                </div>
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <label>Firma / Name *</label>
-                                    <input type="text" id="machine-owner" placeholder="Name des Besitzers">
-                                </div>
-                            </div>
-
-                            <div class="form-group" style="margin-bottom: 1rem;">
-                                <label>Straße &amp; Hausnummer</label>
-                                <input type="text" id="machine-operator-street" placeholder="Musterstraße 1" oninput="updateCombinedAddresses()">
-                            </div>
-
-                            <div style="display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <label>PLZ</label>
-                                    <input type="text" id="machine-operator-zip" placeholder="12345" oninput="updateCombinedAddresses()">
-                                </div>
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <label>Ort</label>
-                                    <input type="text" id="machine-operator-city" placeholder="Musterstadt" oninput="updateCombinedAddresses()">
-                                </div>
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <label>Land</label>
-                                    <input type="text" id="machine-operator-country" value="Deutschland" oninput="updateCombinedAddresses()">
-                                </div>
-                            </div>
-                        </div>
-
-                        <div id="machine-location-address-group">
-                            <!-- Split Standort Fields -->
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;">
-                                <h4 style="color: #fff; margin: 0; font-size: 1rem;">Maschinenstandort</h4>
-                                <button type="button" class="btn-secondary" onclick="copyOperatorAddressToLocation()" style="padding: 4px 10px; font-size: 0.8rem; font-weight: 700; border-radius: 8px;">Adresse von Betreiber kopieren</button>
-                            </div>
-
-                            <div class="form-group" style="margin-bottom: 1rem;">
-                                <label>Straße &amp; Hausnummer</label>
-                                <input type="text" id="machine-location-street" placeholder="Musterstraße 1" oninput="updateCombinedAddresses()">
-                            </div>
-
-                            <div style="display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 1rem; margin-bottom: 1rem;">
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <label>PLZ</label>
-                                    <input type="text" id="machine-location-zip" placeholder="12345" oninput="updateCombinedAddresses()">
-                                </div>
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <label>Ort</label>
-                                    <input type="text" id="machine-location-city" placeholder="Musterstadt" oninput="updateCombinedAddresses()">
-                                </div>
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <label>Land</label>
-                                    <input type="text" id="machine-location-country" value="Deutschland" oninput="updateCombinedAddresses()">
-                                </div>
-                            </div>
+                            <div id="location-suggestions" class="suggestions-box" style="display:none;"></div>
                         </div>
                     </div>
                 </div>
@@ -10526,8 +8975,8 @@
     </main>
     </div><!-- End main-wrapper -->
 
-    <script src="tasks.js?v=2"></script>
-    <script src="task_templates.js?v=2"></script>
+    <script src="tasks.js"></script>
+    <script src="task_templates.js"></script>
     <script>
         window.addEventListener('load', () => {
             if (typeof window.initTaskTemplates === 'function') {
@@ -11268,22 +9717,26 @@
             try {
                 let uploadedUrls = [];
 
-                // Upload photos via Cloudflare R2
-                const wsMachine = (window.machineList || []).find(m => m.id == machineId);
-                const wsFolderName = wsMachine ? window.getMachineFolderName(wsMachine.id, wsMachine.manufacturer, wsMachine.name, wsMachine.serial || wsMachine.serial_number, wsMachine.year) : `Maschinen/${machineId}`;
+                // Upload photos
                 for (let i = 0; i < window.workshopPhotosToUpload.length; i++) {
                     const file = window.workshopPhotosToUpload[i];
                     const ext = file.name.split('.').pop();
-                    const filePath = `${wsFolderName}/Werkstatt/${Date.now()}-${i}.${ext}`;
+                    const path = `manual-history/${machineId}/workshop-${Date.now()}-${i}.${ext}`;
 
-                    const result = await window.FileUploadService.uploadFile(file, {
-                        bucket: 'dateien',
-                        path: filePath,
-                        compress: true,
-                        provider: 'cloudflare-r2'
-                    });
+                    const { error: uploadError } = await window.supabaseClient.storage
+                        .from('machine-images')
+                        .upload(path, file);
 
-                    uploadedUrls.push(result.url);
+                    if (uploadError) {
+                        console.error('Upload Error:', uploadError);
+                        throw uploadError;
+                    }
+
+                    const { data: { publicUrl } } = window.supabaseClient.storage
+                        .from('machine-images')
+                        .getPublicUrl(path);
+
+                    uploadedUrls.push(publicUrl);
                 }
 
                 // Create manual entry
@@ -11363,22 +9816,23 @@
                 listContainer.style.opacity = '0.5';
                 listContainer.style.pointerEvents = 'none';
 
-                // Upload new photos via Cloudflare R2
-                const appMachine = (window.machineList || []).find(m => m.id == machineId);
-                const appFolderName = appMachine ? window.getMachineFolderName(appMachine.id, appMachine.manufacturer, appMachine.name, appMachine.serial || appMachine.serial_number, appMachine.year) : `Maschinen/${machineId}`;
+                // Upload new photos
                 for (let i = 0; i < files.length; i++) {
                     const file = files[i];
                     const ext = file.name.split('.').pop();
-                    const filePath = `${appFolderName}/Werkstatt/${Date.now()}-append-${i}.${ext}`;
+                    const path = `manual-history/${machineId}/workshop-append-${Date.now()}-${i}.${ext}`;
 
-                    const result = await window.FileUploadService.uploadFile(file, {
-                        bucket: 'dateien',
-                        path: filePath,
-                        compress: true,
-                        provider: 'cloudflare-r2'
-                    });
+                    const { error: uploadError } = await window.supabaseClient.storage
+                        .from('machine-images')
+                        .upload(path, file);
 
-                    newUploadedUrls.push(result.url);
+                    if (uploadError) throw uploadError;
+
+                    const { data: { publicUrl } } = window.supabaseClient.storage
+                        .from('machine-images')
+                        .getPublicUrl(path);
+
+                    newUploadedUrls.push(publicUrl);
                 }
 
                 const updatedFilesList = [...existingFiles, ...newUploadedUrls];
@@ -11526,6 +9980,14 @@
         });
     </script>
 
+    <!-- PDF.js for Accounting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+        if (window['pdfjs-dist/build/pdf']) {
+            window.pdfjsLib = window['pdfjs-dist/build/pdf'];
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        }
+    </script>
 
     <!-- Image Compression & Upload Service -->
     <script
@@ -11673,7 +10135,7 @@
                 <div style="display: flex; gap: 15px; justify-content: flex-end;">
                     <button type="button" class="btn-secondary"
                         onclick="window.closeDocumentUploadModal()">Abbrechen</button>
-                    <button type="submit" id="btn-save-doc" class="btn-primary btn-red-animated"
+                    <button type="submit" id="btn-save-doc" class="btn-primary"
                         style="padding: 12px 24px;">Speichern</button>
                 </div>
             </form>
@@ -11727,8 +10189,10 @@
 
 
                 <div style="display: flex; gap: 12px; justify-content: flex-end;">
-                    <button type="button" class="btn-secondary" onclick="window.closeFolderModal()">Abbrechen</button>
-                    <button type="submit" class="btn-primary btn-red-animated" id="save-folder-btn">Erstellen</button>
+                    <button type="button" class="btn-secondary" onclick="window.closeFolderModal()"
+                        style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 0.8rem 1.5rem; border-radius: 12px; cursor: pointer;">Abbrechen</button>
+                    <button type="submit" class="btn-primary" id="save-folder-btn"
+                        style="background: var(--accent-color); border: none; color: black; font-weight: 600; padding: 0.8rem 2rem; border-radius: 12px; cursor: pointer;">Erstellen</button>
                 </div>
             </form>
         </div>
@@ -11739,7 +10203,6 @@
     <script src="file-upload-service-r2.js"></script>
     <script src="accounting.js?v=41"></script>
     <script src="documents-r2.js?v=5"></script>
-    <script src="customers.js"></script>
     <!-- Renaming Modal -->
     <div id="document-rename-modal" class="modal-backdrop hidden"
         style="z-index: 1300; align-items: center; justify-content: center;">
@@ -11760,7 +10223,7 @@
                     <button type="button" class="btn-secondary" onclick="window.closeRenameModal()"
                         style="flex: 1;">Abbrechen</button>
                     <button type="submit" class="btn-primary" id="btn-save-rename"
-                        style="flex: 1;">Speichern</button>
+                        style="flex: 1; background: var(--accent-color); border-color: var(--accent-color);">Speichern</button>
                 </div>
             </form>
         </div>
@@ -11825,164 +10288,7 @@
                 
                 <div style="display: flex; gap: 15px;">
                     <button type="button" class="btn-secondary" onclick="window.closeCreateEventModal()" style="flex: 1; height: 55px; font-weight: 700;">Abbrechen</button>
-                    <button type="submit" class="btn-primary btn-red-animated" style="flex: 1; height: 55px; font-weight: 800;">EREIGNIS SPEICHERN</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- EMAIL IMPORT MODAL -->
-    <div id="email-import-modal" class="modal-new hidden" style="z-index: 10000; display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);">
-        <div class="modal-content glass-card" style="max-width: 750px; width: 90%; max-height: 90vh; overflow-y: auto !important; padding: 2.5rem; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-                <h2 style="margin: 0; color: #fff; font-size: 1.8rem; font-weight: 800;">E-Mail / Vorgang importieren</h2>
-                <button class="btn-close" onclick="window.closeEmailImportModal()" style="background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer;">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </div>
-            
-            <div class="form-group" style="margin-bottom: 1.5rem;">
-                <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">E-Mail hier einfügen (Strg + V)</label>
-                <textarea id="email-paste-area" class="glass-input" style="height: 120px; resize: none; padding-top: 15px; border-color: rgba(52, 211, 153, 0.4);" placeholder="Kopieren Sie den gesamten Inhalt der E-Mail aus Outlook (Strg+A, Strg+C) und fügen Sie ihn hier ein..."></textarea>
-            </div>
-
-            <form id="email-import-form" onsubmit="window.saveImportedEmail(event)">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 1.5rem;">
-                    <div class="form-group">
-                        <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Vorgangs-Typ</label>
-                        <select id="email-type-select" class="glass-input" style="appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 15px center;">
-                            <option value="email_incoming">E-Mail Eingang</option>
-                            <option value="email_outgoing">E-Mail Ausgang</option>
-                            <option value="note">Interne Notiz</option>
-                            <option value="manual">Manuell</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Datum / Uhrzeit</label>
-                        <input type="datetime-local" id="email-date-input" class="glass-input" required>
-                    </div>
-                </div>
-
-                <div class="form-group" style="margin-bottom: 1.5rem;">
-                    <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Betreff / Titel</label>
-                    <input type="text" id="email-title-input" class="glass-input" required placeholder="Betreff der E-Mail...">
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 1.5rem;">
-                    <div class="form-group" style="position: relative;">
-                        <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Absender (Von)</label>
-                        <input type="text" id="email-sender-input" class="glass-input" placeholder="Name oder E-Mail...">
-                        <div id="email-sender-suggestions" class="autocomplete-suggestions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 9999; background: rgba(15,23,42,0.98); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; max-height: 200px; overflow-y: auto; margin-top: 4px; box-shadow: 0 12px 40px rgba(0,0,0,0.6);"></div>
-                    </div>
-                    <div class="form-group" style="position: relative;">
-                        <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Empfänger (An)</label>
-                        <input type="text" id="email-recipient-input" class="glass-input" placeholder="Name oder E-Mail...">
-                        <div id="email-recipient-suggestions" class="autocomplete-suggestions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 9999; background: rgba(15,23,42,0.98); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; max-height: 200px; overflow-y: auto; margin-top: 4px; box-shadow: 0 12px 40px rgba(0,0,0,0.6);"></div>
-                    </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 15px; margin-bottom: 1.5rem;">
-                    <div class="form-group">
-                        <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Verknüpfte Maschine</label>
-                        <select id="email-machine-select" class="glass-input" style="appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 15px center;">
-                            <option value="">Keine Maschine zugeordnet</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Vorgangs-Status</label>
-                        <select id="email-status-select" class="glass-input" style="appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 15px center;">
-                            <option value="offen">Offen</option>
-                            <option value="in_bearbeitung">In Bearbeitung</option>
-                            <option value="erledigt">Erledigt</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-group" style="margin-bottom: 2rem;">
-                    <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Inhalt / Nachrichtentext</label>
-                    <textarea id="email-body-input" class="glass-input" style="height: 180px; resize: vertical; padding-top: 15px;" placeholder="Textinhalt der E-Mail..."></textarea>
-                </div>
-                
-                <div style="display: flex; gap: 15px;">
-                    <button type="button" class="btn-secondary" onclick="window.closeEmailImportModal()" style="flex: 1; height: 55px; font-weight: 700;">Abbrechen</button>
-                    <button type="submit" class="btn-primary btn-red-animated" style="flex: 1; height: 55px; font-weight: 800;">VORGANG SPEICHERN</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- PROCESS EDIT MODAL -->
-    <div id="process-edit-modal" class="modal-new hidden" style="z-index: 10000; display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);">
-        <div class="modal-content glass-card" style="max-width: 750px; width: 90%; max-height: 90vh; overflow-y: auto !important; padding: 2.5rem; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-                <h2 style="margin: 0; color: #fff; font-size: 1.8rem; font-weight: 800;">Vorgang bearbeiten</h2>
-                <button class="btn-close" onclick="window.closeEditProcessModal()" style="background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer;">
-                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </div>
-            
-            <form id="process-edit-form" onsubmit="window.updateProcess(event)">
-                <input type="hidden" id="edit-process-id">
-                
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 1.5rem;">
-                    <div class="form-group">
-                        <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Vorgangs-Typ</label>
-                        <select id="edit-process-type-select" class="glass-input" style="appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 15px center;">
-                            <option value="email_incoming">E-Mail Eingang</option>
-                            <option value="email_outgoing">E-Mail Ausgang</option>
-                            <option value="note">Interne Notiz</option>
-                            <option value="manual">Manuell</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Datum / Uhrzeit</label>
-                        <input type="datetime-local" id="edit-process-date-input" class="glass-input" required>
-                    </div>
-                </div>
-
-                <div class="form-group" style="margin-bottom: 1.5rem;">
-                    <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Betreff / Titel</label>
-                    <input type="text" id="edit-process-title-input" class="glass-input" required placeholder="Betreff der E-Mail...">
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 1.5rem;">
-                    <div class="form-group" style="position: relative;">
-                        <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Absender (Von)</label>
-                        <input type="text" id="edit-process-sender-input" class="glass-input" placeholder="Name oder E-Mail...">
-                        <div id="edit-process-sender-suggestions" class="autocomplete-suggestions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 9999; background: rgba(15,23,42,0.98); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; max-height: 200px; overflow-y: auto; margin-top: 4px; box-shadow: 0 12px 40px rgba(0,0,0,0.6);"></div>
-                    </div>
-                    <div class="form-group" style="position: relative;">
-                        <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Empfänger (An)</label>
-                        <input type="text" id="edit-process-recipient-input" class="glass-input" placeholder="Name oder E-Mail...">
-                        <div id="edit-process-recipient-suggestions" class="autocomplete-suggestions" style="display: none; position: absolute; top: 100%; left: 0; right: 0; z-index: 9999; background: rgba(15,23,42,0.98); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; max-height: 200px; overflow-y: auto; margin-top: 4px; box-shadow: 0 12px 40px rgba(0,0,0,0.6);"></div>
-                    </div>
-                </div>
-
-                <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 15px; margin-bottom: 1.5rem;">
-                    <div class="form-group">
-                        <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Verknüpfte Maschine</label>
-                        <select id="edit-process-machine-select" class="glass-input" style="appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 15px center;">
-                            <option value="">Keine Maschine zugeordnet</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Vorgangs-Status</label>
-                        <select id="edit-process-status-select" class="glass-input" style="appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 15px center;">
-                            <option value="offen">Offen</option>
-                            <option value="in_bearbeitung">In Bearbeitung</option>
-                            <option value="erledigt">Erledigt</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-group" style="margin-bottom: 2rem;">
-                    <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Inhalt / Nachrichtentext</label>
-                    <textarea id="edit-process-body-input" class="glass-input" style="height: 180px; resize: vertical; padding-top: 15px;" placeholder="Textinhalt der E-Mail..."></textarea>
-                </div>
-                
-                <div style="display: flex; gap: 15px;">
-                    <button type="button" class="btn-secondary" onclick="window.closeEditProcessModal()" style="flex: 1; height: 55px; font-weight: 700;">Abbrechen</button>
-                    <button type="submit" class="btn-primary btn-red-animated" style="flex: 1; height: 55px; font-weight: 800;">ÄNDERUNGEN SPEICHERN</button>
+                    <button type="submit" class="btn-primary btn-red-animated" style="flex: 1; height: 55px; font-weight: 800; background: #34d399; border-color: #34d399;">EREIGNIS SPEICHERN</button>
                 </div>
             </form>
         </div>
@@ -12020,57 +10326,11 @@
                     </div>
                 </button>
 
-                <button class="action-select-btn" onclick="window.applySubtaskAction('document')">
-                    <div class="icon-container" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
-                    </div>
-                    <div style="text-align: left;">
-                        <div style="font-weight: 700; color: #fff;">Dokument öffnen</div>
-                        <div style="font-size: 0.8rem; opacity: 0.5;">Bedienungsanleitung / Zeichnung anzeigen</div>
-                    </div>
-                </button>
-
                 <div style="height: 1px; background: rgba(255,255,255,0.05); margin: 10px 0;"></div>
 
                 <button class="action-select-btn" onclick="window.applySubtaskAction(null)" style="border-style: dashed; opacity: 0.6;">
                     <div style="font-weight: 600;">Keine Aktion</div>
                 </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- DOCUMENT PICKER MODAL -->
-    <div id="document-picker-modal" class="modal-new hidden" style="z-index: 10005; display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);">
-        <div class="modal-content glass-card" style="max-width: 750px; width: 95%; max-height: 85vh; padding: 0; overflow: hidden; position: relative; display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
-            <!-- Modal Header -->
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 2rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                <div>
-                    <h2 style="margin: 0; color: #fff; font-size: 1.5rem; font-weight: 800;">Dokument auswählen</h2>
-                    <p style="color: rgba(255,255,255,0.5); margin: 5px 0 0 0; font-size: 0.85rem;">Wähle ein Dokument aus, das mit dieser Unteraufgabe verknüpft werden soll.</p>
-                </div>
-                <button class="btn-close" onclick="window.closeDocumentPicker()" style="background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-            </div>
-
-            <!-- Search and Breadcrumbs bar -->
-            <div style="padding: 1rem 2rem; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 12px;">
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="text" id="picker-search-input" class="glass-input" placeholder="Dokument suchen..." style="flex: 1; height: 45px; font-size: 0.95rem;" oninput="window.filterPickerContent()">
-                </div>
-                <div id="picker-breadcrumbs" style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: rgba(255,255,255,0.5); flex-wrap: wrap;">
-                    <!-- Breadcrumbs rendered dynamically -->
-                </div>
-            </div>
-
-            <!-- Scrollable Body (Grid) -->
-            <div id="picker-content-area" style="flex: 1; overflow-y: auto; padding: 2rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 20px; align-content: start;">
-                <!-- Folders and Documents rendered dynamically -->
-            </div>
-
-            <!-- Modal Footer -->
-            <div style="display: flex; justify-content: flex-end; gap: 15px; border-top: 1px solid rgba(255,255,255,0.05); padding: 1.2rem 2rem; background: rgba(255,255,255,0.02);">
-                <button class="btn-secondary" style="height: 40px; padding: 0 20px;" onclick="window.closeDocumentPicker()">Abbrechen</button>
             </div>
         </div>
     </div>

@@ -107,6 +107,26 @@
 
             if (error) throw error;
             allTasks = data || [];
+
+            // Fetch protocol metadata for machines in current tasks
+            const machineIds = [...new Set(allTasks.map(t => t.machine_id).filter(Boolean))];
+            if (machineIds.length > 0) {
+                const { data: intakeData } = await window.supabaseClient
+                    .from('intake_protocols')
+                    .select('id, machine_id, status')
+                    .in('machine_id', machineIds);
+                
+                const { data: acceptanceData } = await window.supabaseClient
+                    .from('acceptance_protocols')
+                    .select('id, machine_id, status')
+                    .in('machine_id', machineIds);
+                
+                window.machineProtocols = {
+                    intake: intakeData || [],
+                    acceptance: acceptanceData || []
+                };
+            }
+
             renderTasks();
         } catch (err) {
             console.error('Error fetching tasks:', err);
@@ -291,6 +311,12 @@
                     <td data-label="Fortschritt">${renderProgress(task)}</td>
                     <td data-label="Aktionen" onclick="event.stopPropagation()">
                         <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
+                            <button id="star-${task.id}" onclick="event.stopPropagation(); window.saveTaskAsQuickTemplate('${task.id}')" title="Als Schnellvorlage speichern"
+                                class="btn-star-premium btn-premium-action" style="width: 36px; height: 36px;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                </svg>
+                            </button>
                             <button onclick="event.stopPropagation(); window.openTaskModal('${task.id}')" title="Bearbeiten"
                                 style="width:36px; height:36px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
                                 onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
@@ -355,21 +381,76 @@
                             </div>
                             <div style="display:flex; flex-direction:column; gap:4px;">
                                 <span style="font-size: 1.1rem; font-weight: 700;">${task.title}</span>
-                                ${task.subtasks && task.subtasks.length > 0 ? `
-                                <div class="task-list-subtasks" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
-                                    ${task.subtasks.map((sub, index) => `
-                                        <div class="subtask-item" style="display:flex; align-items:center; gap: 8px;">
-                                            <div class="task-quick-complete ${sub.status === 'completed' ? 'completed' : ''}" 
-                                                 onclick="event.stopPropagation(); window.toggleSubtaskStatus('${task.id}', ${index}, '${sub.status}')" 
-                                                 style="width: 18px; height: 18px; min-width: 18px;"
-                                                 title="${sub.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
-                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                            </div>
-                                            <span style="font-size: 0.9rem; color: rgba(255,255,255,0.8);">${sub.title}</span>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                                ` : ''}
+                                  ${(function() {
+                                     if (!task.subtasks || task.subtasks.length === 0) return '';
+                                     const grouped = {};
+                                     task.subtasks.forEach((sub, idx) => {
+                                         const sg = sub.supergroup || 'Allgemein';
+                                         if (!grouped[sg]) grouped[sg] = [];
+                                         grouped[sg].push({ ...sub, idx });
+                                     });
+                                     
+                                     let html = '<div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">';
+                                     for (const [groupName, subs] of Object.entries(grouped)) {
+                                         html += `<div>
+                                             <div style="font-size: 0.7rem; font-weight: 800; color: var(--color-primary-green); margin-bottom: 4px; text-transform: uppercase; opacity: 0.6;">${groupName}</div>`;
+                                         subs.forEach(sub => {
+                                             html += `
+                                             <div class="subtask-item" style="display:flex; align-items:center; gap: 8px; margin-bottom: 4px; justify-content: space-between;">
+                                                 <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                                                     <div class="task-quick-complete ${sub.status === 'completed' ? 'completed' : ''}" 
+                                                          onclick="event.stopPropagation(); window.toggleSubtaskStatus('${task.id}', ${sub.idx}, '${sub.status}')" 
+                                                          style="width: 16px; height: 16px; min-width: 16px;">
+                                                         <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                     </div>
+                                                     <input type="text" class="ghost-input" value="${sub.title}" 
+                                                        onblur="window.updateSubtaskTitle('${task.id}', ${sub.idx}, this.value)"
+                                                        onkeydown="if(event.key === 'Enter') this.blur()"
+                                                        onclick="event.stopPropagation()"
+                                                        style="color: rgba(255,255,255,${sub.status === 'completed' ? '0.4' : '0.8'}); ${sub.status === 'completed' ? 'text-decoration: line-through;' : ''}">
+                                                 </div>
+                                                 ${sub.action_type ? (() => {
+                                                      const isDoc = sub.action_type.startsWith('document:');
+                                                      let textLabel = '';
+                                                      let btnTitle = '';
+                                                      let badgeStyle = '';
+                                                      let btnStyle = '';
+                                                      let buttonIcon = '';
+                                                      if (isDoc) {
+                                                          const parts = sub.action_type.substring(9).split('|||');
+                                                          textLabel = parts[1] || 'Dokument';
+                                                          btnTitle = 'Dokument öffnen';
+                                                          badgeStyle = 'background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); color: #10b981;';
+                                                          btnStyle = 'background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981;';
+                                                          buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>';
+                                                      } else {
+                                                          textLabel = sub.action_type === 'intake' ? 'Eingang' : 'Abnahme';
+                                                          btnTitle = sub.action_type === 'intake' ? 'Eingangsprotokoll öffnen' : 'Abnahmeprotokoll öffnen';
+                                                          const isIntake = sub.action_type === 'intake';
+                                                          badgeStyle = isIntake ? 'background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); color: #f59e0b;';
+                                                          btnStyle = isIntake ? 'background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;';
+                                                          buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>';
+                                                      }
+                                                      return `
+                                                      <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                                                          <span style="${badgeStyle} border-radius: 4px; padding: 2px 6px; font-size: 0.65rem; font-weight: 800; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                                              ${textLabel}
+                                                          </span>
+                                                          <button onclick="event.stopPropagation(); window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')" 
+                                                              title="${btnTitle}"
+                                                              style="${btnStyle} border-radius: 6px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; flex-shrink: 0; transition: all 0.2s;">
+                                                              ${buttonIcon}
+                                                          </button>
+                                                      </div>
+                                                      `;
+                                                  })() : ''}
+                                             </div>`;
+                                         });
+                                         html += '</div>';
+                                     }
+                                     html += '</div>';
+                                     return html;
+                                 })()}
                             </div>
                         </td>
                         <td data-label="Maschine">
@@ -378,7 +459,11 @@
                         <td data-label="Beteiligte">${renderAvatars(task.assigned_to)}</td>
                         <td data-label="Fortschritt">${renderProgress(task)}</td>
                         <td data-label="Aktionen" onclick="event.stopPropagation()">
-                            <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
+                            <div style="display: flex; gap: 12px; align-items: center; justify-content: flex-end;">
+                                <!-- Protocol Button for List View -->
+                                <div style="min-width: 150px;">
+                                    ${getProtocolButtonForTask(task)}
+                                </div>
                                 <button onclick="event.stopPropagation(); window.openTaskModal('${task.id}')" title="Bearbeiten"
                                     style="width:36px; height:36px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
                                     onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
@@ -424,15 +509,21 @@
 
         div.innerHTML = `
             <div class="task-card-header">
-                <div style="display:flex; align-items:center; gap:8px;">
+                <div style="display:flex; align-items:center; gap:8px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; max-width:70%;">
                     <div class="task-quick-complete ${task.status === 'completed' ? 'completed' : ''}" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="${task.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     </div>
-                    ${task.machines ? `<span class="project-tag" style="color: var(--color-primary-green); font-size: 0.95rem; font-weight: 600; opacity: 1;">${getMachineLabel(task.machines)}</span>` : ''}
+                    ${task.machines ? `<span style="color: var(--color-primary-green); font-weight: 800; font-size: 1.05rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${getMachineLabel(task.machines)}">${getMachineLabel(task.machines)}</span>` : ''}
                 </div>
                 <div class="task-card-actions" style="display: flex; gap: 6px; align-items: center;">
+                    <button id="star-card-${task.id}" onclick="event.stopPropagation(); window.saveTaskAsQuickTemplate('${task.id}')" title="Als Schnellvorlage speichern"
+                        class="btn-star-premium btn-premium-action">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                        </svg>
+                    </button>
                     <button onclick="event.stopPropagation(); window.openTaskModal('${task.id}')" title="Bearbeiten" style="width:32px; height:32px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                     </button>
                     <button onclick="event.stopPropagation(); window.deleteTask('${task.id}')" title="Löschen" style="width:32px; height:32px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -442,21 +533,87 @@
             <div class="task-card-title">${task.title}</div>
             ${task.description ? `<div class="task-card-desc">${task.description.substring(0, 60)}${task.description.length > 60 ? '...' : ''}</div>` : ''}
             
-            ${task.subtasks && task.subtasks.length > 0 ? `
-            <div class="task-card-subtasks" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05);">
-                ${task.subtasks.map((sub, index) => `
-                    <div class="subtask-item" style="display:flex; align-items:center; margin-bottom: 6px; gap: 8px;">
-                        <div class="task-quick-complete ${sub.status === 'completed' ? 'completed' : ''}" 
-                             onclick="event.stopPropagation(); window.toggleSubtaskStatus('${task.id}', ${index}, '${sub.status}')" 
-                             style="width: 18px; height: 18px; min-width: 18px;"
-                             title="${sub.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
-                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                        </div>
-                        <span style="font-size: 0.8rem; line-height: 1.3; color: rgba(255,255,255,0.8);">${sub.title}</span>
-                    </div>
-                `).join('')}
+            ${(function() {
+                if (!task.subtasks || task.subtasks.length === 0) return '';
+                const grouped = {};
+                task.subtasks.forEach((sub, idx) => {
+                    const sg = sub.supergroup || 'Allgemein';
+                    if (!grouped[sg]) grouped[sg] = [];
+                    grouped[sg].push({ ...sub, idx });
+                });
+
+                let html = '<div class="task-card-subtasks" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 12px;">';
+                for (const [groupName, subs] of Object.entries(grouped)) {
+                    html += `
+                        <div class="subtask-group">
+                            <div style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: var(--color-primary-green); margin-bottom: 6px; letter-spacing: 0.05em; opacity: 0.8;">${groupName}</div>
+                            <div style="display: flex; flex-direction: column; gap: 6px;">`;
+                    
+                    subs.forEach(sub => {
+                        html += `
+                            <div class="subtask-item" style="display:flex; align-items:center; gap: 10px; justify-content: space-between;">
+                                <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                                    <div class="task-quick-complete ${sub.status === 'completed' ? 'completed' : ''}" 
+                                         onclick="event.stopPropagation(); window.toggleSubtaskStatus('${task.id}', ${sub.idx}, '${sub.status}')" 
+                                         style="width: 18px; height: 18px; min-width: 18px;"
+                                         title="${sub.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
+                                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    </div>
+                                    <input type="text" class="ghost-input" value="${sub.title}" 
+                                        onblur="window.updateSubtaskTitle('${task.id}', ${sub.idx}, this.value)"
+                                        onkeydown="if(event.key === 'Enter') this.blur()"
+                                        onclick="event.stopPropagation()"
+                                        style="color: rgba(255,255,255,${sub.status === 'completed' ? '0.4' : '0.9'}); ${sub.status === 'completed' ? 'text-decoration: line-through;' : ''}">
+                                </div>
+                                ${sub.action_type ? (() => {
+                                      const isDoc = sub.action_type.startsWith('document:');
+                                      let label = 'AKTION';
+                                      let title = '';
+                                      let textLabel = '';
+                                      let btnTitle = '';
+                                      let badgeStyle = '';
+                                      let btnStyle = '';
+                                      let buttonIcon = '';
+                                      if (isDoc) {
+                                          const parts = sub.action_type.substring(9).split('|||');
+                                          textLabel = parts[1] || 'Dokument';
+                                          btnTitle = 'Dokument öffnen';
+                                          badgeStyle = 'background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); color: #10b981;';
+                                          btnStyle = 'background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981;';
+                                          buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>';
+                                      } else {
+                                          textLabel = sub.action_type === 'intake' ? 'Eingang' : 'Abnahme';
+                                          btnTitle = sub.action_type === 'intake' ? 'Eingangsprotokoll öffnen' : 'Abnahmeprotokoll öffnen';
+                                          const isIntake = sub.action_type === 'intake';
+                                          badgeStyle = isIntake ? 'background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); color: #f59e0b;';
+                                          btnStyle = isIntake ? 'background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;';
+                                          buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>';
+                                      }
+                                      return `
+                                      <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                                          <span style="${badgeStyle} border-radius: 4px; padding: 2px 6px; font-size: 0.65rem; font-weight: 800; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                              ${textLabel}
+                                          </span>
+                                          <button onclick="event.stopPropagation(); window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')" 
+                                              title="${btnTitle}"
+                                              style="${btnStyle} border-radius: 6px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; flex-shrink: 0; transition: all 0.2s;">
+                                              ${buttonIcon}
+                                          </button>
+                                      </div>
+                                      `;
+                                  })() : ''}
+                            </div>`;
+                    });
+                    html += '</div></div>';
+                }
+                html += '</div>';
+                return html;
+            })()}
+
+            <!-- Protocol Integration Button -->
+            <div id="protocol-btn-container-${task.id}" style="margin-top: 12px;">
+                ${getProtocolButtonForTask(task)}
             </div>
-            ` : ''}
 
             <div class="task-card-footer" style="margin-top: 12px;">
                 <div class="task-progress-mini">
@@ -551,7 +708,7 @@
 
         if (completedTasks.length > 0) {
             const section = document.createElement('div');
-            section.className = 'glass-card';
+            section.className = 'glass-card completed-tasks-section';
             section.style.marginBottom = '20px';
             section.style.background = 'rgba(255,255,255,0.02)';
 
@@ -612,30 +769,123 @@
         openTaskModal(null);
     };
 
-    window.openTaskModal = async function (taskId = null) {
-        const modal = document.getElementById('task-modal');
-        if (!modal) return;
+    function getProtocolButtonForTask(task) {
+        if (!task.title || !task.machine_id) return '';
+        const title = task.title.toLowerCase();
+        let type = '';
+        let label = '';
 
-        // Ensure user list is available
-        if (!window.userList || window.userList.length === 0) {
-            if (typeof window.fetchUsers === 'function') {
-                await window.fetchUsers();
-            }
+        if (title.includes('eingangsprotokoll')) {
+            type = 'intake';
+            label = 'Eingangsprotokoll';
+        } else if (title.includes('endcheck') || title.includes('abnahme')) {
+            type = 'acceptance';
+            label = 'Endcheck / Abnahme';
         }
 
-        modal.classList.remove('hidden');
-        modal.classList.add('active');
-        modal.style.display = 'flex';
+        if (!type) return '';
 
-        if (taskId) {
-            const task = allTasks.find(t => t.id === taskId);
-            currentTask = task;
-            document.getElementById('task-modal-title').textContent = 'Aufgabe bearbeiten';
-            fillModal(task);
+        // Check if protocol already exists in window.machineProtocols
+        const protocols = window.machineProtocols?.[type] || [];
+        const existing = protocols.find(p => p.machine_id === task.machine_id);
+
+        const btnLabel = existing ? 'Bearbeiten' : 'Erstellen';
+        const protocolId = existing ? existing.id : null;
+
+        const isIntake = type === 'intake';
+        const color = isIntake ? '#3b82f6' : '#f59e0b';
+        const bg = isIntake ? 'rgba(59, 130, 246, 0.1)' : 'rgba(245, 158, 11, 0.1)';
+        const border = isIntake ? 'rgba(59, 130, 246, 0.4)' : 'rgba(245, 158, 11, 0.4)';
+
+        return `
+            <button onclick="event.stopPropagation(); openProtocolFromTask('${task.machine_id}', '${protocolId}', '${type}')" 
+                class="btn-protocol-link ${existing ? 'exists' : 'new'} ${isIntake ? 'glow-blue' : 'glow-orange'}"
+                style="width: 100%; padding: 10px; border-radius: 12px; border: 1.5px solid ${existing ? '#10b981' : border}; background: ${existing ? 'rgba(16, 185, 129, 0.1)' : bg}; color: ${existing ? '#10b981' : color}; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                ${label}: ${btnLabel}
+            </button>
+        `;
+    }
+
+    window.openProtocolFromTask = function(machineId, protocolId, type) {
+        if (type === 'intake') {
+            if (typeof window.openIntakeProtocol === 'function') {
+                window.openIntakeProtocol(machineId, protocolId === 'null' ? null : protocolId);
+            }
         } else {
-            currentTask = null;
-            document.getElementById('task-modal-title').textContent = 'Neue Aufgabe';
-            resetModal();
+            if (typeof window.openAcceptanceProtocol === 'function') {
+                window.openAcceptanceProtocol(machineId, protocolId === 'null' ? null : protocolId);
+            }
+        }
+    };
+
+    // ==========================================
+    // MODAL LOGIC (OVERHAUL)
+    // ==========================================
+    window.openTaskModal = async function (taskId = null) {
+        try {
+            console.log('openTaskModal called with taskId:', taskId);
+            const modal = document.getElementById('task-modal');
+            if (!modal) {
+                console.error('task-modal element not found');
+                return;
+            }
+
+            // Ensure user list is available
+            if (!window.userList || window.userList.length === 0) {
+                if (typeof window.fetchUsers === 'function') {
+                    await window.fetchUsers();
+                }
+            }
+
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            requestAnimationFrame(() => {
+                modal.classList.add('active');
+                modal.classList.add('show');
+            });
+
+            if (taskId) {
+                let task = allTasks.find(t => String(t.id).trim().toLowerCase() === String(taskId).trim().toLowerCase());
+                if (!task) {
+                    console.log('Task not found in memory, fetching from Supabase...');
+                    const { data, error } = await window.supabaseClient
+                        .from('tasks')
+                        .select(`
+                            *,
+                            machines(manufacturer, name, serial, year),
+                            subtasks(*)
+                        `)
+                        .eq('id', taskId)
+                        .maybeSingle();
+                    
+                    if (error) {
+                        console.error('Error fetching task from Supabase:', error);
+                    } else if (data) {
+                        task = data;
+                        allTasks.push(task); // Add to local cache
+                    }
+                }
+
+                if (!task) {
+                    console.error('Task not found in memory or database for id:', taskId);
+                    alert('Aufgabe konnte nicht im System gefunden werden.');
+                    return;
+                }
+
+                currentTask = task;
+                document.getElementById('task-modal-title').textContent = 'Aufgabe bearbeiten';
+                fillModal(task);
+                document.getElementById('task-details-section').style.display = 'block';
+            } else {
+                currentTask = null;
+                document.getElementById('task-modal-title').textContent = 'Neue Aufgabe';
+                resetModal();
+                document.getElementById('task-details-section').style.display = 'none';
+            }
+        } catch (err) {
+            console.error('Error in openTaskModal:', err);
+            alert('Fehler beim Öffnen der Aufgabe: ' + err.message);
         }
     };
 
@@ -643,94 +893,50 @@
         const modal = document.getElementById('task-modal');
         if (modal) {
             modal.classList.remove('active');
-            modal.classList.add('hidden');
-            setTimeout(() => modal.style.display = 'none', 300);
+            modal.classList.remove('show');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }, 300);
         }
     };
 
-    window.deleteTask = async function (id) {
-        if (!confirm('Möchten Sie diese Aufgabe wirklich löschen?')) return;
-        try {
-            const { error } = await window.supabaseClient
-                .from('tasks')
-                .delete()
-                .eq('id', id);
-
-            if (error) throw error;
-            fetchTasks();
-        } catch (err) {
-            console.error('Error deleting task:', err);
-            alert('Fehler beim Löschen der Aufgabe');
-        }
-    };
-
-    window.toggleTaskStatus = async function (id, currentStatus) {
-        // Find task locally to immediately stop propagation if it's already reacting
-        const newStatus = currentStatus === 'completed' ? 'open' : 'completed';
-
-        try {
-            const { error } = await window.supabaseClient
-                .from('tasks')
-                .update({ status: newStatus })
-                .eq('id', id);
-
-            if (error) throw error;
-            // Instantly refresh whole list from DB
-            fetchTasks();
-        } catch (err) {
-            console.error('Error toggling task status:', err);
-            alert('Fehler beim Ändern des Status');
-        }
-    };
-
-    window.toggleSubtaskStatus = async function (taskId, subtaskIndex, currentState) {
-        const taskObj = allTasks.find(t => t.id === taskId);
-        if (!taskObj || !taskObj.subtasks) return;
-
-        const subtask = taskObj.subtasks[subtaskIndex];
-        if (!subtask) return;
-
-        // Support both old boolean parameter or new status string
-        let newStatus = 'open';
-        if (typeof currentState === 'boolean') {
-            newStatus = currentState ? 'completed' : 'open';
+    window.onMachineSelected = function(machineId) {
+        const details = document.getElementById('task-details-section');
+        if (machineId) {
+            details.style.display = 'block';
+            // If it's a new task, load the default supergroups
+            if (!currentTask) {
+                if (typeof window.setupNewTaskGroups === 'function') {
+                    window.setupNewTaskGroups();
+                }
+            }
         } else {
-            newStatus = currentState === 'completed' ? 'open' : 'completed';
+            details.style.display = 'none';
         }
+    };
 
-        try {
-            // Update the subtask in the DB
-            const { error: subtaskError } = await window.supabaseClient
-                .from('subtasks')
-                .update({ status: newStatus })
-                .eq('id', subtask.id);
-
-            if (subtaskError) throw subtaskError;
-
-            // Intentionally not auto-completing the main task here based on user preference
-
-            fetchTasks(); // Reload everything to reflect changes visually
-        } catch (err) {
-            console.error('Error toggling subtask status:', err);
-            alert('Fehler beim Aktualisieren des Unterpunktes.');
-        }
+    // Update the machine selection logic to trigger the above
+    const oldFilterMachineDropdown = window.filterMachineDropdown;
+    window.selectMachine = function(id, label) {
+        document.getElementById('task-machine').value = id;
+        document.getElementById('task-machine-search').value = label;
+        document.getElementById('task-machine-dropdown').style.display = 'none';
+        window.onMachineSelected(id);
     };
 
     function fillModal(task) {
         document.getElementById('task-title').value = task.title || '';
         document.getElementById('task-description').value = task.description || '';
-        // Sync searchable machine field
         document.getElementById('task-machine').value = task.machine_id || '';
         const machineSearch = document.getElementById('task-machine-search');
-        if (machineSearch) {
-            if (task.machines) {
-                machineSearch.value = getMachineLabel(task.machines);
-            } else {
-                machineSearch.value = '';
-            }
+        if (machineSearch && task.machines) {
+            machineSearch.value = getMachineLabel(task.machines);
         }
 
-        renderSubtasks(task.subtasks || []);
+        if (typeof window.setupNewTaskGroups === 'function') {
+            window.setupNewTaskGroups(task.subtasks);
+        }
         renderAssignedUsers(task.assigned_to || []);
     }
 
@@ -740,14 +946,26 @@
         document.getElementById('task-machine').value = '';
         const machineSearch = document.getElementById('task-machine-search');
         if (machineSearch) machineSearch.value = '';
-        const machineDropdown = document.getElementById('task-machine-dropdown');
-        if (machineDropdown) machineDropdown.style.display = 'none';
-        document.getElementById('subtask-list').innerHTML = '';
+        
+        if (typeof window.setupNewTaskGroups === 'function') {
+            window.setupNewTaskGroups();
+        }
         window.tempAssigned = [];
-        window.tempSubtasks = [];
-        renderSubtasks([]);
         renderAssignedUsers([]);
     }
+
+    window.applyTaskTemplate = function(type) {
+        const templates = {
+            intake: { title: 'Eingangsprotokoll ausführen', description: 'Vollständiges Eingangsprotokoll für die Maschine erstellen.' },
+            acceptance: { title: 'Endcheck durchführen', description: 'Abnahmeprotokoll und Endkontrolle vor Auslieferung.' },
+            repair: { title: 'Reparatur durchführen', description: 'Fehler beheben und Funktion prüfen.' }
+        };
+        const t = templates[type];
+        if (t) {
+            document.getElementById('task-title').value = t.title;
+            document.getElementById('task-description').value = t.description;
+        }
+    };
 
     window.saveTask = async function () {
         const title = document.getElementById('task-title').value.trim();
@@ -765,7 +983,9 @@
         };
 
         try {
+            let taskId = currentTask?.id;
             let error;
+
             if (currentTask) {
                 const res = await window.supabaseClient.from('tasks').update(taskData).eq('id', currentTask.id);
                 error = res.error;
@@ -774,22 +994,36 @@
                 taskData.assigned_to = window.tempAssigned || [];
                 const { data, error: insertError } = await window.supabaseClient.from('tasks').insert([taskData]).select();
                 error = insertError;
-
-                if (!error && data && data[0] && window.tempSubtasks && window.tempSubtasks.length > 0) {
-                    const taskId = data[0].id;
-                    const subtasksToInsert = window.tempSubtasks.map(st => ({
-                        task_id: taskId,
-                        title: st.title,
-                        status: st.status || 'open'
-                    }));
-                    const { error: stError } = await window.supabaseClient.from('subtasks').insert(subtasksToInsert);
-                    if (stError) throw stError;
-                }
+                if (data && data[0]) taskId = data[0].id;
             }
 
-            if (error) {
-                console.error('Task Save Error:', error);
-                throw error;
+            if (error) throw error;
+
+            // Handle Subtasks with Supergroups
+            if (taskId && typeof window.getModalGroupsData === 'function') {
+                const groups = window.getModalGroupsData();
+                const allSubtasks = [];
+                groups.forEach(g => {
+                    g.subtasks.forEach(st => {
+                        allSubtasks.push({
+                            task_id: taskId,
+                            title: st.title,
+                            status: st.status || 'open',
+                            supergroup: g.name,
+                            action_type: st.action_type || null
+                        });
+                    });
+                });
+
+                // Clear existing subtasks if editing
+                if (currentTask) {
+                    await window.supabaseClient.from('subtasks').delete().eq('task_id', taskId);
+                }
+
+                if (allSubtasks.length > 0) {
+                    const { error: stError } = await window.supabaseClient.from('subtasks').insert(allSubtasks);
+                    if (stError) throw stError;
+                }
             }
 
             closeTaskModal();
@@ -802,63 +1036,16 @@
     };
 
     // ==========================================
-    // SUBTASKS
+    // TASK RENDERING UTILS
     // ==========================================
-    window.addSubtask = async function () {
-        const input = document.getElementById('new-subtask-input');
-        const title = input.value.trim();
-        if (!title) return;
-
-        if (currentTask) {
-            try {
-                const { data, error } = await window.supabaseClient
-                    .from('subtasks')
-                    .insert([{ task_id: currentTask.id, title: title }])
-                    .select();
-
-                if (error) throw error;
-                input.value = '';
-                input.focus();
-
-                if (!currentTask.subtasks) currentTask.subtasks = [];
-                currentTask.subtasks.push(data[0]);
-                renderSubtasks(currentTask.subtasks);
-                fetchTasks();
-            } catch (err) {
-                console.error('Error adding subtask:', err);
-            }
-        } else {
-            // Temp subtask for new task
-            if (!window.tempSubtasks) window.tempSubtasks = [];
-            window.tempSubtasks.push({
-                id: 'temp-' + Date.now(),
-                title: title,
-                status: 'open'
-            });
-            input.value = '';
-            input.focus();
-            renderSubtasks(window.tempSubtasks);
-        }
-    };
-
-    function renderSubtasks(subtasks) {
-        const container = document.getElementById('subtask-list');
-        if (!container) return;
-        container.innerHTML = '';
-        subtasks.forEach(st => {
-            const div = document.createElement('div');
-            div.className = 'subtask-item';
-            const isCompleted = st.status === 'completed';
-            div.innerHTML = `
-                <div onclick="toggleSubtask('${st.id}', ${!isCompleted})" 
-                     style="min-width: 22px; height: 22px; border-radius: 50%; border: 2px solid ${isCompleted ? 'var(--color-primary-green)' : 'rgba(255,255,255,0.3)'}; background: ${isCompleted ? 'var(--color-primary-green)' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s; flex-shrink: 0;">
-                    ${isCompleted ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
-                </div>
-                <span class="${isCompleted ? 'done' : ''}" style="flex: 1;">${st.title}</span>
-                <button class="delete-st" onclick="deleteSubtask('${st.id}')">&times;</button>
-            `;
-            container.appendChild(div);
-        });
+    function renderAvatars(userIds) {
+        if (!userIds || userIds.length === 0) return '';
+        return userIds.map(id => {
+            const user = (window.userList || []).find(u => u.id === id);
+            const initial = user && user.name ? user.name.charAt(0).toUpperCase() : '?';
+            const color = user && user.color ? user.color : 'rgba(255,255,255,0.1)';
+            return `<div class="user-avatar-mini" style="background: ${color};" title="${user ? user.name : 'Unbekannt'}">${initial}</div>`;
+        }).join('');
     }
 
     // ==========================================
@@ -941,12 +1128,6 @@
             return tokens.length === 0 || tokens.every(token => searchable.includes(token));
         });
         buildMachineDropdown(filtered);
-
-        if (filtered.length === 1) {
-            document.getElementById('task-machine').value = filtered[0].id;
-        } else {
-            document.getElementById('task-machine').value = '';
-        }
     };
 
     window.selectMachine = function (id, label) {
@@ -958,36 +1139,26 @@
         }
         const dropdown = document.getElementById('task-machine-dropdown-portal');
         if (dropdown) dropdown.style.display = 'none';
+
+        // Trigger detail section and template loading
+        if (typeof window.onMachineSelected === 'function') {
+            window.onMachineSelected(id);
+        }
     };
 
     // Close machine dropdown when clicking outside
     document.addEventListener('click', (e) => {
-        if (!e.target.closest('#task-machine-search') && !e.target.closest('#task-machine-dropdown-portal')) {
-            const d = document.getElementById('task-machine-dropdown-portal');
-            if (d) d.style.display = 'none';
+        const d = document.getElementById('task-machine-dropdown-portal');
+        if (d && !e.target.closest('#task-machine-search') && !e.target.closest('#task-machine-dropdown-portal')) {
+            d.style.display = 'none';
         }
     });
 
     window.toggleSubtask = async function (id, isChecked) {
-
         const status = isChecked ? 'completed' : 'open';
-
-        if (id.startsWith('temp-')) {
-            const st = window.tempSubtasks.find(s => s.id === id);
-            if (st) st.status = status;
-            renderSubtasks(window.tempSubtasks);
-            return;
-        }
 
         try {
             await window.supabaseClient.from('subtasks').update({ status }).eq('id', id);
-
-            // Local state update
-            if (currentTask && currentTask.subtasks) {
-                const st = currentTask.subtasks.find(s => s.id === id);
-                if (st) st.status = status;
-                renderSubtasks(currentTask.subtasks);
-            }
             fetchTasks();
         } catch (err) {
             console.error(err);
@@ -996,20 +1167,8 @@
 
     window.deleteSubtask = async function (id) {
         if (!confirm('Unteraufgabe löschen?')) return;
-
-        if (id.startsWith('temp-')) {
-            window.tempSubtasks = window.tempSubtasks.filter(s => s.id !== id);
-            renderSubtasks(window.tempSubtasks);
-            return;
-        }
-
         try {
             await window.supabaseClient.from('subtasks').delete().eq('id', id);
-
-            if (currentTask && currentTask.subtasks) {
-                currentTask.subtasks = currentTask.subtasks.filter(s => s.id !== id);
-                renderSubtasks(currentTask.subtasks);
-            }
             fetchTasks();
         } catch (err) {
             console.error(err);
@@ -1300,5 +1459,265 @@
         });
     }
 
+    // ==========================================
+    window.toggleFocusMode = function () {
+        document.body.classList.toggle('focus-mode-active');
+        const isActive = document.body.classList.contains('focus-mode-active');
 
+        // Stop Cinema Mode if leaving Focus Mode
+        if (!isActive && cinemaActive) {
+            window.toggleCinemaMode();
+        }
+
+        if (isActive) {
+            // Automatically switch to tasks view and force machine mode
+            if (window.navigateTo) {
+                window.navigateTo('tasks');
+            }
+            if (typeof window.switchTaskView === 'function') {
+                window.switchTaskView('machines');
+            }
+        }
+    };
+
+    // ==========================================
+    // CINEMA MODE
+    // ==========================================
+    let cinemaActive = false;
+    let cinemaRequestId = null;
+
+    window.toggleCinemaMode = function () {
+        const btn = document.getElementById('btn-cinema-toggle');
+        const floatingBtn = document.getElementById('cinema-floating-btn');
+        cinemaActive = !cinemaActive;
+
+        if (cinemaActive) {
+            // Force Focus Mode if not active
+            if (!document.body.classList.contains('focus-mode-active')) {
+                window.toggleFocusMode();
+            }
+            btn.classList.add('active');
+            if (floatingBtn) floatingBtn.classList.add('active');
+            startCinemaScrolling();
+        } else {
+            btn.classList.remove('active');
+            if (floatingBtn) floatingBtn.classList.remove('active');
+            if (cinemaRequestId) {
+                cancelAnimationFrame(cinemaRequestId);
+                cinemaRequestId = null;
+            }
+        }
+    };
+
+    function startCinemaScrolling() {
+        if (!cinemaActive) return;
+
+        let lastTime = performance.now();
+        let bottomReachedTime = null;
+        let isResetting = false;
+        
+        // In Focus Mode, the whole body scrolls. In normal mode, it's also the body/documentElement.
+        // We always use document.documentElement for global scrolling consistency.
+        const scrollContainer = document.documentElement;
+
+        // Keep track of the precise scroll position for sub-pixel smoothness
+        let preciseScrollTop = window.pageYOffset || scrollContainer.scrollTop;
+
+        function scrollStep(currentTime) {
+            if (!cinemaActive || isResetting) return;
+
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+
+            const speed = parseFloat(document.getElementById('cinema-speed-slider')?.value || 1.0);
+            
+            // Smoother speed calculation: 0.8 pixels per frame at 60fps (base speed 1.0)
+            const pixelsToScroll = (speed * 0.8) * (deltaTime / 16.67);
+
+            const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+
+            // If content is shorter than viewport, nothing to scroll
+            if (maxScroll <= 0) {
+                cinemaRequestId = requestAnimationFrame(scrollStep);
+                return;
+            }
+
+            if (preciseScrollTop < maxScroll - 2) {
+                preciseScrollTop += pixelsToScroll;
+                // Apply the scroll
+                window.scrollTo(0, preciseScrollTop);
+                
+                bottomReachedTime = null;
+                cinemaRequestId = requestAnimationFrame(scrollStep);
+            } else {
+                // Bottom reached
+                if (!bottomReachedTime) bottomReachedTime = currentTime;
+
+                // Wait 4 seconds at the bottom
+                if (currentTime - bottomReachedTime > 4000) {
+                    isResetting = true;
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    
+                    // Wait for smooth scroll to finish (approx 1s) + pause at top
+                    setTimeout(() => {
+                        if (cinemaActive) {
+                            isResetting = false;
+                            lastTime = performance.now();
+                            preciseScrollTop = 0; // Reset tracking
+                            cinemaRequestId = requestAnimationFrame(scrollStep);
+                        }
+                    }, 4000); 
+                } else {
+                    cinemaRequestId = requestAnimationFrame(scrollStep);
+                }
+            }
+        }
+        cinemaRequestId = requestAnimationFrame(scrollStep);
+    }
+
+    window.openProtocolFromTask = function (machineId, protocolId, actionType) {
+        if (actionType && actionType.startsWith('document:')) {
+            const rawData = actionType.substring(9);
+            const parts = rawData.split('|||');
+            const url = parts[0] || '';
+            const name = parts[1] || 'Dokument';
+            const mimeType = parts[2] || '';
+            if (typeof window.previewDocument === 'function') {
+                window.previewDocument(url, name, mimeType);
+            } else {
+                window.open(url, '_blank');
+            }
+            return;
+        }
+
+        if (actionType === 'intake' && typeof window.openIntakeProtocol === 'function') {
+            window.openIntakeProtocol(machineId, protocolId === 'null' ? null : protocolId);
+        } else if (actionType === 'acceptance' && typeof window.openAcceptanceProtocol === 'function') {
+            window.openAcceptanceProtocol(machineId, protocolId === 'null' ? null : protocolId);
+        } else {
+            console.warn('Unknown action type or protocol function missing:', actionType);
+        }
+    };
+    window.saveTaskAsQuickTemplate = async function(taskId) {
+        const task = allTasks.find(t => t.id === taskId);
+        if (!task) return;
+
+        // Visual feedback
+        const btn = document.getElementById(`star-${taskId}`) || document.getElementById(`star-card-${taskId}`);
+        if (btn) btn.classList.add('active');
+
+        const confirmSave = confirm("Möchtest du diese Aufgabe als Schnellvorlage speichern?");
+        if (!confirmSave) {
+            if (btn) btn.classList.remove('active');
+            return;
+        }
+
+        const templateName = prompt("Name der Schnellvorlage:", task.title);
+        if (!templateName) {
+            if (btn) btn.classList.remove('active');
+            return;
+        }
+
+        try {
+            // Structure task into template groups
+            const grouped = {};
+            task.subtasks.forEach(sub => {
+                const sg = sub.supergroup || 'Allgemein';
+                if (!grouped[sg]) grouped[sg] = [];
+                grouped[sg].push({ title: sub.title, action_type: sub.action_type });
+            });
+
+            const structure = Object.keys(grouped).map(name => ({
+                name: name,
+                subtasks: grouped[name]
+            }));
+
+            const { error } = await window.supabaseClient
+                .from('task_quick_templates')
+                .insert([{
+                    name: templateName,
+                    structure: structure
+                }]);
+
+            if (error) throw error;
+
+            alert(`Schnellvorlage "${templateName}" wurde erfolgreich gespeichert!`);
+            
+            // Fetch updated templates if the function exists
+            if (typeof window.fetchQuickTemplates === 'function') {
+                window.fetchQuickTemplates();
+            }
+
+        } catch (err) {
+            console.error('Error saving template:', err);
+            alert("Fehler beim Speichern der Vorlage.");
+        } finally {
+            if (btn) {
+                btn.style.background = '';
+                btn.style.borderColor = '';
+                btn.style.color = '';
+                btn.classList.remove('glow-yellow');
+            }
+        }
+    };
+    window.updateSubtaskTitle = async function(taskId, subtaskIndex, newTitle) {
+        const task = allTasks.find(t => t.id === taskId);
+        if (!task || !task.subtasks) return;
+
+        if (task.subtasks[subtaskIndex].title === newTitle) return;
+
+        try {
+            const updatedSubtasks = [...task.subtasks];
+            updatedSubtasks[subtaskIndex].title = newTitle;
+
+            const { error } = await window.supabaseClient
+                .from('tasks')
+                .update({ subtasks: updatedSubtasks })
+                .eq('id', taskId);
+
+            if (error) throw error;
+            task.subtasks = updatedSubtasks;
+            // No full re-render needed to avoid focus loss, but good for consistency
+            // renderTasks(); 
+        } catch (err) {
+            console.error('Error updating subtask title:', err);
+        }
+    };
+
+    window.toggleTaskStatus = async function (taskId, currentStatus) {
+        const newStatus = currentStatus === 'completed' ? 'open' : 'completed';
+        try {
+            const task = allTasks.find(t => t.id === taskId);
+            if (task) {
+                task.status = newStatus;
+                renderTasks();
+            }
+            const { error } = await window.supabaseClient.from('tasks').update({ status: newStatus }).eq('id', taskId);
+            if (error) throw error;
+        } catch (err) {
+            console.error('Error toggling task status:', err);
+            fetchTasks();
+        }
+    };
+
+    window.toggleSubtaskStatus = async function (taskId, subtaskIndex, currentStatus) {
+        const newStatus = currentStatus === 'completed' ? 'open' : 'completed';
+        try {
+            const task = allTasks.find(t => t.id === taskId);
+            if (task && task.subtasks && task.subtasks[subtaskIndex]) {
+                const subtask = task.subtasks[subtaskIndex];
+                subtask.status = newStatus;
+                renderTasks();
+                
+                const { error } = await window.supabaseClient
+                    .from('subtasks')
+                    .update({ status: newStatus })
+                    .eq('id', subtask.id);
+                if (error) throw error;
+            }
+        } catch (err) {
+            console.error('Error toggling subtask status:', err);
+            fetchTasks();
+        }
+    };
 })();

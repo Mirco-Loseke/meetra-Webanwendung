@@ -1403,6 +1403,7 @@ Setze Unbekanntes auf null.`;
             updateStatus('Lese PDF aus...');
             const base64Images = [];
             try {
+                await window.loadPDFReader();
                 // Use file.arrayBuffer() instead of FileReader to avoid NotReadableError
                 const arrayBuf = await file.arrayBuffer();
                 const typedarray = new Uint8Array(arrayBuf);

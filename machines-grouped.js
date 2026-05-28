@@ -172,10 +172,12 @@
 
         card.onclick = () => window.openEditStammdaten(machine.id);
 
-        // Image logic
+        // Image logic - use thumbnail if available for faster loading
         let imageHtml = '';
         if (machine.image_url) {
-            imageHtml = `<img src="${machine.image_url.trim()}" alt="${machine.name}" style="width: 100%; height: var(--machine-image-height, 300px); object-fit: contain; display: block; object-position: center;">`;
+            const fullUrl = machine.image_url.trim();
+            const thumbUrl = window.getMachineThumbnailUrl ? window.getMachineThumbnailUrl(fullUrl) : fullUrl;
+            imageHtml = `<img src="${thumbUrl}" alt="${machine.name}" loading="lazy" onerror="if(this.src!=='${fullUrl}'){this.onerror=null;this.src='${fullUrl}';}" style="width: 100%; height: var(--machine-image-height, 300px); object-fit: contain; display: block; object-position: center;">`;
         } else {
             imageHtml = `
                 <div class="card-image-placeholder" style="background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); color: rgba(255,255,255,0.2); height: var(--machine-image-height, 300px); display: flex; align-items: center; justify-content: center;">
@@ -324,14 +326,14 @@
                     ` : ''}
                 </div>
 
-                <div class="card-actions" style="margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); margin-left: -1.25rem; margin-right: -1.25rem;">
-                    <button class="btn-reports" onclick="if(typeof event !== 'undefined' && event.stopPropagation) event.stopPropagation(); window.openServiceActionsModal(event, '${machine.id}')" title="Berichte & Protokolle">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                <div class="card-actions" style="margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 8px; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); margin-left: -1.25rem; margin-right: -1.25rem;">
+                    <button class="btn-reports" style="padding: 8px 10px !important; font-size: 0.85rem !important;" onclick="if(typeof event !== 'undefined' && event.stopPropagation) event.stopPropagation(); window.openServiceActionsModal(event, '${machine.id}')" title="Berichte & Protokolle">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
                         Protokolle
                     </button>
                     
-                    <button class="btn-history" style="flex: 1 !important;" onclick="if(typeof event !== 'undefined' && event.stopPropagation) event.stopPropagation(); window.openHistoryModal ? window.openHistoryModal('${machine.id}') : alert('Historie für ' + '${machine.id}')" title="Historie">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <button class="btn-history" style="flex: 1 !important; padding: 8px 10px !important; font-size: 0.85rem !important;" onclick="if(typeof event !== 'undefined' && event.stopPropagation) event.stopPropagation(); window.openHistoryModal ? window.openHistoryModal('${machine.id}') : alert('Historie für ' + '${machine.id}')" title="Historie">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                         Historie
                     </button>
 

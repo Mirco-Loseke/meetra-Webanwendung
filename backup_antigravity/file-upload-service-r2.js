@@ -1,0 +1,180 @@
+/**
+ * file-upload-service.js
+ * Centralized service for file compression and parallel uploads.
+ */
+
+window.FileUploadService = {
+    /**
+     * Compresses an image file and converts it to WebP.
+     * @param {File} file 
+     * @returns {Promise<File|Blob>}
+     */
+    async compressImage(file) {
+        if (!file.type.startsWith('image/')) return file;
+        
+        const options = {
+            maxSizeMB: 1,
+            maxWidthOrHeight: 1920,
+            useWebWorker: true,
+            fileType: 'image/webp'
+        };
+        
+        try {
+            console.log(`Compressing ${file.name}...`);
+            const compressedBlob = await imageCompression(file, options);
+            return new File([compressedBlob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+                type: 'image/webp',
+                lastModified: Date.now()
+            });
+        } catch (error) {
+            console.error('Compression failed, using original file:', error);
+            return file;
+        }
+    },
+
+    /**
+     * Uploads a single file to the specified storage provider.
+     * @param {File} file 
+     * @param {Object} options { bucket, path, compress, provider, folderPath }
+     */
+    async uploadFile(file, { bucket, path, compress = true, provider = 'supabase', folderPath = null }) {
+        let fileToUpload = file;
+        
+        if (compress && file.type.startsWith('image/')) {
+            fileToUpload = await this.compressImage(file);
+        }
+
+        // --- CLOUDFLARE R2 PROVIDER (TEST) ---
+        if (provider === 'cloudflare-r2') {
+            try {
+                // Initialize AWS S3 Client for Cloudflare R2
+                const s3 = new AWS.S3({
+                    endpoint: 'https://855feaccf4d0215922275100e91c4656.r2.cloudflarestorage.com',
+                    accessKeyId: '49a3cbad28594d9d5a90e46f3965133b',
+                    secretAccessKey: '0642e23714ce5c9f805d0c2f8f59e7c9df01ba8ba7a728b9640b0db5341de797',
+                    region: 'auto',
+                    signatureVersion: 'v4'
+                });
+
+                // User needs to define these or replace them later
+                const R2_BUCKET_NAME = window.R2_BUCKET_NAME || 'dateien'; 
+                const R2_PUBLIC_URL = window.R2_PUBLIC_URL || 'https://pub-28aab7dd73f540f38b6358d78f889a27.r2.dev';
+
+                console.log(`Uploading ${fileToUpload.name} to Cloudflare R2...`);
+                
+                const params = {
+                    Bucket: R2_BUCKET_NAME,
+                    Key: path,
+                    Body: fileToUpload,
+                    ContentType: fileToUpload.type
+                };
+
+                await s3.upload(params).promise();
+
+                return {
+                    url: `${R2_PUBLIC_URL}/${path}`,
+                    path: path,
+                    size: fileToUpload.size,
+                    type: fileToUpload.type,
+                    name: fileToUpload.name,
+                    provider: 'cloudflare-r2'
+                };
+            } catch (err) {
+                console.error('Cloudflare R2 upload failed:', err);
+                throw err;
+            }
+        }
+
+
+
+        // --- SUPABASE PROVIDER (Standard / Fallback) ---
+        const { data, error } = await window.supabaseClient.storage
+            .from(bucket || 'meetra-storage')
+            .upload(path, fileToUpload, {
+                cacheControl: '3600',
+                upsert: true
+            });
+
+        if (error) throw error;
+
+        const { data: { publicUrl } } = window.supabaseClient.storage
+            .from(bucket || 'meetra-storage')
+            .getPublicUrl(path);
+
+        return {
+            url: publicUrl,
+            path: path,
+            size: fileToUpload.size,
+            type: fileToUpload.type,
+            name: fileToUpload.name,
+            provider: 'supabase'
+        };
+    },
+
+    /**
+     * Uploads multiple files in parallel with a concurrency limit.
+     * @param {File[]} files 
+     * @param {Function} pathGenerator (file, index) => string
+     * @param {Object} options { bucket, compress, concurrency }
+     */
+    async uploadFiles(files, pathGenerator, { bucket, compress = true, concurrency = 5, provider = 'supabase' }) {
+        const results = [];
+        const queue = [...files.entries()];
+        
+        const workers = Array(Math.min(concurrency, files.length)).fill(null).map(async () => {
+            while (queue.length > 0) {
+                const [index, file] = queue.shift();
+                const path = pathGenerator(file, index);
+                const result = await this.uploadFile(file, { bucket, path, compress, provider });
+                results[index] = result;
+            }
+        });
+
+        await Promise.all(workers);
+        return results;
+    },
+
+    /**
+     * Deletes a single file from the specified storage provider.
+     * @param {string} path 
+     * @param {Object} options { bucket, provider }
+     */
+    async deleteFile(path, { bucket, provider = 'supabase' }) {
+        if (!path) return;
+
+        if (provider === 'cloudflare-r2') {
+            try {
+                const s3 = new AWS.S3({
+                    endpoint: 'https://855feaccf4d0215922275100e91c4656.r2.cloudflarestorage.com',
+                    accessKeyId: '49a3cbad28594d9d5a90e46f3965133b',
+                    secretAccessKey: '0642e23714ce5c9f805d0c2f8f59e7c9df01ba8ba7a728b9640b0db5341de797',
+                    region: 'auto',
+                    signatureVersion: 'v4'
+                });
+
+                const R2_BUCKET_NAME = window.R2_BUCKET_NAME || 'dateien';
+
+                console.log(`Deleting ${path} from Cloudflare R2...`);
+                
+                const params = {
+                    Bucket: R2_BUCKET_NAME,
+                    Key: path
+                };
+
+                await s3.deleteObject(params).promise();
+                return { success: true, provider: 'cloudflare-r2' };
+            } catch (err) {
+                console.error('Cloudflare R2 deletion failed:', err);
+                throw err;
+            }
+        }
+
+        // Supabase Provider Fallback
+        const { data, error } = await window.supabaseClient.storage
+            .from(bucket || 'meetra-storage')
+            .remove([path]);
+
+        if (error) throw error;
+        return { success: true, provider: 'supabase' };
+    }
+};

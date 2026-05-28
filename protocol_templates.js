@@ -229,11 +229,18 @@ function renderEditor() {
                             <polyline points="6 9 12 15 18 9"></polyline>
                         </svg>
                     </div>
+                    <span style="font-weight: 800; color: var(--color-primary-green); margin-right: 8px;">${groupIndex + 1}.</span>
                     <span class="editable-content" contenteditable="true" 
                           onblur="updateGroupTitle(${groupIndex}, this.textContent)"
-                          onclick="event.stopPropagation()">${group.group_title || 'Neue Gruppe'}</span>
+                          onclick="event.stopPropagation()">${group.group_title ? group.group_title.replace(/^\\d+\\.\\s*/, '') : 'Neue Gruppe'}</span>
                 </div>
                 <div class="template-group-actions" onclick="event.stopPropagation()">
+                    <button class="btn-icon-mini" onclick="moveGroup(${groupIndex}, -1)" ${groupIndex === 0 ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''} title="Gruppe nach oben">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                    </button>
+                    <button class="btn-icon-mini" onclick="moveGroup(${groupIndex}, 1)" ${groupIndex === currentEditingTemplate.structure.length - 1 ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''} title="Gruppe nach unten">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
                     <button class="btn-icon-mini delete" onclick="removeGroup(${groupIndex})" title="Gruppe löschen">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="3 6 5 6 21 6"></polyline>
@@ -249,46 +256,126 @@ function renderEditor() {
             const isNumbered = /^\d+\./.test(item.label);
             return `
                     <div class="template-editor-item ${isNumbered ? 'heading-numbered' : ''}">
-                        <div class="item-main-content" style="flex: 1; display: flex; align-items: center; gap: 12px;">
-                            ${item.type === 'checkbox' ? `
-                                <div class="glass-checkbox-wrapper">
-                                    <input type="checkbox" class="glass-checkbox" checked disabled>
+                        <div class="item-main-content" style="flex: 1; display: flex; flex-direction: column; gap: 12px;">
+                            <div style="display: flex; align-items: center; gap: 12px; width: 100%;">
+                                ${item.type === 'checkbox' ? `
+                                    <div class="glass-checkbox-wrapper">
+                                        <input type="checkbox" class="glass-checkbox" checked disabled>
+                                    </div>
+                                ` : item.type === 'text' ? `
+                                    <div class="text-input-indicator" style="width: 24px; color: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center;">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                                    </div>
+                                ` : `
+                                    <div class="table-input-indicator" style="width: 24px; color: #3b82f6; display: flex; align-items: center; justify-content: center;">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line><line x1="15" y1="3" x2="15" y2="21"></line></svg>
+                                    </div>
+                                `}
+                                <div class="item-text-fields" style="flex: 1;">
+                                    <div style="display: flex; align-items: center;">
+                                        <span class="editable-content" contenteditable="true" 
+                                              onblur="updateItemLabel(${groupIndex}, ${itemIndex}, this.textContent)" style="flex: 1;">${item.label || ''}</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                                        <span class="item-type-tag" onclick="toggleItemType(${groupIndex}, ${itemIndex})" style="cursor: pointer;">${item.type}</span>
+                                        ${item.type !== 'table' ? `
+                                            <span class="editable-content placeholder-red" contenteditable="true" 
+                                                  onblur="updateItemPlaceholder(${groupIndex}, ${itemIndex}, this.textContent)" style="opacity: 0.5;">${item.placeholder || item.placeholder_label || 'Beschreibung / Platzhalter...'}</span>
+                                        ` : ''}
+                                    </div>
                                 </div>
-                            ` : `
-                                <div class="text-input-indicator" style="width: 24px; color: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center;">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
-                                </div>
-                            `}
-                            <div class="item-text-fields" style="flex: 1;">
-                                <span class="editable-content ${isNumbered ? 'heading-numbered' : ''}" contenteditable="true" 
-                                      onblur="updateItemLabel(${groupIndex}, ${itemIndex}, this.textContent)">${item.label}</span>
-                                <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
-                                    <span class="item-type-tag" onclick="toggleItemType(${groupIndex}, ${itemIndex})" style="cursor: pointer;">${item.type}</span>
-                                    ${item.has_description ? `
-                                        <span class="editable-content placeholder-red" contenteditable="true" 
-                                              onblur="updateItemPlaceholder(${groupIndex}, ${itemIndex}, this.textContent)">${item.placeholder || 'Beschreibung...'}</span>
-                                    ` : ''}
+                                <div style="display: flex; gap: 4px; align-items: center;">
+                                    <button class="btn-icon-mini" onclick="moveItem(${groupIndex}, ${itemIndex}, -1)" ${itemIndex === 0 ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''} title="Punkt nach oben">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                                    </button>
+                                    <button class="btn-icon-mini" onclick="moveItem(${groupIndex}, ${itemIndex}, 1)" ${itemIndex === group.items.length - 1 ? 'disabled style="opacity: 0.3; cursor: not-allowed;"' : ''} title="Punkt nach unten">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                    </button>
+                                    <button class="btn-icon-mini delete" onclick="removeItem(${groupIndex}, ${itemIndex})" title="Punkt entfernen">
+                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                        </svg>
+                                    </button>
                                 </div>
                             </div>
+
+                            ${item.type === 'table' ? `
+                                <div class="template-table-editor" style="margin-top: 10px; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); position: relative;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                        <span style="font-size: 0.75rem; font-weight: 800; color: #3b82f6;">TABELLENSTRUKTUR</span>
+                                        <div style="display: flex; gap: 8px;">
+                                            <button class="btn-icon-mini" style="background: rgba(59, 130, 246, 0.1); color: #60a5fa;" onclick="addTableColumn(${groupIndex}, ${itemIndex})" title="Spalte hinzufügen (+)">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div style="overflow-x: auto; margin-bottom: 10px;">
+                                        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+                                            <thead>
+                                                <tr>
+                                                    ${(item.columns || []).map((col, cIdx) => `
+                                                        <th style="padding: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.05);">
+                                                            <div style="display: flex; align-items: center; gap: 5px;">
+                                                                <span contenteditable="true" onblur="updateTableColumn(${groupIndex}, ${itemIndex}, ${cIdx}, this.textContent)" style="flex: 1; outline: none;">${col}</span>
+                                                                <button onclick="removeTableColumn(${groupIndex}, ${itemIndex}, ${cIdx})" style="background: none; border: none; color: rgba(255,255,255,0.2); cursor: pointer; padding: 2px;">&times;</button>
+                                                            </div>
+                                                        </th>
+                                                    `).join('')}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                ${(item.rows || []).map((row, rIdx) => `
+                                                    <tr>
+                                                        ${row.map((cell, cIdx) => {
+                                                            const isPlaceholder = /^\s*\[(.*?)\]\s*$/.test(cell);
+                                                            return `
+                                                            <td style="padding: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                                                                <span class="${isPlaceholder ? 'placeholder-red' : ''}" contenteditable="true" onblur="updateTableCell(${groupIndex}, ${itemIndex}, ${rIdx}, ${cIdx}, this.textContent)" style="display: block; width: 100%; outline: none; min-height: 1.2em; ${isPlaceholder ? 'opacity: 0.7;' : ''}">${cell}</span>
+                                                            </td>
+                                                            `;
+                                                        }).join('')}
+                                                        <td style="width: 30px; border: none;">
+                                                            <button onclick="removeTableRow(${groupIndex}, ${itemIndex}, ${rIdx})" style="background: none; border: none; color: rgba(255,255,255,0.2); cursor: pointer;">&times;</button>
+                                                        </td>
+                                                    </tr>
+                                                `).join('')}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                                        <button class="btn-icon-mini" style="background: rgba(59, 130, 246, 0.1); color: #60a5fa; width: 30px; height: 30px;" onclick="addTableRow(${groupIndex}, ${itemIndex})" title="Zeile hinzufügen (+)">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                        </button>
+                                        <span style="font-size: 0.75rem; color: rgba(255,255,255,0.4); font-family: 'Inter', sans-serif;">
+                                            Platzhalter = [Beispieltext]
+                                        </span>
+                                    </div>
+                                </div>
+                            ` : ''}
                         </div>
-                        <button class="btn-icon-mini delete" onclick="removeItem(${groupIndex}, ${itemIndex})" title="Punkt entfernen">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="3 6 5 6 21 6"></polyline>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                <line x1="10" y1="11" x2="10" y2="17"></line>
-                                <line x1="14" y1="11" x2="14" y2="17"></line>
-                            </svg>
-                        </button>
                     </div>
                 `;
         }).join('')}
-                <button class="btn-add-item" onclick="addItem(${groupIndex})">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                    </svg>
-                    FELD HINZUFÜGEN
-                </button>
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn-add-item" style="flex: 1;" onclick="addItem(${groupIndex})">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        FELD HINZUFÜGEN
+                    </button>
+                    <button class="btn-add-item" style="flex: 1; background: rgba(59, 130, 246, 0.1); color: #60a5fa; border-color: rgba(59, 130, 246, 0.2);" onclick="addTable(${groupIndex})">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="3" y1="9" x2="21" y2="9"></line>
+                            <line x1="3" y1="15" x2="21" y2="15"></line>
+                            <line x1="9" y1="3" x2="9" y2="21"></line>
+                            <line x1="15" y1="3" x2="15" y2="21"></line>
+                        </svg>
+                        TABELLE HINZUFÜGEN
+                    </button>
+                </div>
             </div>
         `;
         container.appendChild(groupEl);
@@ -316,7 +403,14 @@ function toggleGroupCollapse(index) {
 function toggleItemType(groupIndex, itemIndex) {
     if (currentEditingTemplate.structure[groupIndex] && currentEditingTemplate.structure[groupIndex].items[itemIndex]) {
         const item = currentEditingTemplate.structure[groupIndex].items[itemIndex];
-        item.type = item.type === 'checkbox' ? 'text' : 'checkbox';
+        const types = ['checkbox', 'text', 'table'];
+        const currentIdx = types.indexOf(item.type);
+        item.type = types[(currentIdx + 1) % types.length];
+        
+        if (item.type === 'table') {
+            if (!item.columns) item.columns = ['Spalte 1'];
+            if (!item.rows) item.rows = [['Inhalt']];
+        }
         renderEditor();
     }
 }
@@ -336,6 +430,7 @@ function updateItemLabel(groupIndex, itemIndex, newLabel) {
 function updateItemPlaceholder(groupIndex, itemIndex, newPlaceholder) {
     if (currentEditingTemplate.structure[groupIndex] && currentEditingTemplate.structure[groupIndex].items[itemIndex]) {
         currentEditingTemplate.structure[groupIndex].items[itemIndex].placeholder = newPlaceholder;
+        delete currentEditingTemplate.structure[groupIndex].items[itemIndex].placeholder_label;
     }
 }
 
@@ -360,7 +455,6 @@ function addItem(groupIndex) {
     if (!currentEditingTemplate.structure[groupIndex]) return;
     if (!currentEditingTemplate.structure[groupIndex].items) currentEditingTemplate.structure[groupIndex].items = [];
 
-    // Ensure the group is open when adding an item
     currentEditingTemplate.structure[groupIndex].is_collapsed = false;
 
     currentEditingTemplate.structure[groupIndex].items.push({
@@ -371,6 +465,61 @@ function addItem(groupIndex) {
         placeholder: 'Beschreibung hier einfügen...'
     });
     renderEditor();
+}
+
+function addTable(groupIndex) {
+    if (!currentEditingTemplate.structure[groupIndex]) return;
+    if (!currentEditingTemplate.structure[groupIndex].items) currentEditingTemplate.structure[groupIndex].items = [];
+
+    currentEditingTemplate.structure[groupIndex].is_collapsed = false;
+
+    currentEditingTemplate.structure[groupIndex].items.push({
+        id: 'item_' + Date.now(),
+        type: 'table',
+        label: 'Neue Tabelle',
+        columns: ['Spalte 1'],
+        rows: [[' ']],
+        has_description: false
+    });
+    renderEditor();
+}
+
+function addTableRow(groupIndex, itemIndex) {
+    const item = currentEditingTemplate.structure[groupIndex].items[itemIndex];
+    const newRow = new Array(item.columns.length).fill(' ');
+    item.rows.push(newRow);
+    renderEditor();
+}
+
+function removeTableRow(groupIndex, itemIndex, rowIndex) {
+    const item = currentEditingTemplate.structure[groupIndex].items[itemIndex];
+    item.rows.splice(rowIndex, 1);
+    renderEditor();
+}
+
+function addTableColumn(groupIndex, itemIndex) {
+    const item = currentEditingTemplate.structure[groupIndex].items[itemIndex];
+    item.columns.push('Neue Spalte');
+    item.rows.forEach(row => row.push(' '));
+    renderEditor();
+}
+
+function removeTableColumn(groupIndex, itemIndex, colIndex) {
+    const item = currentEditingTemplate.structure[groupIndex].items[itemIndex];
+    item.columns.splice(colIndex, 1);
+    item.rows.forEach(row => row.splice(colIndex, 1));
+    renderEditor();
+}
+
+function updateTableColumn(groupIndex, itemIndex, colIndex, val) {
+    currentEditingTemplate.structure[groupIndex].items[itemIndex].columns[colIndex] = val;
+}
+
+function updateTableCell(groupIndex, itemIndex, rowIndex, colIndex, val) {
+    if (currentEditingTemplate.structure[groupIndex] && currentEditingTemplate.structure[groupIndex].items[itemIndex]) {
+        currentEditingTemplate.structure[groupIndex].items[itemIndex].rows[rowIndex][colIndex] = val.trim();
+        renderEditor();
+    }
 }
 
 function removeItem(groupIndex, itemIndex) {
@@ -456,6 +605,34 @@ async function saveTemplate() {
     }
 }
 
+function moveGroup(index, direction) {
+    if (!currentEditingTemplate || !currentEditingTemplate.structure) return;
+    const structure = currentEditingTemplate.structure;
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= structure.length) return;
+
+    // Swap groups
+    const temp = structure[index];
+    structure[index] = structure[targetIndex];
+    structure[targetIndex] = temp;
+
+    renderEditor();
+}
+
+function moveItem(groupIndex, itemIndex, direction) {
+    if (!currentEditingTemplate || !currentEditingTemplate.structure[groupIndex]) return;
+    const items = currentEditingTemplate.structure[groupIndex].items;
+    const targetIndex = itemIndex + direction;
+    if (targetIndex < 0 || targetIndex >= items.length) return;
+
+    // Swap items
+    const temp = items[itemIndex];
+    items[itemIndex] = items[targetIndex];
+    items[targetIndex] = temp;
+
+    renderEditor();
+}
+
 // Global exposure for event handlers
 window.addTemplateGroup = addTemplateGroup;
 window.toggleGroupCollapse = toggleGroupCollapse;
@@ -466,6 +643,15 @@ window.updateItemPlaceholder = updateItemPlaceholder;
 window.removeGroup = removeGroup;
 window.addItem = addItem;
 window.removeItem = removeItem;
+window.addTable = addTable;
+window.addTableRow = addTableRow;
+window.removeTableRow = removeTableRow;
+window.addTableColumn = addTableColumn;
+window.removeTableColumn = removeTableColumn;
+window.updateTableColumn = updateTableColumn;
+window.updateTableCell = updateTableCell;
+window.moveGroup = moveGroup;
+window.moveItem = moveItem;
 
 // Initial Load
 document.addEventListener('DOMContentLoaded', () => {

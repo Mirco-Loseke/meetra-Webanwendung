@@ -16,6 +16,46 @@
     let currentProtocolType = null; // 'intake' or 'acceptance'
     let protocolPhotos = [];
     let customCheckpoints = [];
+    let protocolIsDirty = false; // Tracks unsaved changes
+
+    function markProtocolDirty() {
+        protocolIsDirty = true;
+    }
+
+    // Expose functions early and robustly
+    window.openIntakeProtocol = async function (machineId, protocolId = null) {
+        console.log('--- Opening Intake Protocol ---');
+        console.log('Arguments:', { machineId, protocolId });
+        
+        // Handle stringified 'null' or 'undefined'
+        if (machineId === 'null' || machineId === 'undefined') machineId = null;
+        if (protocolId === 'null' || protocolId === 'undefined') protocolId = null;
+
+        currentProtocolType = 'intake';
+        try {
+            await openProtocolModal(machineId, protocolId, 'intake');
+        } catch (err) {
+            console.error('Error in window.openIntakeProtocol:', err);
+            alert('Fehler beim Öffnen des Protokolls: ' + err.message);
+        }
+    };
+
+    window.openAcceptanceProtocol = async function (machineId, protocolId = null) {
+        console.log('--- Opening Acceptance Protocol ---');
+        console.log('Arguments:', { machineId, protocolId });
+        
+        // Handle stringified 'null' or 'undefined'
+        if (machineId === 'null' || machineId === 'undefined') machineId = null;
+        if (protocolId === 'null' || protocolId === 'undefined') protocolId = null;
+
+        currentProtocolType = 'acceptance';
+        try {
+            await openProtocolModal(machineId, protocolId, 'acceptance');
+        } catch (err) {
+            console.error('Error in window.openAcceptanceProtocol:', err);
+            alert('Fehler beim Öffnen des Protokolls: ' + err.message);
+        }
+    };
 
     // ==========================================
     // MODAL CREATION
@@ -69,11 +109,25 @@
                     </div>
 
                     <!-- Machine Title (Read-only) -->
-                    <div style="margin-bottom: 2.5rem;">
+                    <div style="margin-bottom: 1.5rem;">
                         <span class="protocol-section-title">Maschine</span>
                         <div style="position: relative;">
                             <input type="text" id="protocol-machine-title" readonly class="glass-form-input" style="opacity: 0.9; font-weight: 700; padding-right: 80px; color: #10b981 !important; border-color: rgba(16, 185, 129, 0.4) !important; background: rgba(16, 185, 129, 0.05) !important;">
                             <div style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 0.75rem; font-weight: 800; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 4px 8px; border-radius: 6px; pointer-events: none; border: 1px solid rgba(16, 185, 129, 0.2); text-transform: uppercase;">Fixiert</div>
+                        </div>
+                    </div>
+
+                    <!-- Machine Customer & Location info (Read-only) -->
+                    <div id="protocol-location-info-section" style="margin-bottom: 2.5rem; display: none; padding: 1.25rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px;">
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <div>
+                                <span style="font-size: 0.75rem; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: 800;">Betreiber / Kunde</span>
+                                <div id="protocol-customer-display" style="color: #fff; font-weight: 700; font-size: 0.95rem; margin-top: 2px;">-</div>
+                            </div>
+                            <div>
+                                <span style="font-size: 0.75rem; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: 800;">Standort / Adresse</span>
+                                <div id="protocol-location-display" style="color: rgba(255,255,255,0.8); font-size: 0.9rem; margin-top: 2px; line-height: 1.4;">-</div>
+                            </div>
                         </div>
                     </div>
 
@@ -83,60 +137,51 @@
                         <div id="predefined-checkpoints-list"></div>
                     </div>
 
-                    <!-- Custom Checkpoints -->
-                    <div id="custom-checkpoints-section" style="margin-bottom: 3rem;">
-                        <h3 class="protocol-section-title">➕ Zusätzliche Prüfpunkte</h3>
-                        <div id="custom-checkpoints-list"></div>
-                        <div id="add-checkpoint-form" style="display: none; margin-top: 1.5rem; padding: 1.5rem; background: rgba(255, 255, 255, 0.03); border-radius: 20px; border: 1px solid var(--glass-border);">
-                            <input type="text" id="new-checkpoint-description" class="glass-form-input" placeholder="Beschreibung des Prüfpunkts" style="margin-bottom: 1.25rem;">
-                            <div style="display: flex; gap: 1.5rem; align-items: center; margin-bottom: 1.5rem; padding-left: 0.5rem;">
-                                <label style="color: rgba(255, 255, 255, 0.6); font-size: 0.95rem; font-weight: 600;">Ergebnis:</label>
-                                <label class="protocol-checkbox-label yes">
-                                    <input type="radio" name="new-checkpoint-result" value="true" style="width: 20px; height: 20px;">
-                                    <span>Ja</span>
-                                </label>
-                                <label class="protocol-checkbox-label no">
-                                    <input type="radio" name="new-checkpoint-result" value="false" style="width: 20px; height: 20px;">
-                                    <span>Nein</span>
-                                </label>
-                            </div>
-                            <div style="display: flex; gap: 1rem;">
-                                <button onclick="window.saveNewCheckpoint()" class="btn-primary" style="flex: 2; border-radius: 14px;">Hinzufügen</button>
-                                <button onclick="window.cancelNewCheckpoint()" class="btn-secondary" style="flex: 1; border-radius: 14px;">Abbrechen</button>
-                            </div>
+                    <!-- Photos (collapsible, collapsed by default) -->
+                    <div id="photos-section" style="margin-bottom: 1rem;">
+                        <button type="button" onclick="window.toggleProtocolCollapsible('photos-collapsible-content', 'photos-chevron')"
+                            style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; cursor: pointer; color: #fff; font-family: 'Inter', sans-serif; transition: background 0.2s;"
+                            onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
+                            <span style="display: flex; align-items: center; gap: 10px; font-size: 1rem; font-weight: 700;">
+                                <span>📸</span> Fotos
+                            </span>
+                            <svg id="photos-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.3s; transform: rotate(-90deg);">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </button>
+                        <div id="photos-collapsible-content" style="display: none; padding: 1.25rem 0.25rem 0.5rem 0.25rem;">
+                            <div id="protocol-photos-grid" class="protocol-photo-grid"></div>
+                            <input type="file" id="protocol-photo-input" accept="image/*" multiple style="display: none;">
+                            <button onclick="document.getElementById('protocol-photo-input').click()" class="report-type-btn compact" style="width: auto; background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); margin-top: 0.75rem;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                    <polyline points="21 15 16 10 5 21"></polyline>
+                                </svg>
+                                <span>Fotos hochladen</span>
+                            </button>
                         </div>
-                        <button onclick="window.showAddCheckpointForm()" id="add-checkpoint-btn" class="report-type-btn compact" style="margin-top:0.5rem; width: auto; background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2);">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="12" y1="5" x2="12" y2="19"></line>
-                                <line x1="5" y1="12" x2="19" y2="12"></line>
-                            </svg>
-                            <span>Prüfpunkt hinzufügen</span>
-                        </button>
                     </div>
 
-                    <!-- Free Text Fields -->
-                    <div id="text-fields-section" style="margin-bottom: 3rem;">
-                        <h3 class="protocol-section-title">ℹ️ Zusätzliche Informationen</h3>
-                        <div id="protocol-text-fields"></div>
-                    </div>
-
-                    <!-- Photos -->
-                    <div id="photos-section" style="margin-bottom: 3rem;">
-                        <h3 class="protocol-section-title">📸 Fotos</h3>
-                        <div id="protocol-photos-grid" class="protocol-photo-grid"></div>
-                        <input type="file" id="protocol-photo-input" accept="image/*" multiple style="display: none;">
-                        <button onclick="document.getElementById('protocol-photo-input').click()" class="report-type-btn compact" style="width: auto; background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2);">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                                <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                                <polyline points="21 15 16 10 5 21"></polyline>
+                    <!-- Free Text Fields / Kommentare (collapsible, collapsed by default) -->
+                    <div id="text-fields-section" style="margin-bottom: 1rem;">
+                        <button type="button" onclick="window.toggleProtocolCollapsible('comments-collapsible-content', 'comments-chevron')"
+                            style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; cursor: pointer; color: #fff; font-family: 'Inter', sans-serif; transition: background 0.2s;"
+                            onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
+                            <span style="display: flex; align-items: center; gap: 10px; font-size: 1rem; font-weight: 700;">
+                                <span>💬</span> Kommentare
+                            </span>
+                            <svg id="comments-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.3s; transform: rotate(-90deg);">
+                                <polyline points="6 9 12 15 18 9"></polyline>
                             </svg>
-                            <span>Fotos hochladen</span>
                         </button>
+                        <div id="comments-collapsible-content" style="display: none; padding: 1.25rem 0.25rem 0.5rem 0.25rem;">
+                            <div id="protocol-text-fields"></div>
+                        </div>
                     </div>
 
                     <!-- Edit History -->
-                    <div id="edit-history-section" style="display: none; margin-bottom: 2rem; padding: 1.5rem; background: rgba(255, 255, 255, 0.02); border-radius: 20px; border: 1px solid var(--glass-border);">
+                    <div id="edit-history-section" style="display: none; margin-bottom: 2rem; margin-top: 1rem; padding: 1.5rem; background: rgba(255, 255, 255, 0.02); border-radius: 20px; border: 1px solid var(--glass-border);">
                         <h3 class="protocol-section-title">🕒 Bearbeitungshistorie</h3>
                         <div id="edit-history-list"></div>
                     </div>
@@ -146,6 +191,10 @@
                         <button onclick="window.closeProtocolModal()" class="btn-modal-base btn-modal-cancel">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                             Abbrechen
+                        </button>
+                        <button onclick="window.previewProtocolPDF()" class="btn-modal-base" style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.35); color: #a78bfa; gap: 8px;" onmouseover="this.style.background='rgba(139,92,246,0.28)'" onmouseout="this.style.background='rgba(139,92,246,0.15)'">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            Vorschau
                         </button>
                         <button onclick="window.saveProtocol()" class="btn-modal-base btn-modal-save">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
@@ -172,15 +221,8 @@
     // ==========================================
     // MODAL FUNCTIONS
     // ==========================================
-    window.openIntakeProtocol = async function (machineId, protocolId = null) {
-        currentProtocolType = 'intake';
-        await openProtocolModal(machineId, protocolId, 'intake');
-    };
-
-    window.openAcceptanceProtocol = async function (machineId, protocolId = null) {
-        currentProtocolType = 'acceptance';
-        await openProtocolModal(machineId, protocolId, 'acceptance');
-    };
+    // Re-exposure not strictly needed but kept for structure
+    // window.openIntakeProtocol...
 
     async function openProtocolModal(machineId, protocolId, type) {
         const modal = createProtocolModal();
@@ -205,6 +247,37 @@
         const modalTitle = type === 'intake' ? '📋 Eingangsprotokoll' : '✅ Abnahmeprotokoll';
         document.getElementById('protocol-modal-title').textContent = modalTitle;
         document.getElementById('protocol-machine-title').value = machineTitle;
+
+        // Populate Customer & Location preview info
+        const locationInfoSection = document.getElementById('protocol-location-info-section');
+        const customerDisplay = document.getElementById('protocol-customer-display');
+        const locationDisplay = document.getElementById('protocol-location-display');
+
+        if (locationInfoSection && machine) {
+            locationInfoSection.style.display = 'block';
+            if (machine.in_workshop) {
+                if (customerDisplay) customerDisplay.textContent = 'Intern (Eigene Werkstatt)';
+                if (locationDisplay) {
+                    const cached = localStorage.getItem('meetra_company_hq');
+                    let hqAddr = '';
+                    if (cached) {
+                        try {
+                            const hq = JSON.parse(cached);
+                            hqAddr = [hq.name || 'Meetra GmbH', hq.street || '', [hq.zip, hq.city].filter(Boolean).join(' '), hq.country].filter(Boolean).join(', ');
+                        } catch(e){}
+                    }
+                    locationDisplay.textContent = hqAddr || 'Meetra GmbH, Am Alten Bahnhof 6, 38122 Braunschweig, Deutschland';
+                }
+            } else {
+                if (customerDisplay) {
+                    const codeStr = machine.customer_number ? ` (Kundennummer: ${machine.customer_number})` : '';
+                    customerDisplay.textContent = (machine.company || 'Unbekannt') + codeStr;
+                }
+                if (locationDisplay) {
+                    locationDisplay.textContent = machine.location || machine.operator_address || 'Keine Adresse hinterlegt';
+                }
+            }
+        }
 
         // Apply category theme
         if (overlay) {
@@ -284,9 +357,36 @@
 
         // Show modal
         overlay.style.display = 'flex';
+
+        // Reset dirty flag when opening
+        protocolIsDirty = false;
     }
 
-    window.closeProtocolModal = function () {
+    window.closeProtocolModal = function (force = false) {
+        if (!force && protocolIsDirty) {
+            // Show custom confirmation dialog
+            const confirmOverlay = document.createElement('div');
+            confirmOverlay.id = 'protocol-confirm-close-overlay';
+            confirmOverlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);';
+            confirmOverlay.innerHTML = `
+                <div style="background:linear-gradient(135deg,rgba(30,41,59,0.98),rgba(15,23,42,0.99));border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:2rem 2.5rem;max-width:420px;width:90%;box-shadow:0 30px 80px rgba(0,0,0,0.6);font-family:'Inter',sans-serif;text-align:center;">
+                    <div style="font-size:2.5rem;margin-bottom:1rem;">⚠️</div>
+                    <h3 style="color:#fff;font-size:1.2rem;font-weight:800;margin:0 0 0.75rem 0;">Ungespeicherte Änderungen</h3>
+                    <p style="color:rgba(255,255,255,0.6);font-size:0.95rem;margin:0 0 2rem 0;line-height:1.5;">Sie haben Änderungen vorgenommen, die noch nicht gespeichert wurden. Wenn Sie jetzt schließen, gehen diese verloren.</p>
+                    <div style="display:flex;gap:1rem;justify-content:center;">
+                        <button onclick="document.getElementById('protocol-confirm-close-overlay').remove()" style="padding:0.75rem 1.5rem;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:12px;color:#fff;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;font-size:0.95rem;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
+                            Zurück
+                        </button>
+                        <button onclick="document.getElementById('protocol-confirm-close-overlay').remove(); window.closeProtocolModal(true);" style="padding:0.75rem 1.5rem;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);border-radius:12px;color:#f87171;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;font-size:0.95rem;transition:background 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.35)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
+                            Trotzdem schließen
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(confirmOverlay);
+            return;
+        }
+
         const overlay = document.getElementById('protocol-modal-overlay');
         if (overlay) {
             overlay.style.display = 'none';
@@ -296,6 +396,7 @@
         currentProtocolType = null;
         customCheckpoints = [];
         protocolPhotos = [];
+        protocolIsDirty = false;
     };
 
     async function setupTemplateSelection(categoryId, type) {
@@ -378,16 +479,29 @@
                         initialResult = machine.year || '';
                     } else if (labelLower.includes('hersteller') || labelLower.includes('manufacturer')) {
                         initialResult = machine.manufacturer || '';
+                    } else if (labelLower.includes('modell') || labelLower.includes('name')) {
+                        initialResult = machine.name || '';
                     }
+                }
+
+                // For table types, initialize with template structure but empty cells
+                let tableData = null;
+                if (item.type === 'table') {
+                    tableData = {
+                        columns: item.columns || [],
+                        rows: item.rows || [],
+                        values: (item.rows || []).map(row => row.map(() => ''))
+                    };
                 }
 
                 return {
                     label: item.label,
                     type: item.type,
-                    result: initialResult || false, // Default to false for single checkbox
-                    comment: '', // Initialize empty comment
-                    placeholder_label: item.placeholder_label, // Keep from template
-                    id: item.id || Date.now() + Math.random()
+                    result: initialResult || false, 
+                    comment: initialResult || '', // Use machine data as comment/value for text fields
+                    placeholder: item.placeholder || item.placeholder_label, 
+                    id: item.id || Date.now() + Math.random(),
+                    table_data: tableData
                 };
             })
         }));
@@ -452,6 +566,7 @@
 
     function renderPredefinedCheckpoints() {
         const container = document.getElementById('predefined-checkpoints-list');
+        if (!container) return;
         container.innerHTML = '';
 
         const checkpoints = currentProtocol.predefined_checkpoints;
@@ -479,8 +594,9 @@
                 header.onclick = () => window.toggleProtocolGroup(gIdx);
                 header.id = `protocol-group-header-${gIdx}`;
 
+                const cleanGroupTitle = group.group_title ? group.group_title.replace(/^\\d+\\.\\s*/, '') : 'Kategorie';
                 header.innerHTML = `
-                    <h4>${group.group_title}</h4>
+                    <h4>${gIdx + 1}. ${cleanGroupTitle}</h4>
                     <svg class="protocol-toggle-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                         <polyline points="6 9 12 15 18 9"></polyline>
                     </svg>
@@ -496,33 +612,106 @@
             group.items.forEach((item, iIdx) => {
                 const row = document.createElement('div');
                 row.className = 'protocol-checkpoint-row';
+                row.style.flexDirection = item.type === 'table' ? 'column' : 'row';
+                row.style.alignItems = item.type === 'table' ? 'stretch' : 'center';
 
-                // Checkbox (Single toggle)
-                const checkboxWrapper = document.createElement('div');
-                checkboxWrapper.className = 'protocol-single-checkbox-wrapper';
-                checkboxWrapper.innerHTML = `
-                    <input type="checkbox" class="protocol-single-checkbox" 
-                           ${item.result === true ? 'checked' : ''} 
-                           onchange="window.updateStructuredCheckpoint(${gIdx}, ${iIdx}, 'result', this.checked)">
-                `;
+                // 1. Checkbox (Only for checkbox type)
+                if (item.type === 'checkbox') {
+                    const checkboxWrapper = document.createElement('div');
+                    checkboxWrapper.className = 'protocol-single-checkbox-wrapper';
+                    checkboxWrapper.innerHTML = `
+                        <input type="checkbox" class="protocol-single-checkbox" 
+                               ${item.result === true ? 'checked' : ''} 
+                               onchange="window.updateStructuredCheckpoint(${gIdx}, ${iIdx}, 'result', this.checked)">
+                    `;
+                    row.appendChild(checkboxWrapper);
+                }
 
-                // Label
+                // 2. Label (Container for all types)
+                const labelContainer = document.createElement('div');
+                labelContainer.style.flex = item.type === 'table' ? 'none' : '1';
+                labelContainer.style.marginBottom = item.type === 'table' ? '10px' : '0';
+                
                 const label = document.createElement('span');
                 label.className = 'protocol-item-label';
-                label.textContent = item.label;
+                label.textContent = item.label || '';
+                label.style.fontWeight = '700';
+                labelContainer.appendChild(label);
+                row.appendChild(labelContainer);
 
-                // Integrated Text Input
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.className = 'protocol-integrated-input';
-                input.value = item.comment || '';
-                // Use placeholder from template or generic fallback
-                input.placeholder = item.placeholder_label || 'Bemerkung...';
-                input.onblur = (e) => window.updateStructuredCheckpoint(gIdx, iIdx, 'comment', e.target.value);
+                // 3. Main Input (Text or Table)
+                if (item.type === 'table') {
+                    const tableDiv = document.createElement('div');
+                    tableDiv.className = 'protocol-table-container';
+                    tableDiv.style.marginTop = '5px';
+                    
+                    const data = item.table_data || { columns: [], rows: [] };
+                    
+                    let tableHtml = `
+                        <div style="overflow-x: auto; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); padding: 2px;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                                <thead>
+                                    <tr>
+                                        ${data.columns.map(col => `
+                                            <th style="padding: 10px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.03); color: rgba(255,255,255,0.6); text-align: left; font-size: 0.75rem; text-transform: uppercase;">${col}</th>
+                                        `).join('')}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${data.rows.map((rowLayout, rIdx) => `
+                                        <tr>
+                                            ${rowLayout.map((cellLayout, cIdx) => {
+                                                const hasValues = !!data.values;
+                                                const cellValue = hasValues ? (data.values[rIdx][cIdx] || '') : (cellLayout !== ' ' ? cellLayout : '');
+                                                
+                                                if (!hasValues) {
+                                                    // Legacy rendering
+                                                    return `
+                                                        <td style="padding: 0; border: 1px solid rgba(255,255,255,0.08);">
+                                                            <input type="text" value="${cellValue}" 
+                                                                   style="width: 100%; background: transparent; border: none; color: #fff; padding: 10px; outline: none; font-size: 0.9rem;"
+                                                                   onblur="window.updateProtocolTableCell(${gIdx}, ${iIdx}, ${rIdx}, ${cIdx}, this.value)">
+                                                        </td>
+                                                    `;
+                                                }
 
-                row.appendChild(checkboxWrapper);
-                row.appendChild(label);
-                row.appendChild(input);
+                                                const matchPlaceholder = cellLayout.match(/^\s*\[(.*?)\]\s*$/);
+                                                if (matchPlaceholder) {
+                                                    const placeholderText = matchPlaceholder[1];
+                                                    return `
+                                                        <td style="padding: 0; border: 1px solid rgba(255,255,255,0.08);">
+                                                            <input type="text" value="${cellValue}" placeholder="${placeholderText}"
+                                                                   style="width: 100%; background: transparent; border: none; color: #fff; padding: 10px; outline: none; font-size: 0.9rem;"
+                                                                   onblur="window.updateProtocolTableCell(${gIdx}, ${iIdx}, ${rIdx}, ${cIdx}, this.value)">
+                                                        </td>
+                                                    `;
+                                                } else {
+                                                    return `
+                                                        <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02); color: rgba(255,255,255,0.8); font-size: 0.9rem;">
+                                                            ${cellLayout}
+                                                        </td>
+                                                    `;
+                                                }
+                                            }).join('')}
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    tableDiv.innerHTML = tableHtml;
+                    row.appendChild(tableDiv);
+                } else {
+                    // Integrated Text Input for checkbox and text types
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'protocol-integrated-input';
+                    input.style.flex = '2';
+                    input.value = item.comment || '';
+                    input.placeholder = item.placeholder || item.placeholder_label || 'Bemerkung...';
+                    input.onblur = (e) => window.updateStructuredCheckpoint(gIdx, iIdx, 'comment', e.target.value);
+                    row.appendChild(input);
+                }
 
                 itemsContainer.appendChild(row);
             });
@@ -538,6 +727,19 @@
         if (content && header) {
             content.classList.toggle('collapsed');
             header.classList.toggle('collapsed-header');
+        }
+    };
+
+    // Toggle collapsible sections (Fotos / Kommentare)
+    window.toggleProtocolCollapsible = function (contentId, chevronId) {
+        const content = document.getElementById(contentId);
+        const chevron = document.getElementById(chevronId);
+        if (!content) return;
+
+        const isOpen = content.style.display !== 'none';
+        content.style.display = isOpen ? 'none' : 'block';
+        if (chevron) {
+            chevron.style.transform = isOpen ? 'rotate(-90deg)' : 'rotate(0deg)';
         }
     };
 
@@ -571,11 +773,27 @@
         if (currentProtocol.predefined_checkpoints[gIdx] && currentProtocol.predefined_checkpoints[gIdx].items[iIdx]) {
             // field can be 'result' or 'comment'
             currentProtocol.predefined_checkpoints[gIdx].items[iIdx][field] = value;
+            markProtocolDirty();
         }
     };
 
     window.updatePredefinedCheckpoint = function (key, value) {
         currentProtocol.predefined_checkpoints[key] = value;
+        markProtocolDirty();
+    };
+
+    window.updateProtocolTableCell = function(gIdx, iIdx, rIdx, cIdx, val) {
+        if (currentProtocol.predefined_checkpoints[gIdx] && 
+            currentProtocol.predefined_checkpoints[gIdx].items[iIdx] &&
+            currentProtocol.predefined_checkpoints[gIdx].items[iIdx].table_data) {
+            const data = currentProtocol.predefined_checkpoints[gIdx].items[iIdx].table_data;
+            if (data.values) {
+                data.values[rIdx][cIdx] = val;
+            } else {
+                data.rows[rIdx][cIdx] = val;
+            }
+            markProtocolDirty();
+        }
     };
 
     window.showAddCheckpointForm = function () {
@@ -609,12 +827,14 @@
             sort_order: customCheckpoints.length
         });
 
+        markProtocolDirty();
         renderCustomCheckpoints();
         window.cancelNewCheckpoint();
     };
 
     function renderCustomCheckpoints() {
         const container = document.getElementById('custom-checkpoints-list');
+        if (!container) return;
         container.innerHTML = '';
 
         customCheckpoints.forEach((checkpoint, index) => {
@@ -677,37 +897,17 @@
     // ==========================================
     function renderTextFields(type, hideAll = false) {
         const container = document.getElementById('protocol-text-fields');
+        if (!container) return;
         container.innerHTML = '';
 
         if (hideAll) return;
 
-        if (type === 'intake') {
-            container.innerHTML = `
-                <div class="form-group" style="margin-bottom: 2rem;">
-                    <label style="display: block; margin-bottom: 0.75rem; color: rgba(255, 255, 255, 0.6); font-weight: 700; font-size: 0.95rem;">🚩 FEHLERBESCHREIBUNG / ARBEITSAUFTRAG</label>
-                    <textarea id="protocol-error-description" rows="5" class="glass-form-input" placeholder="Detaillierte Fehlerbeschreibung eingeben...">${currentProtocol.error_description || ''}</textarea>
-                </div>
-            `;
-        } else {
-            container.innerHTML = `
-                <div class="form-group" style="margin-bottom: 2rem;">
-                    <label style="display: block; margin-bottom: 0.75rem; color: rgba(255, 255, 255, 0.6); font-weight: 700; font-size: 0.95rem;">🛠️ DURCHGEFÜHRTE ARBEITEN</label>
-                    <textarea id="protocol-work-performed" rows="4" class="glass-form-input" placeholder="Zusammenfassung der Arbeiten...">${currentProtocol.work_performed || ''}</textarea>
-                </div>
-                <div class="form-group" style="margin-bottom: 2rem;">
-                    <label style="display: block; margin-bottom: 0.75rem; color: rgba(255, 255, 255, 0.6); font-weight: 700; font-size: 0.95rem;">⚙️ GETAUSCHTE TEILE</label>
-                    <textarea id="protocol-parts-replaced" rows="3" class="glass-form-input" placeholder="Liste der Ersatzteile...">${currentProtocol.parts_replaced || ''}</textarea>
-                </div>
-                <div class="form-group" style="margin-bottom: 2rem;">
-                    <label style="display: block; margin-bottom: 0.75rem; color: rgba(255, 255, 255, 0.6); font-weight: 700; font-size: 0.95rem;">📐 EINSTELLUNGEN / KALIBRIERUNGEN</label>
-                    <textarea id="protocol-settings-calibrations" rows="3" class="glass-form-input" placeholder="Vorgenommene Einstellungen...">${currentProtocol.settings_calibrations || ''}</textarea>
-                </div>
-                <div class="form-group" style="margin-bottom: 2rem;">
-                    <label style="display: block; margin-bottom: 0.75rem; color: rgba(255, 255, 255, 0.6); font-weight: 700; font-size: 0.95rem;">⚠️ RESTMÄNGEL</label>
-                    <textarea id="protocol-remaining-defects" rows="3" class="glass-form-input" placeholder="Bekannte Restmängel...">${currentProtocol.remaining_defects || ''}</textarea>
-                </div>
-            `;
-        }
+        container.innerHTML = `
+            <div class="form-group" style="margin-bottom: 2rem;">
+                <label style="display: block; margin-bottom: 0.75rem; color: rgba(255, 255, 255, 0.6); font-weight: 700; font-size: 0.95rem;">💬 KOMMENTARE</label>
+                <textarea id="protocol-comments" rows="6" class="glass-form-input" placeholder="Allgemeine Kommentare oder Anmerkungen eingeben...">${currentProtocol.comments || ''}</textarea>
+            </div>
+        `;
     }
 
     // ==========================================
@@ -748,6 +948,7 @@
             }
 
             renderPhotos();
+            markProtocolDirty();
             event.target.value = ''; // Reset input
         } catch (err) {
             console.error('Photo upload error:', err);
@@ -760,6 +961,7 @@
 
     function renderPhotos() {
         const container = document.getElementById('protocol-photos-grid');
+        if (!container) return;
         container.innerHTML = '';
 
         // Prepare an array of string URLs for the lightbox
@@ -851,9 +1053,15 @@
             // Save photos
             await saveProtocolPhotos();
 
+            // Mark as clean after successful save
+            protocolIsDirty = false;
+
             // Refresh protocols list if view is active
             if (typeof window.fetchProtocols === 'function') {
                 window.fetchProtocols();
+            }
+            if (typeof window.fetchTasks === 'function') {
+                window.fetchTasks();
             }
 
             alert('Protokoll erfolgreich gespeichert!');
@@ -1020,6 +1228,7 @@
     function renderEditHistory() {
         const section = document.getElementById('edit-history-section');
         const list = document.getElementById('edit-history-list');
+        if (!section || !list) return;
 
         section.style.display = 'block';
         list.innerHTML = '';
@@ -1115,6 +1324,7 @@
 
     window.generateProtocolPDF = async function (previewOpen = false) {
         try {
+            await window.loadPDFGenerators();
             const { jsPDF } = window.jspdf;
 
             // Show loading state
@@ -1171,7 +1381,38 @@
             doc.setTextColor(15, 23, 42); // Reset auf dunkles Blau/Grau
             doc.text(`Status: ${currentProtocol.status === 'completed' ? 'Abgeschlossen' : 'Entwurf'}`, 20, 54);
 
+            // Let's get the machine details
+            const machine = (window.machineList || []).find(m => m.id === currentProtocol.machine_id);
+            
             let startY = 64;
+
+            if (machine) {
+                doc.setFontSize(11);
+                if (machine.in_workshop) {
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Standort:', 20, 62);
+                    doc.setFont(undefined, 'normal');
+                    doc.text('Eigene Werkstatt (Meetra HQ)', 45, 62);
+                    startY = 72;
+                } else {
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Kunde:', 20, 62);
+                    doc.setFont(undefined, 'normal');
+                    
+                    // Format customer name nicely
+                    const customerName = machine.company || '-';
+                    const codeStr = machine.customer_number ? ` (Kundennummer: ${machine.customer_number})` : '';
+                    doc.text(customerName + codeStr, 40, 62);
+
+                    doc.setFont(undefined, 'bold');
+                    doc.text('Standort:', 20, 70);
+                    doc.setFont(undefined, 'normal');
+                    const locLines = doc.splitTextToSize(machine.location || '-', 145);
+                    doc.text(locLines, 45, 70);
+                    
+                    startY = 70 + (locLines.length * 5) + 8;
+                }
+            }
 
             doc.setFontSize(16);
             doc.setFont(undefined, 'bold');
@@ -1182,11 +1423,12 @@
             const tableData = [];
 
             if (Array.isArray(currentProtocol.predefined_checkpoints)) {
-                currentProtocol.predefined_checkpoints.forEach(group => {
-                    tableData.push([{ content: group.group_title || 'Kategorie', colSpan: 3, styles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' } }]);
+                currentProtocol.predefined_checkpoints.forEach((group, gIdx) => {
+                    const cleanGroupTitle = group.group_title ? group.group_title.replace(/^\\d+\\.\\s*/, '') : 'Kategorie';
+                    tableData.push([{ content: `${gIdx + 1}. ${cleanGroupTitle}`, colSpan: 3, styles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' } }]);
                     group.items.forEach(item => {
                         const result = item.result === true ? 'Ja' : (item.result === false ? 'Nein' : '-');
-                        tableData.push([item.label, result, item.comment || '']);
+                        tableData.push([item.label || '', result, item.comment || '']);
                     });
                 });
             } else if (currentProtocol.predefined_checkpoints) {
@@ -1354,6 +1596,127 @@
         await window.generateProtocolPDF(true);
     };
 
+    // Show PDF in an in-page overlay with iframe + print/download buttons
+    window.previewProtocolPDF = async function () {
+        try {
+            await window.loadPDFGenerators();
+            const { jsPDF } = window.jspdf;
+
+            // Loading indicator
+            const loadingEl = document.createElement('div');
+            loadingEl.id = 'pdf-preview-loading';
+            loadingEl.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.88);z-index:100000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-family:\'Inter\',sans-serif;backdrop-filter:blur(8px);';
+            loadingEl.innerHTML = `
+                <div style="width:48px;height:48px;border:4px solid rgba(139,92,246,0.2);border-top:4px solid #a78bfa;border-radius:50%;animation:spin 0.9s linear infinite;margin-bottom:1.25rem;"></div>
+                <div style="font-size:1.1rem;font-weight:700;color:#a78bfa;">PDF wird vorbereitet...</div>
+                <div style="font-size:0.85rem;color:rgba(255,255,255,0.45);margin-top:0.4rem;">Bitte warten</div>
+            `;
+            document.body.appendChild(loadingEl);
+
+            // Generate PDF as blob URL
+            await window.loadPDFGenerators();
+            const docPDF = new jsPDF('p', 'mm', 'a4');
+            const bgImage = await getTemplateBackground();
+            const addBg = () => { if (bgImage) docPDF.addImage(bgImage, 'JPEG', -5, -5, 220, 307, undefined, 'FAST'); };
+            const origAddPage = docPDF.addPage.bind(docPDF);
+            docPDF.addPage = function() { origAddPage(); addBg(); return docPDF; };
+            addBg();
+
+            const title = currentProtocolType === 'intake' ? 'Eingangsprotokoll' : 'Abnahmeprotokoll';
+            const machineTitle = currentProtocol.title || 'Ohne Titel';
+            docPDF.setFontSize(22); docPDF.setFont(undefined,'bold'); docPDF.setTextColor(30,41,59);
+            docPDF.text(title, 20, 36);
+            docPDF.setFontSize(12); docPDF.setFont(undefined,'normal'); docPDF.setTextColor(71,85,105);
+            const dateStr = new Date(currentProtocol.created_at || Date.now()).toLocaleDateString('de-DE');
+            docPDF.text(`Datum: ${dateStr}`, 145, 36);
+            docPDF.setFontSize(14); docPDF.setFont(undefined,'bold'); docPDF.setTextColor(15,23,42);
+            docPDF.text('Maschine: ', 20, 46);
+            const pW = docPDF.getTextWidth('Maschine: ');
+            docPDF.setTextColor(34,197,94);
+            docPDF.text(`${machineTitle}`, 20+pW, 46);
+            docPDF.setFont(undefined,'normal'); docPDF.setTextColor(15,23,42);
+            docPDF.text(`Status: ${currentProtocol.status === 'completed' ? 'Abgeschlossen' : 'Entwurf'}`, 20, 54);
+
+            const machine = (window.machineList||[]).find(m=>m.id===currentProtocol.machine_id);
+            let startY = 64;
+            if (machine) {
+                docPDF.setFontSize(11);
+                if (machine.in_workshop) {
+                    docPDF.setFont(undefined,'bold'); docPDF.text('Standort:', 20, 62);
+                    docPDF.setFont(undefined,'normal'); docPDF.text('Eigene Werkstatt (Meetra HQ)', 45, 62);
+                    startY = 72;
+                } else {
+                    docPDF.setFont(undefined,'bold'); docPDF.text('Kunde:', 20, 62);
+                    docPDF.setFont(undefined,'normal');
+                    const cName = machine.company||'-';
+                    const cCode = machine.customer_number ? ` (Kundennummer: ${machine.customer_number})` : '';
+                    docPDF.text(cName+cCode, 40, 62);
+                    docPDF.setFont(undefined,'bold'); docPDF.text('Standort:', 20, 70);
+                    docPDF.setFont(undefined,'normal');
+                    const locLines = docPDF.splitTextToSize(machine.location||'-', 145);
+                    docPDF.text(locLines, 45, 70);
+                    startY = 70+(locLines.length*5)+8;
+                }
+            }
+
+            docPDF.setFontSize(16); docPDF.setFont(undefined,'bold'); docPDF.setTextColor(15,23,42);
+            docPDF.text('Prüfpunkte', 20, startY); startY += 6;
+
+            const tableData = [];
+            if (Array.isArray(currentProtocol.predefined_checkpoints)) {
+                currentProtocol.predefined_checkpoints.forEach((group,gIdx) => {
+                    const cleanTitle = group.group_title ? group.group_title.replace(/^\\d+\\.\\s*/,'') : 'Kategorie';
+                    tableData.push([{content:`${gIdx+1}. ${cleanTitle}`,colSpan:3,styles:{fillColor:[241,245,249],textColor:[15,23,42],fontStyle:'bold'}}]);
+                    group.items.forEach(item => {
+                        const r = item.result===true?'Ja':(item.result===false?'Nein':'-');
+                        tableData.push([item.label||'',r,item.comment||'']);
+                    });
+                });
+            }
+            docPDF.autoTable({
+                startY, head:[[{content:'Prüfpunkt',styles:{halign:'left'}},{content:'Ergebnis',styles:{halign:'center'}},{content:'Bemerkung',styles:{halign:'center'}}]],
+                body:tableData, theme:'grid',
+                headStyles:{fillColor:[203,213,225],textColor:[15,23,42],lineWidth:0.1,lineColor:[148,163,184]},
+                styles:{fontSize:10,cellPadding:4,lineWidth:0.1,lineColor:[148,163,184]},
+                columnStyles:{0:{cellWidth:70},1:{cellWidth:25,halign:'center'},2:{cellWidth:'auto',halign:'left'}},
+                margin:{top:36,bottom:20,left:20,right:20}
+            });
+
+            const cleanFileName = (title+'_'+machineTitle).replace(/[^a-zA-Z0-9_-]/g,'_');
+            const fileName = `${cleanFileName}_${new Date().toISOString().split('T')[0]}.pdf`;
+            const blobUrl = docPDF.output('bloburl');
+
+            // Remove loading
+            document.getElementById('pdf-preview-loading')?.remove();
+
+            // Build preview overlay
+            const previewOverlay = document.createElement('div');
+            previewOverlay.id = 'pdf-preview-overlay';
+            previewOverlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(5,10,20,0.97);z-index:100001;display:flex;flex-direction:column;font-family:\'Inter\',sans-serif;';
+            previewOverlay.innerHTML = `
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:0.4rem 1rem;background:rgba(15,23,42,0.96);border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
+                    <div style="display:flex;align-items:center;gap:8px;overflow:hidden;min-width:0;">
+                        <span style="color:rgba(255,255,255,0.4);font-size:0.76rem;font-weight:600;white-space:nowrap;flex-shrink:0;">PDF-Vorschau</span>
+                        <span style="color:rgba(255,255,255,0.18);font-size:0.76rem;flex-shrink:0;">|</span>
+                        <span style="color:#fff;font-size:0.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title} &ndash; ${machineTitle}</span>
+                    </div>
+                    <button onclick="document.getElementById('pdf-preview-overlay').remove()"
+                        style="flex-shrink:0;margin-left:0.75rem;width:26px;height:26px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:rgba(255,255,255,0.55);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;"
+                        onmouseover="this.style.background='rgba(239,68,68,0.2)';this.style.borderColor='rgba(239,68,68,0.4)';this.style.color='#f87171';" onmouseout="this.style.background='rgba(255,255,255,0.06)';this.style.borderColor='rgba(255,255,255,0.12)';this.style.color='rgba(255,255,255,0.55)';">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <iframe id="pdf-preview-frame" src="${blobUrl}" style="flex:1;width:100%;border:none;background:#525659;"></iframe>
+            `;
+            document.body.appendChild(previewOverlay);
+
+
+        } catch (err) {
+            document.getElementById('pdf-preview-loading')?.remove();
+            alert('Fehler bei der Vorschau: ' + err.message);
+        }
+    };
+
     // ==========================================
     // LIST RENDERING & FILTERING
     // ==========================================
@@ -1483,6 +1846,10 @@
                 const badgeText = p.status === 'completed' ? 'Abgeschlossen' : 'Entwurf';
                 const badgeColor = p.status === 'completed' ? '#10b981' : '#f59e0b';
                 const typeLabel = isAcceptance ? 'Abnahmeprotokoll' : 'Eingangsprotokoll';
+                // Typ-Farbe: Abnahmeprotokoll = Orange, Eingangsprotokoll = Blau
+                const typeBgColor = isAcceptance ? 'rgba(249, 115, 22, 0.2)' : 'rgba(59, 130, 246, 0.2)';
+                const typeBorderColor = isAcceptance ? 'rgba(249, 115, 22, 0.5)' : 'rgba(59, 130, 246, 0.4)';
+                const typeTextColor = isAcceptance ? '#fb923c' : '#93c5fd';
 
                 return `
                     <div class="card" onclick="${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')" style="font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); border: 3px solid ${badgeColor}66; border-top: 7px solid ${badgeColor}; border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative; padding-top: 35px; width: 100%; box-sizing: border-box; min-width: 0;">
@@ -1495,7 +1862,7 @@
                         <!-- Full-Width Machine Image Container -->
                         <div style="position: relative; width: 100%; height: var(--machine-image-height, 300px); overflow: hidden; background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01)); display: flex; align-items: center; justify-content: center;">
                             ${p.machines && p.machines.image_url ?
-                        `<img src="${p.machines.image_url}" alt="${p.title}" style="width: 100%; height: 100%; object-fit: contain; display: block;">` :
+                        `<img src="${p.machines.image_url}" alt="${p.title}" loading="lazy" style="width: 100%; height: 100%; object-fit: contain; display: block;">` :
                         `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity: 0.15;">
                                     <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
                                     <circle cx="9" cy="9" r="2"/>
@@ -1509,7 +1876,7 @@
                         <div class="card-content" style="padding: 1.25rem 1.25rem 2px 1.25rem; flex: 1; display: flex; flex-direction: column; gap: 0.75rem;">
                             <!-- First Row: Centered Tag -->
                             <div style="display: flex; justify-content: center; margin-bottom: 0.25rem;">
-                                <div style="padding: 4px 12px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); border-radius: 12px; color: #93c5fd; font-size: 0.8rem; font-weight: 800; display: flex; align-items: center; gap: 4px; text-transform: uppercase;">
+                                <div style="padding: 4px 12px; background: ${typeBgColor}; border: 1px solid ${typeBorderColor}; border-radius: 12px; color: ${typeTextColor}; font-size: 0.8rem; font-weight: 800; display: flex; align-items: center; gap: 4px; text-transform: uppercase;">
                                     ${typeLabel}
                                 </div>
                             </div>
@@ -1539,7 +1906,8 @@
                             
                             <!-- Action buttons -->
                             <div class="card-actions" style="margin-top: auto; padding-top: 0.75rem; display: flex; gap: 8px; align-items: stretch;">
-                                <button class="btn-reports">
+                                <button class="btn-reports" style="cursor: pointer !important; pointer-events: auto !important; display: flex; align-items: center; justify-content: center; gap: 8px; flex: 1; min-height: 44px; background: rgba(59, 130, 246, 0.2); border: 1.5px solid rgba(59, 130, 246, 0.5); color: #60a5fa; border-radius: 12px; font-weight: 700;" 
+                                        onclick="event.stopPropagation(); ${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id || ''}', '${p.id || ''}')">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                                     Öffnen
                                 </button>
@@ -1563,6 +1931,8 @@
                 const isAcceptance = p.type === 'acceptance';
                 const typeLabel = isAcceptance ? 'Abnahmeprotokoll' : 'Eingangsprotokoll';
                 const badgeColor = p.status === 'completed' ? '#10b981' : '#f59e0b';
+                // Typ-Farbe: Abnahmeprotokoll = Orange, Eingangsprotokoll = Blau
+                const typeIconColor = isAcceptance ? '#fb923c' : '#60a5fa';
                 const iconPath = isAcceptance
                     ? '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M9 15l2 2 4-4"></path>'
                     : '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline>';
@@ -1571,12 +1941,12 @@
                     <tr style="cursor: pointer; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: inset 5px 0 0 0 ${badgeColor}, inset 0 1.5px 0 0 ${badgeColor}66, inset -1.5px 0 0 0 ${badgeColor}66, inset 0 -1.5px 0 0 ${badgeColor}66, 0 10px 30px rgba(0,0,0,0.4); border-radius: 16px; overflow: hidden;" onclick="${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')">
                         <td data-label="Typ">
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: ${badgeColor}22; color: ${badgeColor};">
+                                <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: ${typeIconColor}22; color: ${typeIconColor};">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         ${iconPath}
                                     </svg>
                                 </div>
-                                <span style="font-weight: 600; font-size: 0.95rem;">${typeLabel}</span>
+                                <span style="font-weight: 600; font-size: 0.95rem; color: ${typeIconColor};">${typeLabel}</span>
                             </div>
                         </td>
                         <td data-label="Maschine" style="color: var(--color-primary-green); font-weight: 700; font-size: 0.98rem; line-height: 1.3;">
