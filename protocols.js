@@ -497,7 +497,7 @@
                 return {
                     label: item.label,
                     type: item.type,
-                    result: initialResult || false, 
+                    result: item.type === 'checkbox' ? null : (initialResult || false), 
                     comment: initialResult || '', // Use machine data as comment/value for text fields
                     placeholder: item.placeholder || item.placeholder_label, 
                     id: item.id || Date.now() + Math.random(),
@@ -615,14 +615,28 @@
                 row.style.flexDirection = item.type === 'table' ? 'column' : 'row';
                 row.style.alignItems = item.type === 'table' ? 'stretch' : 'center';
 
-                // 1. Checkbox (Only for checkbox type)
+                // 1. Tri-State Checkbox
                 if (item.type === 'checkbox') {
                     const checkboxWrapper = document.createElement('div');
                     checkboxWrapper.className = 'protocol-single-checkbox-wrapper';
+                    
+                    let stateClass = '';
+                    let stateSymbol = '&nbsp;';
+                    if (item.result === true) {
+                        stateClass = 'state-ok';
+                        stateSymbol = '✓';
+                    } else if (item.result === 'warning') {
+                        stateClass = 'state-warning';
+                        stateSymbol = '-';
+                    } else if (item.result === false) {
+                        stateClass = 'state-nok';
+                        stateSymbol = '✗';
+                    }
+                    
                     checkboxWrapper.innerHTML = `
-                        <input type="checkbox" class="protocol-single-checkbox" 
-                               ${item.result === true ? 'checked' : ''} 
-                               onchange="window.updateStructuredCheckpoint(${gIdx}, ${iIdx}, 'result', this.checked)">
+                        <div class="protocol-tri-state-box ${stateClass}" onclick="window.cycleTriStateCheckpoint(${gIdx}, ${iIdx})">
+                            ${stateSymbol}
+                        </div>
                     `;
                     row.appendChild(checkboxWrapper);
                 }
@@ -708,7 +722,13 @@
                     input.className = 'protocol-integrated-input';
                     input.style.flex = '2';
                     input.value = item.comment || '';
-                    input.placeholder = item.placeholder || item.placeholder_label || 'Bemerkung...';
+                    if (item.type === 'checkbox' && item.result === false) {
+                        input.style.borderColor = '#ef4444';
+                        input.style.boxShadow = '0 0 10px rgba(239, 68, 68, 0.2)';
+                        input.placeholder = 'Fehlerbeschreibung erforderlich!';
+                    } else {
+                        input.placeholder = item.placeholder || item.placeholder_label || 'Bemerkung...';
+                    }
                     input.onblur = (e) => window.updateStructuredCheckpoint(gIdx, iIdx, 'comment', e.target.value);
                     row.appendChild(input);
                 }
@@ -768,6 +788,27 @@
             container.appendChild(row);
         });
     }
+
+    window.cycleTriStateCheckpoint = function (gIdx, iIdx) {
+        if (currentProtocol.predefined_checkpoints[gIdx] && currentProtocol.predefined_checkpoints[gIdx].items[iIdx]) {
+            const item = currentProtocol.predefined_checkpoints[gIdx].items[iIdx];
+            
+            let nextResult;
+            if (item.result === true) {
+                nextResult = 'warning'; // Step 2: Yellow Minus
+            } else if (item.result === 'warning') {
+                nextResult = false; // Step 3: Red X
+            } else if (item.result === false) {
+                nextResult = null; // Step 4: Empty (or cycle back)
+            } else {
+                nextResult = true; // Step 1: Green Checkmark
+            }
+            
+            item.result = nextResult;
+            markProtocolDirty();
+            renderPredefinedCheckpoints();
+        }
+    };
 
     window.updateStructuredCheckpoint = function (gIdx, iIdx, field, value) {
         if (currentProtocol.predefined_checkpoints[gIdx] && currentProtocol.predefined_checkpoints[gIdx].items[iIdx]) {
@@ -1001,6 +1042,24 @@
     // SAVE & COMPLETE
     // ==========================================
     window.saveProtocol = async function () {
+        // Validate required comments for red (false) Tri-State checkpoints
+        let missingComments = [];
+        if (Array.isArray(currentProtocol.predefined_checkpoints)) {
+            currentProtocol.predefined_checkpoints.forEach(group => {
+                group.items.forEach(item => {
+                    if (item.type === 'checkbox' && item.result === false) {
+                        if (!item.comment || !item.comment.trim()) {
+                            missingComments.push(item.label);
+                        }
+                    }
+                });
+            });
+        }
+        if (missingComments.length > 0) {
+            alert('Bitte tragen Sie für alle rot markierten (defekten) Prüfpunkte eine Fehlerbeschreibung ein:\n\n- ' + missingComments.join('\n- '));
+            return;
+        }
+
         try {
             // Collect text field data
             if (currentProtocolType === 'intake') {
@@ -1062,6 +1121,99 @@
             }
             if (typeof window.fetchTasks === 'function') {
                 window.fetchTasks();
+            }
+
+            // Create automatic tasks from defects
+            if (currentProtocol.machine_id) {
+                const defects = [];
+                if (Array.isArray(currentProtocol.predefined_checkpoints)) {
+                    currentProtocol.predefined_checkpoints.forEach(group => {
+                        group.items.forEach(item => {
+                            if (item.type === 'checkbox' && item.result === false && item.comment && item.comment.trim()) {
+                                defects.push({
+                                    label: item.label,
+                                    comment: item.comment.trim()
+                                });
+                            }
+                        });
+                    });
+                }
+
+                if (defects.length > 0) {
+                    try {
+                        const machine = (window.machineList || []).find(m => m.id === currentProtocol.machine_id);
+                        const machineName = machine ? `${machine.manufacturer} ${machine.name}` : 'Maschine';
+
+                        // 1. Search for existing open task for this machine
+                        const { data: existingTasks, error: findError } = await window.supabaseClient
+                            .from('tasks')
+                            .select('id, title')
+                            .eq('machine_id', currentProtocol.machine_id)
+                            .neq('status', 'completed')
+                            .limit(1);
+
+                        if (findError) throw findError;
+
+                        let taskId = null;
+                        if (existingTasks && existingTasks.length > 0) {
+                            taskId = existingTasks[0].id;
+                        } else {
+                            // Create new main task for the machine
+                            const newTaskData = {
+                                title: `Mängelbehebung (${machineName})`,
+                                description: 'Automatisch erstellt aus Prüfprotokollen.',
+                                status: 'open',
+                                machine_id: currentProtocol.machine_id,
+                                created_by: window.activeUser?.id || null,
+                                updated_at: new Date().toISOString()
+                            };
+
+                            const { data: createdTask, error: createError } = await window.supabaseClient
+                                .from('tasks')
+                                .insert([newTaskData])
+                                .select();
+
+                            if (createError) throw createError;
+                            if (createdTask && createdTask[0]) {
+                                taskId = createdTask[0].id;
+                            }
+                        }
+
+                        if (taskId) {
+                            // 2. Fetch existing subtasks for this task to check for duplicates
+                            const { data: existingSubtasks, error: stError } = await window.supabaseClient
+                                .from('subtasks')
+                                .select('title')
+                                .eq('task_id', taskId);
+
+                            if (stError) throw stError;
+                            const existingTitles = (existingSubtasks || []).map(s => s.title.toLowerCase().trim());
+
+                            // 3. Insert new subtasks under supergroup "Mängel aus Protokollen"
+                            const subtasksToInsert = [];
+                            defects.forEach(defect => {
+                                const subtaskTitle = `${defect.label}: ${defect.comment}`;
+                                if (!existingTitles.includes(subtaskTitle.toLowerCase().trim())) {
+                                    subtasksToInsert.push({
+                                        task_id: taskId,
+                                        title: subtaskTitle,
+                                        status: 'open',
+                                        supergroup: 'Mängel aus Protokollen'
+                                    });
+                                }
+                            });
+
+                            if (subtasksToInsert.length > 0) {
+                                const { error: insertError } = await window.supabaseClient
+                                    .from('subtasks')
+                                    .insert(subtasksToInsert);
+                                if (insertError) throw insertError;
+                            }
+                        }
+                    } catch (taskErr) {
+                        console.error('Error creating tasks from protocol defects:', taskErr);
+                    }
+                }
             }
 
             alert('Protokoll erfolgreich gespeichert!');

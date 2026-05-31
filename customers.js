@@ -232,7 +232,20 @@
         const reader = new FileReader();
         reader.onload = function (e) {
             try {
-                const text = e.target.result;
+                const buffer = e.target.result;
+                
+                // Try decoding as UTF-8 first (with fatal error on invalid sequences)
+                let text;
+                try {
+                    const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
+                    text = utf8Decoder.decode(buffer);
+                } catch (utf8Err) {
+                    // Fallback to Windows-1252 / ISO-8859-1 for German ANSI/Sage exports
+                    console.log('UTF-8 decoding failed. Falling back to windows-1252 encoding.');
+                    const ansiDecoder = new TextDecoder('windows-1252');
+                    text = ansiDecoder.decode(buffer);
+                }
+
                 const lines = text.split(/\r?\n/);
                 if (lines.length === 0 || (lines.length === 1 && lines[0] === '')) {
                     throw new Error('Die CSV-Datei scheint leer zu sein.');
@@ -277,9 +290,8 @@
                 resetImportUI();
             }
         };
-        // Use ISO-8859-1 or UTF-8. Sages exported CSVs on German Windows are often Windows-1252/ISO-8859-1.
-        // Let's read it as UTF-8, but let the user know if there are encoding issues.
-        reader.readAsText(file, 'UTF-8');
+        // Read as ArrayBuffer so TextDecoder can decode it with custom encoding.
+        reader.readAsArrayBuffer(file);
     }
 
     function showMappingConfig(originalDropzoneHtml) {
@@ -296,7 +308,7 @@
 
         // Populate column dropdowns
         const dropdownIds = [
-            'map-cust-num', 'map-matchcode', 'map-name', 'map-street',
+            'map-address-num', 'map-cust-num', 'map-matchcode', 'map-name', 'map-street',
             'map-zip', 'map-city', 'map-country', 'map-phone', 'map-email'
         ];
 
@@ -322,6 +334,7 @@
 
     function findMatchingHeaderIndex(fieldId, headers) {
         const mappingKeywords = {
+            'map-address-num': ['adressnummer', 'adresse', 'adrnr', 'adress-nr', 'adressnr', 'address number', 'addressnum'],
             'map-cust-num': ['konto', 'kdnr', 'kundennummer', 'kunden-nr', 'kundennr', 'client number', 'customer number', 'id'],
             'map-matchcode': ['match', 'matchcode', 'suchbegriff', 'kurzname', 'kürzel'],
             'map-name': ['name1', 'name', 'firma', 'kundenname', 'bezeichnung', 'company', 'name 1'],
@@ -393,6 +406,7 @@
         const resultSection = document.getElementById('import-result-section');
         const resultMessage = document.getElementById('import-result-message');
 
+        const mapAddressNum = document.getElementById('map-address-num').value;
         const mapCustNum = document.getElementById('map-cust-num').value;
         const mapMatchcode = document.getElementById('map-matchcode').value;
         const mapName = document.getElementById('map-name').value;
@@ -404,8 +418,8 @@
         const mapEmail = document.getElementById('map-email').value;
 
         // Validation
-        if (mapCustNum === '' || mapName === '') {
-            alert('Die Felder "Kundennummer" und "Firmenname / Kundenname" sind Pflichtfelder und müssen zugeordnet werden.');
+        if (mapAddressNum === '' || mapName === '') {
+            alert('Die Felder "Adressnummer" und "Firmenname / Kundenname" sind Pflichtfelder und müssen zugeordnet werden.');
             return;
         }
 
@@ -415,10 +429,11 @@
         const customersToUpsert = [];
         
         parsedRows.forEach(row => {
-            const custNum = row[mapCustNum]?.toString().trim();
+            const addressNum = row[mapAddressNum]?.toString().trim();
+            const custNum = mapCustNum !== '' ? row[mapCustNum]?.toString().trim() : null;
             const name = row[mapName]?.toString().trim();
 
-            if (!custNum || !name) return; // Skip invalid rows
+            if (!addressNum || !name) return; // Skip invalid rows
 
             // Construct values with clean fallbacks
             let street = mapStreet !== '' ? row[mapStreet]?.toString().trim() : null;
@@ -436,7 +451,8 @@
             }
 
             customersToUpsert.push({
-                customer_number: custNum,
+                address_number: addressNum,
+                customer_number: custNum || null,
                 name: name,
                 matchcode: mapMatchcode !== '' ? (row[mapMatchcode]?.toString().trim() || name) : name,
                 street: street || null,
@@ -449,7 +465,7 @@
         });
 
         if (customersToUpsert.length === 0) {
-            alert('Keine gültigen Zeilen mit Kundennummer und Name zum Importieren gefunden.');
+            alert('Keine gültigen Zeilen mit Adressnummer und Name zum Importieren gefunden.');
             resetImportUI();
             return;
         }
@@ -465,7 +481,7 @@
                 
                 const { error } = await window.supabaseClient
                     .from('customers')
-                    .upsert(chunk, { onConflict: 'customer_number' });
+                    .upsert(chunk, { onConflict: 'address_number' });
 
                 if (error) throw error;
 
@@ -490,6 +506,8 @@
     // CUSTOMER AUTOCOMPLETE SEARCH & FILL (MACHINE FORM)
     // ==========================================
     let machineSearchTimeout = null;
+    let operatorSearchTimeout = null;
+    let locationSearchTimeout = null;
 
     window.searchCustomersForMachine = function () {
         clearTimeout(machineSearchTimeout);
@@ -511,8 +529,8 @@
 
                 const { data, error } = await window.supabaseClient
                     .from('customers')
-                    .select('id, name, matchcode, customer_number, street, zip_code, city, country')
-                    .or(`name.ilike.%${query}%,matchcode.ilike.%${query}%,customer_number.ilike.%${query}%`)
+                    .select('id, name, matchcode, customer_number, address_number, street, zip_code, city, country')
+                    .or(`name.ilike.%${query}%,matchcode.ilike.%${query}%,customer_number.ilike.%${query}%,address_number.ilike.%${query}%`)
                     .limit(10);
 
                 if (error) throw error;
@@ -530,7 +548,10 @@
                     div.onmouseout = () => div.style.background = 'transparent';
                     
                     const label = cust.matchcode ? `[${cust.matchcode}] ${cust.name}` : cust.name;
-                    const details = `${cust.customer_number ? 'Nr. ' + cust.customer_number + ' - ' : ''}${cust.city || ''}`;
+                    let details = '';
+                    if (cust.address_number) details += `Adr. ${cust.address_number} `;
+                    if (cust.customer_number) details += `(Kdnr. ${cust.customer_number}) `;
+                    if (cust.city) details += `- ${cust.city}`;
                     
                     div.innerHTML = `
                         <div style="font-weight:700; font-size:0.95rem;">${label}</div>
@@ -548,6 +569,166 @@
                 suggestionsBox.innerHTML = '<div style="padding:10px; color:red;">Fehler bei der Suche</div>';
             }
         }, 250);
+    };
+
+    window.searchOperatorsForMachine = function () {
+        clearTimeout(operatorSearchTimeout);
+        operatorSearchTimeout = setTimeout(async () => {
+            const query = document.getElementById('machine-operator-search').value.trim();
+            const suggestionsBox = document.getElementById('machine-operator-suggestions');
+
+            if (!query || query.length < 2) {
+                suggestionsBox.style.display = 'none';
+                suggestionsBox.innerHTML = '';
+                return;
+            }
+
+            suggestionsBox.style.display = 'block';
+            suggestionsBox.innerHTML = '<div style="padding:10px; color:rgba(255,255,255,0.5);">Suche...</div>';
+
+            try {
+                if (!window.supabaseClient) throw new Error('Supabase Client nicht initialisiert');
+
+                const { data, error } = await window.supabaseClient
+                    .from('customers')
+                    .select('id, name, matchcode, customer_number, address_number, street, zip_code, city, country')
+                    .or(`name.ilike.%${query}%,matchcode.ilike.%${query}%,customer_number.ilike.%${query}%,address_number.ilike.%${query}%`)
+                    .limit(10);
+
+                if (error) throw error;
+
+                if (data.length === 0) {
+                    suggestionsBox.innerHTML = '<div style="padding:10px; color:rgba(255,255,255,0.4);">Keine Betreiber gefunden</div>';
+                    return;
+                }
+
+                suggestionsBox.innerHTML = '';
+                data.forEach(cust => {
+                    const div = document.createElement('div');
+                    div.style.cssText = 'padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer; color:#fff; transition: background 0.2s;';
+                    div.onmouseover = () => div.style.background = 'rgba(255,255,255,0.08)';
+                    div.onmouseout = () => div.style.background = 'transparent';
+                    
+                    const label = cust.matchcode ? `[${cust.matchcode}] ${cust.name}` : cust.name;
+                    let details = '';
+                    if (cust.address_number) details += `Adr. ${cust.address_number} `;
+                    if (cust.customer_number) details += `(Kdnr. ${cust.customer_number}) `;
+                    if (cust.city) details += `- ${cust.city}`;
+                    
+                    div.innerHTML = `
+                        <div style="font-weight:700; font-size:0.95rem;">${label}</div>
+                        <div style="font-size:0.8rem; color:rgba(255,255,255,0.4); margin-top:2px;">${details}</div>
+                    `;
+
+                    div.onclick = () => {
+                        window.selectOperatorForMachine(cust);
+                    };
+
+                    suggestionsBox.appendChild(div);
+                });
+            } catch (err) {
+                console.error('Autocomplete operator search failed:', err);
+                suggestionsBox.innerHTML = '<div style="padding:10px; color:red;">Fehler bei der Suche</div>';
+            }
+        }, 250);
+    };
+
+    window.selectOperatorForMachine = function (cust) {
+        document.getElementById('machine-customer-number').value = cust.customer_number || '';
+        document.getElementById('machine-owner').value = cust.name || '';
+        document.getElementById('machine-operator-street').value = cust.street || '';
+        document.getElementById('machine-operator-zip').value = cust.zip_code || '';
+        document.getElementById('machine-operator-city').value = cust.city || '';
+        document.getElementById('machine-operator-country').value = cust.country || 'Deutschland';
+
+        window.updateCombinedAddresses();
+
+        // Populate search input
+        const searchInput = document.getElementById('machine-operator-search');
+        searchInput.value = cust.matchcode ? `[${cust.matchcode}] ${cust.name}` : cust.name;
+        
+        const suggestionsBox = document.getElementById('machine-operator-suggestions');
+        suggestionsBox.style.display = 'none';
+        suggestionsBox.innerHTML = '';
+    };
+
+    window.searchLocationsForMachine = function () {
+        clearTimeout(locationSearchTimeout);
+        locationSearchTimeout = setTimeout(async () => {
+            const query = document.getElementById('machine-location-search').value.trim();
+            const suggestionsBox = document.getElementById('machine-location-suggestions');
+
+            if (!query || query.length < 2) {
+                suggestionsBox.style.display = 'none';
+                suggestionsBox.innerHTML = '';
+                return;
+            }
+
+            suggestionsBox.style.display = 'block';
+            suggestionsBox.innerHTML = '<div style="padding:10px; color:rgba(255,255,255,0.5);">Suche...</div>';
+
+            try {
+                if (!window.supabaseClient) throw new Error('Supabase Client nicht initialisiert');
+
+                const { data, error } = await window.supabaseClient
+                    .from('customers')
+                    .select('id, name, matchcode, customer_number, address_number, street, zip_code, city, country')
+                    .or(`name.ilike.%${query}%,matchcode.ilike.%${query}%,customer_number.ilike.%${query}%,address_number.ilike.%${query}%`)
+                    .limit(10);
+
+                if (error) throw error;
+
+                if (data.length === 0) {
+                    suggestionsBox.innerHTML = '<div style="padding:10px; color:rgba(255,255,255,0.4);">Keine Standorte gefunden</div>';
+                    return;
+                }
+
+                suggestionsBox.innerHTML = '';
+                data.forEach(cust => {
+                    const div = document.createElement('div');
+                    div.style.cssText = 'padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer; color:#fff; transition: background 0.2s;';
+                    div.onmouseover = () => div.style.background = 'rgba(255,255,255,0.08)';
+                    div.onmouseout = () => div.style.background = 'transparent';
+                    
+                    const label = cust.matchcode ? `[${cust.matchcode}] ${cust.name}` : cust.name;
+                    let details = '';
+                    if (cust.address_number) details += `Adr. ${cust.address_number} `;
+                    if (cust.customer_number) details += `(Kdnr. ${cust.customer_number}) `;
+                    if (cust.city) details += `- ${cust.city}`;
+                    
+                    div.innerHTML = `
+                        <div style="font-weight:700; font-size:0.95rem;">${label}</div>
+                        <div style="font-size:0.8rem; color:rgba(255,255,255,0.4); margin-top:2px;">${details}</div>
+                    `;
+
+                    div.onclick = () => {
+                        window.selectLocationForMachine(cust);
+                    };
+
+                    suggestionsBox.appendChild(div);
+                });
+            } catch (err) {
+                console.error('Autocomplete location search failed:', err);
+                suggestionsBox.innerHTML = '<div style="padding:10px; color:red;">Fehler bei der Suche</div>';
+            }
+        }, 250);
+    };
+
+    window.selectLocationForMachine = function (cust) {
+        document.getElementById('machine-location-street').value = cust.street || '';
+        document.getElementById('machine-location-zip').value = cust.zip_code || '';
+        document.getElementById('machine-location-city').value = cust.city || '';
+        document.getElementById('machine-location-country').value = cust.country || 'Deutschland';
+
+        window.updateCombinedAddresses();
+
+        // Populate search input
+        const searchInput = document.getElementById('machine-location-search');
+        searchInput.value = cust.matchcode ? `[${cust.matchcode}] ${cust.name}` : cust.name;
+        
+        const suggestionsBox = document.getElementById('machine-location-suggestions');
+        suggestionsBox.style.display = 'none';
+        suggestionsBox.innerHTML = '';
     };
 
     window.selectCustomerForMachine = function (cust) {
@@ -570,8 +751,14 @@
 
         // Lock search UI
         const searchInput = document.getElementById('machine-customer-search');
-        searchInput.value = cust.matchcode ? `[${cust.matchcode}] ${cust.name}` : cust.name;
+        const displayLabel = cust.matchcode ? `[${cust.matchcode}] ${cust.name}` : cust.name;
+        searchInput.value = displayLabel;
         searchInput.disabled = true;
+
+        const opSearch = document.getElementById('machine-operator-search');
+        if (opSearch) opSearch.value = displayLabel;
+        const locSearch = document.getElementById('machine-location-search');
+        if (locSearch) locSearch.value = displayLabel;
 
         document.getElementById('btn-clear-customer').style.display = 'block';
         
@@ -594,6 +781,11 @@
         document.getElementById('machine-location-zip').value = '';
         document.getElementById('machine-location-city').value = '';
         document.getElementById('machine-location-country').value = 'Deutschland';
+
+        const opSearch = document.getElementById('machine-operator-search');
+        if (opSearch) opSearch.value = '';
+        const locSearch = document.getElementById('machine-location-search');
+        if (locSearch) locSearch.value = '';
 
         window.updateCombinedAddresses();
 

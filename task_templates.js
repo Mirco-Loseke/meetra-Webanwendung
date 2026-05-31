@@ -1,4 +1,4 @@
-// ==========================================
+﻿// ==========================================
 // TASK TEMPLATES & SNIPPETS MODULE
 // ==========================================
 
@@ -175,6 +175,28 @@
     };
 
     window.applySubtaskAction = async function(action) {
+        if (action === 'servicebericht') {
+            const modal = document.getElementById('subtask-action-modal');
+            if (modal) {
+                modal.classList.remove('active');
+                modal.classList.add('hidden');
+                setTimeout(() => modal.style.display = 'none', 300);
+            }
+            window.openServiceberichtPicker();
+            return;
+        }
+
+        if (action === 'servicebericht') {
+            const modal = document.getElementById('subtask-action-modal');
+            if (modal) {
+                modal.classList.remove('active');
+                modal.classList.add('hidden');
+                setTimeout(() => modal.style.display = 'none', 300);
+            }
+            window.openServiceberichtPicker();
+            return;
+        }
+
         if (action === 'document') {
             const modal = document.getElementById('subtask-action-modal');
             if (modal) {
@@ -727,6 +749,7 @@
                     ${group.subtasks.map((st, sIdx) => {
                         const hasAction = !!st.action_type;
                         const isDoc = st.action_type && st.action_type.startsWith('document:');
+                        const isService = st.action_type && st.action_type.startsWith('servicebericht:');
                         
                         let actionColor = 'rgba(255,255,255,0.02)';
                         let actionBorder = 'rgba(255,255,255,0.05)';
@@ -737,6 +760,10 @@
                                 actionColor = 'rgba(16,185,129,0.05)';
                                 actionBorder = 'rgba(16,185,129,0.3)';
                                 actionIndicator = '#10b981';
+                            } else if (isService) {
+                                actionColor = 'rgba(167,139,250,0.05)';
+                                actionBorder = 'rgba(167,139,250,0.3)';
+                                actionIndicator = '#a78bfa';
                             } else if (st.action_type === 'intake') {
                                 actionColor = 'rgba(59,130,246,0.05)';
                                 actionBorder = 'rgba(59,130,246,0.3)';
@@ -748,10 +775,10 @@
                             }
                         }
                         
-                        const glowClass = st.action_type ? (isDoc ? 'glow-green' : (st.action_type === 'intake' ? 'glow-blue' : 'glow-orange')) : '';
-                        const btnBg = st.action_type ? (isDoc ? 'rgba(16,185,129,0.2)' : (st.action_type === 'intake' ? 'rgba(59,130,246,0.2)' : 'rgba(245,158,11,0.2)')) : 'rgba(255,255,255,0.05)';
-                        const btnBorder = st.action_type ? (isDoc ? 'rgba(16,185,129,0.4)' : (st.action_type === 'intake' ? 'rgba(59,130,246,0.4)' : 'rgba(245,158,11,0.4)')) : 'rgba(255,255,255,0.1)';
-                        const btnColor = st.action_type ? (isDoc ? '#10b981' : (st.action_type === 'intake' ? '#60a5fa' : '#f59e0b')) : 'rgba(255,255,255,0.4)';
+                        const glowClass = st.action_type ? (isDoc ? 'glow-green' : (isService ? 'glow-purple' : (st.action_type === 'intake' ? 'glow-blue' : 'glow-orange'))) : '';
+                        const btnBg = st.action_type ? (isDoc ? 'rgba(16,185,129,0.2)' : (isService ? 'rgba(167,139,250,0.2)' : (st.action_type === 'intake' ? 'rgba(59,130,246,0.2)' : 'rgba(245,158,11,0.2)'))) : 'rgba(255,255,255,0.05)';
+                        const btnBorder = st.action_type ? (isDoc ? 'rgba(16,185,129,0.4)' : (isService ? 'rgba(167,139,250,0.4)' : (st.action_type === 'intake' ? 'rgba(59,130,246,0.4)' : 'rgba(245,158,11,0.4)'))) : 'rgba(255,255,255,0.1)';
+                        const btnColor = st.action_type ? (isDoc ? '#10b981' : (isService ? '#a78bfa' : (st.action_type === 'intake' ? '#60a5fa' : '#f59e0b'))) : 'rgba(255,255,255,0.4)';
                         
                         return `
                         <div style="display: flex; gap: 10px; align-items: center; position: relative;">

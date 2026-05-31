@@ -1875,8 +1875,12 @@
                         
                         <div class="mapping-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
                             <div class="form-group">
-                                <label for="map-cust-num" style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">Kundennummer *</label>
-                                <select id="map-cust-num" class="glass-form-input" style="cursor: pointer;" required></select>
+                                <label for="map-address-num" style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">Adressnummer *</label>
+                                <select id="map-address-num" class="glass-form-input" style="cursor: pointer;" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label for="map-cust-num" style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">Kundennummer</label>
+                                <select id="map-cust-num" class="glass-form-input" style="cursor: pointer;"></select>
                             </div>
                             <div class="form-group">
                                 <label for="map-matchcode" style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">Matchcode (Suchbegriff)</label>
@@ -6041,6 +6045,15 @@
                 if (!e.target.closest('.form-group')) {
                     const suggs = document.getElementById('address-suggestions');
                     if (suggs) suggs.style.display = 'none';
+
+                    const custSuggs = document.getElementById('machine-customer-suggestions');
+                    if (custSuggs) custSuggs.style.display = 'none';
+
+                    const opSuggs = document.getElementById('machine-operator-suggestions');
+                    if (opSuggs) opSuggs.style.display = 'none';
+
+                    const locSuggs = document.getElementById('machine-location-suggestions');
+                    if (locSuggs) locSuggs.style.display = 'none';
                 }
             });
 
@@ -6879,7 +6892,11 @@
                     hours: 0,
                     technicians: (typeof selectedTechs !== 'undefined') ? selectedTechs : [],
                     files: finalFiles,
-                    description: description
+                    description: description,
+                    travel_distance_km: parseFloat(document.getElementById('service-driving-distance')?.value) || null,
+                    travel_time_minutes: parseInt(document.getElementById('service-driving-time')?.value) || null,
+                    customer_signature: document.getElementById('service-customer-signature')?.value || null,
+                    customer_name: document.getElementById('service-customer-signee-name')?.value.trim() || null
                 };
 
                 console.log('Sending Servicebericht data to Supabase:', reportData);
@@ -6892,10 +6909,14 @@
                         .eq('id', currentEditingServiceId);
                     dbError = updateError;
                 } else {
-                    const { error: insertError } = await supabaseClient
+                    const { data: insertData, error: insertError } = await supabaseClient
                         .from('service_entries')
-                        .insert([reportData]);
+                        .insert([reportData])
+                        .select('id');
                     dbError = insertError;
+                    if (!dbError && insertData && insertData.length > 0) {
+                        currentEditingServiceId = insertData[0].id;
+                    }
                 }
 
                 if (dbError) {
@@ -8505,6 +8526,41 @@
                     }
                 });
             }
+
+            // Initialize Customer Autocomplete for Import Modal
+            window.setupCustomerAutocomplete('email-sender-input', 'email-sender-suggestions', 'import');
+            window.setupCustomerAutocomplete('email-recipient-input', 'email-recipient-suggestions', 'import');
+
+            // Initialize Customer Autocomplete for Edit Modal
+            window.setupCustomerAutocomplete('edit-process-sender-input', 'edit-process-sender-suggestions', 'edit');
+            window.setupCustomerAutocomplete('edit-process-recipient-input', 'edit-process-recipient-suggestions', 'edit');
+
+            // Initialize Machine Selection Change Listeners
+            const emailMachineSelect = document.getElementById('email-machine-select');
+            if (emailMachineSelect) {
+                emailMachineSelect.addEventListener('change', () => {
+                    window.syncAddressFromMachine('email-machine-select', 'email-type-select', 'email-sender-input', 'email-recipient-input');
+                });
+            }
+            const emailTypeSelect = document.getElementById('email-type-select');
+            if (emailTypeSelect) {
+                emailTypeSelect.addEventListener('change', () => {
+                    window.syncAddressFromMachine('email-machine-select', 'email-type-select', 'email-sender-input', 'email-recipient-input');
+                });
+            }
+
+            const editMachineSelect = document.getElementById('edit-process-machine-select');
+            if (editMachineSelect) {
+                editMachineSelect.addEventListener('change', () => {
+                    window.syncAddressFromMachine('edit-process-machine-select', 'edit-process-type-select', 'edit-process-sender-input', 'edit-process-recipient-input');
+                });
+            }
+            const editTypeSelect = document.getElementById('edit-process-type-select');
+            if (editTypeSelect) {
+                editTypeSelect.addEventListener('change', () => {
+                    window.syncAddressFromMachine('edit-process-machine-select', 'edit-process-type-select', 'edit-process-sender-input', 'edit-process-recipient-input');
+                });
+            }
         });
 
         function populateCalendarCategoryFilter() {
@@ -8710,16 +8766,47 @@
             // Populate machine list
             const select = document.getElementById('edit-process-machine-select');
             if (select) {
-                select.innerHTML = '<option value="">Keine Maschine zugeordnet</option>';
-                (window.machineList || []).forEach(m => {
-                    const opt = document.createElement('option');
-                    opt.value = m.id;
-                    opt.textContent = `${m.manufacturer} ${m.name} (#${m.serial || '?'})`;
-                    if (proc.machine_id && String(m.id) === String(proc.machine_id)) {
-                        opt.selected = true;
+                select.innerHTML = '<option value="">Keine Maschine zugeordnet</option>' +
+                                  '<optgroup id="edit-process-recommended-machines" label="Empfohlene Maschinen" style="display:none;"></optgroup>' +
+                                  '<optgroup id="edit-process-all-machines" label="Alle Maschinen"></optgroup>';
+                
+                const allGroup = document.getElementById('edit-process-all-machines');
+                if (allGroup) {
+                    (window.machineList || []).forEach(m => {
+                        const opt = document.createElement('option');
+                        opt.value = m.id;
+                        opt.textContent = `${m.manufacturer} ${m.name} (#${m.serial || '?'})`;
+                        if (proc.machine_id && String(m.id) === String(proc.machine_id)) {
+                            opt.selected = true;
+                        }
+                        allGroup.appendChild(opt);
+                    });
+                }
+
+                // If the process has a machine_id, find its customer and filter recommended machines
+                if (proc.machine_id) {
+                    const activeMachine = (window.machineList || []).find(m => String(m.id) === String(proc.machine_id));
+                    if (activeMachine && activeMachine.customer_id) {
+                        (async () => {
+                            try {
+                                if (window.supabaseClient) {
+                                    const { data: cust } = await window.supabaseClient
+                                        .from('customers')
+                                        .select('id, name')
+                                        .eq('id', activeMachine.customer_id)
+                                        .maybeSingle();
+                                    if (cust) {
+                                        window.filterMachinesForCustomer(cust.id, cust.name, 'edit');
+                                        // Set selected value back to proc.machine_id since filterMachinesForCustomer might select first matching machine
+                                        select.value = proc.machine_id;
+                                    }
+                                }
+                            } catch (e) {
+                                console.error("Error setting up recommended machines for edit modal:", e);
+                            }
+                        })();
                     }
-                    select.appendChild(opt);
-                });
+                }
             }
         };
 
@@ -8856,6 +8943,160 @@
                 window.runSmartCustomerMatching(senderEmail, text);
             } else {
                 window.runSerialNumberMatching(text, null);
+            }
+        };
+
+        window.filterMachinesForCustomer = function(customerId, customerName, modalType) {
+            const isImport = (modalType === 'import');
+            const selectId = isImport ? 'email-machine-select' : 'edit-process-machine-select';
+            const recGroupId = isImport ? 'email-recommended-machines' : 'edit-process-recommended-machines';
+            
+            const select = document.getElementById(selectId);
+            const recGroup = document.getElementById(recGroupId);
+            if (!select || !recGroup) return;
+
+            const machines = (window.machineList || []).filter(m => String(m.customer_id) === String(customerId));
+            
+            recGroup.innerHTML = '';
+            
+            if (machines.length > 0) {
+                recGroup.label = `Empfohlene Maschinen (${customerName})`;
+                recGroup.style.display = 'block';
+                
+                machines.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = `${m.manufacturer} ${m.name} (#${m.serial || '?'})`;
+                    recGroup.appendChild(opt);
+                });
+
+                select.value = machines[0].id;
+            } else {
+                recGroup.style.display = 'none';
+            }
+        };
+
+        window.setupCustomerAutocomplete = function(inputId, suggestionsId, modalType) {
+            const input = document.getElementById(inputId);
+            const suggestionsBox = document.getElementById(suggestionsId);
+            if (!input || !suggestionsBox) return;
+
+            let timeout = null;
+
+            input.addEventListener('input', () => {
+                clearTimeout(timeout);
+                const query = input.value.trim();
+                if (query.length < 2) {
+                    suggestionsBox.style.display = 'none';
+                    suggestionsBox.innerHTML = '';
+                    return;
+                }
+
+                timeout = setTimeout(async () => {
+                    try {
+                        if (!window.supabaseClient) return;
+                        
+                        const { data, error } = await window.supabaseClient
+                            .from('customers')
+                            .select('id, name, email, matchcode, customer_number, city')
+                            .or(`name.ilike.%${query}%,matchcode.ilike.%${query}%,email.ilike.%${query}%`)
+                            .limit(8);
+
+                        if (error) throw error;
+
+                        suggestionsBox.innerHTML = '';
+                        if (!data || data.length === 0) {
+                            const noResults = document.createElement('div');
+                            noResults.style.cssText = 'padding: 10px; color: rgba(255, 255, 255, 0.4); text-align: center; font-size: 0.9rem;';
+                            noResults.innerText = 'Keine Kunden gefunden';
+                            suggestionsBox.appendChild(noResults);
+                            suggestionsBox.style.display = 'block';
+                            return;
+                        }
+
+                        data.forEach(cust => {
+                            const item = document.createElement('div');
+                            item.className = 'autocomplete-suggestion-item';
+
+                            const nameLabel = cust.matchcode ? `[${cust.matchcode}] ${cust.name}` : cust.name;
+                            let detailText = cust.email ? cust.email : '';
+                            if (cust.customer_number) {
+                                detailText = `Nr. ${cust.customer_number}` + (detailText ? ` - ${detailText}` : '');
+                            }
+                            if (cust.city) {
+                                detailText += (detailText ? ` (${cust.city})` : cust.city);
+                            }
+
+                            item.innerHTML = `
+                                <div class="cust-name">${nameLabel}</div>
+                                <div class="cust-details">${detailText}</div>
+                            `;
+
+                            item.onclick = (e) => {
+                                e.stopPropagation();
+                                input.value = cust.email ? `${cust.name} <${cust.email}>` : cust.name;
+                                suggestionsBox.style.display = 'none';
+                                suggestionsBox.innerHTML = '';
+
+                                window.filterMachinesForCustomer(cust.id, cust.name, modalType);
+                            };
+
+                            suggestionsBox.appendChild(item);
+                        });
+                        suggestionsBox.style.display = 'block';
+                    } catch (err) {
+                        console.error("Autocomplete customer search error:", err);
+                        suggestionsBox.innerHTML = '<div style="padding: 10px; color: #f87171; text-align: center; font-size: 0.9rem;">Fehler bei der Suche</div>';
+                        suggestionsBox.style.display = 'block';
+                    }
+                }, 200);
+            });
+
+            // Close suggestions when clicking outside
+            document.addEventListener('click', (e) => {
+                if (e.target !== input && !suggestionsBox.contains(e.target)) {
+                    suggestionsBox.style.display = 'none';
+                    suggestionsBox.innerHTML = '';
+                }
+            });
+        };
+
+        window.syncAddressFromMachine = async function(machineSelectId, typeSelectId, senderInputId, recipientInputId) {
+            const select = document.getElementById(machineSelectId);
+            if (!select) return;
+            const val = select.value;
+            if (!val) return;
+
+            const type = document.getElementById(typeSelectId)?.value || 'email_incoming';
+            const machine = (window.machineList || []).find(m => String(m.id) === String(val));
+            if (!machine || !machine.customer_id) return;
+
+            try {
+                if (!window.supabaseClient) return;
+                const { data: customer, error } = await window.supabaseClient
+                    .from('customers')
+                    .select('id, name, email')
+                    .eq('id', machine.customer_id)
+                    .maybeSingle();
+
+                if (error) throw error;
+                if (!customer) return;
+
+                const displayVal = customer.email ? `${customer.name} <${customer.email}>` : customer.name;
+                
+                if (type === 'email_incoming') {
+                    const senderInput = document.getElementById(senderInputId);
+                    if (senderInput) {
+                        senderInput.value = displayVal;
+                    }
+                } else if (type === 'email_outgoing') {
+                    const recipientInput = document.getElementById(recipientInputId);
+                    if (recipientInput) {
+                        recipientInput.value = displayVal;
+                    }
+                }
+            } catch (err) {
+                console.error("Error syncing address from machine:", err);
             }
         };
 
@@ -9260,13 +9501,7 @@
                     const machineList = document.getElementById('service-machine-list');
                     const lockHint = document.getElementById('selection-lock-hint');
                     const previewArea = document.getElementById('selected-machine-preview');
-
-                    // Reset form
-                    const form = document.getElementById('servicebericht-form');
-                    if (form) form.reset();
-
-                                        const selectedMachineId = document.getElementById('selected-machine-id');
-                    if (selectedMachineId) selectedMachineId.value = '';
+                    const selectedMachineId = document.getElementById('selected-machine-id');
 
                     const custPreview = document.getElementById('selected-machine-customer-preview');
                     if (custPreview) {
@@ -9288,11 +9523,34 @@
                     const filePreviews = document.getElementById('service-file-previews');
                     if (filePreviews) filePreviews.innerHTML = '';
 
+                    // Reset travel & signature fields
+                    const drivingDistance = document.getElementById('service-driving-distance');
+                    if (drivingDistance) drivingDistance.value = '';
+                    const drivingTime = document.getElementById('service-driving-time');
+                    if (drivingTime) drivingTime.value = '';
+                    if (typeof window.updateDrivingTimeHoursPreview === 'function') window.updateDrivingTimeHoursPreview();
+                    const customerSignature = document.getElementById('service-customer-signature');
+                    if (customerSignature) customerSignature.value = '';
+                    const customerSigneeName = document.getElementById('service-customer-signee-name');
+                    if (customerSigneeName) customerSigneeName.value = '';
+                    
+                    // Reset signature preview
+                    const sigPreviewImg = document.getElementById('signature-preview-img');
+                    if (sigPreviewImg) {
+                        sigPreviewImg.src = '';
+                        sigPreviewImg.classList.add('hidden');
+                        sigPreviewImg.style.display = 'none';
+                    }
+                    const sigPlaceholder = document.getElementById('signature-placeholder');
+                    if (sigPlaceholder) sigPlaceholder.classList.remove('hidden');
+                    const sigClearBtn = document.getElementById('btn-clear-signature');
+                    if (sigClearBtn) sigClearBtn.classList.add('hidden');
+
                     serviceFiles = []; // Reset new files
                     existingServiceFiles = []; // Reset existing files
 
                     selectedTechs = []; // Reset selected technicians
-                    // Reset dropown UI
+                    // Reset dropdown UI
                     const techPills = document.getElementById('tech-selected-pills');
                     if (techPills) techPills.innerHTML = '';
                     const techPlaceholder = document.getElementById('tech-placeholder-text');
@@ -9321,6 +9579,26 @@
 
                         const description = document.getElementById('service-description');
                         if (description) description.value = editData.description || '';
+
+                        // Populate travel & signature data
+                        if (drivingDistance) drivingDistance.value = editData.travel_distance_km || '';
+                        if (drivingTime) {
+                            drivingTime.value = editData.travel_time_minutes || '';
+                            if (typeof window.updateDrivingTimeHoursPreview === 'function') window.updateDrivingTimeHoursPreview();
+                        }
+                        if (customerSigneeName) customerSigneeName.value = editData.customer_name || '';
+                        if (customerSignature) {
+                            customerSignature.value = editData.customer_signature || '';
+                            if (editData.customer_signature) {
+                                if (sigPreviewImg) {
+                                    sigPreviewImg.src = editData.customer_signature;
+                                    sigPreviewImg.classList.remove('hidden');
+                                    sigPreviewImg.style.display = 'block';
+                                }
+                                if (sigPlaceholder) sigPlaceholder.classList.add('hidden');
+                                if (sigClearBtn) sigClearBtn.classList.remove('hidden');
+                            }
+                        }
 
                         // Populate category
                         if (editData.category_ids && Array.isArray(editData.category_ids) && editData.category_ids.length > 0) {
@@ -9727,6 +10005,476 @@
         };
 
 
+        // ==========================================
+        // SERVICE REPORT EXTENSIONS (ROUTING, SIGNATURE, PDF PREVIEW)
+        // ==========================================
+        window.calculateServiceRoute = async function() {
+            const machineId = document.getElementById('selected-machine-id').value;
+            if (!machineId) {
+                alert('Bitte wählen Sie zuerst eine Maschine aus, um die Route zu berechnen.');
+                return;
+            }
+            
+            const btn = document.querySelector('button[onclick="window.calculateServiceRoute()"]');
+            const originalText = btn ? btn.textContent : 'Route & Fahrzeit automatisch schätzen';
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Berechne Route...';
+            }
+            
+            try {
+                // Fetch destination machine address details
+                const machine = (window.machineList || []).find(m => m.id == machineId);
+                if (!machine) throw new Error('Maschine nicht gefunden.');
+                
+                let destStreet = machine.operator_street || '';
+                let destZip = machine.operator_zip || '';
+                let destCity = machine.operator_city || '';
+                let destCountry = machine.operator_country || 'Deutschland';
+                
+                if (machine.customer_id) {
+                    const { data: cust } = await window.supabaseClient
+                        .from('customers')
+                        .select('street, zip_code, city, country')
+                        .eq('id', machine.customer_id)
+                        .single();
+                    if (cust) {
+                        destStreet = cust.street || destStreet;
+                        destZip = cust.zip_code || destZip;
+                        destCity = cust.city || destCity;
+                        destCountry = cust.country || destCountry;
+                    }
+                }
+                
+                if (!destStreet || !destCity) {
+                    alert('Der Maschine/dem Kunden ist keine vollständige Adresse zugeordnet. Route kann nicht berechnet werden.');
+                    return;
+                }
+                
+                // Get HQ Address
+                let hq = null;
+                const cached = localStorage.getItem('meetra_company_hq');
+                if (cached) {
+                    try { hq = JSON.parse(cached); } catch(e){}
+                }
+                if (!hq) {
+                    const { data: hqData } = await window.supabaseClient
+                        .from('app_settings')
+                        .select('value')
+                        .eq('key', 'company_hq')
+                        .single();
+                    if (hqData && hqData.value) {
+                        hq = hqData.value;
+                    }
+                }
+                
+                if (!hq || !hq.street || !hq.city) {
+                    alert('Bitte hinterlegen Sie zuerst die Firmenadresse (HQ) in den Einstellungen.');
+                    return;
+                }
+                
+                const originAddr = `${hq.street}, ${hq.zip} ${hq.city}, ${hq.country}`;
+                const destAddr = `${destStreet}, ${destZip} ${destCity}, ${destCountry}`;
+                
+                // Use Nominatim to geocode both addresses to coordinates
+                const getCoords = async (addr) => {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addr)}&limit=1`);
+                    const data = await res.json();
+                    if (data && data.length > 0) {
+                        return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+                    }
+                    return null;
+                };
+                
+                const originCoords = await getCoords(originAddr);
+                const destCoords = await getCoords(destAddr);
+                
+                if (!originCoords || !destCoords) {
+                    throw new Error('Adresse konnte nicht geolokalisiert werden.');
+                }
+                
+                // Fetch route from OSRM
+                const routeRes = await fetch(`https://router.project-osrm.org/route/v1/driving/${originCoords.lon},${originCoords.lat};${destCoords.lon},${destCoords.lat}?overview=false`);
+                const routeData = await routeRes.json();
+                
+                if (routeData && routeData.routes && routeData.routes.length > 0) {
+                    const route = routeData.routes[0];
+                    const distanceKm = (route.distance / 1000).toFixed(1);
+                    const durationMins = Math.round(route.duration / 60);
+                    
+                    document.getElementById('service-driving-distance').value = distanceKm;
+                    document.getElementById('service-driving-time').value = durationMins;
+                    
+                    alert(`Route berechnet:\nEntfernung: ${distanceKm} km\nGeschätzte Fahrzeit: ${durationMins} Minuten`);
+                } else {
+                    throw new Error('Keine Route gefunden.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Fehler bei der automatischen Routenberechnung: ' + err.message);
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            }
+        };
+
+        // Update Driving Time Preview in Form
+        window.updateDrivingTimeHoursPreview = function() {
+            const val = document.getElementById('service-driving-time').value;
+            const preview = document.getElementById('service-driving-time-hours-preview');
+            if (preview) {
+                const mins = parseInt(val);
+                if (!isNaN(mins) && mins > 0) {
+                    const hrs = (mins / 60).toFixed(1).replace('.', ',');
+                    preview.textContent = `= ${hrs} Std.`;
+                } else {
+                    preview.textContent = '= - Std.';
+                }
+            }
+        };
+
+        // Signature Canvas State
+        let signatureCanvas = null;
+        let signatureCtx = null;
+        let isDrawing = false;
+        
+        window.openSignaturePad = function() {
+            console.log("openSignaturePad is called!");
+            const modal = document.getElementById('signature-modal');
+            if (!modal) {
+                console.error("signature-modal element not found in DOM!");
+                return;
+            }
+            
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            
+            requestAnimationFrame(() => {
+                modal.classList.add('show');
+            });
+            
+            // Wait for browser layout to complete before sizing the canvas
+            setTimeout(() => {
+                signatureCanvas = document.getElementById('signature-canvas');
+                if (signatureCanvas) {
+                    signatureCanvas.width = signatureCanvas.offsetWidth || 560;
+                    signatureCanvas.height = signatureCanvas.offsetHeight || 300;
+                    
+                    signatureCtx = signatureCanvas.getContext('2d');
+                    signatureCtx.strokeStyle = '#0f172a'; // dark stroke
+                    signatureCtx.lineWidth = 3;
+                    signatureCtx.lineCap = 'round';
+                    signatureCtx.lineJoin = 'round';
+                    
+                    // Fill with white background
+                    signatureCtx.fillStyle = '#ffffff';
+                    signatureCtx.fillRect(0, 0, signatureCanvas.width, signatureCanvas.height);
+                    
+                    setupSignatureEventListeners();
+                }
+            }, 50);
+        };
+        
+        window.closeSignaturePad = function() {
+            const modal = document.getElementById('signature-modal');
+            if (modal) {
+                modal.classList.remove('show');
+                modal.classList.add('hidden');
+                modal.style.display = 'none';
+            }
+        };
+        
+        function setupSignatureEventListeners() {
+            if (!signatureCanvas) return;
+            
+            const getPos = (e) => {
+                const rect = signatureCanvas.getBoundingClientRect();
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                return {
+                    x: clientX - rect.left,
+                    y: clientY - rect.top
+                };
+            };
+            
+            const startDraw = (e) => {
+                isDrawing = true;
+                const pos = getPos(e);
+                signatureCtx.beginPath();
+                signatureCtx.moveTo(pos.x, pos.y);
+                e.preventDefault();
+            };
+            
+            const draw = (e) => {
+                if (!isDrawing) return;
+                const pos = getPos(e);
+                signatureCtx.lineTo(pos.x, pos.y);
+                signatureCtx.stroke();
+                e.preventDefault();
+            };
+            
+            const stopDraw = () => {
+                isDrawing = false;
+            };
+            
+            // Mouse
+            signatureCanvas.onmousedown = startDraw;
+            signatureCanvas.onmousemove = draw;
+            signatureCanvas.onmouseup = stopDraw;
+            signatureCanvas.onmouseleave = stopDraw;
+            
+            // Touch
+            signatureCanvas.ontouchstart = startDraw;
+            signatureCanvas.ontouchmove = draw;
+            signatureCanvas.ontouchend = stopDraw;
+            signatureCanvas.ontouchcancel = stopDraw;
+        }
+        
+        window.clearSignatureCanvas = function() {
+            if (signatureCtx && signatureCanvas) {
+                signatureCtx.fillStyle = '#ffffff';
+                signatureCtx.fillRect(0, 0, signatureCanvas.width, signatureCanvas.height);
+            }
+        };
+        
+        window.saveSignatureCanvas = function() {
+            if (signatureCanvas) {
+                const dataUrl = signatureCanvas.toDataURL('image/png');
+                document.getElementById('service-customer-signature').value = dataUrl;
+                
+                const sigPreviewImg = document.getElementById('signature-preview-img');
+                if (sigPreviewImg) {
+                    sigPreviewImg.src = dataUrl;
+                    sigPreviewImg.classList.remove('hidden');
+                    sigPreviewImg.style.display = 'block';
+                }
+                const sigPlaceholder = document.getElementById('signature-placeholder');
+                if (sigPlaceholder) sigPlaceholder.classList.add('hidden');
+                const sigClearBtn = document.getElementById('btn-clear-signature');
+                if (sigClearBtn) sigClearBtn.classList.remove('hidden');
+                
+                window.closeSignaturePad();
+            }
+        };
+        
+        window.clearSignature = function() {
+            document.getElementById('service-customer-signature').value = '';
+            const sigPreviewImg = document.getElementById('signature-preview-img');
+            if (sigPreviewImg) {
+                sigPreviewImg.src = '';
+                sigPreviewImg.classList.add('hidden');
+                sigPreviewImg.style.display = 'none';
+            }
+            const sigPlaceholder = document.getElementById('signature-placeholder');
+            if (sigPlaceholder) sigPlaceholder.classList.remove('hidden');
+            const sigClearBtn = document.getElementById('btn-clear-signature');
+            if (sigClearBtn) sigClearBtn.classList.add('hidden');
+        };
+
+        window.previewServiceberichtPDF = async function() {
+            try {
+                if (typeof window.loadPDFGenerators === 'function') {
+                    await window.loadPDFGenerators();
+                }
+                
+                // Load background template
+                let bgImage = null;
+                if (window.VORLAGE_BASE64) {
+                    bgImage = window.VORLAGE_BASE64;
+                } else {
+                    try {
+                        const res = await fetch('vorlage_bg.jpg');
+                        if (res.ok) {
+                            const blob = await res.blob();
+                            bgImage = await new Promise((resolve, reject) => {
+                                const reader = new FileReader();
+                                reader.onloadend = () => resolve(reader.result);
+                                reader.onerror = reject;
+                                reader.readAsDataURL(blob);
+                            });
+                        }
+                    } catch(e) { console.warn('Could not load background template:', e); }
+                }
+
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                
+                // Helper to add background
+                const addBackground = () => {
+                    if (bgImage) {
+                        doc.addImage(bgImage, 'JPEG', -5, -5, 220, 307, undefined, 'FAST');
+                    }
+                };
+
+                // Overlay doc.addPage
+                const originalAddPage = doc.addPage.bind(doc);
+                doc.addPage = function () {
+                    originalAddPage();
+                    addBackground();
+                    return doc;
+                };
+                
+                // Initial page background
+                addBackground();
+
+                // Get values
+                const machineId = document.getElementById('selected-machine-id').value;
+                const dateStart = document.getElementById('service-date-start').value;
+                const dateEnd = document.getElementById('service-date-end').value;
+                const description = document.getElementById('service-description').value;
+                const travelDistance = document.getElementById('service-driving-distance').value;
+                const travelTime = document.getElementById('service-driving-time').value;
+                const signature = document.getElementById('service-customer-signature').value;
+                const signatureName = document.getElementById('service-customer-signee-name').value.trim();
+                
+                // Get machine detail
+                const machine = (window.machineList || []).find(m => m.id == machineId);
+                const machineTitle = machine ? `${machine.manufacturer || ''} ${machine.name || ''}`.trim() : 'Unbekannte Maschine';
+                const serialNumber = machine ? (machine.serial || machine.serial_number || '-') : '-';
+                
+                // Get customer detail
+                let customerName = '-';
+                let customerAddress = '-';
+                if (machine) {
+                    customerName = machine.company || '-';
+                    customerAddress = [machine.operator_street, [machine.operator_zip, machine.operator_city].filter(Boolean).join(' '), machine.operator_country].filter(Boolean).join(', ') || '-';
+                    
+                    if (machine.customer_id) {
+                        try {
+                            const { data: cust } = await window.supabaseClient
+                                .from('customers')
+                                .select('name, street, zip_code, city, country')
+                                .eq('id', machine.customer_id)
+                                .single();
+                            if (cust) {
+                                customerName = cust.name;
+                                customerAddress = [cust.street, [cust.zip_code, cust.city].filter(Boolean).join(' '), cust.country].filter(Boolean).join(', ');
+                            }
+                        } catch(e){}
+                    }
+                }
+                
+                // Title
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(22);
+                doc.setTextColor(30, 41, 59); // slate color
+                doc.text('Servicebericht', 20, 36);
+                
+                // Header date
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(12);
+                doc.setTextColor(71, 85, 105);
+                const formattedDate = dateStart ? new Date(dateStart).toLocaleDateString('de-DE') : new Date().toLocaleDateString('de-DE');
+                doc.text(`Datum: ${formattedDate}`, 145, 36);
+                
+                // Content area start
+                let currentY = 55;
+                
+                // Section 1: Customer & Machine
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(12);
+                doc.setTextColor(15, 23, 42);
+                doc.text('Kunden- & Maschinendetails', 20, currentY);
+                currentY += 8;
+                
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(10);
+                doc.text(`Kunde: ${customerName}`, 20, currentY);
+                doc.text(`Maschine: ${machineTitle}`, 110, currentY);
+                currentY += 6;
+                
+                doc.text(`Adresse: ${customerAddress}`, 20, currentY, { maxWidth: 80 });
+                doc.text(`Seriennummer: ${serialNumber}`, 110, currentY);
+                currentY += 15;
+                
+                // Section 2: Fahrtzeiten & Kilometer
+                if (travelDistance || travelTime) {
+                    doc.setFont('helvetica', 'bold');
+                    doc.setFontSize(12);
+                    doc.text('Fahrtdaten', 20, currentY);
+                    currentY += 8;
+                    
+                    doc.setFont('helvetica', 'normal');
+                    doc.setFontSize(10);
+                    const distStr = travelDistance ? `${travelDistance} km` : '-';
+                    
+                    let timeStr = '-';
+                    if (travelTime) {
+                        const mins = parseInt(travelTime);
+                        if (!isNaN(mins)) {
+                            const hrs = (mins / 60).toFixed(1).replace('.', ',');
+                            timeStr = `${mins} Min. / ${hrs} Std.`;
+                        } else {
+                            timeStr = travelTime;
+                        }
+                    }
+                    
+                    doc.text(`Gefahrene Kilometer: ${distStr}`, 20, currentY);
+                    doc.text(`Erfasste Fahrzeit: ${timeStr}`, 110, currentY);
+                    currentY += 15;
+                }
+                
+                // Section 3: Beschreibung
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(12);
+                doc.text('Einsatzbeschreibung', 20, currentY);
+                currentY += 8;
+                
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(10);
+                const descLines = doc.splitTextToSize(description || 'Keine Beschreibung hinterlegt.', 170);
+                doc.text(descLines, 20, currentY);
+                currentY += (descLines.length * 5) + 20;
+                
+                // Check page height for signatures
+                if (currentY > 230) {
+                    doc.addPage();
+                    currentY = 30;
+                }
+                
+                // Section 4: Techniker & Unterschrift
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(12);
+                doc.text('Techniker & Freigabe', 20, currentY);
+                currentY += 10;
+                
+                // Left side: Techniker name(s)
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(10);
+                doc.text('Techniker:', 20, currentY + 10);
+                doc.setFont('helvetica', 'normal');
+                const techNames = (typeof selectedTechs !== 'undefined' ? selectedTechs : []).map(id => {
+                    const u = (window.userList || []).find(user => user.id == id);
+                    return u ? u.name : `Techniker #${id}`;
+                }).join(', ') || '-';
+                doc.text(techNames, 42, currentY + 10, { maxWidth: 70 });
+                
+                // Customer signature block
+                if (signature) {
+                    try {
+                        doc.addImage(signature, 'PNG', 120, currentY - 5, 60, 25);
+                    } catch(sigErr){
+                        console.error('Could not render signature image in PDF:', sigErr);
+                    }
+                }
+                doc.setDrawColor(200, 200, 200);
+                doc.line(120, currentY + 25, 190, currentY + 25);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.setTextColor(100, 100, 100);
+                doc.text(signatureName ? `Kunde: ${signatureName}` : 'Unterschrift Kunde', 120, currentY + 30);
+                
+                // Open PDF in new window/tab
+                window.open(doc.output('bloburl'), '_blank');
+                
+            } catch (err) {
+                console.error(err);
+                alert('Fehler beim Generieren der PDF-Vorschau: ' + err.message);
+            }
+        };
+
         // Persistence on load
         if (localStorage.getItem('sidebarCollapsed') === 'true') {
             const s = document.getElementById('sidebar');
@@ -9916,6 +10664,18 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Customer & Address Preview -->
+                            <div id="selected-machine-customer-preview" class="hidden"
+                                style="margin-top: 1rem; padding: 1.25rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
+                                <div style="font-weight: 700; font-size: 0.95rem; color: white; margin-bottom: 0.5rem;" id="service-customer-name">Kunde</div>
+                                <div style="font-size: 0.9rem; color: rgba(255,255,255,0.6); line-height: 1.4;" id="service-customer-address">Adresse</div>
+                                <div id="service-customer-route" style="margin-top: 0.75rem; display: none;">
+                                    <a id="service-customer-route-link" href="#" target="_blank" class="btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.8rem; padding: 6px 12px; height: auto;">
+                                        🗺️ Route in Google Maps öffnen
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -9972,6 +10732,25 @@
                         </div>
                     </div>
 
+                    <!-- Fahrtzeit & Kilometer -->
+                    <div class="form-row"
+                        style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem; align-items: end;">
+                        <div class="form-group">
+                            <label for="service-driving-distance">Gefahrene Kilometer (km)</label>
+                            <input type="number" step="0.1" id="service-driving-distance" class="glass-form-input" placeholder="z.B. 45.5">
+                        </div>
+                        <div class="form-group">
+                            <label for="service-driving-time">Fahrzeit (Minuten / Stunden)</label>
+                            <input type="number" id="service-driving-time" class="glass-form-input" placeholder="z.B. 90" oninput="if (typeof window.updateDrivingTimeHoursPreview === 'function') window.updateDrivingTimeHoursPreview()">
+                            <div id="service-driving-time-hours-preview" style="font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-top: 6px; font-weight: 600;">= - Std.</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 0.75rem;">
+                        <button type="button" class="btn-secondary" onclick="window.calculateServiceRoute()" style="font-size: 0.8rem; padding: 6px 12px; height: auto; border: 1.5px dashed rgba(255,255,255,0.2);">
+                            🚗 Route & Fahrzeit automatisch schätzen
+                        </button>
+                    </div>
+
                     <!-- Step 3: Technician Selection (Dropdown Multi-Select) -->
                     <div class="form-section" style="margin-top: 1.5rem;">
                         <label>Techniker auswählen</label>
@@ -10011,12 +10790,27 @@
                         </div>
                         <div id="service-file-previews" class="file-preview-grid"></div>
                     </div>
+
+                    <!-- Digitale Unterschrift -->
+                    <div class="form-section" style="margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1.5rem;">
+                        <label>Digitale Unterschrift des Kunden</label>
+                        <div id="signature-preview-container" style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; height: 120px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.25); cursor: pointer; position: relative;" onclick="window.openSignaturePad()">
+                            <span id="signature-placeholder" style="color: rgba(255,255,255,0.45); font-size: 0.9rem;">👉 Klicken zum Unterschreiben</span>
+                            <img id="signature-preview-img" class="hidden" style="max-height: 100%; max-width: 100%; object-fit: contain; padding: 10px;">
+                            <button type="button" id="btn-clear-signature" class="hidden" onclick="event.stopPropagation(); window.clearSignature()" style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;">Löschen</button>
+                        </div>
+                        <input type="hidden" id="service-customer-signature">
+                        <div class="form-group" style="margin-top: 0.75rem;">
+                            <input type="text" id="service-customer-signee-name" class="glass-form-input" placeholder="Name des Unterzeichners (optional)">
+                        </div>
+                    </div>
                 </form>
             </div>
 
             <div class="modal-actions"
-                style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem; margin-top: 2rem;">
+                style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem; margin-top: 2rem; display: flex; gap: 10px; justify-content: flex-end;">
                 <button class="btn-secondary" onclick="closeServiceberichtModal()">Abbrechen</button>
+                <button class="btn-secondary" id="btn-servicebericht-preview" onclick="window.previewServiceberichtPDF()" style="border: 1.5px solid var(--color-primary-green); color: #fff; background: rgba(16,185,129,0.05); display: flex; align-items: center; gap: 6px; height: 48px; border-radius: 24px; padding: 0 20px; font-weight: 700; cursor: pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 2px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> Vorschau</button>
                 <button class="btn-primary" onclick="submitServicebericht()">Bericht speichern</button>
             </div>
         </div>
@@ -10124,6 +10918,23 @@
             <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 1rem;">
                 <button id="cancel-cat-btn" class="btn-secondary">Abbrechen</button>
                 <button id="save-cat-btn" class="btn-primary">Speichern</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Signature Pad Modal -->
+    <div id="signature-modal" class="modal-backdrop hidden" style="z-index: 999999 !important; align-items: center; justify-content: center; position: fixed; inset: 0;">
+        <div class="modal-content glass-card" style="max-width: 600px; width: 95%; padding: 1.5rem; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="margin: 0; color: white;">Kundenunterschrift leisten</h3>
+                <button type="button" class="btn-close-modal" onclick="window.closeSignaturePad()" style="font-size: 1.5rem; padding: 0; line-height: 1;">&times;</button>
+            </div>
+            <div style="background: white; border-radius: 8px; overflow: hidden; height: 300px; position: relative;">
+                <canvas id="signature-canvas" style="width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; background: white;"></canvas>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
+                <button type="button" class="btn-secondary" onclick="window.clearSignatureCanvas()">Zurücksetzen</button>
+                <button type="button" class="btn-primary" onclick="window.saveSignatureCanvas()">Fertig</button>
             </div>
         </div>
     </div>
@@ -10321,6 +11132,13 @@
                             <!-- Split Betreiber Fields -->
                             <h4 style="color: #fff; margin-top: 1.5rem; margin-bottom: 0.75rem; font-size: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;">Betreiber / Rechnungsadresse</h4>
                             
+                            <!-- Operator Search Field -->
+                            <div class="form-group" style="position: relative; margin-bottom: 1.5rem;">
+                                <label>Betreiber aus Sage suchen (Matchcode / Name)</label>
+                                <input type="text" id="machine-operator-search" class="glass-input" style="border: 2px solid #ffffff !important; box-shadow: 0 0 10px rgba(255,255,255,0.15);" placeholder="z.B. Müller, 10034..." oninput="searchOperatorsForMachine()">
+                                <div id="machine-operator-suggestions" class="suggestions-box" style="display:none; position: absolute; width: 100%; z-index: 99999; max-height: 200px; overflow-y: auto;"></div>
+                            </div>
+                            
                             <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1rem; margin-bottom: 1rem;">
                                 <div class="form-group" style="margin-bottom: 0;">
                                     <label>Kundennummer</label>
@@ -10358,6 +11176,13 @@
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 5px;">
                                 <h4 style="color: #fff; margin: 0; font-size: 1rem;">Maschinenstandort</h4>
                                 <button type="button" class="btn-secondary" onclick="copyOperatorAddressToLocation()" style="padding: 4px 10px; font-size: 0.8rem; font-weight: 700; border-radius: 8px;">Adresse von Betreiber kopieren</button>
+                            </div>
+
+                            <!-- Location Search Field -->
+                            <div class="form-group" style="position: relative; margin-bottom: 1.5rem;">
+                                <label>Standort aus Sage suchen (Matchcode / Name)</label>
+                                <input type="text" id="machine-location-search" class="glass-input" style="border: 2px solid #ffffff !important; box-shadow: 0 0 10px rgba(255,255,255,0.15);" placeholder="z.B. Baustelle X, 10034..." oninput="searchLocationsForMachine()">
+                                <div id="machine-location-suggestions" class="suggestions-box" style="display:none; position: absolute; width: 100%; z-index: 99999; max-height: 200px; overflow-y: auto;"></div>
                             </div>
 
                             <div class="form-group" style="margin-bottom: 1rem;">
@@ -11684,22 +12509,11 @@
     <div id="document-preview-modal" class="modal-backdrop hidden"
         style="z-index: 1300; align-items: center; justify-content: center; background: rgba(0,0,0,0.9);">
         <div class="modal-content glass-card"
-            style="max-width: 90vw; width: 1200px; height: 90vh; padding: 1rem; display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+            style="max-width: 90vw; width: 1200px; height: 90vh; padding: 0.5rem 0.75rem; display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
             <div
-                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; padding: 0.5rem 1rem;">
-                <h2 id="doc-preview-title" style="margin: 0; font-size: 1.2rem; color: white;">Vorschau</h2>
-                <div style="display: flex; gap: 15px;">
-                    <button class="btn-icon-soft" id="btn-doc-download" onclick="window.downloadCurrentDoc()"
-                        title="Herunterladen">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="2.5">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                        </svg>
-                    </button>
-                    <button class="btn-close-modal" onclick="window.closeDocumentPreviewModal()">&times;</button>
-                </div>
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; padding: 0.25rem 0.5rem;">
+                <span id="doc-preview-title" style="font-size: 0.8rem; color: rgba(255,255,255,0.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 85%;">Vorschau</span>
+                <button class="btn-close-modal" onclick="window.closeDocumentPreviewModal()" style="font-size: 1.5rem; padding: 0; line-height: 1; margin-top: -2px;">&times;</button>
             </div>
             <div id="doc-preview-container"
                 style="flex: 1; background: rgba(0,0,0,0.2); border-radius: 12px; position: relative; overflow-y: auto;">
@@ -12030,6 +12844,16 @@
                     </div>
                 </button>
 
+                <button class="action-select-btn" onclick="window.applySubtaskAction('servicebericht')">
+                    <div class="icon-container" style="background: rgba(167, 139, 250, 0.15); color: #a78bfa;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                    </div>
+                    <div style="text-align: left;">
+                        <div style="font-weight: 700; color: #fff;">Servicebericht verknüpfen</div>
+                        <div style="font-size: 0.8rem; opacity: 0.5;">Neuen oder bestehenden Servicebericht öffnen</div>
+                    </div>
+                </button>
+
                 <div style="height: 1px; background: rgba(255,255,255,0.05); margin: 10px 0;"></div>
 
                 <button class="action-select-btn" onclick="window.applySubtaskAction(null)" style="border-style: dashed; opacity: 0.6;">
@@ -12071,6 +12895,53 @@
             <!-- Modal Footer -->
             <div style="display: flex; justify-content: flex-end; gap: 15px; border-top: 1px solid rgba(255,255,255,0.05); padding: 1.2rem 2rem; background: rgba(255,255,255,0.02);">
                 <button class="btn-secondary" style="height: 40px; padding: 0 20px;" onclick="window.closeDocumentPicker()">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SERVICEBERICHT PICKER MODAL -->
+    <div id="servicebericht-picker-modal" class="modal-new hidden" style="z-index: 10005; display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);">
+        <div class="modal-content glass-card" style="max-width: 750px; width: 95%; max-height: 85vh; padding: 0; overflow: hidden; position: relative; display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+            <!-- Modal Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 2rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div>
+                    <h2 style="margin: 0; color: #fff; font-size: 1.5rem; font-weight: 800;">Servicebericht verknüpfen</h2>
+                    <p style="color: rgba(255,255,255,0.5); margin: 5px 0 0 0; font-size: 0.85rem;">Wähle einen bestehenden Bericht aus oder erstelle einen neuen.</p>
+                </div>
+                <button class="btn-close" onclick="window.closeServiceberichtPicker()" style="background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+
+            <!-- Search bar -->
+            <div style="padding: 1rem 2rem; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; gap: 10px; align-items: center;">
+                <input type="text" id="servicebericht-picker-search" class="glass-input" placeholder="Servicebericht suchen..." style="flex: 1; height: 45px; font-size: 0.95rem;" oninput="window.filterServiceberichtPickerContent()">
+            </div>
+
+            <!-- Scrollable Body -->
+            <div style="flex: 1; overflow-y: auto; padding: 2rem; display: flex; flex-direction: column; gap: 15px; align-content: start;">
+                <!-- Option: New Servicebericht -->
+                <div onclick="window.selectPickerServicebericht('new', 'Neuer Servicebericht')" 
+                     style="display: flex; align-items: center; gap: 15px; padding: 15px 20px; background: rgba(167, 139, 250, 0.1); border: 2px dashed rgba(167, 139, 250, 0.4); border-radius: 12px; cursor: pointer; transition: all 0.2s;"
+                     onmouseover="this.style.background='rgba(167, 139, 250, 0.2)'; this.style.borderColor='rgba(167, 139, 250, 0.6)';"
+                     onmouseout="this.style.background='rgba(167, 139, 250, 0.1)'; this.style.borderColor='rgba(167, 139, 250, 0.4)';">
+                    <span style="font-size: 1.8rem;">➕</span>
+                    <div style="text-align: left;">
+                        <span style="color: #fff; font-size: 1rem; font-weight: 700; display: block;">Neuen Servicebericht erstellen</span>
+                        <span style="color: rgba(255,255,255,0.5); font-size: 0.8rem;">Erstellt bei Klick einen neuen Bericht für diese Aufgabe.</span>
+                    </div>
+                </div>
+
+                <div style="font-size: 0.8rem; font-weight: 800; color: rgba(255,255,255,0.4); text-transform: uppercase; margin-top: 10px; letter-spacing: 0.05em;">Bestehende Berichte</div>
+                
+                <div id="servicebericht-picker-list" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Rendered dynamically -->
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div style="display: flex; justify-content: flex-end; gap: 15px; border-top: 1px solid rgba(255,255,255,0.05); padding: 1.2rem 2rem; background: rgba(255,255,255,0.02);">
+                <button class="btn-secondary" style="height: 40px; padding: 0 20px;" onclick="window.closeServiceberichtPicker()">Abbrechen</button>
             </div>
         </div>
     </div>

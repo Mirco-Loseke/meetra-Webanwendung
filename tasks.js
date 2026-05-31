@@ -1,4 +1,4 @@
-
+﻿
 // ==========================================
 // TASKS MODULE
 // ==========================================
@@ -290,14 +290,63 @@
                             ${task.subtasks && task.subtasks.length > 0 ? `
                             <div class="task-list-subtasks" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
                                 ${task.subtasks.map((sub, index) => `
-                                    <div class="subtask-item" style="display:flex; align-items:center; gap: 8px;">
-                                        <div class="task-quick-complete ${sub.status === 'completed' ? 'completed' : ''}" 
-                                             onclick="event.stopPropagation(); window.toggleSubtaskStatus('${task.id}', ${index}, '${sub.status}')" 
-                                             style="width: 18px; height: 18px; min-width: 18px;"
-                                             title="${sub.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
-                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    <div class="subtask-item" style="display:flex; align-items:center; gap: 8px; justify-content: space-between;">
+                                        <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                                            <div class="task-quick-complete ${sub.status === 'completed' ? 'completed' : ''}" 
+                                                 onclick="event.stopPropagation(); window.toggleSubtaskStatus('${task.id}', ${index}, '${sub.status}')" 
+                                                 style="width: 18px; height: 18px; min-width: 18px;"
+                                                 title="${sub.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
+                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                            </div>
+                                            <span style="font-size: 0.9rem; color: rgba(255,255,255,0.8);">${sub.title}</span>
                                         </div>
-                                        <span style="font-size: 0.9rem; color: rgba(255,255,255,0.8);">${sub.title}</span>
+                                        ${sub.action_type ? (() => {
+                                             const isDoc = sub.action_type.startsWith('document:');
+                                             const isService = sub.action_type.startsWith('servicebericht:');
+                                             let textLabel = '';
+                                             let btnTitle = '';
+                                             let badgeStyle = '';
+                                             let btnStyle = '';
+                                             let buttonIcon = '';
+                                             let clickHandler = '';
+                                             if (isDoc) {
+                                                 const parts = sub.action_type.substring(9).split('|||');
+                                                 textLabel = parts[1] || 'Dokument';
+                                                 btnTitle = 'Dokument öffnen';
+                                                 badgeStyle = 'background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); color: #10b981;';
+                                                 btnStyle = 'background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981;';
+                                                 buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>';
+                                                 clickHandler = `window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')`;
+                                             } else if (isService) {
+                                                 const parts = sub.action_type.substring(15).split('|||');
+                                                 textLabel = parts[1] ? `Service: ${parts[1]}` : 'Servicebericht';
+                                                 btnTitle = 'Servicebericht öffnen';
+                                                 badgeStyle = 'background: rgba(147, 51, 234, 0.1); border: 1px solid rgba(147, 51, 234, 0.25); color: #c084fc;';
+                                                 btnStyle = 'background: rgba(147, 51, 234, 0.2); border: 1px solid rgba(147, 51, 234, 0.4); color: #c084fc;';
+                                                 buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>';
+                                                 clickHandler = `window.openServiceberichtFromTask('${task.machine_id}', '${sub.action_type}', '${task.id}', ${index}, '${sub.id || ''}')`;
+                                             } else {
+                                                 textLabel = sub.action_type === 'intake' ? 'Eingang' : 'Abnahme';
+                                                 btnTitle = sub.action_type === 'intake' ? 'Eingangsprotokoll öffnen' : 'Abnahmeprotokoll öffnen';
+                                                 const isIntake = sub.action_type === 'intake';
+                                                 badgeStyle = isIntake ? 'background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); color: #f59e0b;';
+                                                 btnStyle = isIntake ? 'background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;';
+                                                 buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>';
+                                                 clickHandler = `window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')`;
+                                             }
+                                             return `
+                                             <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                                                 <span style="${badgeStyle} border-radius: 4px; padding: 2px 6px; font-size: 0.65rem; font-weight: 800; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${textLabel}">
+                                                     ${textLabel}
+                                                 </span>
+                                                 <button onclick="event.stopPropagation(); ${clickHandler}" 
+                                                     title="${btnTitle}"
+                                                     style="${btnStyle} border-radius: 6px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; flex-shrink: 0; transition: all 0.2s;">
+                                                     ${buttonIcon}
+                                                 </button>
+                                             </div>
+                                             `;
+                                        })() : ''}
                                     </div>
                                 `).join('')}
                             </div>
@@ -411,11 +460,13 @@
                                                  </div>
                                                  ${sub.action_type ? (() => {
                                                       const isDoc = sub.action_type.startsWith('document:');
+                                                      const isService = sub.action_type.startsWith('servicebericht:');
                                                       let textLabel = '';
                                                       let btnTitle = '';
                                                       let badgeStyle = '';
                                                       let btnStyle = '';
                                                       let buttonIcon = '';
+                                                      let clickHandler = '';
                                                       if (isDoc) {
                                                           const parts = sub.action_type.substring(9).split('|||');
                                                           textLabel = parts[1] || 'Dokument';
@@ -423,6 +474,15 @@
                                                           badgeStyle = 'background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); color: #10b981;';
                                                           btnStyle = 'background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981;';
                                                           buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>';
+                                                          clickHandler = `window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')`;
+                                                      } else if (isService) {
+                                                          const parts = sub.action_type.substring(15).split('|||');
+                                                          textLabel = parts[1] ? `Service: ${parts[1]}` : 'Servicebericht';
+                                                          btnTitle = 'Servicebericht öffnen';
+                                                          badgeStyle = 'background: rgba(147, 51, 234, 0.1); border: 1px solid rgba(147, 51, 234, 0.25); color: #c084fc;';
+                                                          btnStyle = 'background: rgba(147, 51, 234, 0.2); border: 1px solid rgba(147, 51, 234, 0.4); color: #c084fc;';
+                                                          buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>';
+                                                          clickHandler = `window.openServiceberichtFromTask('${task.machine_id}', '${sub.action_type}', '${task.id}', ${sub.idx}, '${sub.id || ''}')`;
                                                       } else {
                                                           textLabel = sub.action_type === 'intake' ? 'Eingang' : 'Abnahme';
                                                           btnTitle = sub.action_type === 'intake' ? 'Eingangsprotokoll öffnen' : 'Abnahmeprotokoll öffnen';
@@ -430,13 +490,14 @@
                                                           badgeStyle = isIntake ? 'background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); color: #f59e0b;';
                                                           btnStyle = isIntake ? 'background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;';
                                                           buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>';
+                                                          clickHandler = `window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')`;
                                                       }
                                                       return `
                                                       <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
                                                           <span style="${badgeStyle} border-radius: 4px; padding: 2px 6px; font-size: 0.65rem; font-weight: 800; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                                               ${textLabel}
                                                           </span>
-                                                          <button onclick="event.stopPropagation(); window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')" 
+                                                          <button onclick="event.stopPropagation(); ${clickHandler}" 
                                                               title="${btnTitle}"
                                                               style="${btnStyle} border-radius: 6px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; flex-shrink: 0; transition: all 0.2s;">
                                                               ${buttonIcon}
@@ -566,42 +627,54 @@
                                         style="color: rgba(255,255,255,${sub.status === 'completed' ? '0.4' : '0.9'}); ${sub.status === 'completed' ? 'text-decoration: line-through;' : ''}">
                                 </div>
                                 ${sub.action_type ? (() => {
-                                      const isDoc = sub.action_type.startsWith('document:');
-                                      let label = 'AKTION';
-                                      let title = '';
-                                      let textLabel = '';
-                                      let btnTitle = '';
-                                      let badgeStyle = '';
-                                      let btnStyle = '';
-                                      let buttonIcon = '';
-                                      if (isDoc) {
-                                          const parts = sub.action_type.substring(9).split('|||');
-                                          textLabel = parts[1] || 'Dokument';
-                                          btnTitle = 'Dokument öffnen';
-                                          badgeStyle = 'background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); color: #10b981;';
-                                          btnStyle = 'background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981;';
-                                          buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>';
-                                      } else {
-                                          textLabel = sub.action_type === 'intake' ? 'Eingang' : 'Abnahme';
-                                          btnTitle = sub.action_type === 'intake' ? 'Eingangsprotokoll öffnen' : 'Abnahmeprotokoll öffnen';
-                                          const isIntake = sub.action_type === 'intake';
-                                          badgeStyle = isIntake ? 'background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); color: #f59e0b;';
-                                          btnStyle = isIntake ? 'background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;';
-                                          buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>';
-                                      }
-                                      return `
-                                      <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
-                                          <span style="${badgeStyle} border-radius: 4px; padding: 2px 6px; font-size: 0.65rem; font-weight: 800; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                              ${textLabel}
-                                          </span>
-                                          <button onclick="event.stopPropagation(); window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')" 
-                                              title="${btnTitle}"
-                                              style="${btnStyle} border-radius: 6px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; flex-shrink: 0; transition: all 0.2s;">
-                                              ${buttonIcon}
-                                          </button>
-                                      </div>
-                                      `;
-                                  })() : ''}
+                                       const isDoc = sub.action_type.startsWith('document:');
+                                       const isService = sub.action_type.startsWith('servicebericht:');
+                                       let label = 'AKTION';
+                                       let title = '';
+                                       let textLabel = '';
+                                       let btnTitle = '';
+                                       let badgeStyle = '';
+                                       let btnStyle = '';
+                                       let buttonIcon = '';
+                                       let clickHandler = '';
+                                       if (isDoc) {
+                                           const parts = sub.action_type.substring(9).split('|||');
+                                           textLabel = parts[1] || 'Dokument';
+                                           btnTitle = 'Dokument Ã¶ffnen';
+                                           badgeStyle = 'background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); color: #10b981;';
+                                           btnStyle = 'background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981;';
+                                           buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>';
+                                           clickHandler = `window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')`;
+                                       } else if (isService) {
+                                           const parts = sub.action_type.substring(15).split('|||');
+                                           textLabel = parts[1] ? `Service: ${parts[1]}` : 'Servicebericht';
+                                           btnTitle = 'Servicebericht Ã¶ffnen';
+                                           badgeStyle = 'background: rgba(147, 51, 234, 0.1); border: 1px solid rgba(147, 51, 234, 0.25); color: #c084fc;';
+                                           btnStyle = 'background: rgba(147, 51, 234, 0.2); border: 1px solid rgba(147, 51, 234, 0.4); color: #c084fc;';
+                                           buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>';
+                                           clickHandler = `window.openServiceberichtFromTask('${task.machine_id}', '${sub.action_type}', '${task.id}', ${sub.idx}, '${sub.id || ''}')`;
+                                       } else {
+                                           textLabel = sub.action_type === 'intake' ? 'Eingang' : 'Abnahme';
+                                           btnTitle = sub.action_type === 'intake' ? 'Eingangsprotokoll Ã¶ffnen' : 'Abnahmeprotokoll Ã¶ffnen';
+                                           const isIntake = sub.action_type === 'intake';
+                                           badgeStyle = isIntake ? 'background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); color: #f59e0b;';
+                                           btnStyle = isIntake ? 'background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;';
+                                           buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>';
+                                           clickHandler = `window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')`;
+                                       }
+                                       return `
+                                       <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                                           <span style="${badgeStyle} border-radius: 4px; padding: 2px 6px; font-size: 0.65rem; font-weight: 800; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                               ${textLabel}
+                                           </span>
+                                           <button onclick="event.stopPropagation(); ${clickHandler}" 
+                                               title="${btnTitle}"
+                                               style="${btnStyle} border-radius: 6px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; flex-shrink: 0; transition: all 0.2s;">
+                                               ${buttonIcon}
+                                           </button>
+                                       </div>
+                                       `;
+                                   })() : ''}
                             </div>`;
                     });
                     html += '</div></div>';
