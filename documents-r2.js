@@ -21,6 +21,47 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.location.hash === '#documents') {
         fetchDocuments();
     }
+
+    // Set up upload dropzone drag-and-drop
+    const dropzone = document.getElementById('doc-dropzone');
+    if (dropzone) {
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.add('dragover');
+        });
+
+        dropzone.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.remove('dragover');
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            dropzone.classList.remove('dragover');
+
+            const files = Array.from(e.dataTransfer.files);
+            if (files.length > 0) {
+                selectedDocFiles = files;
+                const fileNameLabel = document.getElementById('doc-file-name');
+                if (files.length === 1) {
+                    fileNameLabel.textContent = files[0].name;
+                    const nameInput = document.getElementById('doc-upload-name');
+                    if (nameInput && !nameInput.value) {
+                        nameInput.value = files[0].name.split('.').slice(0, -1).join('.');
+                    }
+                } else {
+                    fileNameLabel.textContent = `${files.length} Dateien ausgewählt`;
+                    const nameInput = document.getElementById('doc-upload-name');
+                    if (nameInput) {
+                        nameInput.value = "Mehrere Dokumente";
+                    }
+                }
+            }
+        });
+    }
 });
 
 // For cross-module compatibility (switchView)
@@ -797,7 +838,8 @@ window.saveFolder = async function(event) {
     if (event) event.preventDefault();
     
     const name = document.getElementById('folder-name-input').value;
-    const machineId = document.getElementById('folder-machine-select').value || null;
+    const selectEl = document.getElementById('folder-machine-select');
+    const machineId = selectEl ? (selectEl.value || null) : null;
     
     if (!name) return;
     

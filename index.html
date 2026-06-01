@@ -6534,7 +6534,22 @@
             if (!machine) {
                 custPreview.classList.add('hidden');
                 custPreview.style.display = 'none';
+                const locFieldsWrapper = document.getElementById('service-location-fields-wrapper');
+                if (locFieldsWrapper) {
+                    locFieldsWrapper.classList.add('hidden');
+                    locFieldsWrapper.style.display = 'none';
+                }
                 return;
+            }
+
+            const locFieldsWrapper = document.getElementById('service-location-fields-wrapper');
+            if (locFieldsWrapper) {
+                locFieldsWrapper.classList.remove('hidden');
+                locFieldsWrapper.style.display = 'block';
+                document.getElementById('service-location-street').value = machine.location_street || '';
+                document.getElementById('service-location-zip').value = machine.location_zip || '';
+                document.getElementById('service-location-city').value = machine.location_city || '';
+                document.getElementById('service-location-country').value = machine.location_country || 'Deutschland';
             }
 
             if (machine.customer_id) {
@@ -6835,6 +6850,12 @@
                 const description = document.getElementById('service-description').value;
 
                 if (!machineId || !dateStart || !description) {
+                    if (!dateStart) {
+                        toggleServiceReportSection('service-group-1-header', true);
+                    }
+                    if (!description) {
+                        toggleServiceReportSection('service-group-2-header', true);
+                    }
                     alert('Bitte Maschine, Datum und Beschreibung ausfüllen.');
                     if (submitBtn) {
                         submitBtn.disabled = false;
@@ -6896,7 +6917,11 @@
                     travel_distance_km: parseFloat(document.getElementById('service-driving-distance')?.value) || null,
                     travel_time_minutes: parseInt(document.getElementById('service-driving-time')?.value) || null,
                     customer_signature: document.getElementById('service-customer-signature')?.value || null,
-                    customer_name: document.getElementById('service-customer-signee-name')?.value.trim() || null
+                    customer_name: document.getElementById('service-customer-signee-name')?.value.trim() || null,
+                    operating_hours: document.getElementById('service-operating-hours')?.value || null,
+                    work_log: typeof window.getWorkLogTableData === 'function' ? window.getWorkLogTableData() : [],
+                    status_repaired: document.getElementById('service-status-repaired')?.checked || false,
+                    status_repaired_en: document.getElementById('service-status-repaired-en')?.checked || false
                 };
 
                 console.log('Sending Servicebericht data to Supabase:', reportData);
@@ -6955,12 +6980,21 @@
                         updatedFiles.push({ type: 'meta', key: 'is_next_maintenance_auto', property: 'true' });
                     }
 
+                    const locStreet = document.getElementById('service-location-street')?.value.trim() || null;
+                    const locZip = document.getElementById('service-location-zip')?.value.trim() || null;
+                    const locCity = document.getElementById('service-location-city')?.value.trim() || null;
+                    const locCountry = document.getElementById('service-location-country')?.value.trim() || null;
+
                     const { error: machineUpdateError } = await supabaseClient
                         .from('machines')
                         .update({
                             last_maintenance: serviceDate,
                             next_maintenance: nextMaintDate,
-                            files: updatedFiles
+                            files: updatedFiles,
+                            location_street: locStreet,
+                            location_zip: locZip,
+                            location_city: locCity,
+                            location_country: locCountry
                         })
                         .eq('id', targetMachineId);
 
@@ -9496,6 +9530,19 @@
                         modal.classList.add('show');
                     });
 
+                    // Reset collapsible sections in servicebericht form to collapsed
+                    const serviceCollapsibles = modal.querySelectorAll('.collapsible-section');
+                    serviceCollapsibles.forEach(section => {
+                        const content = section.querySelector('.section-content');
+                        const chevron = section.querySelector('.toggle-chevron');
+                        if (content) {
+                            content.style.display = 'none';
+                        }
+                        if (chevron) {
+                            chevron.style.transform = 'rotate(0deg)';
+                        }
+                    });
+
                     const titleEl = modal.querySelector('h2');
                     const machineSelector = modal.querySelector('.machine-selector-wrapper .search-input-container');
                     const machineList = document.getElementById('service-machine-list');
@@ -9533,6 +9580,30 @@
                     if (customerSignature) customerSignature.value = '';
                     const customerSigneeName = document.getElementById('service-customer-signee-name');
                     if (customerSigneeName) customerSigneeName.value = '';
+                    
+                    const operatingHours = document.getElementById('service-operating-hours');
+                    if (operatingHours) operatingHours.value = '';
+                    const workLogTableBody = document.getElementById('service-work-log-table-body');
+                    if (workLogTableBody) workLogTableBody.innerHTML = '';
+                    const statusRepaired = document.getElementById('service-status-repaired');
+                    if (statusRepaired) statusRepaired.checked = false;
+                    const statusRepairedEn = document.getElementById('service-status-repaired-en');
+                    if (statusRepairedEn) statusRepairedEn.checked = false;
+                    
+                    // Reset location fields
+                    const locStreetInput = document.getElementById('service-location-street');
+                    if (locStreetInput) locStreetInput.value = '';
+                    const locZipInput = document.getElementById('service-location-zip');
+                    if (locZipInput) locZipInput.value = '';
+                    const locCityInput = document.getElementById('service-location-city');
+                    if (locCityInput) locCityInput.value = '';
+                    const locCountryInput = document.getElementById('service-location-country');
+                    if (locCountryInput) locCountryInput.value = 'Deutschland';
+                    const locFieldsWrapper = document.getElementById('service-location-fields-wrapper');
+                    if (locFieldsWrapper) {
+                        locFieldsWrapper.classList.add('hidden');
+                        locFieldsWrapper.style.display = 'none';
+                    }
                     
                     // Reset signature preview
                     const sigPreviewImg = document.getElementById('signature-preview-img');
@@ -9584,8 +9655,28 @@
                         if (drivingDistance) drivingDistance.value = editData.travel_distance_km || '';
                         if (drivingTime) {
                             drivingTime.value = editData.travel_time_minutes || '';
+                            if (typeof window.formatDrivingTimeInput === 'function') window.formatDrivingTimeInput();
                             if (typeof window.updateDrivingTimeHoursPreview === 'function') window.updateDrivingTimeHoursPreview();
                         }
+                        
+                        const operatingHours = document.getElementById('service-operating-hours');
+                        if (operatingHours) operatingHours.value = editData.operating_hours || '';
+                        
+                        const statusRepaired = document.getElementById('service-status-repaired');
+                        if (statusRepaired) statusRepaired.checked = !!editData.status_repaired;
+                        const statusRepairedEn = document.getElementById('service-status-repaired-en');
+                        if (statusRepairedEn) statusRepairedEn.checked = !!editData.status_repaired_en;
+
+                        const workLogTableBody = document.getElementById('service-work-log-table-body');
+                        if (workLogTableBody) workLogTableBody.innerHTML = '';
+                        if (editData.work_log && Array.isArray(editData.work_log)) {
+                            editData.work_log.forEach(row => {
+                                if (typeof window.addWorkLogTableRow === 'function') {
+                                    window.addWorkLogTableRow(row);
+                                }
+                            });
+                        }
+
                         if (customerSigneeName) customerSigneeName.value = editData.customer_name || '';
                         if (customerSignature) {
                             customerSignature.value = editData.customer_signature || '';
@@ -9991,14 +10082,179 @@
             // NOTE: fetchServiceEntries on nav click is handled by switchView (see above)
         });
 
-        // Override submit to refresh list
-        // We need to capture the original function reference appropriately
-        // Since submitServicebericht was defined on window, we can wrap it.
+        // Override submit to refresh list and perform subtask linkage
+        window.activeSubtaskSource = null;
+        let serviceberichtPickerSearchTimeout = null;
+        let pickerActiveTaskMachineId = null;
+
+        window.openServiceberichtFromTask = async function(machineId, actionType, taskId, subtaskIndex, subtaskId) {
+            console.log('openServiceberichtFromTask:', { machineId, actionType, taskId, subtaskIndex, subtaskId });
+            window.activeSubtaskSource = { taskId, subtaskIndex, subtaskId };
+
+            if (actionType === 'servicebericht:new') {
+                if (machineId && machineId !== 'null' && machineId !== 'undefined') {
+                    window.currentSelectedMachineForService = parseInt(machineId);
+                } else {
+                    window.currentSelectedMachineForService = null;
+                }
+                window.openServiceberichtModal(null);
+            } else {
+                const parts = actionType.substring(15).split('|||');
+                const reportId = parseInt(parts[0]);
+                if (!isNaN(reportId)) {
+                    window.openEditServicebericht(reportId);
+                } else {
+                    alert('Ungültige Servicebericht-Verknüpfung.');
+                }
+            }
+        };
+
+        window.openServiceberichtPicker = async function() {
+            const machineSelect = document.getElementById('task-machine');
+            pickerActiveTaskMachineId = machineSelect ? machineSelect.value : null;
+
+            const modal = document.getElementById('servicebericht-picker-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.style.display = 'flex';
+                requestAnimationFrame(() => modal.classList.add('show'));
+            }
+
+            const searchInput = document.getElementById('servicebericht-picker-search');
+            if (searchInput) searchInput.value = '';
+
+            await window.filterServiceberichtPickerContent();
+        };
+
+        window.closeServiceberichtPicker = function() {
+            const modal = document.getElementById('servicebericht-picker-modal');
+            if (modal) {
+                modal.classList.remove('show');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    modal.style.display = 'none';
+                }, 300);
+            }
+        };
+
+        window.filterServiceberichtPickerContent = async function() {
+            const list = document.getElementById('servicebericht-picker-list');
+            if (list) {
+                list.innerHTML = '<div style="padding: 1rem; color: rgba(255,255,255,0.4); text-align: center;">Lade Serviceberichte...</div>';
+            }
+
+            try {
+                const searchVal = (document.getElementById('servicebericht-picker-search')?.value || '').trim().toLowerCase();
+
+                let query = supabaseClient.from('service_entries').select('id, title, date, machines(manufacturer, name, serial)');
+
+                if (pickerActiveTaskMachineId) {
+                    query = query.eq('machine_id', parseInt(pickerActiveTaskMachineId));
+                }
+
+                const { data, error } = await query.order('date', { ascending: false }).limit(50);
+                if (error) throw error;
+
+                let entries = data || [];
+
+                if (searchVal) {
+                    entries = entries.filter(e => {
+                        const mLabel = e.machines ? `${e.machines.manufacturer} ${e.machines.name} ${e.machines.serial || ''}` : '';
+                        return (e.title && e.title.toLowerCase().includes(searchVal)) || 
+                               (mLabel.toLowerCase().includes(searchVal)) ||
+                               (e.date && e.date.includes(searchVal));
+                    });
+                }
+
+                if (entries.length === 0) {
+                    if (list) {
+                        list.innerHTML = '<div style="padding: 1rem; color: rgba(255,255,255,0.4); text-align: center;">Keine passenden Serviceberichte gefunden.</div>';
+                    }
+                    return;
+                }
+
+                let html = '';
+                entries.forEach(e => {
+                    const mText = e.machines ? `${e.machines.manufacturer} ${e.machines.name} (${e.machines.serial || 'Ohne S/N'})` : 'Keine Maschine';
+                    const dateStr = new Date(e.date).toLocaleDateString('de-DE');
+                    html += `
+                        <div onclick="window.selectPickerServicebericht('${e.id}', '${e.title.replace(/'/g, "\\'")}')" 
+                             style="display: flex; align-items: center; gap: 15px; padding: 12px 18px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; cursor: pointer; transition: all 0.2s;"
+                             onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)';"
+                             onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.borderColor='rgba(255,255,255,0.08)';">
+                            <span style="font-size: 1.5rem;">📄</span>
+                            <div style="text-align: left; flex: 1;">
+                                <span style="color: #fff; font-size: 0.95rem; font-weight: 700; display: block;">${e.title}</span>
+                                <span style="color: rgba(255,255,255,0.4); font-size: 0.8rem; display: block; margin-top: 2px;">${mText} | ${dateStr}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                if (list) list.innerHTML = html;
+            } catch (err) {
+                console.error('Error fetching service reports for picker:', err);
+                if (list) {
+                    list.innerHTML = '<div style="padding: 1rem; color: #ef4444; text-align: center;">Fehler beim Laden.</div>';
+                }
+            }
+        };
+
+        window.selectPickerServicebericht = async function(id, title) {
+            const actionValue = 'servicebericht:' + id + '|||' + title;
+            if (typeof window.applySubtaskAction === 'function') {
+                await window.applySubtaskAction(actionValue);
+            }
+            window.closeServiceberichtPicker();
+        };
+
         const originalSubmitServicebericht = window.submitServicebericht;
         window.submitServicebericht = async function () {
             try {
                 await originalSubmitServicebericht();
-                fetchServiceEntries(); // Refresh list after save
+                
+                if (typeof fetchServiceEntries === 'function') fetchServiceEntries();
+
+                if (window.activeSubtaskSource) {
+                    const { taskId, subtaskIndex, subtaskId } = window.activeSubtaskSource;
+                    const newReportId = currentEditingServiceId;
+                    const reportTitle = document.getElementById('service-report-title')?.value || 'Servicebericht';
+
+                    if (newReportId) {
+                        const newActionVal = `servicebericht:${newReportId}|||${reportTitle}`;
+                        console.log('Linking new Servicebericht to subtask:', { taskId, subtaskIndex, subtaskId, newActionVal });
+
+                        const { data: taskData, error: taskFetchErr } = await supabaseClient
+                            .from('tasks')
+                            .select('subtasks')
+                            .eq('id', taskId)
+                            .single();
+
+                        if (!taskFetchErr && taskData && taskData.subtasks) {
+                            const subtasks = [...taskData.subtasks];
+                            if (subtasks[subtaskIndex]) {
+                                subtasks[subtaskIndex].action_type = newActionVal;
+                                
+                                await supabaseClient
+                                    .from('tasks')
+                                    .update({ subtasks })
+                                    .eq('id', taskId);
+                            }
+                        }
+
+                        if (subtaskId && subtaskId !== 'null') {
+                            await supabaseClient
+                                .from('subtasks')
+                                .update({ action_type: newActionVal })
+                                .eq('id', subtaskId);
+                        }
+
+                        if (typeof fetchTasks === 'function') {
+                            await fetchTasks();
+                        }
+                    }
+                    window.activeSubtaskSource = null;
+                }
             } catch (e) {
                 console.error(e);
             }
@@ -10027,27 +10283,24 @@
                 const machine = (window.machineList || []).find(m => m.id == machineId);
                 if (!machine) throw new Error('Maschine nicht gefunden.');
                 
-                let destStreet = machine.operator_street || '';
-                let destZip = machine.operator_zip || '';
-                let destCity = machine.operator_city || '';
-                let destCountry = machine.operator_country || 'Deutschland';
+                let destStreet = document.getElementById('service-location-street')?.value.trim();
+                let destZip = document.getElementById('service-location-zip')?.value.trim();
+                let destCity = document.getElementById('service-location-city')?.value.trim();
+                let destCountry = document.getElementById('service-location-country')?.value.trim() || 'Deutschland';
                 
-                if (machine.customer_id) {
-                    const { data: cust } = await window.supabaseClient
-                        .from('customers')
-                        .select('street, zip_code, city, country')
-                        .eq('id', machine.customer_id)
-                        .single();
-                    if (cust) {
-                        destStreet = cust.street || destStreet;
-                        destZip = cust.zip_code || destZip;
-                        destCity = cust.city || destCity;
-                        destCountry = cust.country || destCountry;
-                    }
+                if (!destStreet || !destCity) {
+                    destStreet = machine.location_street || machine.operator_street || '';
+                    destZip = machine.location_zip || machine.operator_zip || '';
+                    destCity = machine.location_city || machine.operator_city || '';
+                    destCountry = machine.location_country || machine.operator_country || 'Deutschland';
                 }
                 
                 if (!destStreet || !destCity) {
                     alert('Der Maschine/dem Kunden ist keine vollständige Adresse zugeordnet. Route kann nicht berechnet werden.');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                    }
                     return;
                 }
                 
@@ -10070,6 +10323,10 @@
                 
                 if (!hq || !hq.street || !hq.city) {
                     alert('Bitte hinterlegen Sie zuerst die Firmenadresse (HQ) in den Einstellungen.');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                    }
                     return;
                 }
                 
@@ -10103,17 +10360,34 @@
                     const durationMins = Math.round(route.duration / 60);
                     
                     document.getElementById('service-driving-distance').value = distanceKm;
-                    document.getElementById('service-driving-time').value = durationMins;
+                    const durationHrs = (durationMins / 60).toFixed(1).replace('.', ',');
+                    document.getElementById('service-driving-time').value = `${durationMins}`;
+                    if (typeof window.updateDrivingTimeHoursPreview === 'function') window.updateDrivingTimeHoursPreview();
                     
-                    alert(`Route berechnet:\nEntfernung: ${distanceKm} km\nGeschätzte Fahrzeit: ${durationMins} Minuten`);
+                    // Autofill kilometers into existing Anfahrt & Abfahrt rows
+                    const logRows = document.querySelectorAll('.service-work-log-row');
+                    logRows.forEach(tr => {
+                        const typInput = tr.querySelector('.log-typ');
+                        const kmInput = tr.querySelector('.log-kilometer');
+                        if (typInput && kmInput && (typInput.value === 'Anfahrt' || typInput.value === 'Abfahrt')) {
+                            kmInput.value = distanceKm;
+                        }
+                    });
+                    
+                    alert(`Route berechnet:\nEntfernung: ${distanceKm} km\nGeschätzte Fahrzeit: ${durationMins} Min. & ${durationHrs} Std.`);
                 } else {
                     throw new Error('Keine Route gefunden.');
                 }
             } catch (err) {
                 console.error(err);
-                alert('Fehler bei der automatischen Routenberechnung: ' + err.message);
-            } finally {
                 if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+                // Show custom modal instead of alert
+                window.showRouteErrorModal();
+            } finally {
+                if (btn && !btn.disabled) {
                     btn.disabled = false;
                     btn.textContent = originalText;
                 }
@@ -10128,11 +10402,302 @@
                 const mins = parseInt(val);
                 if (!isNaN(mins) && mins > 0) {
                     const hrs = (mins / 60).toFixed(1).replace('.', ',');
-                    preview.textContent = `= ${hrs} Std.`;
+                    preview.textContent = `${hrs} Std.`;
                 } else {
-                    preview.textContent = '= - Std.';
+                    preview.textContent = '- Std.';
                 }
             }
+        };
+
+        window.syncDrivingDistanceToTable = function(distanceKm) {
+            const logRows = document.querySelectorAll('.service-work-log-row');
+            logRows.forEach(tr => {
+                const typInput = tr.querySelector('.log-typ');
+                const kmInput = tr.querySelector('.log-kilometer');
+                if (typInput && kmInput && (typInput.value === 'Anfahrt' || typInput.value === 'Abfahrt')) {
+                    kmInput.value = distanceKm;
+                }
+            });
+        };
+        
+        window.formatDrivingTimeInput = function() {
+            // Disabled
+        };
+        
+        window.unformatDrivingTimeInput = function() {
+            // Disabled
+        };
+
+        window.showRouteErrorModal = function() {
+            const modal = document.getElementById('service-route-error-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.style.display = 'flex';
+                requestAnimationFrame(() => modal.classList.add('show'));
+            }
+        };
+
+        window.closeRouteErrorModal = function() {
+            const modal = document.getElementById('service-route-error-modal');
+            if (modal) {
+                modal.classList.remove('show');
+                modal.classList.add('hidden');
+                setTimeout(() => modal.style.display = 'none', 300);
+            }
+        };
+
+        window.openGoogleMapsRouteFallback = function() {
+            window.closeRouteErrorModal();
+
+            // Resolve origin and destination
+            const machineId = document.getElementById('selected-machine-id').value;
+            const machine = (window.machineList || []).find(m => m.id == machineId);
+            
+            let destStreet = document.getElementById('service-location-street')?.value.trim();
+            let destZip = document.getElementById('service-location-zip')?.value.trim();
+            let destCity = document.getElementById('service-location-city')?.value.trim();
+            let destCountry = document.getElementById('service-location-country')?.value.trim() || 'Deutschland';
+            
+            if (machine && (!destStreet || !destCity)) {
+                destStreet = machine.location_street || machine.operator_street || '';
+                destZip = machine.location_zip || machine.operator_zip || '';
+                destCity = machine.location_city || machine.operator_city || '';
+                destCountry = machine.location_country || machine.operator_country || 'Deutschland';
+            }
+
+            let hq = null;
+            const cached = localStorage.getItem('meetra_company_hq');
+            if (cached) {
+                try { hq = JSON.parse(cached); } catch(e){}
+            }
+            
+            const origin = hq ? `${hq.street}, ${hq.zip} ${hq.city}, ${hq.country}` : '';
+            const destination = `${destStreet}, ${destZip} ${destCity}, ${destCountry}`;
+
+            if (origin || destination) {
+                const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`;
+                window.open(url, '_blank');
+            } else {
+                window.open('https://maps.google.com', '_blank');
+            }
+
+            // Reset inputs
+            const distInput = document.getElementById('fallback-driving-distance');
+            if (distInput) distInput.value = '';
+            const timeInput = document.getElementById('fallback-driving-time');
+            if (timeInput) timeInput.value = '';
+
+            // Open manual input modal
+            const modal = document.getElementById('service-manual-route-input-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.style.display = 'flex';
+                requestAnimationFrame(() => modal.classList.add('show'));
+            }
+        };
+
+        window.closeManualRouteInputModal = function() {
+            const modal = document.getElementById('service-manual-route-input-modal');
+            if (modal) {
+                modal.classList.remove('show');
+                modal.classList.add('hidden');
+                setTimeout(() => modal.style.display = 'none', 300);
+            }
+        };
+
+        window.applyManualRouteInputs = function() {
+            const distanceVal = document.getElementById('fallback-driving-distance').value.trim();
+            const timeVal = document.getElementById('fallback-driving-time').value.trim();
+
+            if (!distanceVal || !timeVal) {
+                alert('Bitte tragen Sie sowohl Kilometer als auch Fahrzeit ein.');
+                return;
+            }
+
+            const distanceKm = parseFloat(distanceVal).toFixed(1);
+            const durationMins = parseInt(timeVal);
+
+            if (isNaN(distanceKm) || isNaN(durationMins)) {
+                alert('Bitte geben Sie gültige Werte ein.');
+                return;
+            }
+
+            window.closeManualRouteInputModal();
+
+            // Set main inputs
+            document.getElementById('service-driving-distance').value = distanceKm;
+            document.getElementById('service-driving-time').value = `${durationMins}`;
+            if (typeof window.updateDrivingTimeHoursPreview === 'function') window.updateDrivingTimeHoursPreview();
+
+            // Autofill kilometers into existing Anfahrt & Abfahrt rows
+            const logRows = document.querySelectorAll('.service-work-log-row');
+            logRows.forEach(tr => {
+                const typInput = tr.querySelector('.log-typ');
+                const kmInput = tr.querySelector('.log-kilometer');
+                if (typInput && kmInput && (typInput.value === 'Anfahrt' || typInput.value === 'Abfahrt')) {
+                    kmInput.value = distanceKm;
+                }
+            });
+
+            alert(`Werte übernommen:\nEntfernung: ${distanceKm} km\nFahrzeit: ${durationMins} Min.`);
+        };
+
+        window.formatTimeInput = function(el) {
+            let val = el.value.trim().replace(/[^\d:]/g, ''); // keep only digits and colon
+            if (!val) return;
+            if (val.includes(':')) {
+                let parts = val.split(':');
+                let h = parts[0].padStart(2, '0');
+                let m = (parts[1] || '00').padEnd(2, '0').substring(0, 2);
+                el.value = `${h}:${m}`;
+                return;
+            }
+            if (val.length === 1 || val.length === 2) {
+                el.value = val.padStart(2, '0') + ':00';
+            } else if (val.length === 3) {
+                el.value = '0' + val.charAt(0) + ':' + val.substring(1);
+            } else if (val.length >= 4) {
+                el.value = val.substring(0, 2) + ':' + val.substring(2, 4);
+            }
+        };
+
+        window.addWorkLogTableRow = function(data = null, forceTyp = null) {
+            const tbody = document.getElementById('service-work-log-table-body');
+            if (!tbody) return;
+            
+            // Legacy data support & splitting
+            if (data && !data.typ) {
+                if (data.arbeitszeit && data.fahrzeit) {
+                    window.addWorkLogTableRow({ datum: data.datum, typ: 'Arbeitszeit', arbeitszeit: data.arbeitszeit, pause: data.pause, kilometer: data.kilometer });
+                    window.addWorkLogTableRow({ datum: data.datum, typ: 'Anfahrt', fahrzeit: data.fahrzeit });
+                    return;
+                } else if (data.fahrzeit) {
+                    data.typ = 'Anfahrt';
+                } else if (data.arbeitszeit) {
+                    data.typ = 'Arbeitszeit';
+                } else {
+                    data.typ = 'Arbeitszeit';
+                }
+            }
+            
+            let resolvedDatum = data?.datum || '';
+            const typ = data?.typ || forceTyp || 'Arbeitszeit';
+
+            const defaultKm = (typ === 'Anfahrt' || typ === 'Abfahrt') ? (document.getElementById('service-driving-distance')?.value || '') : '';
+            
+            const tr = document.createElement('tr');
+            tr.className = 'service-work-log-row';
+            tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+            
+            if (!resolvedDatum) {
+                const dateStart = document.getElementById('service-date-start')?.value || '';
+                const dateEnd = document.getElementById('service-date-end')?.value || '';
+                if (dateStart && !dateEnd) {
+                    resolvedDatum = dateStart;
+                } else if (dateStart && dateEnd) {
+                    if (typ === 'Anfahrt') resolvedDatum = dateStart;
+                    else if (typ === 'Abfahrt') resolvedDatum = dateEnd;
+                    else resolvedDatum = dateStart;
+                }
+            }
+            
+            const datum = resolvedDatum;
+            const pause = data?.pause || '';
+            const kilometer = data?.kilometer || defaultKm;
+            
+            let zeitVon = '';
+            let zeitBis = '';
+            let sourceZeit = '';
+            
+            if (data?.zeit) {
+                sourceZeit = data.zeit;
+            } else if (typ === 'Arbeitszeit' && data?.arbeitszeit) {
+                sourceZeit = data.arbeitszeit;
+            } else if ((typ === 'Anfahrt' || typ === 'Abfahrt') && data?.fahrzeit) {
+                sourceZeit = data.fahrzeit;
+            }
+            
+            if (sourceZeit) {
+                if (sourceZeit.includes(' - ')) {
+                    const parts = sourceZeit.split(' - ');
+                    zeitVon = parts[0];
+                    zeitBis = parts[1];
+                } else {
+                    zeitVon = sourceZeit;
+                }
+            }
+            
+            const kmDisabledAttr = typ === 'Arbeitszeit' ? 'disabled' : '';
+            const kmStyle = typ === 'Arbeitszeit' ? 'background: rgba(0,0,0,0.2); cursor: not-allowed; color: rgba(255,255,255,0.3);' : '';
+            const kmPlaceholder = typ === 'Arbeitszeit' ? '/' : 'z.B. 45';
+
+            tr.innerHTML = `
+                <td style="padding: 6px;"><input type="date" class="glass-form-input log-datum" value="${datum}" style="padding: 6px 10px; height: 36px; border-radius: 8px; font-size: 0.85rem; width: 100%;"></td>
+                <td style="padding: 6px;">
+                    <input type="text" class="glass-form-input log-typ" value="${typ}" readonly style="padding: 6px 10px; height: 36px; border-radius: 8px; font-size: 0.85rem; width: 100%; cursor: default; color: rgba(255,255,255,0.8); background: rgba(0,0,0,0.1);">
+                </td>
+                <td style="padding: 6px;"><input type="text" class="glass-form-input log-pause" value="${pause}" placeholder="z.B. 30 Min" style="padding: 6px 10px; height: 36px; border-radius: 8px; font-size: 0.85rem; width: 100%;"></td>
+                <td style="padding: 6px;">
+                    <div style="display: flex; gap: 4px; align-items: center;">
+                        <input type="text" class="glass-form-input log-zeit-von" value="${zeitVon}" placeholder="08:00" style="padding: 6px 10px; height: 36px; border-radius: 8px; font-size: 0.85rem; width: 100%;" onblur="if(window.formatTimeInput) window.formatTimeInput(this)">
+                        <span style="color: rgba(255,255,255,0.5);">-</span>
+                        <input type="text" class="glass-form-input log-zeit-bis" value="${zeitBis}" placeholder="16:30" style="padding: 6px 10px; height: 36px; border-radius: 8px; font-size: 0.85rem; width: 100%;" onblur="if(window.formatTimeInput) window.formatTimeInput(this)">
+                    </div>
+                </td>
+                <td style="padding: 6px;"><input type="text" class="glass-form-input log-kilometer" value="${kilometer}" placeholder="${kmPlaceholder}" style="padding: 6px 10px; height: 36px; border-radius: 8px; font-size: 0.85rem; width: 100%; ${kmStyle}" ${kmDisabledAttr}></td>
+                <td style="padding: 6px; text-align: center;">
+                    <button type="button" onclick="this.closest('tr').remove()" style="border: none; background: rgba(239, 68, 68, 0.15); color: #f87171; width: 32px; height: 32px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;" title="Zeile löschen">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                </td>
+            `;
+            if (typ === 'Anfahrt') {
+                tbody.insertBefore(tr, tbody.firstChild);
+            } else if (typ === 'Abfahrt') {
+                tbody.appendChild(tr);
+            } else {
+                let abfahrtRow = null;
+                const rows = Array.from(tbody.children);
+                for (let i = 0; i < rows.length; i++) {
+                    const rowTyp = rows[i].querySelector('.log-typ')?.value;
+                    if (rowTyp === 'Abfahrt') {
+                        abfahrtRow = rows[i];
+                        break;
+                    }
+                }
+                if (abfahrtRow) {
+                    tbody.insertBefore(tr, abfahrtRow);
+                } else {
+                    tbody.appendChild(tr);
+                }
+            }
+        };
+        
+        window.getWorkLogTableData = function() {
+            const rows = document.querySelectorAll('.service-work-log-row');
+            const data = [];
+            rows.forEach(tr => {
+                const datum = tr.querySelector('.log-datum')?.value || '';
+                const typ = tr.querySelector('.log-typ')?.value || '';
+                const zVon = tr.querySelector('.log-zeit-von')?.value.trim() || '';
+                const zBis = tr.querySelector('.log-zeit-bis')?.value.trim() || '';
+                const zeit = (zVon && zBis) ? `${zVon} - ${zBis}` : (zVon || zBis);
+                const pause = tr.querySelector('.log-pause')?.value || '';
+                const kilometer = tr.querySelector('.log-kilometer')?.value || '';
+                
+                let arbeitszeit = '';
+                let fahrzeit = '';
+                if (typ === 'Arbeitszeit') {
+                    arbeitszeit = zeit;
+                } else if (typ === 'Anfahrt' || typ === 'Abfahrt') {
+                    fahrzeit = zeit;
+                }
+                
+                if (datum || zeit || pause || kilometer) {
+                    data.push({ datum, typ, zeit, arbeitszeit, fahrzeit, pause, kilometer });
+                }
+            });
+            return data;
         };
 
         // Signature Canvas State
@@ -10171,6 +10736,16 @@
                     // Fill with white background
                     signatureCtx.fillStyle = '#ffffff';
                     signatureCtx.fillRect(0, 0, signatureCanvas.width, signatureCanvas.height);
+                    
+                    // If a signature already exists, draw it on the canvas
+                    const existingSig = document.getElementById('service-customer-signature').value;
+                    if (existingSig && existingSig.startsWith('data:image')) {
+                        const img = new Image();
+                        img.onload = function() {
+                            signatureCtx.drawImage(img, 0, 0, signatureCanvas.width, signatureCanvas.height);
+                        };
+                        img.src = existingSig;
+                    }
                     
                     setupSignatureEventListeners();
                 }
@@ -10233,6 +10808,7 @@
         }
         
         window.clearSignatureCanvas = function() {
+            if (!confirm("Möchten Sie die Zeichnung der Unterschrift wirklich zurücksetzen?")) return;
             if (signatureCtx && signatureCanvas) {
                 signatureCtx.fillStyle = '#ffffff';
                 signatureCtx.fillRect(0, 0, signatureCanvas.width, signatureCanvas.height);
@@ -10260,6 +10836,7 @@
         };
         
         window.clearSignature = function() {
+            if (!confirm("Möchten Sie die gespeicherte Unterschrift wirklich löschen?")) return;
             document.getElementById('service-customer-signature').value = '';
             const sigPreviewImg = document.getElementById('signature-preview-img');
             if (sigPreviewImg) {
@@ -10363,57 +10940,122 @@
                 doc.text('Servicebericht', 20, 36);
                 
                 // Header date
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(10);
+                doc.setTextColor(0, 0, 0);
+                doc.text('Datum: ', 160, 36);
+                const dateW = doc.getTextWidth('Datum: ');
                 doc.setFont('helvetica', 'normal');
-                doc.setFontSize(12);
-                doc.setTextColor(71, 85, 105);
-                const formattedDate = dateStart ? new Date(dateStart).toLocaleDateString('de-DE') : new Date().toLocaleDateString('de-DE');
-                doc.text(`Datum: ${formattedDate}`, 145, 36);
+                const formattedDate = dateStart ? new Date(dateStart).toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'}) : new Date().toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'});
+                doc.text(formattedDate, 160 + dateW, 36);
                 
                 // Content area start
-                let currentY = 55;
+                let currentY = 52;
                 
-                // Section 1: Customer & Machine
-                doc.setFont('helvetica', 'bold');
-                doc.setFontSize(12);
-                doc.setTextColor(15, 23, 42);
-                doc.text('Kunden- & Maschinendetails', 20, currentY);
-                currentY += 8;
-                
-                doc.setFont('helvetica', 'normal');
                 doc.setFontSize(10);
-                doc.text(`Kunde: ${customerName}`, 20, currentY);
-                doc.text(`Maschine: ${machineTitle}`, 110, currentY);
+                doc.setFont('helvetica', 'bold');
+                doc.text('Kunde: ', 20, currentY);
+                const kundeW = doc.getTextWidth('Kunde: ');
+                doc.setFont('helvetica', 'normal');
+                doc.text(String(customerName), 20 + kundeW, currentY);
+
+                doc.setFont('helvetica', 'bold');
+                doc.text('Maschine: ', 120, currentY);
+                const maschineW = doc.getTextWidth('Maschine: ');
+                doc.setFont('helvetica', 'normal');
+                doc.text(String(machineTitle), 120 + maschineW, currentY);
                 currentY += 6;
                 
-                doc.text(`Adresse: ${customerAddress}`, 20, currentY, { maxWidth: 80 });
-                doc.text(`Seriennummer: ${serialNumber}`, 110, currentY);
-                currentY += 15;
+                // Get machine's construction year
+                const machineYear = machine ? (machine.year || '-') : '-';
                 
-                // Section 2: Fahrtzeiten & Kilometer
-                if (travelDistance || travelTime) {
+                // Check and build location address
+                let locationAddress = '-';
+                let hasDifferentLocation = false;
+                
+                const locStreetVal = document.getElementById('service-location-street')?.value.trim() || '';
+                const locZipVal = document.getElementById('service-location-zip')?.value.trim() || '';
+                const locCityVal = document.getElementById('service-location-city')?.value.trim() || '';
+                const locCountryVal = document.getElementById('service-location-country')?.value.trim() || '';
+                
+                const builtLocation = [locStreetVal, [locZipVal, locCityVal].filter(Boolean).join(' '), locCountryVal].filter(Boolean).join(', ');
+                
+                if (builtLocation && builtLocation.trim() !== '') {
+                    locationAddress = builtLocation;
+                    const cleanCust = customerAddress.replace(/\s+/g, ' ').trim().toLowerCase();
+                    const cleanLoc = locationAddress.replace(/\s+/g, ' ').trim().toLowerCase();
+                    if (cleanCust !== cleanLoc && cleanLoc !== '') {
+                        hasDifferentLocation = true;
+                    }
+                }
+                
+                // Render Customer Address
+                const labelAddr = hasDifferentLocation ? 'Betreiberadresse: ' : 'Adresse: ';
+                const fullAddrText = `${labelAddr}${customerAddress}`;
+                const addrLines = doc.splitTextToSize(fullAddrText, 80);
+                
+                if (addrLines.length > 0) {
                     doc.setFont('helvetica', 'bold');
-                    doc.setFontSize(12);
-                    doc.text('Fahrtdaten', 20, currentY);
-                    currentY += 8;
+                    doc.text(labelAddr, 20, currentY);
+                    const labelW = doc.getTextWidth(labelAddr);
                     
+                    const firstLineRest = addrLines[0].substring(labelAddr.length);
                     doc.setFont('helvetica', 'normal');
-                    doc.setFontSize(10);
-                    const distStr = travelDistance ? `${travelDistance} km` : '-';
+                    doc.text(firstLineRest, 20 + labelW, currentY);
                     
-                    let timeStr = '-';
-                    if (travelTime) {
-                        const mins = parseInt(travelTime);
-                        if (!isNaN(mins)) {
-                            const hrs = (mins / 60).toFixed(1).replace('.', ',');
-                            timeStr = `${mins} Min. / ${hrs} Std.`;
-                        } else {
-                            timeStr = travelTime;
+                    for (let i = 1; i < addrLines.length; i++) {
+                        doc.text(addrLines[i], 20, currentY + (i * 5));
+                    }
+                }
+                
+                // Render Machine Details on the right
+                doc.setFont('helvetica', 'bold');
+                doc.text('Seriennummer: ', 120, currentY);
+                const snW = doc.getTextWidth('Seriennummer: ');
+                doc.setFont('helvetica', 'normal');
+                doc.text(String(serialNumber), 120 + snW, currentY);
+                
+                doc.setFont('helvetica', 'bold');
+                doc.text('Baujahr: ', 120, currentY + 6);
+                const bjW = doc.getTextWidth('Baujahr: ');
+                doc.setFont('helvetica', 'normal');
+                doc.text(String(machineYear), 120 + bjW, currentY + 6);
+                
+                const operatingHoursVal = document.getElementById('service-operating-hours')?.value.trim() || '-';
+                doc.setFont('helvetica', 'bold');
+                doc.text('Betriebsstunden: ', 120, currentY + 12);
+                const bhW = doc.getTextWidth('Betriebsstunden: ');
+                doc.setFont('helvetica', 'normal');
+                doc.text(String(operatingHoursVal), 120 + bhW, currentY + 12);
+                
+                if (hasDifferentLocation) {
+                    const addrHeight = addrLines.length * 5;
+                    const locY = currentY + addrHeight + 1;
+                    const labelLoc = 'Maschinenstandort: ';
+                    const fullLocText = `${labelLoc}${locationAddress}`;
+                    const locLines = doc.splitTextToSize(fullLocText, 80);
+                    
+                    if (locLines.length > 0) {
+                        doc.setFont('helvetica', 'bold');
+                        doc.text(labelLoc, 20, locY);
+                        const labelW = doc.getTextWidth(labelLoc);
+                        
+                        const firstLineRest = locLines[0].substring(labelLoc.length);
+                        doc.setFont('helvetica', 'normal');
+                        doc.text(firstLineRest, 20 + labelW, locY);
+                        
+                        for (let i = 1; i < locLines.length; i++) {
+                            doc.text(locLines[i], 20, locY + (i * 5));
                         }
                     }
                     
-                    doc.text(`Gefahrene Kilometer: ${distStr}`, 20, currentY);
-                    doc.text(`Erfasste Fahrzeit: ${timeStr}`, 110, currentY);
-                    currentY += 15;
+                    const leftSideHeight = addrHeight + 1 + (locLines.length * 5);
+                    const rightSideHeight = 18;
+                    currentY += Math.max(leftSideHeight, rightSideHeight) + 6;
+                } else {
+                    const leftSideHeight = addrLines.length * 5;
+                    const rightSideHeight = 18;
+                    currentY += Math.max(leftSideHeight, rightSideHeight) + 6;
                 }
                 
                 // Section 3: Beschreibung
@@ -10426,7 +11068,121 @@
                 doc.setFontSize(10);
                 const descLines = doc.splitTextToSize(description || 'Keine Beschreibung hinterlegt.', 170);
                 doc.text(descLines, 20, currentY);
-                currentY += (descLines.length * 5) + 20;
+                currentY += (descLines.length * 5) + 15;
+                
+                // Work Log Table
+                const workLogData = typeof window.getWorkLogTableData === 'function' ? window.getWorkLogTableData() : [];
+                if (workLogData && workLogData.length > 0) {
+                    if (currentY > 210) {
+                        doc.addPage();
+                        currentY = 30;
+                    }
+                    // Header removed
+                    
+                    const headers = [['Datum', 'Typ', 'Pause', 'Fahr.- / Arbeitszeit', 'Kilometer']];
+                    const body = workLogData.map(row => {
+                        let formattedDate = row.datum;
+                        if (row.datum) {
+                            try {
+                                const parts = row.datum.split('-');
+                                if (parts.length === 3) formattedDate = `${parts[2]}.${parts[1]}.${parts[0]}`;
+                            } catch(e){}
+                        }
+                        
+                        let typText = row.typ || 'Arbeitszeit';
+                        
+                        let zeitRaw = (row.zeit || row.arbeitszeit || row.fahrzeit || '').trim();
+                        let zeitText = '';
+                        if (zeitRaw) {
+                            zeitText = zeitRaw.toLowerCase().includes('uhr') ? zeitRaw : `${zeitRaw} Uhr`;
+                        }
+                        
+                        let pauseVal = (row.pause || '').trim();
+                        let pauseText = '/';
+                        if (pauseVal && pauseVal !== '/') {
+                            pauseText = pauseVal.toLowerCase().includes('min') ? pauseVal : `${pauseVal} min`;
+                        }
+                        
+                        let kmVal = '/';
+                        if (row.typ !== 'Arbeitszeit') {
+                            let kmRaw = (row.kilometer || '').trim();
+                            if (kmRaw && kmRaw !== '/') {
+                                kmVal = kmRaw.toLowerCase().includes('km') ? kmRaw : `${kmRaw} km`;
+                            } else {
+                                kmVal = kmRaw || '';
+                            }
+                        }
+                        
+                        return [
+                            formattedDate || '',
+                            typText,
+                            pauseText,
+                            zeitText,
+                            kmVal
+                        ];
+                    });
+                    
+                    doc.autoTable({
+                        startY: currentY,
+                        head: headers,
+                        body: body,
+                        margin: { left: 20, right: 20 },
+                        theme: 'grid',
+                        styles: {
+                            font: 'helvetica',
+                            fontSize: 9,
+                            cellPadding: 4
+                        },
+                        headStyles: {
+                            fillColor: [30, 41, 59],
+                            textColor: [255, 255, 255],
+                            fontStyle: 'bold'
+                        },
+                        alternateRowStyles: {
+                            fillColor: [248, 250, 252]
+                        }
+                    });
+                    
+                    currentY = doc.lastAutoTable.finalY + 15;
+                }
+                
+                // Checkboxes
+                const statusRepairedChecked = document.getElementById('service-status-repaired')?.checked || false;
+                const statusRepairedEnChecked = document.getElementById('service-status-repaired-en')?.checked || false;
+                
+                if (currentY > 230) {
+                    doc.addPage();
+                    currentY = 30;
+                }
+                
+                // Draw checkboxes
+                doc.setDrawColor(100, 116, 139);
+                doc.setLineWidth(0.4);
+                
+                // Box 1
+                doc.rect(20, currentY, 4, 4);
+                if (statusRepairedChecked) {
+                    // Draw checkmark
+                    doc.line(20.5, currentY + 2, 21.5, currentY + 3.5);
+                    doc.line(21.5, currentY + 3.5, 23.5, currentY + 0.5);
+                }
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.setTextColor(30, 41, 59);
+                doc.text('O. g. gemeldete Störung ist behoben und die Reparatur in vollem Umfang ausgeführt.', 28, currentY + 3.2);
+                
+                currentY += 7;
+                
+                // Box 2
+                doc.rect(20, currentY, 4, 4);
+                if (statusRepairedEnChecked) {
+                    // Draw checkmark
+                    doc.line(20.5, currentY + 2, 21.5, currentY + 3.5);
+                    doc.line(21.5, currentY + 3.5, 23.5, currentY + 0.5);
+                }
+                doc.text('The a. a. malfunction has been repaired and repair has fully completed.', 28, currentY + 3.2);
+                
+                currentY += 15;
                 
                 // Check page height for signatures
                 if (currentY > 230) {
@@ -10437,6 +11193,7 @@
                 // Section 4: Techniker & Unterschrift
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(12);
+                doc.setTextColor(30, 41, 59);
                 doc.text('Techniker & Freigabe', 20, currentY);
                 currentY += 10;
                 
@@ -10464,7 +11221,7 @@
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(9);
                 doc.setTextColor(100, 100, 100);
-                doc.text(signatureName ? `Kunde: ${signatureName}` : 'Unterschrift Kunde', 120, currentY + 30);
+                doc.text(signatureName ? `Unterschrift Kunde: ${signatureName}` : 'Unterschrift Kunde', 120, currentY + 30);
                 
                 // Open PDF in new window/tab
                 window.open(doc.output('bloburl'), '_blank');
@@ -10670,148 +11427,336 @@
                                 style="margin-top: 1rem; padding: 1.25rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
                                 <div style="font-weight: 700; font-size: 0.95rem; color: white; margin-bottom: 0.5rem;" id="service-customer-name">Kunde</div>
                                 <div style="font-size: 0.9rem; color: rgba(255,255,255,0.6); line-height: 1.4;" id="service-customer-address">Adresse</div>
-                                <div id="service-customer-route" style="margin-top: 0.75rem; display: none;">
-                                    <a id="service-customer-route-link" href="#" target="_blank" class="btn-secondary" style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.8rem; padding: 6px 12px; height: auto;">
-                                        🗺️ Route in Google Maps öffnen
-                                    </a>
+                                </div>
+                            </div>
+                            
+                            <!-- Maschinenstandort Fields -->
+                            <div id="service-location-fields-wrapper" class="hidden" style="margin-top: 1rem; padding: 1.25rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
+                                <div style="font-weight: 700; font-size: 0.95rem; color: white; margin-bottom: 0.75rem;">Maschinenstandort (falls abweichend)</div>
+                                <div style="display: grid; grid-template-columns: 2fr 1fr 2fr; gap: 0.75rem;">
+                                    <div>
+                                        <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Straße & Hausnr.</label>
+                                        <input type="text" id="service-location-street" class="glass-form-input" placeholder="Straße & Hausnr.">
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">PLZ</label>
+                                        <input type="text" id="service-location-zip" class="glass-form-input" placeholder="PLZ">
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Ort</label>
+                                        <input type="text" id="service-location-city" class="glass-form-input" placeholder="Ort">
+                                    </div>
+                                </div>
+                                <div style="margin-top: 0.75rem;">
+                                    <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Land</label>
+                                    <input type="text" id="service-location-country" class="glass-form-input" placeholder="Deutschland">
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Step 2: Date and Description -->
-                    <div class="form-row"
-                        style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
-                        <div class="form-group">
-                            <label for="service-date-start">Datum (von)</label>
-                            <input type="date" id="service-date-start" class="glass-form-input" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="service-date-end">Datum (bis) - Optional</label>
-                            <input type="date" id="service-date-end" class="glass-form-input">
-                        </div>
-                    </div>
-
-                    <div class="form-group" style="margin-top: 1.5rem;">
-                        <label for="service-next-maintenance-override"
-                            style="color: var(--secondary-green); font-weight: 800;">Manuelles Datum für NÄCHSTE
-                            Wartung (Optional)</label>
-                        <p style="font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-bottom: 8px;">Leer lassen
-                            für automatische Berechnung basierend auf der Kategorie.</p>
-                        <input type="date" id="service-next-maintenance-override" class="glass-form-input"
-                            style="border-color: rgba(16, 185, 129, 0.3);">
-                    </div>
-
-                    <div class="form-group" style="margin-top: 1.5rem;">
-                        <label for="service-description">Kurzbeschreibung des Einsatzes</label>
-                        <textarea id="service-description" rows="4" class="glass-form-input"
-                            placeholder="Was wurde gemacht?" required></textarea>
-                    </div>
-
-                    <!-- Step: Category Selection (New) -->
-                    <div class="form-group" style="margin-top: 1.5rem;">
-                        <label>Kategorie</label>
-                        <div id="service-category-wrapper" style="position: relative;">
-                            <div id="service-category-trigger" class="glass-select"
-                                style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;"
-                                onclick="toggleServiceCategoryDropdown(event)">
-                                <span id="service-category-text">Bitte wählen...</span>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="6 9 12 15 18 9"></polyline>
-                                </svg>
+                    <!-- Gruppe 1: Betriebsstunden / Datum / Wartung -->
+                    <div class="collapsible-section" style="margin-top: 1.5rem;">
+                        <div id="service-group-1-header" class="section-header" onclick="toggleServiceReportSection(this)"
+                            style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 12px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 1rem; transition: all 0.2s;"
+                            onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
+                            onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <h3 class="section-title"
+                                    style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">1. Betriebsstunden / Datum / Wartung</h3>
+                                <span style="font-size: 0.75rem; opacity: 0.4; font-weight: 500;">(Klicken zum Ausklappen)</span>
                             </div>
-                            <input type="hidden" id="service-category-id">
+                            <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                                style="transition: transform 0.3s ease; opacity: 0.6;">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                        <div class="section-content" style="display: none; transition: all 0.3s ease;">
+                            <div class="form-row"
+                                style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-top: 1rem; margin-bottom: 1.5rem;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label for="service-operating-hours">Betriebsstunden (h)</label>
+                                    <input type="text" id="service-operating-hours" class="glass-form-input" placeholder="z.B. 1450">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label for="service-date-start">Datum (von)</label>
+                                    <input type="date" id="service-date-start" class="glass-form-input" required>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label for="service-date-end">Datum (bis) - Optional</label>
+                                    <input type="date" id="service-date-end" class="glass-form-input">
+                                </div>
+                            </div>
 
-                            <div id="service-category-dropdown" class="user-dropdown-menu"
-                                style="width: 100%; top: 105%; right: auto; left: 0; z-index: 100;">
-                                <ul id="service-category-list">
-                                    <!-- Populated by JS -->
-                                </ul>
+                            <div class="form-group" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+                                <label for="service-next-maintenance-override"
+                                    style="color: var(--secondary-green); font-weight: 800;">Manuelles Datum für NÄCHSTE Wartung (Optional)</label>
+                                <p style="font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-bottom: 8px;">Leer lassen für automatische Berechnung basierend auf der Kategorie.</p>
+                                <input type="date" id="service-next-maintenance-override" class="glass-form-input"
+                                    style="border-color: rgba(16, 185, 129, 0.3);">
                             </div>
                         </div>
                     </div>
 
-                    <!-- Fahrtzeit & Kilometer -->
-                    <div class="form-row"
-                        style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem; align-items: end;">
-                        <div class="form-group">
-                            <label for="service-driving-distance">Gefahrene Kilometer (km)</label>
-                            <input type="number" step="0.1" id="service-driving-distance" class="glass-form-input" placeholder="z.B. 45.5">
+                    <!-- Gruppe 2: Fehlermeldung / Kategorie / Techniker -->
+                    <div class="collapsible-section" style="margin-top: 1.5rem;">
+                        <div id="service-group-2-header" class="section-header" onclick="toggleServiceReportSection(this)"
+                            style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 12px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 1rem; transition: all 0.2s;"
+                            onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
+                            onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <h3 class="section-title"
+                                    style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">2. Fehlermeldung / Kategorie / Techniker</h3>
+                                <span style="font-size: 0.75rem; opacity: 0.4; font-weight: 500;">(Klicken zum Ausklappen)</span>
+                            </div>
+                            <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                                style="transition: transform 0.3s ease; opacity: 0.6;">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
                         </div>
-                        <div class="form-group">
-                            <label for="service-driving-time">Fahrzeit (Minuten / Stunden)</label>
-                            <input type="number" id="service-driving-time" class="glass-form-input" placeholder="z.B. 90" oninput="if (typeof window.updateDrivingTimeHoursPreview === 'function') window.updateDrivingTimeHoursPreview()">
-                            <div id="service-driving-time-hours-preview" style="font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-top: 6px; font-weight: 600;">= - Std.</div>
-                        </div>
-                    </div>
-                    <div style="margin-top: 0.75rem;">
-                        <button type="button" class="btn-secondary" onclick="window.calculateServiceRoute()" style="font-size: 0.8rem; padding: 6px 12px; height: auto; border: 1.5px dashed rgba(255,255,255,0.2);">
-                            🚗 Route & Fahrzeit automatisch schätzen
-                        </button>
-                    </div>
-
-                    <!-- Step 3: Technician Selection (Dropdown Multi-Select) -->
-                    <div class="form-section" style="margin-top: 1.5rem;">
-                        <label>Techniker auswählen</label>
-                        <div class="tech-dropdown-wrapper" id="tech-dropdown-wrapper" style="position: relative;">
-                            <!-- Trigger -->
-                            <div class="tech-dropdown-trigger" id="tech-dropdown-trigger" onclick="toggleTechDropdown()"
-                                style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-height: 48px; padding: 8px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; cursor: pointer; transition: border-color 0.2s; user-select: none;">
-                                <div id="tech-selected-pills"
-                                    style="display: flex; flex-wrap: wrap; gap: 6px; flex: 1;"></div>
-                                <div style="display: flex; align-items: center; gap: 6px; color: rgba(255,255,255,0.4); font-size: 0.88rem; margin-left: auto;"
-                                    id="tech-placeholder-text">Techniker wählen...</div>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                                    stroke="rgba(255,255,255,0.4)" stroke-width="2.5" stroke-linecap="round"
-                                    stroke-linejoin="round" style="flex-shrink:0;">
-                                    <polyline points="6 9 12 15 18 9"></polyline>
-                                </svg>
+                        <div class="section-content" style="display: none; transition: all 0.3s ease;">
+                            <div class="form-group" style="margin-top: 1rem; margin-bottom: 1.5rem;">
+                                <label for="service-description">Kurzbeschreibung des Einsatzes</label>
+                                <textarea id="service-description" rows="4" class="glass-form-input"
+                                    placeholder="Was wurde gemacht?" required></textarea>
                             </div>
 
-                            <!-- Dropdown Panel -->
-                            <div id="tech-dropdown-panel"
-                                style="display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: rgba(15,23,42,0.97); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; z-index: 200; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); max-height: 240px; overflow-y: auto; box-shadow: 0 16px 48px rgba(0,0,0,0.5);">
-                                <div id="tech-option-list" style="padding: 8px;"></div>
+                            <div class="form-group" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+                                <label>Kategorie</label>
+                                <div id="service-category-wrapper" style="position: relative;">
+                                    <div id="service-category-trigger" class="glass-select"
+                                        style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;"
+                                        onclick="toggleServiceCategoryDropdown(event)">
+                                        <span id="service-category-text">Bitte wählen...</span>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                            stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </div>
+                                    <input type="hidden" id="service-category-id">
+
+                                    <div id="service-category-dropdown" class="user-dropdown-menu"
+                                        style="width: 100%; top: 105%; right: auto; left: 0; z-index: 100;">
+                                        <ul id="service-category-list">
+                                            <!-- Populated by JS -->
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-section" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+                                <label>Techniker auswählen</label>
+                                <div class="tech-dropdown-wrapper" id="tech-dropdown-wrapper" style="position: relative;">
+                                    <!-- Trigger -->
+                                    <div class="tech-dropdown-trigger" id="tech-dropdown-trigger" onclick="toggleTechDropdown()"
+                                        style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-height: 48px; padding: 8px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; cursor: pointer; transition: border-color 0.2s; user-select: none;">
+                                        <div id="tech-selected-pills"
+                                            style="display: flex; flex-wrap: wrap; gap: 6px; flex: 1;"></div>
+                                        <div style="display: flex; align-items: center; gap: 6px; color: rgba(255,255,255,0.4); font-size: 0.88rem; margin-left: auto;"
+                                            id="tech-placeholder-text">Techniker wählen...</div>
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                            stroke="rgba(255,255,255,0.4)" stroke-width="2.5" stroke-linecap="round"
+                                            stroke-linejoin="round" style="flex-shrink:0;">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </div>
+
+                                    <!-- Dropdown Panel -->
+                                    <div id="tech-dropdown-panel"
+                                        style="display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: rgba(15,23,42,0.97); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; z-index: 200; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); max-height: 240px; overflow-y: auto; box-shadow: 0 16px 48px rgba(0,0,0,0.5);">
+                                        <div id="tech-option-list" style="padding: 8px;"></div>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="selected-technician-ids">
                             </div>
                         </div>
-                        <input type="hidden" id="selected-technician-ids">
                     </div>
 
-                    <!-- Step 4: File Upload -->
-                    <div class="form-section" style="margin-top: 1.5rem;">
-                        <label>Bilder & Dokumente</label>
-                        <div class="file-drop-zone" id="service-file-dropzone">
-                            <input type="file" id="service-file-input" multiple class="hidden-file-input">
-                            <div class="drop-zone-content">
-                                <span class="icon">📁</span>
-                                <p>Dateien hierher ziehen oder klicken</p>
+                    <!-- Gruppe 3: Arbeitszeit und Fahrzeit -->
+                    <div class="collapsible-section" style="margin-top: 1.5rem;">
+                        <div id="service-group-3-header" class="section-header" onclick="toggleServiceReportSection(this)"
+                            style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 12px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 1rem; transition: all 0.2s;"
+                            onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
+                            onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <h3 class="section-title"
+                                    style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">3. Arbeitszeit und Fahrzeit</h3>
+                                <span style="font-size: 0.75rem; opacity: 0.4; font-weight: 500;">(Klicken zum Ausklappen)</span>
+                            </div>
+                            <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                                style="transition: transform 0.3s ease; opacity: 0.6;">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                        <div class="section-content" style="display: none; transition: all 0.3s ease;">
+                            <div class="form-row"
+                                style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem; align-items: end; margin-bottom: 1rem;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label for="service-driving-distance">Gefahrene Kilometer (km)</label>
+                                    <input type="number" step="0.1" id="service-driving-distance" class="glass-form-input" placeholder="z.B. 45.5" oninput="if(window.syncDrivingDistanceToTable) window.syncDrivingDistanceToTable(this.value)">
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label for="service-driving-time">Fahrzeit (Minuten / Stunden)</label>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <input type="text" id="service-driving-time" class="glass-form-input" placeholder="z.B. 90" style="flex: 1;" oninput="if (typeof window.updateDrivingTimeHoursPreview === 'function') window.updateDrivingTimeHoursPreview()" onfocus="if (typeof window.unformatDrivingTimeInput === 'function') window.unformatDrivingTimeInput()" onblur="if (typeof window.formatDrivingTimeInput === 'function') window.formatDrivingTimeInput()">
+                                        <span style="font-size: 1.1rem; color: rgba(255,255,255,0.4);">/</span>
+                                        <span id="service-driving-time-hours-preview" style="font-size: 1rem; color: #fff; font-weight: 600; min-width: 70px;">- Std.</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="margin-top: 0.75rem; margin-bottom: 1.5rem;">
+                                <button type="button" class="btn-secondary" onclick="window.calculateServiceRoute()" style="font-size: 0.8rem; padding: 6px 12px; height: auto; border: 1.5px dashed rgba(255,255,255,0.2);">
+                                    🚗 Route & Fahrzeit automatisch schätzen
+                                </button>
+                            </div>
+
+                            <div class="form-section" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
+                                <label style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span>Arbeitszeit- & Fahrzeit-Protokoll</span>
+                                    <div style="display: flex; gap: 8px;">
+                                        <button type="button" class="btn-secondary" onclick="window.addWorkLogTableRow(null, 'Anfahrt')" style="font-size: 0.8rem; padding: 6px 12px; height: auto; border: 1.5px dashed rgba(255,255,255,0.2);">
+                                            ➕ Anfahrt
+                                        </button>
+                                        <button type="button" class="btn-secondary" onclick="window.addWorkLogTableRow(null, 'Arbeitszeit')" style="font-size: 0.8rem; padding: 6px 12px; height: auto; border: 1.5px dashed rgba(255,255,255,0.2);">
+                                            ➕ Arbeitszeit
+                                        </button>
+                                        <button type="button" class="btn-secondary" onclick="window.addWorkLogTableRow(null, 'Abfahrt')" style="font-size: 0.8rem; padding: 6px 12px; height: auto; border: 1.5px dashed rgba(255,255,255,0.2);">
+                                            ➕ Abfahrt
+                                        </button>
+                                    </div>
+                                </label>
+                                <div style="overflow-x: auto; background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 8px; margin-top: 8px;">
+                                    <table style="width: 100%; border-collapse: collapse; min-width: 650px;">
+                                        <thead>
+                                            <tr style="border-bottom: 1.5px solid rgba(255,255,255,0.15);">
+                                                <th style="padding: 10px; text-align: left; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 18%;">Datum</th>
+                                                <th style="padding: 10px; text-align: left; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 18%;">Typ</th>
+                                                <th style="padding: 10px; text-align: left; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 14%;">Pause</th>
+                                                <th style="padding: 10px; text-align: left; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 30%;">Fahr.- / Arbeitszeit</th>
+                                                <th style="padding: 10px; text-align: left; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 14%;">Kilometer</th>
+                                                <th style="padding: 10px; text-align: center; font-size: 0.85rem; color: rgba(255,255,255,0.6); width: 6%;">Aktion</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="service-work-log-table-body">
+                                            <!-- Dynamic rows loaded here -->
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
-                        <div id="service-file-previews" class="file-preview-grid"></div>
                     </div>
 
-                    <!-- Digitale Unterschrift -->
-                    <div class="form-section" style="margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1.5rem;">
-                        <label>Digitale Unterschrift des Kunden</label>
-                        <div id="signature-preview-container" style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; height: 120px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.25); cursor: pointer; position: relative;" onclick="window.openSignaturePad()">
-                            <span id="signature-placeholder" style="color: rgba(255,255,255,0.45); font-size: 0.9rem;">👉 Klicken zum Unterschreiben</span>
-                            <img id="signature-preview-img" class="hidden" style="max-height: 100%; max-width: 100%; object-fit: contain; padding: 10px;">
-                            <button type="button" id="btn-clear-signature" class="hidden" onclick="event.stopPropagation(); window.clearSignature()" style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;">Löschen</button>
+                    <!-- Gruppe 4: Dokumente und Unterschrift -->
+                    <div class="collapsible-section" style="margin-top: 1.5rem;">
+                        <div id="service-group-4-header" class="section-header" onclick="toggleServiceReportSection(this)"
+                            style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 12px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 1rem; transition: all 0.2s;"
+                            onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
+                            onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <h3 class="section-title"
+                                    style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">4. Dokumente und Unterschrift</h3>
+                                <span style="font-size: 0.75rem; opacity: 0.4; font-weight: 500;">(Klicken zum Ausklappen)</span>
+                            </div>
+                            <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                                style="transition: transform 0.3s ease; opacity: 0.6;">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
                         </div>
-                        <input type="hidden" id="service-customer-signature">
-                        <div class="form-group" style="margin-top: 0.75rem;">
-                            <input type="text" id="service-customer-signee-name" class="glass-form-input" placeholder="Name des Unterzeichners (optional)">
+                        <div class="section-content" style="display: none; transition: all 0.3s ease;">
+                            <div class="form-section" style="margin-top: 1rem; margin-bottom: 1.5rem;">
+                                <label>Bilder & Dokumente</label>
+                                <div class="file-drop-zone" id="service-file-dropzone">
+                                    <input type="file" id="service-file-input" multiple class="hidden-file-input">
+                                    <div class="drop-zone-content">
+                                        <span class="icon">📁</span>
+                                        <p>Dateien hierher ziehen oder klicken</p>
+                                    </div>
+                                </div>
+                                <div id="service-file-previews" class="file-preview-grid"></div>
+                            </div>
+
+                            <div class="form-section" style="margin-top: 1.5rem; padding-top: 1rem; margin-bottom: 1.5rem;">
+                                <!-- Status Checkboxes -->
+                                <div class="form-group" style="margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 12px;">
+                                    <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; user-select: none;">
+                                        <input type="checkbox" id="service-status-repaired" style="margin-top: 4px; width: 18px; height: 18px; accent-color: var(--color-primary-green);">
+                                        <span style="font-size: 0.9rem; color: #fff; line-height: 1.4;">O. g. gemeldete Störung ist behoben und die Reparatur in vollem Umfang ausgeführt.</span>
+                                    </label>
+                                    <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; user-select: none;">
+                                        <input type="checkbox" id="service-status-repaired-en" style="margin-top: 4px; width: 18px; height: 18px; accent-color: var(--color-primary-green);">
+                                        <span style="font-size: 0.9rem; color: rgba(255,255,255,0.7); line-height: 1.4; font-style: italic;">The a. a. malfunction has been repaired and repair has fully completed.</span>
+                                    </label>
+                                </div>
+
+                                <label>Digitale Unterschrift des Kunden</label>
+                                <div id="signature-preview-container" style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; height: 120px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.25); cursor: pointer; position: relative; margin-bottom: 1.5rem;" onclick="window.openSignaturePad()">
+                                    <span id="signature-placeholder" style="color: rgba(255,255,255,0.45); font-size: 0.9rem;">👉 Klicken zum Unterschreiben</span>
+                                    <img id="signature-preview-img" class="hidden" style="max-height: 100%; max-width: 100%; object-fit: contain; padding: 10px;">
+                                    <button type="button" id="btn-clear-signature" class="hidden" onclick="event.stopPropagation(); window.clearSignature()" style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;">Löschen</button>
+                                </div>
+                                <input type="hidden" id="service-customer-signature">
+                                <div class="form-group" style="margin-top: 0.75rem;">
+                                    <input type="text" id="service-customer-signee-name" class="glass-form-input" placeholder="Name des Unterzeichners (optional)">
+                                </div>
+                            </div>
                         </div>
+                    </div>
+
+                    <div class="modal-actions"
+                        style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem; margin-top: 2rem; display: flex; gap: 10px; justify-content: flex-end;">
+                        <button type="button" class="btn-secondary" onclick="closeServiceberichtModal()">Abbrechen</button>
+                        <button type="button" class="btn-secondary" id="btn-servicebericht-preview" onclick="window.previewServiceberichtPDF()" style="border: 1.5px solid var(--color-primary-green); color: #fff; background: rgba(16,185,129,0.05); display: flex; align-items: center; gap: 6px; height: 48px; border-radius: 24px; padding: 0 20px; font-weight: 700; cursor: pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 2px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> Vorschau</button>
+                        <button type="button" class="btn-primary" onclick="submitServicebericht()">Bericht speichern</button>
                     </div>
                 </form>
             </div>
+        </div>
+    </div>
 
-            <div class="modal-actions"
-                style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem; margin-top: 2rem; display: flex; gap: 10px; justify-content: flex-end;">
-                <button class="btn-secondary" onclick="closeServiceberichtModal()">Abbrechen</button>
-                <button class="btn-secondary" id="btn-servicebericht-preview" onclick="window.previewServiceberichtPDF()" style="border: 1.5px solid var(--color-primary-green); color: #fff; background: rgba(16,185,129,0.05); display: flex; align-items: center; gap: 6px; height: 48px; border-radius: 24px; padding: 0 20px; font-weight: 700; cursor: pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 2px;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> Vorschau</button>
-                <button class="btn-primary" onclick="submitServicebericht()">Bericht speichern</button>
+    <!-- Modal: Route Error Options -->
+    <div id="service-route-error-modal" class="modal-backdrop hidden">
+        <div class="modal-content" style="max-width: 480px; padding: 2rem; border-radius: 24px;">
+            <h2 style="margin-bottom: 1rem; font-size: 1.4rem; color: #f87171;">Routenberechnung fehlgeschlagen</h2>
+            <p style="color: rgba(255,255,255,0.7); line-height: 1.5; margin-bottom: 1.75rem; font-size: 0.95rem;">
+                Die Adresse der Maschine bzw. des Standorts konnte nicht automatisch gefunden werden. 
+                Möchten Sie die Route auf Google Maps planen und die Werte manuell eintragen?
+            </p>
+            <div class="modal-actions" style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 0;">
+                <button type="button" class="btn-secondary" onclick="closeRouteErrorModal()" style="border-radius: 12px; font-size: 0.9rem; padding: 10px 18px;">Schließen</button>
+                <button type="button" class="btn-primary" onclick="openGoogleMapsRouteFallback()" style="border-radius: 12px; font-size: 0.9rem; padding: 10px 18px; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">Auf Google Maps planen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Manual Route Input Fallback -->
+    <div id="service-manual-route-input-modal" class="modal-backdrop hidden">
+        <div class="modal-content" style="max-width: 500px; padding: 2rem; border-radius: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="margin: 0; font-size: 1.4rem;">Werte aus Google Maps eintragen</h2>
+                <button type="button" class="btn-close-modal" onclick="closeManualRouteInputModal()">&times;</button>
+            </div>
+            <p style="color: rgba(255,255,255,0.5); font-size: 0.88rem; margin-bottom: 1.5rem;">
+                Die Route wurde in einem neuen Tab auf Google Maps geöffnet. Bitte tragen Sie die dort ermittelten Werte für Entfernung und Fahrzeit hier ein:
+            </p>
+            
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.5rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="fallback-driving-distance">Kilometer (km)</label>
+                    <input type="number" step="0.1" id="fallback-driving-distance" class="glass-form-input" placeholder="z.B. 45.5">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="fallback-driving-time">Fahrzeit (Minuten)</label>
+                    <input type="number" id="fallback-driving-time" class="glass-form-input" placeholder="z.B. 40">
+                </div>
+            </div>
+            
+            <div class="modal-actions" style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 0;">
+                <button type="button" class="btn-secondary" onclick="closeManualRouteInputModal()" style="border-radius: 12px; padding: 10px 20px;">Abbrechen</button>
+                <button type="button" class="btn-primary" onclick="applyManualRouteInputs()" style="border-radius: 12px; padding: 10px 20px;">Werte übernehmen</button>
             </div>
         </div>
     </div>
@@ -11216,6 +12161,21 @@
 
                         content.style.display = isHidden ? 'block' : 'none';
                         chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+                    }
+
+                    function toggleServiceReportSection(headerOrId, forceState) {
+                        let header = typeof headerOrId === 'string' ? document.getElementById(headerOrId) : headerOrId;
+                        if (!header) return;
+                        const content = header.nextElementSibling;
+                        const chevron = header.querySelector('.toggle-chevron');
+                        if (!content) return;
+                        const isHidden = content.style.display === 'none';
+                        const show = forceState !== undefined ? forceState : isHidden;
+
+                        content.style.display = show ? 'block' : 'none';
+                        if (chevron) {
+                            chevron.style.transform = show ? 'rotate(180deg)' : 'rotate(0deg)';
+                        }
                     }
                 </script>
 

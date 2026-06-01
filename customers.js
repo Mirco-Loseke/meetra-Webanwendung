@@ -426,6 +426,39 @@
         if (configSection) configSection.classList.add('hidden');
         if (progressSection) progressSection.classList.remove('hidden');
 
+        function formatCountryName(countryStr) {
+            if (!countryStr) return 'Deutschland';
+            const c = countryStr.toString().trim().toLowerCase();
+            if (c === 'de' || c === 'deu' || c === 'd' || c === 'germany' || c === 'deutschland') {
+                return 'Deutschland';
+            }
+            if (c === 'at' || c === 'aut' || c === 'österreich' || c === 'oesterreich' || c === 'austria') {
+                return 'Österreich';
+            }
+            if (c === 'ch' || c === 'che' || c === 'schweiz' || c === 'switzerland') {
+                return 'Schweiz';
+            }
+            if (c === 'fr' || c === 'fra' || c === 'frankreich' || c === 'france') {
+                return 'Frankreich';
+            }
+            if (c === 'nl' || c === 'nld' || c === 'niederlande' || c === 'netherlands') {
+                return 'Niederlande';
+            }
+            if (c === 'be' || c === 'bel' || c === 'belgien' || c === 'belgium') {
+                return 'Belgien';
+            }
+            if (c === 'it' || c === 'ita' || c === 'italien' || c === 'italy') {
+                return 'Italien';
+            }
+            if (c === 'pl' || c === 'pol' || c === 'polen' || c === 'poland') {
+                return 'Polen';
+            }
+            if (c === 'cz' || c === 'cze' || c === 'tschechien' || c === 'czechia' || c === 'czech republic') {
+                return 'Tschechien';
+            }
+            return countryStr.toString().trim().charAt(0).toUpperCase() + countryStr.toString().trim().slice(1);
+        }
+
         const customersToUpsert = [];
         
         parsedRows.forEach(row => {
@@ -458,7 +491,7 @@
                 street: street || null,
                 zip_code: zip || null,
                 city: city || null,
-                country: mapCountry !== '' ? (row[mapCountry]?.toString().trim() || 'Deutschland') : 'Deutschland',
+                country: mapCountry !== '' ? formatCountryName(row[mapCountry]) : 'Deutschland',
                 phone: mapPhone !== '' ? (row[mapPhone]?.toString().trim() || null) : null,
                 email: mapEmail !== '' ? (row[mapEmail]?.toString().trim() || null) : null
             });
