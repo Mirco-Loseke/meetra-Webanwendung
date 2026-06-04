@@ -170,7 +170,7 @@
             card.style.cssText = `font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; ${glassBg} border: 3px solid rgba(255,255,255,0.3); border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer; position: relative; padding-top: 35px; min-width: 0; width: 100%;`;
         }
 
-        card.onclick = () => window.openEditStammdaten(machine.id);
+        card.onclick = () => window.openMachineDetails(machine.id);
 
         // Image logic - use thumbnail if available for faster loading
         let imageHtml = '';
@@ -337,7 +337,14 @@
                         Historie
                     </button>
 
-                    <button class="btn-delete-card" onclick="if(typeof event !== 'undefined' && event.stopPropagation) event.stopPropagation(); deleteMachine('${machine.id}')" title="Maschine löschen">
+                    <button class="btn-edit-card" onclick="if(typeof event !== 'undefined' && event.stopPropagation) event.stopPropagation(); window.openEditStammdaten(${machine.id})" title="Bearbeiten">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                    </button>
+
+                    <button class="btn-delete-card delete-permission-required" onclick="if(typeof event !== 'undefined' && event.stopPropagation) event.stopPropagation(); deleteMachine('${machine.id}')" title="Maschine löschen">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M3 6h18"></path>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path>

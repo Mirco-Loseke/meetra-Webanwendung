@@ -17,6 +17,8 @@
     let protocolPhotos = [];
     let customCheckpoints = [];
     let protocolIsDirty = false; // Tracks unsaved changes
+    let removedProtocolPhotos = [];
+    let sessionUploadedPhotos = [];
 
     function markProtocolDirty() {
         protocolIsDirty = true;
@@ -108,17 +110,28 @@
                         </p>
                     </div>
 
-                    <!-- Machine Title (Read-only) -->
-                    <div style="margin-bottom: 1.5rem;">
-                        <span class="protocol-section-title">Maschine</span>
-                        <div style="position: relative;">
-                            <input type="text" id="protocol-machine-title" readonly class="glass-form-input" style="opacity: 0.9; font-weight: 700; padding-right: 80px; color: #10b981 !important; border-color: rgba(16, 185, 129, 0.4) !important; background: rgba(16, 185, 129, 0.05) !important;">
-                            <div style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); font-size: 0.75rem; font-weight: 800; color: #10b981; background: rgba(16, 185, 129, 0.1); padding: 4px 8px; border-radius: 6px; pointer-events: none; border: 1px solid rgba(16, 185, 129, 0.2); text-transform: uppercase;">Fixiert</div>
+                    <!-- Machine Preview Section (Premium Style like Serviceberichte) -->
+                    <div id="protocol-machine-preview" style="margin-top: 1.5rem; margin-bottom: 1.5rem; padding: 1.5rem; background: rgba(0, 150, 64, 0.1); border: 2px solid var(--color-primary-green); border-radius: 16px; position: relative;">
+                        <div style="position: absolute; top: -12px; right: 20px; background: var(--color-primary-green); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                            FIXIERT
+                        </div>
+                        <div style="display: flex; gap: 1.5rem; align-items: center;">
+                            <div id="protocol-preview-image" style="width: 80px; height: 80px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center;">
+                                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.3;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                            </div>
+                            <div>
+                                <div id="protocol-preview-name" style="font-weight: 800; font-size: 1.1rem; color: white;">-</div>
+                                <div id="protocol-preview-serial" style="color: rgba(255,255,255,0.5); font-size: 0.9rem; margin-top: 4px;">-</div>
+                            </div>
                         </div>
                     </div>
 
                     <!-- Machine Customer & Location info (Read-only) -->
-                    <div id="protocol-location-info-section" style="margin-bottom: 2.5rem; display: none; padding: 1.25rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px;">
+                    <div id="protocol-location-info-section" style="margin-bottom: 1.5rem; display: none; padding: 1.25rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px;">
                         <div style="display: flex; flex-direction: column; gap: 8px;">
                             <div>
                                 <span style="font-size: 0.75rem; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: 800;">Betreiber / Kunde</span>
@@ -129,6 +142,12 @@
                                 <div id="protocol-location-display" style="color: rgba(255,255,255,0.8); font-size: 0.9rem; margin-top: 2px; line-height: 1.4;">-</div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Betriebsstunden Field -->
+                    <div style="margin-bottom: 2.5rem;">
+                        <span class="protocol-section-title">Betriebsstunden</span>
+                        <input type="number" id="protocol-operating-hours" class="glass-form-input" style="font-weight: 700;" placeholder="Betriebsstunden eingeben...">
                     </div>
 
                     <!-- Predefined Checkpoints -->
@@ -185,25 +204,38 @@
                         <h3 class="protocol-section-title">🕒 Bearbeitungshistorie</h3>
                         <div id="edit-history-list"></div>
                     </div>
-
                     <!-- Action Buttons at the very bottom of scrollable content -->
-                    <div class="protocol-modal-actions" style="margin-top: 4rem; border-top: 1px solid rgba(255,255,255,0.05);">
-                        <button onclick="window.closeProtocolModal()" class="btn-modal-base btn-modal-cancel">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                            Abbrechen
-                        </button>
-                        <button onclick="window.previewProtocolPDF()" class="btn-modal-base" style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.35); color: #a78bfa; gap: 8px;" onmouseover="this.style.background='rgba(139,92,246,0.28)'" onmouseout="this.style.background='rgba(139,92,246,0.15)'">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                            Vorschau
-                        </button>
-                        <button onclick="window.saveProtocol()" class="btn-modal-base btn-modal-save">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-                            Speichern
-                        </button>
-                        <button onclick="window.completeProtocol()" id="complete-protocol-btn" class="btn-modal-base btn-modal-complete">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                            Abschließen
-                        </button>
+                    <div class="protocol-modal-actions" style="margin-top: 4rem; border-top: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 1rem; width: 100%;">
+                        <div style="display: flex; gap: 10px; width: 100%;">
+                            <button onclick="window.closeProtocolModal()" class="btn-modal-base btn-modal-cancel" style="flex: 1;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                Abbrechen
+                            </button>
+                            <button onclick="window.previewProtocolPDF()" class="btn-modal-base" style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.35); color: #a78bfa; gap: 8px; flex: 1;" onmouseover="this.style.background='rgba(139,92,246,0.28)'" onmouseout="this.style.background='rgba(139, 92, 246, 0.15)'">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                Vorschau
+                            </button>
+                            <button onclick="window.saveProtocol()" class="btn-modal-base btn-modal-save" style="flex: 1;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                Speichern
+                            </button>
+                        </div>
+                        
+                        <!-- Full-Width buttons container (Abschließen OR PDF speichern) -->
+                        <div id="protocol-complete-container" style="width: 100%;">
+                            <button onclick="window.completeProtocol()" id="complete-protocol-btn" class="btn-modal-base btn-modal-complete" style="width: 100%;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                Abschließen
+                            </button>
+                        </div>
+                        
+                        <div id="protocol-pdf-container" style="width: 100%; display: none; flex-direction: column; align-items: center; gap: 6px;">
+                            <button onclick="window.saveProtocolPDFToR2()" id="btn-protocol-cloud-pdf" class="btn-modal-base btn-modal-pdf" style="width: 100%;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                                PDF erstellen / speichern
+                            </button>
+                            <span id="protocol-pdf-status" style="font-size: 0.72rem; color: rgba(255,255,255,0.45); font-weight: 500; display: block; min-height: 14px; text-align: center;">Noch kein PDF gespeichert</span>
+                        </div>
                     </div>
 
                 </div>
@@ -225,6 +257,8 @@
     // window.openIntakeProtocol...
 
     async function openProtocolModal(machineId, protocolId, type) {
+        removedProtocolPhotos = [];
+        sessionUploadedPhotos = [];
         const modal = createProtocolModal();
         const overlay = document.getElementById('protocol-modal-overlay');
 
@@ -246,7 +280,26 @@
         // Set modal title
         const modalTitle = type === 'intake' ? '📋 Eingangsprotokoll' : '✅ Abnahmeprotokoll';
         document.getElementById('protocol-modal-title').textContent = modalTitle;
-        document.getElementById('protocol-machine-title').value = machineTitle;
+
+        // Set machine preview elements (Premium Style like Serviceberichte)
+        const pName = document.getElementById('protocol-preview-name');
+        const pSerial = document.getElementById('protocol-preview-serial');
+        const pImgContainer = document.getElementById('protocol-preview-image');
+        
+        if (pName) {
+            pName.textContent = [machine.manufacturer, machine.name].filter(Boolean).join(' ') || 'Unbekannte Maschine';
+        }
+        if (pSerial) {
+            pSerial.textContent = [machine.serial_number || machine.serial ? `#${machine.serial_number || machine.serial}` : null, machine.year ? `(${machine.year})` : null].filter(Boolean).join(' ') || 'Keine Seriennummer';
+        }
+        if (pImgContainer) {
+            if (machine.image_url) {
+                const imgUrl = window.getMachineThumbnailUrl ? window.getMachineThumbnailUrl(machine.image_url) : machine.image_url;
+                pImgContainer.innerHTML = `<img src="${imgUrl}" onerror="this.src='${machine.image_url}'; this.onerror=null;" style="width: 100%; height: 100%; object-fit: cover;">`;
+            } else {
+                pImgContainer.innerHTML = `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.3;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>`;
+            }
+        }
 
         // Populate Customer & Location preview info
         const locationInfoSection = document.getElementById('protocol-location-info-section');
@@ -303,6 +356,7 @@
                 machine_id: machineId,
                 title: machineTitle,
                 status: 'draft',
+                operating_hours: null,
                 predefined_checkpoints: type === 'intake' ? getIntakeCheckpoints() : getAcceptanceCheckpoints()
             };
             customCheckpoints = [];
@@ -310,6 +364,12 @@
 
             // Fetch and show templates
             await setupTemplateSelection(machine.category_id, type);
+        }
+
+        // Populate Operating Hours input
+        const opHoursInput = document.getElementById('protocol-operating-hours');
+        if (opHoursInput) {
+            opHoursInput.value = currentProtocol.operating_hours !== null && currentProtocol.operating_hours !== undefined ? currentProtocol.operating_hours : '';
         }
 
         // Conditionally hide sections for Rotorschaufel Acceptance
@@ -349,10 +409,27 @@
         // Update status badge
         updateStatusBadge();
 
-        // Hide "Abschließen" button for completed protocols
+        // Toggle "Abschließen" and "PDF erstellen/speichern" containers
+        const completeContainer = document.getElementById('protocol-complete-container');
+        const pdfContainer = document.getElementById('protocol-pdf-container');
+        const pdfStatusEl = document.getElementById('protocol-pdf-status');
+        
         if (currentProtocol.status === 'completed') {
-            const completeBtn = document.getElementById('complete-protocol-btn');
-            if (completeBtn) completeBtn.style.display = 'none';
+            if (completeContainer) completeContainer.style.display = 'none';
+            if (pdfContainer) pdfContainer.style.display = 'flex';
+            if (pdfStatusEl) {
+                if (currentProtocol.pdf_created_at) {
+                    const d = new Date(currentProtocol.pdf_created_at);
+                    const dStr = d.toLocaleDateString('de-DE');
+                    const tStr = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                    pdfStatusEl.textContent = `Zuletzt gespeichert: ${dStr}, ${tStr} Uhr`;
+                } else {
+                    pdfStatusEl.textContent = 'Noch kein PDF gespeichert';
+                }
+            }
+        } else {
+            if (completeContainer) completeContainer.style.display = 'block';
+            if (pdfContainer) pdfContainer.style.display = 'none';
         }
 
         // Show modal
@@ -392,6 +469,19 @@
             overlay.style.display = 'none';
             overlay.remove();
         }
+
+        // Clean up newly uploaded photos from storage if they weren't saved
+        if (sessionUploadedPhotos && sessionUploadedPhotos.length > 0) {
+            console.log('Cleaning up session-uploaded photos because modal was closed without saving:', sessionUploadedPhotos);
+            try {
+                window.supabaseClient.storage.from('machine-images').remove(sessionUploadedPhotos);
+            } catch (storageErr) {
+                console.error('Failed to clean up session-uploaded photos:', storageErr);
+            }
+        }
+        removedProtocolPhotos = [];
+        sessionUploadedPhotos = [];
+
         currentProtocol = null;
         currentProtocolType = null;
         customCheckpoints = [];
@@ -986,6 +1076,7 @@
                     file_url: urlData.publicUrl,
                     file_size: file.size
                 });
+                sessionUploadedPhotos.push(fileName);
             }
 
             renderPhotos();
@@ -1033,8 +1124,25 @@
 
     window.deleteProtocolPhoto = function (index) {
         if (confirm('Foto wirklich löschen?')) {
+            const photo = protocolPhotos[index];
+            if (photo && photo.file_name) {
+                const sessionIdx = sessionUploadedPhotos.indexOf(photo.file_name);
+                if (sessionIdx > -1) {
+                    // It was uploaded in this session, delete from storage immediately
+                    try {
+                        window.supabaseClient.storage.from('machine-images').remove([photo.file_name]);
+                    } catch (e) {
+                        console.error('Failed to delete session photo from storage:', e);
+                    }
+                    sessionUploadedPhotos.splice(sessionIdx, 1);
+                } else {
+                    // Existing photo, track to delete on save
+                    removedProtocolPhotos.push(photo.file_name);
+                }
+            }
             protocolPhotos.splice(index, 1);
             renderPhotos();
+            markProtocolDirty();
         }
     };
 
@@ -1070,6 +1178,10 @@
                 currentProtocol.settings_calibrations = document.getElementById('protocol-settings-calibrations')?.value || '';
                 currentProtocol.remaining_defects = document.getElementById('protocol-remaining-defects')?.value || '';
             }
+
+            // Operating Hours
+            const opHoursVal = document.getElementById('protocol-operating-hours')?.value;
+            currentProtocol.operating_hours = opHoursVal ? parseFloat(opHoursVal) : null;
 
             // Add edit history entry
             if (!currentProtocol.edit_history) currentProtocol.edit_history = [];
@@ -1114,6 +1226,21 @@
 
             // Mark as clean after successful save
             protocolIsDirty = false;
+
+            // Delete removed photos from Supabase Storage
+            if (removedProtocolPhotos.length > 0) {
+                console.log('Deleting removed protocol photos from storage on save:', removedProtocolPhotos);
+                try {
+                    await window.supabaseClient.storage
+                        .from('machine-images')
+                        .remove(removedProtocolPhotos);
+                } catch (storageErr) {
+                    console.error('Failed to delete photos from storage on save:', storageErr);
+                }
+                removedProtocolPhotos = [];
+            }
+            // Clear sessionUploadedPhotos as they are now committed to the database
+            sessionUploadedPhotos = [];
 
             // Refresh protocols list if view is active
             if (typeof window.fetchProtocols === 'function') {
@@ -1189,7 +1316,7 @@
                             if (stError) throw stError;
                             const existingTitles = (existingSubtasks || []).map(s => s.title.toLowerCase().trim());
 
-                            // 3. Insert new subtasks under supergroup "Mängel aus Protokollen"
+                            // 3. Insert new subtasks under supergroup "Protokolleinträge"
                             const subtasksToInsert = [];
                             defects.forEach(defect => {
                                 const subtaskTitle = `${defect.label}: ${defect.comment}`;
@@ -1198,7 +1325,7 @@
                                         task_id: taskId,
                                         title: subtaskTitle,
                                         status: 'open',
-                                        supergroup: 'Mängel aus Protokollen'
+                                        supergroup: 'Protokolleinträge'
                                     });
                                 }
                             });
@@ -1258,8 +1385,13 @@
 
         // Update UI
         updateStatusBadge();
-        const completeBtn = document.getElementById('complete-protocol-btn');
-        if (completeBtn) completeBtn.style.display = 'none';
+        const completeContainer = document.getElementById('protocol-complete-container');
+        const pdfContainer = document.getElementById('protocol-pdf-container');
+        const pdfStatusEl = document.getElementById('protocol-pdf-status');
+        
+        if (completeContainer) completeContainer.style.display = 'none';
+        if (pdfContainer) pdfContainer.style.display = 'flex';
+        if (pdfStatusEl) pdfStatusEl.textContent = 'Noch kein PDF gespeichert';
         renderEditHistory();
     };
 
@@ -1474,261 +1606,460 @@
         });
     }
 
-    window.generateProtocolPDF = async function (previewOpen = false) {
-        try {
-            await window.loadPDFGenerators();
-            const { jsPDF } = window.jspdf;
+    window.generateProtocolPDFDoc = async function () {
+        await window.loadPDFGenerators();
+        const { jsPDF } = window.jspdf;
 
-            // Show loading state
-            const loadingOverlay = document.createElement('div');
-            loadingOverlay.innerHTML = '<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;color:white;font-size:1.5rem;font-weight:bold;font-family:\'Inter\',sans-serif;">PDF wird generiert...</div>';
-            document.body.appendChild(loadingOverlay);
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const bgImage = await getTemplateBackground();
 
-            const doc = new jsPDF('p', 'mm', 'a4');
-            const bgImage = await getTemplateBackground();
+        // Helper to add background
+        const addBackground = () => {
+            if (bgImage) {
+                // Slight zoom to push borders out: left: -5, top: -5, width: 220, height: 307
+                doc.addImage(bgImage, 'JPEG', -5, -5, 220, 307, undefined, 'FAST');
+            }
+        };
 
-            // Helper to add background
-            const addBackground = () => {
-                if (bgImage) {
-                    // Slight zoom to push borders out: left: -5, top: -5, width: 220, height: 307
-                    doc.addImage(bgImage, 'JPEG', -5, -5, 220, 307, undefined, 'FAST');
-                }
-            };
-
-            // Overlay doc.addPage to automatically add background
-            const originalAddPage = doc.addPage.bind(doc);
-            doc.addPage = function () {
-                originalAddPage();
-                addBackground();
-                return doc;
-            };
-
+        // Overlay doc.addPage to automatically add background
+        const originalAddPage = doc.addPage.bind(doc);
+        doc.addPage = function () {
+            originalAddPage();
             addBackground();
+            return doc;
+        };
 
-            const title = currentProtocolType === 'intake' ? 'Eingangsprotokoll' : 'Abnahmeprotokoll';
-            const machineTitle = currentProtocol.title || 'Ohne Titel';
+        addBackground();
 
-            // Header area below template letterhead (start around Y = 36)
-            doc.setFontSize(22);
-            doc.setFont(undefined, 'bold');
-            doc.setTextColor(30, 41, 59);
-            doc.text(title, 20, 36);
+        const title = currentProtocolType === 'intake' ? 'Eingangsprotokoll' : 'Abnahmeprotokoll';
+        const machineTitle = currentProtocol.title || 'Ohne Titel';
 
-            doc.setFontSize(12);
-            doc.setFont(undefined, 'normal');
-            doc.setTextColor(71, 85, 105);
-            const dateStr = new Date(currentProtocol.created_at || Date.now()).toLocaleDateString('de-DE');
-            doc.text(`Datum: ${dateStr}`, 145, 36);
+        // Header area below template letterhead (start around Y = 36)
+        doc.setFontSize(22);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(30, 41, 59);
+        doc.text(title, 20, 36);
 
-            doc.setFontSize(14);
-            doc.setFont(undefined, 'bold');
-            doc.setTextColor(15, 23, 42); // Dokument-Schwarz/Blau
-            doc.text(`Maschine: `, 20, 46);
+        doc.setFontSize(12);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(71, 85, 105);
+        const dateStr = new Date(currentProtocol.created_at || Date.now()).toLocaleDateString('de-DE');
+        doc.text(`Datum: ${dateStr}`, 145, 36);
 
-            const prefixWidth = doc.getTextWidth(`Maschine: `);
-            doc.setTextColor(34, 197, 94); // Primär-Grün
-            doc.text(`${machineTitle}`, 20 + prefixWidth, 46);
+        // Let's get the machine details
+        const machine = (window.machineList || []).find(m => m.id === currentProtocol.machine_id);
 
-            doc.setFont(undefined, 'normal');
-            doc.setTextColor(15, 23, 42); // Reset auf dunkles Blau/Grau
-            doc.text(`Status: ${currentProtocol.status === 'completed' ? 'Abgeschlossen' : 'Entwurf'}`, 20, 54);
+        let operatorLines = [];
+        let locationLines = [];
+        let hasDifferentLocation = false;
 
-            // Let's get the machine details
-            const machine = (window.machineList || []).find(m => m.id === currentProtocol.machine_id);
-            
-            let startY = 64;
-
-            if (machine) {
-                doc.setFontSize(11);
-                if (machine.in_workshop) {
-                    doc.setFont(undefined, 'bold');
-                    doc.text('Standort:', 20, 62);
-                    doc.setFont(undefined, 'normal');
-                    doc.text('Eigene Werkstatt (Meetra HQ)', 45, 62);
-                    startY = 72;
+        if (machine) {
+            if (machine.in_workshop) {
+                operatorLines.push('Intern (Eigene Werkstatt)');
+                const cached = localStorage.getItem('meetra_company_hq');
+                if (cached) {
+                    try {
+                        const hq = JSON.parse(cached);
+                        if (hq.name) operatorLines.push(hq.name);
+                        if (hq.street) operatorLines.push(hq.street);
+                        const zipCity = [hq.zip, hq.city].filter(Boolean).join(' ');
+                        if (zipCity) operatorLines.push(zipCity);
+                        if (hq.country) operatorLines.push(hq.country);
+                    } catch(e) {
+                        operatorLines.push('Meetra GmbH', 'Am Alten Bahnhof 6', '38122 Braunschweig', 'Deutschland');
+                    }
                 } else {
-                    doc.setFont(undefined, 'bold');
-                    doc.text('Kunde:', 20, 62);
-                    doc.setFont(undefined, 'normal');
-                    
-                    // Format customer name nicely
-                    const customerName = machine.company || '-';
-                    const codeStr = machine.customer_number ? ` (Kundennummer: ${machine.customer_number})` : '';
-                    doc.text(customerName + codeStr, 40, 62);
+                    operatorLines.push('Meetra GmbH', 'Am Alten Bahnhof 6', '38122 Braunschweig', 'Deutschland');
+                }
+            } else {
+                if (machine.customer_number) {
+                    operatorLines.push(`Kundennummer: ${machine.customer_number}`);
+                }
+                if (machine.company) {
+                    operatorLines.push(machine.company);
+                } else {
+                    operatorLines.push('Unbekannter Betreiber');
+                }
+                
+                const addr = machine.operator_address || '';
+                if (addr) {
+                    const parts = addr.split('\n').map(p => p.trim()).filter(Boolean);
+                    operatorLines.push(...parts);
+                }
 
-                    doc.setFont(undefined, 'bold');
-                    doc.text('Standort:', 20, 70);
-                    doc.setFont(undefined, 'normal');
-                    const locLines = doc.splitTextToSize(machine.location || '-', 145);
-                    doc.text(locLines, 45, 70);
-                    
-                    startY = 70 + (locLines.length * 5) + 8;
+                // Standort address
+                const loc = machine.location || '';
+                if (loc && loc.trim() !== addr.trim()) {
+                    hasDifferentLocation = true;
+                    const parts = loc.split('\n').map(p => p.trim()).filter(Boolean);
+                    locationLines.push(...parts);
                 }
             }
+        }
 
+        // Content area start
+        let currentY = 52;
+        
+        // Draw Betreiber/Rechnungsadresse
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(30, 41, 59);
+        doc.text('Betreiber / Rechnungsadresse:', 20, currentY);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(51, 65, 85);
+        
+        let leftY = currentY + 6;
+        operatorLines.forEach(line => {
+            doc.text(line, 20, leftY);
+            leftY += 5;
+        });
+        
+        if (hasDifferentLocation) {
+            leftY += 2;
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(30, 41, 59);
+            doc.text('Maschinenstandort:', 20, leftY);
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(51, 65, 85);
+            leftY += 6;
+            locationLines.forEach(line => {
+                doc.text(line, 20, leftY);
+                leftY += 5;
+            });
+        }
+        
+        // Draw Machine Details on the right
+        let rightY = currentY;
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(30, 41, 59);
+        doc.text('Maschine: ', 120, rightY);
+        const maschineW = doc.getTextWidth('Maschine: ');
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(51, 65, 85);
+        doc.text(String(machine ? [machine.manufacturer, machine.name].filter(Boolean).join(' ') : (currentProtocol.title || '-')), 120 + maschineW, rightY);
+        
+        rightY += 6;
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(30, 41, 59);
+        doc.text('Seriennummer: ', 120, rightY);
+        const snW = doc.getTextWidth('Seriennummer: ');
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(51, 65, 85);
+        doc.text(String(machine ? (machine.serial || machine.serial_number || '-') : '-'), 120 + snW, rightY);
+        
+        rightY += 6;
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(30, 41, 59);
+        doc.text('Baujahr: ', 120, rightY);
+        const bjW = doc.getTextWidth('Baujahr: ');
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(51, 65, 85);
+        doc.text(String(machine ? (machine.year || '-') : '-'), 120 + bjW, rightY);
+        
+        rightY += 6;
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(30, 41, 59);
+        doc.text('Betriebsstunden: ', 120, rightY);
+        const bhW = doc.getTextWidth('Betriebsstunden: ');
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(51, 65, 85);
+        const operatingHoursVal = currentProtocol.operating_hours !== null && currentProtocol.operating_hours !== undefined && currentProtocol.operating_hours !== '' ? `${currentProtocol.operating_hours} h` : '-';
+        doc.text(String(operatingHoursVal), 120 + bhW, rightY);
+        
+        let startY = Math.max(leftY, rightY + 5) + 8;
+
+        doc.setFontSize(16);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(15, 23, 42);
+        doc.text('Prüfpunkte', 20, startY);
+
+        // Legend at top right above the table
+        const legendX = 100;
+        const legendY = startY - 5;
+        
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(71, 85, 105); // slate-600
+
+        // Subtle background container for the legend
+        doc.setDrawColor(226, 232, 240); // slate-200
+        doc.setFillColor(248, 250, 252); // slate-50
+        doc.setLineWidth(0.2);
+        doc.roundedRect(legendX, legendY, 90, 15, 1, 1, 'FD');
+
+        const drawLegendBox = (bx, by, type) => {
+            const bSize = 3;
+            doc.setDrawColor(100, 116, 139);
+            doc.setLineWidth(0.2);
+            doc.rect(bx, by, bSize, bSize);
+
+            if (type === 'green') {
+                doc.setDrawColor(34, 197, 94);
+                doc.setLineWidth(0.4);
+                doc.line(bx + 0.7, by + 1.5, bx + 1.3, by + 2.2);
+                doc.line(bx + 1.3, by + 2.2, bx + 2.4, by + 0.8);
+            } else if (type === 'orange') {
+                doc.setDrawColor(245, 158, 11);
+                doc.setLineWidth(0.4);
+                doc.line(bx + 0.7, by + 1.5, bx + 2.3, by + 1.5);
+            } else if (type === 'red') {
+                doc.setDrawColor(239, 68, 68);
+                doc.setLineWidth(0.4);
+                doc.line(bx + 0.8, by + 0.8, bx + 2.2, by + 2.2);
+                doc.line(bx + 2.2, by + 0.8, bx + 0.8, by + 2.2);
+            }
+        };
+
+        // Row 1
+        // Col 1: Green Checkmark (in Ordnung)
+        drawLegendBox(legendX + 3, legendY + 3, 'green');
+        doc.text('= in Ordnung', legendX + 8, legendY + 5.3);
+
+        // Col 2: Orange Dash (nicht zutreffend / nicht vorhanden)
+        drawLegendBox(legendX + 40, legendY + 3, 'orange');
+        doc.text('= nicht zutreffend / nicht vorhanden', legendX + 45, legendY + 5.3);
+
+        // Row 2
+        // Col 1: Red Cross (Fehler, defekt)
+        drawLegendBox(legendX + 3, legendY + 9, 'red');
+        doc.text('= Fehler, defekt', legendX + 8, legendY + 11.3);
+
+        // Col 2: k. A. (keine Angabe)
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(30, 41, 59);
+        doc.text('k. A.', legendX + 40, legendY + 11.3);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(71, 85, 105);
+        doc.text('= keine Angabe', legendX + 47, legendY + 11.3);
+
+        startY = legendY + 15 + 4; // Safety space below the legend before the table starts
+        const formatPdfResult = (res) => {
+            if (res === true) return 'true';
+            if (res === 'warning') return 'warning';
+            if (res === false) return 'false';
+            return 'k. A.';
+        };
+
+        const tableData = [];
+
+        if (Array.isArray(currentProtocol.predefined_checkpoints)) {
+            currentProtocol.predefined_checkpoints.forEach((group, gIdx) => {
+                const cleanGroupTitle = group.group_title ? group.group_title.replace(/^\d+\.\s*/, '') : 'Kategorie';
+                tableData.push([{ content: `${gIdx + 1}. ${cleanGroupTitle}`, colSpan: 3, styles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' } }]);
+                group.items.forEach(item => {
+                    const resultText = formatPdfResult(item.result);
+                    tableData.push([item.label || '', resultText, item.comment || '']);
+                });
+            });
+        } else if (currentProtocol.predefined_checkpoints) {
+            Object.keys(currentProtocol.predefined_checkpoints).forEach(key => {
+                const label = getCheckpointLabel(key, currentProtocolType);
+                const value = currentProtocol.predefined_checkpoints[key];
+                const resultText = formatPdfResult(value);
+                tableData.push([label, resultText, '']);
+            });
+        }
+
+        if (customCheckpoints && customCheckpoints.length > 0) {
+            tableData.push([{ content: 'Zusätzliche Prüfpunkte', colSpan: 3, styles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' } }]);
+            customCheckpoints.forEach(cp => {
+                const resultText = formatPdfResult(cp.result);
+                tableData.push([cp.description, resultText, '']);
+            });
+        }
+
+        doc.autoTable({
+            startY: startY,
+            head: [[
+                { content: 'Prüfpunkt', styles: { halign: 'left' } },
+                { content: 'Ergebnis', styles: { halign: 'center' } },
+                { content: 'Bemerkung', styles: { halign: 'center' } }
+            ]],
+            body: tableData,
+            theme: 'grid',
+            headStyles: { fillColor: [203, 213, 225], textColor: [15, 23, 42], lineWidth: 0.1, lineColor: [148, 163, 184] },
+            styles: { fontSize: 10, cellPadding: 4, lineWidth: 0.1, lineColor: [148, 163, 184] },
+            columnStyles: {
+                0: { cellWidth: 70 },
+                1: { cellWidth: 32, halign: 'center' },
+                2: { cellWidth: 'auto', halign: 'left' }
+            },
+            margin: { top: 36, bottom: 20, left: 20, right: 20 },
+            willDrawCell: (data) => {
+                if (data.section === 'body' && data.column.index === 1) {
+                    const rawVal = data.cell.raw;
+                    if (rawVal === 'true' || rawVal === 'false' || rawVal === 'warning') {
+                        data.cell.text = ''; // Clear text before it is drawn
+                    }
+                }
+            },
+            didDrawCell: (data) => {
+                if (data.section === 'body' && data.column.index === 1) {
+                    const rawVal = data.cell.raw;
+                    if (rawVal === 'true' || rawVal === 'false' || rawVal === 'warning') {
+                        // Draw box (5mm x 5mm) centered in cell
+                        const boxSize = 5; 
+                        const boxX = data.cell.x + (data.cell.width - boxSize) / 2;
+                        const boxY = data.cell.y + (data.cell.height - boxSize) / 2;
+                        
+                        // Draw outer rectangle
+                        doc.setDrawColor(100, 116, 139); // slate-500 border color
+                        doc.setLineWidth(0.3);
+                        doc.rect(boxX, boxY, boxSize, boxSize);
+                        
+                        if (rawVal === 'true') {
+                            // Green checkmark
+                            doc.setDrawColor(34, 197, 94); // green-500
+                            doc.setLineWidth(0.6);
+                            doc.line(boxX + 1.2, boxY + 2.5, boxX + 2.2, boxY + 3.7);
+                            doc.line(boxX + 2.2, boxY + 3.7, boxX + 4.0, boxY + 1.3);
+                        } else if (rawVal === 'warning') {
+                            // Orange dash
+                            doc.setDrawColor(245, 158, 11); // orange-500
+                            doc.setLineWidth(0.6);
+                            doc.line(boxX + 1.2, boxY + 2.5, boxX + 3.8, boxY + 2.5);
+                        } else if (rawVal === 'false') {
+                            // Red cross
+                            doc.setDrawColor(239, 68, 68); // red-500
+                            doc.setLineWidth(0.6);
+                            doc.line(boxX + 1.4, boxY + 1.4, boxX + 3.6, boxY + 3.6);
+                            doc.line(boxX + 3.6, boxY + 1.4, boxX + 1.4, boxY + 3.6);
+                        }
+                        
+                        // Reset draw styles to standard table colors
+                        doc.setDrawColor(148, 163, 184); // line color
+                        doc.setLineWidth(0.1);
+                    }
+                }
+            }
+        });
+
+        startY = doc.lastAutoTable.finalY + 15;
+
+        // Text fields
+        const addTextField = (label, text) => {
+            if (!text) return;
+            if (startY > 255) { doc.addPage(); startY = 36; }
+            doc.setFontSize(14);
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(15, 23, 42);
+            doc.text(label, 20, startY);
+            startY += 8;
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(51, 65, 85);
+            const lines = doc.splitTextToSize(text, 170);
+            doc.text(lines, 20, startY);
+            startY += lines.length * 5 + 10;
+        };
+
+        if (currentProtocolType === 'intake') {
+            addTextField('Fehlerbeschreibung / Arbeitsauftrag', currentProtocol.error_description);
+        } else {
+            addTextField('Durchgeführte Arbeiten', currentProtocol.work_performed);
+            addTextField('Getauschte Teile', currentProtocol.parts_replaced);
+            addTextField('Einstellungen / Kalibrierungen', currentProtocol.settings_calibrations);
+            addTextField('Restmängel', currentProtocol.remaining_defects);
+        }
+
+        if (currentProtocol.completed_at) {
+            if (startY > 255) { doc.addPage(); startY = 36; }
+            doc.setFontSize(12);
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(220, 38, 38); // Rot
+            doc.text('Abschlussinformationen', 105, startY, { align: 'center' });
+            startY += 8;
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(220, 38, 38); // Rot für alle Textzeilen
+            const completedDate = new Date(currentProtocol.completed_at).toLocaleString('de-DE');
+            const completedUser = window.userList?.find(u => u.id === currentProtocol.completed_by);
+            doc.text(`Abgeschlossen am: ${completedDate}`, 105, startY, { align: 'center' });
+            startY += 6;
+            doc.text(`Abgeschlossen von: ${completedUser?.name || 'Unbekannt'}`, 105, startY, { align: 'center' });
+        }
+
+        // Photos
+        if (protocolPhotos && protocolPhotos.length > 0) {
+            doc.addPage();
+            let photoY = 36;
             doc.setFontSize(16);
             doc.setFont(undefined, 'bold');
             doc.setTextColor(15, 23, 42);
-            doc.text('Prüfpunkte', 20, startY);
-            startY += 6;
+            doc.text('Fotodokumentation', 20, photoY);
+            photoY += 15;
 
-            const tableData = [];
+            const pageWidth = 210;
+            const margin = 20;
+            const photoWidth = (pageWidth - margin * 2 - 10) / 2;
+            const maxPhotoHeight = 100; // Allow dynamic height up to 100mm per row
 
-            if (Array.isArray(currentProtocol.predefined_checkpoints)) {
-                currentProtocol.predefined_checkpoints.forEach((group, gIdx) => {
-                    const cleanGroupTitle = group.group_title ? group.group_title.replace(/^\\d+\\.\\s*/, '') : 'Kategorie';
-                    tableData.push([{ content: `${gIdx + 1}. ${cleanGroupTitle}`, colSpan: 3, styles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' } }]);
-                    group.items.forEach(item => {
-                        const result = item.result === true ? 'Ja' : (item.result === false ? 'Nein' : '-');
-                        tableData.push([item.label || '', result, item.comment || '']);
-                    });
-                });
-            } else if (currentProtocol.predefined_checkpoints) {
-                Object.keys(currentProtocol.predefined_checkpoints).forEach(key => {
-                    const label = getCheckpointLabel(key, currentProtocolType);
-                    const value = currentProtocol.predefined_checkpoints[key];
-                    const result = value === true ? 'Ja' : (value === false ? 'Nein' : '-');
-                    tableData.push([label, result, '']);
-                });
-            }
+            let col = 0;
+            let rowMaxHeight = 0;
 
-            if (customCheckpoints && customCheckpoints.length > 0) {
-                tableData.push([{ content: 'Zusätzliche Prüfpunkte', colSpan: 3, styles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' } }]);
-                customCheckpoints.forEach(cp => {
-                    const result = cp.result === true ? 'Ja' : (cp.result === false ? 'Nein' : '-');
-                    tableData.push([cp.description, result, '']);
-                });
-            }
+            for (let i = 0; i < protocolPhotos.length; i++) {
+                const photo = protocolPhotos[i];
 
-            doc.autoTable({
-                startY: startY,
-                head: [[
-                    { content: 'Prüfpunkt', styles: { halign: 'left' } },
-                    { content: 'Ergebnis', styles: { halign: 'center' } },
-                    { content: 'Bemerkung', styles: { halign: 'center' } }
-                ]],
-                body: tableData,
-                theme: 'grid',
-                headStyles: { fillColor: [203, 213, 225], textColor: [15, 23, 42], lineWidth: 0.1, lineColor: [148, 163, 184] },
-                styles: { fontSize: 10, cellPadding: 4, lineWidth: 0.1, lineColor: [148, 163, 184] },
-                columnStyles: {
-                    0: { cellWidth: 70 },
-                    1: { cellWidth: 25, halign: 'center' },
-                    2: { cellWidth: 'auto', halign: 'left' }
-                },
-                margin: { top: 36, bottom: 20, left: 20, right: 20 }
-            });
+                if (photoY + maxPhotoHeight > 277) {
+                    doc.addPage();
+                    photoY = 36;
+                    col = 0;
+                    rowMaxHeight = 0;
+                }
 
-            startY = doc.lastAutoTable.finalY + 15;
+                const imgResult = await getBase64ImageFromUrl(photo.file_url);
+                if (imgResult && imgResult.dataUrl) {
+                    const { dataUrl, width, height } = imgResult;
+                    const imgRatio = height / width;
 
-            // Text fields
-            const addTextField = (label, text) => {
-                if (!text) return;
-                if (startY > 255) { doc.addPage(); startY = 36; }
-                doc.setFontSize(14);
-                doc.setFont(undefined, 'bold');
-                doc.setTextColor(15, 23, 42);
-                doc.text(label, 20, startY);
-                startY += 8;
-                doc.setFontSize(10);
-                doc.setFont(undefined, 'normal');
-                doc.setTextColor(51, 65, 85);
-                const lines = doc.splitTextToSize(text, 170);
-                doc.text(lines, 20, startY);
-                startY += lines.length * 5 + 10;
-            };
+                    let finalRenderWidth = photoWidth;
+                    let finalRenderHeight = photoWidth * imgRatio;
 
-            if (currentProtocolType === 'intake') {
-                addTextField('Fehlerbeschreibung / Arbeitsauftrag', currentProtocol.error_description);
-            } else {
-                addTextField('Durchgeführte Arbeiten', currentProtocol.work_performed);
-                addTextField('Getauschte Teile', currentProtocol.parts_replaced);
-                addTextField('Einstellungen / Kalibrierungen', currentProtocol.settings_calibrations);
-                addTextField('Restmängel', currentProtocol.remaining_defects);
-            }
-
-            if (currentProtocol.completed_at) {
-                if (startY > 255) { doc.addPage(); startY = 36; }
-                doc.setFontSize(12);
-                doc.setFont(undefined, 'bold');
-                doc.setTextColor(220, 38, 38); // Rot
-                doc.text('Abschlussinformationen', 105, startY, { align: 'center' });
-                startY += 8;
-                doc.setFontSize(10);
-                doc.setFont(undefined, 'normal');
-                doc.setTextColor(220, 38, 38); // Rot für alle Textzeilen
-                const completedDate = new Date(currentProtocol.completed_at).toLocaleString('de-DE');
-                const completedUser = window.userList?.find(u => u.id === currentProtocol.completed_by);
-                doc.text(`Abgeschlossen am: ${completedDate}`, 105, startY, { align: 'center' });
-                startY += 6;
-                doc.text(`Abgeschlossen von: ${completedUser?.name || 'Unbekannt'}`, 105, startY, { align: 'center' });
-            }
-
-            // Photos
-            if (protocolPhotos && protocolPhotos.length > 0) {
-                doc.addPage();
-                let photoY = 36;
-                doc.setFontSize(16);
-                doc.setFont(undefined, 'bold');
-                doc.setTextColor(15, 23, 42);
-                doc.text('Fotodokumentation', 20, photoY);
-                photoY += 15;
-
-                const pageWidth = 210;
-                const margin = 20;
-                const photoWidth = (pageWidth - margin * 2 - 10) / 2;
-                const maxPhotoHeight = 100; // Allow dynamic height up to 100mm per row
-
-                let col = 0;
-                let rowMaxHeight = 0;
-
-                for (let i = 0; i < protocolPhotos.length; i++) {
-                    const photo = protocolPhotos[i];
-
-                    if (photoY + maxPhotoHeight > 277) {
-                        doc.addPage();
-                        photoY = 36;
-                        col = 0;
-                        rowMaxHeight = 0;
+                    if (finalRenderHeight > maxPhotoHeight) {
+                        finalRenderHeight = maxPhotoHeight;
+                        finalRenderWidth = finalRenderHeight / imgRatio;
                     }
 
-                    const imgResult = await getBase64ImageFromUrl(photo.file_url);
-                    if (imgResult && imgResult.dataUrl) {
-                        const { dataUrl, width, height } = imgResult;
-                        const imgRatio = height / width;
-
-                        let finalRenderWidth = photoWidth;
-                        let finalRenderHeight = photoWidth * imgRatio;
-
-                        if (finalRenderHeight > maxPhotoHeight) {
-                            finalRenderHeight = maxPhotoHeight;
-                            finalRenderWidth = finalRenderHeight / imgRatio;
-                        }
-
-                        if (finalRenderHeight > rowMaxHeight) {
-                            rowMaxHeight = finalRenderHeight;
-                        }
-
-                        const finalX = margin + (col * (photoWidth + 10)) + ((photoWidth - finalRenderWidth) / 2);
-
-                        try {
-                            doc.addImage(dataUrl, 'JPEG', finalX, photoY, finalRenderWidth, finalRenderHeight, undefined, 'FAST');
-                        } catch (e) { console.warn('Konnte Foto nicht zeichnen:', e); }
+                    if (finalRenderHeight > rowMaxHeight) {
+                        rowMaxHeight = finalRenderHeight;
                     }
 
-                    col++;
-                    if (col > 1) {
-                        col = 0;
-                        photoY += rowMaxHeight + 10;
-                        rowMaxHeight = 0;
-                    }
+                    const finalX = margin + (col * (photoWidth + 10)) + ((photoWidth - finalRenderWidth) / 2);
+
+                    try {
+                        doc.addImage(dataUrl, 'JPEG', finalX, photoY, finalRenderWidth, finalRenderHeight, undefined, 'FAST');
+                    } catch (e) { console.warn('Konnte Foto nicht zeichnen:', e); }
+                }
+
+                col++;
+                if (col > 1) {
+                    col = 0;
+                    photoY += rowMaxHeight + 10;
+                    rowMaxHeight = 0;
                 }
             }
+        }
 
+        return doc;
+    };
+
+    window.generateProtocolPDF = async function (previewOpen = false) {
+        try {
+            // Show loading state
+            const loadingOverlay = document.createElement('div');
+            loadingOverlay.id = 'pdf-gen-loading';
+            loadingOverlay.innerHTML = '<div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;color:white;font-size:1.5rem;font-weight:bold;font-family:\'Inter\',sans-serif;">PDF wird generiert...</div>';
+            document.body.appendChild(loadingOverlay);
+
+            const doc = await window.generateProtocolPDFDoc();
+            document.getElementById('pdf-gen-loading')?.remove();
+
+            if (!doc) throw new Error('PDF-Generierung fehlgeschlagen.');
+
+            const title = currentProtocolType === 'intake' ? 'Eingangsprotokoll' : 'Abnahmeprotokoll';
+            const machineTitle = currentProtocol.title || 'Ohne Titel';
             const cleanFileName = (title + '_' + machineTitle).replace(/[^a-zA-Z0-9_-]/g, '_');
             const fileName = `${cleanFileName}_${new Date().toISOString().split('T')[0]}.pdf`;
-
-            document.body.removeChild(loadingOverlay);
 
             if (previewOpen) {
                 window.open(doc.output('bloburl'), '_blank');
@@ -1737,9 +2068,8 @@
                 alert('PDF erfolgreich erstellt!');
             }
         } catch (err) {
+            document.getElementById('pdf-gen-loading')?.remove();
             console.error('PDF generation error:', err);
-            const overlay = document.querySelector('div[style*="PDF wird generiert"]');
-            if (overlay) overlay.remove();
             alert('Fehler beim Erstellen des PDFs: ' + err.message);
         }
     };
@@ -1748,12 +2078,8 @@
         await window.generateProtocolPDF(true);
     };
 
-    // Show PDF in an in-page overlay with iframe + print/download buttons
     window.previewProtocolPDF = async function () {
         try {
-            await window.loadPDFGenerators();
-            const { jsPDF } = window.jspdf;
-
             // Loading indicator
             const loadingEl = document.createElement('div');
             loadingEl.id = 'pdf-preview-loading';
@@ -1765,81 +2091,14 @@
             `;
             document.body.appendChild(loadingEl);
 
-            // Generate PDF as blob URL
-            await window.loadPDFGenerators();
-            const docPDF = new jsPDF('p', 'mm', 'a4');
-            const bgImage = await getTemplateBackground();
-            const addBg = () => { if (bgImage) docPDF.addImage(bgImage, 'JPEG', -5, -5, 220, 307, undefined, 'FAST'); };
-            const origAddPage = docPDF.addPage.bind(docPDF);
-            docPDF.addPage = function() { origAddPage(); addBg(); return docPDF; };
-            addBg();
+            const docPDF = await window.generateProtocolPDFDoc();
+            document.getElementById('pdf-preview-loading')?.remove();
+
+            if (!docPDF) throw new Error('PDF-Generierung fehlgeschlagen.');
 
             const title = currentProtocolType === 'intake' ? 'Eingangsprotokoll' : 'Abnahmeprotokoll';
             const machineTitle = currentProtocol.title || 'Ohne Titel';
-            docPDF.setFontSize(22); docPDF.setFont(undefined,'bold'); docPDF.setTextColor(30,41,59);
-            docPDF.text(title, 20, 36);
-            docPDF.setFontSize(12); docPDF.setFont(undefined,'normal'); docPDF.setTextColor(71,85,105);
-            const dateStr = new Date(currentProtocol.created_at || Date.now()).toLocaleDateString('de-DE');
-            docPDF.text(`Datum: ${dateStr}`, 145, 36);
-            docPDF.setFontSize(14); docPDF.setFont(undefined,'bold'); docPDF.setTextColor(15,23,42);
-            docPDF.text('Maschine: ', 20, 46);
-            const pW = docPDF.getTextWidth('Maschine: ');
-            docPDF.setTextColor(34,197,94);
-            docPDF.text(`${machineTitle}`, 20+pW, 46);
-            docPDF.setFont(undefined,'normal'); docPDF.setTextColor(15,23,42);
-            docPDF.text(`Status: ${currentProtocol.status === 'completed' ? 'Abgeschlossen' : 'Entwurf'}`, 20, 54);
-
-            const machine = (window.machineList||[]).find(m=>m.id===currentProtocol.machine_id);
-            let startY = 64;
-            if (machine) {
-                docPDF.setFontSize(11);
-                if (machine.in_workshop) {
-                    docPDF.setFont(undefined,'bold'); docPDF.text('Standort:', 20, 62);
-                    docPDF.setFont(undefined,'normal'); docPDF.text('Eigene Werkstatt (Meetra HQ)', 45, 62);
-                    startY = 72;
-                } else {
-                    docPDF.setFont(undefined,'bold'); docPDF.text('Kunde:', 20, 62);
-                    docPDF.setFont(undefined,'normal');
-                    const cName = machine.company||'-';
-                    const cCode = machine.customer_number ? ` (Kundennummer: ${machine.customer_number})` : '';
-                    docPDF.text(cName+cCode, 40, 62);
-                    docPDF.setFont(undefined,'bold'); docPDF.text('Standort:', 20, 70);
-                    docPDF.setFont(undefined,'normal');
-                    const locLines = docPDF.splitTextToSize(machine.location||'-', 145);
-                    docPDF.text(locLines, 45, 70);
-                    startY = 70+(locLines.length*5)+8;
-                }
-            }
-
-            docPDF.setFontSize(16); docPDF.setFont(undefined,'bold'); docPDF.setTextColor(15,23,42);
-            docPDF.text('Prüfpunkte', 20, startY); startY += 6;
-
-            const tableData = [];
-            if (Array.isArray(currentProtocol.predefined_checkpoints)) {
-                currentProtocol.predefined_checkpoints.forEach((group,gIdx) => {
-                    const cleanTitle = group.group_title ? group.group_title.replace(/^\\d+\\.\\s*/,'') : 'Kategorie';
-                    tableData.push([{content:`${gIdx+1}. ${cleanTitle}`,colSpan:3,styles:{fillColor:[241,245,249],textColor:[15,23,42],fontStyle:'bold'}}]);
-                    group.items.forEach(item => {
-                        const r = item.result===true?'Ja':(item.result===false?'Nein':'-');
-                        tableData.push([item.label||'',r,item.comment||'']);
-                    });
-                });
-            }
-            docPDF.autoTable({
-                startY, head:[[{content:'Prüfpunkt',styles:{halign:'left'}},{content:'Ergebnis',styles:{halign:'center'}},{content:'Bemerkung',styles:{halign:'center'}}]],
-                body:tableData, theme:'grid',
-                headStyles:{fillColor:[203,213,225],textColor:[15,23,42],lineWidth:0.1,lineColor:[148,163,184]},
-                styles:{fontSize:10,cellPadding:4,lineWidth:0.1,lineColor:[148,163,184]},
-                columnStyles:{0:{cellWidth:70},1:{cellWidth:25,halign:'center'},2:{cellWidth:'auto',halign:'left'}},
-                margin:{top:36,bottom:20,left:20,right:20}
-            });
-
-            const cleanFileName = (title+'_'+machineTitle).replace(/[^a-zA-Z0-9_-]/g,'_');
-            const fileName = `${cleanFileName}_${new Date().toISOString().split('T')[0]}.pdf`;
             const blobUrl = docPDF.output('bloburl');
-
-            // Remove loading
-            document.getElementById('pdf-preview-loading')?.remove();
 
             // Build preview overlay
             const previewOverlay = document.createElement('div');
@@ -1861,11 +2120,132 @@
                 <iframe id="pdf-preview-frame" src="${blobUrl}" style="flex:1;width:100%;border:none;background:#525659;"></iframe>
             `;
             document.body.appendChild(previewOverlay);
-
-
         } catch (err) {
             document.getElementById('pdf-preview-loading')?.remove();
             alert('Fehler bei der Vorschau: ' + err.message);
+        }
+    };
+
+    window.saveProtocolPDFToR2 = async function() {
+        const protocolId = currentProtocol.id;
+        if (!protocolId) {
+            alert('Bitte speichern Sie das Protokoll ab, bevor Sie ein PDF erstellen.');
+            return;
+        }
+
+        const btn = document.getElementById('btn-protocol-cloud-pdf');
+        const statusEl = document.getElementById('protocol-pdf-status');
+
+        if (btn) {
+            btn.disabled = true;
+            btn.style.opacity = '0.7';
+        }
+        if (statusEl) statusEl.textContent = 'PDF wird hochgeladen...';
+
+        try {
+            const doc = await window.generateProtocolPDFDoc();
+            if (!doc) throw new Error('PDF-Generierung fehlgeschlagen.');
+
+            const machineId = currentProtocol.machine_id;
+            if (!machineId) throw new Error('Keine Maschine ausgewählt.');
+
+            const wsMachine = (window.machineList || []).find(m => m.id == machineId);
+            if (!wsMachine) throw new Error('Maschinendetails konnten nicht ermittelt werden.');
+
+            const wsFolderName = window.getMachineFolderName(wsMachine.id, wsMachine.manufacturer, wsMachine.name, wsMachine.serial || wsMachine.serial_number, wsMachine.year);
+
+            const dateObj = new Date(currentProtocol.created_at || Date.now());
+            const dateStr = dateObj.toLocaleDateString('de-DE');
+
+            const typeLabel = currentProtocolType === 'intake' ? 'Eingangsprotokoll' : 'Abnahmeprotokoll';
+            const fileName = `${typeLabel}_${dateStr.replace(/\./g, '-')}.pdf`;
+
+            const filePath = currentProtocol.pdf_path || `${wsFolderName}/protokolle/${fileName}`;
+
+            const pdfBlob = doc.output('blob');
+            const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+            console.log(`Uploading PDF ${fileName} to R2 path: ${filePath}`);
+            const uploadResult = await window.FileUploadService.uploadFile(pdfFile, {
+                bucket: 'dateien',
+                path: filePath,
+                compress: false,
+                provider: 'cloudflare-r2'
+            });
+
+            const nowISO = new Date().toISOString();
+            const tableName = currentProtocolType === 'intake' ? 'intake_protocols' : 'acceptance_protocols';
+
+            // Update in Supabase
+            const { error: updateError } = await window.supabaseClient
+                .from(tableName)
+                .update({
+                    pdf_url: uploadResult.url,
+                    pdf_path: uploadResult.path,
+                    pdf_created_at: nowISO
+                })
+                .eq('id', protocolId);
+
+            if (updateError) throw updateError;
+
+            // Update currentProtocol local values
+            currentProtocol.pdf_url = uploadResult.url;
+            currentProtocol.pdf_path = uploadResult.path;
+            currentProtocol.pdf_created_at = nowISO;
+
+            // Upsert in documents table
+            const { data: existingDoc } = await window.supabaseClient
+                .from('documents')
+                .select('id')
+                .eq('file_path', uploadResult.path)
+                .maybeSingle();
+
+            if (existingDoc) {
+                await window.supabaseClient
+                    .from('documents')
+                    .update({
+                        size: pdfFile.size,
+                        created_at: nowISO
+                    })
+                    .eq('id', existingDoc.id);
+            } else {
+                await window.supabaseClient
+                    .from('documents')
+                    .insert([{
+                        name: fileName.replace('.pdf', ''),
+                        category: 'Protokoll',
+                        machine_id: machineId,
+                        url: uploadResult.url,
+                        file_path: uploadResult.path,
+                        size: pdfFile.size,
+                        mime_type: 'application/pdf',
+                        folder_id: null
+                    }]);
+            }
+
+            // Refresh lists
+            if (typeof window.fetchProtocols === 'function') {
+                window.fetchProtocols();
+            }
+
+            // Update timestamp display
+            if (statusEl) {
+                const d = new Date(nowISO);
+                const dStr = d.toLocaleDateString('de-DE');
+                const tStr = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                statusEl.textContent = `Zuletzt gespeichert: ${dStr}, ${tStr} Uhr`;
+            }
+
+            alert('PDF erfolgreich generiert, in der Cloud gespeichert und dem Protokoll zugeordnet!');
+        } catch (err) {
+            console.error('Failed to save protocol PDF to R2:', err);
+            alert('Fehler beim Speichern der PDF: ' + err.message);
+            if (statusEl) statusEl.textContent = 'Speichern fehlgeschlagen';
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            }
         }
     };
 
@@ -2066,8 +2446,17 @@
                                 ${p.status === 'completed' ? `
                                 <button class="btn-reports-red" onclick="event.stopPropagation(); window.openProtocolPDF('${p.machine_id}', '${p.id}', '${p.type}')">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="stroke: white;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                                    PDF öffnen
                                 </button>` : ''}
+                                 <button class="btn-icon-circular delete delete-permission-required" title="Löschen"
+                                         style="flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(239, 68, 68, 0.85); border: 2.5px solid rgba(252, 165, 165, 0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 18px rgba(239, 68, 68, 0.6); backdrop-filter: blur(12px); padding: 0;"
+                                         onclick="event.stopPropagation(); window.deleteProtocol('${p.id}', '${p.type}')"
+                                         onmouseover="this.style.transform='scale(1.08)'; this.style.background='rgba(239, 68, 68, 0.95)'; this.style.boxShadow='0 4px 24px rgba(239, 68, 68, 0.7)'; this.style.borderColor='rgba(252, 165, 165, 1)'"
+                                         onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(239, 68, 68, 0.85)'; this.style.boxShadow='0 4px 18px rgba(239, 68, 68, 0.6)'; this.style.borderColor='rgba(252, 165, 165, 0.8)'">
+                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                         <polyline points="3 6 5 6 21 6"></polyline>
+                                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path>
+                                     </svg>
+                                 </button>
                             </div>
                         </div>
                     </div>
@@ -2124,10 +2513,18 @@
                                 </button>
                                 ${p.status === 'completed' ? `
                                 <button onclick="event.stopPropagation(); window.openProtocolPDF('${p.machine_id}', '${p.id}', '${p.type}')" title="PDF öffnen"
-                                    style="width:36px; height:36px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
-                                    onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
+                                    style="width:36px; height:36px; border-radius:50%; background: #ef4444; border: 1.5px solid #dc2626; color: #ffffff; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
+                                    onmouseover="this.style.background='#dc2626'; this.style.borderColor='#b91c1c';" onmouseout="this.style.background='#ef4444'; this.style.borderColor='#dc2626'">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
                                 </button>` : ''}
+                                <button class="delete-permission-required" onclick="event.stopPropagation(); window.deleteProtocol('${p.id}', '${p.type}')" title="Löschen"
+                                    style="width:36px; height:36px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
+                                    onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path>
+                                    </svg>
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -2143,18 +2540,128 @@
         window.fetchProtocols();
     };
 
+    window.deleteProtocol = async function(protocolId, protocolType) {
+        if (window.activeUser && window.activeUser.permissions && window.activeUser.permissions.can_delete === false) {
+            alert('Keine Berechtigung zum Löschen von Protokollen.');
+            return;
+        }
+        if (!window.supabaseClient) { alert('Datenbank nicht verbunden'); return; }
+        if (!confirm('Möchten Sie dieses Protokoll und alle zugehörigen Dateien (PDF, Bilder) wirklich unwiderruflich löschen?')) {
+            return;
+        }
+
+        try {
+            const tableName = protocolType === 'intake' ? 'intake_protocols' : 'acceptance_protocols';
+
+            // 1. Fetch protocol to get pdf_path
+            const { data: protocol, error: fetchErr } = await window.supabaseClient
+                .from(tableName)
+                .select('pdf_path')
+                .eq('id', protocolId)
+                .single();
+
+            if (fetchErr) throw fetchErr;
+
+            // 2. Fetch protocol photos to get file_name values for storage deletion
+            const { data: photos, error: photosErr } = await window.supabaseClient
+                .from('protocol_photos')
+                .select('file_name')
+                .eq('protocol_id', protocolId)
+                .eq('protocol_type', protocolType);
+
+            if (photosErr) console.error('Error fetching protocol photos for deletion:', photosErr);
+
+            // 3. Delete PDF from Cloudflare R2
+            if (protocol && protocol.pdf_path) {
+                console.log('Deleting protocol PDF from R2:', protocol.pdf_path);
+                try {
+                    await window.FileUploadService.deleteFile(protocol.pdf_path, {
+                        bucket: 'dateien',
+                        provider: 'cloudflare-r2'
+                    });
+                } catch (r2Err) {
+                    console.error('Failed to delete PDF from R2:', r2Err);
+                }
+
+                // Also delete from documents registry in DB
+                await window.supabaseClient
+                    .from('documents')
+                    .delete()
+                    .eq('file_path', protocol.pdf_path);
+            }
+
+            // 4. Delete Photos from Supabase Storage
+            if (photos && photos.length > 0) {
+                const fileNames = photos.map(p => p.file_name).filter(Boolean);
+                if (fileNames.length > 0) {
+                    console.log('Deleting protocol photos from storage:', fileNames);
+                    try {
+                        const { error: storageErr } = await window.supabaseClient
+                            .storage
+                            .from('machine-images')
+                            .remove(fileNames);
+                        if (storageErr) throw storageErr;
+                    } catch (storeErr) {
+                        console.error('Failed to delete photos from Supabase storage:', storeErr);
+                    }
+                }
+            }
+
+            // 5. Delete DB relationships
+            await window.supabaseClient
+                .from('protocol_checkpoints')
+                .delete()
+                .eq('protocol_id', protocolId)
+                .eq('protocol_type', protocolType);
+
+            await window.supabaseClient
+                .from('protocol_photos')
+                .delete()
+                .eq('protocol_id', protocolId)
+                .eq('protocol_type', protocolType);
+
+            // 6. Delete protocol record itself
+            const { error: deleteErr } = await window.supabaseClient
+                .from(tableName)
+                .delete()
+                .eq('id', protocolId);
+
+            if (deleteErr) throw deleteErr;
+
+            console.log('Protocol deleted successfully:', protocolId);
+            
+            // Refresh list
+            if (typeof window.fetchProtocols === 'function') {
+                await window.fetchProtocols();
+            }
+
+            // Close modal if open
+            if (typeof currentProtocol !== 'undefined' && currentProtocol && String(currentProtocol.id) === String(protocolId)) {
+                if (typeof window.closeProtocolModal === 'function') {
+                    window.closeProtocolModal(true);
+                }
+            }
+        } catch (err) {
+            console.error('Error deleting protocol:', err);
+            alert('Fehler beim Löschen des Protokolls: ' + (err.message || JSON.stringify(err)));
+        }
+    };
+
     console.log('Protocols module loaded successfully');
     window.openProtocolPDF = async function (machineId, protocolId, type) {
         try {
             currentProtocolType = type;
             await loadProtocol(protocolId, type);
             if (currentProtocol) {
-                await window.generateProtocolPDF(true); // true for preview in new tab
+                if (currentProtocol.pdf_url) {
+                    window.open(currentProtocol.pdf_url, '_blank');
+                } else {
+                    await window.generateProtocolPDF(true); // true for preview in new tab
+                }
             }
         } catch (err) {
             console.error('Error opening protocol PDF from history:', err);
             alert('Fehler beim Öffnen des PDFs');
         }
     };
-
 })();

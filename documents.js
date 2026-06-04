@@ -247,6 +247,35 @@ document.addEventListener('click', function() {
 });
 
 
+function checkCanDelete() {
+    let canDelete = true;
+    
+    // Fallback: If body has class disable-delete, delete is disabled
+    if (document.body.classList.contains('disable-delete')) {
+        canDelete = false;
+    }
+    
+    if (window.activeUser) {
+        // Admin (Mirco Loseke) always has delete permission
+        const nameLower = (window.activeUser.name || '').toLowerCase().trim();
+        if (nameLower.includes('mirco') && nameLower.includes('loseke')) {
+            return true;
+        }
+        
+        let perms = window.activeUser.permissions;
+        if (typeof perms === 'string') {
+            try {
+                perms = JSON.parse(perms);
+            } catch(e){}
+        }
+        if (perms && perms.can_delete === false) {
+            canDelete = false;
+        }
+    }
+    
+    return canDelete;
+}
+
 window.renderDocuments = function() {
     const grid = document.getElementById('documents-grid');
     const emptyState = document.getElementById('documents-empty-state');
@@ -261,22 +290,25 @@ window.renderDocuments = function() {
 
     emptyState.classList.add('hidden');
     
+    let canDelete = checkCanDelete();
+    
     let html = '';
 
     // Render Folders
     filteredFolders.forEach(folder => {
-        const iconSvg = window.getFolderIcon(folder.name);
-        const coverContent = folder.cover_url 
-            ? `<img src="${folder.cover_url}" alt="${folder.name}">` 
-            : iconSvg;
-            
+        const coverUrl = folder.cover_image_url || '';
+        const coverContent = coverUrl ? 
+            `<img src="${coverUrl}" alt="${folder.name}">` : 
+            `<div class="folder-icon-placeholder">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+             </div>`;
+             
         html += `
             <div class="doc-card folder-card" 
-                 onclick="window.navigateToFolder('${folder.id}', '${folder.name}')"
+                 onclick="window.openFolder('${folder.id}', '${folder.name}')"
                  draggable="true" 
                  ondragstart="window.handleDragStart(event, 'folder', '${folder.id}')"
-                 ondragover="window.handleDragOver(event)"
-                 ondragleave="window.handleDragLeave(event)"
+                 ondragover="event.preventDefault()"
                  ondrop="window.handleDrop(event, '${folder.id}')">
                 <div class="doc-info" style="margin-bottom: auto;">
                     <div class="doc-title" style="display: flex; align-items: center; gap: 8px;">
@@ -297,9 +329,11 @@ window.renderDocuments = function() {
                     <button class="btn-doc-action" onclick="event.stopPropagation(); window.openRenameModal('${folder.id}', 'folder', '${folder.name.replace(/'/g, "\\'")}')" title="Umbenennen">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                     </button>
-                    <button class="btn-doc-action" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.3); color: #ef4444;" onclick="event.stopPropagation(); window.deleteFolder('${folder.id}')">
+                    ${canDelete ? `
+                    <button class="btn-doc-action delete-permission-required" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.3); color: #ef4444;" onclick="event.stopPropagation(); window.deleteFolder('${folder.id}')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     </button>
+                    ` : ''}
                 </div>
             </div>
         `;
@@ -341,9 +375,11 @@ window.renderDocuments = function() {
                     <button class="btn-doc-action" onclick="event.stopPropagation(); window.downloadDoc('${doc.url}', '${escapedName}')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                     </button>
-                    <button class="btn-doc-action" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.3); color: #ef4444;" onclick="event.stopPropagation(); window.deleteDocument('${doc.id}', '${doc.file_path}')">
+                    ${canDelete ? `
+                    <button class="btn-doc-action delete-permission-required" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.3); color: #ef4444;" onclick="event.stopPropagation(); window.deleteDocument('${doc.id}', '${doc.file_path}')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     </button>
+                    ` : ''}
                 </div>
             </div>
         `;
@@ -579,6 +615,11 @@ window.downloadDoc = function(url, name) {
 };
 
 window.deleteDocument = async function(id, filePath) {
+    let canDelete = checkCanDelete();
+    if (!canDelete) {
+        alert('Keine Berechtigung zum Löschen von Dokumenten.');
+        return;
+    }
     if (!confirm('Möchtest du dieses Dokument wirklich löschen?')) return;
 
     try {
@@ -605,6 +646,11 @@ window.deleteDocument = async function(id, filePath) {
 };
 
 window.deleteFolder = async function(id) {
+    let canDelete = checkCanDelete();
+    if (!canDelete) {
+        alert('Keine Berechtigung zum Löschen von Ordnern.');
+        return;
+    }
     if (!confirm('Möchtest du diesen Ordner und alle darin enthaltenen Dokumente wirklich löschen?')) return;
 
     try {

@@ -1,4 +1,4 @@
-﻿// ==========================================
+// ==========================================
 // TASK TEMPLATES & SNIPPETS MODULE
 // ==========================================
 
@@ -876,12 +876,25 @@
             const cleanTasks = Array.isArray(existingTasks) ? existingTasks.filter(Boolean) : [];
 
             if (cleanTasks.length > 0) {
+                // Initialize modalGroups with the default template groups
                 modalGroups = supergroupTemplates.map(t => ({
                     name: t.name,
                     subtasks: cleanTasks.filter(st => st && st.supergroup === t.name)
                 }));
                 
-                const otherSubtasks = cleanTasks.filter(st => st && !supergroupTemplates.some(t => t.name === st.supergroup));
+                // Extract unique custom supergroups that are not part of the default templates
+                const customSgs = [...new Set(cleanTasks.map(st => st && st.supergroup).filter(Boolean))];
+                customSgs.forEach(sgName => {
+                    if (!supergroupTemplates.some(t => t.name === sgName)) {
+                        modalGroups.push({
+                            name: sgName,
+                            subtasks: cleanTasks.filter(st => st && st.supergroup === sgName)
+                        });
+                    }
+                });
+
+                // Fallback for subtasks that have no supergroup assigned
+                const otherSubtasks = cleanTasks.filter(st => st && !st.supergroup);
                 if (otherSubtasks.length > 0) {
                     modalGroups.push({ name: 'Sonstiges', subtasks: otherSubtasks });
                 }
@@ -968,9 +981,9 @@
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
                     </div>
-                    <div id="modal-subtasks-${gIdx}" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+                    <div id="modal-subtasks-${gIdx}" ondragover="event.preventDefault();" ondrop="window.handleModalSubtaskDrop(event, ${gIdx})" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; min-height: 30px;">
                         ${subtasks.map((st, sIdx) => `
-                            <div style="display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);">
+                            <div draggable="true" ondragstart="window.handleModalSubtaskDragStart(event, ${gIdx}, ${sIdx})" style="display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); cursor: grab;">
                                 <div class="task-quick-complete ${st.status === 'completed' ? 'completed' : ''}" onclick="window.toggleModalSubtaskStatus(${gIdx}, ${sIdx})">
                                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                 </div>
@@ -1037,6 +1050,26 @@
     window.removeModalSubtask = function (gIdx, sIdx) {
         modalGroups[gIdx].subtasks.splice(sIdx, 1);
         renderModalGroups();
+    };
+
+    window.handleModalSubtaskDragStart = function(event, gIdx, sIdx) {
+        event.dataTransfer.setData('sourceGroupIdx', gIdx);
+        event.dataTransfer.setData('sourceSubtaskIdx', sIdx);
+    };
+
+    window.handleModalSubtaskDrop = function(event, targetGIdx) {
+        event.preventDefault();
+        const sourceGIdx = parseInt(event.dataTransfer.getData('sourceGroupIdx'), 10);
+        const sourceSIdx = parseInt(event.dataTransfer.getData('sourceSubtaskIdx'), 10);
+        
+        if (isNaN(sourceGIdx) || isNaN(sourceSIdx)) return;
+        
+        // Move from source group to target group
+        const [subtaskToMove] = modalGroups[sourceGIdx].subtasks.splice(sourceSIdx, 1);
+        if (subtaskToMove) {
+            modalGroups[targetGIdx].subtasks.push(subtaskToMove);
+            renderModalGroups();
+        }
     };
 
     window.addSubtaskToGroup = function (gIdx) {

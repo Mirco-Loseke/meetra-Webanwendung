@@ -4950,9 +4950,9 @@ tr.completed-task td {
 .btn-reports {
     height: 44px !important;
     flex: 1 !important;
-    background: rgba(59, 130, 246, 0.85) !important;
+    background: rgba(16, 185, 129, 0.85) !important; /* Green Glass */
     color: #ffffff !important;
-    border: 2px solid rgba(147, 197, 253, 0.6) !important;
+    border: 2px solid rgba(110, 231, 183, 0.6) !important;
     border-radius: 20px !important;
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
     display: flex;
@@ -4960,7 +4960,7 @@ tr.completed-task td {
     justify-content: center;
     gap: 8px;
     cursor: pointer;
-    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.5) !important;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.5) !important;
     backdrop-filter: blur(12px) !important;
     padding: 0 16px !important;
     font-weight: 700 !important;
@@ -4970,8 +4970,8 @@ tr.completed-task td {
 
 .btn-reports:hover {
     transform: scale(1.1);
-    background: rgba(59, 130, 246, 0.95) !important;
-    box-shadow: 0 4px 18px rgba(59, 130, 246, 0.5) !important;
+    background: rgba(16, 185, 129, 0.95) !important;
+    box-shadow: 0 4px 18px rgba(16, 185, 129, 0.5) !important;
 }
 
 /* Berichte Button - Red Glass Premium (for PDF) */
@@ -5030,6 +5030,32 @@ tr.completed-task td {
     background: rgba(34, 197, 94, 0.95) !important;
     border: 3px solid #4ade80 !important;
     box-shadow: 0 6px 24px rgba(34, 197, 94, 0.7), inset 0 0 15px rgba(134, 239, 172, 0.6) !important;
+}
+
+/* Edit Button - Blue Glass Premium (Circular) */
+.btn-edit-card {
+    width: 40px !important;
+    height: 40px !important;
+    min-height: auto !important;
+    flex: none !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(59, 130, 246, 0.85) !important; /* Blue Glass */
+    border: 2px solid rgba(147, 197, 253, 0.6) !important;
+    color: #ffffff !important;
+    border-radius: 50% !important;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.5) !important;
+    backdrop-filter: blur(12px) !important;
+    padding: 0 !important;
+}
+
+.btn-edit-card:hover {
+    transform: scale(1.12);
+    background: rgba(59, 130, 246, 0.95) !important;
+    box-shadow: 0 4px 18px rgba(59, 130, 246, 0.5) !important;
 }
 
 /* Delete Button - Red Glass Premium */
@@ -5601,7 +5627,7 @@ MACHINE HISTORY TIMELINE
     }
 
     /* Aggressive Icon & Button Scaling */
-    .btn-add-bg, .btn-glass-add, .btn-primary, .btn-secondary, .btn-reports, .btn-reports-red {
+    .btn-add-bg, .btn-glass-add, .btn-primary, .btn-secondary, .btn-reports, .btn-reports-red, .btn-history {
         padding: 6px 12px !important;
         font-size: 0.75rem !important;
         border-radius: 12px !important;
@@ -5609,7 +5635,7 @@ MACHINE HISTORY TIMELINE
         min-height: 32px !important;
     }
 
-    .btn-add-bg svg, .btn-glass-add svg, .btn-reports svg, .btn-reports-red svg {
+    .btn-add-bg svg, .btn-glass-add svg, .btn-reports svg, .btn-reports-red svg, .btn-history svg {
         width: 14px !important;
         height: 14px !important;
     }
@@ -8543,3 +8569,8 @@ body.focus-mode-active .view-header-row-top {
 
 
 
+
+/* Delete permission helper */
+body.disable-delete .delete-permission-required {
+    display: none !important;
+}

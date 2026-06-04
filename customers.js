@@ -748,6 +748,7 @@
     };
 
     window.selectLocationForMachine = function (cust) {
+        document.getElementById('machine-location-company').value = cust.name || '';
         document.getElementById('machine-location-street').value = cust.street || '';
         document.getElementById('machine-location-zip').value = cust.zip_code || '';
         document.getElementById('machine-location-city').value = cust.city || '';
@@ -774,6 +775,7 @@
         document.getElementById('machine-operator-country').value = cust.country || 'Deutschland';
 
         // Auto-fill Standort too by default
+        document.getElementById('machine-location-company').value = cust.name || '';
         document.getElementById('machine-location-street').value = cust.street || '';
         document.getElementById('machine-location-zip').value = cust.zip_code || '';
         document.getElementById('machine-location-city').value = cust.city || '';
@@ -810,6 +812,7 @@
         document.getElementById('machine-operator-city').value = '';
         document.getElementById('machine-operator-country').value = 'Deutschland';
 
+        document.getElementById('machine-location-company').value = '';
         document.getElementById('machine-location-street').value = '';
         document.getElementById('machine-location-zip').value = '';
         document.getElementById('machine-location-city').value = '';
@@ -831,6 +834,7 @@
     };
 
     window.copyOperatorAddressToLocation = function () {
+        document.getElementById('machine-location-company').value = document.getElementById('machine-owner').value;
         document.getElementById('machine-location-street').value = document.getElementById('machine-operator-street').value;
         document.getElementById('machine-location-zip').value = document.getElementById('machine-operator-zip').value;
         document.getElementById('machine-location-city').value = document.getElementById('machine-operator-city').value;

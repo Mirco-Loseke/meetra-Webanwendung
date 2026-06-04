@@ -389,6 +389,35 @@ window.formatSize = function(bytes) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
 };
 
+function checkCanDelete() {
+    let canDelete = true;
+    
+    // Fallback: If body has class disable-delete, delete is disabled
+    if (document.body.classList.contains('disable-delete')) {
+        canDelete = false;
+    }
+    
+    if (window.activeUser) {
+        // Admin (Mirco Loseke) always has delete permission
+        const nameLower = (window.activeUser.name || '').toLowerCase().trim();
+        if (nameLower.includes('mirco') && nameLower.includes('loseke')) {
+            return true;
+        }
+        
+        let perms = window.activeUser.permissions;
+        if (typeof perms === 'string') {
+            try {
+                perms = JSON.parse(perms);
+            } catch(e){}
+        }
+        if (perms && perms.can_delete === false) {
+            canDelete = false;
+        }
+    }
+    
+    return canDelete;
+}
+
 window.renderDocuments = function() {
     const grid = document.getElementById('documents-grid');
     const emptyState = document.getElementById('documents-empty-state');
@@ -403,6 +432,7 @@ window.renderDocuments = function() {
 
     emptyState.classList.add('hidden');
     
+    let canDelete = checkCanDelete();
     let html = '';
 
     // Render Folders
@@ -442,9 +472,11 @@ window.renderDocuments = function() {
                     <button class="btn-doc-action" onclick="event.stopPropagation(); window.openRenameModal('${folder.id}', 'folder', '${folder.name.replace(/'/g, "\\'")}')" title="Umbenennen">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                     </button>
-                    <button class="btn-doc-action btn-doc-delete" onclick="event.stopPropagation(); window.deleteFolder('${folder.id}')">
+                    ${canDelete ? `
+                    <button class="btn-doc-action btn-doc-delete delete-permission-required" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.3); color: #ef4444;" onclick="event.stopPropagation(); window.deleteFolder('${folder.id}')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     </button>
+                    ` : ''}
                 </div>
             </div>
         `;
@@ -491,9 +523,11 @@ window.renderDocuments = function() {
                     <button class="btn-doc-action" onclick="event.stopPropagation(); window.downloadDoc('${doc.url}', '${escapedName}')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                     </button>
-                    <button class="btn-doc-action btn-doc-delete" onclick="event.stopPropagation(); window.deleteDocument('${doc.id}', '${doc.file_path}')">
+                    ${canDelete ? `
+                    <button class="btn-doc-action btn-doc-delete delete-permission-required" style="background: rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.3); color: #ef4444;" onclick="event.stopPropagation(); window.deleteDocument('${doc.id}', '${doc.file_path}')">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     </button>
+                    ` : ''}
                 </div>
             </div>
         `;
@@ -698,7 +732,7 @@ window.saveDocument = async function(event) {
     }
 };
 
-window.previewDocument = function(url, title, mimeType) {
+window.previewDocument = async function(url, title, mimeType) {
     const modal = document.getElementById('document-preview-modal');
     const container = document.getElementById('doc-preview-container');
     const titleEl = document.getElementById('doc-preview-title');
@@ -707,14 +741,11 @@ window.previewDocument = function(url, title, mimeType) {
     
     titleEl.textContent = title;
     
-    const isImage = mimeType.startsWith('image/') || url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-    
-    if (isImage) {
-        container.innerHTML = `<img src="${url}" style="max-width: 100%; max-height: 100%; display: block; margin: auto; object-fit: contain;">`;
-    } else {
-        container.innerHTML = `<iframe src="${url}" style="width: 100%; height: 100%; border: none; background: white;"></iframe>`;
+    const openNewTabBtn = document.getElementById('btn-open-preview-newtab');
+    if (openNewTabBtn) {
+        openNewTabBtn.href = url;
     }
-
+    
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
     
@@ -724,6 +755,51 @@ window.previewDocument = function(url, title, mimeType) {
     
     window.currentPreviewUrl = url;
     window.currentPreviewName = title;
+
+    const isImage = mimeType.startsWith('image/') || url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+    const isPdf = mimeType === 'application/pdf' || url.toLowerCase().endsWith('.pdf');
+    
+    if (isImage) {
+        container.innerHTML = `<img src="${url}" style="max-width: 100%; max-height: 100%; display: block; margin: auto; object-fit: contain;">`;
+    } else if (isPdf) {
+        container.innerHTML = '<div style="padding: 2rem; text-align: center; color: rgba(255,255,255,0.4);">Dokument wird gerendert...</div>';
+        try {
+            await window.loadPDFReader();
+            const loadingTask = window.pdfjsLib.getDocument(url);
+            const pdf = await loadingTask.promise;
+            
+            container.innerHTML = ''; // Clear loader
+            
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                const page = await pdf.getPage(pageNum);
+                
+                const pageWrapper = document.createElement('div');
+                pageWrapper.style.cssText = 'margin: 20px auto; padding: 15px; background: white; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 8px; max-width: 900px; width: 95%; display: block; box-sizing: border-box;';
+                
+                const canvas = document.createElement('canvas');
+                canvas.style.cssText = 'width: 100%; height: auto; display: block;';
+                pageWrapper.appendChild(canvas);
+                container.appendChild(pageWrapper);
+                
+                const context = canvas.getContext('2d');
+                const viewport = page.getViewport({ scale: 1.5 }); // Crisp high-res rendering
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                
+                const renderContext = {
+                    canvasContext: context,
+                    viewport: viewport
+                };
+                
+                await page.render(renderContext).promise;
+            }
+        } catch (err) {
+            console.error('PDF.js rendering failed, falling back to iframe:', err);
+            container.innerHTML = `<iframe src="${url}" style="width: 100%; height: 100%; border: none; background: white;"></iframe>`;
+        }
+    } else {
+        container.innerHTML = `<iframe src="${url}" style="width: 100%; height: 100%; border: none; background: white;"></iframe>`;
+    }
 };
 
 window.closeDocumentPreviewModal = function() {
@@ -755,6 +831,10 @@ window.downloadDoc = function(url, name) {
 };
 
 window.deleteDocument = async function(id, filePath) {
+    if (!checkCanDelete()) {
+        alert('Keine Berechtigung zum Löschen von Dokumenten.');
+        return;
+    }
     if (!confirm('Möchtest du dieses Dokument wirklich löschen?')) return;
 
     try {
@@ -781,20 +861,104 @@ window.deleteDocument = async function(id, filePath) {
     }
 };
 
+async function getFolderDocumentsRecursive(folderId) {
+    let docsToDelete = [];
+
+    // 1. Fetch documents in the current folder
+    const { data: docs, error: docError } = await window.supabaseClient
+        .from('documents')
+        .select('id, file_path')
+        .eq('folder_id', folderId);
+
+    if (!docError && docs) {
+        docsToDelete.push(...docs);
+    }
+
+    // 2. Fetch nested subfolders
+    const { data: subfolders, error: subError } = await window.supabaseClient
+        .from('document_folders')
+        .select('id')
+        .eq('parent_id', folderId);
+
+    if (!subError && subfolders) {
+        for (const sub of subfolders) {
+            const nestedDocs = await getFolderDocumentsRecursive(sub.id);
+            docsToDelete.push(...nestedDocs);
+        }
+    }
+
+    return docsToDelete;
+}
+
 window.deleteFolder = async function(id) {
+    if (!checkCanDelete()) {
+        alert('Keine Berechtigung zum Löschen von Ordnern.');
+        return;
+    }
     if (!confirm('Möchtest du diesen Ordner und alle darin enthaltenen Dokumente wirklich löschen?')) return;
 
     try {
+        // 1. Fetch all documents in this folder and its subfolders recursively
+        const docsToDelete = await getFolderDocumentsRecursive(id);
+
+        // 2. Delete each document's file from Cloudflare R2
+        console.log(`Deleting ${docsToDelete.length} documents from Cloudflare R2 for folder ID:`, id);
+        for (const doc of docsToDelete) {
+            if (doc.file_path) {
+                try {
+                    await window.FileUploadService.deleteFile(doc.file_path, {
+                        bucket: 'accounting-documents',
+                        provider: 'cloudflare-r2'
+                    });
+                } catch (r2Err) {
+                    console.error('Failed to delete document from Cloudflare R2:', doc.file_path, r2Err);
+                }
+            }
+        }
+
+        // 3. Delete document rows from database first to prevent foreign key errors
+        if (docsToDelete.length > 0) {
+            const docIds = docsToDelete.map(d => d.id);
+            const { error: docDbError } = await window.supabaseClient
+                .from('documents')
+                .delete()
+                .in('id', docIds);
+            if (docDbError) {
+                console.error('Failed to delete documents from DB:', docDbError);
+                throw docDbError;
+            }
+        }
+
+        // 4. Fetch all subfolder IDs recursively
+        async function getSubfolderIdsRecursive(folderId) {
+            let ids = [folderId];
+            const { data: subs } = await window.supabaseClient
+                .from('document_folders')
+                .select('id')
+                .eq('parent_id', folderId);
+            if (subs) {
+                for (const sub of subs) {
+                    const childIds = await getSubfolderIdsRecursive(sub.id);
+                    ids.push(...childIds);
+                }
+            }
+            return ids;
+        }
+
+        const folderIdsToDelete = await getSubfolderIdsRecursive(id);
+        console.log('Deleting folder rows from DB:', folderIdsToDelete);
+
+        // 5. Delete folders from DB (reverse order of nesting or in bulk)
         const { error } = await window.supabaseClient
             .from('document_folders')
             .delete()
-            .eq('id', id);
+            .in('id', folderIdsToDelete);
 
         if (error) throw error;
         window.fetchDocuments();
     } catch (err) {
         console.error('Error deleting folder:', err);
-        alert('Fehler beim Löschen des Ordners.');
+        alert('Fehler beim Löschen des Ordners: ' + err.message);
     }
 };
 
