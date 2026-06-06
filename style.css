@@ -5711,9 +5711,17 @@ MACHINE HISTORY TIMELINE
         width: 100% !important;
         min-width: 0 !important;
         max-width: 100% !important;
-        margin: 0 !important;
+        margin: 0 0 1.5rem 0 !important;
         min-height: auto !important;
-        padding: 0.75rem !important;
+        padding: 0 !important;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .task-card {
+        padding: 12px !important;
+        border-radius: 12px !important;
     }
 
     .column-title {
@@ -6077,12 +6085,16 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         width: 100% !important;
     }
 
+    #main-content {
+        padding: 0.15rem 10px 2rem 10px !important;
+    }
+
     #mobile-sidebar-toggle {
         display: flex !important; /* Show hamburger */
     }
 
     #topbar {
-        padding: 0 1rem;
+        padding: 0 10px !important;
         height: 70px;
     }
 
@@ -6134,11 +6146,11 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     }
 
     .view-header-layout {
-        padding: 1rem !important;
+        padding: 0 0 0.75rem 0 !important;
         background: transparent !important;
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
-        margin-bottom: 1rem !important;
+        margin-bottom: 0.75rem !important;
         width: 100% !important;
         box-sizing: border-box !important;
     }
@@ -6274,8 +6286,8 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         gap: 0.75rem;
         position: relative;
         margin-bottom: 0.75rem !important;
-        margin-left: 0.5rem !important;
-        margin-right: 0.5rem !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
     }
 
     /* Edge-to-edge for Accounting on Mobile - RESTORED ROUNDING */
@@ -6514,49 +6526,85 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         font-size: 1.05rem !important;
     }
 
-    /* Checkpoint Rows - Prevent Horizontal Scrolling */
+    /* Checkpoint Rows - Align checkbox on left, text behind it, comment input below */
     .protocol-checkpoint-row {
-        flex-direction: column !important;
-        align-items: stretch !important;
-        gap: 12px !important;
-        padding: 1rem !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: flex-start !important; /* Align items to the left */
+        align-items: center !important;
+        gap: 8px 10px !important;
+        padding: 0.75rem 0.5rem !important;
     }
     
     .protocol-item-label {
         font-size: 0.85rem !important;
         line-height: 1.3 !important;
-        margin-bottom: 4px !important;
+        margin-bottom: 0 !important;
+        flex: 1 !important;
+    }
+
+    /* Prevent wrapper from squishing and match the tri-state box size */
+    .protocol-single-checkbox-wrapper {
+        width: 32px !important;
+        height: 32px !important;
+        flex-shrink: 0 !important;
+    }
+
+    /* Centering the tri-state box symbols on mobile */
+    .protocol-tri-state-box {
+        width: 32px !important;
+        height: 32px !important;
+        font-size: 1.1rem !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+        font-weight: 700 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+        flex-shrink: 0 !important;
+    }
+    .protocol-tri-state-box svg {
+        display: block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        flex-shrink: 0 !important;
     }
     
     /* Wrap the Ja/Nein checkboxes and any delete buttons */
     .protocol-checkpoint-row > div {
         display: flex !important;
-        flex-wrap: wrap !important;
-        gap: 10px !important;
-        width: 100% !important;
+        flex-wrap: nowrap !important;
+        gap: 8px !important;
+        width: auto !important;
     }
 
     /* Target the container of Ja/Nein labels specifically */
     .protocol-checkpoint-row > div > div {
-        flex: 1 !important;
+        flex: 0 0 auto !important;
         display: flex !important;
-        gap: 10px !important;
-        justify-content: space-between !important;
+        gap: 8px !important;
+        justify-content: flex-end !important;
+        align-items: center !important;
     }
 
-    /* Scale down checkboxes */
+    /* Scale down checkboxes and don't let them stretch */
     .protocol-checkbox-label {
-        flex: 1 !important;
+        flex: 0 0 auto !important;
         justify-content: center !important;
-        padding: 8px 10px !important;
+        padding: 6px 10px !important;
         font-size: 0.8rem !important; /* Smaller text */
     }
 
     /* Force integrated inputs to jump to a new line and take full width */
     .protocol-integrated-input {
+        flex: 1 0 100% !important;
         width: 100% !important;
         font-size: 0.8rem !important;
-        margin-top: 4px !important;
+        margin-top: 8px !important;
+        box-sizing: border-box !important;
     }
 
     /* Action Buttons (Save, Cancel, Complete) */
@@ -6841,8 +6889,8 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
             padding: 1.25rem !important;
             gap: 0.5rem;
             margin-bottom: 0.75rem !important;
-            margin-left: 0.5rem !important;
-            margin-right: 0.5rem !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
         }
 
         .task-table td, #procurement-table td, .data-table td {
@@ -7813,7 +7861,7 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     justify-content: center;
     color: white;
     cursor: pointer;
-    z-index: 10001;
+    z-index: 999999 !important;
     box-shadow: 0 10px 30px rgba(255, 255, 255, 0.2);
     transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     border: 2px solid rgba(255, 255, 255, 0.4);
@@ -8505,17 +8553,28 @@ body.focus-mode-active .view-header-row-top {
     width: 32px;
     height: 32px;
     border-radius: 8px;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    text-align: center;
     cursor: pointer;
     font-size: 1.1rem;
-    font-weight: 900;
+    font-weight: 700;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     user-select: none;
     border: 2px solid rgba(255, 255, 255, 0.15);
     background: rgba(255, 255, 255, 0.03);
     color: transparent;
+    flex-shrink: 0;
+}
+.protocol-tri-state-box svg {
+    display: block;
+    margin: 0;
+    padding: 0;
     flex-shrink: 0;
 }
 
@@ -8633,44 +8692,43 @@ body.focus-mode-active .view-header-row-top {
         align-items: center;
     }
 
-    /* Make large forms display full-screen on mobile for ideal data entry */
-    #servicebericht-modal .modal-content, 
-    #task-modal .modal-content, 
-    #add-machine-modal .modal-content, 
-    #machine-details-modal .modal-content, 
-    #document-overview-modal .modal-content, 
-    #accounting-modal .modal-content {
+    /* Make all modals/forms display full-screen on mobile for ideal data entry */
+    .modal-backdrop, 
+    .modal-new {
+        padding: 0 !important;
+        align-items: stretch !important;
+        justify-content: stretch !important;
+    }
+    
+    .modal-backdrop .modal-content, 
+    .modal-new .modal-content {
         width: 100% !important;
+        max-width: 100% !important;
         height: 100% !important;
-        max-height: 100vh !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
         border-radius: 0 !important;
         margin: 0 !important;
         padding: 1.5rem 1rem !important;
-        display: flex;
-        flex-direction: column;
+        display: flex !important;
+        flex-direction: column !important;
+        border: none !important;
+        box-shadow: none !important;
+        box-sizing: border-box !important;
     }
     
-    #servicebericht-modal .modal-scroll-area, 
-    #task-modal .modal-scroll-area, 
-    #add-machine-modal .modal-scroll-area, 
-    #machine-details-modal .modal-scroll-area, 
-    #document-overview-modal .modal-scroll-area, 
-    #accounting-modal .modal-scroll-area {
+    .modal-backdrop .modal-scroll-area, 
+    .modal-new .modal-scroll-area, 
+    .modal-backdrop .modal-body, 
+    .modal-new .modal-body, 
+    .modal-backdrop .modal-form-area, 
+    .modal-new .modal-form-area,
+    .modal-backdrop .custom-scrollbar,
+    .modal-new .custom-scrollbar {
         max-height: none !important;
         flex: 1 !important;
         overflow-y: auto !important;
         padding-right: 0 !important;
-    }
-    
-    #servicebericht-modal.modal-backdrop, 
-    #task-modal.modal-backdrop, 
-    #add-machine-modal.modal-backdrop, 
-    #machine-details-modal.modal-backdrop, 
-    #document-overview-modal.modal-backdrop, 
-    #accounting-modal.modal-backdrop {
-        padding: 0 !important;
-        align-items: stretch !important;
-        justify-content: stretch !important;
     }
 }
 
@@ -8717,6 +8775,221 @@ body.focus-mode-active .view-header-row-top {
         padding: 0.25rem 0.5rem !important;
         border: none !important;
     }
+}
+
+/* Mobile Spacing & Fullscreen Overrides for all Dialogs and Modals (including Protocols) */
+@media (max-width: 768px) {
+    /* Apply fullscreen to protocol modals */
+    .protocol-modal-overlay {
+        padding: 0 !important;
+        align-items: stretch !important;
+        justify-content: stretch !important;
+    }
+    
+    .protocol-modal {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100% !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .protocol-modal-header {
+        padding: 1rem 0.75rem !important;
+    }
+
+    .protocol-modal-content {
+        padding: 1rem 0.5rem !important;
+    }
+
+    .protocol-modal-actions {
+        padding: 1rem 0.75rem !important;
+    }
+
+    /* Reduce left and right spacing to the absolute minimum on general modals */
+    .modal-backdrop .modal-content, 
+    .modal-new .modal-content {
+        padding: 1.25rem 0.5rem !important; /* Spacing left/right reduced to 0.5rem */
+    }
+
+    /* Focus mode responsive spacing on mobile */
+    body.focus-mode-active .view {
+        padding: 0.5rem 10px !important;
+    }
+
+    /* Subtasks wrapping: shift action badges to the second line under the title */
+    .subtask-item {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 6px !important;
+        width: 100% !important;
+    }
+    .subtask-item > div:first-child {
+        width: 100% !important;
+    }
+    .subtask-item > .subtask-action-btn {
+        margin-left: 28px !important;
+    }
+
+    /* Compact Tasks Page Header for Mobile */
+    #tasks .view-header-layout {
+        gap: 0.4rem !important;
+        margin-bottom: 1rem !important;
+    }
+    #tasks .view-header-row-bottom {
+        gap: 0.4rem !important;
+    }
+    #tasks .view-header-left,
+    #tasks .view-header-right {
+        margin-top: 0.25rem !important;
+    }
+
+    /* Textbausteine mobile optimizations */
+    .settings-tabs-container {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+    }
+    .settings-tabs {
+        width: 100% !important;
+        display: flex !important;
+        gap: 6px !important;
+        overflow-x: visible !important;
+        justify-content: space-between !important;
+        border-bottom: none !important;
+    }
+    .settings-tab {
+        flex: 1 !important;
+        text-align: center !important;
+        padding: 8px 4px !important;
+        font-size: clamp(0.7rem, 2.8vw, 0.85rem) !important;
+        white-space: nowrap !important;
+    }
+    .template-item {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 10px !important;
+        padding: 12px !important;
+    }
+    .template-item > div:last-child {
+        width: 100% !important;
+        justify-content: flex-start !important;
+        flex-wrap: wrap !important;
+    }
+    #supergroups-tab-content div[style*="display: flex"][style*="gap: 10px"],
+    #subtasks-tab-content div[style*="display: flex"][style*="gap: 10px"] {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        background: rgba(255,255,255,0.02) !important;
+        padding: 12px !important;
+    }
+    #supergroups-tab-content div[style*="display: flex"][style*="gap: 10px"] input,
+    #subtasks-tab-content div[style*="display: flex"][style*="gap: 10px"] input,
+    #supergroups-tab-content div[style*="display: flex"][style*="gap: 10px"] button,
+    #subtasks-tab-content div[style*="display: flex"][style*="gap: 10px"] button {
+        width: 100% !important;
+        height: 44px !important;
+    }
+    #quicktemplate-list {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+    .template-card-premium {
+        padding: 16px !important;
+    }
+
+    /* Header container & back button optimizations for mobile settings subpages */
+    .users-header-container {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
+        margin-bottom: 1.5rem !important;
+        padding: 0 !important;
+    }
+    .users-header-actions {
+        width: 100% !important;
+    }
+    .users-header-actions .btn-back-custom {
+        width: 100% !important;
+        justify-content: center !important;
+        display: flex !important;
+    }
+
+    /* Sidebar mobile logo display fix */
+    #sidebar.mobile-open .sidebar-header .logo {
+        display: block !important;
+        opacity: 1 !important;
+        transform: scale(1) !important;
+        pointer-events: auto !important;
+    }
+    #sidebar.mobile-open .sidebar-header .logo-icon {
+        display: none !important;
+        opacity: 0 !important;
+    }
+
+    /* Categories page mobile layout */
+    #categories .user-item-content {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+        padding: 12px 10px !important;
+    }
+    #categories .user-details {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 4px !important;
+        padding-left: 0 !important;
+        width: 100% !important;
+    }
+    #categories .user-details span {
+        padding-right: 0 !important;
+    }
+    #categories .user-actions {
+        width: 100% !important;
+        justify-content: flex-end !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+        padding-top: 8px !important;
+        margin-top: 4px !important;
+    }
+
+    /* Task list/board: titles wrap on mobile instead of truncating */
+    .task-list-row-premium td span,
+    .task-list-row-premium td > div > span,
+    .task-table td[data-label="Aufgabe"] span {
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+    }
+
+    /* Kanban card titles also wrap */
+    .task-card-title {
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+    }
+}
+
+/* Unified Subtask Action Button hover effect */
+.subtask-action-btn {
+    box-sizing: border-box;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.subtask-action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+    filter: brightness(1.2) !important;
+}
+.subtask-action-btn:active {
+    transform: translateY(1px);
+    filter: brightness(0.9) !important;
 }
 
 

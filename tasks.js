@@ -290,8 +290,8 @@
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                             </div>
                         </div>
-                        <div style="display:flex; flex-direction:column; gap:4px;">
-                            <span style="font-size: 1.1rem; font-weight: 700;">${task.title}</span>
+                        <div style="display:flex; flex-direction:column; gap:4px; min-width:0; flex:1;">
+                            <span style="font-size: 1.1rem; font-weight: 700; white-space: normal; word-break: break-word; overflow-wrap: break-word; display:block;">${task.title}</span>
                             ${task.subtasks && task.subtasks.length > 0 ? `
                             <div class="task-list-subtasks" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
                                 ${task.subtasks.map((sub, index) => `
@@ -334,23 +334,21 @@
                                                  textLabel = sub.action_type === 'intake' ? 'Eingang' : 'Abnahme';
                                                  btnTitle = sub.action_type === 'intake' ? 'Eingangsprotokoll öffnen' : 'Abnahmeprotokoll öffnen';
                                                  const isIntake = sub.action_type === 'intake';
-                                                 badgeStyle = isIntake ? 'background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); color: #f59e0b;';
-                                                 btnStyle = isIntake ? 'background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;';
+                                                 badgeStyle = isIntake ? 'background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;';
                                                  buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>';
                                                  clickHandler = `window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')`;
                                              }
                                              return `
-                                             <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
-                                                 <span style="${badgeStyle} border-radius: 4px; padding: 2px 6px; font-size: 0.65rem; font-weight: 800; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${textLabel}">
-                                                     ${textLabel}
-                                                 </span>
-                                                 <button onclick="event.stopPropagation(); ${clickHandler}" 
-                                                     title="${btnTitle}"
-                                                     style="${btnStyle} border-radius: 6px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; flex-shrink: 0; transition: all 0.2s;">
-                                                     ${buttonIcon}
-                                                 </button>
-                                             </div>
-                                             `;
+                                        <button onclick="event.stopPropagation(); ${clickHandler}" 
+                                            title="${btnTitle}"
+                                            class="subtask-action-btn"
+                                            style="${badgeStyle} border-radius: 8px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: all 0.2s; font-size: 0.7rem; font-weight: 700; height: 28px; line-height: 1; text-decoration: none; max-width: 100%; box-sizing: border-box; flex-shrink: 0;">
+                                            ${buttonIcon}
+                                            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;">
+                                                ${textLabel}
+                                            </span>
+                                        </button>
+                                        `;
                                         })() : ''}
                                     </div>
                                 `).join('')}
@@ -433,8 +431,8 @@
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                 </div>
                             </div>
-                            <div style="display:flex; flex-direction:column; gap:4px;">
-                                <span style="font-size: 1.1rem; font-weight: 700;">${task.title}</span>
+                            <div style="display:flex; flex-direction:column; gap:4px; min-width:0; flex:1;">
+                                <span style="font-size: 1.1rem; font-weight: 700; white-space: normal; word-break: break-word; overflow-wrap: break-word; display:block;">${task.title}</span>
                                 ${task.completed_at ? `
                                 <span style="font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-top: 2px;">
                                     Erledigt am ${new Date(task.completed_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr
@@ -478,46 +476,41 @@
                                                       let textLabel = '';
                                                       let btnTitle = '';
                                                       let badgeStyle = '';
-                                                      let btnStyle = '';
                                                       let buttonIcon = '';
                                                       let clickHandler = '';
                                                       if (isDoc) {
                                                           const parts = sub.action_type.substring(9).split('|||');
                                                           textLabel = parts[1] || 'Dokument';
                                                           btnTitle = 'Dokument öffnen';
-                                                          badgeStyle = 'background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); color: #10b981;';
-                                                          btnStyle = 'background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981;';
+                                                          badgeStyle = 'background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981;';
                                                           buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>';
                                                           clickHandler = `window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')`;
                                                       } else if (isService) {
                                                           const parts = sub.action_type.substring(15).split('|||');
                                                           textLabel = parts[1] ? `Service: ${parts[1]}` : 'Servicebericht';
                                                           btnTitle = 'Servicebericht öffnen';
-                                                          badgeStyle = 'background: rgba(147, 51, 234, 0.1); border: 1px solid rgba(147, 51, 234, 0.25); color: #c084fc;';
-                                                          btnStyle = 'background: rgba(147, 51, 234, 0.2); border: 1px solid rgba(147, 51, 234, 0.4); color: #c084fc;';
+                                                          badgeStyle = 'background: rgba(147, 51, 234, 0.2); border: 1px solid rgba(147, 51, 234, 0.4); color: #c084fc;';
                                                           buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>';
                                                           clickHandler = `window.openServiceberichtFromTask('${task.machine_id}', '${sub.action_type}', '${task.id}', ${sub.idx}, '${sub.id || ''}')`;
                                                       } else {
                                                           textLabel = sub.action_type === 'intake' ? 'Eingang' : 'Abnahme';
                                                           btnTitle = sub.action_type === 'intake' ? 'Eingangsprotokoll öffnen' : 'Abnahmeprotokoll öffnen';
                                                           const isIntake = sub.action_type === 'intake';
-                                                          badgeStyle = isIntake ? 'background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); color: #f59e0b;';
-                                                          btnStyle = isIntake ? 'background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;';
+                                                          badgeStyle = isIntake ? 'background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;';
                                                           buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>';
                                                           clickHandler = `window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')`;
                                                       }
                                                       return `
-                                                      <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
-                                                          <span style="${badgeStyle} border-radius: 4px; padding: 2px 6px; font-size: 0.65rem; font-weight: 800; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                                              ${textLabel}
-                                                          </span>
-                                                          <button onclick="event.stopPropagation(); ${clickHandler}" 
-                                                              title="${btnTitle}"
-                                                              style="${btnStyle} border-radius: 6px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; flex-shrink: 0; transition: all 0.2s;">
-                                                              ${buttonIcon}
-                                                          </button>
-                                                      </div>
-                                                      `;
+                                              <button onclick="event.stopPropagation(); ${clickHandler}" 
+                                                  title="${btnTitle}"
+                                                  class="subtask-action-btn"
+                                                  style="${badgeStyle} border-radius: 8px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: all 0.2s; font-size: 0.7rem; font-weight: 700; height: 28px; line-height: 1; text-decoration: none; max-width: 100%; box-sizing: border-box; flex-shrink: 0;">
+                                                  ${buttonIcon}
+                                                  <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;" title="${textLabel}">
+                                                      ${textLabel}
+                                                  </span>
+                                              </button>
+                                              `;
                                                   })() : ''}
                                              </div>`;
                                          });
@@ -681,22 +674,20 @@
                                            textLabel = sub.action_type === 'intake' ? 'Eingang' : 'Abnahme';
                                            btnTitle = sub.action_type === 'intake' ? 'Eingangsprotokoll Ã¶ffnen' : 'Abnahmeprotokoll Ã¶ffnen';
                                            const isIntake = sub.action_type === 'intake';
-                                           badgeStyle = isIntake ? 'background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); color: #f59e0b;';
-                                           btnStyle = isIntake ? 'background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;';
+                                           badgeStyle = isIntake ? 'background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;';
                                            buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>';
                                            clickHandler = `window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')`;
                                        }
                                        return `
-                                       <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
-                                           <span style="${badgeStyle} border-radius: 4px; padding: 2px 6px; font-size: 0.65rem; font-weight: 800; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                       <button onclick="event.stopPropagation(); ${clickHandler}" 
+                                           title="${btnTitle}"
+                                           class="subtask-action-btn"
+                                           style="${badgeStyle} border-radius: 8px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: all 0.2s; font-size: 0.7rem; font-weight: 700; height: 28px; line-height: 1; text-decoration: none; max-width: 100%; box-sizing: border-box; flex-shrink: 0;">
+                                           ${buttonIcon}
+                                           <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;">
                                                ${textLabel}
                                            </span>
-                                           <button onclick="event.stopPropagation(); ${clickHandler}" 
-                                               title="${btnTitle}"
-                                               style="${btnStyle} border-radius: 6px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; flex-shrink: 0; transition: all 0.2s;">
-                                               ${buttonIcon}
-                                           </button>
-                                       </div>
+                                       </button>
                                        `;
                                    })() : ''}
                             </div>`;

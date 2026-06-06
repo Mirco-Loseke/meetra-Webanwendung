@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Webapp meetra</title>
     <link rel="icon" type="image/png" href="meetra_arrows_icon.png">
-    <link rel="stylesheet" href="style.css?v=39">
+    <link rel="stylesheet" href="style.css?v=99999999999999999999999">
     <!-- Preloading standard fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4074,7 +4074,6 @@
                                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
                                 Startseite
                             </h1>
-                            <p style="margin:6px 0 0; color:rgba(255,255,255,0.4); font-size:0.95rem; font-family:'Inter',sans-serif;">Übersicht &amp; Statistiken</p>
                         </div>
 
                         <div style="display:flex; flex-wrap:wrap; gap:1rem; margin-bottom:2.5rem;">
@@ -4084,7 +4083,7 @@
                         </div>
 
                         <!-- Middle Row: Alarms + Calendar -->
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:2.5rem;">
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:1.5rem; margin-bottom:2.5rem;">
 
                             <!-- Maintenance Alarms -->
                             <div style="background:rgba(110, 122, 140, 0.45); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:3px solid rgba(239,68,68,0.5); border-left:7px solid #ef4444; border-radius:20px; padding:1.5rem; box-shadow:0 10px 30px rgba(0,0,0,0.6);">
@@ -14414,14 +14413,14 @@
     </div>
     <!-- Load scripts -->
     <script src="machines-grouped.js?v=51"></script>
-    <script src="protocols.js?v=51"></script>
+    <script src="protocols.js?v=99999999"></script>
     <!-- Procurement Modal -->
 
 
     </main>
     </div><!-- End main-wrapper -->
 
-    <script src="tasks.js?v=2"></script>
+    <script src="tasks.js?v=99999999999"></script>
     <script src="task_templates.js?v=2"></script>
     <script>
         window.addEventListener('load', () => {
@@ -15660,7 +15659,7 @@
     <input type="file" id="folder-cover-input" class="hidden" accept="image/*"
         onchange="window.handleFolderCoverUpload(event)">
     <!-- Floating Focus Mode Container -->
-    <div id="focus-mode-container" style="position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column; align-items: flex-end; z-index: 9999;">
+    <div id="focus-mode-container" style="position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column; align-items: flex-end; z-index: 999999;">
         <!-- Dropdown Menu -->
         <div id="focus-mode-menu" style="display: none; flex-direction: column; gap: 8px; margin-bottom: 12px; background: rgba(15,23,42,0.95); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.6);">
             <button onclick="document.getElementById('focus-mode-menu').style.display='none'; window.activateMode('focus')" style="background: transparent; border: none; color: var(--primary-red); padding: 12px 20px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 1rem;" onmouseover="this.style.background='rgba(190, 30, 45, 0.15)'" onmouseout="this.style.background='transparent'">

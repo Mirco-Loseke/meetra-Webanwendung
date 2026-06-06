@@ -154,6 +154,65 @@
             }
         }
 
+        // Show or hide current action indicator
+        let currentActionBox = document.getElementById('current-action-indicator');
+        if (!currentActionBox) {
+            // Create it dynamically above the buttons in the modal
+            const modal = document.getElementById('subtask-action-modal');
+            if (modal) {
+                const buttonsContainer = modal.querySelector('div[style*="flex-direction: column"]');
+                if (buttonsContainer) {
+                    currentActionBox = document.createElement('div');
+                    currentActionBox.id = 'current-action-indicator';
+                    buttonsContainer.insertBefore(currentActionBox, buttonsContainer.firstChild);
+                }
+            }
+        }
+
+        if (currentActionBox) {
+            if (currentAction && currentAction.length > 0) {
+                let actionLabel = '';
+                let actionColor = '';
+                let actionBg = '';
+                if (currentAction === 'intake') {
+                    actionLabel = '📋 Eingangsprotokoll';
+                    actionColor = '#60a5fa';
+                    actionBg = 'rgba(59,130,246,0.1)';
+                } else if (currentAction === 'acceptance') {
+                    actionLabel = '📋 Abnahmeprotokoll';
+                    actionColor = '#f59e0b';
+                    actionBg = 'rgba(245,158,11,0.1)';
+                } else if (currentAction.startsWith('document:')) {
+                    const parts = currentAction.substring(9).split('|||');
+                    actionLabel = '📄 Dokument: ' + (parts[1] || 'Unbenannt');
+                    actionColor = '#10b981';
+                    actionBg = 'rgba(16,185,129,0.1)';
+                } else if (currentAction.startsWith('servicebericht:')) {
+                    const parts = currentAction.substring(15).split('|||');
+                    actionLabel = '🔧 ' + (parts[1] ? 'Service: ' + parts[1] : 'Servicebericht');
+                    actionColor = '#c084fc';
+                    actionBg = 'rgba(147,51,234,0.1)';
+                } else {
+                    actionLabel = '⚡ ' + currentAction;
+                    actionColor = '#f59e0b';
+                    actionBg = 'rgba(245,158,11,0.1)';
+                }
+                currentActionBox.innerHTML = `
+                    <div style="background: ${actionBg}; border: 1px solid ${actionColor}33; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 12px;">
+                        <div style="flex: 1;">
+                            <div style="font-size: 0.75rem; color: rgba(255,255,255,0.4); font-weight: 600; margin-bottom: 4px;">AKTUELLE AKTION</div>
+                            <div style="color: ${actionColor}; font-weight: 700; font-size: 1rem;">${actionLabel}</div>
+                        </div>
+                    </div>
+                    <div style="height: 1px; background: rgba(255,255,255,0.05); margin-bottom: 12px;"></div>
+                    <div style="font-size: 0.8rem; color: rgba(255,255,255,0.4); font-weight: 600; margin-bottom: 10px;">ANDERE AKTION WÄHLEN</div>
+                `;
+                currentActionBox.style.display = 'block';
+            } else {
+                currentActionBox.style.display = 'none';
+            }
+        }
+
         const modal = document.getElementById('subtask-action-modal');
         if (modal) {
             modal.classList.remove('hidden');
