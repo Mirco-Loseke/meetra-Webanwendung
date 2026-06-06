@@ -18,9 +18,9 @@
 </head>
 
 <body>
-    <!-- Futuristic Login Screen (Nixon/Space Style) -->
-    <div id="profile-selection-screen"
-        style="display: none; position: fixed; inset: 0; z-index: 999999; flex-direction: column; align-items: center; justify-content: center; color: white; overflow: hidden; background: #05070a;">
+    <!-- Supabase Auth Login Screen -->
+    <div id="supabase-login-screen"
+        style="display: none; position: fixed; inset: 0; z-index: 1000000; flex-direction: column; align-items: center; justify-content: center; color: white; overflow: hidden; background: #05070a;">
         <!-- Nebula Background (Blue Shifted) -->
         <div
             style="position: absolute; inset: 0; background: 
@@ -31,59 +31,54 @@
 
         <!-- CSS Star Field (Simulated) -->
         <div class="stars-container" style="position: absolute; inset: 0; pointer-events: none; opacity: 0.5;">
-            <div
-                style="position: absolute; top: 10%; left: 20%; width: 2px; height: 2px; background: #fff; border-radius: 50%; box-shadow: 0 0 10px #fff;">
-            </div>
-            <div
-                style="position: absolute; top: 30%; left: 80%; width: 1px; height: 1px; background: #fff; border-radius: 50%;">
-            </div>
-            <div
-                style="position: absolute; top: 70%; left: 40%; width: 2px; height: 2px; background: #fff; border-radius: 50%; box-shadow: 0 0 5px #fff;">
-            </div>
-            <div
-                style="position: absolute; top: 50%; left: 10%; width: 1px; height: 1px; background: #fff; border-radius: 50%;">
-            </div>
-            <div
-                style="position: absolute; top: 90%; left: 90%; width: 2px; height: 2px; background: #fff; border-radius: 50%;">
-            </div>
-            <div
-                style="position: absolute; top: 20%; left: 60%; width: 1px; height: 1px; background: #fff; border-radius: 50%;">
-            </div>
+            <div style="position: absolute; top: 10%; left: 20%; width: 2px; height: 2px; background: #fff; border-radius: 50%; box-shadow: 0 0 10px #fff;"></div>
+            <div style="position: absolute; top: 30%; left: 80%; width: 1px; height: 1px; background: #fff; border-radius: 50%;"></div>
+            <div style="position: absolute; top: 70%; left: 40%; width: 2px; height: 2px; background: #fff; border-radius: 50%; box-shadow: 0 0 5px #fff;"></div>
+            <div style="position: absolute; top: 50%; left: 10%; width: 1px; height: 1px; background: #fff; border-radius: 50%;"></div>
+            <div style="position: absolute; top: 90%; left: 90%; width: 2px; height: 2px; background: #fff; border-radius: 50%;"></div>
+            <div style="position: absolute; top: 20%; left: 60%; width: 1px; height: 1px; background: #fff; border-radius: 50%;"></div>
         </div>
 
         <!-- Main Login Card -->
-        <div class="nixon-card login-card-responsive">
-
+        <div class="nixon-card login-card-responsive" style="max-width: 420px; width: 90%; padding: clamp(2rem, 5vw, 3rem) 2rem;">
             <!-- Vertical Branding Stack -->
-            <div class="branding-header-responsive">
-                <img src="meetra logo remove.png" alt="Logo" class="logo-responsive">
-
-                <div class="headline-container-responsive">
-                    <h2 class="title-responsive">Willkommen bei meetra</h2>
-                    <img src="meetra_arrows_icon.png" alt="Arrows" class="arrows-responsive">
-                </div>
-
-                <p class="subtitle-responsive">
-                    Bitte wähle dein Profil aus
-                </p>
+            <div class="branding-header-responsive" style="margin-bottom: 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <img src="meetra logo remove.png" alt="Logo" class="logo-responsive" style="display: block; margin: 0 auto; height: clamp(64px, 12vw, 94px);">
             </div>
 
-            <!-- Purple-to-Blue Radiant Gradient Glass User List Container -->
-            <div class="user-list-container-responsive">
-                <div id="profile-selection-list" class="user-list-scroll-responsive">
-                    <!-- Profiles injected here -->
+            <!-- Login Form -->
+            <div style="width: 100%; display: flex; flex-direction: column; gap: 0.85rem; margin-top: 0.5rem;">
+                <div class="form-group" style="margin-bottom: 0px;">
+                    <label style="color: rgba(255, 255, 255, 0.75); font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem; display: block;">Benutzername oder E-Mail</label>
+                    <input type="text" id="supabase-login-identifier" class="glass-input" placeholder="Vor- und Nachname oder E-Mail-Adresse" required style="width: 100%; padding: 11px 16px; font-size: 0.95rem;">
                 </div>
-            </div>
-
-            <!-- Last Active Footer Selection -->
-            <div id="last-active-footer" class="footer-responsive" style="display: none;">
-                <h4 class="footer-title-responsive">Zuletzt angemeldet</h4>
-                <div id="footer-last-user-container" class="footer-container-responsive">
-                    <!-- Last user mini card injected here -->
+                <div class="form-group" style="margin-bottom: 0px;">
+                    <label style="color: rgba(255, 255, 255, 0.75); font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem; display: block;">Passwort</label>
+                    <input type="password" id="supabase-login-password" class="glass-input" placeholder="Passwort eingeben" required style="width: 100%; padding: 11px 16px; font-size: 0.95rem;">
                 </div>
+                <!-- Premium Meetra Red button (re-added btn-primary to fix JS error) -->
+                <button class="btn-primary" onclick="window.submitSupabaseLogin()" style="width: 100%; height: 48px; font-weight: 700; border-radius: 12px; margin-top: 1rem; display: flex; align-items: center; justify-content: center; gap: 8px; background: linear-gradient(135deg, #e11d48, #be123c); border: 1px solid rgba(255,255,255,0.15); color: white; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(225, 29, 72, 0.45); font-size: 1rem;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(225, 29, 72, 0.6)'; this.style.filter='brightness(1.1)';" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 15px rgba(225, 29, 72, 0.45)'; this.style.filter='none';">
+                    Anmelden
+                </button>
             </div>
         </div>
 
+        <!-- Custom Login Error Popup Modal -->
+        <div id="login-error-modal" style="display: none; position: absolute; inset: 0; background: rgba(5,7,10,0.85); z-index: 10000000; align-items: center; justify-content: center; backdrop-filter: blur(8px); transition: all 0.3s ease;">
+            <div class="glass-card" style="padding: 2rem; max-width: 340px; width: 90%; text-align: center; border: 1.5px solid rgba(239, 68, 68, 0.4); box-shadow: 0 10px 30px rgba(239, 68, 68, 0.2); border-radius: 20px; transform: scale(0.9); transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+                <div style="width: 50px; height: 50px; background: rgba(239, 68, 68, 0.1); color: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; border: 1.5px solid rgba(239, 68, 68, 0.3);">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </div>
+                <h3 style="color: #ef4444; margin-bottom: 0.5rem; font-weight: 700;">Anmeldung fehlgeschlagen</h3>
+                <p id="login-error-message" style="color: rgba(255,255,255,0.7); font-size: 0.9rem; line-height: 1.4; margin-bottom: 1.5rem;">Falsches Passwort oder Benutzername.</p>
+                <button class="btn-primary" onclick="window.closeLoginErrorModal()" style="width: 100%; height: 42px; border-radius: 10px; font-weight: 600; background: #ef4444; border: none; color: white; cursor: pointer; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); display: flex; align-items: center; justify-content: center;">
+                    Schließen
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- ========================================================= -->
@@ -605,7 +600,7 @@
     <!-- Edit User Modal -->
     <div id="user-edit-modal"
         style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999999; backdrop-filter: blur(10px); flex-direction: column; align-items: center; justify-content: center;">
-        <div class="glass-card" style="padding: 2.5rem; max-width: 500px; width: 90%; position: relative;">
+        <div class="glass-card" style="padding: 2.5rem; max-width: 500px; width: 90%; position: relative; max-height: 90vh; overflow-y: auto;">
             <button onclick="closeEditUserModal()"
                 style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: white; cursor: pointer;">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -619,6 +614,11 @@
             <div class="form-group">
                 <label>Name</label>
                 <input type="text" id="edit-user-name" class="glass-input">
+            </div>
+
+            <div class="form-group">
+                <label>E-Mail-Adresse (für Supabase-Login im Hintergrund)</label>
+                <input type="email" id="edit-user-email" class="glass-input" placeholder="Z.B. name@company.de">
             </div>
 
             <div class="form-group">
@@ -1180,8 +1180,6 @@
                                         onclick="switchTaskView('board')">Board</button>
                                     <button class="calendar-tab-btn" id="btn-view-list"
                                         onclick="switchTaskView('list')">Liste</button>
-                                    <button class="calendar-tab-btn" id="btn-view-machines"
-                                        onclick="switchTaskView('machines')">Maschinen</button>
                                 </div>
                             </div>
                             <div class="view-header-right">
@@ -1225,10 +1223,6 @@
                                 </tbody>
                             </table>
                         </div>
-                    </div>
-
-                    <div id="tasks-machines" class="hidden">
-                        <!-- Dynamically populated grouped view -->
                     </div>
                 </section>
 
@@ -1512,7 +1506,6 @@
                                         <th>Datum</th>
                                         <th>Kategorie</th>
                                         <th style="min-width: 200px;">Maschine</th>
-                                        <th>Beschreibung</th>
                                         <th style="text-align: right;">Aktionen</th>
                                     </tr>
                                 </thead>
@@ -3062,12 +3055,21 @@
                 if (mw) mw.classList.add('collapsed-sidebar');
             })();
 
-            // Load Users if on user view or just generally on startup
+            // Load Users if on user view or just generally on startup after authentication
             if (supabaseClient) {
-                fetchUsers(); // Users + Switcher
-                fetchCategories(); // Categories
-                fetchMachines(); // Machines
-                if (typeof fetchServiceEntries === 'function') fetchServiceEntries(); // Service Entries
+                // Add keydown listeners for Enter key on login fields
+                const loginIdentifier = document.getElementById('supabase-login-identifier');
+                const loginPassword = document.getElementById('supabase-login-password');
+                if (loginIdentifier && loginPassword) {
+                    const handleEnter = (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            window.submitSupabaseLogin();
+                        }
+                    };
+                    loginIdentifier.addEventListener('keydown', handleEnter);
+                    loginPassword.addEventListener('keydown', handleEnter);
+                }
 
                 // Initialize Machine Category Filter Trigger
                 const categoryFilterTrigger = document.getElementById('machine-category-filter-trigger');
@@ -3302,93 +3304,220 @@
                     };
                     dropdownList.appendChild(li);
                 });
+
+                // Add Logout Option
+                const divider = document.createElement('div');
+                divider.style.height = '1px';
+                divider.style.background = 'rgba(255,255,255,0.1)';
+                divider.style.margin = '8px 0';
+                dropdownList.appendChild(divider);
+
+                const logoutLi = document.createElement('li');
+                logoutLi.style.display = 'flex';
+                logoutLi.style.alignItems = 'center';
+                logoutLi.style.gap = '12px';
+                logoutLi.style.padding = '12px 16px';
+                logoutLi.style.color = '#ef4444';
+                logoutLi.style.fontWeight = 'bold';
+                logoutLi.innerHTML = `
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                    <span style="flex: 1;">Abmelden (Logout)</span>
+                `;
+                logoutLi.onclick = (e) => {
+                    e.stopPropagation();
+                    window.supabaseLogout();
+                };
+                dropdownList.appendChild(logoutLi);
             }
 
             // ==========================================
-            // PROFILE SELECTION & PIN LOGIC
+            // SUPABASE AUTHENTICATION
             // ==========================================
-            let pendingLoginUserId = null;
-
-            window.showProfileSelectionScreen = function () {
-                const screen = document.getElementById('profile-selection-screen');
-                const list = document.getElementById('profile-selection-list');
-                const footer = document.getElementById('last-active-footer');
-                const footerContainer = document.getElementById('footer-last-user-container');
-
-                if (!screen || !list) return;
-
-                list.innerHTML = '';
-                if (footerContainer) footerContainer.innerHTML = '';
-                if (footer) footer.style.display = 'none';
-
-                const lastUserId = localStorage.getItem('lastActiveUserId');
-                const lastUser = lastUserId ? userList.find(u => u.id === lastUserId) : null;
-
-                if (lastUser && footer && footerContainer) {
-                    footer.style.display = 'block';
-                    const footerCard = createUserLoginCard(lastUser, true);
-                    footerContainer.appendChild(footerCard);
+            // ==========================================
+            // SUPABASE AUTHENTICATION
+            // ==========================================
+            window.showLoginError = function(message) {
+                document.getElementById('login-error-message').textContent = message;
+                const modal = document.getElementById('login-error-modal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    setTimeout(() => {
+                        modal.firstElementChild.style.transform = 'scale(1)';
+                    }, 10);
                 }
-
-                // Render all users in the main list
-                userList.forEach(user => {
-                    const card = createUserLoginCard(user, false);
-                    list.appendChild(card);
-                });
-
-                screen.style.display = 'flex';
             };
 
-            function createUserLoginCard(user, isFooterMini = false) {
-                const card = document.createElement('div');
-                card.style.cssText = `
-                        padding: ${isFooterMini ? '0.75rem 1rem' : '1.15rem 1.5rem'}; 
-                        cursor: pointer; 
-                        display: flex; 
-                        align-items: center; 
-                        gap: 1.5rem; 
-                        width: 100%; 
-                        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                        background: rgba(255, 255, 255, 0.04);
-                        backdrop-filter: blur(15px);
-                        border-radius: 20px;
-                        border: 1px solid rgba(255, 255, 255, 0.08);
-                        position: relative;
-                        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-                        ${isFooterMini ? 'max-width: 320px;' : ''}
-                    `;
+            window.closeLoginErrorModal = function() {
+                const modal = document.getElementById('login-error-modal');
+                if (modal) {
+                    modal.firstElementChild.style.transform = 'scale(0.9)';
+                    setTimeout(() => {
+                        modal.style.display = 'none';
+                    }, 150);
+                }
+            };
 
-                card.onmouseover = () => {
-                    card.style.background = 'rgba(255, 255, 255, 0.08)';
-                    card.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-                    card.style.transform = 'translateY(-2px)';
-                    card.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)';
-                };
-                card.onmouseout = () => {
-                    card.style.background = 'rgba(255, 255, 255, 0.04)';
-                    card.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                    card.style.transform = 'translateY(0)';
-                    card.style.boxShadow = '0 4px 15px rgba(0,0,0,0.1)';
-                };
+            window.supabaseLogout = async function() {
+                if (supabaseClient) {
+                    await supabaseClient.auth.signOut();
+                }
+                localStorage.removeItem('activeUserId');
+                localStorage.removeItem('lastActiveUserId');
+                if (typeof window.activeUser !== 'undefined') window.activeUser = null;
+                activeUser = null;
 
-                const initials = user.initials || user.name.substring(0, 2).toUpperCase();
-                const color = user.color || 'var(--primary-red)';
+                // Input-Felder leeren
+                const idInput = document.getElementById('supabase-login-identifier');
+                const pwInput = document.getElementById('supabase-login-password');
+                if (idInput) idInput.value = '';
+                if (pwInput) pwInput.value = '';
 
-                card.innerHTML = `
-                        <div style="width: ${isFooterMini ? '42px' : '56px'}; height: ${isFooterMini ? '42px' : '56px'}; border-radius: 14px; background: linear-gradient(135deg, ${color}, rgba(255,255,255,0.1)); display: flex; align-items: center; justify-content: center; font-size: ${isFooterMini ? '1rem' : '1.3rem'}; font-weight: bold; color: white; flex-shrink: 0; box-shadow: 0 6px 15px rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15);">
-                            ${initials}
-                        </div>
-                        <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
-                            <span style="font-size: ${isFooterMini ? '1.1rem' : '1.3rem'}; font-weight: ${isFooterMini ? '500' : '600'}; color: rgba(255,255,255,0.95);">${user.name}</span>
-                        </div>
-                        <svg width="${isFooterMini ? '16' : '22'}" height="${isFooterMini ? '16' : '22'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.25;">
-                            <polyline points="9 18 15 12 9 6"></polyline>
-                        </svg>
-                    `;
+                document.getElementById('app-layout').style.display = 'none';
+                document.getElementById('supabase-login-screen').style.display = 'flex';
+            };
 
-                card.onclick = () => attemptUserLogin(user.id);
-                return card;
-            }
+            window.submitSupabaseLogin = async function() {
+                const identifier = document.getElementById('supabase-login-identifier').value.trim();
+                const password = document.getElementById('supabase-login-password').value;
+                const btn = document.querySelector('#supabase-login-screen .btn-primary');
+
+                if (!identifier || !password) {
+                    window.showLoginError('Bitte Benutzername/E-Mail und Passwort eingeben.');
+                    return;
+                }
+
+                btn.disabled = true;
+                const originalText = btn.textContent;
+                btn.textContent = 'Anmeldung läuft...';
+
+                try {
+                    let email = identifier;
+                    
+                    // Wenn es keine E-Mail-Adresse ist (kein @-Zeichen), suchen wir in der users-Datenbank nach der E-Mail des Namens
+                    if (!identifier.includes('@')) {
+                        let lookupEmail = null;
+                        
+                        // Zuerst versuchen wir es sicher per RPC (umgeht RLS vor dem Login)
+                        try {
+                            const { data: rpcData, error: rpcErr } = await supabaseClient
+                                .rpc('get_email_by_name', { username: identifier });
+                            
+                            if (!rpcErr && rpcData && rpcData.length > 0 && rpcData[0].email) {
+                                lookupEmail = rpcData[0].email;
+                            }
+                        } catch (rpcErr) {
+                            console.warn('RPC Lookup fehlgeschlagen, versuche Tabellen-Select:', rpcErr);
+                        }
+
+                        // Fallback: Wenn RPC fehlschlug oder keine E-Mail zurücklieferte, direktes Select (falls RLS aus ist)
+                        if (!lookupEmail) {
+                            const { data, error: userErr } = await supabaseClient
+                                .from('users')
+                                .select('email')
+                                .ilike('name', identifier)
+                                .maybeSingle();
+
+                            if (data && data.email) {
+                                lookupEmail = data.email;
+                            }
+                        }
+
+                        if (lookupEmail) {
+                            email = lookupEmail;
+                        } else {
+                            throw new Error('Benutzername nicht gefunden oder keine E-Mail-Adresse zugeordnet. Bitte versuchen Sie es zuerst mit Ihrer E-Mail.');
+                        }
+                    }
+
+                    // Supabase Login
+                    const { data: authData, error: authErr } = await supabaseClient.auth.signInWithPassword({
+                        email: email,
+                        password: password
+                    });
+
+                    if (authErr) throw authErr;
+
+                    console.log('Supabase Login erfolgreich:', authData);
+                    
+                    // Nach erfolgreichem Login laden wir die Daten
+                    await fetchUsers();
+                    await fetchCategories();
+                    await fetchMachines();
+                    if (typeof fetchServiceEntries === 'function') await fetchServiceEntries();
+
+                    // Login-Screen ausblenden
+                    document.getElementById('supabase-login-screen').style.display = 'none';
+
+                    // Profil automatisch auswählen, wenn E-Mail übereinstimmt
+                    const sessionEmail = authData?.user?.email;
+                    let matchedUser = sessionEmail ? userList.find(u => u.email && u.email.toLowerCase() === sessionEmail.toLowerCase()) : null;
+
+                    // Fallback: Wenn kein Profil passt, nimm das erste verfügbare Profil
+                    if (!matchedUser && userList.length > 0) {
+                        matchedUser = userList[0];
+                    }
+
+                    if (matchedUser) {
+                        executeLogin(matchedUser.id);
+                    } else {
+                        window.showLoginError('Keine Benutzerprofile in der Datenbank "users" gefunden! Bitte legen Sie dort Profile an.');
+                    }
+
+                } catch (err) {
+                    console.error('Login-Fehler:', err);
+                    let msg = err.message;
+                    if (msg === 'Invalid login credentials') {
+                        msg = 'Benutzername, E-Mail oder Passwort ist falsch. Bitte überprüfen Sie Ihre Eingaben.';
+                    }
+                    window.showLoginError(msg);
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            };
+
+            window.checkAuth = async function() {
+                if (!supabaseClient) return;
+
+                const { data: { session }, error } = await supabaseClient.auth.getSession();
+                
+                if (error || !session) {
+                    document.getElementById('app-layout').style.display = 'none';
+                    document.getElementById('supabase-login-screen').style.display = 'flex';
+                } else {
+                    document.getElementById('supabase-login-screen').style.display = 'none';
+                    
+                    // Daten laden, da wir eingeloggt sind
+                    await fetchUsers();
+                    await fetchCategories();
+                    await fetchMachines();
+                    if (typeof fetchServiceEntries === 'function') await fetchServiceEntries();
+
+                    // Profil automatisch auswählen, wenn E-Mail übereinstimmt
+                    const sessionEmail = session?.user?.email;
+                    let matchedUser = sessionEmail ? userList.find(u => u.email && u.email.toLowerCase() === sessionEmail.toLowerCase()) : null;
+
+                    // Fallback: Wenn kein Profil passt, nimm das erste verfügbare Profil
+                    if (!matchedUser && userList.length > 0) {
+                        matchedUser = userList[0];
+                    }
+
+                    if (matchedUser) {
+                        executeLogin(matchedUser.id);
+                    } else {
+                        window.showLoginError('Keine Benutzerprofile in der Datenbank "users" gefunden! Bitte legen Sie dort Profile an.');
+                    }
+                }
+            };
+
+            // ==========================================
+            // PROFILE SWITCH PIN LOGIC
+            // ==========================================
+            let pendingLoginUserId = null;
 
             window.attemptUserLogin = function (userId) {
                 const user = userList.find(u => u.id === userId);
@@ -3431,6 +3560,9 @@
             function executeLogin(userId) {
                 const screen = document.getElementById('profile-selection-screen');
                 if (screen) screen.style.display = 'none';
+
+                const appLayout = document.getElementById('app-layout');
+                if (appLayout) appLayout.style.display = 'flex';
 
                 // Remember this user for next time
                 localStorage.setItem('lastActiveUserId', userId);
@@ -4213,11 +4345,7 @@
                 if (typeof renderTechDropdown === 'function') {
                     renderTechDropdown();
                 }
-
-                // Only show profile selection screen on startup if no active user is set yet
-                if (!window.activeUser) {
-                    showProfileSelectionScreen();
-                } else {
+                if (window.activeUser) {
                     // Update active user data with fresh values from updated list
                     const freshActiveUser = userList.find(u => String(u.id) === String(window.activeUser.id));
                     if (freshActiveUser) {
@@ -4401,6 +4529,7 @@
 
                 document.getElementById('edit-user-id').value = user.id;
                 document.getElementById('edit-user-name').value = user.name || '';
+                document.getElementById('edit-user-email').value = user.email || '';
 
                 // PIN Logic: Admin sees all, users see their own
                 const pinInput = document.getElementById('edit-user-pin');
@@ -4445,6 +4574,7 @@
                 const id = document.getElementById('edit-user-id').value;
                 const newName = document.getElementById('edit-user-name').value;
                 const newPin = document.getElementById('edit-user-pin').value;
+                const newEmail = document.getElementById('edit-user-email').value.trim() || null;
 
                 const activeUserObj = window.activeUser || {};
                 const currentName = (activeUserObj.name || "").toLowerCase().trim();
@@ -4480,6 +4610,7 @@
 
                 const updatePayload = {
                     pin: newPin,
+                    email: newEmail,
                     permissions: permsToSave
                 };
 
@@ -6644,6 +6775,11 @@
             }
             
             window.switchView(startView);
+            
+            // Check authentication now that all helper functions and window objects are defined
+            if (supabaseClient) {
+                window.checkAuth();
+            }
 
         }); // End of DOMContentLoaded
 
@@ -10208,7 +10344,7 @@
 
                           const { data, error } = await supabaseClient
                   .from('service_entries')
-                  .select('id, machine_id, category_id, category_ids, title, date, datum_von, datum_bis, hours, technicians')
+                  .select('id, machine_id, category_id, category_ids, title, date, datum_von, datum_bis, hours, technicians, pdf_url, pdf_path')
                   .order('date', { ascending: false });
 
             if (error) {
@@ -10570,7 +10706,6 @@
             }
         };
 
-
         window.renderServiceEntries = function () {
             try {
                 const list = document.getElementById('service-entries-list');
@@ -10733,13 +10868,9 @@
                                              onmouseout="${machineImg ? "this.style.opacity='1'" : ''}">
                                             ${machineImg
                                 ? `<img src="${machineImg}" loading="lazy" onerror="if(this.src!=='${machineImgFull}'){this.onerror=null;this.src='${machineImgFull}';}" style="width: 100%; height: 100%; object-fit: contain; display: block;">`
-                                : `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity: 0.15;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>`
-                            }
+                                : `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity: 0.15;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>`}
                                         </div>
                                     </div>
-
-                                    <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 0;"></div>
-
                                     <div class="card-content" style="padding: 1.25rem 1.25rem 2px 1.25rem; flex: 1; display: flex; flex-direction: column; gap: 0.75rem;">
                                         
                                         <!-- Row 1: Centered Order Tag (Blau-Stil wie Abnahmeprotokoll, falls vorhanden) -->
@@ -10750,8 +10881,8 @@
                                             </div>
                                         </div>` : ''}
 
-                                        <!-- Row 2: Date (Left-aligned, smaller) -->
-                                        <div style="display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.7); font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px; text-align: left; width: 100%;">
+                                        <!-- Row 2: Date (Left-aligned, smaller, white text) -->
+                                        <div style="display: flex; align-items: center; gap: 8px; color: #ffffff; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px; text-align: left; width: 100%;">
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.8;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                                             ${(e.datum_von && e.datum_bis && new Date(e.datum_von).toLocaleDateString('de-DE') !== new Date(e.datum_bis).toLocaleDateString('de-DE'))
                                 ? new Date(e.datum_von).toLocaleDateString('de-DE') + ' - ' + new Date(e.datum_bis).toLocaleDateString('de-DE')
@@ -10777,17 +10908,8 @@
                                         </div>` : ''}
 
                                          <!-- Separated Buttons (Icons Only) -->
-                                         ${(images.length > 0 || docs.length > 0 || e.pdf_url) ? `
+                                         ${(images.length > 0 || docs.length > 0) ? `
                                          <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 8px; margin-top: 0.5rem; text-align: left;">
-                                             ${e.pdf_url ? `
-                                             <div class="btn-meta-icon" onclick="window.previewDocument('${e.pdf_url}', 'Servicebericht', 'application/pdf')" title="PDF ansehen"
-                                                  style="background: rgba(16, 185, 129, 0.15); border: 1.5px solid rgba(16, 185, 129, 0.6); box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);"
-                                                  onmouseover="this.style.background='rgba(16, 185, 129, 0.25)'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 0 18px rgba(16, 185, 129, 0.6)'"
-                                                  onmouseout="this.style.background='rgba(16, 185, 129, 0.15)'; this.style.transform='translateY(0)'; this.style.boxShadow='0 0 12px rgba(16, 185, 129, 0.4)'">
-                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
-                                                 PDF
-                                             </div>` : ''}
-
                                              ${images.length > 0 ? `
                                             <div class="btn-meta-icon" onclick="openPhotosLightbox(${JSON.stringify(images).replace(/"/g, '&quot;')}, 0)" title="Bilder ansehen"
                                                  style="background: rgba(168, 85, 247, 0.15); border: 1.5px solid rgba(168, 85, 247, 0.6); box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);"
@@ -10797,7 +10919,7 @@
                                                 (${images.length})
                                             </div>` : ''}
                                             
-                                            ${docs.length > 0 ? `
+                                             ${docs.length > 0 ? `
                                             <div class="btn-meta-icon" onclick="window.openDocumentsModal(this)" 
                                                  data-docs="${encodeURIComponent(JSON.stringify(docs))}" 
                                                  title="Dokumente ansehen"
@@ -10807,26 +10929,37 @@
                                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
                                                 (${docs.length})
                                             </div>` : ''}
-                                        </div>` : ''}
+                                         </div>` : ''}
+                                    </div>
 
-                                        <div style="margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); margin-left: -0.25rem; margin-right: -0.25rem;">
-                                            <button class="btn-primary" onclick="openEditServicebericht(${e.id})" title="Bearbeiten"
-                                                style="flex: 1; height: 44px; background: rgba(59, 130, 246, 0.85); color: #ffffff; border: 2.5px solid rgba(147, 197, 253, 0.8); border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 18px rgba(59, 130, 246, 0.6); backdrop-filter: blur(12px); padding: 0 16px; font-weight: 700; font-family: 'Inter', sans-serif;"
-                                                onmouseover="this.style.transform='scale(1.08)'; this.style.background='rgba(59, 130, 246, 0.95)'; this.style.boxShadow='0 4px 24px rgba(59, 130, 246, 0.7)'; this.style.borderColor='rgba(147, 197, 253, 1)'"
-                                                onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(59, 130, 246, 0.85)'; this.style.boxShadow='0 4px 18px rgba(59, 130, 246, 0.6)'; this.style.borderColor='rgba(147, 197, 253, 0.8)'">
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-                                                Bearbeiten
-                                            </button>
-                                            <button class="btn-icon-circular delete delete-permission-required" onclick="deleteServiceEntry(${e.id})" title="Löschen"
-                                                style="flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(239, 68, 68, 0.85); border: 2.5px solid rgba(252, 165, 165, 0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 18px rgba(239, 68, 68, 0.6); backdrop-filter: blur(12px); padding: 0;"
-                                                onmouseover="this.style.transform='scale(1.08)'; this.style.background='rgba(239, 68, 68, 0.95)'; this.style.boxShadow='0 4px 24px rgba(239, 68, 68, 0.7)'; this.style.borderColor='rgba(252, 165, 165, 1)'"
-                                                onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(239, 68, 68, 0.85)'; this.style.boxShadow='0 4px 18px rgba(239, 68, 68, 0.6)'; this.style.borderColor='rgba(252, 165, 165, 0.8)'">
-                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                                    <path d="M3 6h18"></path>
-                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path>
-                                                </svg>
-                                            </button>
-                                        </div>
+                                    <div style="margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); margin-left: -0.25rem; margin-right: -0.25rem; padding-left: 1.25rem; padding-right: 1.25rem; padding-bottom: 1.25rem;">
+                                        <button class="btn-primary" onclick="openEditServicebericht(${e.id})" title="Bearbeiten"
+                                            style="flex: 1; height: 44px; background: rgba(59, 130, 246, 0.85); color: #ffffff; border: 2.5px solid rgba(147, 197, 253, 0.8); border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 18px rgba(59, 130, 246, 0.6); backdrop-filter: blur(12px); padding: 0 16px; font-weight: 700; font-family: 'Inter', sans-serif;"
+                                            onmouseover="this.style.transform='scale(1.08)'; this.style.background='rgba(59, 130, 246, 0.95)'; this.style.boxShadow='0 4px 24px rgba(59, 130, 246, 0.7)'; this.style.borderColor='rgba(147, 197, 253, 1)'"
+                                            onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(59, 130, 246, 0.85)'; this.style.boxShadow='0 4px 18px rgba(59, 130, 246, 0.6)'; this.style.borderColor='rgba(147, 197, 253, 0.8)'">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                            Bearbeiten
+                                        </button>
+                                        ${e.pdf_url ? `
+                                        <button onclick="event.stopPropagation(); window.previewDocument('${e.pdf_url}', 'Servicebericht', 'application/pdf')" title="PDF öffnen"
+                                            style="flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(16, 185, 129, 0.85); border: 2.5px solid rgba(167, 243, 208, 0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 18px rgba(16, 185, 129, 0.6); backdrop-filter: blur(12px); padding: 0;"
+                                            onmouseover="this.style.transform='scale(1.08)'; this.style.background='rgba(16, 185, 129, 0.95)'; this.style.boxShadow='0 4px 24px rgba(16, 185, 129, 0.7)'; this.style.borderColor='rgba(167, 243, 208, 1)'"
+                                            onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(16, 185, 129, 0.85)'; this.style.boxShadow='0 4px 18px rgba(16, 185, 129, 0.6)'; this.style.borderColor='rgba(167, 243, 208, 0.8)'">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                                <polyline points="14 2 14 8 20 8"></polyline>
+                                            </svg>
+                                        </button>
+                                        ` : ''}
+                                        <button class="btn-icon-circular delete delete-permission-required" onclick="deleteServiceEntry(${e.id})" title="Löschen"
+                                            style="flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(239, 68, 68, 0.85); border: 2.5px solid rgba(252, 165, 165, 0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 18px rgba(239, 68, 68, 0.6); backdrop-filter: blur(12px); padding: 0;"
+                                            onmouseover="this.style.transform='scale(1.08)'; this.style.background='rgba(239, 68, 68, 0.95)'; this.style.boxShadow='0 4px 24px rgba(239, 68, 68, 0.7)'; this.style.borderColor='rgba(252, 165, 165, 1)'"
+                                            onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(239, 68, 68, 0.85)'; this.style.boxShadow='0 4px 18px rgba(239, 68, 68, 0.6)'; this.style.borderColor='rgba(252, 165, 165, 0.8)'">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <path d="M3 6h18"></path>
+                                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path>
+                                            </svg>
+                                        </button>
                                     </div>
                                 </div>
                                 `;
@@ -10839,27 +10972,69 @@
                         const dateObj = new Date(e.date);
                         const dateStr = dateObj.toLocaleDateString('de-DE');
 
-                        const serviceCat = (window.categoryList || []).find(c => c.id === e.category_id);
-                        const catName = serviceCat ? serviceCat.name : 'Allgemein';
-                        const catColor = serviceCat ? (serviceCat.color || '#10b981') : 'rgba(255,255,255,0.4)';
+                        // Multi-Category Logic
+                        let displayedCategories = [];
+                        if (e.category_ids && Array.isArray(e.category_ids) && e.category_ids.length > 0) {
+                            displayedCategories = e.category_ids.map(id => (window.categoryList || []).find(c => c.id === id)).filter(Boolean);
+                        } else if (e.category_id) {
+                            const cat = (window.categoryList || []).find(c => c.id === e.category_id);
+                            if (cat) displayedCategories = [cat];
+                        }
+
+                        if (displayedCategories.length === 0) {
+                            displayedCategories = [{ name: 'Allgemein', color: '#10b981', id: 0 }];
+                        }
+
+                        const mainCat = displayedCategories[0];
+                        const fallbackPalette = ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#ef4444', '#06b6d4', '#84cc16'];
+                        const primaryCatColor = mainCat.color || fallbackPalette[mainCat.id % fallbackPalette.length];
+
+                        // Calculate Duration
+                        let durationStr = '';
+                        if (e.datum_von) {
+                            const d1 = new Date(e.datum_von);
+                            const d2 = e.datum_bis ? new Date(e.datum_bis) : new Date(e.datum_von);
+                            d1.setHours(0, 0, 0, 0);
+                            d2.setHours(0, 0, 0, 0);
+                            const diffDays = Math.round(Math.abs(d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+
+                            if (diffDays >= 30) {
+                                const months = Math.floor(diffDays / 30);
+                                const remainingDays = diffDays % 30;
+                                durationStr = ` (${months}. Monat${remainingDays > 0 ? ` ${remainingDays}. Tage` : ''})`;
+                            } else {
+                                durationStr = diffDays === 1 ? ` (1. Tag)` : ` (${diffDays}. Tage)`;
+                            }
+                        }
+
+                        const displayedDateStr = (e.datum_von && e.datum_bis && new Date(e.datum_von).toLocaleDateString('de-DE') !== new Date(e.datum_bis).toLocaleDateString('de-DE'))
+                            ? new Date(e.datum_von).toLocaleDateString('de-DE') + ' - ' + new Date(e.datum_bis).toLocaleDateString('de-DE')
+                            : (e.datum_von ? new Date(e.datum_von).toLocaleDateString('de-DE') : dateStr);
 
                         return `
-                                <tr onclick="openEditServicebericht(${e.id})" style="cursor: pointer; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: inset 5px 0 0 0 ${catColor}, inset 0 1.5px 0 0 ${catColor}66, inset -1.5px 0 0 0 ${catColor}66, inset 0 -1.5px 0 0 ${catColor}66, 0 10px 30px rgba(0,0,0,0.4); border-radius: 16px; overflow: hidden;">
-                                    <td data-label="Datum" style="color: rgba(255,255,255,0.6);">${dateStr}</td>
+                                <tr onclick="openEditServicebericht(${e.id})" style="cursor: pointer; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: inset 5px 0 0 0 ${primaryCatColor}, inset 0 1.5px 0 0 ${primaryCatColor}66, inset -1.5px 0 0 0 ${primaryCatColor}66, inset 0 -1.5px 0 0 ${primaryCatColor}66, 0 10px 30px rgba(0,0,0,0.4); border-radius: 16px; overflow: hidden;">
+                                    <td data-label="Datum" style="color: #ffffff; font-weight: 700; line-height: 1.3;">
+                                        <div>${displayedDateStr}</div>
+                                        ${durationStr ? `<div style="font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-top: 2px;">${durationStr}</div>` : ''}
+                                    </td>
                                     <td data-label="Kategorie">
-                                        <div style="background: ${catColor}20; color: ${catColor}; border: 1px solid ${catColor}40; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; display: inline-block;">
-                                            ${catName}
+                                        <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                                            ${displayedCategories.map(cat => {
+                                                const cColor = cat.color || fallbackPalette[cat.id % fallbackPalette.length];
+                                                return `
+                                                    <div style="background: ${cColor}20; color: ${cColor}; border: 1px solid ${cColor}40; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; text-transform: uppercase; display: inline-block; white-space: nowrap;">
+                                                        ${cat.name}
+                                                    </div>
+                                                `;
+                                            }).join('')}
                                         </div>
                                     </td>
-                                    <td data-label="Maschine" style="color: var(--color-primary-green); font-weight: 700; font-size: 0.98rem; line-height: 1.3;">
+                                    <td data-label="Maschine" style="color: #ffffff; font-weight: 700; font-size: 0.98rem; line-height: 1.3;">
                                         ${machine ? `
                                             <div>${[machine.manufacturer, machine.name].filter(Boolean).join(' ')}</div>
                                             <div style="font-size: 0.8rem; opacity: 0.8;">
                                                 ${[machine.serial_number || machine.serial ? `#${machine.serial_number || machine.serial}` : null, machine.year ? `(${machine.year})` : null].filter(Boolean).join(' ')}
                                             </div>` : '-'}
-                                    </td>
-                                    <td data-label="Beschreibung" style="color: rgba(255,255,255,0.5); font-size: 0.9rem;">
-                                        ${e.description.substring(0, 80)}${e.description.length > 80 ? '...' : ''}
                                     </td>
                                     <td data-label="Aktionen" onclick="event.stopPropagation()">
                                         <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
@@ -10983,6 +11158,12 @@
                 if (error) throw error;
 
                 let entries = data || [];
+
+                // Werkstattaufenthalte ausschließen
+                entries = entries.filter(e => {
+                    const title = (e.title || '').toLowerCase();
+                    return !title.includes('werkstattaufenthalt');
+                });
 
                 if (searchVal) {
                     entries = entries.filter(e => {
@@ -12346,41 +12527,38 @@
                     const u = (window.userList || []).find(user => user.id == id);
                     return u ? u.name : `Techniker #${id}`;
                 }).join(', ') || '-';
+                
+                // Techniker-Name oben
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(10);
                 doc.setTextColor(30, 41, 59);
-                doc.text('Techniker:', 20, currentY + 10);
-                doc.setFont('helvetica', 'normal');
-                doc.text(techNames, 42, currentY + 10, { maxWidth: 70 });
-
+                doc.text(`Techniker: ${techNames}`, 20, currentY);
+                currentY += 8;
                 
                 // Techniker-Unterschrift links
                 if (techSignature && techSignature.startsWith('data:image')) {
                     try {
-                        doc.addImage(techSignature, 'PNG', 20, currentY - 5, 60, 25);
+                        doc.addImage(techSignature, 'PNG', 20, currentY, 70, 22);
                     } catch(e) {}
                 }
-                doc.setDrawColor(200, 200, 200);
-                doc.line(20, currentY + 25, 90, currentY + 25);
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(9);
-                doc.setTextColor(100, 100, 100);
-                doc.text('Unterschrift Techniker', 20, currentY + 30);
-                
-                // Customer signature block (rechts)
+                // Kunden-Unterschrift rechts
                 if (signature) {
                     try {
-                        doc.addImage(signature, 'PNG', 120, currentY - 5, 60, 25);
-                    } catch(sigErr){
-                        console.error('Could not render signature image in PDF:', sigErr);
-                    }
+                        doc.addImage(signature, 'PNG', 110, currentY, 70, 22);
+                    } catch(sigErr) {}
                 }
-                doc.setDrawColor(200, 200, 200);
-                doc.line(120, currentY + 25, 190, currentY + 25);
+                doc.setDrawColor(150, 150, 150);
+                doc.setLineWidth(0.5);
+                doc.line(20, currentY + 22, 90, currentY + 22);   // Links: Techniker
+                doc.line(110, currentY + 22, 190, currentY + 22); // Rechts: Kunde
                 doc.setFont('helvetica', 'normal');
-                doc.setFontSize(9);
+                doc.setFontSize(8);
                 doc.setTextColor(100, 100, 100);
-                doc.text(signatureName ? `Unterschrift Kunde: ${signatureName}` : 'Unterschrift Kunde', 120, currentY + 30);
+                doc.text('Unterschrift Techniker', 20, currentY + 27);
+                doc.text('Unterschrift Kunde', 110, currentY + 27);
+                if (signatureName) {
+                    doc.text(signatureName, 110, currentY + 31);
+                }
                 
                 // Append Checklist if any
                 const checklistPayload = typeof window.getChecklistPayload === 'function' ? window.getChecklistPayload() : null;
@@ -12528,22 +12706,15 @@
                             // Signature section
                             if (uvvY > 230) { doc.addPage(); uvvY = 20; }
                             
-                            doc.setFont('helvetica', 'bold');
-                            doc.setFontSize(10);
-                            doc.setTextColor(30, 41, 59);
-                            doc.text('5. Unterschrift', 20, uvvY);
-                            uvvY += 7;
-                            
                             // Technician name line
                             const uvvTechName = (typeof selectedTechs !== 'undefined' ? selectedTechs : []).map(id => {
                                 const u = (window.userList || []).find(user => user.id == id);
                                 return u ? u.name : '';
                             }).filter(Boolean).join(', ') || '';
-                            doc.setFont('helvetica', 'normal');
+                            doc.setFont('helvetica', 'bold');
                             doc.setFontSize(9);
-                            doc.setTextColor(60, 60, 60);
-                            const techLabel = `Techniker: ${uvvTechName}`;
-                            doc.text(techLabel, 20, uvvY);
+                            doc.setTextColor(30, 41, 59);
+                            doc.text(`Techniker: ${uvvTechName}`, 20, uvvY);
                             uvvY += 6;
                             
                             // Tech signature image (left)
@@ -13038,7 +13209,7 @@
                                     <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Firma / Name (Maschinenstandort)</label>
                                     <input type="text" id="service-location-company" class="glass-form-input" placeholder="z.B. Baustelle XY / Zweigstelle">
                                 </div>
-                                <div style="display: grid; grid-template-columns: 2fr 1fr 2fr; gap: 0.75rem;">
+                                <div class="responsive-grid-location">
                                     <div>
                                         <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Straße & Hausnr.</label>
                                         <input type="text" id="service-location-street" class="glass-form-input" placeholder="Straße & Hausnr.">
@@ -13078,8 +13249,8 @@
                             </svg>
                         </div>
                         <div class="section-content" style="display: none; transition: all 0.3s ease;">
-                            <div class="form-row"
-                                style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; margin-top: 1rem; margin-bottom: 1.5rem;">
+                            <div class="form-row responsive-grid-3"
+                                style="margin-top: 1rem; margin-bottom: 1.5rem;">
                                 <div class="form-group" style="margin-bottom: 0;">
                                     <label for="service-operating-hours">Betriebsstunden (h)</label>
                                     <input type="text" id="service-operating-hours" class="glass-form-input" placeholder="z.B. 1450">
@@ -13094,8 +13265,8 @@
                                 </div>
                             </div>
 
-                            <div class="form-row"
-                                style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem; margin-bottom: 1.5rem;">
+                            <div class="form-row responsive-grid-2"
+                                style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
                                 <div class="form-group" style="margin-bottom: 0;">
                                     <label style="color: var(--color-primary-green); font-weight: 800; display: block; margin-bottom: 6px;">Werkstattauftragsnummer (Optional)</label>
                                     <p style="font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-bottom: 8px;">Geben Sie hier die Werkstattauftragsnummer ein, falls die Maschine in die Werkstatt geht.</p>
@@ -13241,8 +13412,8 @@
                             </svg>
                         </div>
                         <div class="section-content" style="display: none; transition: all 0.3s ease;">
-                            <div class="form-row"
-                                style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1rem; align-items: end; margin-bottom: 1rem;">
+                            <div class="form-row responsive-grid-2"
+                                style="margin-top: 1rem; align-items: end; margin-bottom: 1rem;">
                                 <div class="form-group" style="margin-bottom: 0;">
                                     <label for="service-driving-distance">Gefahrene Kilometer (km)</label>
                                     <input type="number" step="0.1" id="service-driving-distance" class="glass-form-input" placeholder="z.B. 45.5" oninput="if(window.syncDrivingDistanceToTable) window.syncDrivingDistanceToTable(this.value)">
@@ -13265,7 +13436,7 @@
                             <div class="form-section" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
                                 <label style="display: flex; justify-content: space-between; align-items: center;">
                                     <span>Arbeitszeit- & Fahrzeit-Protokoll</span>
-                                    <div style="display: flex; gap: 8px;">
+                                    <div class="btn-row-responsive">
                                         <button type="button" class="btn-secondary" onclick="window.addWorkLogTableRow(null, 'Anfahrt')" style="font-size: 0.8rem; padding: 6px 12px; height: auto; border: 1.5px dashed rgba(255,255,255,0.2);">
                                             ➕ Anfahrt
                                         </button>
@@ -13410,7 +13581,7 @@
                                     </label>
                                 </div>
 
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                                <div class="responsive-grid-2">
                                     <!-- Techniker-Unterschrift (links) -->
                                     <div>
                                         <label style="display: block; margin-bottom: 0.5rem;">Unterschrift Techniker</label>

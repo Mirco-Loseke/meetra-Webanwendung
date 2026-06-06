@@ -374,8 +374,7 @@
                                     <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                 </svg>
                             </button>
-                            <button onclick="event.stopPropagation(); window.deleteTask('${task.id}')" title="Löschen"
-                                class="delete-permission-required"
+                            <button class="delete-permission-required" onclick="event.stopPropagation(); window.deleteTask('${task.id}')" title="Löschen"
                                 style="width:36px; height:36px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
                                 onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -417,13 +416,13 @@
                     tr.style.background = 'rgba(110, 122, 140, 0.45)';
                     tr.style.backdropFilter = 'blur(24px)';
                     tr.style.webkitBackdropFilter = 'blur(24px)';
-                    tr.style.boxShadow = `inset 5px 0 0 0 ${accentColor}, inset 0 1.5px 0 0 ${accentColor}66, inset -1.5px 0 0 0 ${accentColor}66, inset 0 -1.5px 0 0 ${accentColor}66, 0 10px 30px rgba(0,0,0,0.4)`;
+                    tr.style.boxShadow = `inset 0 1.5px 0 0 ${accentColor}66, inset -1.5px 0 0 0 ${accentColor}66, inset 0 -1.5px 0 0 ${accentColor}66, 0 10px 30px rgba(0,0,0,0.4)`;
                     tr.style.borderRadius = '16px';
                     tr.style.overflow = 'hidden';
                     tr.style.opacity = '0.7';
 
                     tr.innerHTML = `
-                        <td data-label="Aufgabe" style="font-weight: 600; display:flex; align-items:flex-start; gap:12px;">
+                        <td data-label="Aufgabe" style="font-weight: 600; display:flex; align-items:flex-start; gap:12px; box-shadow: inset 5px 0 0 0 ${accentColor}; border-top-left-radius: 16px; border-bottom-left-radius: 16px;">
                             <div style="padding-top: 4px;">
                                 <div class="task-quick-complete ${task.status === 'completed' ? 'completed' : ''}" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="${task.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -431,8 +430,14 @@
                             </div>
                             <div style="display:flex; flex-direction:column; gap:4px;">
                                 <span style="font-size: 1.1rem; font-weight: 700;">${task.title}</span>
-                                ${task.status === 'completed' && task.completed_at ? `
-                                    <span style="font-size: 0.8rem; color: #10b981; font-weight: 600;">Erledigt am: ${formatDateTime(task.completed_at)}</span>
+                                ${task.completed_at ? `
+                                <span style="font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-top: 2px;">
+                                    Erledigt am ${new Date(task.completed_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr
+                                    ${task.completed_by ? `von ${(() => {
+                                        const u = (window.userList || []).find(usr => String(usr.id) === String(task.completed_by));
+                                        return u ? u.name : 'Unbekannt';
+                                    })()}` : ''}
+                                </span>
                                 ` : ''}
                                   ${(function() {
                                      if (!task.subtasks || task.subtasks.length === 0) return '';
@@ -537,8 +542,7 @@
                                         <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                     </svg>
                                 </button>
-                                <button onclick="event.stopPropagation(); window.deleteTask('${task.id}')" title="Löschen"
-                                    class="delete-permission-required"
+                                <button class="delete-permission-required" onclick="event.stopPropagation(); window.deleteTask('${task.id}')" title="Löschen"
                                     style="width:36px; height:36px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
                                     onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -591,20 +595,24 @@
                     <button onclick="event.stopPropagation(); window.openTaskModal('${task.id}')" title="Bearbeiten" style="width:32px; height:32px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                     </button>
-                    <button onclick="event.stopPropagation(); window.deleteTask('${task.id}')" title="Löschen" class="delete-permission-required" style="width:32px; height:32px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    <button class="delete-permission-required" onclick="event.stopPropagation(); window.deleteTask('${task.id}')" title="Löschen" style="width:32px; height:32px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     </button>
                 </div>
             </div>
             <div class="task-card-title">${task.title}</div>
             ${task.description ? `<div class="task-card-desc">${task.description.substring(0, 60)}${task.description.length > 60 ? '...' : ''}</div>` : ''}
-            ${task.status === 'completed' && task.completed_at ? `
-                <div class="task-card-completed-date" style="font-size: 0.75rem; color: #10b981; margin-top: 8px; display: flex; align-items: center; gap: 4px;">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                    <span>Erledigt am: ${formatDateTime(task.completed_at)}</span>
-                </div>
-            ` : ''}
             
+            ${task.status === 'completed' && task.completed_at ? `
+            <div class="task-card-completed-info" style="font-size: 0.75rem; color: rgba(255,255,255,0.45); margin-top: 6px; padding-top: 4px; display: flex; flex-direction: column; gap: 2px;">
+                <span>Erledigt am: ${new Date(task.completed_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr</span>
+                ${task.completed_by ? `<span>von: ${(() => {
+                    const u = (window.userList || []).find(usr => String(usr.id) === String(task.completed_by));
+                    return u ? u.name : 'Unbekannt';
+                })()}</span>` : ''}
+            </div>
+            ` : ''}
+
             ${(function() {
                 if (!task.subtasks || task.subtasks.length === 0) return '';
                 const grouped = {};
@@ -1018,6 +1026,31 @@
             machineSearch.value = getMachineLabel(task.machines);
         }
 
+        const compInfo = document.getElementById('task-completion-info');
+        if (compInfo) {
+            if (task.status === 'completed' && task.completed_at) {
+                const dateStr = new Date(task.completed_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                let userStr = 'Unbekannt';
+                if (task.completed_by) {
+                    const u = (window.userList || []).find(usr => String(usr.id) === String(task.completed_by));
+                    if (u) userStr = u.name;
+                }
+                compInfo.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 8px; color: #10b981; font-weight: 800; font-size: 1rem; text-shadow: 0 0 10px rgba(16,185,129,0.3);">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        ERLEDIGTE AUFGABE
+                    </div>
+                    <div style="font-size: 0.85rem; color: rgba(255,255,255,0.7); margin-top: 4px; line-height: 1.4;">
+                        Erledigt am: <strong>${dateStr} Uhr</strong><br>
+                        Erledigt von: <strong>${userStr}</strong>
+                    </div>
+                `;
+                compInfo.style.display = 'block';
+            } else {
+                compInfo.style.display = 'none';
+            }
+        }
+
         if (typeof window.setupNewTaskGroups === 'function') {
             window.setupNewTaskGroups(task.subtasks);
         }
@@ -1031,6 +1064,9 @@
         const machineSearch = document.getElementById('task-machine-search');
         if (machineSearch) machineSearch.value = '';
         
+        const compInfo = document.getElementById('task-completion-info');
+        if (compInfo) compInfo.style.display = 'none';
+
         if (typeof window.setupNewTaskGroups === 'function') {
             window.setupNewTaskGroups();
         }
@@ -1250,34 +1286,12 @@
     };
 
     window.deleteSubtask = async function (id) {
-        if (window.activeUser && window.activeUser.permissions && window.activeUser.permissions.can_delete === false) {
-            alert('Keine Berechtigung zum Löschen von Unteraufgaben.');
-            return;
-        }
         if (!confirm('Unteraufgabe löschen?')) return;
         try {
             await window.supabaseClient.from('subtasks').delete().eq('id', id);
             fetchTasks();
         } catch (err) {
             console.error(err);
-        }
-    };
-
-    window.deleteTask = async function(taskId) {
-        if (window.activeUser && window.activeUser.permissions && window.activeUser.permissions.can_delete === false) {
-            alert('Keine Berechtigung zum Löschen von Aufgaben.');
-            return;
-        }
-        if (!confirm('Möchtest du diese Aufgabe wirklich löschen?')) return;
-
-        try {
-            await window.supabaseClient.from('subtasks').delete().eq('task_id', taskId);
-            const { error } = await window.supabaseClient.from('tasks').delete().eq('id', taskId);
-            if (error) throw error;
-            fetchTasks();
-        } catch (err) {
-            console.error('Error deleting task:', err);
-            alert('Fehler beim Löschen der Aufgabe: ' + err.message);
         }
     };
 
@@ -1451,20 +1465,6 @@
         return colors[index];
     }
 
-    function formatDateTime(isoString) {
-        if (!isoString) return '';
-        try {
-            const d = new Date(isoString);
-            if (isNaN(d.getTime())) return '';
-            const pad = (n) => String(n).padStart(2, '0');
-            const dateStr = `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
-            const timeStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-            return `${dateStr} um ${timeStr} Uhr`;
-        } catch (e) {
-            return '';
-        }
-    }
-
     function renderAvatars(assignedTo) {
         if (!assignedTo || assignedTo.length === 0) return '<span style="color: rgba(255,255,255,0.4); font-size: 0.85rem;">Nicht zugeordnet</span>';
 
@@ -1559,27 +1559,34 @@
                 const newStatus = col.dataset.status;
 
                 // Optimistic UI update
-                const task = allTasks.find(t => t.id === taskId);
+                const task = allTasks.find(t => String(t.id).trim().toLowerCase() === String(taskId).trim().toLowerCase());
                 if (task && task.status !== newStatus) {
                     const oldStatus = task.status;
                     const oldCompletedAt = task.completed_at;
                     const oldCompletedBy = task.completed_by;
 
-                    const completed_at = newStatus === 'completed' ? new Date().toISOString() : null;
-                    const completed_by = newStatus === 'completed' ? (window.activeUser?.id || null) : null;
+                    const completedAt = newStatus === 'completed' ? new Date().toISOString() : null;
+                    const completedBy = newStatus === 'completed' ? (window.activeUser?.id || null) : null;
 
                     task.status = newStatus;
-                    task.completed_at = completed_at;
-                    task.completed_by = completed_by;
+                    task.completed_at = completedAt;
+                    task.completed_by = completedBy;
                     renderTasks();
 
                     // Supabase update
                     try {
-                        const { error } = await window.supabaseClient.from('tasks').update({ 
+                        let { error } = await window.supabaseClient.from('tasks').update({ 
                             status: newStatus,
-                            completed_at: completed_at,
-                            completed_by: completed_by
+                            completed_at: completedAt,
+                            completed_by: completedBy
                         }).eq('id', taskId);
+
+                        if (error && error.code === '42703') {
+                            console.warn('completed_at/completed_by columns missing, falling back to status only.');
+                            const retry = await window.supabaseClient.from('tasks').update({ status: newStatus }).eq('id', taskId);
+                            error = retry.error;
+                        }
+
                         if (error) throw error;
                     } catch (err) {
                         console.error('Drag drop save error:', err);
@@ -1604,12 +1611,12 @@
         }
 
         if (isActive) {
-            // Automatically switch to tasks view and force machine mode
+            // Automatically switch to tasks view and force board mode
             if (window.navigateTo) {
                 window.navigateTo('tasks');
             }
             if (typeof window.switchTaskView === 'function') {
-                window.switchTaskView('machines');
+                window.switchTaskView('board');
             }
         }
     };
@@ -1733,7 +1740,7 @@
         }
     };
     window.saveTaskAsQuickTemplate = async function(taskId) {
-        const task = allTasks.find(t => t.id === taskId);
+        const task = allTasks.find(t => String(t.id).trim().toLowerCase() === String(taskId).trim().toLowerCase());
         if (!task) return;
 
         // Visual feedback
@@ -1795,7 +1802,7 @@
         }
     };
     window.updateSubtaskTitle = async function(taskId, subtaskIndex, newTitle) {
-        const task = allTasks.find(t => t.id === taskId);
+        const task = allTasks.find(t => String(t.id).trim().toLowerCase() === String(taskId).trim().toLowerCase());
         if (!task || !task.subtasks) return;
 
         if (task.subtasks[subtaskIndex].title === newTitle) return;
@@ -1820,21 +1827,28 @@
 
     window.toggleTaskStatus = async function (taskId, currentStatus) {
         const newStatus = currentStatus === 'completed' ? 'open' : 'completed';
-        const completed_at = newStatus === 'completed' ? new Date().toISOString() : null;
-        const completed_by = newStatus === 'completed' ? (window.activeUser?.id || null) : null;
+        const completedAt = newStatus === 'completed' ? new Date().toISOString() : null;
+        const completedBy = newStatus === 'completed' ? (window.activeUser?.id || null) : null;
         try {
-            const task = allTasks.find(t => t.id === taskId);
+            const task = allTasks.find(t => String(t.id).trim().toLowerCase() === String(taskId).trim().toLowerCase());
             if (task) {
                 task.status = newStatus;
-                task.completed_at = completed_at;
-                task.completed_by = completed_by;
+                task.completed_at = completedAt;
+                task.completed_by = completedBy;
                 renderTasks();
             }
-            const { error } = await window.supabaseClient.from('tasks').update({ 
+            let { error } = await window.supabaseClient.from('tasks').update({ 
                 status: newStatus,
-                completed_at: completed_at,
-                completed_by: completed_by
+                completed_at: completedAt,
+                completed_by: completedBy
             }).eq('id', taskId);
+
+            if (error && error.code === '42703') {
+                console.warn('completed_at/completed_by columns missing, falling back to status only.');
+                const retry = await window.supabaseClient.from('tasks').update({ status: newStatus }).eq('id', taskId);
+                error = retry.error;
+            }
+
             if (error) throw error;
         } catch (err) {
             console.error('Error toggling task status:', err);
@@ -1845,7 +1859,7 @@
     window.toggleSubtaskStatus = async function (taskId, subtaskIndex, currentStatus) {
         const newStatus = currentStatus === 'completed' ? 'open' : 'completed';
         try {
-            const task = allTasks.find(t => t.id === taskId);
+            const task = allTasks.find(t => String(t.id).trim().toLowerCase() === String(taskId).trim().toLowerCase());
             if (task && task.subtasks && task.subtasks[subtaskIndex]) {
                 const subtask = task.subtasks[subtaskIndex];
                 subtask.status = newStatus;

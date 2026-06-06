@@ -3663,7 +3663,7 @@ input[type="date"].glass-form-input::-webkit-calendar-picker-indicator:hover {
 
 .kanban-board {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
     gap: 1.5rem;
     min-height: 500px;
     align-items: flex-start;
@@ -3982,7 +3982,11 @@ tr.completed-task td {
 
 .task-list-row-premium.status-open {
     background: rgba(239, 68, 68, 0.12) !important;
-    box-shadow: inset 5px 0 0 0 #ef4444, 0 10px 30px rgba(0,0,0,0.4);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+}
+
+.task-list-row-premium.status-open td:first-child {
+    box-shadow: inset 5px 0 0 0 #ef4444;
 }
 
 .task-list-row-premium:hover {
@@ -8567,10 +8571,106 @@ body.focus-mode-active .view-header-row-top {
     transform: translateX(4px);
 }
 
-
-
-
-/* Delete permission helper */
-body.disable-delete .delete-permission-required {
+/* Delete Permissions System */
+.disable-delete .delete-permission-required {
     display: none !important;
 }
+
+/* ========================================================= */
+/* --- MOBILE LAYOUT & GRID FORM OPTIMIZATIONS (MEETRA) --- */
+/* ========================================================= */
+
+/* Responsive Form Grids for Service Reports and Modals */
+.responsive-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+}
+
+.responsive-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.responsive-grid-location {
+    display: grid;
+    grid-template-columns: 2fr 1fr 2fr;
+    gap: 0.75rem;
+}
+
+.btn-row-responsive {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Responsive Overrides (Mobile Phones) */
+@media (max-width: 768px) {
+    .responsive-grid-3,
+    .responsive-grid-2,
+    .responsive-grid-location {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+    
+    .btn-row-responsive {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 8px !important;
+    }
+    
+    .btn-row-responsive button {
+        width: 100% !important;
+        font-size: 0.78rem !important;
+        padding: 8px 10px !important;
+        height: auto !important;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* Make large forms display full-screen on mobile for ideal data entry */
+    #servicebericht-modal .modal-content, 
+    #task-modal .modal-content, 
+    #add-machine-modal .modal-content, 
+    #machine-details-modal .modal-content, 
+    #document-overview-modal .modal-content, 
+    #accounting-modal .modal-content {
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 100vh !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        padding: 1.5rem 1rem !important;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    #servicebericht-modal .modal-scroll-area, 
+    #task-modal .modal-scroll-area, 
+    #add-machine-modal .modal-scroll-area, 
+    #machine-details-modal .modal-scroll-area, 
+    #document-overview-modal .modal-scroll-area, 
+    #accounting-modal .modal-scroll-area {
+        max-height: none !important;
+        flex: 1 !important;
+        overflow-y: auto !important;
+        padding-right: 0 !important;
+    }
+    
+    #servicebericht-modal.modal-backdrop, 
+    #task-modal.modal-backdrop, 
+    #add-machine-modal.modal-backdrop, 
+    #machine-details-modal.modal-backdrop, 
+    #document-overview-modal.modal-backdrop, 
+    #accounting-modal.modal-backdrop {
+        padding: 0 !important;
+        align-items: stretch !important;
+        justify-content: stretch !important;
+    }
+}
+
+
+
