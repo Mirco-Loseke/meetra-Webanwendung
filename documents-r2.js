@@ -757,7 +757,7 @@ window.previewDocument = async function(url, title, mimeType) {
     window.currentPreviewName = title;
 
     const isImage = mimeType.startsWith('image/') || url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-    const isPdf = mimeType === 'application/pdf' || url.toLowerCase().endsWith('.pdf');
+    const isPdf = mimeType === 'application/pdf' || url.toLowerCase().endsWith('.pdf') || url.startsWith('blob:');
     
     if (isImage) {
         container.innerHTML = `<img src="${url}" style="max-width: 100%; max-height: 100%; display: block; margin: auto; object-fit: contain;">`;

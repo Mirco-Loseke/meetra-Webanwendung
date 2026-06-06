@@ -172,7 +172,12 @@
             const matchesSearch = title.includes(filters.search) || desc.includes(filters.search);
             const matchesMachine = filters.machine === 'all' || String(task.machine_id) === String(filters.machine);
 
-            return matchesSearch && matchesMachine;
+            let isServiceMatch = true;
+            if (window.currentAppMode === 'service') {
+                isServiceMatch = task.subtasks && task.subtasks.some(s => s.action_type && s.action_type.startsWith('servicebericht:'));
+            }
+
+            return matchesSearch && matchesMachine && isServiceMatch;
         });
 
         if (viewMode === 'board') {
@@ -579,11 +584,11 @@
 
         div.innerHTML = `
             <div class="task-card-header">
-                <div style="display:flex; align-items:center; gap:8px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; max-width:70%;">
-                    <div class="task-quick-complete ${task.status === 'completed' ? 'completed' : ''}" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="${task.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
+                <div style="display:flex; align-items:flex-start; gap:8px; max-width:100%; word-break:break-word;">
+                    <div class="task-quick-complete ${task.status === 'completed' ? 'completed' : ''}" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="${task.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}" style="margin-top: 2px;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     </div>
-                    ${task.machines ? `<span style="color: var(--color-primary-green); font-weight: 800; font-size: 1.05rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${getMachineLabel(task.machines)}">${getMachineLabel(task.machines)}</span>` : ''}
+                    ${task.machines ? `<span style="color: var(--color-primary-green); font-weight: 800; font-size: 1.05rem; white-space:normal; line-height: 1.2;" title="${getMachineLabel(task.machines)}">${getMachineLabel(task.machines)}</span>` : ''}
                 </div>
                 <div class="task-card-actions" style="display: flex; gap: 6px; align-items: center;">
                     <button id="star-card-${task.id}" onclick="event.stopPropagation(); window.saveTaskAsQuickTemplate('${task.id}')" title="Als Schnellvorlage speichern"
@@ -1601,9 +1606,59 @@
     }
 
     // ==========================================
-    window.toggleFocusMode = function () {
+    window.currentAppMode = 'normal';
+
+    window.updateFocusModeVisuals = function() {
+        const btn = document.getElementById('focus-mode-btn');
+        if (!btn) return;
+        
+        if (window.currentAppMode === 'service') {
+            btn.style.color = 'var(--color-primary-green)';
+            btn.style.borderColor = 'var(--color-primary-green)';
+        } else if (window.currentAppMode === 'focus') {
+            btn.style.color = ''; // defaults to red via css
+            btn.style.borderColor = ''; 
+        } else {
+            btn.style.color = '';
+            btn.style.borderColor = '';
+        }
+    };
+
+    window.handleFocusModeBtnClick = function() {
+        if (document.body.classList.contains('focus-mode-active')) {
+            // Turn off completely
+            window.toggleFocusMode(false);
+        } else {
+            // Show menu
+            const menu = document.getElementById('focus-mode-menu');
+            if (menu) {
+                menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
+            }
+        }
+    };
+
+    window.activateMode = function(mode) {
+        window.currentAppMode = mode;
+        if (!document.body.classList.contains('focus-mode-active')) {
+            window.toggleFocusMode(true);
+        } else {
+            renderTasks();
+            window.updateFocusModeVisuals();
+        }
+    };
+
+    window.toggleFocusMode = function (keepMode = false) {
         document.body.classList.toggle('focus-mode-active');
         const isActive = document.body.classList.contains('focus-mode-active');
+
+        if (!isActive) {
+            window.currentAppMode = 'normal';
+        } else if (keepMode !== true) {
+            window.currentAppMode = 'focus';
+        }
+        
+        window.updateFocusModeVisuals();
+        renderTasks();
 
         // Stop Cinema Mode if leaving Focus Mode
         if (!isActive && cinemaActive) {

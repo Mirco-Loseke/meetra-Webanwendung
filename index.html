@@ -1137,28 +1137,6 @@
                                         <path d="M20 21H4" />
                                     </svg>Aufgaben</h1>
                             </div>
-                            <!-- Cinema Mode Controls -->
-                            <div class="cinema-mode-controls">
-                                <button id="btn-cinema-toggle" class="btn-cinema-premium" onclick="window.toggleCinemaMode()" title="Kino-Modus">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
-                                        <line x1="7" y1="2" x2="7" y2="22"></line>
-                                        <line x1="17" y1="2" x2="17" y2="22"></line>
-                                        <line x1="2" y1="12" x2="22" y2="12"></line>
-                                        <line x1="2" y1="7" x2="7" y2="7"></line>
-                                        <line x1="2" y1="17" x2="7" y2="17"></line>
-                                        <line x1="17" y1="17" x2="22" y2="17"></line>
-                                        <line x1="17" y1="7" x2="22" y2="7"></line>
-                                    </svg>
-                                </button>
-                                <div id="cinema-speed-ui" class="cinema-speed-ui">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <circle cx="12" cy="12" r="10"></circle>
-                                        <polyline points="12 6 12 12 16 14"></polyline>
-                                    </svg>
-                                    <input type="range" min="0.1" max="10" step="0.1" value="1.0" id="cinema-speed-slider">
-                                </div>
-                            </div>
                             <div class="view-header-right">
                                 <div class="custom-search-wrapper" style="width: 250px;">
                                     <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -1182,7 +1160,29 @@
                                         onclick="switchTaskView('list')">Liste</button>
                                 </div>
                             </div>
-                            <div class="view-header-right">
+                            <div class="view-header-right" style="display: flex; align-items: center; gap: 12px;">
+                                <!-- Cinema Mode Controls (Moved here next to Add Button) -->
+                                <div class="cinema-mode-controls">
+                                    <button id="btn-cinema-toggle" class="btn-cinema-premium" onclick="window.toggleCinemaMode()" title="Kino-Modus">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                                            <line x1="7" y1="2" x2="7" y2="22"></line>
+                                            <line x1="17" y1="2" x2="17" y2="22"></line>
+                                            <line x1="2" y1="12" x2="22" y2="12"></line>
+                                            <line x1="2" y1="7" x2="7" y2="7"></line>
+                                            <line x1="2" y1="17" x2="7" y2="17"></line>
+                                            <line x1="17" y1="17" x2="22" y2="17"></line>
+                                            <line x1="17" y1="7" x2="22" y2="7"></line>
+                                        </svg>
+                                    </button>
+                                    <div id="cinema-speed-ui" class="cinema-speed-ui">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <polyline points="12 6 12 12 16 14"></polyline>
+                                        </svg>
+                                        <input type="range" min="0.1" max="10" step="0.1" value="1.0" id="cinema-speed-slider">
+                                    </div>
+                                </div>
                                 <button class="btn-add-bg" onclick="openAddTaskModal()">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -7226,6 +7226,9 @@
                     window.updateServiceCustomerPreview(id);
                 }
             }
+            if (typeof window.handleChecklistMachineChange === 'function') {
+                window.handleChecklistMachineChange();
+            }
         };
 
         // Update customer details in Servicebericht modal
@@ -7879,7 +7882,7 @@
                 } else {
                     const cats = window.categoryList || [];
                     const names = selectedServiceCategories.map(id => {
-                        const c = cats.find(cat => cat.id === id);
+                        const c = cats.find(cat => cat.id.toString() === id.toString());
                         return c ? c.name : '';
                     }).filter(n => n !== '');
                     textEl.textContent = names.join(', ');
@@ -10183,7 +10186,7 @@
                 let machineCell = '<span style="color: rgba(255,255,255,0.3); font-style: italic;">Nicht verknüpft</span>';
                 if (p.machines) {
                     const m = p.machines;
-                    machineCell = `<span class="machine-link-btn" onclick="window.switchView('machines'); window.openEditStammdaten(${m.id});" style="color: #34d399; font-weight: 700; cursor: pointer; text-decoration: underline; transition: color 0.2s;" onmouseover="this.style.color='#10b981'" onmouseout="this.style.color='#34d399'">
+                    machineCell = `<span class="machine-link-btn" onclick="window.switchView('machines'); window.openEditStammdaten(${m.id});" style="color: #34d399; font-weight: 700; cursor: pointer; text-decoration: underline; transition: color 0.2s; white-space: normal; word-break: break-word;" onmouseover="this.style.color='#10b981'" onmouseout="this.style.color='#34d399'">
                         ${m.manufacturer} ${m.name} (#${m.serial || '?'})
                     </span>`;
                 }
@@ -10207,7 +10210,7 @@
                             ${typeHtml}
                         </td>
                         <td style="padding: 18px 16px; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: middle;">
-                            <div style="font-weight: 700; color: #fff; font-size: 1.05rem;">${cleanTitle}</div>
+                            <div style="font-weight: 700; color: #fff; font-size: 1.05rem; white-space: normal; word-break: break-word;">${cleanTitle}</div>
                             ${senderRecText ? `<div style="font-size: 0.8rem; color: rgba(255,255,255,0.4); margin-top: 4px;">${senderRecText}</div>` : ''}
                         </td>
                         <td style="padding: 18px 16px; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: middle;">
@@ -10573,6 +10576,28 @@
                         const statusRepairedEn = document.getElementById('service-status-repaired-en');
                         if (statusRepairedEn) statusRepairedEn.checked = !!editData.status_repaired_en;
 
+                        // Populate machine first
+                        if (editData.machine_id) {
+                            const m = (window.machineList || []).find(x => x.id === editData.machine_id);
+                            if (m) {
+                                const cat = (window.categoryList || []).find(c => c.id === m.category_id);
+                                selectServiceMachine(m.id, m.manufacturer, m.name, m.serial, m.image_url, cat ? cat.name : '', m.year);
+                            }
+                        }
+
+                        // Populate category second
+                        if (editData.category_ids && Array.isArray(editData.category_ids) && editData.category_ids.length > 0) {
+                            selectedServiceCategories = editData.category_ids.map(id => parseInt(id));
+                            updateServiceCategoryUI();
+                        } else if (editData.category_id) {
+                            selectedServiceCategories = [parseInt(editData.category_id)];
+                            updateServiceCategoryUI();
+                        } else {
+                            selectedServiceCategories = [];
+                            updateServiceCategoryUI();
+                        }
+
+                        // Load checklist payload third
                         if (typeof window.loadChecklistPayload === 'function') {
                             window.loadChecklistPayload(editData.checklist_payload || null);
                         }
@@ -10618,27 +10643,6 @@
                                 }
                                 if (sigPlaceholder) sigPlaceholder.classList.add('hidden');
                                 if (sigClearBtn) sigClearBtn.classList.remove('hidden');
-                            }
-                        }
-
-                        // Populate category
-                        if (editData.category_ids && Array.isArray(editData.category_ids) && editData.category_ids.length > 0) {
-                            selectedServiceCategories = [...editData.category_ids];
-                            updateServiceCategoryUI();
-                        } else if (editData.category_id) {
-                            selectedServiceCategories = [editData.category_id];
-                            updateServiceCategoryUI();
-                        } else {
-                            selectedServiceCategories = [];
-                            updateServiceCategoryUI();
-                        }
-
-                        // Populate machine
-                        if (editData.machine_id) {
-                            const m = (window.machineList || []).find(x => x.id === editData.machine_id);
-                            if (m) {
-                                const cat = (window.categoryList || []).find(c => c.id === m.category_id);
-                                selectServiceMachine(m.id, m.manufacturer, m.name, m.serial, m.image_url, cat ? cat.name : '', m.year);
                             }
                         }
 
@@ -12860,7 +12864,16 @@
             try {
                 const doc = await window.generateServiceberichtPDFDoc();
                 if (doc) {
-                    window.open(doc.output('bloburl'), '_blank');
+                    const blobUrl = doc.output('bloburl');
+                    const machineId = document.getElementById('selected-machine-id').value;
+                    const machine = (window.machineList || []).find(m => m.id == machineId);
+                    const machineTitle = machine ? `${machine.manufacturer || ''} ${machine.name || ''}`.trim() : 'Servicebericht';
+                    
+                    if (typeof window.previewDocument === 'function') {
+                        window.previewDocument(blobUrl, `Vorschau Servicebericht - ${machineTitle}`, 'application/pdf');
+                    } else {
+                        window.open(blobUrl, '_blank');
+                    }
                 }
             } catch (err) {
                 console.error(err);
@@ -12869,12 +12882,6 @@
         };
 
         window.saveServiceberichtPDFToR2 = async function() {
-            const reportId = currentEditingServiceId;
-            if (!reportId) {
-                alert('Bitte speichern Sie zuerst den Bericht ab, bevor Sie ein PDF erstellen.');
-                return;
-            }
-            
             const btn = document.getElementById('btn-servicebericht-cloud-pdf');
             const statusEl = document.getElementById('servicebericht-pdf-status');
             
@@ -12882,9 +12889,19 @@
                 btn.disabled = true;
                 btn.style.opacity = '0.7';
             }
-            if (statusEl) statusEl.textContent = 'PDF wird hochgeladen...';
+            if (statusEl) statusEl.textContent = 'Speichert Bericht & generiert PDF...';
             
             try {
+                // Auto-save report data to Supabase first so database and PDF are in perfect sync!
+                const savedReportId = await window.saveServiceberichtData();
+                const reportId = savedReportId || currentEditingServiceId;
+                
+                if (!reportId) {
+                    throw new Error('Speichern des Serviceberichts fehlgeschlagen.');
+                }
+
+                if (statusEl) statusEl.textContent = 'PDF wird hochgeladen...';
+                
                 const doc = await window.generateServiceberichtPDFDoc();
                 if (!doc) throw new Error('PDF-Generierung fehlgeschlagen.');
                 
@@ -15642,16 +15659,31 @@
     <!-- Hidden Folder Cover Input -->
     <input type="file" id="folder-cover-input" class="hidden" accept="image/*"
         onchange="window.handleFolderCoverUpload(event)">
-    <!-- Floating Focus Mode Button -->
-    <div id="focus-mode-btn" class="focus-mode-btn" onclick="window.toggleFocusMode()" title="Fokus-Modus umschalten">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"></circle>
-            <circle cx="12" cy="12" r="3"></circle>
-            <line x1="12" y1="2" x2="12" y2="5"></line>
-            <line x1="12" y1="19" x2="12" y2="22"></line>
-            <line x1="2" y1="12" x2="5" y2="12"></line>
-            <line x1="19" y1="12" x2="22" y2="12"></line>
-        </svg>
+    <!-- Floating Focus Mode Container -->
+    <div id="focus-mode-container" style="position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column; align-items: flex-end; z-index: 9999;">
+        <!-- Dropdown Menu -->
+        <div id="focus-mode-menu" style="display: none; flex-direction: column; gap: 8px; margin-bottom: 12px; background: rgba(15,23,42,0.95); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.6);">
+            <button onclick="document.getElementById('focus-mode-menu').style.display='none'; window.activateMode('focus')" style="background: transparent; border: none; color: var(--primary-red); padding: 12px 20px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 1rem;" onmouseover="this.style.background='rgba(190, 30, 45, 0.15)'" onmouseout="this.style.background='transparent'">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+                Fokusmodus
+            </button>
+            <button onclick="document.getElementById('focus-mode-menu').style.display='none'; window.activateMode('service')" style="background: transparent; border: none; color: var(--color-primary-green); padding: 12px 20px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 1rem;" onmouseover="this.style.background='rgba(34,197,94,0.15)'" onmouseout="this.style.background='transparent'">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                Servicemodus
+            </button>
+        </div>
+        
+        <!-- The actual Button -->
+        <div id="focus-mode-btn" class="focus-mode-btn" style="position: static;" onclick="window.handleFocusModeBtnClick()" title="Modus whlen">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <circle cx="12" cy="12" r="3"></circle>
+                <line x1="12" y1="2" x2="12" y2="5"></line>
+                <line x1="12" y1="19" x2="12" y2="22"></line>
+                <line x1="2" y1="12" x2="5" y2="12"></line>
+                <line x1="19" y1="12" x2="22" y2="12"></line>
+            </svg>
+        </div>
     </div>
 
     <!-- Floating Cinema Mode Stop Button -->

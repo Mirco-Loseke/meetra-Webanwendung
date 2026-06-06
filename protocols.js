@@ -2100,26 +2100,11 @@
             const machineTitle = currentProtocol.title || 'Ohne Titel';
             const blobUrl = docPDF.output('bloburl');
 
-            // Build preview overlay
-            const previewOverlay = document.createElement('div');
-            previewOverlay.id = 'pdf-preview-overlay';
-            previewOverlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(5,10,20,0.97);z-index:100001;display:flex;flex-direction:column;font-family:\'Inter\',sans-serif;';
-            previewOverlay.innerHTML = `
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:0.4rem 1rem;background:rgba(15,23,42,0.96);border-bottom:1px solid rgba(255,255,255,0.08);flex-shrink:0;">
-                    <div style="display:flex;align-items:center;gap:8px;overflow:hidden;min-width:0;">
-                        <span style="color:rgba(255,255,255,0.4);font-size:0.76rem;font-weight:600;white-space:nowrap;flex-shrink:0;">PDF-Vorschau</span>
-                        <span style="color:rgba(255,255,255,0.18);font-size:0.76rem;flex-shrink:0;">|</span>
-                        <span style="color:#fff;font-size:0.82rem;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${title} &ndash; ${machineTitle}</span>
-                    </div>
-                    <button onclick="document.getElementById('pdf-preview-overlay').remove()"
-                        style="flex-shrink:0;margin-left:0.75rem;width:26px;height:26px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:rgba(255,255,255,0.55);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;"
-                        onmouseover="this.style.background='rgba(239,68,68,0.2)';this.style.borderColor='rgba(239,68,68,0.4)';this.style.color='#f87171';" onmouseout="this.style.background='rgba(255,255,255,0.06)';this.style.borderColor='rgba(255,255,255,0.12)';this.style.color='rgba(255,255,255,0.55)';">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                    </button>
-                </div>
-                <iframe id="pdf-preview-frame" src="${blobUrl}" style="flex:1;width:100%;border:none;background:#525659;"></iframe>
-            `;
-            document.body.appendChild(previewOverlay);
+            if (typeof window.previewDocument === 'function') {
+                window.previewDocument(blobUrl, `${title} - ${machineTitle}`, 'application/pdf');
+            } else {
+                window.open(blobUrl, '_blank');
+            }
         } catch (err) {
             document.getElementById('pdf-preview-loading')?.remove();
             alert('Fehler bei der Vorschau: ' + err.message);
@@ -2653,10 +2638,27 @@
             currentProtocolType = type;
             await loadProtocol(protocolId, type);
             if (currentProtocol) {
+                const title = currentProtocolType === 'intake' ? 'Eingangsprotokoll' : 'Abnahmeprotokoll';
+                const machineTitle = currentProtocol.title || 'Ohne Titel';
+                const displayName = `${title} - ${machineTitle}`;
                 if (currentProtocol.pdf_url) {
-                    window.open(currentProtocol.pdf_url, '_blank');
+                    if (typeof window.previewDocument === 'function') {
+                        window.previewDocument(currentProtocol.pdf_url, displayName, 'application/pdf');
+                    } else {
+                        window.open(currentProtocol.pdf_url, '_blank');
+                    }
                 } else {
-                    await window.generateProtocolPDF(true); // true for preview in new tab
+                    const docPDF = await window.generateProtocolPDFDoc();
+                    if (docPDF) {
+                        const blobUrl = docPDF.output('bloburl');
+                        if (typeof window.previewDocument === 'function') {
+                            window.previewDocument(blobUrl, displayName, 'application/pdf');
+                        } else {
+                            window.open(blobUrl, '_blank');
+                        }
+                    } else {
+                        throw new Error('PDF-Generierung fehlgeschlagen.');
+                    }
                 }
             }
         } catch (err) {
