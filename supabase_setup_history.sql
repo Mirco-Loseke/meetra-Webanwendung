@@ -941,6 +941,10 @@ CREATE POLICY "Enable all for everyone" ON task_quick_templates FOR ALL USING (t
 
 ALTER TABLE machines ADD COLUMN IF NOT EXISTS files jsonb DEFAULT '[]'::jsonb;
 
+-- Weitere Maschinen & Zusatzausrüstung (optional; wird zusätzlich in files-meta gespeichert)
+ALTER TABLE machines ADD COLUMN IF NOT EXISTS related_machine_ids jsonb DEFAULT '[]'::jsonb;
+ALTER TABLE machines ADD COLUMN IF NOT EXISTS additional_equipment jsonb DEFAULT '[]'::jsonb;
+
 
 
 /* ========================================================= */

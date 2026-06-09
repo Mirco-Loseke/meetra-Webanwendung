@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Webapp meetra</title>
     <link rel="icon" type="image/png" href="meetra_arrows_icon.png">
-    <link rel="stylesheet" href="style.css?v=99999999999999999999999">
+    <link rel="stylesheet" href="style.css?v=40">
     <!-- Preloading standard fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -572,6 +572,48 @@
         #profile-selection-list::-webkit-scrollbar-thumb {
             background: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
+        }
+
+        /* Compact machine edit spacing for sections 1-4 */
+        #add-machine-modal .form-grid {
+            gap: 6px;
+        }
+
+        #add-machine-modal .form-group {
+            margin-bottom: 0.55rem;
+        }
+
+        #add-machine-modal .form-group label {
+            margin-bottom: 0.25rem;
+            display: block;
+        }
+
+        #add-machine-modal .section-header {
+            padding: 8px 12px;
+            margin-bottom: 0.5rem;
+        }
+
+        #add-machine-modal .section-header h3,
+        #add-machine-modal .section-header span {
+            margin: 0;
+        }
+
+        #add-machine-modal .section-content > * {
+            margin-bottom: 0.5rem;
+        }
+
+        #add-machine-modal .section-content > *:last-child {
+            margin-bottom: 0;
+        }
+
+        #add-machine-modal .machine-related-search-group,
+        #add-machine-modal .machine-equipment-list,
+        #add-machine-modal .machine-related-chips {
+            margin-bottom: 0.65rem;
+        }
+
+        #add-machine-modal .machine-equipment-add-btn {
+            margin-top: 0.35rem;
         }
     </style>
     </div>
@@ -1659,10 +1701,10 @@
                                 </div>
                                 <h2
                                     style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">
-                                    Benutzerverwaltung</h2>
+                                    Benutzer<wbr>verwaltung</h2>
                             </div>
                             <div class="settings-content">
-                                <p style="font-size: 1rem;">Benutzer hinzufügen, bearbeiten oder entfernen</p>
+                                <p class="settings-card-desc">Benutzer hinzufügen,<wbr> bearbeiten oder entfernen</p>
                             </div>
                         </div>
 
@@ -1681,7 +1723,7 @@
                                     Kategorien</h2>
                             </div>
                             <div class="settings-content">
-                                <p style="font-size: 1rem;">Maschinenkategorien verwalten</p>
+                                <p class="settings-card-desc">Maschinenkategorien verwalten</p>
                             </div>
                         </div>
 
@@ -1702,10 +1744,10 @@
                                 </div>
                                 <h2
                                     style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">
-                                    Protokollvorlagen</h2>
+                                    Protokoll<wbr>vorlagen</h2>
                             </div>
                             <div class="settings-content">
-                                <p style="font-size: 1rem;">Templates für Abnahme- und Eingangsprotokolle</p>
+                                <p class="settings-card-desc">Templates für Abnahme-<wbr> und Eingangsprotokolle</p>
                             </div>
                         </div>
 
@@ -1725,7 +1767,7 @@
                                     Textbausteine</h2>
                             </div>
                             <div class="settings-content">
-                                <p style="font-size: 1rem;">Vorlagen für Übergruppen und Unteraufgaben</p>
+                                <p class="settings-card-desc">Vorlagen für Übergruppen und Unteraufgaben</p>
                             </div>
                         </div>
 
@@ -1743,13 +1785,31 @@
                                 </div>
                                 <h2
                                     style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">
-                                    Firmeneinstellungen</h2>
+                                    Firmen<wbr>einstellungen</h2>
                             </div>
                             <div class="settings-content">
-                                <p style="font-size: 1rem;">Firmendaten &amp; Kunden-Adressimport (Sage 100)</p>
+                                <p class="settings-card-desc">Firmendaten &amp;<wbr> Kunden-Adressimport (Sage 100)</p>
                             </div>
                         </div>
                         
+                        <!-- UVV & Wartungspläne Card -->
+                        <div class="settings-card" data-target="settings-uvv-wartungsplaene">
+                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
+                                <div class="settings-icon-container"
+                                    style="background: rgba(16, 185, 129, 0.12); color: #10b981; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0;">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path>
+                                        <rect x="9" y="3" width="6" height="4" rx="1"></rect>
+                                        <path d="m9 12 2 2 4-4"></path>
+                                    </svg>
+                                </div>
+                                <h2 style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">UVV &amp; Wartungs&shy;pläne</h2>
+                            </div>
+                            <div class="settings-content">
+                                <p class="settings-card-desc">Prüf- &amp; Wartungspläne verwalten und Maschinen zuordnen</p>
+                            </div>
+                        </div>
+
                         <!-- Groq API Key Card -->
                         <div class="settings-card" data-target="settings-ai">
                             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
@@ -1774,7 +1834,7 @@
                                     Groq API Key</h2>
                             </div>
                             <div class="settings-content">
-                                <p style="font-size: 1rem;">API-Key für die kostenlose KI-Buchhaltung verwalten</p>
+                                <p class="settings-card-desc">API-Key für die kostenlose KI-Buchhaltung verwalten</p>
                             </div>
                         </div>
 
@@ -1782,6 +1842,87 @@
 
 
         </section>
+
+        <!-- UVV & Wartungspläne Settings View -->
+        <section id="settings-uvv-wartungsplaene" class="view hidden">
+            <div class="users-header-container">
+                <h1>UVV &amp; Wartungspläne</h1>
+                <div class="users-header-actions">
+                    <button class="btn-back-custom" data-target="settings">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg>
+                        ZURÜCK
+                    </button>
+                    <button class="btn-add-bg" onclick="openPlanModal(null)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        ANLEGEN
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filter Tabs -->
+            <div style="display: flex; gap: 10px; margin: 1.25rem 0 1rem 0; flex-wrap: wrap;">
+                <button class="uvv-filter-btn active" data-filter="all" onclick="filterUvvPlanCards('all')"
+                    style="padding: 7px 18px; border-radius: 20px; border: 1.5px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: white; font-weight: 700; font-size: 0.83rem; cursor: pointer; transition: all 0.2s;">
+                    Alle
+                </button>
+                <button class="uvv-filter-btn" data-filter="uvv" onclick="filterUvvPlanCards('uvv')"
+                    style="padding: 7px 18px; border-radius: 20px; border: 1.5px solid rgba(239,68,68,0.4); background: rgba(239,68,68,0.08); color: #f87171; font-weight: 700; font-size: 0.83rem; cursor: pointer; transition: all 0.2s;">
+                    UVV
+                </button>
+                <button class="uvv-filter-btn" data-filter="wartung" onclick="filterUvvPlanCards('wartung')"
+                    style="padding: 7px 18px; border-radius: 20px; border: 1.5px solid rgba(59,130,246,0.4); background: rgba(59,130,246,0.08); color: #60a5fa; font-weight: 700; font-size: 0.83rem; cursor: pointer; transition: all 0.2s;">
+                    Wartung
+                </button>
+            </div>
+
+            <!-- Plan Cards Container -->
+            <div id="uvv-plan-cards-container" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+        </section>
+
+        <!-- Plan Editor Modal -->
+        <div id="plan-editor-modal" style="display:none; position:fixed; inset:0; z-index:100000; background:rgba(5,7,10,0.88); backdrop-filter:blur(12px); align-items:center; justify-content:center;">
+            <div class="glass-card pme-modal-inner" style="width:92%; max-width:820px; max-height:92vh; overflow-y:auto; padding:2rem; border-radius:20px; border:1.5px solid rgba(255,255,255,0.1); position:relative;">
+                <div class="pme-modal-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; padding-right:44px;">
+                    <h2 id="plan-modal-title" style="margin:0; font-family:'Outfit',sans-serif; font-size:1.35rem; color:#fff;">Wartungsplan bearbeiten</h2>
+                </div>
+                <button onclick="closePlanModal()" class="btn-close-modal" style="position:absolute; top:12px; right:16px;">&times;</button>
+                <div class="pme-fields-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; margin-bottom:1.25rem;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Plan-Titel</label>
+                        <input type="text" id="pme-title" class="glass-form-input" placeholder="z.B. Wartungsplan JT 580" style="height:44px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Maschinenmodell</label>
+                        <input type="text" id="pme-model" class="glass-form-input" placeholder="z.B. JT 580 oder generic" style="height:44px;">
+                    </div>
+                </div>
+                <div style="margin-bottom:1.25rem;">
+                    <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:8px;">Typ</label>
+                    <div style="display:flex; gap:8px;">
+                        <button id="pme-type-wartung" onclick="setPmeType('wartung')" style="padding:7px 18px; border-radius:20px; border:1.5px solid rgba(59,130,246,0.55); background:rgba(59,130,246,0.22); color:#60a5fa; font-weight:700; font-size:0.83rem; cursor:pointer; transition:all 0.15s;">Wartung</button>
+                        <button id="pme-type-uvv" onclick="setPmeType('uvv')" style="padding:7px 18px; border-radius:20px; border:1.5px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.4); font-weight:700; font-size:0.83rem; cursor:pointer; transition:all 0.15s;">UVV</button>
+                    </div>
+                </div>
+                <div style="margin-bottom:0.75rem; display:flex; align-items:center; justify-content:space-between;">
+                    <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Prüfpunkte</label>
+                    <button onclick="uvvAddItem()" style="padding:6px 14px; border-radius:8px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#10b981; font-weight:700; font-size:0.8rem; cursor:pointer; display:flex; align-items:center; gap:5px;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        Hinzufügen
+                    </button>
+                </div>
+                <!-- Scrollable table wrapper -->
+                <div class="pme-table-scroll">
+                    <div class="pme-items-header" style="display:grid; grid-template-columns:20px 55px 1fr 2fr 110px 32px; gap:6px; padding:0 10px 6px; font-size:0.72rem; color:rgba(255,255,255,0.35); font-weight:700; text-transform:uppercase; letter-spacing:0.4px;">
+                        <span></span><span>Pos.</span><span>Kategorie</span><span>Beschreibung</span><span>Intervall</span><span></span>
+                    </div>
+                    <div id="pme-items" style="display:flex; flex-direction:column; gap:6px; max-height:300px; overflow-y:auto; padding-right:2px;"></div>
+                </div>
+                <div class="pme-modal-actions" style="display:flex; justify-content:flex-end; gap:10px; margin-top:1.5rem; border-top:1px solid rgba(255,255,255,0.06); padding-top:1.25rem;">
+                    <button onclick="closePlanModal()" class="btn-secondary" style="padding:9px 20px;">Abbrechen</button>
+                    <button onclick="savePlanModal()" class="btn-primary" style="padding:9px 26px; font-weight:700;">Speichern</button>
+                </div>
+            </div>
+        </div>
 
         <!-- Firmeneinstellungen Settings View -->
         <section id="settings-firmeneinstellungen" class="view hidden">
@@ -2090,7 +2231,8 @@
                             <line x1="20" y1="8" x2="20" y2="14"></line>
                             <line x1="23" y1="11" x2="17" y2="11"></line>
                         </svg>
-                        BENUTZER ANLEGEN
+                        <span class="btn-label-full">BENUTZER ANLEGEN</span>
+                        <span class="btn-label-short">ANLEGEN</span>
                     </button>
                 </div>
             </div>
@@ -2120,7 +2262,8 @@
                             stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12 5v14M5 12h14"></path>
                         </svg>
-                        KATEGORIE ANLEGEN
+                        <span class="btn-label-full">KATEGORIE ANLEGEN</span>
+                        <span class="btn-label-short">ANLEGEN</span>
                     </button>
                 </div>
             </div>
@@ -3012,6 +3155,29 @@
             return false;
         };
 
+        // ==========================================
+        // SHARED UNSAVED CHANGES DIALOG
+        // ==========================================
+        window.showUnsavedDialog = function ({ overlayId, onDiscard, onSave }) {
+            document.getElementById(overlayId)?.remove();
+            const el = document.createElement('div');
+            el.id = overlayId;
+            el.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:999999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);';
+            el.innerHTML = `
+                <div style="background:linear-gradient(135deg,rgba(30,41,59,0.98),rgba(15,23,42,0.99));border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:1.75rem 2rem;max-width:380px;width:90%;box-shadow:0 30px 80px rgba(0,0,0,0.6);font-family:'Inter',sans-serif;text-align:center;">
+                    <h3 style="color:#fff;font-size:1.05rem;font-weight:800;margin:0 0 0.6rem 0;">Ungespeicherte Änderungen</h3>
+                    <p style="color:rgba(255,255,255,0.55);font-size:0.88rem;margin:0 0 1.5rem 0;line-height:1.5;">Möchtest du ohne Speichern verlassen?</p>
+                    <div style="display:flex;gap:0.75rem;justify-content:center;">
+                        <button id="${overlayId}-discard" style="flex:1;padding:0.7rem 1rem;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:12px;color:rgba(255,255,255,0.75);font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;font-size:0.88rem;transition:background 0.2s;">Trotzdem Schließen</button>
+                        <button id="${overlayId}-save" style="flex:1;padding:0.7rem 1rem;background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.4);border-radius:12px;color:#34d399;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;font-size:0.88rem;transition:background 0.2s;">Speichern</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(el);
+            document.getElementById(overlayId + '-discard').onclick = () => { el.remove(); onDiscard(); };
+            document.getElementById(overlayId + '-save').onclick = () => { el.remove(); onSave(); };
+        };
+
         console.log('Inline Script Loaded');
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -3143,6 +3309,7 @@
                             'settings-firmeneinstellungen',
                             'settings-textbausteine',
                             'settings-ai',
+                            'settings-uvv-wartungsplaene',
                             'users',
                             'categories',
                             'protocol-templates',
@@ -3210,6 +3377,10 @@
                     const input = document.getElementById('settings-api-key-new');
                     const savedKey = localStorage.getItem('groq_api_key');
                     if (input) input.value = savedKey || '';
+                } else if (targetId === 'settings-uvv-wartungsplaene') {
+                    if (typeof window.loadUvvWartungsplaene === 'function') {
+                        window.loadUvvWartungsplaene();
+                    }
                 }
 
                 if (!found) {
@@ -4074,6 +4245,7 @@
                                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
                                 Startseite
                             </h1>
+                            <p style="margin:6px 0 0; color:rgba(255,255,255,0.4); font-size:0.95rem; font-family:'Inter',sans-serif;">Übersicht &amp; Statistiken</p>
                         </div>
 
                         <div style="display:flex; flex-wrap:wrap; gap:1rem; margin-bottom:2.5rem;">
@@ -4083,7 +4255,7 @@
                         </div>
 
                         <!-- Middle Row: Alarms + Calendar -->
-                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:1.5rem; margin-bottom:2.5rem;">
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:2.5rem;">
 
                             <!-- Maintenance Alarms -->
                             <div style="background:rgba(110, 122, 140, 0.45); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px); border:3px solid rgba(239,68,68,0.5); border-left:7px solid #ef4444; border-radius:20px; padding:1.5rem; box-shadow:0 10px 30px rgba(0,0,0,0.6);">
@@ -4434,7 +4606,7 @@
                                 </span>` : '';
 
                     li.innerHTML = `
-                            <div class="user-item-content" style="position: relative; display: flex; align-items: center; justify-content: space-between;">
+                            <div class="user-item-content">
                                 ${adminBadgeHtml}
                                 <div class="user-info-group">
                                     <div class="user-avatar-large" style="position: relative; cursor: pointer;" onclick="document.getElementById('color-picker-${user.id}').click()" title="Farbe ändern">
@@ -4444,17 +4616,10 @@
                                                value="${user.color || '#999999'}"
                                                onchange="updateUserColor(${user.id}, this.value)">
                                     </div>
-                                    <div class="user-details" style="display: flex; align-items: center; margin-left: 10px;">
+                                    <div class="user-details">
                                         <span class="user-name-link">${user.name}</span>
+                                        ${showPinInList ? `<span class="user-pin-badge"><span class="user-pin-label">PIN:</span><span class="user-pin-value">${user.pin || '----'}</span></span>` : ''}
                                     </div>
-                                </div>
-
-                                <!-- Centered PIN (Exactly in the middle of the card) -->
-                                <div style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; display: flex; align-items: center; justify-content: center;">
-                                    ${showPinInList ? `<span style="pointer-events: auto; font-family: 'JetBrains Mono', monospace; color: rgba(255,255,255,0.5); font-size: 0.95rem; background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 8px;">
-                                        <span style="opacity: 0.7;">PIN:</span>
-                                        <span style="color: #60a5fa; font-weight: 800; letter-spacing: 1px;">${user.pin || '----'}</span>
-                                    </span>` : ''}
                                 </div>
 
                                 <div class="user-actions">
@@ -5781,6 +5946,92 @@
                     };
                 }
 
+                // Verknüpfte Maschinen & Zusatzausrüstung
+                const normMachineIds = (src) => {
+                    if (Array.isArray(src)) return src.filter(Boolean).map(String);
+                    if (typeof src === 'string' && src.trim()) {
+                        try { const p = JSON.parse(src); if (Array.isArray(p)) return p.filter(Boolean).map(String); } catch(e) {}
+                        return src.split(',').map(s => s.trim()).filter(Boolean);
+                    }
+                    return [];
+                };
+                const extractMetaVal = (files, key) => {
+                    if (!Array.isArray(files)) return null;
+                    const e = files.find(f => f && f.type === 'meta' && f.key === key && f.property != null);
+                    return e ? e.property : null;
+                };
+                const normalizeEquipList = (src) => {
+                    if (!src) return [];
+                    let items = Array.isArray(src) ? src : (() => { try { const p = JSON.parse(src); return Array.isArray(p) ? p : []; } catch(e) { return []; } })();
+                    const seen = new Map();
+                    return items.filter(Boolean).map(eq => ({
+                        serial: eq.serial ? String(eq.serial).trim() : '',
+                        type: eq.type ? String(eq.type).trim() : '',
+                        designation: (eq.designation || eq.name) ? String(eq.designation || eq.name).trim() : '',
+                        year: eq.year ? String(eq.year).trim() : ''
+                    })).filter(eq => {
+                        const k = `${eq.type}|${eq.serial}|${eq.designation}`;
+                        if (seen.has(k)) return false;
+                        seen.set(k, true);
+                        return eq.serial || eq.type || eq.designation;
+                    });
+                };
+
+                const relatedIds = Array.from(new Set([
+                    ...normMachineIds(machine.related_machine_ids),
+                    ...normMachineIds(extractMetaVal(machine.files, 'related_machine_ids'))
+                ]));
+                const additionalEquip = [
+                    ...normalizeEquipList(machine.additional_equipment),
+                    ...normalizeEquipList(extractMetaVal(machine.files, 'additional_equipment'))
+                ];
+
+                const extrasWrapper = document.getElementById('machine-details-extras-wrapper');
+                const relatedCard = document.getElementById('machine-details-related-card');
+                const relatedList = document.getElementById('machine-details-related-list');
+                const equipCard = document.getElementById('machine-details-equipment-card');
+                const equipList = document.getElementById('machine-details-equipment-list');
+
+                const hasRelated = relatedIds.length > 0;
+                const hasEquip = additionalEquip.length > 0;
+
+                if (extrasWrapper) extrasWrapper.style.display = (hasRelated || hasEquip) ? 'grid' : 'none';
+
+                if (relatedList) {
+                    if (hasRelated) {
+                        const allMachinesRef = window.machineList || [];
+                        relatedList.innerHTML = relatedIds.map(rid => {
+                            const rm = allMachinesRef.find(m => String(m.id) === rid);
+                            if (!rm) return `<div style="padding: 8px 0; font-size: 0.9rem; color: rgba(255,255,255,0.35);">Maschine #${rid}</div>`;
+                            const sub = [rm.serial ? `SN: ${rm.serial}` : '', rm.year ? rm.year : ''].filter(Boolean).join(' · ');
+                            return `<div onclick="closeMachineDetailsModal(); window.openMachineDetails(${rm.id})"
+                                         style="padding: 10px 12px; background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.2); border-radius: 10px; cursor: pointer; transition: background 0.2s;"
+                                         onmouseover="this.style.background='rgba(59,130,246,0.18)'"
+                                         onmouseout="this.style.background='rgba(59,130,246,0.08)'">
+                                        <div style="font-size: 0.95rem; color: white; font-weight: 700; line-height: 1.3;">${rm.manufacturer || ''} ${rm.name || ''}</div>
+                                        ${sub ? `<div style="font-size: 0.78rem; color: rgba(255,255,255,0.4); font-weight: 400; margin-top: 3px;">${sub}</div>` : ''}
+                                    </div>`;
+                        }).join('');
+                    } else {
+                        relatedList.innerHTML = '<div style="font-size: 0.85rem; color: rgba(255,255,255,0.3); padding: 4px 0;">Keine verknüpften Maschinen</div>';
+                    }
+                }
+
+                if (equipList) {
+                    if (hasEquip) {
+                        equipList.innerHTML = additionalEquip.map(eq => {
+                            const title = [eq.designation, eq.type].filter(Boolean).join(' · ') || 'Unbekannt';
+                            const sub = [eq.serial ? `SN: ${eq.serial}` : '', eq.year ? eq.year : ''].filter(Boolean).join(' · ');
+                            return `<div style="padding: 10px 12px; background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.2); border-radius: 10px;">
+                                        <div style="font-size: 0.95rem; color: white; font-weight: 700; line-height: 1.3;">${title}</div>
+                                        ${sub ? `<div style="font-size: 0.78rem; color: rgba(255,255,255,0.4); font-weight: 400; margin-top: 3px;">${sub}</div>` : ''}
+                                    </div>`;
+                        }).join('');
+                    } else {
+                        equipList.innerHTML = '<div style="font-size: 0.85rem; color: rgba(255,255,255,0.3); padding: 4px 0;">Keine Zusatzausrüstung erfasst</div>';
+                    }
+                }
+
                 const custAddressEl = document.getElementById('machine-details-cust-address');
                 const custMapsLink = document.getElementById('machine-details-cust-maps-link');
                 
@@ -5965,6 +6216,562 @@
                 }
             };
 
+
+            // ============================================================
+            // UVV & Wartungspläne Settings
+            // ============================================================
+
+            let uvvPlanAssignments = {}; // { planId: { category_ids: [], machine_ids: [] } }
+            let uvvMachineChips = {};    // { planId: Set of machine IDs currently in the chip UI }
+
+            window.loadUvvWartungsplaene = async function () {
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('app_settings').select('value')
+                        .eq('key', 'uvv_plan_assignments').maybeSingle();
+                    uvvPlanAssignments = (data && !error && data.value) ? data.value : {};
+                } catch(e) { uvvPlanAssignments = {}; }
+
+                // Merge built-in + custom templates
+                try {
+                    const { data } = await supabaseClient
+                        .from('app_settings').select('value')
+                        .eq('key', 'custom_checklist_templates').maybeSingle();
+                    const custom = (data && Array.isArray(data.value)) ? data.value : [];
+                    const builtInIds = new Set((window.MOCK_CHECKLIST_TEMPLATES || []).map(t => t.id));
+                    const customMap = Object.fromEntries(custom.map(t => [t.id, t]));
+                    window.ACTIVE_CHECKLIST_TEMPLATES = [
+                        ...(window.MOCK_CHECKLIST_TEMPLATES || []).map(t => customMap[t.id] || t),
+                        ...custom.filter(t => !builtInIds.has(t.id))
+                    ];
+                } catch(e) {
+                    window.ACTIVE_CHECKLIST_TEMPLATES = [...(window.MOCK_CHECKLIST_TEMPLATES || [])];
+                }
+
+                uvvMachineChips = {};
+                renderUvvPlanCards('all');
+            };
+
+            function renderUvvPlanCards(filter) {
+                const container = document.getElementById('uvv-plan-cards-container');
+                if (!container) return;
+
+                const templates = window.ACTIVE_CHECKLIST_TEMPLATES || window.MOCK_CHECKLIST_TEMPLATES || [];
+                const filtered = filter === 'all' ? templates : templates.filter(t => t.type === filter);
+
+                if (!filtered.length) {
+                    container.innerHTML = '<div style="text-align:center; padding: 3rem; color: rgba(255,255,255,0.4);">Keine Pläne vorhanden.</div>';
+                    return;
+                }
+
+                const builtInIds = new Set((window.MOCK_CHECKLIST_TEMPLATES || []).map(t => t.id));
+
+                container.innerHTML = filtered.map(plan => {
+                    const assignment = uvvPlanAssignments[plan.id] || { category_ids: [], machine_models: [] };
+                    const isUvv = plan.type === 'uvv';
+                    const badgeColor = isUvv ? '#ef4444' : '#3b82f6';
+                    const badgeBg = isUvv ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.15)';
+                    const badgeBorder = isUvv ? 'rgba(239,68,68,0.4)' : 'rgba(59,130,246,0.4)';
+                    const badgeLabel = isUvv ? 'UVV' : 'WARTUNG';
+                    const itemCount = plan.items ? plan.items.length : 0;
+                    const assignedModels = assignment.machine_models || [];
+                    const models = assignedModels.length > 0 ? assignedModels.join(', ') : (plan.machine_model && plan.machine_model !== 'generic' ? plan.machine_model : 'Alle Maschinen');
+                    const isCustom = !builtInIds.has(plan.id);
+
+                    // Category dropdown + tags
+                    const categories = (window.categoryList || []).filter(c => c.type === 'machine');
+                    const selectedCatIds = new Set((assignment.category_ids || []).map(String));
+                    const catDropdownItems = categories.map(c => {
+                        const sel = selectedCatIds.has(String(c.id));
+                        const bg = sel ? 'rgba(59,130,246,0.15)' : 'transparent';
+                        const bgHover = sel ? 'rgba(59,130,246,0.25)' : 'rgba(255,255,255,0.06)';
+                        return `<div onclick="uvvToggleCat('${plan.id}','${c.id}')"
+                            style="padding:9px 14px; cursor:pointer; font-size:0.88rem; color:${sel ? '#60a5fa' : 'white'};
+                            border-bottom:1px solid rgba(255,255,255,0.06); transition:background 0.15s; background:${bg};"
+                            onmouseover="this.style.background='${bgHover}'"
+                            onmouseout="this.style.background='${bg}'">${sel ? '✓ ' : ''}${c.name}</div>`;
+                    }).join('');
+                    const catSelectedTags = [...selectedCatIds].map(cid => {
+                        const cat = categories.find(c => String(c.id) === cid);
+                        if (!cat) return '';
+                        return `<span style="display:inline-flex; align-items:center; gap:6px; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.35); border-radius:20px; padding:4px 12px; font-size:0.82rem; color:#60a5fa; font-weight:700;">${cat.name}<span onclick="uvvToggleCat('${plan.id}','${cat.id}')" style="cursor:pointer; opacity:0.7; font-size:1rem; line-height:1;">&times;</span></span>`;
+                    }).join('');
+
+                    // Assigned model type chips
+                    const chipHtml = (assignment.machine_models || []).map(model => {
+                        const safe = model.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+                        return `<span style="display:inline-flex; align-items:center; gap:6px; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); border-radius:20px; padding:4px 12px; font-size:0.82rem; color:#10b981; font-weight:700;">
+                            ${model}
+                            <span onclick="uvvRemoveMachineType('${plan.id}','${safe}')" style="cursor:pointer; opacity:0.7; font-size:1rem; line-height:1;">&times;</span>
+                        </span>`;
+                    }).join('');
+
+                    return `<div class="glass-card uvv-plan-card" data-plan-type="${plan.type}" style="padding: 1.25rem 1.5rem; position: relative;">
+                        <div style="flex:1; min-width:0;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                                <span style="font-size:0.68rem; font-weight:900; text-transform:uppercase; letter-spacing:1px; padding:3px 9px; border-radius:20px; background:${badgeBg}; border:1px solid ${badgeBorder}; color:${badgeColor};">${badgeLabel}</span>
+                                <div style="display:flex; gap:6px;">
+                                    <button class="btn-icon-soft edit" onclick="openPlanModal('${plan.id}')" title="Bearbeiten">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                    </button>
+                                    ${isCustom ? `<button class="btn-icon-soft delete" onclick="deletePlan('${plan.id}')" title="Löschen">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                    </button>` : ''}
+                                </div>
+                            </div>
+                            <div style="margin-bottom:0.65rem;">
+                                <span style="font-size:0.76rem; color:rgba(255,255,255,0.35); font-weight:500;">${itemCount} Prüfpunkte · ${models}</span>
+                            </div>
+                            <h3 style="margin:0 0 0.9rem 0; font-family:'Outfit',sans-serif; font-size:1.15rem; font-weight:800; color:#fff;">${plan.title}</h3>
+
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; align-items:start;">
+                                <div>
+                                    <label style="font-size:0.75rem; color:rgba(255,255,255,0.4); text-transform:uppercase; font-weight:700; letter-spacing:0.5px; display:block; margin-bottom:7px;">Maschinentyp</label>
+                                    <div style="position:relative;">
+                                        <button onclick="uvvToggleCatDropdown('${plan.id}')" id="uvv-cat-btn-${plan.id}"
+                                            style="width:100%; padding:9px 12px; border-radius:9px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.04); color:${selectedCatIds.size ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)'}; font-family:'Inter',sans-serif; font-size:0.86rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center;">
+                                            <span id="uvv-cat-btn-text-${plan.id}">${selectedCatIds.size ? selectedCatIds.size + ' ausgewählt' : 'Maschinentyp wählen...'}</span>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:0.5; flex-shrink:0;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                        </button>
+                                        <div id="uvv-cat-dropdown-${plan.id}" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:500; background:#0b1220; border:1px solid rgba(255,255,255,0.15); border-radius:10px; margin-top:4px; max-height:200px; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.7);">
+                                            ${catDropdownItems || '<div style="padding:10px 14px; color:rgba(255,255,255,0.4); font-size:0.85rem;">Keine Kategorien</div>'}
+                                        </div>
+                                    </div>
+                                    <div id="uvv-cat-tags-${plan.id}" style="display:flex; flex-wrap:wrap; gap:5px; margin-top:8px;">${catSelectedTags}</div>
+                                </div>
+                                <div>
+                                    <label style="font-size:0.75rem; color:rgba(255,255,255,0.4); text-transform:uppercase; font-weight:700; letter-spacing:0.5px; display:block; margin-bottom:6px;">Maschinenmodell</label>
+                                    <div style="position:relative;">
+                                        <input type="text" id="uvv-machine-search-${plan.id}"
+                                            placeholder="Maschine suchen..."
+                                            oninput="uvvSearchMachineType('${plan.id}', this.value)"
+                                            style="width:100%; padding:9px 12px; border-radius:9px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.04); color:white; font-family:'Inter',sans-serif; font-size:0.86rem; box-sizing:border-box;">
+                                        <div id="uvv-machine-dropdown-${plan.id}" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:500; background:#0b1220; border:1px solid rgba(255,255,255,0.15); border-radius:10px; margin-top:4px; max-height:180px; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.7);"></div>
+                                    </div>
+                                    <div id="uvv-machine-chips-${plan.id}" style="display:flex; flex-wrap:wrap; gap:5px; margin-top:8px;">${chipHtml}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:flex-end; margin-top:0.9rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.06);">
+                            <button class="uvv-assignment-save" onclick="saveUvvPlanAssignment('${plan.id}')"
+                                style="padding:8px 20px; border-radius:10px; background:rgba(16,185,129,0.2); border:1.5px solid rgba(16,185,129,0.4); color:#10b981; font-weight:800; font-size:0.82rem; cursor:pointer; transition:all 0.2s; text-transform:uppercase; letter-spacing:0.5px;"
+                                onmouseover="this.style.background='rgba(16,185,129,0.35)'"
+                                onmouseout="this.style.background='rgba(16,185,129,0.2)'">
+                                Zuordnung speichern
+                            </button>
+                        </div>
+                    </div>`;
+                }).join('');
+            }
+
+            window.filterUvvPlanCards = function (filter) {
+                document.querySelectorAll('.uvv-filter-btn').forEach(btn => {
+                    const isActive = btn.dataset.filter === filter;
+                    btn.style.background = isActive ? 'rgba(255,255,255,0.15)' : (btn.dataset.filter === 'uvv' ? 'rgba(239,68,68,0.08)' : btn.dataset.filter === 'wartung' ? 'rgba(59,130,246,0.08)' : 'rgba(255,255,255,0.08)');
+                    btn.style.borderColor = isActive ? 'rgba(255,255,255,0.4)' : (btn.dataset.filter === 'uvv' ? 'rgba(239,68,68,0.4)' : btn.dataset.filter === 'wartung' ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.2)');
+                });
+                renderUvvPlanCards(filter);
+            };
+
+            // Search distinct machine model types from machineList
+            window.uvvSearchMachineType = function (planId, query) {
+                const dropdown = document.getElementById(`uvv-machine-dropdown-${planId}`);
+                if (!dropdown) return;
+                if (!query.trim()) { dropdown.style.display = 'none'; return; }
+
+                const current = new Set((uvvPlanAssignments[planId] || {}).machine_models || []);
+                const q = query.toLowerCase();
+                const seen = new Set();
+                const matches = [];
+                for (const m of (window.machineList || [])) {
+                    const key = `${m.manufacturer || ''} ${m.name || ''}`.trim();
+                    if (!key || seen.has(key) || current.has(key)) continue;
+                    if (key.toLowerCase().includes(q)) { seen.add(key); matches.push(key); }
+                    if (matches.length >= 10) break;
+                }
+
+                if (!matches.length) {
+                    dropdown.innerHTML = '<div style="padding:10px 14px; color:rgba(255,255,255,0.4); font-size:0.85rem;">Keine Ergebnisse</div>';
+                } else {
+                    dropdown.innerHTML = matches.map(model => {
+                        const safe = model.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+                        return `<div onclick="uvvAddMachineType('${planId}','${safe}')"
+                             style="padding:10px 14px; cursor:pointer; font-size:0.88rem; color:white; border-bottom:1px solid rgba(255,255,255,0.06); transition:background 0.15s;"
+                             onmouseover="this.style.background='rgba(16,185,129,0.15)'"
+                             onmouseout="this.style.background='transparent'">
+                            <strong>${model}</strong>
+                        </div>`;
+                    }).join('');
+                }
+                dropdown.style.display = 'block';
+            };
+
+            window.uvvAddMachineType = function (planId, model) {
+                if (!uvvPlanAssignments[planId]) uvvPlanAssignments[planId] = { category_ids: [], machine_models: [] };
+                if (!uvvPlanAssignments[planId].machine_models) uvvPlanAssignments[planId].machine_models = [];
+                if (!uvvPlanAssignments[planId].machine_models.includes(model)) {
+                    uvvPlanAssignments[planId].machine_models.push(model);
+                }
+                const input = document.getElementById(`uvv-machine-search-${planId}`);
+                const dropdown = document.getElementById(`uvv-machine-dropdown-${planId}`);
+                if (input) input.value = '';
+                if (dropdown) dropdown.style.display = 'none';
+                refreshUvvModelChips(planId);
+            };
+
+            window.uvvRemoveMachineType = function (planId, model) {
+                if (uvvPlanAssignments[planId] && uvvPlanAssignments[planId].machine_models) {
+                    uvvPlanAssignments[planId].machine_models = uvvPlanAssignments[planId].machine_models.filter(m => m !== model);
+                }
+                refreshUvvModelChips(planId);
+            };
+
+            function refreshUvvModelChips(planId) {
+                const container = document.getElementById(`uvv-machine-chips-${planId}`);
+                if (!container) return;
+                const models = (uvvPlanAssignments[planId] || {}).machine_models || [];
+                container.innerHTML = models.map(model => {
+                    const safe = model.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+                    return `<span style="display:inline-flex; align-items:center; gap:6px; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); border-radius:20px; padding:4px 12px; font-size:0.82rem; color:#10b981; font-weight:700;">
+                        ${model}
+                        <span onclick="uvvRemoveMachineType('${planId}','${safe}')" style="cursor:pointer; opacity:0.7; font-size:1rem; line-height:1;">&times;</span>
+                    </span>`;
+                }).join('');
+            }
+
+            window.saveUvvPlanAssignment = async function (planId) {
+                if (!uvvPlanAssignments[planId]) uvvPlanAssignments[planId] = { category_ids: [], machine_models: [] };
+
+                try {
+                    const { data: existing } = await supabaseClient
+                        .from('app_settings').select('key').eq('key', 'uvv_plan_assignments').maybeSingle();
+
+                    if (existing) {
+                        await supabaseClient.from('app_settings')
+                            .update({ value: uvvPlanAssignments })
+                            .eq('key', 'uvv_plan_assignments');
+                    } else {
+                        await supabaseClient.from('app_settings')
+                            .insert([{ key: 'uvv_plan_assignments', value: uvvPlanAssignments }]);
+                    }
+
+                    // Brief visual feedback
+                    const btn = event && event.target ? event.target : null;
+                    if (btn) {
+                        const orig = btn.textContent;
+                        btn.textContent = '✓ Gespeichert';
+                        btn.style.background = 'rgba(16,185,129,0.4)';
+                        setTimeout(() => { btn.textContent = orig; btn.style.background = 'rgba(16,185,129,0.2)'; }, 1800);
+                    }
+                } catch(e) {
+                    alert('Fehler beim Speichern: ' + (e.message || e));
+                }
+            };
+
+            // Close machine dropdowns on outside click
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('[id^="uvv-machine-search-"]') && !e.target.closest('[id^="uvv-machine-dropdown-"]')) {
+                    document.querySelectorAll('[id^="uvv-machine-dropdown-"]').forEach(d => d.style.display = 'none');
+                }
+            });
+
+            // Toggle category selection
+            window.uvvToggleCat = function(planId, catId) {
+                if (!uvvPlanAssignments[planId]) uvvPlanAssignments[planId] = { category_ids: [], machine_ids: [] };
+                const ids = uvvPlanAssignments[planId].category_ids;
+                const cid = String(catId);
+                const idx = ids.indexOf(cid);
+                if (idx === -1) { ids.push(cid); } else { ids.splice(idx, 1); }
+                const selectedCatIds = new Set(ids);
+                const categories = (window.categoryList || []).filter(c => c.type === 'machine');
+                // Update button text
+                const btnText = document.getElementById(`uvv-cat-btn-text-${planId}`);
+                if (btnText) btnText.textContent = selectedCatIds.size ? `${selectedCatIds.size} ausgewählt` : 'Maschinentyp wählen...';
+                const btn = document.getElementById(`uvv-cat-btn-${planId}`);
+                if (btn) btn.style.color = selectedCatIds.size ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)';
+                // Re-render dropdown items
+                const dropdown = document.getElementById(`uvv-cat-dropdown-${planId}`);
+                if (dropdown) {
+                    dropdown.innerHTML = categories.map(c => {
+                        const sel = selectedCatIds.has(String(c.id));
+                        const bg = sel ? 'rgba(59,130,246,0.15)' : 'transparent';
+                        const bgHover = sel ? 'rgba(59,130,246,0.25)' : 'rgba(255,255,255,0.06)';
+                        return `<div onclick="uvvToggleCat('${planId}','${c.id}')"
+                            style="padding:9px 14px; cursor:pointer; font-size:0.88rem; color:${sel ? '#60a5fa' : 'white'};
+                            border-bottom:1px solid rgba(255,255,255,0.06); transition:background 0.15s; background:${bg};"
+                            onmouseover="this.style.background='${bgHover}'"
+                            onmouseout="this.style.background='${bg}'">${sel ? '✓ ' : ''}${c.name}</div>`;
+                    }).join('');
+                }
+                // Re-render tags
+                const tagsEl = document.getElementById(`uvv-cat-tags-${planId}`);
+                if (tagsEl) {
+                    tagsEl.innerHTML = [...selectedCatIds].map(cid2 => {
+                        const cat = categories.find(c => String(c.id) === cid2);
+                        if (!cat) return '';
+                        return `<span style="display:inline-flex; align-items:center; gap:6px; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.35); border-radius:20px; padding:4px 12px; font-size:0.82rem; color:#60a5fa; font-weight:700;">${cat.name}<span onclick="uvvToggleCat('${planId}','${cat.id}')" style="cursor:pointer; opacity:0.7; font-size:1rem; line-height:1;">&times;</span></span>`;
+                    }).join('');
+                }
+            };
+
+            window.uvvToggleCatDropdown = function(planId) {
+                const dropdown = document.getElementById(`uvv-cat-dropdown-${planId}`);
+                if (!dropdown) return;
+                const isOpen = dropdown.style.display !== 'none';
+                document.querySelectorAll('[id^="uvv-cat-dropdown-"]').forEach(d => { d.style.display = 'none'; });
+                if (!isOpen) dropdown.style.display = 'block';
+            };
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('[id^="uvv-cat-btn-"]') && !e.target.closest('[id^="uvv-cat-dropdown-"]')) {
+                    document.querySelectorAll('[id^="uvv-cat-dropdown-"]').forEach(d => { d.style.display = 'none'; });
+                }
+            });
+
+            // Plan Editor Modal
+            let planEditorState = { id: null, isNew: false, type: 'wartung', items: [] };
+
+            window.openPlanModal = function(planId) {
+                const modal = document.getElementById('plan-editor-modal');
+                if (!modal) return;
+                if (!planId) {
+                    planEditorState = { id: 'custom-' + Date.now(), isNew: true, type: 'wartung', items: [] };
+                    document.getElementById('plan-modal-title').textContent = 'Neuer Wartungsplan';
+                    document.getElementById('pme-title').value = '';
+                    document.getElementById('pme-model').value = '';
+                    setPmeType('wartung');
+                } else {
+                    const templates = window.ACTIVE_CHECKLIST_TEMPLATES || window.MOCK_CHECKLIST_TEMPLATES || [];
+                    const plan = templates.find(t => t.id === planId);
+                    if (!plan) return;
+                    planEditorState = { id: planId, isNew: false, type: plan.type || 'wartung', items: (plan.items || []).map(item => ({...item})) };
+                    document.getElementById('plan-modal-title').textContent = 'Wartungsplan bearbeiten';
+                    document.getElementById('pme-title').value = plan.title || '';
+                    // Pre-fill machine model from assignment's selected types, fallback to plan's machine_model
+                    const asgn = uvvPlanAssignments[planId] || {};
+                    const preModels = (asgn.machine_models && asgn.machine_models.length)
+                        ? asgn.machine_models.join(', ')
+                        : (plan.machine_model !== 'generic' ? (plan.machine_model || '') : '');
+                    document.getElementById('pme-model').value = preModels;
+                    setPmeType(plan.type || 'wartung');
+                }
+                renderPmeItems();
+                modal.style.display = 'flex';
+            };
+
+            window.closePlanModal = function() {
+                const modal = document.getElementById('plan-editor-modal');
+                if (modal) modal.style.display = 'none';
+            };
+
+            window.setPmeType = function(type) {
+                planEditorState.type = type;
+                const wBtn = document.getElementById('pme-type-wartung');
+                const uBtn = document.getElementById('pme-type-uvv');
+                if (!wBtn || !uBtn) return;
+                if (type === 'wartung') {
+                    wBtn.style.cssText = 'padding:7px 18px; border-radius:20px; border:1.5px solid rgba(59,130,246,0.55); background:rgba(59,130,246,0.22); color:#60a5fa; font-weight:700; font-size:0.83rem; cursor:pointer; transition:all 0.15s;';
+                    uBtn.style.cssText = 'padding:7px 18px; border-radius:20px; border:1.5px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.4); font-weight:700; font-size:0.83rem; cursor:pointer; transition:all 0.15s;';
+                } else {
+                    uBtn.style.cssText = 'padding:7px 18px; border-radius:20px; border:1.5px solid rgba(239,68,68,0.55); background:rgba(239,68,68,0.22); color:#f87171; font-weight:700; font-size:0.83rem; cursor:pointer; transition:all 0.15s;';
+                    wBtn.style.cssText = 'padding:7px 18px; border-radius:20px; border:1.5px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.4); font-weight:700; font-size:0.83rem; cursor:pointer; transition:all 0.15s;';
+                }
+            };
+
+            let pmeDragSrc = null;
+
+            function renderPmeItems() {
+                const container = document.getElementById('pme-items');
+                if (!container) return;
+                if (!planEditorState.items.length) {
+                    container.innerHTML = '<div style="text-align:center; padding:1.5rem; color:rgba(255,255,255,0.25); font-size:0.85rem;">Noch keine Prüfpunkte. Klicke "Hinzufügen" um einen hinzuzufügen.</div>';
+                    return;
+                }
+                container.innerHTML = planEditorState.items.map((item, i) => `
+                    <div draggable="true" data-idx="${i}"
+                        ondragstart="pmeItemDragStart(event,${i})"
+                        ondragover="pmeItemDragOver(event)"
+                        ondragleave="pmeItemDragLeave(event)"
+                        ondrop="pmeItemDrop(event,${i})"
+                        ondragend="pmeItemDragEnd(event)"
+                        style="display:grid; grid-template-columns:20px 55px 1fr 2fr 110px 32px; gap:6px; align-items:center; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:9px; padding:7px 10px; transition:border-color 0.15s, background 0.15s;">
+                        <div onmousedown="this.closest('[draggable]').style.cursor='grabbing'" onmouseup="this.closest('[draggable]').style.cursor='default'"
+                            style="cursor:grab; color:rgba(255,255,255,0.22); display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <svg width="12" height="16" viewBox="0 0 8 14" fill="currentColor"><circle cx="2" cy="2" r="1.2"/><circle cx="6" cy="2" r="1.2"/><circle cx="2" cy="7" r="1.2"/><circle cx="6" cy="7" r="1.2"/><circle cx="2" cy="12" r="1.2"/><circle cx="6" cy="12" r="1.2"/></svg>
+                        </div>
+                        <input type="text" value="${(item.pos||'').replace(/"/g,'&quot;')}" oninput="uvvUpdateItem(${i},'pos',this.value)" placeholder="Pos."
+                            style="background:transparent; border:none; border-bottom:1px solid rgba(255,255,255,0.15); color:white; font-size:0.81rem; padding:2px 3px; outline:none; width:100%;">
+                        <input type="text" value="${(item.category||'').replace(/"/g,'&quot;')}" oninput="uvvUpdateItem(${i},'category',this.value)" placeholder="Kategorie"
+                            style="background:transparent; border:none; border-bottom:1px solid rgba(255,255,255,0.15); color:white; font-size:0.81rem; padding:2px 3px; outline:none; width:100%;">
+                        <input type="text" value="${(item.description||'').replace(/"/g,'&quot;')}" oninput="uvvUpdateItem(${i},'description',this.value)" placeholder="Beschreibung"
+                            style="background:transparent; border:none; border-bottom:1px solid rgba(255,255,255,0.15); color:white; font-size:0.81rem; padding:2px 3px; outline:none; width:100%;">
+                        <input type="text" value="${(item.interval||'').replace(/"/g,'&quot;')}" oninput="uvvUpdateItem(${i},'interval',this.value)" placeholder="Intervall"
+                            style="background:transparent; border:none; border-bottom:1px solid rgba(255,255,255,0.15); color:white; font-size:0.81rem; padding:2px 3px; outline:none; width:100%;">
+                        <button onclick="uvvRemoveItem(${i})" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25); border-radius:6px; color:#ef4444; cursor:pointer; width:28px; height:28px; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0;">&times;</button>
+                    </div>`).join('');
+            }
+
+            window.pmeItemDragStart = function(e, idx) {
+                pmeDragSrc = idx;
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', idx);
+                setTimeout(() => { const el = document.querySelector(`#pme-items [data-idx="${idx}"]`); if (el) el.style.opacity = '0.35'; }, 0);
+            };
+
+            window.pmeItemDragOver = function(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                e.currentTarget.style.background = 'rgba(59,130,246,0.12)';
+                e.currentTarget.style.borderColor = 'rgba(59,130,246,0.45)';
+            };
+
+            window.pmeItemDragLeave = function(e) {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+            };
+
+            window.pmeItemDragEnd = function(e) {
+                e.currentTarget.style.opacity = '1';
+                document.querySelectorAll('#pme-items > div').forEach(el => {
+                    el.style.background = 'rgba(255,255,255,0.03)';
+                    el.style.borderColor = 'rgba(255,255,255,0.06)';
+                });
+                pmeDragSrc = null;
+            };
+
+            window.pmeItemDrop = function(e, targetIdx) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (pmeDragSrc === null || pmeDragSrc === targetIdx) return;
+                const items = planEditorState.items;
+                const [moved] = items.splice(pmeDragSrc, 1);
+                items.splice(targetIdx, 0, moved);
+                renderPmeItems();
+            };
+
+            window.uvvAddItem = function() {
+                // Auto-increment pos from last item
+                let nextPos = String(planEditorState.items.length + 1);
+                const last = planEditorState.items[planEditorState.items.length - 1];
+                if (last && last.pos) {
+                    const n = parseFloat(last.pos);
+                    if (!isNaN(n)) {
+                        // If integer-like, just +1; if decimal, increment the integer part
+                        nextPos = last.pos.includes('.') ? String(Math.floor(n) + 1) : String(Math.round(n) + 1);
+                    }
+                }
+                planEditorState.items.push({ pos: nextPos, category: '', description: '', interval: '500Bh' });
+                renderPmeItems();
+                const c = document.getElementById('pme-items');
+                if (c) c.scrollTop = c.scrollHeight;
+            };
+
+            window.uvvUpdateItem = function(idx, field, value) {
+                if (planEditorState.items[idx]) planEditorState.items[idx][field] = value;
+            };
+
+            window.uvvRemoveItem = function(idx) {
+                planEditorState.items.splice(idx, 1);
+                renderPmeItems();
+            };
+
+            window.savePlanModal = async function() {
+                const title = document.getElementById('pme-title').value.trim();
+                const modelRaw = document.getElementById('pme-model').value.trim();
+                if (!title) { alert('Bitte einen Plan-Titel eingeben.'); return; }
+                // Parse comma-separated models for assignment sync
+                const modelArr = modelRaw ? modelRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+                const plan = {
+                    id: planEditorState.id,
+                    title,
+                    type: planEditorState.type,
+                    machine_model: modelArr.length ? modelArr.join(', ') : 'generic',
+                    items: planEditorState.items
+                };
+                // Sync machine_models in assignment
+                if (!uvvPlanAssignments[plan.id]) uvvPlanAssignments[plan.id] = { category_ids: [], machine_models: [] };
+                if (modelArr.length) uvvPlanAssignments[plan.id].machine_models = modelArr;
+                let custom = await loadCustomTemplates();
+                const idx = custom.findIndex(t => t.id === plan.id);
+                if (idx !== -1) { custom[idx] = plan; } else { custom.push(plan); }
+                await saveCustomTemplates(custom);
+                // Sync existing service entries with updated template
+                syncServiceEntriesWithTemplate(plan).catch(e => console.error('Sync failed:', e));
+                // Persist updated assignments (machine_models sync)
+                try {
+                    const { data: ex } = await supabaseClient.from('app_settings').select('key').eq('key', 'uvv_plan_assignments').maybeSingle();
+                    if (ex) { await supabaseClient.from('app_settings').update({ value: uvvPlanAssignments }).eq('key', 'uvv_plan_assignments'); }
+                    else { await supabaseClient.from('app_settings').insert([{ key: 'uvv_plan_assignments', value: uvvPlanAssignments }]); }
+                } catch(e) {}
+                closePlanModal();
+                await window.loadUvvWartungsplaene();
+            };
+
+            async function syncServiceEntriesWithTemplate(plan) {
+                const { data: entries, error } = await supabaseClient
+                    .from('service_entries')
+                    .select('id, checklist_payload')
+                    .not('checklist_payload', 'is', null);
+                if (error || !entries?.length) return;
+                const newItems = plan.items || [];
+                const updates = [];
+                for (const entry of entries) {
+                    const payload = entry.checklist_payload;
+                    if (!payload?.checklists?.length) continue;
+                    const matchIdx = payload.checklists.findIndex(c => String(c.template_id) === String(plan.id));
+                    if (matchIdx === -1) continue;
+                    const existing = payload.checklists[matchIdx];
+                    const answerMap = {};
+                    (existing.answers || []).forEach(a => { answerMap[String(a.pos)] = a; });
+                    // Rebuild answers from new template items, preserving user input
+                    const newAnswers = newItems.map(item => {
+                        const old = answerMap[String(item.pos)] || {};
+                        return {
+                            pos: item.pos,
+                            category: item.category || '',
+                            description: item.description || '',
+                            interval: item.interval || '',
+                            checked: old.checked !== undefined ? old.checked : false,
+                            comment: old.comment || '',
+                            io: old.io || ''
+                        };
+                    });
+                    const updatedPayload = { ...payload, checklists: [...payload.checklists] };
+                    updatedPayload.checklists[matchIdx] = { ...existing, title: plan.title, answers: newAnswers };
+                    updates.push({ id: entry.id, checklist_payload: updatedPayload });
+                }
+                if (!updates.length) return;
+                await Promise.all(updates.map(u =>
+                    supabaseClient.from('service_entries').update({ checklist_payload: u.checklist_payload }).eq('id', u.id)
+                ));
+            }
+
+            window.deletePlan = async function(planId) {
+                if (!confirm('Diesen Wartungsplan wirklich löschen?')) return;
+                let custom = await loadCustomTemplates();
+                custom = custom.filter(t => t.id !== planId);
+                await saveCustomTemplates(custom);
+                await window.loadUvvWartungsplaene();
+            };
+
+            async function loadCustomTemplates() {
+                try {
+                    const { data } = await supabaseClient.from('app_settings').select('value')
+                        .eq('key', 'custom_checklist_templates').maybeSingle();
+                    return (data && Array.isArray(data.value)) ? data.value : [];
+                } catch(e) { return []; }
+            }
+
+            async function saveCustomTemplates(templates) {
+                try {
+                    const { data: ex } = await supabaseClient.from('app_settings').select('key')
+                        .eq('key', 'custom_checklist_templates').maybeSingle();
+                    if (ex) {
+                        await supabaseClient.from('app_settings').update({ value: templates }).eq('key', 'custom_checklist_templates');
+                    } else {
+                        await supabaseClient.from('app_settings').insert([{ key: 'custom_checklist_templates', value: templates }]);
+                    }
+                } catch(e) { alert('Fehler beim Speichern: ' + (e.message || e)); }
+            }
 
             // Group Color Persistence
             window.updateGroupColor = function (type, color) {
@@ -6274,6 +7081,10 @@
                         updateContactDisplay();
                     };
 
+                    if (typeof window.loadMachineExtrasFromEditData === 'function') {
+                        window.loadMachineExtrasFromEditData(editData);
+                    }
+
                 } catch (e) {
                     alert('Ein Fehler ist aufgetreten: ' + e.message);
                     console.error(e);
@@ -6347,7 +7158,29 @@
                     !contactTrigger.contains(e.target) && !contactDropdown.contains(e.target)) {
                     contactDropdown.classList.remove('show');
                 }
+
+                const relatedSearch = document.getElementById('machine-related-search');
+                const relatedSuggestions = document.getElementById('machine-related-suggestions');
+                if (relatedSuggestions && relatedSuggestions.style.display !== 'none' &&
+                    relatedSearch && !relatedSearch.contains(e.target) && !relatedSuggestions.contains(e.target)) {
+                    window.closeMachineRelatedSuggestions();
+                }
             });
+
+            window.addEventListener('resize', function () {
+                if (typeof window.positionMachineRelatedSuggestions === 'function') {
+                    window.positionMachineRelatedSuggestions();
+                }
+            });
+
+            const addMachineModalScroll = document.querySelector('#add-machine-modal .modal-form-area');
+            if (addMachineModalScroll) {
+                addMachineModalScroll.addEventListener('scroll', function () {
+                    if (typeof window.positionMachineRelatedSuggestions === 'function') {
+                        window.positionMachineRelatedSuggestions();
+                    }
+                }, { passive: true });
+            }
 
             window.closeAddMachineModal = function () {
                 const modal = document.getElementById('add-machine-modal');
@@ -6528,6 +7361,7 @@
                         // 1. Upload files first since we have the ID
                         let finalFiles = [...existingMachineFiles];
                         finalFiles = finalFiles.filter(f => f.type !== 'meta' || f.key !== 'is_next_maintenance_auto');
+                        finalFiles = applyMachineExtrasMeta(finalFiles);
                         if (isAuto) {
                             finalFiles.push({ type: 'meta', key: 'is_next_maintenance_auto', property: 'true' });
                         }
@@ -6636,7 +7470,7 @@
                         machineId = insertResult.data[0].id;
 
                         // 2. Upload files with the newly created ID
-                        let finalFiles = [];
+                        let finalFiles = applyMachineExtrasMeta([]);
                         if (isAuto) {
                             finalFiles.push({ type: 'meta', key: 'is_next_maintenance_auto', property: 'true' });
                         }
@@ -6664,6 +7498,12 @@
 
                         if (updateResult.error) throw updateResult.error;
                     }
+
+                    // Bidirektionale Verknüpfung synchronisieren
+                    const finalRelatedIds = (window.machineRelatedIds || []).map(String).filter(id => id && id !== 'null');
+                    const prevRelatedIds = (window.machineRelatedIdsBefore || []).map(String).filter(id => id && id !== 'null');
+                    await syncBidirectionalLinks(machineId, finalRelatedIds, prevRelatedIds);
+                    window.machineRelatedIdsBefore = [];
 
                     // Success
                     alert(typeof currentEditingId !== 'undefined' && currentEditingId ? 'Maschine aktualisiert!' : 'Maschine erfolgreich angelegt!');
@@ -6790,6 +7630,309 @@
         let existingMachineFiles = [];
         let machineMainImage = null;
         let removedMachineFiles = [];
+        window.machineRelatedIds = [];
+        window.machineAdditionalEquipment = [];
+
+        function parseMachineFilesMeta(files, key, defaultVal) {
+            const entry = (files || []).find(f => f.type === 'meta' && f.key === key);
+            if (!entry || entry.property == null || entry.property === '') return defaultVal;
+            try {
+                return JSON.parse(entry.property);
+            } catch (e) {
+                return defaultVal;
+            }
+        }
+
+        async function syncBidirectionalLinks(machineId, newRelatedIds, prevRelatedIds) {
+            const machineIdStr = String(machineId);
+            const newSet = new Set(newRelatedIds.map(String));
+            const prevSet = new Set(prevRelatedIds.map(String));
+
+            const added = [...newSet].filter(id => !prevSet.has(id));
+            const removed = [...prevSet].filter(id => !newSet.has(id));
+            if (added.length === 0 && removed.length === 0) return;
+
+            for (const otherId of [...added, ...removed]) {
+                const isAdded = added.includes(otherId);
+                try {
+                    const { data: otherMachine, error } = await supabaseClient
+                        .from('machines')
+                        .select('id, files')
+                        .eq('id', otherId)
+                        .maybeSingle();
+                    if (error || !otherMachine) continue;
+
+                    const otherFiles = Array.isArray(otherMachine.files) ? [...otherMachine.files] : [];
+                    const metaIdx = otherFiles.findIndex(f => f && f.type === 'meta' && f.key === 'related_machine_ids');
+
+                    let otherRelated = [];
+                    if (metaIdx >= 0) {
+                        try { otherRelated = JSON.parse(otherFiles[metaIdx].property || '[]').map(String); } catch(e) {}
+                        otherFiles.splice(metaIdx, 1);
+                    }
+
+                    if (isAdded) {
+                        if (!otherRelated.includes(machineIdStr)) otherRelated.push(machineIdStr);
+                    } else {
+                        otherRelated = otherRelated.filter(id => id !== machineIdStr);
+                    }
+
+                    if (otherRelated.length > 0) {
+                        otherFiles.push({ type: 'meta', key: 'related_machine_ids', property: JSON.stringify(otherRelated) });
+                    }
+
+                    await supabaseClient.from('machines').update({ files: otherFiles }).eq('id', otherId);
+                } catch(e) {
+                    console.error('Bidirektionale Sync fehlgeschlagen für Maschine', otherId, e);
+                }
+            }
+        }
+
+        function applyMachineExtrasMeta(files) {
+            const equipment = (typeof window.collectMachineEquipmentFromUI === 'function')
+                ? window.collectMachineEquipmentFromUI()
+                : (window.machineAdditionalEquipment || []);
+            const related = (window.machineRelatedIds || [])
+                .map(id => String(id))
+                .filter(id => id && id !== 'null' && id !== 'undefined');
+            const cleanedEquipment = equipment
+                .map(eq => ({
+                    serial: (eq.serial || '').trim(),
+                    type: (eq.type || '').trim(),
+                    designation: (eq.designation || '').trim(),
+                    year: (eq.year || '').trim()
+                }))
+                .filter(eq => eq.serial || eq.type || eq.designation);
+
+            let result = (files || []).filter(f => !(f.type === 'meta' && ['related_machine_ids', 'additional_equipment'].includes(f.key)));
+
+            if (related.length > 0) {
+                result.push({ type: 'meta', key: 'related_machine_ids', property: JSON.stringify(related) });
+            }
+            if (cleanedEquipment.length > 0) {
+                result.push({ type: 'meta', key: 'additional_equipment', property: JSON.stringify(cleanedEquipment) });
+            }
+            return result;
+        }
+
+        window.loadMachineExtrasFromEditData = function (editData = null) {
+            window.machineRelatedIds = [];
+            window.machineAdditionalEquipment = [];
+
+            if (editData) {
+                if (Array.isArray(editData.related_machine_ids)) {
+                    window.machineRelatedIds = editData.related_machine_ids.map(String);
+                } else if (Array.isArray(editData.files)) {
+                    const parsedRelated = parseMachineFilesMeta(editData.files, 'related_machine_ids', []);
+                    window.machineRelatedIds = Array.isArray(parsedRelated) ? parsedRelated.map(String) : [];
+                }
+
+                if (Array.isArray(editData.additional_equipment)) {
+                    window.machineAdditionalEquipment = editData.additional_equipment.map(eq => ({
+                        serial: eq.serial || '',
+                        type: eq.type || '',
+                        designation: eq.designation || eq.name || '',
+                        year: eq.year || ''
+                    }));
+                } else if (Array.isArray(editData.files)) {
+                    const parsedEquipment = parseMachineFilesMeta(editData.files, 'additional_equipment', []);
+                    window.machineAdditionalEquipment = Array.isArray(parsedEquipment)
+                        ? parsedEquipment.map(eq => ({
+                            serial: eq.serial || '',
+                            type: eq.type || '',
+                            designation: eq.designation || eq.name || '',
+                            year: eq.year || ''
+                        }))
+                        : [];
+                }
+            }
+
+            // Snapshot der vorherigen Verknüpfungen für bidirektionale Sync beim Speichern
+            window.machineRelatedIdsBefore = [...window.machineRelatedIds];
+
+            if (typeof currentEditingId !== 'undefined' && currentEditingId) {
+                window.machineRelatedIds = window.machineRelatedIds.filter(id => String(id) !== String(currentEditingId));
+            }
+
+            const searchInput = document.getElementById('machine-related-search');
+            if (searchInput) searchInput.value = '';
+            window.closeMachineRelatedSuggestions();
+
+            window.renderMachineRelatedChips();
+            window.renderMachineEquipmentRows();
+        };
+
+        window.renderMachineRelatedChips = function () {
+            const container = document.getElementById('machine-related-selected');
+            if (!container) return;
+
+            const ids = window.machineRelatedIds || [];
+            if (!ids.length) {
+                container.innerHTML = '<div class="machine-related-empty">Noch keine weiteren Maschinen verknüpft.</div>';
+                return;
+            }
+
+            container.innerHTML = ids.map(id => {
+                const label = (typeof window.getMachineName === 'function')
+                    ? window.getMachineName(id)
+                    : `Maschine #${id}`;
+                const safeLabel = label.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                return `<span class="machine-related-chip">
+                    <span class="machine-related-chip-label">${safeLabel}</span>
+                    <button type="button" class="machine-related-chip-remove" onclick="window.removeRelatedMachineFromModal('${id}')" title="Entfernen">&times;</button>
+                </span>`;
+            }).join('');
+        };
+
+        window.positionMachineRelatedSuggestions = function () {
+            const input = document.getElementById('machine-related-search');
+            const box = document.getElementById('machine-related-suggestions');
+            if (!input || !box || box.style.display === 'none') return;
+
+            const rect = input.getBoundingClientRect();
+            const viewportPadding = 12;
+            const maxHeight = Math.min(280, window.innerHeight - rect.bottom - viewportPadding - 8);
+
+            // backdrop-filter on .modal-content creates a new containing block for position:fixed children
+            const modalContent = input.closest('.modal-content');
+            const cbRect = modalContent ? modalContent.getBoundingClientRect() : { left: 0, top: 0 };
+
+            box.style.position = 'fixed';
+            box.style.top = `${rect.bottom + 6 - cbRect.top}px`;
+            box.style.left = `${rect.left - cbRect.left}px`;
+            box.style.width = `${rect.width}px`;
+            box.style.maxHeight = `${Math.max(120, maxHeight)}px`;
+            box.style.zIndex = '100200';
+        };
+
+        window.closeMachineRelatedSuggestions = function () {
+            const box = document.getElementById('machine-related-suggestions');
+            const group = document.querySelector('.machine-related-search-group');
+            if (box) {
+                box.style.display = 'none';
+                box.innerHTML = '';
+            }
+            if (group) group.classList.remove('is-dropdown-open');
+        };
+
+        window.searchRelatedMachinesForModal = function () {
+            const input = document.getElementById('machine-related-search');
+            const box = document.getElementById('machine-related-suggestions');
+            const group = document.querySelector('.machine-related-search-group');
+            if (!input || !box) return;
+
+            const q = input.value.trim().toLowerCase();
+            if (!q) {
+                window.closeMachineRelatedSuggestions();
+                return;
+            }
+
+            const excludeId = (typeof currentEditingId !== 'undefined') ? currentEditingId : null;
+            const selected = new Set((window.machineRelatedIds || []).map(String));
+
+            const machines = (window.machineList || []).filter(m => {
+                if (excludeId && String(m.id) === String(excludeId)) return false;
+                if (selected.has(String(m.id))) return false;
+                const label = (typeof window.getMachineName === 'function')
+                    ? window.getMachineName(m.id)
+                    : `${m.manufacturer || ''} ${m.name || ''}`.trim();
+                const serial = (m.serial || m.serial_number || '').toString().toLowerCase();
+                const haystack = `${label} ${serial}`.toLowerCase();
+                return haystack.includes(q);
+            }).slice(0, 10);
+
+            if (!machines.length) {
+                box.innerHTML = '<div class="suggestion-item" style="color: rgba(255,255,255,0.45);">Keine Maschinen gefunden</div>';
+            } else {
+                box.innerHTML = machines.map(m => {
+                    const label = (typeof window.getMachineName === 'function')
+                        ? window.getMachineName(m.id)
+                        : `${m.manufacturer || ''} ${m.name || ''}`.trim();
+                    const safeLabel = label.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, "\\'");
+                    return `<div class="suggestion-item" onclick="window.addRelatedMachineToModal('${m.id}')">${safeLabel}</div>`;
+                }).join('');
+            }
+            box.style.display = 'block';
+            if (group) group.classList.add('is-dropdown-open');
+            window.positionMachineRelatedSuggestions();
+        };
+
+        window.addRelatedMachineToModal = function (machineId) {
+            const id = String(machineId);
+            if (!window.machineRelatedIds) window.machineRelatedIds = [];
+            if (!window.machineRelatedIds.includes(id)) {
+                window.machineRelatedIds.push(id);
+            }
+            const input = document.getElementById('machine-related-search');
+            if (input) input.value = '';
+            window.closeMachineRelatedSuggestions();
+            window.renderMachineRelatedChips();
+        };
+
+        window.removeRelatedMachineFromModal = function (machineId) {
+            const id = String(machineId);
+            window.machineRelatedIds = (window.machineRelatedIds || []).filter(mid => String(mid) !== id);
+            window.renderMachineRelatedChips();
+        };
+
+        window.renderMachineEquipmentRows = function () {
+            const container = document.getElementById('machine-equipment-list');
+            if (!container) return;
+
+            const rows = window.machineAdditionalEquipment || [];
+            if (!rows.length) {
+                container.innerHTML = '<div class="machine-equipment-empty">Noch keine Zusatzausrüstung erfasst.</div>';
+                return;
+            }
+
+            container.innerHTML = rows.map((eq, index) => window.buildMachineEquipmentRowHtml(eq, index)).join('');
+        };
+
+        window.buildMachineEquipmentRowHtml = function (eq = {}, index = 0) {
+            const esc = (val) => String(val || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+            return `<div class="machine-equipment-row" data-index="${index}">
+                <div class="machine-equipment-field">
+                    <label>Bezeichnung</label>
+                    <input type="text" class="glass-input equipment-designation" placeholder="z.B. Überbandmagnet" value="${esc(eq.designation)}">
+                </div>
+                <div class="machine-equipment-field">
+                    <label>Typ</label>
+                    <input type="text" class="glass-input equipment-type" placeholder="z.B. Magnet, Sieb" value="${esc(eq.type)}">
+                </div>
+                <div class="machine-equipment-field">
+                    <label>Seriennummer</label>
+                    <input type="text" class="glass-input equipment-serial" placeholder="z.B. SN-98765" value="${esc(eq.serial)}">
+                </div>
+                <div class="machine-equipment-field">
+                    <label>Baujahr</label>
+                    <input type="number" class="glass-input equipment-year" placeholder="z.B. 2020" value="${esc(eq.year)}">
+                </div>
+                <button type="button" class="machine-equipment-remove-btn" onclick="window.removeMachineEquipmentRow(${index})" title="Entfernen">&times;</button>
+            </div>`;
+        };
+
+        window.addMachineEquipmentRow = function (data = null) {
+            window.machineAdditionalEquipment = window.collectMachineEquipmentFromUI();
+            window.machineAdditionalEquipment.push(data || { serial: '', type: '', designation: '', year: '' });
+            window.renderMachineEquipmentRows();
+        };
+
+        window.collectMachineEquipmentFromUI = function () {
+            const container = document.getElementById('machine-equipment-list');
+            if (!container) return [];
+            return Array.from(container.querySelectorAll('.machine-equipment-row')).map(row => ({
+                serial: row.querySelector('.equipment-serial')?.value.trim() || '',
+                type: row.querySelector('.equipment-type')?.value.trim() || '',
+                designation: row.querySelector('.equipment-designation')?.value.trim() || '',
+                year: row.querySelector('.equipment-year')?.value.trim() || ''
+            }));
+        };
+
+        window.removeMachineEquipmentRow = function (index) {
+            const current = window.collectMachineEquipmentFromUI();
+            window.machineAdditionalEquipment = current.filter((_, i) => i !== index);
+            window.renderMachineEquipmentRows();
+        };
 
         async function deleteR2FileHelper(url) {
             if (!url) return;
@@ -7106,9 +8249,20 @@
 
 
 
-        window.closeServiceberichtModal = function () {
+        window.closeServiceberichtModal = function (force = false) {
+            if (!force && serviceberichtIsDirty) {
+                window.showUnsavedDialog({
+                    overlayId: 'servicebericht-confirm-close-overlay',
+                    onDiscard: () => window.closeServiceberichtModal(true),
+                    onSave: () => window.saveAndCloseServicebericht()
+                });
+                return;
+            }
+            serviceberichtIsDirty = false;
             const modal = document.getElementById('servicebericht-modal');
             if (modal) {
+                modal.removeEventListener('input', onServiceberichtFieldChange);
+                modal.removeEventListener('change', onServiceberichtFieldChange);
                 modal.classList.remove('show');
                 setTimeout(() => {
                     modal.classList.add('hidden');
@@ -7192,19 +8346,19 @@
             const previewContainer = document.getElementById('selected-machine-preview');
             const previewImg = document.getElementById('preview-image');
             const previewName = document.getElementById('preview-name');
+            const previewCategory = document.getElementById('preview-category');
             const previewSerial = document.getElementById('preview-serial');
 
             if (previewContainer) {
                 previewContainer.classList.remove('hidden');
                 previewContainer.style.display = 'block'; // Ensure visibility
 
-                // Row 1: Manufacturer Name #Serial (Year)
-                const fullTitle = `${manufacturer} ${name}${serial ? ` #${serial}` : ''}${year ? ` (${year})` : ''}`;
+                const machineTitle = `${manufacturer} ${name}`;
+                const metaSuffix = `${serial ? ` #${serial}` : ''}${year ? ` (${year})` : ''}`;
 
-                previewName.innerHTML = `${fullTitle} <br> <span
-                        style="font-size: 0.8em; color: var(--color-primary-green); font-weight: normal; margin-top: 4px; display: block;">${categoryName ||
-                    ''}</span>`;
-                previewSerial.textContent = serial ? `S/N: ${serial}` : '';
+                previewName.textContent = machineTitle;
+                if (previewCategory) previewCategory.textContent = categoryName || '';
+                previewSerial.textContent = metaSuffix.trim();
 
                 if (imageUrl && imageUrl !== 'undefined' && imageUrl !== 'null') {
                     previewImg.innerHTML = `<img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: cover;">`;
@@ -7446,6 +8600,9 @@
         let serviceFiles = []; // New files to upload
         let existingServiceFiles = []; // Files already in DB
         let removedServiceFiles = [];
+        let serviceberichtIsDirty = false;
+        function markServiceberichtDirty() { serviceberichtIsDirty = true; }
+        function onServiceberichtFieldChange() { serviceberichtIsDirty = true; }
 
         function handleServiceFiles(files) {
             Array.from(files).forEach(file => {
@@ -7764,6 +8921,11 @@
             }
         };
 
+        window.saveAndCloseServicebericht = async function () {
+            serviceberichtIsDirty = false;
+            await window.submitServicebericht();
+        };
+
         // ==========================================
         // NEW SERVICE INTERACTION LOGIC
         // ==========================================
@@ -8003,21 +9165,21 @@
                     if (intakeBtnText) intakeBtnText.textContent = `Eingangsprotokoll${catSuffix}`;
                     if (acceptanceBtnText) acceptanceBtnText.textContent = `Abnahmeprotokoll${catSuffix}`;
 
-                    // Initially collapse everything
+                    // Expand both sections by default
                     const createSection = document.getElementById('create-section');
                     const viewSection = document.getElementById('view-section');
                     const createIcon = document.getElementById('create-section-icon');
                     const viewIcon = document.getElementById('view-section-icon');
 
                     if (createSection) {
-                        createSection.style.maxHeight = '0px';
-                        createSection.style.opacity = '0';
-                        if (createIcon) createIcon.style.transform = 'rotate(-90deg)';
+                        createSection.style.maxHeight = '600px';
+                        createSection.style.opacity = '1';
+                        if (createIcon) createIcon.style.transform = 'rotate(0deg)';
                     }
                     if (viewSection) {
-                        viewSection.style.maxHeight = '0px';
-                        viewSection.style.opacity = '0';
-                        if (viewIcon) viewIcon.style.transform = 'rotate(-90deg)';
+                        viewSection.style.maxHeight = '600px';
+                        viewSection.style.opacity = '1';
+                        if (viewIcon) viewIcon.style.transform = 'rotate(0deg)';
                     }
                 });
             }
@@ -10395,6 +11557,8 @@
                     modal.style.display = 'flex';
                     requestAnimationFrame(() => {
                         modal.classList.add('show');
+                        const scrollArea = modal.querySelector('.modal-scroll-area');
+                        if (scrollArea) scrollArea.scrollTop = 0;
                     });
 
                     // Reset collapsible sections in servicebericht form to collapsed
@@ -10702,6 +11866,14 @@
                     if (typeof window.machineList !== 'undefined') renderServiceMachineList();
                     if (typeof userList !== 'undefined') renderTechDropdown();
                     renderServiceCategoryList();
+
+                    // Dirty tracking: reset flag, re-attach delegation
+                    serviceberichtIsDirty = false;
+                    const sbModal = document.getElementById('servicebericht-modal');
+                    sbModal.removeEventListener('input', onServiceberichtFieldChange);
+                    sbModal.removeEventListener('change', onServiceberichtFieldChange);
+                    sbModal.addEventListener('input', onServiceberichtFieldChange);
+                    sbModal.addEventListener('change', onServiceberichtFieldChange);
                 }
             } catch (error) {
                 console.error('Error opening service report modal:', error);
@@ -10852,11 +12024,11 @@
                                 <div class="card" style="font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); border: 3px solid ${primaryCatColor}66; border-top: 7px solid ${primaryCatColor}; border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); position: relative; padding-top: 35px; width: 100%; box-sizing: border-box; min-width: 0;">
 
                                     <!-- Category Badges on Top-Right Border (Premium Button Style) -->
-                                    <div style="position: absolute; top: -26px; right: 24px; left: auto; display: flex; flex-direction: row-reverse; gap: 8px; z-index: 10;">
+                                    <div class="service-card-badge-row" style="position: absolute; top: -26px; right: 24px; left: auto; display: flex; flex-direction: row-reverse; gap: 8px; z-index: 10;">
                                         ${displayedCategories.map(cat => {
                             const cColor = cat.color || fallbackPalette[cat.id % fallbackPalette.length];
                             return `
-                                                <div style="height: 40px; padding: 0 18px; background: ${cColor}; color: #ffffff; border-radius: 20px; font-size: 0.9rem; font-weight: 700; box-shadow: 0 0 15px ${cColor}60; border: 2.5px solid color-mix(in srgb, ${cColor}, #ffffff 60%); backdrop-filter: blur(8px); letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; font-family: 'Inter', sans-serif;">
+                                                <div class="service-card-badge" style="height: 40px; padding: 0 18px; background: ${cColor}; color: #ffffff; border-radius: 20px; font-size: 0.9rem; font-weight: 700; box-shadow: 0 0 15px ${cColor}60; border: 2.5px solid color-mix(in srgb, ${cColor}, #ffffff 60%); backdrop-filter: blur(8px); letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; font-family: 'Inter', sans-serif;">
                                                     ${cat.name}
                                                 </div>
                                             `;
@@ -10935,7 +12107,7 @@
                                          </div>` : ''}
                                     </div>
 
-                                    <div style="margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); margin-left: -0.25rem; margin-right: -0.25rem; padding-left: 1.25rem; padding-right: 1.25rem; padding-bottom: 1.25rem;">
+                                    <div class="service-card-actions" style="margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); margin-left: -0.25rem; margin-right: -0.25rem; padding-left: 1.25rem; padding-right: 1.25rem; padding-bottom: 1.25rem;">
                                         <button class="btn-primary" onclick="openEditServicebericht(${e.id})" title="Bearbeiten"
                                             style="flex: 1; height: 44px; background: rgba(59, 130, 246, 0.85); color: #ffffff; border: 2.5px solid rgba(147, 197, 253, 0.8); border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 18px rgba(59, 130, 246, 0.6); backdrop-filter: blur(12px); padding: 0 16px; font-weight: 700; font-family: 'Inter', sans-serif;"
                                             onmouseover="this.style.transform='scale(1.08)'; this.style.background='rgba(59, 130, 246, 0.95)'; this.style.boxShadow='0 4px 24px rgba(59, 130, 246, 0.7)'; this.style.borderColor='rgba(147, 197, 253, 1)'"
@@ -13036,16 +14208,19 @@
             <!-- Section 1: Create -->
             <div class="accordion-section" style="margin-bottom: 1rem;">
                 <h3 onclick="toggleAccordion('create-section')"
-                    style="font-size: 0.8rem; color: rgba(255,255,255,0.4); text-transform: uppercase; margin-bottom: 0.75rem; letter-spacing: 1px; font-weight: 700; cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; user-select: none;">
-                    <span>Anlegen</span>
+                    style="font-size: 0.8rem; color: rgba(255,255,255,0.9); text-transform: uppercase; margin-bottom: 0.75rem; letter-spacing: 1px; font-weight: 700; cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; user-select: none;">
+                    <span style="display:flex; align-items:center; gap:6px;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        Anlegen
+                    </span>
                     <svg id="create-section-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-                        style="transition: transform 0.3s; transform: rotate(-90deg);">
+                        style="transition: transform 0.3s; transform: rotate(0deg);">
                         <polyline points="6 9 12 15 18 9"></polyline>
                     </svg>
                 </h3>
                 <div id="create-section" class="accordion-content"
-                    style="display: grid; gap: 0.6rem; margin-bottom: 0.5rem; max-height: 0px; overflow: hidden; transition: max-height 0.3s ease, opacity 0.3s ease; opacity: 0;">
+                    style="display: grid; gap: 0.6rem; margin-bottom: 0.5rem; max-height: 600px; overflow: hidden; transition: max-height 0.3s ease, opacity 0.3s ease; opacity: 1;">
                     <button class="report-type-btn compact" onclick="startReportCreation('servicebericht')">
                         <div class="icon-small">📄</div>
                         <div class="text"><strong>Servicebericht</strong></div>
@@ -13066,16 +14241,19 @@
             <!-- Section 2: View -->
             <div class="accordion-section" style="margin-bottom: 1rem;">
                 <h3 onclick="toggleAccordion('view-section')"
-                    style="font-size: 0.8rem; color: rgba(255,255,255,0.4); text-transform: uppercase; margin-bottom: 0.75rem; letter-spacing: 1px; font-weight: 700; cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; user-select: none;">
-                    <span>Ansehen</span>
+                    style="font-size: 0.8rem; color: rgba(255,255,255,0.9); text-transform: uppercase; margin-bottom: 0.75rem; letter-spacing: 1px; font-weight: 700; cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; user-select: none;">
+                    <span style="display:flex; align-items:center; gap:6px;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        Ansehen
+                    </span>
                     <svg id="view-section-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-                        style="transition: transform 0.3s; transform: rotate(-90deg);">
+                        style="transition: transform 0.3s; transform: rotate(0deg);">
                         <polyline points="6 9 12 15 18 9"></polyline>
                     </svg>
                 </h3>
                 <div id="view-section" class="accordion-content"
-                    style="display: grid; gap: 0.6rem; max-height: 0px; overflow: hidden; transition: max-height 0.3s ease, opacity 0.3s ease; opacity: 0;">
+                    style="display: grid; gap: 0.6rem; max-height: 600px; overflow: hidden; transition: max-height 0.3s ease, opacity 0.3s ease; opacity: 1;">
                     <button class="report-type-btn compact secondary"
                         onclick="showServiceReportsForCurrentMachine('Servicebericht')">
                         <div class="icon-small">📄</div>
@@ -13199,12 +14377,15 @@
                                     <div id="preview-image"
                                         style="width: 80px; height: 80px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; background: rgba(255,255,255,0.05);">
                                     </div>
-                                    <div>
+                                    <div style="flex: 1; min-width: 0;">
                                         <div id="preview-name"
-                                            style="font-weight: 800; font-size: 1.1rem; color: white;">
+                                            style="font-weight: 800; font-size: 1.5rem; color: white; line-height: 1.2; word-break: break-word;">
+                                        </div>
+                                        <div id="preview-category"
+                                            style="font-size: 1.05rem; font-weight: 700; color: var(--color-primary-green); margin-top: 6px; letter-spacing: 0.3px;">
                                         </div>
                                         <div id="preview-serial"
-                                            style="color: rgba(255,255,255,0.5); font-size: 0.9rem; margin-top: 4px;">
+                                            style="color: rgba(255,255,255,0.4); font-size: 0.8rem; margin-top: 4px;">
                                         </div>
                                     </div>
                                 </div>
@@ -13256,7 +14437,6 @@
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 <h3 class="section-title"
                                     style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">1. Betriebsstunden / Werkstattauftrag / Datum</h3>
-                                <span style="font-size: 0.75rem; opacity: 0.4; font-weight: 500;">(Klicken zum Ausklappen)</span>
                             </div>
                             <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
                                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
@@ -13265,18 +14445,18 @@
                             </svg>
                         </div>
                         <div class="section-content" style="display: none; transition: all 0.3s ease;">
-                            <div class="form-row responsive-grid-3"
-                                style="margin-top: 1rem; margin-bottom: 1.5rem;">
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <label for="service-operating-hours">Betriebsstunden (h)</label>
-                                    <input type="text" id="service-operating-hours" class="glass-form-input" placeholder="z.B. 1450">
-                                </div>
+                            <div class="form-group" style="margin-top: 1rem; margin-bottom: 1rem;">
+                                <label for="service-operating-hours">Betriebsstunden (h)</label>
+                                <input type="text" id="service-operating-hours" class="glass-form-input" placeholder="z.B. 1450">
+                            </div>
+                            <div class="form-row service-date-row"
+                                style="margin-bottom: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                                 <div class="form-group" style="margin-bottom: 0;">
                                     <label for="service-date-start">Datum (von)</label>
                                     <input type="date" id="service-date-start" class="glass-form-input" required>
                                 </div>
                                 <div class="form-group" style="margin-bottom: 0;">
-                                    <label for="service-date-end">Datum (bis) - Optional</label>
+                                    <label for="service-date-end">Datum (bis)</label>
                                     <input type="date" id="service-date-end" class="glass-form-input">
                                 </div>
                             </div>
@@ -13285,20 +14465,18 @@
                                 style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
                                 <div class="form-group" style="margin-bottom: 0;">
                                     <label style="color: var(--color-primary-green); font-weight: 800; display: block; margin-bottom: 6px;">Werkstattauftragsnummer (Optional)</label>
-                                    <p style="font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-bottom: 8px;">Geben Sie hier die Werkstattauftragsnummer ein, falls die Maschine in die Werkstatt geht.</p>
-                                    <div class="glass-form-input" style="display: flex; align-items: center; gap: 4px; padding: 0.5rem 1rem; border-radius: 12px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.1); width: 100%;">
-                                        <span style="color: rgba(255,255,255,0.4); font-weight: 600; font-size: 1.1rem; user-select: none;">202</span>
+                                    <div class="glass-form-input" style="display: flex; align-items: center; gap: 4px; padding: 0.5rem 1rem; border-radius: 12px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.1); width: 100%; box-sizing: border-box;">
+                                        <span style="color: white; font-weight: 600; font-size: 1.1rem; user-select: none;">202</span>
                                         <input type="text" id="service-workshop-year-digit" maxlength="1" style="background: transparent; border: none; outline: none; color: white; font-size: 1.1rem; font-weight: 600; width: 15px; padding: 0; text-align: center;" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-                                        <span style="color: rgba(255,255,255,0.4); font-weight: 600; font-size: 1.1rem; user-select: none;">-40</span>
+                                        <span style="color: white; font-weight: 600; font-size: 1.1rem; user-select: none;">-40</span>
                                         <input type="text" id="service-workshop-order-suffix" placeholder="000" maxlength="3" style="background: transparent; border: none; outline: none; color: white; font-size: 1.1rem; font-weight: 600; width: 100%; padding: 0;" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
                                     </div>
                                 </div>
                                 <div class="form-group" style="margin-bottom: 0;">
                                     <label for="service-next-maintenance-override"
                                         style="color: var(--secondary-green); font-weight: 800;">Manuelles Datum für NÄCHSTE Wartung (Optional)</label>
-                                    <p style="font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-bottom: 8px;">Leer lassen für automatische Berechnung basierend auf der Kategorie.</p>
                                     <input type="date" id="service-next-maintenance-override" class="glass-form-input"
-                                        style="border-color: rgba(16, 185, 129, 0.3);">
+                                        style="border-color: rgba(16, 185, 129, 0.3); margin-top: 2px;">
                                 </div>
                             </div>
                         </div>
@@ -13313,7 +14491,6 @@
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 <h3 class="section-title"
                                     style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">2. Fehlermeldung / Kategorie / Techniker</h3>
-                                <span style="font-size: 0.75rem; opacity: 0.4; font-weight: 500;">(Klicken zum Ausklappen)</span>
                             </div>
                             <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
                                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
@@ -13387,8 +14564,7 @@
                             onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 <h3 class="section-title"
-                                    style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">Zusatzprotokoll (Wartung / UVV)</h3>
-                                <span style="font-size: 0.75rem; opacity: 0.4; font-weight: 500;">(Klicken zum Ausklappen)</span>
+                                    style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0; color: var(--secondary-green);">Zusatzprotokoll (Wartung / UVV)</h3>
                             </div>
                             <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
                                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
@@ -13419,7 +14595,6 @@
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 <h3 class="section-title"
                                     style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">3. Arbeitszeit und Fahrzeit</h3>
-                                <span style="font-size: 0.75rem; opacity: 0.4; font-weight: 500;">(Klicken zum Ausklappen)</span>
                             </div>
                             <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
                                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
@@ -13494,7 +14669,6 @@
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 <h3 class="section-title"
                                     style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">4. Arbeiten und Material</h3>
-                                <span style="font-size: 0.75rem; opacity: 0.4; font-weight: 500;">(Klicken zum Ausklappen)</span>
                             </div>
                             <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
                                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
@@ -13563,7 +14737,6 @@
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 <h3 class="section-title"
                                     style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">5. Dokumente und Unterschrift</h3>
-                                <span style="font-size: 0.75rem; opacity: 0.4; font-weight: 500;">(Klicken zum Ausklappen)</span>
                             </div>
                             <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
                                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
@@ -13947,7 +15120,6 @@
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <h3 class="section-title"
                                 style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">2. Wartung</h3>
-                            <span style="font-size: 0.75rem; opacity: 0.4; font-weight: 500;">(Klicken zum Ausklappen)</span>
                         </div>
                         <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
@@ -13982,7 +15154,6 @@
                         <div style="display: flex; align-items: center; gap: 12px;">
                             <h3 class="section-title"
                                 style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">3. Standort &amp; Besitzer</h3>
-                            <span style="font-size: 0.75rem; opacity: 0.4; font-weight: 500;">(Klicken zum Ausklappen)</span>
                         </div>
                         <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
@@ -14113,6 +15284,44 @@
                                     <input type="text" id="machine-location-country" value="Deutschland" oninput="updateCombinedAddresses()">
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Weitere Maschinen & Zusatzausrüstung -->
+                <div id="machine-extras-section" class="collapsible-section machine-extras-section" style="margin-top: 2rem;">
+                    <div class="section-header" onclick="toggleAddMachineSection(this)"
+                        style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; padding: 12px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; margin-bottom: 1rem; transition: all 0.2s;"
+                        onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)'"
+                        onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <h3 class="section-title"
+                                style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0;">4. Weitere Maschinen &amp; Zusatzausrüstung</h3>
+                        </div>
+                        <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                            style="transition: transform 0.3s ease; opacity: 0.6;">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </div>
+                    <div class="section-content" style="display: none; transition: all 0.3s ease;">
+                        <div class="form-group machine-related-search-group" style="position: relative; margin-bottom: 1.75rem;">
+                            <label>Weitere Maschinen verknüpfen</label>
+                            <input type="text" id="machine-related-search" class="glass-input"
+                                placeholder="Hersteller, Typ oder Seriennummer suchen..."
+                                oninput="window.searchRelatedMachinesForModal()"
+                                onfocus="window.searchRelatedMachinesForModal()">
+                            <div id="machine-related-suggestions" class="suggestions-box machine-related-suggestions-dropdown" style="display:none;"></div>
+                            <div id="machine-related-selected" class="machine-related-chips"></div>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Zusatzausrüstung</label>
+                            <div id="machine-equipment-list" class="machine-equipment-list"></div>
+                            <button type="button" class="btn-secondary machine-equipment-add-btn"
+                                onclick="window.addMachineEquipmentRow()" style="margin-top: 0.75rem;">
+                                + Zusatzausrüstung hinzufügen
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -14287,6 +15496,21 @@
                                 </div>
                             </div>
                         </div>
+
+                    </div>
+
+                    <!-- Full-width row: Zusatzausrüstung (links) & Verknüpfte Maschinen (rechts) -->
+                    <div id="machine-details-extras-wrapper" style="grid-column: 1 / -1; display: none; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                        <!-- Zusatzausrüstung Card - LEFT -->
+                        <div id="machine-details-equipment-card" class="modal-form-area" style="margin-bottom: 0; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+                            <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.1rem; color: var(--color-primary-green); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Zusatzausrüstung</h3>
+                            <div id="machine-details-equipment-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                        </div>
+                        <!-- Verknüpfte Maschinen Card - RIGHT -->
+                        <div id="machine-details-related-card" class="modal-form-area" style="margin-bottom: 0; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+                            <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.1rem; color: var(--color-primary-green); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Verknüpfte Maschinen</h3>
+                            <div id="machine-details-related-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -14309,16 +15533,10 @@
     <div id="task-modal" class="modal-backdrop hidden">
         <div class="modal-content glass-card"
             style="max-width: 900px; position: relative; background: rgba(10,15,30,0.97); backdrop-filter: blur(40px); border: 1px solid rgba(255,255,255,0.1);">
-            <div class="modal-header" style="padding-right: 60px; margin-bottom: 1.5rem;">
+            <div class="modal-header" style="margin-bottom: 1.5rem; padding-right: 50px;">
                 <h2 id="task-modal-title">Aufgabe bearbeiten</h2>
             </div>
-            <button class="procurement-close-btn" onclick="closeTaskModal()">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-            </button>
+            <button class="btn-close-modal task-modal-close" onclick="closeTaskModal()">&times;</button>
             <div class="modal-body">
                 <!-- Optimized Multi-column grid -->
                 <div style="display: grid; grid-template-columns: 1fr; gap: 20px; align-items: start;">
@@ -14413,14 +15631,14 @@
     </div>
     <!-- Load scripts -->
     <script src="machines-grouped.js?v=51"></script>
-    <script src="protocols.js?v=99999999"></script>
+    <script src="protocols.js?v=51"></script>
     <!-- Procurement Modal -->
 
 
     </main>
     </div><!-- End main-wrapper -->
 
-    <script src="tasks.js?v=99999999999"></script>
+    <script src="tasks.js?v=2"></script>
     <script src="task_templates.js?v=2"></script>
     <script>
         window.addEventListener('load', () => {
@@ -15659,7 +16877,7 @@
     <input type="file" id="folder-cover-input" class="hidden" accept="image/*"
         onchange="window.handleFolderCoverUpload(event)">
     <!-- Floating Focus Mode Container -->
-    <div id="focus-mode-container" style="position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column; align-items: flex-end; z-index: 999999;">
+    <div id="focus-mode-container" style="position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column; align-items: flex-end; z-index: 9999;">
         <!-- Dropdown Menu -->
         <div id="focus-mode-menu" style="display: none; flex-direction: column; gap: 8px; margin-bottom: 12px; background: rgba(15,23,42,0.95); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.6);">
             <button onclick="document.getElementById('focus-mode-menu').style.display='none'; window.activateMode('focus')" style="background: transparent; border: none; color: var(--primary-red); padding: 12px 20px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 1rem;" onmouseover="this.style.background='rgba(190, 30, 45, 0.15)'" onmouseout="this.style.background='transparent'">

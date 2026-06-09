@@ -16,6 +16,8 @@
     let allTasks = [];
     let currentTask = null;
     let viewMode = 'board'; // 'board' or 'list'
+    let taskIsDirty = false;
+    function onTaskFieldChange() { taskIsDirty = true; }
     let filters = {
         machine: 'all',
         search: ''
@@ -281,7 +283,6 @@
                 
                 tr.className = 'task-list-row-premium status-open';
                 tr.style.cursor = 'pointer';
-                tr.style.overflow = 'hidden';
 
                 tr.innerHTML = `
                     <td data-label="Aufgabe" style="font-weight: 600; display:flex; align-items:flex-start; gap:12px;">
@@ -290,13 +291,14 @@
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                             </div>
                         </div>
-                        <div style="display:flex; flex-direction:column; gap:4px; min-width:0; flex:1;">
-                            <span style="font-size: 1.1rem; font-weight: 700; white-space: normal; word-break: break-word; overflow-wrap: break-word; display:block;">${task.title}</span>
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <span style="font-size: 1.1rem; font-weight: 700;">${task.title}</span>
                             ${task.subtasks && task.subtasks.length > 0 ? `
                             <div class="task-list-subtasks" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
                                 ${task.subtasks.map((sub, index) => `
-                                    <div class="subtask-item" style="display:flex; align-items:center; gap: 8px; justify-content: space-between;">
-                                        <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                                    <div class="subtask-item" style="display:flex; align-items:flex-start; gap: 6px; flex-wrap:wrap;">
+                                        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; flex:1; min-width:0;">
+                                        <div class="subtask-text-row" style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 100px;">
                                             <div class="task-quick-complete ${sub.status === 'completed' ? 'completed' : ''}" 
                                                  onclick="event.stopPropagation(); window.toggleSubtaskStatus('${task.id}', ${index}, '${sub.status}')" 
                                                  style="width: 18px; height: 18px; min-width: 18px;"
@@ -334,22 +336,21 @@
                                                  textLabel = sub.action_type === 'intake' ? 'Eingang' : 'Abnahme';
                                                  btnTitle = sub.action_type === 'intake' ? 'Eingangsprotokoll öffnen' : 'Abnahmeprotokoll öffnen';
                                                  const isIntake = sub.action_type === 'intake';
-                                                 badgeStyle = isIntake ? 'background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;';
+                                                 badgeStyle = isIntake ? 'background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); color: #f59e0b;';
+                                                 btnStyle = isIntake ? 'background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;';
                                                  buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>';
                                                  clickHandler = `window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')`;
                                              }
                                              return `
-                                        <button onclick="event.stopPropagation(); ${clickHandler}" 
-                                            title="${btnTitle}"
-                                            class="subtask-action-btn"
-                                            style="${badgeStyle} border-radius: 8px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: all 0.2s; font-size: 0.7rem; font-weight: 700; height: 28px; line-height: 1; text-decoration: none; max-width: 100%; box-sizing: border-box; flex-shrink: 0;">
-                                            ${buttonIcon}
-                                            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;">
-                                                ${textLabel}
-                                            </span>
-                                        </button>
-                                        `;
+                                             <button onclick="event.stopPropagation(); ${clickHandler}"
+                                                 title="${btnTitle}"
+                                                 style="${btnStyle} border-radius: 8px; height: 30px; padding: 0 10px; display: flex; align-items: center; gap: 6px; cursor: pointer; flex-shrink: 0; transition: all 0.2s; font-size: 0.75rem; font-weight: 800; white-space: nowrap; max-width: 160px;">
+                                                 ${buttonIcon}
+                                                 <span style="overflow:hidden; text-overflow:ellipsis;">${textLabel}</span>
+                                             </button>
+                                             `;
                                         })() : ''}
+                                        </div>
                                     </div>
                                 `).join('')}
                             </div>
@@ -421,7 +422,6 @@
                     tr.style.webkitBackdropFilter = 'blur(24px)';
                     tr.style.boxShadow = `inset 0 1.5px 0 0 ${accentColor}66, inset -1.5px 0 0 0 ${accentColor}66, inset 0 -1.5px 0 0 ${accentColor}66, 0 10px 30px rgba(0,0,0,0.4)`;
                     tr.style.borderRadius = '16px';
-                    tr.style.overflow = 'hidden';
                     tr.style.opacity = '0.7';
 
                     tr.innerHTML = `
@@ -431,8 +431,8 @@
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                 </div>
                             </div>
-                            <div style="display:flex; flex-direction:column; gap:4px; min-width:0; flex:1;">
-                                <span style="font-size: 1.1rem; font-weight: 700; white-space: normal; word-break: break-word; overflow-wrap: break-word; display:block;">${task.title}</span>
+                            <div style="display:flex; flex-direction:column; gap:4px;">
+                                <span style="font-size: 1.1rem; font-weight: 700;">${task.title}</span>
                                 ${task.completed_at ? `
                                 <span style="font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-top: 2px;">
                                     Erledigt am ${new Date(task.completed_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr
@@ -476,41 +476,46 @@
                                                       let textLabel = '';
                                                       let btnTitle = '';
                                                       let badgeStyle = '';
+                                                      let btnStyle = '';
                                                       let buttonIcon = '';
                                                       let clickHandler = '';
                                                       if (isDoc) {
                                                           const parts = sub.action_type.substring(9).split('|||');
                                                           textLabel = parts[1] || 'Dokument';
                                                           btnTitle = 'Dokument öffnen';
-                                                          badgeStyle = 'background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981;';
+                                                          badgeStyle = 'background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); color: #10b981;';
+                                                          btnStyle = 'background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981;';
                                                           buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>';
                                                           clickHandler = `window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')`;
                                                       } else if (isService) {
                                                           const parts = sub.action_type.substring(15).split('|||');
                                                           textLabel = parts[1] ? `Service: ${parts[1]}` : 'Servicebericht';
                                                           btnTitle = 'Servicebericht öffnen';
-                                                          badgeStyle = 'background: rgba(147, 51, 234, 0.2); border: 1px solid rgba(147, 51, 234, 0.4); color: #c084fc;';
+                                                          badgeStyle = 'background: rgba(147, 51, 234, 0.1); border: 1px solid rgba(147, 51, 234, 0.25); color: #c084fc;';
+                                                          btnStyle = 'background: rgba(147, 51, 234, 0.2); border: 1px solid rgba(147, 51, 234, 0.4); color: #c084fc;';
                                                           buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>';
                                                           clickHandler = `window.openServiceberichtFromTask('${task.machine_id}', '${sub.action_type}', '${task.id}', ${sub.idx}, '${sub.id || ''}')`;
                                                       } else {
                                                           textLabel = sub.action_type === 'intake' ? 'Eingang' : 'Abnahme';
                                                           btnTitle = sub.action_type === 'intake' ? 'Eingangsprotokoll öffnen' : 'Abnahmeprotokoll öffnen';
                                                           const isIntake = sub.action_type === 'intake';
-                                                          badgeStyle = isIntake ? 'background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;';
+                                                          badgeStyle = isIntake ? 'background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); color: #f59e0b;';
+                                                          btnStyle = isIntake ? 'background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;';
                                                           buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>';
                                                           clickHandler = `window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')`;
                                                       }
                                                       return `
-                                              <button onclick="event.stopPropagation(); ${clickHandler}" 
-                                                  title="${btnTitle}"
-                                                  class="subtask-action-btn"
-                                                  style="${badgeStyle} border-radius: 8px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: all 0.2s; font-size: 0.7rem; font-weight: 700; height: 28px; line-height: 1; text-decoration: none; max-width: 100%; box-sizing: border-box; flex-shrink: 0;">
-                                                  ${buttonIcon}
-                                                  <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;" title="${textLabel}">
-                                                      ${textLabel}
-                                                  </span>
-                                              </button>
-                                              `;
+                                                      <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                                                          <span style="${badgeStyle} border-radius: 4px; padding: 2px 6px; font-size: 0.65rem; font-weight: 800; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                                              ${textLabel}
+                                                          </span>
+                                                          <button onclick="event.stopPropagation(); ${clickHandler}" 
+                                                              title="${btnTitle}"
+                                                              style="${btnStyle} border-radius: 6px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; flex-shrink: 0; transition: all 0.2s;">
+                                                              ${buttonIcon}
+                                                          </button>
+                                                      </div>
+                                                      `;
                                                   })() : ''}
                                              </div>`;
                                          });
@@ -629,8 +634,15 @@
                     
                     subs.forEach(sub => {
                         html += `
-                            <div class="subtask-item" style="display:flex; align-items:center; gap: 10px; justify-content: space-between;">
-                                <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                            <div class="subtask-item" draggable="true"
+                                 data-subtask-id="${sub.id}" data-task-id="${task.id}"
+                                 ondragstart="window.startSubtaskDrag(event,'${sub.id}','${task.id}')"
+                                 style="display:flex; align-items:flex-start; gap: 6px; border-radius:6px; padding:2px 4px; transition:background 0.15s;">
+                                <div class="subtask-drag-handle" title="Verschieben" style="cursor:grab; color:rgba(255,255,255,0.18); flex-shrink:0; display:flex; align-items:center; padding:2px; margin-top:3px;">
+                                    <svg width="8" height="12" viewBox="0 0 8 14" fill="currentColor"><circle cx="2" cy="2" r="1.2"/><circle cx="6" cy="2" r="1.2"/><circle cx="2" cy="7" r="1.2"/><circle cx="6" cy="7" r="1.2"/><circle cx="2" cy="12" r="1.2"/><circle cx="6" cy="12" r="1.2"/></svg>
+                                </div>
+                                <div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; flex:1; min-width:0;">
+                                <div class="subtask-text-row" style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 100px;">
                                     <div class="task-quick-complete ${sub.status === 'completed' ? 'completed' : ''}" 
                                          onclick="event.stopPropagation(); window.toggleSubtaskStatus('${task.id}', ${sub.idx}, '${sub.status}')" 
                                          style="width: 18px; height: 18px; min-width: 18px;"
@@ -674,22 +686,22 @@
                                            textLabel = sub.action_type === 'intake' ? 'Eingang' : 'Abnahme';
                                            btnTitle = sub.action_type === 'intake' ? 'Eingangsprotokoll Ã¶ffnen' : 'Abnahmeprotokoll Ã¶ffnen';
                                            const isIntake = sub.action_type === 'intake';
-                                           badgeStyle = isIntake ? 'background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;';
+                                           badgeStyle = isIntake ? 'background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); color: #f59e0b;';
+                                           btnStyle = isIntake ? 'background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;';
                                            buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>';
                                            clickHandler = `window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')`;
                                        }
                                        return `
-                                       <button onclick="event.stopPropagation(); ${clickHandler}" 
+                                       <button onclick="event.stopPropagation(); ${clickHandler}"
                                            title="${btnTitle}"
                                            class="subtask-action-btn"
-                                           style="${badgeStyle} border-radius: 8px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: all 0.2s; font-size: 0.7rem; font-weight: 700; height: 28px; line-height: 1; text-decoration: none; max-width: 100%; box-sizing: border-box; flex-shrink: 0;">
+                                           style="${btnStyle} border-radius: 8px; height: 30px; padding: 0 10px; display: flex; align-items: center; gap: 6px; cursor: pointer; flex-shrink: 0; transition: all 0.2s; font-size: 0.75rem; font-weight: 800; white-space: nowrap; max-width: 160px;">
                                            ${buttonIcon}
-                                           <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;">
-                                               ${textLabel}
-                                           </span>
+                                           <span style="overflow:hidden; text-overflow:ellipsis;">${textLabel}</span>
                                        </button>
                                        `;
                                    })() : ''}
+                                </div>
                             </div>`;
                     });
                     html += '</div></div>';
@@ -722,6 +734,7 @@
         // Buttons are always fully visible - no opacity fade needed
 
         div.addEventListener('dragstart', (e) => {
+            if (e.target.closest('.subtask-item[draggable]')) return;
             e.dataTransfer.setData('text/plain', task.id);
             div.classList.add('dragging');
         });
@@ -971,15 +984,36 @@
                 resetModal();
                 document.getElementById('task-details-section').style.display = 'none';
             }
+
+            // Dirty tracking: reset + event delegation
+            taskIsDirty = false;
+            const taskModal = document.getElementById('task-modal');
+            if (taskModal) {
+                taskModal.removeEventListener('input', onTaskFieldChange);
+                taskModal.removeEventListener('change', onTaskFieldChange);
+                taskModal.addEventListener('input', onTaskFieldChange);
+                taskModal.addEventListener('change', onTaskFieldChange);
+            }
         } catch (err) {
             console.error('Error in openTaskModal:', err);
             alert('Fehler beim Öffnen der Aufgabe: ' + err.message);
         }
     };
 
-    window.closeTaskModal = function () {
+    window.closeTaskModal = function (force = false) {
+        if (!force && taskIsDirty) {
+            window.showUnsavedDialog({
+                overlayId: 'task-confirm-close-overlay',
+                onDiscard: () => window.closeTaskModal(true),
+                onSave: () => { document.getElementById('task-confirm-close-overlay')?.remove(); window.saveTask(); }
+            });
+            return;
+        }
+        taskIsDirty = false;
         const modal = document.getElementById('task-modal');
         if (modal) {
+            modal.removeEventListener('input', onTaskFieldChange);
+            modal.removeEventListener('change', onTaskFieldChange);
             modal.classList.remove('active');
             modal.classList.remove('show');
             setTimeout(() => {
@@ -1142,7 +1176,8 @@
                 }
             }
 
-            closeTaskModal();
+            taskIsDirty = false;
+            closeTaskModal(true);
             fetchTasks();
         } catch (err) {
             console.error('Error in saveTask:', err);
@@ -1536,10 +1571,97 @@
     // ==========================================
     // DRAG & DROP
     // ==========================================
+    // ---- Subtask cross-task drag (registered once globally) ----
+    if (!window._subtaskDragSetup) {
+        window._subtaskDragSetup = true;
+        window._subtaskDragInfo = null;
+
+        window.startSubtaskDrag = function(e, subtaskId, fromTaskId) {
+            window._subtaskDragInfo = { subtaskId: String(subtaskId), fromTaskId: String(fromTaskId) };
+            e.dataTransfer.setData('subtask-move', subtaskId);
+            e.dataTransfer.effectAllowed = 'move';
+            e.stopPropagation();
+            const el = e.currentTarget;
+            setTimeout(() => { if (el) el.style.opacity = '0.35'; }, 0);
+        };
+
+        document.addEventListener('dragover', (e) => {
+            if (!window._subtaskDragInfo) return;
+            const card = e.target.closest('.task-card');
+            if (card && card.dataset.id !== window._subtaskDragInfo.fromTaskId) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!card._stDragActive) {
+                    card._stDragActive = true;
+                    card.style.outline = '2px solid rgba(59,130,246,0.6)';
+                    card.style.outlineOffset = '-2px';
+                }
+            }
+        }, true);
+
+        document.addEventListener('dragleave', (e) => {
+            if (!window._subtaskDragInfo) return;
+            const card = e.target.closest('.task-card');
+            if (card && card._stDragActive && !card.contains(e.relatedTarget)) {
+                card._stDragActive = false;
+                card.style.outline = '';
+            }
+        });
+
+        document.addEventListener('dragend', (e) => {
+            if (!window._subtaskDragInfo) return;
+            const el = e.target.closest('.subtask-item');
+            if (el) el.style.opacity = '1';
+            document.querySelectorAll('.task-card').forEach(c => { c._stDragActive = false; c.style.outline = ''; });
+            window._subtaskDragInfo = null;
+        });
+
+        document.addEventListener('drop', async (e) => {
+            if (!window._subtaskDragInfo) return;
+            const card = e.target.closest('.task-card');
+            if (!card) return;
+            e.preventDefault();
+            e.stopPropagation();
+
+            const { subtaskId, fromTaskId } = window._subtaskDragInfo;
+            const toTaskId = String(card.dataset.id);
+            window._subtaskDragInfo = null;
+            card._stDragActive = false;
+            card.style.outline = '';
+
+            if (toTaskId === fromTaskId) return;
+
+            const fromTask = allTasks.find(t => String(t.id) === fromTaskId);
+            const toTask = allTasks.find(t => String(t.id) === toTaskId);
+            if (!fromTask || !toTask) return;
+
+            const subIdx = (fromTask.subtasks || []).findIndex(s => String(s.id) === subtaskId);
+            if (subIdx === -1) return;
+
+            const [movedSub] = fromTask.subtasks.splice(subIdx, 1);
+            if (!toTask.subtasks) toTask.subtasks = [];
+            toTask.subtasks.push(movedSub);
+            renderTasks();
+
+            try {
+                const { error } = await window.supabaseClient.from('subtasks')
+                    .update({ task_id: toTaskId }).eq('id', subtaskId);
+                if (error) throw error;
+            } catch (err) {
+                console.error('Subtask move failed:', err);
+                toTask.subtasks.pop();
+                fromTask.subtasks.splice(subIdx, 0, movedSub);
+                renderTasks();
+            }
+        }, true);
+    }
+    // ---- End subtask drag ----
+
     function setupDragAndDrop() {
         const columns = document.querySelectorAll('.kanban-column');
         columns.forEach(col => {
             col.addEventListener('dragover', (e) => {
+                if (window._subtaskDragInfo) return; // subtask drag, skip column highlight
                 e.preventDefault();
                 col.classList.add('drag-over');
             });
@@ -1549,6 +1671,7 @@
             });
 
             col.addEventListener('drop', async (e) => {
+                if (window._subtaskDragInfo) return; // handled by subtask drop listener
                 e.preventDefault();
                 col.classList.remove('drag-over');
                 const taskId = e.dataTransfer.getData('text/plain');

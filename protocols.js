@@ -19,6 +19,7 @@
     let protocolIsDirty = false; // Tracks unsaved changes
     let removedProtocolPhotos = [];
     let sessionUploadedPhotos = [];
+    let openedMachineId = null;
 
     function markProtocolDirty() {
         protocolIsDirty = true;
@@ -78,24 +79,7 @@
                         <h2 id="protocol-modal-title"></h2>
                         <div id="protocol-status-badge" style="margin-top: 0.75rem;"></div>
                     </div>
-                    <button onclick="window.closeProtocolModal()" class="sidebar-user-profile" style="
-                        background: rgba(255, 255, 255, 0.05);
-                        border: 1px solid var(--glass-border);
-                        color: #fff;
-                        width: 44px;
-                        height: 44px;
-                        border-radius: 12px;
-                        cursor: pointer;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-                    " onmouseover="this.style.transform='rotate(90deg) scale(1.1)'; this.style.background='rgba(255, 100, 100, 0.1)'; this.style.borderColor='rgba(255, 100, 100, 0.3)';" onmouseout="this.style.transform='rotate(0deg) scale(1)'; this.style.background='rgba(255, 255, 255, 0.05)'; this.style.borderColor='var(--glass-border)';">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg>
-                    </button>
+                    <button onclick="window.closeProtocolModal()" class="btn-close-modal">&times;</button>
                 </div>
 
                 <div class="protocol-modal-content">
@@ -145,67 +129,67 @@
                     </div>
 
                     <!-- Betriebsstunden Field -->
-                    <div style="margin-bottom: 2.5rem;">
+                    <div style="margin-bottom: 0.875rem;">
                         <span class="protocol-section-title">Betriebsstunden</span>
-                        <input type="number" id="protocol-operating-hours" class="glass-form-input" style="font-weight: 700;" placeholder="Betriebsstunden eingeben...">
+                        <input type="number" id="protocol-operating-hours" class="glass-form-input protocol-hours-input" style="font-weight: 700;" placeholder="Betriebsstunden eingeben...">
                     </div>
 
                     <!-- Predefined Checkpoints -->
-                    <div id="predefined-checkpoints-section" style="margin-bottom: 3rem;">
+                    <div id="predefined-checkpoints-section" style="margin-bottom: 0.75rem;">
                         <h3 class="protocol-section-title">🔍 Vordefinierte Prüfpunkte</h3>
                         <div id="predefined-checkpoints-list"></div>
                     </div>
 
                     <!-- Photos (collapsible, collapsed by default) -->
-                    <div id="photos-section" style="margin-bottom: 1rem;">
+                    <div id="photos-section" style="margin-bottom: 0.625rem;">
                         <button type="button" onclick="window.toggleProtocolCollapsible('photos-collapsible-content', 'photos-chevron')"
-                            style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; cursor: pointer; color: #fff; font-family: 'Inter', sans-serif; transition: background 0.2s;"
+                            style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 1rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 11px; cursor: pointer; color: #fff; font-family: 'Inter', sans-serif; transition: background 0.2s;"
                             onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
-                            <span style="display: flex; align-items: center; gap: 10px; font-size: 1rem; font-weight: 700;">
+                            <span style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 700;">
                                 <span>📸</span> Fotos
                             </span>
-                            <svg id="photos-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.3s; transform: rotate(-90deg);">
+                            <svg id="photos-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.3s; transform: rotate(-90deg);">
                                 <polyline points="6 9 12 15 18 9"></polyline>
                             </svg>
                         </button>
-                        <div id="photos-collapsible-content" style="display: none; padding: 1.25rem 0.25rem 0.5rem 0.25rem;">
-                            <div id="protocol-photos-grid" class="protocol-photo-grid"></div>
+                        <div id="photos-collapsible-content" style="display: none; padding: 0.25rem 0 0.25rem 0;">
                             <input type="file" id="protocol-photo-input" accept="image/*" multiple style="display: none;">
-                            <button onclick="document.getElementById('protocol-photo-input').click()" class="report-type-btn compact" style="width: auto; background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); margin-top: 0.75rem;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <button onclick="document.getElementById('protocol-photo-input').click()" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; background: rgba(139,92,246,0.08); color: #a78bfa; border: 1px solid rgba(139,92,246,0.35); border-radius: 10px; cursor: pointer; font-size: 0.82rem; font-weight: 600; font-family: 'Inter', sans-serif; transition: background 0.2s; box-sizing: border-box;" onmouseover="this.style.background='rgba(139,92,246,0.18)'; this.style.borderColor='rgba(139,92,246,0.6)'" onmouseout="this.style.background='rgba(139,92,246,0.08)'; this.style.borderColor='rgba(139,92,246,0.35)'">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                                     <circle cx="8.5" cy="8.5" r="1.5"></circle>
                                     <polyline points="21 15 16 10 5 21"></polyline>
                                 </svg>
-                                <span>Fotos hochladen</span>
+                                Fotos hochladen
                             </button>
+                            <div id="protocol-photos-grid" class="protocol-photo-grid" style="margin-top: 0.5rem;"></div>
                         </div>
                     </div>
 
                     <!-- Free Text Fields / Kommentare (collapsible, collapsed by default) -->
-                    <div id="text-fields-section" style="margin-bottom: 1rem;">
+                    <div id="text-fields-section" style="margin-bottom: 0.625rem;">
                         <button type="button" onclick="window.toggleProtocolCollapsible('comments-collapsible-content', 'comments-chevron')"
-                            style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; cursor: pointer; color: #fff; font-family: 'Inter', sans-serif; transition: background 0.2s;"
+                            style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 1rem; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 11px; cursor: pointer; color: #fff; font-family: 'Inter', sans-serif; transition: background 0.2s;"
                             onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
-                            <span style="display: flex; align-items: center; gap: 10px; font-size: 1rem; font-weight: 700;">
+                            <span style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 700;">
                                 <span>💬</span> Kommentare
                             </span>
-                            <svg id="comments-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.3s; transform: rotate(-90deg);">
+                            <svg id="comments-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.3s; transform: rotate(-90deg);">
                                 <polyline points="6 9 12 15 18 9"></polyline>
                             </svg>
                         </button>
-                        <div id="comments-collapsible-content" style="display: none; padding: 1.25rem 0.25rem 0.5rem 0.25rem;">
+                        <div id="comments-collapsible-content" style="display: none; padding: 0.75rem 0.25rem 0.375rem 0.25rem;">
                             <div id="protocol-text-fields"></div>
                         </div>
                     </div>
 
                     <!-- Edit History -->
-                    <div id="edit-history-section" style="display: none; margin-bottom: 2rem; margin-top: 1rem; padding: 1.5rem; background: rgba(255, 255, 255, 0.02); border-radius: 20px; border: 1px solid var(--glass-border);">
+                    <div id="edit-history-section" style="display: none; margin-bottom: 0.75rem; margin-top: 0.625rem; padding: 0.875rem 1rem; background: rgba(255, 255, 255, 0.02); border-radius: 12px; border: 1px solid var(--glass-border);">
                         <h3 class="protocol-section-title">🕒 Bearbeitungshistorie</h3>
                         <div id="edit-history-list"></div>
                     </div>
                     <!-- Action Buttons at the very bottom of scrollable content -->
-                    <div class="protocol-modal-actions" style="margin-top: 4rem; border-top: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 1rem; width: 100%;">
+                    <div class="protocol-modal-actions" style="margin-top: 1rem; border-top: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 0.625rem; width: 100%;">
                         <div style="display: flex; gap: 10px; width: 100%;">
                             <button onclick="window.closeProtocolModal()" class="btn-modal-base btn-modal-cancel" style="flex: 1;">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -259,6 +243,7 @@
     async function openProtocolModal(machineId, protocolId, type) {
         removedProtocolPhotos = [];
         sessionUploadedPhotos = [];
+        openedMachineId = machineId;
         const modal = createProtocolModal();
         const overlay = document.getElementById('protocol-modal-overlay');
 
@@ -370,6 +355,7 @@
         const opHoursInput = document.getElementById('protocol-operating-hours');
         if (opHoursInput) {
             opHoursInput.value = currentProtocol.operating_hours !== null && currentProtocol.operating_hours !== undefined ? currentProtocol.operating_hours : '';
+            opHoursInput.addEventListener('input', markProtocolDirty);
         }
 
         // Conditionally hide sections for Rotorschaufel Acceptance
@@ -439,28 +425,19 @@
         protocolIsDirty = false;
     }
 
+    window.saveAndCloseProtocol = async function () {
+        document.getElementById('protocol-confirm-close-overlay')?.remove();
+        await window.saveProtocol();
+        window.closeProtocolModal(true);
+    };
+
     window.closeProtocolModal = function (force = false) {
         if (!force && protocolIsDirty) {
-            // Show custom confirmation dialog
-            const confirmOverlay = document.createElement('div');
-            confirmOverlay.id = 'protocol-confirm-close-overlay';
-            confirmOverlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);';
-            confirmOverlay.innerHTML = `
-                <div style="background:linear-gradient(135deg,rgba(30,41,59,0.98),rgba(15,23,42,0.99));border:1px solid rgba(255,255,255,0.12);border-radius:20px;padding:2rem 2.5rem;max-width:420px;width:90%;box-shadow:0 30px 80px rgba(0,0,0,0.6);font-family:'Inter',sans-serif;text-align:center;">
-                    <div style="font-size:2.5rem;margin-bottom:1rem;">⚠️</div>
-                    <h3 style="color:#fff;font-size:1.2rem;font-weight:800;margin:0 0 0.75rem 0;">Ungespeicherte Änderungen</h3>
-                    <p style="color:rgba(255,255,255,0.6);font-size:0.95rem;margin:0 0 2rem 0;line-height:1.5;">Sie haben Änderungen vorgenommen, die noch nicht gespeichert wurden. Wenn Sie jetzt schließen, gehen diese verloren.</p>
-                    <div style="display:flex;gap:1rem;justify-content:center;">
-                        <button onclick="document.getElementById('protocol-confirm-close-overlay').remove()" style="padding:0.75rem 1.5rem;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:12px;color:#fff;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;font-size:0.95rem;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.08)'">
-                            Zurück
-                        </button>
-                        <button onclick="document.getElementById('protocol-confirm-close-overlay').remove(); window.closeProtocolModal(true);" style="padding:0.75rem 1.5rem;background:rgba(239,68,68,0.2);border:1px solid rgba(239,68,68,0.4);border-radius:12px;color:#f87171;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;font-size:0.95rem;transition:background 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.35)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
-                            Trotzdem schließen
-                        </button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(confirmOverlay);
+            window.showUnsavedDialog({
+                overlayId: 'protocol-confirm-close-overlay',
+                onDiscard: () => window.closeProtocolModal(true),
+                onSave: () => window.saveAndCloseProtocol()
+            });
             return;
         }
 
@@ -472,11 +449,9 @@
 
         // Clean up newly uploaded photos from storage if they weren't saved
         if (sessionUploadedPhotos && sessionUploadedPhotos.length > 0) {
-            console.log('Cleaning up session-uploaded photos because modal was closed without saving:', sessionUploadedPhotos);
-            try {
-                window.supabaseClient.storage.from('machine-images').remove(sessionUploadedPhotos);
-            } catch (storageErr) {
-                console.error('Failed to clean up session-uploaded photos:', storageErr);
+            for (const path of sessionUploadedPhotos) {
+                window.FileUploadService.deleteFile(path, { bucket: 'dateien', provider: 'cloudflare-r2' })
+                    .catch(e => console.error('Failed to clean up session photo:', e));
             }
         }
         removedProtocolPhotos = [];
@@ -711,19 +686,21 @@
                     checkboxWrapper.className = 'protocol-single-checkbox-wrapper';
                     
                     let stateClass = '';
-                    let stateSymbol = '&nbsp;';
+                    let stateIcon = '';
                     if (item.result === true) {
                         stateClass = 'state-ok';
-                        stateSymbol = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+                        stateIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
                     } else if (item.result === 'warning') {
                         stateClass = 'state-warning';
-                        stateSymbol = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+                        stateIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>';
                     } else if (item.result === false) {
                         stateClass = 'state-nok';
-                        stateSymbol = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+                        stateIcon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
                     }
-                    
-                    checkboxWrapper.innerHTML = `<div class="protocol-tri-state-box ${stateClass}" onclick="window.cycleTriStateCheckpoint(${gIdx}, ${iIdx})">${stateSymbol}</div>`;
+
+                    checkboxWrapper.innerHTML = `
+                        <div class="protocol-tri-state-box ${stateClass}" onclick="window.cycleTriStateCheckpoint(${gIdx}, ${iIdx})" style="display:flex!important;align-items:center!important;justify-content:center!important;width:32px!important;height:32px!important;">${stateIcon}</div>
+                    `;
                     row.appendChild(checkboxWrapper);
                 }
 
@@ -1035,6 +1012,7 @@
                 <textarea id="protocol-comments" rows="6" class="glass-form-input" placeholder="Allgemeine Kommentare oder Anmerkungen eingeben...">${currentProtocol.comments || ''}</textarea>
             </div>
         `;
+        document.getElementById('protocol-comments')?.addEventListener('input', markProtocolDirty);
     }
 
     // ==========================================
@@ -1052,27 +1030,22 @@
         try {
             for (let file of files) {
                 const cleanName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-                const fileName = `protocols/${Date.now()}_${cleanName}`;
+                const filePath = `Protokolle/Fotos/${openedMachineId || 'allgemein'}/${Date.now()}_${cleanName}`;
 
-                const { data, error } = await window.supabaseClient
-                    .storage
-                    .from('machine-images')
-                    .upload(fileName, file);
-
-                if (error) throw error;
-
-                const { data: urlData } = window.supabaseClient
-                    .storage
-                    .from('machine-images')
-                    .getPublicUrl(fileName);
+                const uploadResult = await window.FileUploadService.uploadFile(file, {
+                    bucket: 'dateien',
+                    path: filePath,
+                    compress: true,
+                    provider: 'cloudflare-r2'
+                });
 
                 protocolPhotos.push({
-                    id: Date.now() + Math.random(), // Temporary ID
-                    file_name: fileName,
-                    file_url: urlData.publicUrl,
+                    id: Date.now() + Math.random(),
+                    file_name: uploadResult.path,
+                    file_url: uploadResult.url,
                     file_size: file.size
                 });
-                sessionUploadedPhotos.push(fileName);
+                sessionUploadedPhotos.push(uploadResult.path);
             }
 
             renderPhotos();
@@ -1109,7 +1082,7 @@
             const removeBtn = document.createElement('button');
             removeBtn.className = 'protocol-photo-remove';
             removeBtn.onclick = () => window.deleteProtocolPhoto(index);
-            removeBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="stroke-current" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+            removeBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
 
             photoCard.appendChild(img);
             photoCard.appendChild(removeBtn);
@@ -1118,7 +1091,7 @@
         });
     }
 
-    window.deleteProtocolPhoto = function (index) {
+    window.deleteProtocolPhoto = async function (index) {
         if (confirm('Foto wirklich löschen?')) {
             const photo = protocolPhotos[index];
             if (photo && photo.file_name) {
@@ -1126,7 +1099,7 @@
                 if (sessionIdx > -1) {
                     // It was uploaded in this session, delete from storage immediately
                     try {
-                        window.supabaseClient.storage.from('machine-images').remove([photo.file_name]);
+                        await window.FileUploadService.deleteFile(photo.file_name, { bucket: 'dateien', provider: 'cloudflare-r2' });
                     } catch (e) {
                         console.error('Failed to delete session photo from storage:', e);
                     }
@@ -1223,15 +1196,14 @@
             // Mark as clean after successful save
             protocolIsDirty = false;
 
-            // Delete removed photos from Supabase Storage
+            // Delete removed photos from Cloudflare R2
             if (removedProtocolPhotos.length > 0) {
-                console.log('Deleting removed protocol photos from storage on save:', removedProtocolPhotos);
-                try {
-                    await window.supabaseClient.storage
-                        .from('machine-images')
-                        .remove(removedProtocolPhotos);
-                } catch (storageErr) {
-                    console.error('Failed to delete photos from storage on save:', storageErr);
+                for (const path of removedProtocolPhotos) {
+                    try {
+                        await window.FileUploadService.deleteFile(path, { bucket: 'dateien', provider: 'cloudflare-r2' });
+                    } catch (e) {
+                        console.error('Failed to delete photo from storage on save:', e);
+                    }
                 }
                 removedProtocolPhotos = [];
             }
@@ -2418,8 +2390,8 @@
                             </div>
                             
                             <!-- Action buttons -->
-                            <div class="card-actions" style="margin-top: auto; padding-top: 0.75rem; display: flex; gap: 8px; align-items: stretch;">
-                                <button class="btn-reports" style="cursor: pointer !important; pointer-events: auto !important; display: flex; align-items: center; justify-content: center; gap: 8px; flex: 1; min-height: 44px; background: rgba(59, 130, 246, 0.2); border: 1.5px solid rgba(59, 130, 246, 0.5); color: #60a5fa; border-radius: 12px; font-weight: 700;" 
+                            <div class="card-actions" style="margin-top: auto; padding-top: 0.75rem; display: flex; gap: 8px; align-items: center;">
+                                <button class="btn-reports" style="cursor: pointer !important; pointer-events: auto !important; display: flex; align-items: center; justify-content: center; gap: 8px; flex: 1; height: 44px; background: rgba(59, 130, 246, 0.2); border: 1.5px solid rgba(59, 130, 246, 0.5); color: #60a5fa; border-radius: 12px; font-weight: 700;" 
                                         onclick="event.stopPropagation(); ${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id || ''}', '${p.id || ''}')">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                                     Öffnen
@@ -2575,15 +2547,12 @@
             if (photos && photos.length > 0) {
                 const fileNames = photos.map(p => p.file_name).filter(Boolean);
                 if (fileNames.length > 0) {
-                    console.log('Deleting protocol photos from storage:', fileNames);
-                    try {
-                        const { error: storageErr } = await window.supabaseClient
-                            .storage
-                            .from('machine-images')
-                            .remove(fileNames);
-                        if (storageErr) throw storageErr;
-                    } catch (storeErr) {
-                        console.error('Failed to delete photos from Supabase storage:', storeErr);
+                    for (const path of fileNames) {
+                        try {
+                            await window.FileUploadService.deleteFile(path, { bucket: 'dateien', provider: 'cloudflare-r2' });
+                        } catch (e) {
+                            console.error('Failed to delete photo from Cloudflare R2:', e);
+                        }
                     }
                 }
             }

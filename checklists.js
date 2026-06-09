@@ -1,6 +1,7 @@
 // checklists.js - Client-side prototype logic for dynamic checklists (Wartungspläne & UVV-Protokolle)
 
-const MOCK_CHECKLIST_TEMPLATES = [
+window.MOCK_CHECKLIST_TEMPLATES = window.MOCK_CHECKLIST_TEMPLATES || [];
+const MOCK_CHECKLIST_TEMPLATES = window.MOCK_CHECKLIST_TEMPLATES = [
     {
         id: "wartungsplan-jt-580",
         title: "Wartungsplan JT 580 / JT 630",

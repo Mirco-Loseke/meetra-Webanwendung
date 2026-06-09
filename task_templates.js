@@ -1046,8 +1046,8 @@
                                 <div class="task-quick-complete ${st.status === 'completed' ? 'completed' : ''}" onclick="window.toggleModalSubtaskStatus(${gIdx}, ${sIdx})">
                                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                 </div>
-                                <div style="flex: 1; display: flex; align-items: center; gap: 10px;">
-                                    <input type="text" value="${st.title || ''}" class="glass-input-minimal" style="flex: 1; background: none; border: none; color: #fff; font-size: 0.95rem;" onblur="window.updateModalSubtask(${gIdx}, ${sIdx}, this.value)">
+                                <div class="subtask-content-row" style="flex: 1; display: flex; align-items: center; gap: 10px; min-width: 0;">
+                                    <input type="text" value="${st.title || ''}" class="glass-input-minimal" style="flex: 1; min-width: 0; background: none; border: none; color: #fff; font-size: 0.95rem;" onblur="window.updateModalSubtask(${gIdx}, ${sIdx}, this.value)">
                                     <span onclick="window.setSubtaskAction(null, '${st.action_type || ''}', { taskModal: true, gIdx: ${gIdx}, sIdx: ${sIdx} })" style="font-size: 0.65rem; cursor: pointer; background: ${st.action_type ? (st.action_type.startsWith('document:') ? 'rgba(16, 185, 129, 0.2)' : st.action_type.startsWith('servicebericht:') ? 'rgba(147, 51, 234, 0.2)' : (st.action_type === 'intake' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(245, 158, 11, 0.2)')) : 'rgba(255,255,255,0.05)'}; color: ${st.action_type ? (st.action_type.startsWith('document:') ? '#10b981' : st.action_type.startsWith('servicebericht:') ? '#c084fc' : (st.action_type === 'intake' ? '#60a5fa' : '#f59e0b')) : 'rgba(255,255,255,0.4)'}; padding: 2px 5px; border-radius: 4px; font-weight: 800; border: 1px solid ${st.action_type ? (st.action_type.startsWith('document:') ? 'rgba(16, 185, 129, 0.3)' : st.action_type.startsWith('servicebericht:') ? 'rgba(147, 51, 234, 0.3)' : (st.action_type === 'intake' ? 'rgba(59, 130, 246, 0.3)' : 'rgba(245, 158, 11, 0.3)')) : 'rgba(255,255,255,0.1)'}; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                         ${st.action_type ? (st.action_type.startsWith('document:') ? '📄 ' + (st.action_type.substring(9).split('|||')[1] || 'Dokument') : st.action_type.startsWith('servicebericht:') ? '🔧 ' + (st.action_type.substring(15).split('|||')[1] ? 'Service: ' + st.action_type.substring(15).split('|||')[1] : 'Servicebericht') : (st.action_type === 'intake' ? '⚡ Eingang' : '⚡ Endcheck')) : '+ Aktion'}
                                     </span>
@@ -1056,11 +1056,11 @@
                             </div>
                         `).join('')}
                     </div>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <input type="text" id="add-subtask-input-${gIdx}" class="glass-input" style="font-size: 0.9rem; height: 40px; border-color: rgba(255,255,255,0.1);" placeholder="Unteraufgabe hinzufügen..." onkeypress="if(event.key === 'Enter') window.addSubtaskToGroup(${gIdx})">
-                        <div style="position: relative;">
-                            <button onclick="window.toggleSnippetDropdown(${gIdx})" class="btn-circle-premium btn-circle-blue">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <input type="text" id="add-subtask-input-${gIdx}" class="glass-input" style="font-size: 0.9rem; height: 40px; border-color: rgba(255,255,255,0.1);" placeholder="Unteraufgabe hinzufügen..." onkeydown="if(event.key==='Enter'){event.preventDefault();window.addSubtaskToGroup(${gIdx});}">
+                        <div style="position: relative; flex-shrink: 0;">
+                            <button onclick="window.toggleSnippetDropdown(${gIdx})" class="btn-circle-premium btn-circle-blue" title="Vorlage wählen">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                             </button>
                             <div id="snippet-dropdown-${gIdx}" class="snippet-dropdown hidden" style="position: absolute; bottom: 100%; right: 0; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; min-width: 250px; max-height: 250px; overflow-y: auto; z-index: 1000; margin-bottom: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
                                 ${subtaskTemplates.filter(st => st && st.title).map(st => `
@@ -1071,9 +1071,6 @@
                                 `).join('')}
                             </div>
                         </div>
-                        <button class="btn-circle-premium btn-circle-green" onclick="window.addSubtaskToGroup(${gIdx})">
-                            <span style="font-size: 1.6rem; font-weight: 300; line-height: 1; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; margin-top: -1px;">+</span>
-                        </button>
                     </div>
                 `;
                 container.appendChild(groupDiv);

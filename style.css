@@ -1,4 +1,4 @@
-:root {
+﻿:root {
     /* Midnight Glass Color Palette */
     --midnight-deep: #0f172a;
     --midnight-blue: #1e293b;
@@ -1365,7 +1365,7 @@ body {
 #main-content {
     flex: 1;
     overflow-y: auto;
-    padding: 1.5rem 2rem 2rem 2rem;
+    padding: 0.75rem 2rem 2rem 2rem;
     background: transparent;
     width: 100%;
 }
@@ -1657,7 +1657,7 @@ h1,
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
     padding: 0 0.5rem;
 }
 
@@ -1706,6 +1706,12 @@ h1,
     display: flex;
     gap: 1rem;
     align-items: center;
+}
+
+#users .btn-label-short,
+#categories .btn-label-short,
+#uvv .btn-label-short {
+    display: none;
 }
 
 /* BACK BUTTON */
@@ -2411,7 +2417,7 @@ h1,
 
 .section-title {
     font-family: 'Outfit', sans-serif;
-    color: var(--color-primary-green);
+    color: #ffffff;
     font-size: 1.2rem;
     margin-bottom: 1rem;
     padding-bottom: 0.5rem;
@@ -3277,32 +3283,60 @@ input[type="date"].glass-form-input::-webkit-calendar-picker-indicator:hover {
 }
 
 .protocol-modal-header {
-    padding: 2rem 2.5rem;
+    padding: 0.875rem 1.5rem;
     border-bottom: 1px solid var(--glass-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(255, 255, 255, 0.03);
-    z-index: 10;
+    background: rgba(15, 23, 42, 0.97);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    position: sticky;
+    top: 0;
+    z-index: 20;
 }
 
 .protocol-modal-header h2 {
-    font-size: 1.8rem;
+    font-size: 0.88rem;
     font-weight: 800;
-    color: #10b981; /* Reverted to vibrant green */
-    letter-spacing: -0.02em;
+    color: #10b981;
+    letter-spacing: 0;
     margin: 0;
 }
 
+#protocol-status-badge {
+    margin-top: 0.2rem !important;
+}
+
+.protocol-status-badge {
+    padding: 3px 9px !important;
+    font-size: 0.65rem !important;
+    letter-spacing: 0.5px !important;
+    gap: 4px !important;
+    border-radius: 20px !important;
+}
+
+.protocol-modal-header .sidebar-user-profile {
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 9px !important;
+    flex-shrink: 0;
+}
+
+.protocol-modal-header .sidebar-user-profile svg {
+    width: 18px !important;
+    height: 18px !important;
+}
+
 .protocol-modal-content {
-    padding: 2.5rem;
+    padding: 1.25rem 1.5rem;
     flex: 1;
 }
 
 .protocol-modal-actions {
-    padding: 1.5rem 2.5rem 3rem 2.5rem; /* More bottom padding */
+    padding: 0.875rem 1.5rem 1.25rem 1.5rem;
     display: flex;
-    gap: 1.25rem;
+    gap: 0.625rem;
     align-items: center;
     background: transparent;
     border: none;
@@ -3311,17 +3345,24 @@ input[type="date"].glass-form-input::-webkit-calendar-picker-indicator:hover {
 /* Premium Modal Buttons */
 .btn-modal-base {
     flex: 1;
-    min-height: 56px;
-    border-radius: 16px;
-    font-size: 1rem;
+    min-height: 36px;
+    padding: 6px 14px;
+    border-radius: 11px;
+    font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
     display: flex;
     align-items: center !important;
     justify-content: center !important;
-    gap: 12px;
+    gap: 7px;
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
     font-family: 'Inter', sans-serif;
+}
+
+.btn-modal-base svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
 }
 
 .btn-modal-base:hover {
@@ -3384,15 +3425,15 @@ input[type="date"].glass-form-input::-webkit-calendar-picker-indicator:hover {
 }
 
 .protocol-section-title {
-    font-size: 1.1rem;
+    font-size: 0.82rem;
     font-weight: 700;
     color: rgba(255, 255, 255, 0.9);
-    margin: 0 0 1.25rem 0;
+    margin: 0 0 0.75rem 0;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.5rem;
 }
 
 .protocol-section-title::after {
@@ -3406,11 +3447,11 @@ input[type="date"].glass-form-input::-webkit-calendar-picker-indicator:hover {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.25rem 1.5rem;
+    padding: 7px 11px;
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid var(--glass-border);
-    border-radius: 18px;
-    margin-bottom: 1rem;
+    border-radius: 10px;
+    margin-bottom: 5px;
     line-height: 1.2;
     transition: all 0.3s ease;
 }
@@ -3424,12 +3465,12 @@ input[type="date"].glass-form-input::-webkit-calendar-picker-indicator:hover {
 .protocol-checkbox-label {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
+    gap: 0.4rem;
     cursor: pointer;
     font-weight: 700;
-    font-size: 0.95rem;
-    padding: 8px 16px;
-    border-radius: 12px;
+    font-size: 0.78rem;
+    padding: 5px 10px;
+    border-radius: 9px;
     transition: all 0.2s;
     user-select: none;
 }
@@ -4690,12 +4731,12 @@ tr.completed-task td {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1.25rem 1.5rem;
+    padding: 0.6rem 1rem;
     background: rgba(255, 255, 255, 0.03);
-    border-radius: 16px;
+    border-radius: 12px;
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.375rem;
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -4705,12 +4746,12 @@ tr.completed-task td {
 }
 
 .protocol-group-header h4 {
-    font-size: 1.25rem !important;
+    font-size: 0.88rem !important;
     font-weight: 800 !important;
     color: #fff !important;
     margin: 0 !important;
     font-family: 'Outfit', sans-serif !important;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
 }
 
 .protocol-group-content {
@@ -4740,11 +4781,11 @@ tr.completed-task td {
 .protocol-checkpoint-row {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 12px 16px;
+    gap: 10px;
+    padding: 7px 11px;
     background: rgba(255, 255, 255, 0.02);
-    border-radius: 12px;
-    margin-bottom: 8px;
+    border-radius: 10px;
+    margin-bottom: 5px;
     border: 1px solid rgba(255, 255, 255, 0.03);
     transition: all 0.2s ease;
 }
@@ -4879,16 +4920,18 @@ tr.completed-task td {
     position: absolute;
     top: 5px;
     right: 5px;
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    background: rgba(239, 68, 68, 0.8);
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.85);
     color: #fff;
     border: none;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    opacity: 1;
+    transform: none;
     backdrop-filter: blur(4px);
     transition: all 0.2s ease;
     z-index: 10;
@@ -5278,10 +5321,8 @@ tr.completed-task td {
         -webkit-overflow-scrolling: touch;
     }
 
-    .task-table,
     .procurement-table {
         min-width: 800px;
-        /* Slightly wider to ensure clarity */
         font-size: 0.85rem;
     }
 
@@ -5735,8 +5776,7 @@ MACHINE HISTORY TIMELINE
         -webkit-overflow-scrolling: touch;
     }
 
-    .task-table,
-    table {
+    table:not(.task-table) {
         min-width: 640px;
         font-size: 0.85rem;
     }
@@ -6010,6 +6050,58 @@ select.glass-form-input option, select.glass-form-select option {
 select.glass-form-input, select.glass-form-select, select.glass-form-input option, select.glass-form-select option {
   background-color: #1a1a24 !important;
   color: #ffffff !important;
+}
+
+/* ==========================================
+   SERVICEBERICHT MODAL — GLOBAL FIXES
+   ========================================== */
+
+/* modal-content is the ONE scroll container — header sticks to its top */
+#servicebericht-modal .modal-content {
+    max-height: 92vh;
+    overflow-y: auto !important;
+    overflow-x: hidden;
+}
+
+/* Header (Titel + X) bleibt immer oben kleben beim Scrollen */
+#servicebericht-modal .modal-content > div:first-child {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: rgba(15, 23, 42, 0.97);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    margin-left: -2.5rem;
+    margin-right: -2.5rem;
+    padding: 1.25rem 2.5rem 1rem 2.5rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* modal-scroll-area wird kein eigener Scroll-Container mehr */
+#servicebericht-modal .modal-scroll-area {
+    max-height: none !important;
+    overflow: visible !important;
+    padding-right: 0 !important;
+}
+
+/* Bottom action buttons — kompakt */
+#servicebericht-modal .modal-actions .btn-modal-base {
+    min-height: 34px !important;
+    padding: 5px 10px !important;
+    font-size: 0.78rem !important;
+    border-radius: 10px !important;
+    gap: 5px !important;
+    letter-spacing: 0 !important;
+}
+#servicebericht-modal .modal-actions .btn-modal-base svg {
+    width: 14px !important;
+    height: 14px !important;
+    flex-shrink: 0 !important;
+}
+#servicebericht-modal .modal-actions {
+    gap: 8px !important;
+    flex-wrap: wrap !important;
 }
 
 /* ==========================================
@@ -6496,9 +6588,6 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     }
     
     /* Header Scalings & Truncations */
-    .protocol-modal-header h2 {
-        font-size: 1.1rem !important;
-    }
     #protocol-machine-title {
         font-size: 0.85rem !important;
         padding-right: 60px !important;
@@ -6506,41 +6595,60 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         white-space: nowrap !important;
         overflow: hidden !important;
     }
-    .protocol-modal-header .sidebar-user-profile {
-        width: 36px !important;
-        height: 36px !important;
-    }
-    .protocol-modal-header .sidebar-user-profile svg {
-        width: 18px !important;
-        height: 18px !important;
-    }
 
     .protocol-section-title {
-        font-size: 0.95rem !important;
-        margin-bottom: 1rem !important;
+        font-size: 0.72rem !important;
+        margin-bottom: 0.5rem !important;
+        letter-spacing: 0.5px !important;
+    }
+
+    /* Betriebsstunden input compact */
+    .protocol-hours-input {
+        padding: 7px 10px !important;
+        font-size: 0.85rem !important;
+        min-height: unset !important;
+        border-radius: 9px !important;
+    }
+
+    /* Bearbeitungshistorie compact */
+    #edit-history-section .protocol-section-title {
+        font-size: 0.68rem !important;
+        margin-bottom: 0.375rem !important;
+    }
+    #edit-history-list {
+        font-size: 0.75rem !important;
     }
     .protocol-group-header {
-        padding: 1rem 1.25rem !important;
+        padding: 0.5rem 0.75rem !important;
+        border-radius: 10px !important;
     }
     .protocol-group-header h4 {
-        font-size: 1.05rem !important;
+        font-size: 0.8rem !important;
     }
 
     /* Checkpoint Rows - Align checkbox on left, text behind it, comment input below */
     .protocol-checkpoint-row {
         flex-direction: row !important;
         flex-wrap: wrap !important;
-        justify-content: flex-start !important; /* Align items to the left */
+        justify-content: flex-start !important;
         align-items: center !important;
-        gap: 8px 10px !important;
-        padding: 0.75rem 0.5rem !important;
+        gap: 5px 7px !important;
+        padding: 5px 7px !important;
+        border-radius: 8px !important;
+        margin-bottom: 4px !important;
     }
-    
+
     .protocol-item-label {
-        font-size: 0.85rem !important;
+        font-size: 0.78rem !important;
         line-height: 1.3 !important;
         margin-bottom: 0 !important;
         flex: 1 !important;
+    }
+
+    .protocol-checkbox-label {
+        padding: 4px 8px !important;
+        font-size: 0.72rem !important;
+        border-radius: 7px !important;
     }
 
     /* Prevent wrapper from squishing and match the tri-state box size */
@@ -6555,12 +6663,9 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         width: 32px !important;
         height: 32px !important;
         font-size: 1.1rem !important;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
-        font-weight: 700 !important;
-        display: inline-flex !important;
+        display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        text-align: center !important;
         padding: 0 !important;
         margin: 0 !important;
         box-sizing: border-box !important;
@@ -6581,8 +6686,8 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         width: auto !important;
     }
 
-    /* Target the container of Ja/Nein labels specifically */
-    .protocol-checkpoint-row > div > div {
+    /* Target the container of Ja/Nein labels specifically — exclude checkbox wrapper */
+    .protocol-checkpoint-row > div:not(.protocol-single-checkbox-wrapper) > div {
         flex: 0 0 auto !important;
         display: flex !important;
         gap: 8px !important;
@@ -6626,9 +6731,471 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     }
 
     .btn-modal-base {
-        padding: 10px 12px !important;
-        font-size: 0.85rem !important;
+        padding: 6px 10px !important;
+        font-size: 0.78rem !important;
         justify-content: center !important;
+    }
+
+    /* ---- SERVICEBERICHT MOBILE OPTIMIZATIONS ---- */
+
+    /* Backdrop: kein Padding, Modal beginnt direkt am oberen Rand */
+    #servicebericht-modal {
+        padding: 0 !important;
+        align-items: stretch !important;
+        justify-content: stretch !important;
+    }
+
+    /* Modal container & header */
+    #servicebericht-modal .modal-content {
+        padding: 0 0.875rem 0.875rem 0.875rem !important;
+        max-height: 100dvh !important;
+        min-height: 100dvh !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+    }
+    #servicebericht-modal .modal-content > div:first-child {
+        margin-left: -0.875rem !important;
+        margin-right: -0.875rem !important;
+        padding: 0.875rem 0.875rem 0.75rem 0.875rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    #servicebericht-modal .modal-content > div:first-child h2 {
+        font-size: 1rem !important;
+    }
+
+    /* Machine preview – compact */
+    #servicebericht-modal #selected-machine-preview {
+        padding: 0.75rem !important;
+        margin-top: 0.5rem !important;
+        gap: 0.75rem !important;
+    }
+    #servicebericht-modal #preview-image {
+        width: 48px !important;
+        height: 48px !important;
+        min-width: 48px !important;
+        flex-shrink: 0 !important;
+    }
+    #servicebericht-modal #preview-name {
+        font-size: 0.9rem !important;
+    }
+    #servicebericht-modal #preview-category {
+        font-size: 0.8rem !important;
+        margin-top: 3px !important;
+    }
+    #servicebericht-modal #preview-serial {
+        font-size: 0.72rem !important;
+    }
+    #servicebericht-modal #selected-machine-customer-preview {
+        margin-top: 0.5rem !important;
+        padding: 0.625rem 0.875rem !important;
+    }
+    #servicebericht-modal #service-customer-name {
+        font-size: 0.85rem !important;
+    }
+    #servicebericht-modal #service-customer-address {
+        font-size: 0.8rem !important;
+    }
+
+    /* Section headers (Punkt 1–5) */
+    #servicebericht-modal .section-header {
+        padding: 8px 11px !important;
+        margin-bottom: 0.625rem !important;
+        border-radius: 10px !important;
+    }
+    #servicebericht-modal .section-header .section-title {
+        font-size: 0.78rem !important;
+        font-weight: 700 !important;
+    }
+    #servicebericht-modal .collapsible-section {
+        margin-top: 0.75rem !important;
+    }
+
+    /* Labels */
+    #servicebericht-modal label,
+    #servicebericht-modal .form-group label {
+        font-size: 0.78rem !important;
+        margin-bottom: 0.3rem !important;
+    }
+
+    /* Form groups spacing */
+    #servicebericht-modal .form-group {
+        margin-bottom: 0.875rem !important;
+    }
+    #servicebericht-modal .form-section {
+        margin-top: 0.75rem !important;
+        margin-bottom: 0.75rem !important;
+    }
+    #servicebericht-modal .form-row,
+    #servicebericht-modal .form-grid {
+        gap: 0.625rem !important;
+        margin-top: 0.625rem !important;
+        margin-bottom: 0.625rem !important;
+    }
+
+    /* Inputs, selects, textareas */
+    #servicebericht-modal .glass-form-input,
+    #servicebericht-modal .glass-select,
+    #servicebericht-modal input.glass-form-input,
+    #servicebericht-modal textarea.glass-form-input,
+    #servicebericht-modal select.glass-form-input {
+        padding: 8px 10px !important;
+        font-size: 0.82rem !important;
+        border-radius: 9px !important;
+        min-height: unset !important;
+    }
+    #servicebericht-modal textarea.glass-form-input {
+        min-height: 72px !important;
+    }
+    #servicebericht-modal input[type="date"].glass-form-input {
+        padding: 7px 8px !important;
+    }
+
+    /* Werkstattauftrag inline inputs + spans gleiche Größe */
+    #servicebericht-modal #service-workshop-year-digit,
+    #servicebericht-modal #service-workshop-order-suffix {
+        font-size: 0.9rem !important;
+    }
+    #servicebericht-modal #service-workshop-year-digit,
+    #servicebericht-modal #service-workshop-order-suffix,
+    #servicebericht-modal .glass-form-input > span {
+        font-size: 0.9rem !important;
+        color: rgba(255,255,255,0.55) !important;
+    }
+    #servicebericht-modal #service-workshop-year-digit,
+    #servicebericht-modal #service-workshop-order-suffix {
+        color: white !important;
+    }
+
+    /* Section content table cells */
+    #servicebericht-modal table th {
+        padding: 7px 6px !important;
+        font-size: 0.72rem !important;
+    }
+    #servicebericht-modal table td {
+        padding: 5px 6px !important;
+        font-size: 0.8rem !important;
+    }
+    #servicebericht-modal table input,
+    #servicebericht-modal table select {
+        padding: 5px 7px !important;
+        font-size: 0.8rem !important;
+        border-radius: 7px !important;
+    }
+
+    /* Buttons inside sections (add row etc.) */
+    #servicebericht-modal .btn-secondary {
+        padding: 5px 9px !important;
+        font-size: 0.72rem !important;
+        height: auto !important;
+        border-radius: 7px !important;
+    }
+    #servicebericht-modal .btn-row-responsive {
+        gap: 5px !important;
+        flex-wrap: wrap !important;
+    }
+
+    /* Technician dropdown */
+    #servicebericht-modal #tech-dropdown-trigger {
+        min-height: 38px !important;
+        padding: 5px 10px !important;
+        border-radius: 9px !important;
+    }
+    #servicebericht-modal .tech-dropdown-trigger {
+        min-height: 38px !important;
+        font-size: 0.8rem !important;
+    }
+
+    /* Signature areas */
+    #servicebericht-modal #tech-signature-preview-container,
+    #servicebericht-modal #signature-preview-container {
+        height: 90px !important;
+    }
+
+    /* Responsive grids inside modal → stack */
+    #servicebericht-modal .responsive-grid-3,
+    #servicebericht-modal .responsive-grid-2,
+    #servicebericht-modal .responsive-grid-location {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 0.625rem !important;
+    }
+    /* Datum von/bis always side by side */
+    #servicebericht-modal .service-date-row {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 0.625rem !important;
+    }
+
+    /* Bottom action buttons */
+    #servicebericht-modal .modal-actions {
+        gap: 6px !important;
+        padding-top: 0.875rem !important;
+        margin-top: 0.875rem !important;
+    }
+
+    /* ---- SERVICE CARD MOBILE OPTIMIZATIONS ---- */
+
+    /* Badges (Wartung / UVV / Reparatur) — smaller on mobile */
+    .service-card-badge-row {
+        top: -14px !important;
+    }
+    .service-card-badge {
+        height: 28px !important;
+        padding: 0 11px !important;
+        font-size: 0.72rem !important;
+        border-radius: 14px !important;
+        gap: 5px !important;
+        letter-spacing: 0 !important;
+    }
+
+    /* Action buttons (Bearbeiten / PDF / Löschen) — equal height */
+    .service-card-actions {
+        align-items: stretch !important;
+        gap: 7px !important;
+    }
+    .service-card-actions button {
+        height: 36px !important;
+        min-height: 36px !important;
+        padding: 0 10px !important;
+        font-size: 0.78rem !important;
+        border-radius: 18px !important;
+    }
+    /* Keep circular delete/pdf buttons square at the same height */
+    .service-card-actions button[style*="border-radius: 50%"] {
+        width: 36px !important;
+        flex: none !important;
+        border-radius: 50% !important;
+        padding: 0 !important;
+    }
+    .service-card-actions button svg {
+        width: 14px !important;
+        height: 14px !important;
+    }
+
+    /* ---- TASK MODAL — MOBILE OPTIMIZATIONS ---- */
+
+    /* Full-screen on mobile */
+    #task-modal .modal-content {
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: 100dvh !important;
+        height: 100dvh !important;
+        border-radius: 0 !important;
+        padding: 0 !important;
+        overflow-y: auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    /* Sticky header */
+    #task-modal .modal-header {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 20 !important;
+        background: rgba(10, 15, 30, 0.97) !important;
+        backdrop-filter: blur(20px) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
+        padding: 0.75rem 3rem 0.75rem 0.875rem !important;
+        margin-bottom: 0 !important;
+        border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+        flex-shrink: 0 !important;
+    }
+
+    #task-modal #task-modal-title {
+        font-size: 1.05rem !important;
+        font-weight: 800 !important;
+        margin: 0 !important;
+    }
+
+    /* X button — absolute top-right */
+    #task-modal .task-modal-close {
+        position: fixed !important;
+        top: 9px !important;
+        right: 21px !important;
+        z-index: 30 !important;
+        font-size: 2rem !important;
+        padding: 0 0.25rem !important;
+        line-height: 1 !important;
+    }
+
+    /* Scrollable body */
+    #task-modal .modal-body {
+        flex: 1 !important;
+        overflow-y: auto !important;
+        padding: 0.75rem 0.875rem !important;
+    }
+
+    /* Form group spacing */
+    #task-modal .form-group {
+        margin-bottom: 0.75rem !important;
+    }
+
+    #task-modal .form-group label,
+    #task-modal label {
+        font-size: 0.75rem !important;
+        margin-bottom: 0.25rem !important;
+        display: block !important;
+    }
+
+    /* Machine search */
+    #task-modal #task-machine-search {
+        height: 40px !important;
+        font-size: 0.85rem !important;
+        padding-left: 10px !important;
+    }
+
+    /* All glass-input fields */
+    #task-modal .glass-input {
+        padding: 7px 10px !important;
+        font-size: 0.82rem !important;
+        min-height: unset !important;
+        height: auto !important;
+        border-radius: 9px !important;
+    }
+
+    #task-modal textarea.glass-input {
+        min-height: 60px !important;
+    }
+
+    /* Zuständig dropdown */
+    #task-user-select-trigger {
+        min-height: 36px !important;
+        padding: 5px 10px !important;
+        font-size: 0.82rem !important;
+        border-radius: 9px !important;
+    }
+
+    /* Details section padding */
+    #task-details-section {
+        padding-top: 12px !important;
+    }
+
+    /* Supergroups container */
+    #supergroups-container {
+        margin-top: 12px !important;
+    }
+
+    #quick-template-picker-container {
+        margin-bottom: 10px !important;
+    }
+
+    /* Section title "Übergruppen & Unteraufgaben" */
+    #task-modal .section-title,
+    #supergroups-container h3.section-title {
+        font-size: 0.75rem !important;
+        margin-bottom: 8px !important;
+        padding-bottom: 3px !important;
+    }
+
+    /* Supergroup cards */
+    #task-supergroups-list {
+        gap: 8px !important;
+        margin-bottom: 8px !important;
+    }
+
+    .modal-supergroup-card {
+        padding: 10px !important;
+        border-radius: 11px !important;
+    }
+
+    /* Supergroup card header */
+    .modal-supergroup-card > div:first-child {
+        margin-bottom: 8px !important;
+    }
+
+    .modal-supergroup-card h4 {
+        font-size: 0.82rem !important;
+    }
+
+    /* Subtask rows inside cards */
+    #task-modal [id^="modal-subtasks-"] {
+        gap: 5px !important;
+        margin-bottom: 8px !important;
+        min-height: 20px !important;
+    }
+
+    #task-modal [id^="modal-subtasks-"] > div {
+        padding: 5px 8px !important;
+        border-radius: 8px !important;
+        gap: 7px !important;
+    }
+
+    /* Subtask text input */
+    #task-modal .glass-input-minimal {
+        font-size: 0.8rem !important;
+        min-width: 0 !important;
+    }
+
+    /* Subtask content row: wrap so badge never hides behind text */
+    .subtask-content-row {
+        flex-wrap: wrap !important;
+        align-items: flex-start !important;
+        min-width: 0 !important;
+    }
+
+    .subtask-content-row input {
+        flex: 1 1 100% !important;
+        min-width: 0 !important;
+        width: 100% !important;
+    }
+
+    .subtask-content-row span {
+        flex-shrink: 0 !important;
+        white-space: normal !important;
+        max-width: none !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+        word-break: break-word !important;
+        font-size: 0.65rem !important;
+    }
+
+    /* Add-subtask row */
+    .modal-supergroup-card > div:last-child {
+        gap: 6px !important;
+    }
+
+    .modal-supergroup-card > div:last-child .glass-input {
+        height: 34px !important;
+        font-size: 0.78rem !important;
+    }
+
+    /* Sprachblasen- und +-Button kleiner */
+    .btn-circle-premium {
+        width: 28px !important;
+        height: 28px !important;
+        flex-shrink: 0 !important;
+    }
+
+    .btn-circle-premium svg {
+        width: 13px !important;
+        height: 13px !important;
+    }
+
+    .btn-circle-green span {
+        font-size: 1.2rem !important;
+    }
+
+    /* "Neue Übergruppe" button */
+    #task-modal .btn-secondary {
+        height: 34px !important;
+        font-size: 0.72rem !important;
+        padding: 0 12px !important;
+    }
+
+    /* Bottom action buttons */
+    #task-modal .modal-actions {
+        flex-shrink: 0 !important;
+        padding: 0.625rem 0.875rem 0.875rem 0.875rem !important;
+        margin-top: 0 !important;
+        gap: 6px !important;
+        border-top: 1px solid rgba(255,255,255,0.06) !important;
+        background: rgba(10, 15, 30, 0.97) !important;
+    }
+
+    #task-modal .modal-actions .btn-modal-base {
+        flex: 1 !important;
+        min-width: 0 !important;
     }
 }
 
@@ -7283,7 +7850,12 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         gap: 16px !important;
     }
     .settings-content {
-        display: none !important; /* Hide subtext on mobile */
+        display: block !important;
+    }
+    .settings-content p {
+        font-size: 0.78rem !important;
+        line-height: 1.4 !important;
+        margin-top: 4px !important;
     }
     .settings-card h2 {
         font-size: clamp(0.95rem, 4vw, 1.1rem) !important;
@@ -7295,6 +7867,92 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     .quarters-stats-grid {
         grid-template-columns: 1fr !important;
         gap: 12px !important;
+    }
+
+    /* ---- Plan Editor Modal Mobile — Fullscreen ---- */
+    #plan-editor-modal {
+        align-items: stretch !important;
+        justify-content: stretch !important;
+    }
+    #plan-editor-modal .pme-modal-inner {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+        padding: 1rem 1rem 1.25rem 1rem !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    #plan-editor-modal .pme-modal-header {
+        margin-bottom: 1rem !important;
+        padding-right: 40px !important;
+    }
+    #plan-editor-modal #plan-modal-title {
+        font-size: 1rem !important;
+    }
+    #plan-editor-modal .btn-close-modal {
+        position: fixed !important;
+        top: 9px !important;
+        right: 14px !important;
+        font-size: 1.8rem !important;
+        z-index: 10 !important;
+    }
+    /* Fields: 1 column */
+    #plan-editor-modal .pme-fields-grid {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+        margin-bottom: 0.875rem !important;
+    }
+    #plan-editor-modal .glass-form-input {
+        height: 38px !important;
+        font-size: 0.82rem !important;
+        padding: 6px 10px !important;
+    }
+    #plan-editor-modal label {
+        font-size: 0.75rem !important;
+        margin-bottom: 4px !important;
+    }
+    #plan-editor-modal #pme-type-wartung,
+    #plan-editor-modal #pme-type-uvv {
+        padding: 5px 14px !important;
+        font-size: 0.76rem !important;
+    }
+    /* Table: nimmt restlichen vertikalen Platz, scrollt nur horizontal */
+    #plan-editor-modal .pme-table-scroll {
+        flex: 1 1 0 !important;
+        min-height: 0 !important;
+        overflow-x: auto !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    #plan-editor-modal .pme-items-header {
+        min-width: 480px !important;
+        font-size: 0.7rem !important;
+        position: sticky !important;
+        top: 0 !important;
+        background: rgba(10,15,30,0.97) !important;
+        z-index: 2 !important;
+    }
+    #plan-editor-modal #pme-items {
+        min-width: 480px !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+    #plan-editor-modal #pme-items > div {
+        font-size: 0.75rem !important;
+    }
+    #plan-editor-modal .pme-modal-actions {
+        padding-top: 0.875rem !important;
+        margin-top: 1rem !important;
+    }
+    #plan-editor-modal .pme-modal-actions button {
+        padding: 8px 16px !important;
+        font-size: 0.82rem !important;
     }
 }
 
@@ -8409,6 +9067,22 @@ body.focus-mode-active .view-header-row-top {
     box-shadow: 0 0 25px rgba(16, 185, 129, 0.5), inset 0 0 15px rgba(16, 185, 129, 0.2);
 }
 
+.uvv-plan-card {
+    border: 1px solid rgba(255, 255, 255, 0.13) !important;
+    border-radius: 16px !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+@media (max-width: 768px) {
+    .uvv-assignment-save {
+        padding: 6px 12px !important;
+        font-size: 0.72rem !important;
+        letter-spacing: 0.2px !important;
+    }
+}
+
 .btn-trash-glow {
     background: rgba(239, 68, 68, 0.1);
     border: 1px solid rgba(239, 68, 68, 0.2);
@@ -8549,18 +9223,24 @@ body.focus-mode-active .view-header-row-top {
 }
 
 /* Tri-State Checkboxes in Protocols */
+.protocol-single-checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+}
 .protocol-tri-state-box {
     width: 32px;
     height: 32px;
     border-radius: 8px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
+    position: relative;
     cursor: pointer;
     font-size: 1.1rem;
     font-weight: 700;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1;
     padding: 0;
     margin: 0;
     box-sizing: border-box;
@@ -8799,15 +9479,16 @@ body.focus-mode-active .view-header-row-top {
     }
 
     .protocol-modal-header {
-        padding: 1rem 0.75rem !important;
+        padding: 0.625rem 0.75rem !important;
     }
 
     .protocol-modal-content {
-        padding: 1rem 0.5rem !important;
+        padding: 0.75rem 0.5rem !important;
     }
 
     .protocol-modal-actions {
-        padding: 1rem 0.75rem !important;
+        padding: 0.625rem 0.75rem 0.875rem 0.75rem !important;
+        gap: 6px !important;
     }
 
     /* Reduce left and right spacing to the absolute minimum on general modals */
@@ -8833,6 +9514,27 @@ body.focus-mode-active .view-header-row-top {
     }
     .subtask-item > .subtask-action-btn {
         margin-left: 28px !important;
+    }
+    /* Override for drag-enabled subtasks: keep drag handle inline, inner wrapper goes column */
+    .subtask-item[draggable="true"] {
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: flex-start !important;
+    }
+    .subtask-item[draggable="true"] > .subtask-drag-handle {
+        width: auto !important;
+        min-width: auto !important;
+        flex-shrink: 0 !important;
+    }
+    .subtask-item[draggable="true"] > div:not(.subtask-drag-handle) {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 6px !important;
+        width: auto !important;
+        flex: 1 !important;
+    }
+    .subtask-item[draggable="true"] > div:not(.subtask-drag-handle) > .subtask-action-btn {
+        margin-left: 0 !important;
     }
 
     /* Compact Tasks Page Header for Mobile */
@@ -8918,6 +9620,48 @@ body.focus-mode-active .view-header-row-top {
         justify-content: center !important;
         display: flex !important;
     }
+    /* Settings sub-pages: Zurück + Anlegen in one row, same height */
+    #users .users-header-actions,
+    #categories .users-header-actions,
+    #uvv .users-header-actions {
+        display: grid !important;
+        grid-template-columns: auto 1fr !important;
+        gap: 8px !important;
+        align-items: stretch !important;
+    }
+    #users .users-header-actions .btn-back-custom,
+    #categories .users-header-actions .btn-back-custom,
+    #uvv .users-header-actions .btn-back-custom {
+        width: auto !important;
+        padding: 0 12px !important;
+        font-size: 0.75rem !important;
+        white-space: nowrap !important;
+    }
+    #users .users-header-actions .btn-add-bg,
+    #categories .users-header-actions .btn-add-bg,
+    #uvv .users-header-actions .btn-add-bg {
+        width: 100% !important;
+        height: auto !important;
+        min-height: unset !important;
+        align-self: stretch !important;
+        justify-content: center !important;
+        margin-top: 0 !important;
+    }
+    #users .users-header-actions .btn-back-custom,
+    #categories .users-header-actions .btn-back-custom,
+    #uvv .users-header-actions .btn-back-custom {
+        align-self: stretch !important;
+    }
+    #users .btn-label-full,
+    #categories .btn-label-full,
+    #uvv .btn-label-full {
+        display: none !important;
+    }
+    #users .btn-label-short,
+    #categories .btn-label-short,
+    #uvv .btn-label-short {
+        display: inline !important;
+    }
 
     /* Sidebar mobile logo display fix */
     #sidebar.mobile-open .sidebar-header .logo {
@@ -8975,6 +9719,149 @@ body.focus-mode-active .view-header-row-top {
         overflow: visible !important;
         text-overflow: unset !important;
     }
+
+    /* ---- TASK TABLE — MOBILE CARD LAYOUT ---- */
+    .task-table {
+        min-width: 0 !important;
+        width: 100% !important;
+        display: block !important;
+    }
+    .task-table thead { display: none !important; }
+    .task-table tbody {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+    .task-list-row-premium {
+        display: block !important;
+        width: 100% !important;
+        border-radius: 14px !important;
+        overflow: visible !important;
+        box-sizing: border-box !important;
+    }
+    .task-list-row-premium td {
+        display: block !important;
+        width: 100% !important;
+        padding: 8px 12px !important;
+        border: none !important;
+        box-sizing: border-box !important;
+        overflow: visible !important;
+    }
+    /* Hide secondary columns */
+    .task-list-row-premium td[data-label="Status"],
+    .task-list-row-premium td[data-label="Fällig"],
+    .task-list-row-premium td[data-label="Zugewiesen"],
+    .task-list-row-premium td[data-label="Maschine"],
+    .task-list-row-premium td[data-label="Aktionen"] {
+        display: none !important;
+    }
+    /* Aufgabe cell: Kreis links, Content-Spalte rechts */
+    .task-list-row-premium td[data-label="Aufgabe"] {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+        overflow: visible !important;
+    }
+    /* Kreis-Wrapper: nicht schrumpfen */
+    .task-list-row-premium td[data-label="Aufgabe"] > div:first-child {
+        flex-shrink: 0 !important;
+        padding-top: 2px !important;
+    }
+    /* Kreis etwas kleiner */
+    .task-list-row-premium td[data-label="Aufgabe"] > div:first-child .task-quick-complete {
+        width: 20px !important;
+        height: 20px !important;
+        min-width: 20px !important;
+    }
+    /* Content-Spalte: nimmt Rest */
+    .task-list-row-premium td[data-label="Aufgabe"] > div:last-child {
+        flex: 1 !important;
+        min-width: 0 !important;
+        overflow: visible !important;
+        gap: 5px !important;
+    }
+    /* Haupttitel: kleinere Schrift, wraps */
+    .task-list-row-premium td[data-label="Aufgabe"] > div:last-child > span:first-child {
+        font-size: 0.85rem !important;
+        line-height: 1.4 !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        display: block !important;
+    }
+
+    /* ---- Unteraufgaben-Layout ---- */
+    /* subtask-item: Kreis + Text in gleicher Reihe, Aktionsbutton darunter */
+    .subtask-item {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: flex-start !important;
+        gap: 5px !important;
+        overflow: visible !important;
+    }
+    /* Inner wrapper: flex-wrap so Text-Row voll breit ist, Button darunter */
+    .subtask-item > div:not(.subtask-drag-handle) {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: flex-start !important;
+        gap: 4px !important;
+        flex: 1 !important;
+        min-width: 0 !important;
+    }
+    .subtask-drag-handle {
+        flex: 0 0 auto !important;
+        flex-shrink: 0 !important;
+    }
+    /* Subtask-Kreis kleiner */
+    .subtask-text-row .task-quick-complete {
+        width: 15px !important;
+        height: 15px !important;
+        min-width: 15px !important;
+        align-self: center !important;
+        margin-top: 0 !important;
+    }
+    /* Subtask-Text-Row (Kreis + Text): volle Breite → Text wraps */
+    .subtask-text-row {
+        flex: 0 0 100% !important;
+        min-width: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        overflow: visible !important;
+    }
+    .subtask-text-row span {
+        font-size: 0.74rem !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+        flex: 1 !important;
+        min-width: 0 !important;
+        line-height: 1.4 !important;
+    }
+    /* Aktionsbutton: eigene Reihe (flex-wrap schubst ihn runter) */
+    .subtask-item > div > button {
+        flex: 0 0 auto !important;
+        white-space: normal !important;
+        max-width: none !important;
+        height: auto !important;
+        min-height: 24px !important;
+        font-size: 0.7rem !important;
+        padding: 3px 8px !important;
+        overflow: visible !important;
+        margin-top: 0 !important;
+        word-break: break-word !important;
+    }
+    .subtask-item > div > button span {
+        overflow: visible !important;
+        text-overflow: unset !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+    }
 }
 
 /* Unified Subtask Action Button hover effect */
@@ -8991,6 +9878,7 @@ body.focus-mode-active .view-header-row-top {
     transform: translateY(1px);
     filter: brightness(0.9) !important;
 }
+
 
 
 
