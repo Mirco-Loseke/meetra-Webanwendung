@@ -6061,6 +6061,7 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     max-height: 92vh;
     overflow-y: auto !important;
     overflow-x: hidden;
+    padding-top: 0 !important;
 }
 
 /* Header (Titel + X) bleibt immer oben kleben beim Scrollen */
@@ -6071,11 +6072,14 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     background: rgba(15, 23, 42, 0.97);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+    margin-top: 0;
     margin-left: -2.5rem;
     margin-right: -2.5rem;
-    padding: 1.25rem 2.5rem 1rem 2.5rem;
+    padding: 1rem 2.5rem 1rem 2.5rem;
     margin-bottom: 0.5rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    border-top-left-radius: 24px;
+    border-top-right-radius: 24px;
 }
 
 /* modal-scroll-area wird kein eigener Scroll-Container mehr */
@@ -6756,10 +6760,12 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         margin: 0 !important;
     }
     #servicebericht-modal .modal-content > div:first-child {
+        margin-top: 0 !important;
         margin-left: -0.875rem !important;
         margin-right: -0.875rem !important;
         padding: 0.875rem 0.875rem 0.75rem 0.875rem !important;
         margin-bottom: 0.5rem !important;
+        border-radius: 0 !important;
     }
     #servicebericht-modal .modal-content > div:first-child h2 {
         font-size: 1rem !important;
@@ -7196,6 +7202,210 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     #task-modal .modal-actions .btn-modal-base {
         flex: 1 !important;
         min-width: 0 !important;
+    }
+
+    /* ---- ADD/EDIT MACHINE MODAL — MOBILE OPTIMIZATIONS ---- */
+    #add-machine-modal .modal-content {
+        padding: 1rem !important;
+        max-height: 96vh !important;
+    }
+    #add-machine-modal .modal-content > h2 {
+        margin-bottom: 0.75rem !important;
+        font-size: 1.15rem !important;
+    }
+    #add-machine-modal .modal-form-area {
+        padding: 0.75rem !important;
+        padding-right: 0.5rem !important;
+    }
+
+    /* Image upload slot — much smaller */
+    #add-machine-modal .machine-modal-image-slot {
+        height: 100px !important;
+        margin-bottom: 0.875rem !important;
+        border-radius: 14px !important;
+    }
+    #add-machine-modal .machine-modal-image-slot svg {
+        width: 26px !important;
+        height: 26px !important;
+    }
+    #add-machine-modal .machine-modal-image-slot .placeholder-text {
+        font-size: 0.75rem !important;
+    }
+    #add-machine-modal #machine-file-previews {
+        grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)) !important;
+        gap: 0.5rem !important;
+        margin-top: 0.75rem !important;
+        margin-bottom: 0.875rem !important;
+    }
+    #add-machine-modal #machine-file-previews .file-preview-item .remove-btn,
+    #add-machine-modal #machine-file-previews .file-preview-item .set-main-btn {
+        width: 18px !important;
+        height: 18px !important;
+        font-size: 0.7rem !important;
+        top: 3px !important;
+    }
+    #add-machine-modal #machine-file-previews .file-preview-item .remove-btn {
+        right: 3px !important;
+    }
+    #add-machine-modal #machine-file-previews .file-preview-item .set-main-btn {
+        left: 3px !important;
+    }
+    #add-machine-modal #machine-file-previews .file-preview-item .set-main-btn svg {
+        width: 10px !important;
+        height: 10px !important;
+    }
+
+    /* "1. Stammdaten" section title */
+    #add-machine-modal .modal-form-area > h3.section-title {
+        font-size: 0.95rem !important;
+        margin-bottom: 0.625rem !important;
+        padding-bottom: 0.375rem !important;
+    }
+
+    /* Form grids/groups */
+    #add-machine-modal .form-grid {
+        gap: 0.3rem !important;
+    }
+    #add-machine-modal .form-group {
+        margin-bottom: 0.35rem !important;
+    }
+    #add-machine-modal .form-group label {
+        font-size: 0.78rem !important;
+        margin-bottom: 0.12rem !important;
+    }
+
+    /* Inputs & selects */
+    #add-machine-modal input[type="text"],
+    #add-machine-modal input[type="number"],
+    #add-machine-modal input[type="date"],
+    #add-machine-modal .glass-input,
+    #add-machine-modal .glass-select {
+        padding: 9px 12px !important;
+        font-size: 0.85rem !important;
+        border-radius: 10px !important;
+    }
+
+    /* Collapsible sections (2. Wartung / 3. Standort & Besitzer / 4. Weitere Maschinen) */
+    #add-machine-modal .collapsible-section {
+        margin-top: 0.875rem !important;
+    }
+    #add-machine-modal .section-header {
+        padding: 8px 11px !important;
+        margin-bottom: 0.625rem !important;
+        border-radius: 10px !important;
+    }
+    #add-machine-modal .section-header .section-title {
+        font-size: 0.82rem !important;
+    }
+    #add-machine-modal .section-header .toggle-chevron {
+        width: 16px !important;
+        height: 16px !important;
+    }
+
+    /* Sub-headings inside sections (Betreiber/Rechnungsadresse, Maschinenstandort) */
+    #add-machine-modal .section-content h4 {
+        font-size: 0.85rem !important;
+        margin-top: 0.875rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    #add-machine-modal #machine-meetra-address-display {
+        padding: 0.875rem !important;
+        margin-bottom: 0.875rem !important;
+    }
+    #add-machine-modal #machine-location-address-group > div:first-child {
+        margin-top: 0.875rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    /* Compact secondary buttons (Entfernen, Adresse kopieren, Zusatzausrüstung hinzufügen) */
+    #add-machine-modal .btn-secondary {
+        padding: 6px 10px !important;
+        font-size: 0.72rem !important;
+    }
+
+    /* Bottom action buttons */
+    #add-machine-modal .modal-actions {
+        gap: 8px !important;
+        margin-top: 0.875rem !important;
+    }
+
+    /* ---- E-MAIL / VORGANG MODAL — MOBILE OPTIMIZATIONS ---- */
+    #email-import-modal .modal-content,
+    #process-edit-modal .modal-content {
+        padding: 1rem !important;
+    }
+    #email-import-modal .modal-content > div:first-child,
+    #process-edit-modal .modal-content > div:first-child {
+        margin-bottom: 0.625rem !important;
+    }
+    #email-import-modal .modal-content > div:first-child h2,
+    #process-edit-modal .modal-content > div:first-child h2 {
+        font-size: 1.05rem !important;
+    }
+    #email-import-modal .modal-content > div:first-child .btn-close svg,
+    #process-edit-modal .modal-content > div:first-child .btn-close svg {
+        width: 20px !important;
+        height: 20px !important;
+    }
+
+    /* Form groups & labels */
+    #email-import-modal .form-group,
+    #process-edit-modal .form-group {
+        margin-bottom: 0.5rem !important;
+    }
+    #email-import-modal .form-group label,
+    #process-edit-modal .form-group label {
+        font-size: 0.68rem !important;
+        margin-bottom: 0.25rem !important;
+        letter-spacing: 0.5px !important;
+    }
+
+    /* Inputs / selects */
+    #email-import-modal .glass-input,
+    #process-edit-modal .glass-input {
+        padding: 9px 12px !important;
+        font-size: 0.85rem !important;
+        border-radius: 10px !important;
+    }
+
+    /* .msg dropzone */
+    #email-import-modal #email-msg-dropzone,
+    #process-edit-modal #edit-process-msg-dropzone {
+        padding: 10px !important;
+        font-size: 0.75rem !important;
+    }
+    #email-import-modal #email-msg-dropzone svg,
+    #process-edit-modal #edit-process-msg-dropzone svg {
+        width: 18px !important;
+        height: 18px !important;
+        margin-bottom: 4px !important;
+    }
+
+    /* Textareas */
+    #email-import-modal #email-paste-area {
+        height: 80px !important;
+    }
+    #email-import-modal #email-body-input,
+    #process-edit-modal #edit-process-body-input {
+        height: 100px !important;
+    }
+
+    /* 2-column grids inside the form */
+    #email-import-modal [style*="display: grid"],
+    #process-edit-modal [style*="display: grid"] {
+        gap: 0.5rem !important;
+        margin-bottom: 0.625rem !important;
+    }
+
+    /* Bottom action buttons */
+    #email-import-form > div:last-child,
+    #process-edit-form > div:last-child {
+        gap: 8px !important;
+    }
+    #email-import-form > div:last-child button,
+    #process-edit-form > div:last-child button {
+        height: 42px !important;
+        font-size: 0.85rem !important;
     }
 }
 
@@ -9018,6 +9228,9 @@ body.focus-mode-active .view-header-row-top {
     font-family: inherit !important;
     font-size: inherit !important;
     font-weight: inherit !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
 }
 
 .btn-circle-premium {
@@ -9832,7 +10045,8 @@ body.focus-mode-active .view-header-row-top {
         gap: 6px !important;
         overflow: visible !important;
     }
-    .subtask-text-row span {
+    .subtask-text-row span,
+    .subtask-text-row .ghost-input {
         font-size: 0.74rem !important;
         white-space: normal !important;
         word-break: break-word !important;

@@ -421,13 +421,31 @@ window.renderActiveChecklists = function() {
             } else {
                 // Wartung: original layout with interval + checkbox
                 const isYearInterval = item.interval && item.interval.toLowerCase().includes('jahr');
-                const intervalBadgeStyle = isYearInterval 
-                    ? 'background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b;' 
+                const intervalBadgeStyle = isYearInterval
+                    ? 'background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b;'
                     : 'background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #e2e8f0;';
-                const checkedAttr = item.checked ? 'checked' : '';
+
+                // Tri-state "Erledigt" status: false (offen) -> true (erledigt) -> 'na' (nicht zutreffend) -> false
+                const status = item.checked;
+                const isNA = status === 'na';
+                let statusBoxStyle, statusContent;
+                if (isNA) {
+                    statusBoxStyle = 'border: 2px solid #1e3a5f; background: transparent; color: transparent;';
+                    statusContent = '';
+                } else if (status === true) {
+                    statusBoxStyle = 'border: 2px solid var(--color-primary-green); background: var(--color-primary-green); color: white;';
+                    statusContent = '✓';
+                } else {
+                    statusBoxStyle = 'border: 2px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.03); color: transparent;';
+                    statusContent = '';
+                }
+
                 html += `
-                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);" onmouseover="this.style.background='rgba(255,255,255,0.01)'" onmouseout="this.style.background='transparent'">
-                        <td style="padding: 12px 10px; color: rgba(255,255,255,0.6); font-size: 0.9rem; font-weight: 600;">${item.pos}</td>
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); position: relative;" onmouseover="this.style.background='rgba(255,255,255,0.01)'" onmouseout="this.style.background='transparent'">
+                        <td style="padding: 12px 10px; color: rgba(255,255,255,0.6); font-size: 0.9rem; font-weight: 600;">
+                            ${isNA ? `<div style="position: absolute; left: 0; top: 50%; width: 100%; height: 2px; background: #1e3a5f; opacity: 0.9; transform: translateY(-50%); pointer-events: none; z-index: 1;"></div>` : ''}
+                            ${item.pos}
+                        </td>
                         <td style="padding: 12px 10px;">
                             <div style="color: white; font-size: 0.9rem; font-weight: 500; line-height: 1.4;">${item.description}</div>
                         </td>
@@ -437,12 +455,13 @@ window.renderActiveChecklists = function() {
                             </span>
                         </td>
                         <td style="padding: 12px 10px; text-align: center;">
-                            <label class="custom-checkbox-wrapper" style="display: inline-block; cursor: pointer; position: relative;">
-                                <input type="checkbox" ${checkedAttr} onchange="window.toggleChecklistItem('${checklist.template_id}', ${index}, this.checked)" style="width: 20px; height: 20px; accent-color: var(--color-primary-green); cursor: pointer;">
-                            </label>
+                            <div onclick="window.toggleChecklistItem('${checklist.template_id}', ${index})" title="Klicken: offen → erledigt → nicht zutreffend"
+                                 style="width: 24px; height: 24px; margin: 0 auto; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 1rem; line-height: 1; transition: all 0.15s ease; ${statusBoxStyle}">
+                                ${statusContent}
+                            </div>
                         </td>
                         <td style="padding: 12px 10px; text-align: center;">
-                            <input type="text" value="${commentVal}" placeholder="Notiz..." oninput="window.setChecklistItemComment('${checklist.template_id}', ${index}, this.value)" 
+                            <input type="text" value="${commentVal}" placeholder="Notiz..." oninput="window.setChecklistItemComment('${checklist.template_id}', ${index}, this.value)"
                                    style="width: 100%; height: 36px; padding: 6px 12px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 0.85rem; outline: none; transition: border-color 0.2s; text-align: left;"
                                    onfocus="this.style.borderColor='var(--color-primary-green)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
                         </td>
@@ -478,10 +497,19 @@ window.renderActiveChecklists = function() {
     container.innerHTML = html;
 };
 
-window.toggleChecklistItem = function(templateId, index, checked) {
-    if (activeChecklists[templateId] && activeChecklists[templateId].answers[index]) {
-        activeChecklists[templateId].answers[index].checked = checked;
+window.toggleChecklistItem = function(templateId, index) {
+    const item = activeChecklists[templateId] && activeChecklists[templateId].answers[index];
+    if (!item) return;
+
+    // Cycle: offen (false) -> erledigt (true) -> nicht zutreffend ('na') -> offen
+    if (item.checked === true) {
+        item.checked = 'na';
+    } else if (item.checked === 'na') {
+        item.checked = false;
+    } else {
+        item.checked = true;
     }
+    window.renderActiveChecklists();
 };
 
 window.toggleChecklistItemIO = function(templateId, index, value) {

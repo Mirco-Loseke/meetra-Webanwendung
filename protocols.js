@@ -2433,16 +2433,6 @@
 
                 return `
                     <tr style="cursor: pointer; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: inset 5px 0 0 0 ${badgeColor}, inset 0 1.5px 0 0 ${badgeColor}66, inset -1.5px 0 0 0 ${badgeColor}66, inset 0 -1.5px 0 0 ${badgeColor}66, 0 10px 30px rgba(0,0,0,0.4); border-radius: 16px; overflow: hidden;" onclick="${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')">
-                        <td data-label="Typ">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: ${typeIconColor}22; color: ${typeIconColor};">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        ${iconPath}
-                                    </svg>
-                                </div>
-                                <span style="font-weight: 600; font-size: 0.95rem; color: ${typeIconColor};">${typeLabel}</span>
-                            </div>
-                        </td>
                         <td data-label="Maschine" style="color: var(--color-primary-green); font-weight: 700; font-size: 0.98rem; line-height: 1.3;">
                             ${p.machines ? `
                                 <div style="font-weight: 900; font-family: 'Outfit', sans-serif; font-size: 1.1rem;">${[p.machines.manufacturer, p.machines.name].filter(Boolean).join(' ')}</div>
@@ -2453,6 +2443,16 @@
                         <td data-label="Datum">
                             <div style="font-weight: 600;">${dateStr}</div>
                             <div style="font-size: 0.8rem; color: rgba(255,255,255,0.4);">${timeStr} Uhr</div>
+                        </td>
+                        <td data-label="Typ">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: ${typeIconColor}22; color: ${typeIconColor};">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        ${iconPath}
+                                    </svg>
+                                </div>
+                                <span style="font-weight: 600; font-size: 0.95rem; color: ${typeIconColor};">${typeLabel}</span>
+                            </div>
                         </td>
                         <td data-label="Status">
                             <span class="status-badge ${statusClass}" style="background: ${badgeColor}25; color: ${badgeColor}; border: 1px solid ${badgeColor}60; border-radius: 20px; padding: 4px 12px; font-size: 0.8rem; font-weight: 800;">${statusLabel}</span>

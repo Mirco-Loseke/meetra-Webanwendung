@@ -464,11 +464,11 @@
                                                           style="width: 16px; height: 16px; min-width: 16px;">
                                                          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                                      </div>
-                                                     <input type="text" class="ghost-input" value="${sub.title}" 
-                                                        onblur="window.updateSubtaskTitle('${task.id}', ${sub.idx}, this.value)"
-                                                        onkeydown="if(event.key === 'Enter') this.blur()"
+                                                     <div class="ghost-input" contenteditable="true"
+                                                        onblur="window.updateSubtaskTitle('${task.id}', ${sub.idx}, this.textContent.trim())"
+                                                        onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }"
                                                         onclick="event.stopPropagation()"
-                                                        style="color: rgba(255,255,255,${sub.status === 'completed' ? '0.4' : '0.8'}); ${sub.status === 'completed' ? 'text-decoration: line-through;' : ''}">
+                                                        style="color: rgba(255,255,255,${sub.status === 'completed' ? '0.4' : '0.8'}); ${sub.status === 'completed' ? 'text-decoration: line-through;' : ''}">${sub.title}</div>
                                                  </div>
                                                  ${sub.action_type ? (() => {
                                                       const isDoc = sub.action_type.startsWith('document:');
@@ -649,11 +649,11 @@
                                          title="${sub.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
                                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                     </div>
-                                    <input type="text" class="ghost-input" value="${sub.title}" 
-                                        onblur="window.updateSubtaskTitle('${task.id}', ${sub.idx}, this.value)"
-                                        onkeydown="if(event.key === 'Enter') this.blur()"
+                                    <div class="ghost-input" contenteditable="true"
+                                        onblur="window.updateSubtaskTitle('${task.id}', ${sub.idx}, this.textContent.trim())"
+                                        onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }"
                                         onclick="event.stopPropagation()"
-                                        style="color: rgba(255,255,255,${sub.status === 'completed' ? '0.4' : '0.9'}); ${sub.status === 'completed' ? 'text-decoration: line-through;' : ''}">
+                                        style="color: rgba(255,255,255,${sub.status === 'completed' ? '0.4' : '0.9'}); ${sub.status === 'completed' ? 'text-decoration: line-through;' : ''}">${sub.title}</div>
                                 </div>
                                 ${sub.action_type ? (() => {
                                        const isDoc = sub.action_type.startsWith('document:');

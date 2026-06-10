@@ -1545,9 +1545,9 @@
                             <table class="task-table" style="border-collapse: separate; border-spacing: 0 10px;">
                                 <thead>
                                     <tr>
+                                        <th style="min-width: 200px;">Maschine</th>
                                         <th>Datum</th>
                                         <th>Kategorie</th>
-                                        <th style="min-width: 200px;">Maschine</th>
                                         <th style="text-align: right;">Aktionen</th>
                                     </tr>
                                 </thead>
@@ -1661,9 +1661,9 @@
                             <table class="task-table" style="border-collapse: separate; border-spacing: 0 10px;">
                                 <thead>
                                     <tr>
-                                        <th>Typ</th>
                                         <th style="min-width: 200px;">Maschine</th>
                                         <th>Datum</th>
+                                        <th>Typ</th>
                                         <th>Status</th>
                                         <th style="text-align: right;">Aktionen</th>
                                     </tr>
@@ -3383,6 +3383,12 @@
                     }
                 }
 
+                // Floating Focus Mode button: only visible on the Aufgaben (tasks) page
+                const focusModeContainer = document.getElementById('focus-mode-container');
+                if (focusModeContainer) {
+                    focusModeContainer.style.display = (targetId === 'tasks') ? 'flex' : 'none';
+                }
+
                 if (!found) {
                     console.warn('View ID not found:', targetId);
                 }
@@ -3477,25 +3483,21 @@
                 });
 
                 // Add Logout Option
-                const divider = document.createElement('div');
-                divider.style.height = '1px';
-                divider.style.background = 'rgba(255,255,255,0.1)';
-                divider.style.margin = '8px 0';
-                dropdownList.appendChild(divider);
-
                 const logoutLi = document.createElement('li');
                 logoutLi.style.display = 'flex';
                 logoutLi.style.alignItems = 'center';
                 logoutLi.style.gap = '12px';
-                logoutLi.style.padding = '12px 16px';
+                logoutLi.style.padding = '10px 16px';
                 logoutLi.style.color = '#ef4444';
                 logoutLi.style.fontWeight = 'bold';
                 logoutLi.innerHTML = `
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                        <polyline points="16 17 21 12 16 7"></polyline>
-                        <line x1="21" y1="12" x2="9" y2="12"></line>
-                    </svg>
+                    <div style="width: 24px; height: 24px; border-radius: 50%; background-color: #ef4444; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                    </div>
                     <span style="flex: 1;">Abmelden (Logout)</span>
                 `;
                 logoutLi.onclick = (e) => {
@@ -6083,25 +6085,31 @@
                             .maybeSingle();
 
                         if (custData && !custErr) {
-                            const kdnr = custData.customer_number || machine.customer_number || '';
+                            const kdnr = machine.customer_number || custData.customer_number || '';
                             const kdnrLine = kdnr ? `Kundennummer: ${kdnr}` : '';
-                            
+
+                            // Manuell bearbeitete Betreiber-/Rechnungsadresse der Maschine hat Vorrang vor den Sage-Stammdaten
+                            const custName = machine.company || custData.name;
+                            const custStreet = machine.operator_street || custData.street;
+                            const custZipCity = [machine.operator_zip || custData.zip_code, machine.operator_city || custData.city].filter(Boolean).join(' ');
+                            const custCountry = machine.operator_country || custData.country;
+
                             const custAddrParts = [
                                 kdnrLine,
-                                `<strong>${custData.name}</strong>`,
-                                custData.street,
-                                [custData.zip_code, custData.city].filter(Boolean).join(' '),
-                                custData.country
+                                `<strong>${custName}</strong>`,
+                                custStreet,
+                                custZipCity,
+                                custCountry
                             ].filter(Boolean);
 
                             custAddressEl.innerHTML = custAddrParts.join('<br>');
-                            
+
                             const mapQueryParts = [
-                                custData.street,
-                                [custData.zip_code, custData.city].filter(Boolean).join(' '),
-                                custData.country
+                                custStreet,
+                                custZipCity,
+                                custCountry
                             ].filter(Boolean);
-                            const fullCustAddrForMap = [custData.name, ...mapQueryParts].join(', ');
+                            const fullCustAddrForMap = [custName, ...mapQueryParts].join(', ');
                             custMapsLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullCustAddrForMap)}`;
                             custMapsLink.style.display = 'inline-flex';
 
@@ -8906,6 +8914,7 @@
 
             try {
                 await window.saveServiceberichtData();
+                serviceberichtIsDirty = false;
                 alert('Servicebericht wurde erfolgreich gespeichert!');
                 closeServiceberichtModal();
             } catch (err) {
@@ -9430,6 +9439,7 @@
                             const typeMap = {
                                 'phone': { label: 'Telefon', icon: '📞', color: '#10b981' },
                                 'note': { label: 'Bemerkung', icon: '📝', color: '#f59e0b' },
+                                'email': { label: 'E-Mail', icon: '✉️', color: '#3b82f6' },
                                 'photo': {
                                     label: (m.files && Array.isArray(m.files) && m.files.length > 0) ? `Foto <span style="display:inline-flex; align-items:center; background:rgba(139,92,246,0.2); padding:2px 8px; border-radius:12px; font-size:0.7rem; margin-left:8px; color:#c4b5fd; border: 1px solid rgba(139,92,246,0.3);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>${m.files.length}</span>` : 'Foto',
                                     icon: '📸',
@@ -9755,6 +9765,21 @@
                             </label>
                         </div>
                     `;
+            } else if (type === 'email') {
+                html = `
+                        <input type="text" id="manual-title" placeholder="Betreff der E-Mail" class="glass-input" style="margin-bottom: 0.75rem;">
+                        <div id="manual-email-msg-dropzone"
+                            onclick="document.getElementById('manual-email-msg-file-input').click()"
+                            ondragover="event.preventDefault(); this.style.borderColor='var(--color-primary-green)'; this.style.background='rgba(52,211,153,0.06)';"
+                            ondragleave="this.style.borderColor='rgba(255,255,255,0.15)'; this.style.background='transparent';"
+                            ondrop="window.handleManualHistoryMsgDrop(event)"
+                            style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 14px; text-align: center; cursor: pointer; color: rgba(255,255,255,0.45); font-size: 0.8rem; font-weight: 600; margin-bottom: 0.75rem; transition: border-color 0.2s, background 0.2s;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: 0 auto 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            .msg-Datei hierher ziehen oder klicken
+                        </div>
+                        <input type="file" id="manual-email-msg-file-input" accept=".msg" style="display:none;" onchange="window.handleManualHistoryMsgSelect(event)">
+                        <textarea id="manual-content" placeholder="Von / An / Inhalt der E-Mail..." class="glass-input" style="min-height: 80px;"></textarea>
+                    `;
             }
             const todayStr = new Date().toISOString().split('T')[0];
             const dateRow = `
@@ -9769,6 +9794,81 @@
             setTimeout(() => {
                 container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }, 100);
+        };
+
+        window.handleManualHistoryMsgDrop = function(event) {
+            event.preventDefault();
+            event.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+            event.currentTarget.style.background = 'transparent';
+            const file = event.dataTransfer.files && event.dataTransfer.files[0];
+            if (file) window.processManualHistoryMsgFile(file);
+        };
+
+        window.handleManualHistoryMsgSelect = function(event) {
+            const file = event.target.files && event.target.files[0];
+            if (file) window.processManualHistoryMsgFile(file);
+            event.target.value = '';
+        };
+
+        window.processManualHistoryMsgFile = function(file) {
+            if (!file.name.toLowerCase().endsWith('.msg')) {
+                alert('Bitte eine .msg-Datei auswählen (Outlook-Nachricht).');
+                return;
+            }
+
+            const MsgReaderClass = window.MSGReaderClass;
+            if (!MsgReaderClass) {
+                alert('MSG-Reader Bibliothek konnte nicht geladen werden.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const msgReader = new MsgReaderClass(e.target.result);
+                    const fileData = msgReader.getFileData();
+
+                    if (fileData.subject) {
+                        document.getElementById('manual-title').value = fileData.subject;
+                    }
+
+                    let sender = '';
+                    if (fileData.senderName && fileData.senderEmail) {
+                        sender = `${fileData.senderName} <${fileData.senderEmail}>`;
+                    } else {
+                        sender = fileData.senderEmail || fileData.senderName || '';
+                    }
+
+                    const toRecipients = (fileData.recipients || [])
+                        .filter(r => !r.recipType || r.recipType.toLowerCase() === 'to')
+                        .map(r => (r.name && r.email) ? `${r.name} <${r.email}>` : (r.email || r.name))
+                        .filter(Boolean);
+
+                    const body = (fileData.body || '').trim();
+
+                    const contentParts = [];
+                    if (sender) contentParts.push(`Von: ${sender}`);
+                    if (toRecipients.length > 0) contentParts.push(`An: ${toRecipients.join('; ')}`);
+                    if (contentParts.length > 0 && body) contentParts.push('');
+                    if (body) contentParts.push(body);
+
+                    const contentEl = document.getElementById('manual-content');
+                    if (contentEl) contentEl.value = contentParts.join('\n');
+
+                    const dateRaw = fileData.messageDeliveryTime || fileData.creationTime || fileData.lastModificationTime;
+                    if (dateRaw) {
+                        const d = new Date(dateRaw);
+                        if (!isNaN(d.getTime())) {
+                            const dateInput = document.getElementById('manual-entry-date');
+                            if (dateInput) dateInput.value = d.toISOString().split('T')[0];
+                        }
+                    }
+                } catch (err) {
+                    console.error('Error parsing .msg file:', err);
+                    alert('Fehler beim Lesen der .msg-Datei: ' + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
         };
 
         window.updatePhotoCount = function (input) {
@@ -10598,24 +10698,11 @@
             window.setupCustomerAutocomplete('edit-process-sender-input', 'edit-process-sender-suggestions', 'edit');
             window.setupCustomerAutocomplete('edit-process-recipient-input', 'edit-process-recipient-suggestions', 'edit');
 
-            // Initialize Machine Selection Change Listeners
-            const emailMachineSelect = document.getElementById('email-machine-select');
-            if (emailMachineSelect) {
-                emailMachineSelect.addEventListener('change', () => {
-                    window.syncAddressFromMachine('email-machine-select', 'email-type-select', 'email-sender-input', 'email-recipient-input');
-                });
-            }
+            // Initialize Type Selection Change Listeners (re-sync address when type changes)
             const emailTypeSelect = document.getElementById('email-type-select');
             if (emailTypeSelect) {
                 emailTypeSelect.addEventListener('change', () => {
                     window.syncAddressFromMachine('email-machine-select', 'email-type-select', 'email-sender-input', 'email-recipient-input');
-                });
-            }
-
-            const editMachineSelect = document.getElementById('edit-process-machine-select');
-            if (editMachineSelect) {
-                editMachineSelect.addEventListener('change', () => {
-                    window.syncAddressFromMachine('edit-process-machine-select', 'edit-process-type-select', 'edit-process-sender-input', 'edit-process-recipient-input');
                 });
             }
             const editTypeSelect = document.getElementById('edit-process-type-select');
@@ -10766,22 +10853,13 @@
             const localISOTime = (new Date(now.getTime() - tzOffset)).toISOString().slice(0, 16);
             document.getElementById('email-date-input').value = localISOTime;
             
-            // Populate machine list
-            const select = document.getElementById('email-machine-select');
-            if (select) {
-                select.innerHTML = '<option value="">Keine Maschine zugeordnet</option>' +
-                                  '<optgroup id="email-recommended-machines" label="Empfohlene Maschinen" style="display:none;"></optgroup>' +
-                                  '<optgroup id="email-all-machines" label="Alle Maschinen"></optgroup>';
-                
-                const allGroup = document.getElementById('email-all-machines');
-                if (allGroup) {
-                    (window.machineList || []).forEach(m => {
-                        const opt = document.createElement('option');
-                        opt.value = m.id;
-                        opt.textContent = `${m.manufacturer} ${m.name} (#${m.serial || '?'})`;
-                        allGroup.appendChild(opt);
-                    });
-                }
+            // Reset machine search field
+            window.processMachineRecommended.email = [];
+            document.getElementById('email-machine-select').value = '';
+            const machineSearch = document.getElementById('email-machine-search');
+            if (machineSearch) {
+                machineSearch.value = '';
+                machineSearch.style.color = '';
             }
         };
 
@@ -10826,30 +10904,21 @@
                 document.getElementById('edit-process-date-input').value = '';
             }
             
-            // Populate machine list
-            const select = document.getElementById('edit-process-machine-select');
-            if (select) {
-                select.innerHTML = '<option value="">Keine Maschine zugeordnet</option>' +
-                                  '<optgroup id="edit-process-recommended-machines" label="Empfohlene Maschinen" style="display:none;"></optgroup>' +
-                                  '<optgroup id="edit-process-all-machines" label="Alle Maschinen"></optgroup>';
-                
-                const allGroup = document.getElementById('edit-process-all-machines');
-                if (allGroup) {
-                    (window.machineList || []).forEach(m => {
-                        const opt = document.createElement('option');
-                        opt.value = m.id;
-                        opt.textContent = `${m.manufacturer} ${m.name} (#${m.serial || '?'})`;
-                        if (proc.machine_id && String(m.id) === String(proc.machine_id)) {
-                            opt.selected = true;
-                        }
-                        allGroup.appendChild(opt);
-                    });
-                }
+            // Set up machine search field
+            window.processMachineRecommended['edit-process'] = [];
+            const machineHidden = document.getElementById('edit-process-machine-select');
+            const machineSearch = document.getElementById('edit-process-machine-search');
+            if (proc.machine_id) {
+                const activeMachine = (window.machineList || []).find(m => String(m.id) === String(proc.machine_id));
+                if (activeMachine) {
+                    if (machineHidden) machineHidden.value = activeMachine.id;
+                    if (machineSearch) {
+                        machineSearch.value = `${activeMachine.manufacturer || ''} ${activeMachine.name || ''} (#${activeMachine.serial || '?'})`.trim();
+                        machineSearch.style.color = 'var(--color-primary-green)';
+                    }
 
-                // If the process has a machine_id, find its customer and filter recommended machines
-                if (proc.machine_id) {
-                    const activeMachine = (window.machineList || []).find(m => String(m.id) === String(proc.machine_id));
-                    if (activeMachine && activeMachine.customer_id) {
+                    // Find its customer and filter recommended machines for the dropdown
+                    if (activeMachine.customer_id) {
                         (async () => {
                             try {
                                 if (window.supabaseClient) {
@@ -10860,8 +10929,6 @@
                                         .maybeSingle();
                                     if (cust) {
                                         window.filterMachinesForCustomer(cust.id, cust.name, 'edit');
-                                        // Set selected value back to proc.machine_id since filterMachinesForCustomer might select first matching machine
-                                        select.value = proc.machine_id;
                                     }
                                 }
                             } catch (e) {
@@ -10869,6 +10936,12 @@
                             }
                         })();
                     }
+                }
+            } else {
+                if (machineHidden) machineHidden.value = '';
+                if (machineSearch) {
+                    machineSearch.value = '';
+                    machineSearch.style.color = '';
                 }
             }
         };
@@ -11009,35 +11082,232 @@
             }
         };
 
+        // ==========================================
+        // .MSG FILE IMPORT (Outlook Message Format)
+        // ==========================================
+        window.handleMsgFileDrop = function(event, prefix) {
+            event.preventDefault();
+            event.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+            event.currentTarget.style.background = 'transparent';
+            const file = event.dataTransfer.files && event.dataTransfer.files[0];
+            if (file) window.processMsgFile(file, prefix || 'email');
+        };
+
+        window.handleMsgFileSelect = function(event, prefix) {
+            const file = event.target.files && event.target.files[0];
+            if (file) window.processMsgFile(file, prefix || 'email');
+            event.target.value = '';
+        };
+
+        window.processMsgFile = function(file, prefix) {
+            prefix = prefix || 'email';
+
+            if (!file.name.toLowerCase().endsWith('.msg')) {
+                alert('Bitte eine .msg-Datei auswählen (Outlook-Nachricht).');
+                return;
+            }
+
+            const MsgReaderClass = window.MSGReaderClass;
+            if (!MsgReaderClass) {
+                alert('MSG-Reader Bibliothek konnte nicht geladen werden.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const msgReader = new MsgReaderClass(e.target.result);
+                    const fileData = msgReader.getFileData();
+
+                    if (fileData.subject) {
+                        document.getElementById(`${prefix}-title-input`).value = fileData.subject;
+                    }
+
+                    // Sender
+                    let sender = '';
+                    if (fileData.senderName && fileData.senderEmail) {
+                        sender = `${fileData.senderName} <${fileData.senderEmail}>`;
+                    } else {
+                        sender = fileData.senderEmail || fileData.senderName || '';
+                    }
+                    if (sender) document.getElementById(`${prefix}-sender-input`).value = sender;
+
+                    // Recipients (To)
+                    const toRecipients = (fileData.recipients || [])
+                        .filter(r => !r.recipType || r.recipType.toLowerCase() === 'to')
+                        .map(r => (r.name && r.email) ? `${r.name} <${r.email}>` : (r.email || r.name))
+                        .filter(Boolean);
+                    if (toRecipients.length > 0) {
+                        document.getElementById(`${prefix}-recipient-input`).value = toRecipients.join('; ');
+                    }
+
+                    // Body
+                    const body = (fileData.body || '').trim();
+                    if (body) document.getElementById(`${prefix}-body-input`).value = body;
+
+                    // Date
+                    const dateRaw = fileData.messageDeliveryTime || fileData.creationTime || fileData.lastModificationTime;
+                    if (dateRaw) {
+                        const d = new Date(dateRaw);
+                        if (!isNaN(d.getTime())) {
+                            document.getElementById(`${prefix}-date-input`).value = formatDateToLocalInput(d);
+                        }
+                    }
+
+                    // Auto determine incoming or outgoing
+                    if (sender && (sender.toLowerCase().includes('meetra') || sender.toLowerCase().includes('birco') || sender.toLowerCase().includes('info@') || sender.toLowerCase().includes('sales@'))) {
+                        document.getElementById(`${prefix}-type-select`).value = 'email_outgoing';
+                    } else {
+                        document.getElementById(`${prefix}-type-select`).value = 'email_incoming';
+                    }
+
+                    // Smart matching trigger
+                    const senderEmail = fileData.senderEmail || '';
+                    const matchText = body + ' ' + (fileData.subject || '');
+                    if (senderEmail) {
+                        window.runSmartCustomerMatching(senderEmail, matchText, prefix);
+                    } else {
+                        window.runSerialNumberMatching(matchText, null, prefix);
+                    }
+                } catch (err) {
+                    console.error('Error parsing .msg file:', err);
+                    alert('Fehler beim Lesen der .msg-Datei: ' + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        };
+
         window.filterMachinesForCustomer = function(customerId, customerName, modalType) {
-            const isImport = (modalType === 'import');
-            const selectId = isImport ? 'email-machine-select' : 'edit-process-machine-select';
-            const recGroupId = isImport ? 'email-recommended-machines' : 'edit-process-recommended-machines';
-            
-            const select = document.getElementById(selectId);
-            const recGroup = document.getElementById(recGroupId);
-            if (!select || !recGroup) return;
-
+            const prefix = (modalType === 'import') ? 'email' : 'edit-process';
             const machines = (window.machineList || []).filter(m => String(m.customer_id) === String(customerId));
-            
-            recGroup.innerHTML = '';
-            
-            if (machines.length > 0) {
-                recGroup.label = `Empfohlene Maschinen (${customerName})`;
-                recGroup.style.display = 'block';
-                
-                machines.forEach(m => {
-                    const opt = document.createElement('option');
-                    opt.value = m.id;
-                    opt.textContent = `${m.manufacturer} ${m.name} (#${m.serial || '?'})`;
-                    recGroup.appendChild(opt);
-                });
 
-                select.value = machines[0].id;
-            } else {
-                recGroup.style.display = 'none';
+            window.processMachineRecommended[prefix] = machines.map(m => m.id);
+
+            const hidden = document.getElementById(`${prefix}-machine-select`);
+            if (machines.length > 0 && hidden && !hidden.value) {
+                const m = machines[0];
+                window.selectProcessMachine(prefix, m.id, `${m.manufacturer || ''} ${m.name || ''} (#${m.serial || '?'})`.trim());
             }
         };
+
+        // ==========================================
+        // PROCESS MACHINE SEARCH DROPDOWN (Email-Import / Vorgang bearbeiten)
+        // ==========================================
+        window.processMachineRecommended = { 'email': [], 'edit-process': [] };
+
+        function buildProcessMachineDropdown(prefix, machines) {
+            const portalId = `${prefix}-machine-dropdown-portal`;
+            let dropdown = document.getElementById(portalId);
+            if (!dropdown) {
+                dropdown = document.createElement('div');
+                dropdown.id = portalId;
+                dropdown.style.cssText = [
+                    'position: fixed',
+                    'z-index: 999999',
+                    'background: rgba(15,23,42,0.98)',
+                    'border: 1px solid rgba(255,255,255,0.15)',
+                    'border-radius: 12px',
+                    'max-height: 260px',
+                    'overflow-y: auto',
+                    'box-shadow: 0 16px 48px rgba(0,0,0,0.7)',
+                    'display: none'
+                ].join(';');
+                document.body.appendChild(dropdown);
+            }
+
+            const searchInput = document.getElementById(`${prefix}-machine-search`);
+            if (searchInput) {
+                const rect = searchInput.getBoundingClientRect();
+                dropdown.style.top = (rect.bottom + 4) + 'px';
+                dropdown.style.left = rect.left + 'px';
+                dropdown.style.width = rect.width + 'px';
+            }
+
+            dropdown.innerHTML = '';
+
+            const buildItem = (m) => {
+                const label = `${m.manufacturer || ''} ${m.name || ''} (#${m.serial || '?'})`.trim();
+                const item = document.createElement('div');
+                item.style.cssText = 'padding: 10px 14px; cursor: pointer; font-size: 0.9rem; border-top: 1px solid rgba(255,255,255,0.05);';
+                item.innerHTML = `<span style="color: var(--color-primary-green); font-weight: 600;">${label}</span>`;
+                item.onmousedown = (e) => { e.preventDefault(); window.selectProcessMachine(prefix, m.id, label); };
+                item.onmouseover = () => { item.style.background = 'rgba(255,255,255,0.06)'; };
+                item.onmouseout = () => { item.style.background = ''; };
+                return item;
+            };
+
+            const noneItem = document.createElement('div');
+            noneItem.textContent = 'Keine Maschine zugeordnet';
+            noneItem.style.cssText = 'padding: 10px 14px; cursor: pointer; color: rgba(255,255,255,0.6); font-size: 0.9rem;';
+            noneItem.onmousedown = (e) => { e.preventDefault(); window.selectProcessMachine(prefix, '', ''); };
+            noneItem.onmouseover = () => { noneItem.style.background = 'rgba(255,255,255,0.08)'; };
+            noneItem.onmouseout = () => { noneItem.style.background = ''; };
+            dropdown.appendChild(noneItem);
+
+            const recommendedIds = window.processMachineRecommended[prefix] || [];
+            const recommended = recommendedIds.length > 0 ? machines.filter(m => recommendedIds.includes(m.id)) : [];
+            const others = recommended.length > 0 ? machines.filter(m => !recommendedIds.includes(m.id)) : machines;
+
+            if (recommended.length > 0) {
+                const header = document.createElement('div');
+                header.textContent = 'Empfohlene Maschinen';
+                header.style.cssText = 'padding: 6px 14px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-primary-green); border-top: 1px solid rgba(255,255,255,0.05);';
+                dropdown.appendChild(header);
+                recommended.forEach(m => dropdown.appendChild(buildItem(m)));
+
+                if (others.length > 0) {
+                    const header2 = document.createElement('div');
+                    header2.textContent = 'Alle Maschinen';
+                    header2.style.cssText = 'padding: 6px 14px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.4); border-top: 1px solid rgba(255,255,255,0.05);';
+                    dropdown.appendChild(header2);
+                }
+            }
+
+            others.forEach(m => dropdown.appendChild(buildItem(m)));
+
+            dropdown.style.display = 'block';
+        }
+
+        window.showProcessMachineDropdown = function(prefix) {
+            buildProcessMachineDropdown(prefix, window.machineList || []);
+        };
+
+        window.filterProcessMachineDropdown = function(prefix, query) {
+            const machines = window.machineList || [];
+            const tokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+            const filtered = machines.filter(m => {
+                const searchable = [m.manufacturer || '', m.name || '', m.serial || '', m.year ? String(m.year) : ''].join(' ').toLowerCase();
+                return tokens.length === 0 || tokens.every(token => searchable.includes(token));
+            });
+            buildProcessMachineDropdown(prefix, filtered);
+        };
+
+        window.selectProcessMachine = function(prefix, id, label) {
+            const hidden = document.getElementById(`${prefix}-machine-select`);
+            const search = document.getElementById(`${prefix}-machine-search`);
+            if (hidden) hidden.value = id;
+            if (search) {
+                search.value = label || '';
+                search.style.color = id ? 'var(--color-primary-green)' : '';
+            }
+            const dropdown = document.getElementById(`${prefix}-machine-dropdown-portal`);
+            if (dropdown) dropdown.style.display = 'none';
+
+            if (prefix === 'email') {
+                window.syncAddressFromMachine('email-machine-select', 'email-type-select', 'email-sender-input', 'email-recipient-input');
+            } else {
+                window.syncAddressFromMachine('edit-process-machine-select', 'edit-process-type-select', 'edit-process-sender-input', 'edit-process-recipient-input');
+            }
+        };
+
+        document.addEventListener('click', (e) => {
+            ['email', 'edit-process'].forEach(prefix => {
+                const dropdown = document.getElementById(`${prefix}-machine-dropdown-portal`);
+                if (dropdown && !e.target.closest(`#${prefix}-machine-search`) && !e.target.closest(`#${prefix}-machine-dropdown-portal`)) {
+                    dropdown.style.display = 'none';
+                }
+            });
+        });
 
         window.setupCustomerAutocomplete = function(inputId, suggestionsId, modalType) {
             const input = document.getElementById(inputId);
@@ -11163,7 +11433,8 @@
             }
         };
 
-        window.runSmartCustomerMatching = async function(senderEmail, text) {
+        window.runSmartCustomerMatching = async function(senderEmail, text, prefix) {
+            prefix = prefix || 'email';
             const genericDomains = ['gmail.com', 'googlemail.com', 'gmx.de', 'gmx.net', 'web.de', 't-online.de', 'outlook.com', 'outlook.de', 'hotmail.com', 'hotmail.de', 'yahoo.com', 'yahoo.de', 'aol.com', 'icloud.com', 'mail.ru', 'freenet.de', 'directbox.com', 'posteo.de', 'gmx.at', 'gmx.ch'];
             
             if (!supabaseClient) return;
@@ -11195,62 +11466,47 @@
                     }
                 }
                 
-                const recGroup = document.getElementById('email-recommended-machines');
-                if (customer && recGroup) {
+                if (customer) {
                     const machines = (window.machineList || []).filter(m => m.customer_id === customer.id);
                     if (machines.length > 0) {
-                        recGroup.innerHTML = '';
-                        recGroup.label = `Empfohlene Maschinen (${customer.name})`;
-                        recGroup.style.display = 'block';
-                        
-                        machines.forEach(m => {
-                            const opt = document.createElement('option');
-                            opt.value = m.id;
-                            opt.textContent = `${m.manufacturer} ${m.name} (#${m.serial || '?'})`;
-                            recGroup.appendChild(opt);
-                        });
-                        
-                        window.runSerialNumberMatching(text, recGroup.firstElementChild ? recGroup.firstElementChild.value : null);
+                        window.processMachineRecommended[prefix] = machines.map(m => m.id);
+                        window.runSerialNumberMatching(text, machines[0].id, prefix);
                         return;
                     }
                 }
-                
-                if (recGroup) {
-                    recGroup.style.display = 'none';
-                    recGroup.innerHTML = '';
-                }
-                window.runSerialNumberMatching(text, null);
-                
+
+                window.processMachineRecommended[prefix] = [];
+                window.runSerialNumberMatching(text, null, prefix);
+
             } catch (e) {
                 console.error("Error in Smart Customer Matching:", e);
-                window.runSerialNumberMatching(text, null);
+                window.runSerialNumberMatching(text, null, prefix);
             }
         };
 
-        window.runSerialNumberMatching = function(text, defaultMachineId) {
-            const select = document.getElementById('email-machine-select');
-            if (!select) return;
-            
-            let matchedMachineId = null;
-            
+        window.runSerialNumberMatching = function(text, defaultMachineId, prefix) {
+            prefix = prefix || 'email';
+            let matchedMachine = null;
+
             // Scan for serials
             for (const m of (window.machineList || [])) {
                 if (m.serial && m.serial.length >= 3) {
                     const escaped = m.serial.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
                     const regex = new RegExp('\\b' + escaped + '\\b', 'i');
                     if (regex.test(text)) {
-                        matchedMachineId = m.id;
+                        matchedMachine = m;
                         break;
                     }
                 }
             }
-            
-            if (matchedMachineId) {
-                select.value = matchedMachineId;
-            } else if (defaultMachineId) {
-                select.value = defaultMachineId;
+
+            const targetId = matchedMachine ? matchedMachine.id : (defaultMachineId || '');
+            if (targetId) {
+                const machine = matchedMachine || (window.machineList || []).find(m => String(m.id) === String(targetId));
+                const label = machine ? `${machine.manufacturer || ''} ${machine.name || ''} (#${machine.serial || '?'})`.trim() : '';
+                window.selectProcessMachine(prefix, targetId, label);
             } else {
-                select.value = '';
+                window.selectProcessMachine(prefix, '', '');
             }
         };
 
@@ -12188,6 +12444,13 @@
 
                         return `
                                 <tr onclick="openEditServicebericht(${e.id})" style="cursor: pointer; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: inset 5px 0 0 0 ${primaryCatColor}, inset 0 1.5px 0 0 ${primaryCatColor}66, inset -1.5px 0 0 0 ${primaryCatColor}66, inset 0 -1.5px 0 0 ${primaryCatColor}66, 0 10px 30px rgba(0,0,0,0.4); border-radius: 16px; overflow: hidden;">
+                                    <td data-label="Maschine" style="color: var(--color-primary-green); font-weight: 700; font-size: 0.98rem; line-height: 1.3;">
+                                        ${machine ? `
+                                            <div>${[machine.manufacturer, machine.name].filter(Boolean).join(' ')}</div>
+                                            <div style="font-size: 0.8rem; opacity: 0.8;">
+                                                ${[machine.serial_number || machine.serial ? `#${machine.serial_number || machine.serial}` : null, machine.year ? `(${machine.year})` : null].filter(Boolean).join(' ')}
+                                            </div>` : '-'}
+                                    </td>
                                     <td data-label="Datum" style="color: #ffffff; font-weight: 700; line-height: 1.3;">
                                         <div>${displayedDateStr}</div>
                                         ${durationStr ? `<div style="font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-top: 2px;">${durationStr}</div>` : ''}
@@ -12203,13 +12466,6 @@
                                                 `;
                                             }).join('')}
                                         </div>
-                                    </td>
-                                    <td data-label="Maschine" style="color: #ffffff; font-weight: 700; font-size: 0.98rem; line-height: 1.3;">
-                                        ${machine ? `
-                                            <div>${[machine.manufacturer, machine.name].filter(Boolean).join(' ')}</div>
-                                            <div style="font-size: 0.8rem; opacity: 0.8;">
-                                                ${[machine.serial_number || machine.serial ? `#${machine.serial_number || machine.serial}` : null, machine.year ? `(${machine.year})` : null].filter(Boolean).join(' ')}
-                                            </div>` : '-'}
                                     </td>
                                     <td data-label="Aktionen" onclick="event.stopPropagation()">
                                         <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
@@ -13289,12 +13545,13 @@
                             .single();
                         if (data) {
                             cust = data;
-                            customerName = cust.name || customerName;
-                            if (cust.customer_number) customerNumber = cust.customer_number;
-                            opStreet = cust.street || '';
-                            opZip = cust.zip_code || '';
-                            opCity = cust.city || '';
-                            opCountry = cust.country || 'Deutschland';
+                            // Manuell bearbeitete Betreiber-/Rechnungsadresse der Maschine hat Vorrang vor den Sage-Stammdaten
+                            if (!machine.company) customerName = cust.name || customerName;
+                            if (!customerNumber && cust.customer_number) customerNumber = cust.customer_number;
+                            if (!opStreet) opStreet = cust.street || '';
+                            if (!opZip) opZip = cust.zip_code || '';
+                            if (!opCity) opCity = cust.city || '';
+                            if (!machine.operator_country) opCountry = cust.country || 'Deutschland';
                         }
                     } catch(e){}
                 }
@@ -13929,7 +14186,7 @@
                                     ans.pos || '',
                                     ans.description || '',
                                     ans.interval || '',
-                                    ans.checked ? 'checked' : 'unchecked',
+                                    ans.checked === 'na' ? 'na' : (ans.checked ? 'checked' : 'unchecked'),
                                     (ans.comment && ans.comment.trim()) ? ans.comment : '/'
                                 ]);
                             });
@@ -13991,6 +14248,7 @@
                                 },
                                 didDrawCell: function(data) {
                                     if (categoryRowsCL.includes(data.row.index)) return;
+                                    const rowStatus = data.row.raw[3];
                                     if (data.column.index === 3 && data.cell.section === 'body') {
                                         const xc = data.cell.x + data.cell.width / 2;
                                         const yc = data.cell.y + data.cell.height / 2;
@@ -14000,12 +14258,19 @@
                                         doc.setDrawColor(100, 116, 139);
                                         doc.setLineWidth(0.4);
                                         doc.rect(x, y, size, size);
-                                        if (data.cell.raw === 'checked') {
+                                        if (rowStatus === 'checked') {
                                             doc.setDrawColor(30, 41, 59);
                                             doc.setLineWidth(0.75);
                                             doc.line(x + 0.8, y + 2.3, x + 2, y + 3.5);
                                             doc.line(x + 2, y + 3.5, x + 3.8, y + 1.2);
                                         }
+                                    }
+                                    // "Nicht zutreffend": Querstrich über die gesamte Zeile
+                                    if (rowStatus === 'na' && data.cell.section === 'body') {
+                                        const yMid = data.cell.y + data.cell.height / 2;
+                                        doc.setDrawColor(30, 58, 95);
+                                        doc.setLineWidth(0.5);
+                                        doc.line(data.cell.x, yMid, data.cell.x + data.cell.width, yMid);
                                     }
                                 }
                             });
@@ -14800,30 +15065,30 @@
                     </div>
 
                     <div class="modal-actions"
-                        style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem; margin-top: 2rem; display: flex; gap: 10px; justify-content: flex-end; align-items: flex-start; flex-wrap: wrap; width: 100%;">
-                        
+                        style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem; margin-top: 2rem; display: flex; gap: 10px; justify-content: flex-end; align-items: stretch; flex-wrap: wrap; width: 100%;">
+
                         <button type="button" class="btn-modal-base btn-modal-cancel" onclick="closeServiceberichtModal()" style="flex: 1;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                             Abbrechen
                         </button>
-                        
+
                         <button type="button" class="btn-modal-base" id="btn-servicebericht-preview" onclick="window.previewServiceberichtPDF()" style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.35); color: #a78bfa; gap: 8px; flex: 1;" onmouseover="this.style.background='rgba(139,92,246,0.28)'" onmouseout="this.style.background='rgba(139,92,246,0.15)'">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                             Vorschau
                         </button>
-                        
+
                         <button type="button" class="btn-modal-base btn-modal-save" onclick="submitServicebericht()" style="flex: 1;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
                             Speichern
                         </button>
 
-                        <div style="display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1;">
-                            <button type="button" class="btn-modal-base btn-modal-pdf" id="btn-servicebericht-cloud-pdf" onclick="window.saveServiceberichtPDFToR2()" style="width: 100%;">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                                PDF erstellen/speichern
-                            </button>
-                            <span id="servicebericht-pdf-status" style="font-size: 0.72rem; color: rgba(255,255,255,0.45); font-weight: 500; display: block; min-height: 14px; text-align: center;">Noch kein PDF gespeichert</span>
-                        </div>
+                        <button type="button" class="btn-modal-base btn-modal-pdf" id="btn-servicebericht-cloud-pdf" onclick="window.saveServiceberichtPDFToR2()" style="flex: 1;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            PDF erstellen/speichern
+                        </button>
+                    </div>
+                    <div style="text-align: center; margin-top: 6px; width: 100%;">
+                        <span id="servicebericht-pdf-status" style="font-size: 0.72rem; color: rgba(255,255,255,0.45); font-weight: 500; display: block; min-height: 14px;">Noch kein PDF gespeichert</span>
                     </div>
                 </form>
             </div>
@@ -15021,8 +15286,8 @@
         <div class="modal-content"
             style="max-width: 900px; width: 90%; max-height: 85vh; display: flex; flex-direction: column; position: relative; margin: auto;">
             <h2 style="margin-bottom: 2rem;">Maschine anlegen</h2>
-            <div style="position: absolute; top: 20px; right: 20px; cursor: pointer; font-size: 24px; line-height: 1;"
-                onclick="closeAddMachineModal()">&times;</div>
+            <button type="button" class="btn-close-modal" style="position: absolute; top: 12px; right: 16px;"
+                onclick="closeAddMachineModal()">&times;</button>
 
             <div class="modal-form-area" style="overflow-y: auto; padding-right: 10px; flex: 1;">
                 <!-- Interactive Image Slot at the Top -->
@@ -15796,14 +16061,7 @@
                             <path d="M9 9l6 6m0-6l-6 6"></path>
                         </svg>
                     </button>
-                    <button class="btn-icon-soft btn-close-premium" onclick="window.closeHistoryModal()"
-                        style="border-radius: 12px; padding: 8px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                            <line x1="6" y1="6" x2="18" y2="18"></line>
-                        </svg>
-                    </button>
+                    <button class="btn-close-modal" onclick="window.closeHistoryModal()">&times;</button>
                 </div>
             </div>
 
@@ -15818,9 +16076,6 @@
                         <span
                             style="font-size: 0.85rem; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px;">Schnelleintrag</span>
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="font-size: 0.75rem; color: rgba(255,255,255,0.3); font-weight: 600;">(Klicken
-                                zum
-                                Ausklappen)</span>
                             <svg class="toggle-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none"
                                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
                                 style="transition: transform 0.3s ease; opacity: 0.5;">
@@ -15880,6 +16135,21 @@
                                 </div>
                                 <span
                                     style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.3px;">Foto</span>
+                            </button>
+                            <!-- E-Mail -->
+                            <button onclick="window.toggleManualHistoryForm('email')"
+                                style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0.5rem;">
+                                <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(59,130,246,0.12); border: 1.5px solid rgba(59,130,246,0.5); display: flex; align-items: center; justify-content: center; color: #3b82f6; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 0 14px rgba(59,130,246,0.35), 0 0 28px rgba(59,130,246,0.15);"
+                                    onmouseover="this.style.transform='scale(1.15)'; this.style.background='rgba(59,130,246,0.22)'; this.style.boxShadow='0 0 24px rgba(59,130,246,0.6), 0 0 48px rgba(59,130,246,0.3)'"
+                                    onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(59,130,246,0.12)'; this.style.boxShadow='0 0 14px rgba(59,130,246,0.35), 0 0 28px rgba(59,130,246,0.15)'">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                        <polyline points="22,6 12,13 2,6"></polyline>
+                                    </svg>
+                                </div>
+                                <span
+                                    style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.3px;">E-Mail</span>
                             </button>
                         </div>
 
@@ -16795,9 +17065,9 @@
 
     <!-- Document Preview Modal (Full Screen Content) -->
     <div id="document-preview-modal" class="modal-backdrop hidden"
-        style="z-index: 1300; align-items: center; justify-content: center; background: rgba(0,0,0,0.9);">
+        style="z-index: 10100; align-items: center; justify-content: center; background: rgba(0,0,0,0.9); padding: 0;">
         <div class="modal-content glass-card"
-            style="max-width: 90vw; width: 1200px; height: 90vh; padding: 0.5rem 0.75rem; display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);">
+            style="max-width: 100vw; width: 100vw; height: 100dvh; max-height: 100dvh; padding: 0.5rem 0.75rem; display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); border-radius: 0; margin: 0;">
             <div
                 style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; padding: 0.25rem 0.5rem;">
                 <span id="doc-preview-title" style="font-size: 0.8rem; color: rgba(255,255,255,0.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%;">Vorschau</span>
@@ -16843,6 +17113,10 @@
 
     <script
         src="https://cdn.jsdelivr.net/npm/browser-image-compression@2.0.2/dist/browser-image-compression.js"></script>
+    <script type="module">
+        import MsgReader from 'https://esm.sh/@kenjiuno/msgreader@1.28.0';
+        window.MSGReaderClass = MsgReader;
+    </script>
     <script src="file-upload-service-r2.js"></script>
     <script src="accounting.js?v=41"></script>
     <script src="documents-r2.js?v=5"></script>
@@ -16964,8 +17238,22 @@
                 </button>
             </div>
             
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Outlook-E-Mail (.msg) importieren</label>
+                <div id="email-msg-dropzone"
+                    onclick="document.getElementById('email-msg-file-input').click()"
+                    ondragover="event.preventDefault(); this.style.borderColor='var(--color-primary-green)'; this.style.background='rgba(52,211,153,0.06)';"
+                    ondragleave="this.style.borderColor='rgba(255,255,255,0.15)'; this.style.background='transparent';"
+                    ondrop="window.handleMsgFileDrop(event)"
+                    style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 18px; text-align: center; cursor: pointer; color: rgba(255,255,255,0.45); font-size: 0.85rem; font-weight: 600; transition: border-color 0.2s, background 0.2s;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: 0 auto 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    .msg-Datei hierher ziehen oder klicken
+                </div>
+                <input type="file" id="email-msg-file-input" accept=".msg" style="display:none;" onchange="window.handleMsgFileSelect(event)">
+            </div>
+
             <div class="form-group" style="margin-bottom: 1.5rem;">
-                <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">E-Mail hier einfügen (Strg + V)</label>
+                <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Oder E-Mail-Text einfügen (Strg + V)</label>
                 <textarea id="email-paste-area" class="glass-input" style="height: 120px; resize: none; padding-top: 15px; border-color: rgba(52, 211, 153, 0.4);" placeholder="Kopieren Sie den gesamten Inhalt der E-Mail aus Outlook (Strg+A, Strg+C) und fügen Sie ihn hier ein..."></textarea>
             </div>
 
@@ -17005,11 +17293,12 @@
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 15px; margin-bottom: 1.5rem;">
-                    <div class="form-group">
+                    <div class="form-group" style="position: relative;">
                         <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Verknüpfte Maschine</label>
-                        <select id="email-machine-select" class="glass-input" style="appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 15px center;">
-                            <option value="">Keine Maschine zugeordnet</option>
-                        </select>
+                        <input type="hidden" id="email-machine-select" value="">
+                        <input type="text" id="email-machine-search" class="glass-input" placeholder="Maschine suchen..." autocomplete="off"
+                            oninput="window.filterProcessMachineDropdown('email', this.value)"
+                            onfocus="window.showProcessMachineDropdown('email')">
                     </div>
                     <div class="form-group">
                         <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Vorgangs-Status</label>
@@ -17046,7 +17335,21 @@
             
             <form id="process-edit-form" onsubmit="window.updateProcess(event)">
                 <input type="hidden" id="edit-process-id">
-                
+
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Outlook-E-Mail (.msg) importieren</label>
+                    <div id="edit-process-msg-dropzone"
+                        onclick="document.getElementById('edit-process-msg-file-input').click()"
+                        ondragover="event.preventDefault(); this.style.borderColor='var(--color-primary-green)'; this.style.background='rgba(52,211,153,0.06)';"
+                        ondragleave="this.style.borderColor='rgba(255,255,255,0.15)'; this.style.background='transparent';"
+                        ondrop="window.handleMsgFileDrop(event, 'edit-process')"
+                        style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 18px; text-align: center; cursor: pointer; color: rgba(255,255,255,0.45); font-size: 0.85rem; font-weight: 600; transition: border-color 0.2s, background 0.2s;">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: 0 auto 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        .msg-Datei hierher ziehen oder klicken
+                    </div>
+                    <input type="file" id="edit-process-msg-file-input" accept=".msg" style="display:none;" onchange="window.handleMsgFileSelect(event, 'edit-process')">
+                </div>
+
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 1.5rem;">
                     <div class="form-group">
                         <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Vorgangs-Typ</label>
@@ -17082,11 +17385,12 @@
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 15px; margin-bottom: 1.5rem;">
-                    <div class="form-group">
+                    <div class="form-group" style="position: relative;">
                         <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Verknüpfte Maschine</label>
-                        <select id="edit-process-machine-select" class="glass-input" style="appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 15px center;">
-                            <option value="">Keine Maschine zugeordnet</option>
-                        </select>
+                        <input type="hidden" id="edit-process-machine-select" value="">
+                        <input type="text" id="edit-process-machine-search" class="glass-input" placeholder="Maschine suchen..." autocomplete="off"
+                            oninput="window.filterProcessMachineDropdown('edit-process', this.value)"
+                            onfocus="window.showProcessMachineDropdown('edit-process')">
                     </div>
                     <div class="form-group">
                         <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Vorgangs-Status</label>

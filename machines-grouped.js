@@ -294,32 +294,6 @@
             return [];
         };
 
-        const normalizeEquipmentList = (source) => {
-            if (!source) return [];
-            let items = [];
-            if (Array.isArray(source)) items = source;
-            else if (typeof source === 'string' && source.trim()) {
-                try {
-                    const parsed = JSON.parse(source);
-                    if (Array.isArray(parsed)) items = parsed;
-                } catch (e) {
-                    return [];
-                }
-            }
-            const unique = new Map();
-            return items.filter(Boolean).map(eq => {
-                const serial = eq && eq.serial ? String(eq.serial).trim() : '';
-                const type = eq && eq.type ? String(eq.type).trim() : '';
-                const designation = eq && (eq.designation || eq.name) ? String(eq.designation || eq.name).trim() : '';
-                return { serial, type, designation };
-            }).filter(eq => {
-                const key = `${eq.type}|${eq.serial}|${eq.designation}`;
-                if (unique.has(key)) return false;
-                unique.set(key, true);
-                return eq.serial || eq.type || eq.designation;
-            });
-        };
-
         const extractMetaProperty = (files, key) => {
             if (!Array.isArray(files)) return null;
             const entry = files.find(item => item && item.type === 'meta' && item.key === key && item.property != null);
@@ -330,11 +304,6 @@
             ...normalizeMachineIdList(machine.related_machine_ids),
             ...normalizeMachineIdList(extractMetaProperty(machine.files, 'related_machine_ids'))
         ]));
-
-        const additionalEquipment = [
-            ...normalizeEquipmentList(machine.additional_equipment),
-            ...normalizeEquipmentList(extractMetaProperty(machine.files, 'additional_equipment'))
-        ];
 
         const linkedBadge = relatedMachineIds.length > 0 ? `
             <div title="${relatedMachineIds.length} ${relatedMachineIds.length === 1 ? 'verknüpfte Maschine' : 'verknüpfte Maschinen'}"
@@ -351,19 +320,6 @@
                  onmouseover="this.style.transform='scale(1.12)'"
                  onmouseout="this.style.transform='scale(1)'">
                 ${relatedMachineIds.length}
-            </div>
-        ` : '';
-
-        const extraInfoParts = [];
-        if (additionalEquipment.length) {
-            extraInfoParts.push(`${additionalEquipment.length} Zusatzausrüstung`);
-        }
-
-        const extrasInfoHtml = extraInfoParts.length ? `
-            <div style="padding: 0 1.25rem 0.65rem 1.25rem; display: flex; justify-content: center;">
-                <div style="display: inline-flex; align-items: center; justify-content: center; gap: 0.55rem; flex-wrap: wrap; font-size: 0.82rem; color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 999px; padding: 0.55rem 0.95rem; width: 100%; max-width: 100%;">
-                    ${extraInfoParts.join(' · ')}
-                </div>
             </div>
         ` : '';
 
@@ -412,7 +368,6 @@
                     </div>
                     ` : ''}
                 </div>
-                ${extrasInfoHtml}
                 <div class="card-actions" style="margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 8px; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); margin-left: -1.25rem; margin-right: -1.25rem;">
                     <button class="btn-reports" style="padding: 8px 10px !important; font-size: 0.85rem !important;" onclick="if(typeof event !== 'undefined' && event.stopPropagation) event.stopPropagation(); window.openServiceActionsModal(event, '${machine.id}')" title="Berichte & Protokolle">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
