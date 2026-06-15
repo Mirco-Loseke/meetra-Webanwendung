@@ -15072,7 +15072,47 @@
                 if (!wsMachine) throw new Error('Maschinendetails konnten nicht ermittelt werden.');
                 
                 const wsFolderName = window.getMachineFolderName(wsMachine.id, wsMachine.manufacturer, wsMachine.name, wsMachine.serial || wsMachine.serial_number, wsMachine.year);
-                
+
+                // Find or create the "Serviceberichte" folder for this machine in the Dokumente module
+                const wsMachineIdInt = parseInt(machineId, 10);
+                const wsMachineDisplayName = [wsMachine.manufacturer, wsMachine.name, (wsMachine.serial || wsMachine.serial_number) ? `#${wsMachine.serial || wsMachine.serial_number}` : null].filter(Boolean).join(' ');
+
+                let { data: wsMachineFolder } = await window.supabaseClient
+                    .from('document_folders')
+                    .select('id')
+                    .eq('machine_id', wsMachineIdInt)
+                    .is('parent_id', null)
+                    .maybeSingle();
+
+                if (!wsMachineFolder) {
+                    const { data: newMachineFolder, error: machineFolderError } = await window.supabaseClient
+                        .from('document_folders')
+                        .insert([{ name: wsMachineDisplayName, parent_id: null, machine_id: wsMachineIdInt }])
+                        .select('id')
+                        .single();
+                    if (machineFolderError) throw machineFolderError;
+                    wsMachineFolder = newMachineFolder;
+                }
+
+                let { data: wsReportsFolder } = await window.supabaseClient
+                    .from('document_folders')
+                    .select('id')
+                    .eq('parent_id', wsMachineFolder.id)
+                    .eq('name', 'Serviceberichte')
+                    .maybeSingle();
+
+                if (!wsReportsFolder) {
+                    const { data: newReportsFolder, error: reportsFolderError } = await window.supabaseClient
+                        .from('document_folders')
+                        .insert([{ name: 'Serviceberichte', parent_id: wsMachineFolder.id, machine_id: wsMachineIdInt }])
+                        .select('id')
+                        .single();
+                    if (reportsFolderError) throw reportsFolderError;
+                    wsReportsFolder = newReportsFolder;
+                }
+
+                const wsTargetFolderId = wsReportsFolder.id;
+
                 const serviceYearDigitVal = document.getElementById('service-workshop-year-digit')?.value.trim() || '';
                 const serviceSuffixVal = document.getElementById('service-workshop-order-suffix')?.value.trim() || '';
                 const orderNum = serviceSuffixVal ? `202${serviceYearDigitVal}-40${serviceSuffixVal.padStart(3, '0')}` : '';
@@ -15129,7 +15169,8 @@
                         .from('documents')
                         .update({
                             size: pdfFile.size,
-                            created_at: nowISO
+                            created_at: nowISO,
+                            folder_id: wsTargetFolderId
                         })
                         .eq('id', existingDoc.id);
                 } else {
@@ -15143,7 +15184,7 @@
                             file_path: uploadResult.path,
                             size: pdfFile.size,
                             mime_type: 'application/pdf',
-                            folder_id: null
+                            folder_id: wsTargetFolderId
                         }]);
                 }
                 
@@ -16002,6 +16043,10 @@
                         <label class="segmented-option">
                             <input type="radio" name="cat-type" value="contact">
                             <span class="option-text">Kontaktart</span>
+                        </label>
+                        <label class="segmented-option">
+                            <input type="radio" name="cat-type" value="document">
+                            <span class="option-text">Dokument</span>
                         </label>
                     </div>
                 </div>
@@ -17915,18 +17960,57 @@
     <div id="document-rename-modal" class="modal-backdrop hidden"
         style="z-index: 1300; align-items: center; justify-content: center;">
         <div class="modal-content glass-card"
-            style="max-width: 400px; width: 95%; padding: 2.5rem; border: 1px solid rgba(255,255,255,0.12);">
+            style="max-width: 480px; width: 95%; padding: 2.5rem; border: 1px solid rgba(255,255,255,0.12);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-                <h2 id="rename-modal-title" style="margin: 0; font-size: 1.5rem; color: white;">Umbennenen</h2>
+                <h2 id="rename-modal-title" style="margin: 0; font-size: 1.5rem; color: white;">Umbenennen</h2>
                 <button class="btn-close-modal" onclick="window.closeRenameModal()">&times;</button>
             </div>
             <form id="doc-rename-form" onsubmit="window.saveRename(event)">
-                <div class="form-group" style="margin-bottom: 2rem;">
+                <div class="form-group" style="margin-bottom: 1.5rem;">
                     <label
                         style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Neuer
                         Name</label>
                     <input type="text" id="rename-input" class="glass-input" required placeholder="Name eingeben...">
                 </div>
+
+                <div id="doc-edit-category-fields" style="display: none;">
+                    <div class="form-group" style="margin-bottom: 1.5rem;">
+                        <label
+                            style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Dokumententyp (Mehrfachauswahl)</label>
+                        <div class="custom-filter-dropdown" id="doc-edit-type-dropdown"
+                            onclick="window.toggleDocEditTypeDropdown(event)" style="width: 100%;">
+                            <span class="filter-label" id="doc-edit-type-label">Dokumententyp wählen...</span>
+                            <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                            <div class="custom-filter-menu">
+                                <ul class="dropdown-options" id="doc-edit-type-options">
+                                    <!-- dynamically populated -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 1.5rem;">
+                        <label
+                            style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Maschinenkategorie (Mehrfachauswahl)</label>
+                        <div class="custom-filter-dropdown" id="doc-edit-machine-cat-dropdown"
+                            onclick="window.toggleDocEditMachineCatDropdown(event)" style="width: 100%;">
+                            <span class="filter-label" id="doc-edit-machine-cat-label">Maschinenkategorie wählen...</span>
+                            <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                            <div class="custom-filter-menu">
+                                <ul class="dropdown-options" id="doc-edit-machine-cat-options">
+                                    <!-- dynamically populated -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div style="display: flex; gap: 12px;">
                     <button type="button" class="btn-secondary" onclick="window.closeRenameModal()"
                         style="flex: 1;">Abbrechen</button>

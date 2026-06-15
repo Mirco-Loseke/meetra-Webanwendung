@@ -7,6 +7,9 @@ let filteredFolders = [];
 let activeDocCategories = ['all'];
 let activeUploadDocTypes = [];
 let activeUploadMachineCategories = [];
+let activeEditDocTypes = [];
+let activeEditMachineCategories = [];
+let _filterDocsDebounceTimer = null;
 let selectedDocFile = null;
 let currentFolderId = null;
 let currentFolderPath = []; // Array of {id, name}
@@ -165,22 +168,66 @@ window.updateBreadcrumbs = function() {
     container.innerHTML = html;
 };
 
-window.filterDocuments = function() {
-    const searchTerm = document.getElementById('doc-search-input')?.value.toLowerCase() || '';
-    
-    filteredDocuments = allDocuments.filter(doc => {
-        const matchesSearch = doc.name.toLowerCase().includes(searchTerm) || 
+// Wendet Such-/Kategorie-Filter auf eine Liste von Dokumenten an.
+// doc.category wird als kommagetrennte Liste behandelt (Mehrfachauswahl beim Hochladen/Bearbeiten).
+function applyDocFilters(docs, searchTerm) {
+    return docs.filter(doc => {
+        const matchesSearch = doc.name.toLowerCase().includes(searchTerm) ||
                              (doc.machines?.name && doc.machines.name.toLowerCase().includes(searchTerm)) ||
                              (doc.category && doc.category.toLowerCase().includes(searchTerm));
-        
-        const matchesCategory = activeDocCategories.includes('all') || activeDocCategories.includes(doc.category);
-        
+
+        const docCategories = (doc.category || '').split(',').map(c => c.trim()).filter(Boolean);
+        const matchesCategory = activeDocCategories.includes('all') || docCategories.some(c => activeDocCategories.includes(c));
+
         return matchesSearch && matchesCategory;
     });
+}
 
-    filteredFolders = allFolders.filter(f => f.name.toLowerCase().includes(searchTerm));
+window.filterDocuments = function() {
+    const searchTerm = document.getElementById('doc-search-input')?.value.toLowerCase() || '';
+    const isFiltering = !activeDocCategories.includes('all') || searchTerm.length > 0;
 
-    window.renderDocuments();
+    clearTimeout(_filterDocsDebounceTimer);
+
+    if (!isFiltering) {
+        // Normaler Ordner-Modus: nur Inhalt des aktuellen Ordners anzeigen
+        filteredDocuments = applyDocFilters(allDocuments, searchTerm);
+        filteredFolders = allFolders.filter(f => f.name.toLowerCase().includes(searchTerm));
+        window.renderDocuments();
+        return;
+    }
+
+    // Aktiver Filter/Suche: alle Dokumente durchsuchen, auch in Unterordnern
+    _filterDocsDebounceTimer = setTimeout(async () => {
+        try {
+            const [{ data: docs, error: docError }, { data: folders, error: folderError }] = await Promise.all([
+                window.supabaseClient
+                    .from('documents')
+                    .select('*, machines(name)')
+                    .order('created_at', { ascending: false }),
+                window.supabaseClient
+                    .from('document_folders')
+                    .select('id, name')
+            ]);
+            if (docError) throw docError;
+            if (folderError) throw folderError;
+
+            const folderNameMap = {};
+            (folders || []).forEach(f => { folderNameMap[f.id] = f.name; });
+            (docs || []).forEach(doc => {
+                doc._folderName = doc.folder_id ? folderNameMap[doc.folder_id] : null;
+            });
+
+            filteredDocuments = applyDocFilters(docs || [], searchTerm);
+            filteredFolders = []; // Ordnerkarten ausblenden, da global über alle Ordner gesucht wird
+            window.renderDocuments();
+        } catch (err) {
+            console.error('Error fetching documents for global filter:', err);
+            filteredDocuments = applyDocFilters(allDocuments, searchTerm);
+            filteredFolders = [];
+            window.renderDocuments();
+        }
+    }, 200);
 };
 
 
@@ -247,6 +294,42 @@ window.populateDocumentTypeDropdowns = function() {
             uploadMachineCatList.appendChild(li);
         });
         window.updateUploadMachineCatLabel();
+    }
+
+    // 4) Edit modal dropdown - Document Types (multi-select)
+    const editDocTypeList = document.getElementById('doc-edit-type-options');
+    if (editDocTypeList) {
+        editDocTypeList.innerHTML = '';
+        docCategories.forEach(cat => {
+            const li = document.createElement('li');
+            li.dataset.value = cat.name;
+            li.textContent = cat.name;
+            if (activeEditDocTypes.includes(cat.name)) li.classList.add('selected');
+            li.addEventListener('click', e => {
+                e.stopPropagation();
+                window.toggleEditDocType(cat.name);
+            });
+            editDocTypeList.appendChild(li);
+        });
+        window.updateEditDocTypeLabel();
+    }
+
+    // 5) Edit modal dropdown - Machine Categories (multi-select)
+    const editMachineCatList = document.getElementById('doc-edit-machine-cat-options');
+    if (editMachineCatList) {
+        editMachineCatList.innerHTML = '';
+        machineCategories.forEach(cat => {
+            const li = document.createElement('li');
+            li.dataset.value = cat.name;
+            li.textContent = cat.name;
+            if (activeEditMachineCategories.includes(cat.name)) li.classList.add('selected');
+            li.addEventListener('click', e => {
+                e.stopPropagation();
+                window.toggleEditMachineCategory(cat.name);
+            });
+            editMachineCatList.appendChild(li);
+        });
+        window.updateEditMachineCatLabel();
     }
 };
 
@@ -330,6 +413,80 @@ window.updateUploadMachineCatLabel = function() {
     const label = document.getElementById('doc-upload-machine-cat-label');
     if (label) {
         label.textContent = activeUploadMachineCategories.length > 0 ? activeUploadMachineCategories.join(', ') : 'Maschinenkategorie wählen...';
+    }
+};
+
+// ─── Edit modal dropdowns (Dokumententyp / Maschinenkategorie beim Bearbeiten) ───
+
+window.toggleDocEditTypeDropdown = function(event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById('doc-edit-type-dropdown');
+    if (!dropdown) return;
+    const isOpen = dropdown.classList.contains('active');
+
+    document.querySelectorAll('.custom-filter-dropdown.active').forEach(d => {
+        d.classList.remove('active');
+        d.closest('.form-group')?.classList.remove('has-active-dropdown');
+    });
+
+    if (!isOpen) {
+        dropdown.classList.add('active');
+        dropdown.closest('.form-group')?.classList.add('has-active-dropdown');
+    }
+};
+
+window.toggleDocEditMachineCatDropdown = function(event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById('doc-edit-machine-cat-dropdown');
+    if (!dropdown) return;
+    const isOpen = dropdown.classList.contains('active');
+
+    document.querySelectorAll('.custom-filter-dropdown.active').forEach(d => {
+        d.classList.remove('active');
+        d.closest('.form-group')?.classList.remove('has-active-dropdown');
+    });
+
+    if (!isOpen) {
+        dropdown.classList.add('active');
+        dropdown.closest('.form-group')?.classList.add('has-active-dropdown');
+    }
+};
+
+window.toggleEditDocType = function(typeName) {
+    if (activeEditDocTypes.includes(typeName)) {
+        activeEditDocTypes = activeEditDocTypes.filter(t => t !== typeName);
+    } else {
+        activeEditDocTypes.push(typeName);
+    }
+    window.updateEditDocTypeLabel();
+    document.querySelectorAll('#doc-edit-type-options li').forEach(li => {
+        li.classList.toggle('selected', activeEditDocTypes.includes(li.dataset.value));
+    });
+};
+
+window.updateEditDocTypeLabel = function() {
+    const label = document.getElementById('doc-edit-type-label');
+    if (label) {
+        label.textContent = activeEditDocTypes.length > 0 ? activeEditDocTypes.join(', ') : 'Dokumententyp wählen...';
+    }
+};
+
+window.toggleEditMachineCategory = function(catName) {
+    if (activeEditMachineCategories.includes(catName)) {
+        activeEditMachineCategories = activeEditMachineCategories.filter(c => c !== catName);
+    } else {
+        activeEditMachineCategories.push(catName);
+    }
+    window.updateEditMachineCatLabel();
+    document.querySelectorAll('#doc-edit-machine-cat-options li').forEach(li => {
+        li.classList.toggle('selected', activeEditMachineCategories.includes(li.dataset.value));
+    });
+};
+
+window.updateEditMachineCatLabel = function() {
+    const label = document.getElementById('doc-edit-machine-cat-label');
+    if (label) {
+        label.textContent = activeEditMachineCategories.length > 0 ? activeEditMachineCategories.join(', ') : 'Maschinenkategorie wählen...';
     }
 };
 
@@ -435,6 +592,10 @@ window.renderDocuments = function() {
     let canDelete = checkCanDelete();
     let html = '';
 
+    // Wenn aktiv gefiltert/gesucht wird, kommen Treffer aus allen Ordnern - dann den Ordnernamen anzeigen
+    const docSearchTerm = document.getElementById('doc-search-input')?.value.toLowerCase() || '';
+    const isGlobalSearch = !activeDocCategories.includes('all') || docSearchTerm.length > 0;
+
     // Render Folders
     filteredFolders.forEach(folder => {
         const iconSvg = window.getFolderIcon(folder.name);
@@ -488,19 +649,22 @@ window.renderDocuments = function() {
         const machineName = doc.machines?.name || 'Keine Zuordnung';
         const dateStr = new Date(doc.created_at).toLocaleDateString('de-DE');
         const escapedName = doc.name.replace(/'/g, "\\'");
+        const escapedCategory = (doc.category || '').replace(/'/g, "\\'");
+        const escapedMachineCategories = (doc.machine_categories || '').replace(/'/g, "\\'");
         const previewId = `pdf-preview-${doc.id}`;
-        
+        const folderName = doc._folderName;
+
         html += `
-            <div class="doc-card" 
+            <div class="doc-card"
                  onclick="window.previewDocument('${doc.url}', '${escapedName}', '${doc.mime_type}')"
-                 draggable="true" 
+                 draggable="true"
                  ondragstart="window.handleDragStart(event, 'document', '${doc.id}')">
                 <div class="doc-thumb" id="thumb-container-${doc.id}">
-                    ${isPdf ? 
+                    ${isPdf ?
                         `<canvas id="${previewId}" class="pdf-thumbnail-canvas"></canvas>
                          <div class="pdf-placeholder" id="placeholder-${doc.id}">
                             <span class="doc-type-icon" style="color: #ef4444;">PDF</span>
-                         </div>` : 
+                         </div>` :
                         `<img src="${doc.url}" alt="${doc.name}" loading="lazy">`
                     }
                 </div>
@@ -510,14 +674,15 @@ window.renderDocuments = function() {
                         <span>${machineName}</span>
                         <span>${dateStr}</span>
                     </div>
+                    ${isGlobalSearch && folderName ? `<div class="doc-meta" style="margin-top: 2px;"><span style="opacity: 0.7;">📁 ${folderName}</span></div>` : ''}
                 </div>
-                
+
                 <div style="text-align: center; color: rgba(255,255,255,0.4); font-size: 0.75rem; margin-top: auto; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.05);">
                     ${window.formatSize(doc.size)}
                 </div>
-                
+
                 <div class="doc-actions">
-                    <button class="btn-doc-action" onclick="event.stopPropagation(); window.openRenameModal('${doc.id}', 'document', '${escapedName}')" title="Umbenennen">
+                    <button class="btn-doc-action" onclick="event.stopPropagation(); window.openRenameModal('${doc.id}', 'document', '${escapedName}', '${escapedCategory}', '${escapedMachineCategories}')" title="Bearbeiten">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                     </button>
                     <button class="btn-doc-action" onclick="event.stopPropagation(); window.downloadDoc('${doc.url}', '${escapedName}')">
@@ -758,14 +923,18 @@ window.previewDocument = async function(url, title, mimeType) {
 
     const isImage = mimeType.startsWith('image/') || url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
     const isPdf = mimeType === 'application/pdf' || url.toLowerCase().endsWith('.pdf') || url.startsWith('blob:');
-    
+
+    // Cache-Buster, damit nach einem PDF-Update immer die aktuellste Version geladen wird
+    // (statt einer vom Browser zwischengespeicherten alten Version unter derselben URL)
+    const cacheBustedUrl = url.startsWith('blob:') ? url : `${url}${url.includes('?') ? '&' : '?'}_cb=${Date.now()}`;
+
     if (isImage) {
-        container.innerHTML = `<img src="${url}" style="max-width: 100%; max-height: 100%; display: block; margin: auto; object-fit: contain;">`;
+        container.innerHTML = `<img src="${cacheBustedUrl}" style="max-width: 100%; max-height: 100%; display: block; margin: auto; object-fit: contain;">`;
     } else if (isPdf) {
         container.innerHTML = '<div style="padding: 2rem; text-align: center; color: rgba(255,255,255,0.4);">Dokument wird gerendert...</div>';
         try {
             await window.loadPDFReader();
-            const loadingTask = window.pdfjsLib.getDocument(url);
+            const loadingTask = window.pdfjsLib.getDocument(cacheBustedUrl);
             const pdf = await loadingTask.promise;
             
             container.innerHTML = ''; // Clear loader
@@ -795,7 +964,7 @@ window.previewDocument = async function(url, title, mimeType) {
             }
         } catch (err) {
             console.error('PDF.js rendering failed, falling back to iframe:', err);
-            container.innerHTML = `<iframe src="${url}" style="width: 100%; height: 100%; border: none; background: white;"></iframe>`;
+            container.innerHTML = `<iframe src="${cacheBustedUrl}" style="width: 100%; height: 100%; border: none; background: white;"></iframe>`;
         }
     } else {
         container.innerHTML = `<iframe src="${url}" style="width: 100%; height: 100%; border: none; background: white;"></iframe>`;
@@ -1105,15 +1274,29 @@ window.getFolderIcon = function(name) {
     return `<svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="var(--accent-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.8">${icon}</svg>`;
 };
 
-// --- Renaming ---
-window.openRenameModal = function(id, type, currentName) {
+// --- Renaming / Bearbeiten ---
+window.openRenameModal = function(id, type, currentName, category, machineCategories) {
     renamingItem = { id, type, currentName };
     const modal = document.getElementById('document-rename-modal');
     const input = document.getElementById('rename-input');
-    
+    const titleEl = document.getElementById('rename-modal-title');
+    const categoryFields = document.getElementById('doc-edit-category-fields');
+
     if (!modal || !input) return;
-    
+
     input.value = currentName;
+
+    if (type === 'document') {
+        if (titleEl) titleEl.textContent = 'Dokument bearbeiten';
+        if (categoryFields) categoryFields.style.display = 'block';
+        activeEditDocTypes = (category || '').split(',').map(c => c.trim()).filter(Boolean);
+        activeEditMachineCategories = (machineCategories || '').split(',').map(c => c.trim()).filter(Boolean);
+        window.populateDocumentTypeDropdowns();
+    } else {
+        if (titleEl) titleEl.textContent = 'Ordner umbenennen';
+        if (categoryFields) categoryFields.style.display = 'none';
+    }
+
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
     requestAnimationFrame(() => modal.classList.add('show'));
@@ -1134,54 +1317,70 @@ window.closeRenameModal = function() {
 window.saveRename = async function(event) {
     if (event) event.preventDefault();
     if (!renamingItem) return;
-    
+
     const newName = document.getElementById('rename-input').value;
-    if (!newName || newName === renamingItem.currentName) {
+    const isDocument = renamingItem.type === 'document';
+
+    if (!newName) {
         window.closeRenameModal();
         return;
     }
-    
+
+    const nameChanged = newName !== renamingItem.currentName;
+
+    if (!nameChanged && !isDocument) {
+        window.closeRenameModal();
+        return;
+    }
+
     const btn = document.getElementById('btn-save-rename');
     btn.disabled = true;
     btn.textContent = 'Speichere...';
-    
+
     try {
-        if (renamingItem.type === 'document') {
-            // 1. Fetch current document details to get the old path
-            const { data: doc, error: fetchError } = await window.supabaseClient
-                .from('documents')
-                .select('file_path, url, mime_type')
-                .eq('id', renamingItem.id)
-                .single();
+        if (isDocument) {
+            let updatePayload = {
+                category: activeEditDocTypes.join(', '),
+                machine_categories: activeEditMachineCategories.join(', ')
+            };
 
-            if (fetchError) throw fetchError;
+            if (nameChanged) {
+                updatePayload.name = newName;
 
-            let updatePayload = { name: newName };
+                // 1. Fetch current document details to get the old path
+                const { data: doc, error: fetchError } = await window.supabaseClient
+                    .from('documents')
+                    .select('file_path, url, mime_type')
+                    .eq('id', renamingItem.id)
+                    .single();
 
-            if (doc && doc.file_path) {
-                const oldPath = doc.file_path;
-                const fileExt = oldPath.split('.').pop();
-                const cleanNewName = newName.replace(/[^a-zA-Z0-9_\- ]/g, '_');
-                
-                // Get the folder path
-                const pathParts = oldPath.split('/');
-                pathParts.pop(); // remove old filename
-                pathParts.push(`${cleanNewName}_${Date.now()}.${fileExt}`);
-                const newPath = pathParts.join('/');
+                if (fetchError) throw fetchError;
 
-                // 2. Perform physical rename on Cloudflare R2
-                const renameResult = await window.FileUploadService.renameFile(oldPath, newPath, {
-                    bucket: 'accounting-documents',
-                    provider: 'cloudflare-r2'
-                });
+                if (doc && doc.file_path) {
+                    const oldPath = doc.file_path;
+                    const fileExt = oldPath.split('.').pop();
+                    const cleanNewName = newName.replace(/[^a-zA-Z0-9_\- ]/g, '_');
 
-                if (renameResult && renameResult.success) {
-                    updatePayload.file_path = newPath;
-                    updatePayload.url = renameResult.url;
+                    // Get the folder path
+                    const pathParts = oldPath.split('/');
+                    pathParts.pop(); // remove old filename
+                    pathParts.push(`${cleanNewName}_${Date.now()}.${fileExt}`);
+                    const newPath = pathParts.join('/');
+
+                    // 2. Perform physical rename on Cloudflare R2
+                    const renameResult = await window.FileUploadService.renameFile(oldPath, newPath, {
+                        bucket: 'accounting-documents',
+                        provider: 'cloudflare-r2'
+                    });
+
+                    if (renameResult && renameResult.success) {
+                        updatePayload.file_path = newPath;
+                        updatePayload.url = renameResult.url;
+                    }
                 }
             }
 
-            // 3. Update Database record
+            // 3. Update Database record (Name, Dokumententyp, Maschinenkategorie)
             const { error: dbError } = await window.supabaseClient
                 .from('documents')
                 .update(updatePayload)
@@ -1194,15 +1393,15 @@ window.saveRename = async function(event) {
                 .from('document_folders')
                 .update({ name: newName })
                 .eq('id', renamingItem.id);
-                
+
             if (error) throw error;
         }
-        
+
         window.closeRenameModal();
         window.fetchDocuments();
     } catch (err) {
         console.error('Error renaming item:', err);
-        alert('Fehler beim Umbenennen: ' + err.message);
+        alert('Fehler beim Bearbeiten: ' + err.message);
     } finally {
         btn.disabled = false;
         btn.textContent = 'Speichern';
