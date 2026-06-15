@@ -586,7 +586,8 @@
                     <div class="task-quick-complete ${task.status === 'completed' ? 'completed' : ''}" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="${task.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}" style="margin-top: 2px;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     </div>
-                    ${task.machines ? `<span style="color: var(--color-primary-green); font-weight: 800; font-size: 1.05rem; white-space:normal; line-height: 1.2;" title="${getMachineLabel(task.machines)}">${getMachineLabel(task.machines)}</span>` : ''}
+                    ${task.machines ? `<span class="task-card-machine" style="color: var(--color-primary-green); font-weight: 800; font-size: 1.05rem; white-space:normal; line-height: 1.2;" title="${getMachineLabel(task.machines)}">${getMachineLabel(task.machines)}</span>` : ''}
+                    ${!task.machines && task.workshop_order_number ? `<span class="task-card-machine" style="color: #60a5fa; font-weight: 800; font-size: 1.05rem; white-space:normal; line-height: 1.2;" title="Werkstattauftrag ${task.workshop_order_number}">Werkstattauftrag ${task.workshop_order_number}</span>` : ''}
                 </div>
                 <div class="task-card-actions" style="display: flex; gap: 6px; align-items: center;">
                     <button id="star-card-${task.id}" onclick="event.stopPropagation(); window.saveTaskAsQuickTemplate('${task.id}')" title="Als Schnellvorlage speichern"
@@ -604,8 +605,7 @@
                 </div>
             </div>
             <div class="task-card-title">${task.title}</div>
-            ${task.description ? `<div class="task-card-desc">${task.description.substring(0, 60)}${task.description.length > 60 ? '...' : ''}</div>` : ''}
-            
+
             ${task.status === 'completed' && task.completed_at ? `
             <div class="task-card-completed-info" style="font-size: 0.75rem; color: rgba(255,255,255,0.45); margin-top: 6px; padding-top: 4px; display: flex; flex-direction: column; gap: 2px;">
                 <span>Erledigt am: ${new Date(task.completed_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr</span>
@@ -625,11 +625,16 @@
                     grouped[sg].push({ ...sub, idx });
                 });
 
+                // Open subtasks first, completed ones sink to the bottom (stable order within each group)
+                Object.values(grouped).forEach(subs => {
+                    subs.sort((a, b) => (a.status === 'completed' ? 1 : 0) - (b.status === 'completed' ? 1 : 0));
+                });
+
                 let html = '<div class="task-card-subtasks" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 12px;">';
                 for (const [groupName, subs] of Object.entries(grouped)) {
                     html += `
                         <div class="subtask-group">
-                            <div style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: var(--color-primary-green); margin-bottom: 6px; letter-spacing: 0.05em; opacity: 0.8;">${groupName}</div>
+                            <div class="subtask-group-title" style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: var(--color-primary-green); margin-bottom: 6px; letter-spacing: 0.05em; opacity: 0.8;">${groupName}</div>
                             <div style="display: flex; flex-direction: column; gap: 6px;">`;
                     
                     subs.forEach(sub => {
@@ -1025,7 +1030,9 @@
 
     window.onMachineSelected = function(machineId) {
         const details = document.getElementById('task-details-section');
-        if (machineId) {
+        const workshopWrapper = document.getElementById('task-workshop-order-wrapper');
+        const workshopActive = workshopWrapper && workshopWrapper.style.display !== 'none';
+        if (machineId || workshopActive) {
             details.style.display = 'block';
             // If it's a new task, load the default supergroups
             if (!currentTask) {
@@ -1049,11 +1056,30 @@
 
     function fillModal(task) {
         document.getElementById('task-title').value = task.title || '';
-        document.getElementById('task-description').value = task.description || '';
+        const descEl = document.getElementById('task-description');
+        descEl.value = task.description || '';
+        descEl.style.height = 'auto';
+        descEl.style.height = descEl.scrollHeight + 'px';
         document.getElementById('task-machine').value = task.machine_id || '';
         const machineSearch = document.getElementById('task-machine-search');
+        window.hideWorkshopOrderInput();
         if (machineSearch && task.machines) {
             machineSearch.value = getMachineLabel(task.machines);
+            machineSearch.style.color = 'var(--color-primary-green)';
+        } else if (task.workshop_order_number) {
+            const match = task.workshop_order_number.match(/^202(\d)-40(\d{1,3})$/);
+            if (match) {
+                document.getElementById('task-workshop-year-digit').value = match[1];
+                document.getElementById('task-workshop-order-suffix').value = match[2];
+            }
+            document.getElementById('task-workshop-order-wrapper').style.display = 'block';
+            if (machineSearch) {
+                machineSearch.value = 'Werkstattauftrag';
+                machineSearch.style.color = '#60a5fa';
+            }
+        } else if (machineSearch) {
+            machineSearch.value = '';
+            machineSearch.style.color = '';
         }
 
         const compInfo = document.getElementById('task-completion-info');
@@ -1089,11 +1115,17 @@
 
     function resetModal() {
         document.getElementById('task-title').value = '';
-        document.getElementById('task-description').value = '';
+        const descEl = document.getElementById('task-description');
+        descEl.value = '';
+        descEl.style.height = 'auto';
         document.getElementById('task-machine').value = '';
         const machineSearch = document.getElementById('task-machine-search');
-        if (machineSearch) machineSearch.value = '';
-        
+        if (machineSearch) {
+            machineSearch.value = '';
+            machineSearch.style.color = '';
+        }
+        window.hideWorkshopOrderInput();
+
         const compInfo = document.getElementById('task-completion-info');
         if (compInfo) compInfo.style.display = 'none';
 
@@ -1113,7 +1145,10 @@
         const t = templates[type];
         if (t) {
             document.getElementById('task-title').value = t.title;
-            document.getElementById('task-description').value = t.description;
+            const descEl = document.getElementById('task-description');
+            descEl.value = t.description;
+            descEl.style.height = 'auto';
+            descEl.style.height = descEl.scrollHeight + 'px';
         }
     };
 
@@ -1124,11 +1159,24 @@
             return;
         }
 
+        const workshopWrapper = document.getElementById('task-workshop-order-wrapper');
+        let workshopOrderNumber = null;
+        if (workshopWrapper && workshopWrapper.style.display !== 'none') {
+            const yearDigit = document.getElementById('task-workshop-year-digit').value.trim();
+            const suffix = document.getElementById('task-workshop-order-suffix').value.trim();
+            if (!yearDigit || !suffix) {
+                alert('Bitte eine vollständige Werkstattauftragsnummer eingeben.');
+                return;
+            }
+            workshopOrderNumber = `202${yearDigit}-40${suffix.padStart(3, '0')}`;
+        }
+
         const taskData = {
             title: title,
             description: document.getElementById('task-description').value,
             status: 'open',
             machine_id: document.getElementById('task-machine').value || null,
+            workshop_order_number: workshopOrderNumber,
             updated_at: new Date().toISOString()
         };
 
@@ -1246,6 +1294,15 @@
         noneItem.onmouseout = () => { noneItem.style.background = ''; };
         dropdown.appendChild(noneItem);
 
+        // "Werkstattauftrag" option (Aufgabe ohne Maschinenbezug, mit Auftragsnummer)
+        const workshopItem = document.createElement('div');
+        workshopItem.innerHTML = '<span style="color: #60a5fa; font-weight: 700;">Werkstattauftrag (ohne Maschine)</span>';
+        workshopItem.style.cssText = 'padding: 10px 14px; cursor: pointer; font-size: 0.9rem; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);';
+        workshopItem.onmousedown = (e) => { e.preventDefault(); window.selectWorkshopOrderMode(); };
+        workshopItem.onmouseover = () => { workshopItem.style.background = 'rgba(96,165,250,0.08)'; };
+        workshopItem.onmouseout = () => { workshopItem.style.background = ''; };
+        dropdown.appendChild(workshopItem);
+
         machines.forEach(m => {
             const label = getMachineLabel(m);
             const item = document.createElement('div');
@@ -1291,9 +1348,38 @@
         const dropdown = document.getElementById('task-machine-dropdown-portal');
         if (dropdown) dropdown.style.display = 'none';
 
+        window.hideWorkshopOrderInput();
+
         // Trigger detail section and template loading
         if (typeof window.onMachineSelected === 'function') {
             window.onMachineSelected(id);
+        }
+    };
+
+    window.hideWorkshopOrderInput = function () {
+        const wrapper = document.getElementById('task-workshop-order-wrapper');
+        if (wrapper) wrapper.style.display = 'none';
+        const yearDigit = document.getElementById('task-workshop-year-digit');
+        const suffix = document.getElementById('task-workshop-order-suffix');
+        if (yearDigit) yearDigit.value = '';
+        if (suffix) suffix.value = '';
+    };
+
+    window.selectWorkshopOrderMode = function () {
+        document.getElementById('task-machine').value = '';
+        const searchInput = document.getElementById('task-machine-search');
+        if (searchInput) {
+            searchInput.value = 'Werkstattauftrag';
+            searchInput.style.color = '#60a5fa';
+        }
+        const dropdown = document.getElementById('task-machine-dropdown-portal');
+        if (dropdown) dropdown.style.display = 'none';
+
+        const wrapper = document.getElementById('task-workshop-order-wrapper');
+        if (wrapper) wrapper.style.display = 'block';
+
+        if (typeof window.onMachineSelected === 'function') {
+            window.onMachineSelected('');
         }
     };
 
@@ -1313,6 +1399,24 @@
             fetchTasks();
         } catch (err) {
             console.error(err);
+        }
+    };
+
+    window.deleteTask = async function (taskId) {
+        if (window.activeUser && window.activeUser.permissions && window.activeUser.permissions.can_delete === false) {
+            alert('Keine Berechtigung zum Löschen von Aufgaben.');
+            return;
+        }
+        if (!confirm('Möchten Sie diese Aufgabe wirklich unwiderruflich löschen?')) return;
+
+        try {
+            await window.supabaseClient.from('subtasks').delete().eq('task_id', taskId);
+            const { error } = await window.supabaseClient.from('tasks').delete().eq('id', taskId);
+            if (error) throw error;
+            fetchTasks();
+        } catch (err) {
+            console.error('Error in deleteTask:', err);
+            alert('Fehler beim Löschen: ' + (err.message || 'Unbekannter Fehler'));
         }
     };
 

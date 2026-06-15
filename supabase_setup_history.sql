@@ -1019,3 +1019,74 @@ ADD COLUMN IF NOT EXISTS pin TEXT DEFAULT NULL;
 
 
 
+
+
+/* ========================================================= */
+/* DATEI: add_assigned_users_to_internal_processes.sql */
+/* ========================================================= */
+
+-- Mitarbeiter-Zuordnung fuer interne Vorgaenge (Vorgang hinzufuegen)
+ALTER TABLE internal_processes
+ADD COLUMN IF NOT EXISTS assigned_users jsonb DEFAULT '[]'::jsonb;
+
+
+
+/* ========================================================= */
+/* DATEI: add_workshop_order_number_to_tasks.sql */
+/* ========================================================= */
+
+-- Aufgaben ohne Maschinenbezug: Werkstattauftragsnummer statt Maschine
+ALTER TABLE public.tasks
+ADD COLUMN IF NOT EXISTS workshop_order_number TEXT;
+
+
+
+/* ========================================================= */
+/* DATEI: add_tech_signature_to_service_entries.sql */
+/* ========================================================= */
+
+-- Unterschrift des Technikers ebenfalls speichern (analog zu customer_signature)
+ALTER TABLE public.service_entries
+ADD COLUMN IF NOT EXISTS tech_signature TEXT;
+
+
+
+/* ========================================================= */
+/* DATEI: add_remark_to_internal_processes.sql */
+/* ========================================================= */
+
+-- Separates Bemerkungs-/Beschreibungsfeld fuer interne Vorgaenge (zusaetzlich zum E-Mail-Text in 'description')
+ALTER TABLE internal_processes
+ADD COLUMN IF NOT EXISTS remark text;
+
+
+
+/* ========================================================= */
+/* DATEI: add_workshop_order_number_to_internal_processes.sql */
+/* ========================================================= */
+
+-- Verknuepfung eines Vorgangs mit einem Werkstattauftrag (ohne Maschinenbezug)
+ALTER TABLE internal_processes
+ADD COLUMN IF NOT EXISTS workshop_order_number text;
+
+
+
+/* ========================================================= */
+/* DATEI: add_contact_person_and_hotel_to_service_entries.sql */
+/* ========================================================= */
+
+-- Ansprechpartner / Telefon (zwischen Betreiber und Maschinenstandort auf dem Beleg)
+ALTER TABLE public.service_entries
+ADD COLUMN IF NOT EXISTS contact_person text;
+
+-- Hotel / Unterkunft (analog zu Maschinenstandort, optional pro Servicebericht)
+ALTER TABLE public.service_entries
+ADD COLUMN IF NOT EXISTS hotel_company text;
+ALTER TABLE public.service_entries
+ADD COLUMN IF NOT EXISTS hotel_street text;
+ALTER TABLE public.service_entries
+ADD COLUMN IF NOT EXISTS hotel_zip text;
+ALTER TABLE public.service_entries
+ADD COLUMN IF NOT EXISTS hotel_city text;
+ALTER TABLE public.service_entries
+ADD COLUMN IF NOT EXISTS hotel_country text;

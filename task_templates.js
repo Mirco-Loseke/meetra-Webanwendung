@@ -74,10 +74,16 @@
         const stList = document.getElementById('subtask-template-list');
         if (!sgList || !stList) return;
 
-        sgList.innerHTML = supergroupTemplates.map(t => `
+        sgList.innerHTML = supergroupTemplates.map((t, i) => `
             <div class="template-item glass-card" style="padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
                 <span style="font-weight: 600; color: #fff;">${t.name}</span>
                 <div style="display: flex; gap: 8px;">
+                    <button onclick="window.moveSupergroupTemplate('${t.id}', -1)" ${i === 0 ? 'disabled' : ''} title="Nach oben verschieben" class="btn-doc-action" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; ${i === 0 ? 'opacity: 0.25; cursor: not-allowed;' : ''}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                    </button>
+                    <button onclick="window.moveSupergroupTemplate('${t.id}', 1)" ${i === supergroupTemplates.length - 1 ? 'disabled' : ''} title="Nach unten verschieben" class="btn-doc-action" style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.6); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; ${i === supergroupTemplates.length - 1 ? 'opacity: 0.25; cursor: not-allowed;' : ''}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
                     <button onclick="window.editSupergroupTemplate('${t.id}', '${t.name}')" class="btn-doc-action" style="background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); color: #60a5fa; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                     </button>
@@ -589,6 +595,31 @@
         }
     };
 
+    window.moveSupergroupTemplate = async function (id, direction) {
+        const idx = supergroupTemplates.findIndex(t => t.id === id);
+        if (idx === -1) return;
+        const targetIdx = idx + direction;
+        if (targetIdx < 0 || targetIdx >= supergroupTemplates.length) return;
+
+        const reordered = [...supergroupTemplates];
+        const [moved] = reordered.splice(idx, 1);
+        reordered.splice(targetIdx, 0, moved);
+
+        try {
+            const updates = reordered.map((t, i) =>
+                window.supabaseClient.from('task_supergroups_templates').update({ sort_order: i }).eq('id', t.id)
+            );
+            const results = await Promise.all(updates);
+            const error = results.find(r => r.error)?.error;
+            if (error) throw error;
+
+            await fetchTemplates();
+            renderTemplatesInSettings();
+        } catch (err) {
+            alert('Fehler beim Verschieben: ' + err.message);
+        }
+    };
+
     window.deleteSupergroupTemplate = async function (id) {
         if (!confirm('Übergruppe wirklich löschen?')) return;
         try {
@@ -936,32 +967,31 @@
 
             if (cleanTasks.length > 0) {
                 // Initialize modalGroups with the default template groups
-                modalGroups = supergroupTemplates.map(t => ({
-                    name: t.name,
-                    subtasks: cleanTasks.filter(st => st && st.supergroup === t.name)
-                }));
-                
+                modalGroups = supergroupTemplates.map(t => {
+                    const subtasks = cleanTasks.filter(st => st && st.supergroup === t.name);
+                    return { name: t.name, subtasks, collapsed: subtasks.length === 0 };
+                });
+
                 // Extract unique custom supergroups that are not part of the default templates
                 const customSgs = [...new Set(cleanTasks.map(st => st && st.supergroup).filter(Boolean))];
                 customSgs.forEach(sgName => {
                     if (!supergroupTemplates.some(t => t.name === sgName)) {
-                        modalGroups.push({
-                            name: sgName,
-                            subtasks: cleanTasks.filter(st => st && st.supergroup === sgName)
-                        });
+                        const subtasks = cleanTasks.filter(st => st && st.supergroup === sgName);
+                        modalGroups.push({ name: sgName, subtasks, collapsed: subtasks.length === 0 });
                     }
                 });
 
                 // Fallback for subtasks that have no supergroup assigned
                 const otherSubtasks = cleanTasks.filter(st => st && !st.supergroup);
                 if (otherSubtasks.length > 0) {
-                    modalGroups.push({ name: 'Sonstiges', subtasks: otherSubtasks });
+                    modalGroups.push({ name: 'Sonstiges', subtasks: otherSubtasks, collapsed: false });
                 }
             } else {
                 // New task: Load default supergroups
                 modalGroups = supergroupTemplates.map(t => ({
                     name: t.name,
-                    subtasks: []
+                    subtasks: [],
+                    collapsed: true
                 }));
             }
             renderModalGroups();
@@ -999,11 +1029,12 @@
                 stGroup.subtasks.forEach(st => {
                     const title = typeof st === 'string' ? st : st.title;
                     const action = typeof st === 'string' ? (subtaskTemplates.find(t => t.title === title)?.action_type || null) : st.action_type;
-                    
+
                     if (!existing.subtasks.some(est => est.title === title)) {
                         existing.subtasks.push({ title, status: 'open', action_type: action });
                     }
                 });
+                if (existing.subtasks.length > 0) existing.collapsed = false;
             } else {
                 modalGroups.push({
                     name: stGroup.name,
@@ -1011,7 +1042,8 @@
                         const title = typeof st === 'string' ? st : st.title;
                         const action = typeof st === 'string' ? (subtaskTemplates.find(t => t.title === title)?.action_type || null) : st.action_type;
                         return { title, status: 'open', action_type: action };
-                    })
+                    }),
+                    collapsed: false
                 });
             }
         });
@@ -1030,18 +1062,29 @@
                 const groupDiv = document.createElement('div');
                 groupDiv.className = 'modal-supergroup-card glass-card';
                 groupDiv.style.cssText = 'padding: 18px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02); border-radius: 16px;';
+                groupDiv.addEventListener('dragenter', () => window.handleModalGroupDragEnter(gIdx));
 
                 const subtasks = Array.isArray(group.subtasks) ? group.subtasks.filter(Boolean) : [];
+                const isCollapsed = !!group.collapsed;
+                const doneCount = subtasks.filter(st => st.status === 'completed').length;
+                // Open subtasks first, completed ones sink to the bottom (stable order within each group)
+                const displayOrder = subtasks.map((st, idx) => idx)
+                    .sort((a, b) => (subtasks[a].status === 'completed' ? 1 : 0) - (subtasks[b].status === 'completed' ? 1 : 0));
 
                 groupDiv.innerHTML = `
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                        <h4 style="margin: 0; color: #fff; font-weight: 700; font-size: 1.05rem;">${group.name || 'Unbenannt'}</h4>
-                        <button onclick="window.removeSupergroupFromModal(${gIdx})" style="background: rgba(255,255,255,0.05); border: none; color: rgba(255,255,255,0.4); width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.color='#ef4444';" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.color='rgba(255,255,255,0.4)';">
+                    <div id="modal-group-header-${gIdx}" onclick="window.toggleModalGroupCollapse(${gIdx})" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: ${isCollapsed ? '0' : '15px'}; cursor: pointer;">
+                        <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                            <svg id="modal-group-chevron-${gIdx}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="color: rgba(255,255,255,0.4); flex-shrink: 0; transition: transform 0.2s; transform: rotate(${isCollapsed ? '-90deg' : '0deg'});"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            <h4 style="margin: 0; color: #fff; font-weight: 700; font-size: 1.05rem;">${group.name || 'Unbenannt'}</h4>
+                            ${subtasks.length > 0 ? `<span style="font-size: 0.7rem; font-weight: 800; color: rgba(255,255,255,0.4); background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 10px; flex-shrink: 0;">${doneCount}/${subtasks.length}</span>` : ''}
+                        </div>
+                        <button onclick="event.stopPropagation(); window.removeSupergroupFromModal(${gIdx})" style="background: rgba(255,255,255,0.05); border: none; color: rgba(255,255,255,0.4); width: 28px; height: 28px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0;" onmouseover="this.style.background='rgba(239,68,68,0.2)'; this.style.color='#ef4444';" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.color='rgba(255,255,255,0.4)';">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
                     </div>
+                    <div id="modal-group-content-${gIdx}" style="display: ${isCollapsed ? 'none' : 'block'};">
                     <div id="modal-subtasks-${gIdx}" ondragover="event.preventDefault();" ondrop="window.handleModalSubtaskDrop(event, ${gIdx})" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; min-height: 30px;">
-                        ${subtasks.map((st, sIdx) => `
+                        ${displayOrder.map(sIdx => { const st = subtasks[sIdx]; return `
                             <div draggable="true" ondragstart="window.handleModalSubtaskDragStart(event, ${gIdx}, ${sIdx})" style="display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); cursor: grab;">
                                 <div class="task-quick-complete ${st.status === 'completed' ? 'completed' : ''}" onclick="window.toggleModalSubtaskStatus(${gIdx}, ${sIdx})">
                                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -1054,7 +1097,7 @@
                                 </div>
                                 <button onclick="window.removeModalSubtask(${gIdx}, ${sIdx})" style="color: rgba(255,255,255,0.2); background: none; border: none; cursor: pointer; font-size: 1.2rem; transition: color 0.2s;" onmouseover="this.style.color='#ef4444'">&times;</button>
                             </div>
-                        `).join('')}
+                        `; }).join('')}
                     </div>
                     <div style="display: flex; gap: 8px; align-items: center;">
                         <input type="text" id="add-subtask-input-${gIdx}" class="glass-input" style="font-size: 0.9rem; height: 40px; border-color: rgba(255,255,255,0.1);" placeholder="Unteraufgabe hinzufügen..." onkeydown="if(event.key==='Enter'){event.preventDefault();window.addSubtaskToGroup(${gIdx});}">
@@ -1072,6 +1115,7 @@
                             </div>
                         </div>
                     </div>
+                    </div>
                 `;
                 container.appendChild(groupDiv);
             });
@@ -1083,14 +1127,47 @@
     window.addNewSupergroupToTask = function() {
         const name = prompt('Name der neuen Übergruppe:');
         if (!name) return;
-        modalGroups.push({ name, subtasks: [] });
+        modalGroups.push({ name, subtasks: [], collapsed: false });
         renderModalGroups();
     };
 
     window.removeSupergroupFromModal = function (idx) {
+        commitPendingSubtaskEdit();
         modalGroups.splice(idx, 1);
         renderModalGroups();
     };
+
+    window.toggleModalGroupCollapse = function (gIdx) {
+        modalGroups[gIdx].collapsed = !modalGroups[gIdx].collapsed;
+        renderModalGroups();
+    };
+
+    // Auto-expand a collapsed group when a dragged subtask hovers over it,
+    // without re-rendering (which would abort the in-progress drag).
+    window.handleModalGroupDragEnter = function (gIdx) {
+        const group = modalGroups[gIdx];
+        if (!group || !group.collapsed) return;
+        group.collapsed = false;
+
+        const content = document.getElementById(`modal-group-content-${gIdx}`);
+        const chevron = document.getElementById(`modal-group-chevron-${gIdx}`);
+        const header = document.getElementById(`modal-group-header-${gIdx}`);
+        if (content) content.style.display = 'block';
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
+        if (header) header.style.marginBottom = '15px';
+    };
+
+    // Commit the title of a subtask currently being edited before the
+    // group/subtask arrays are reordered. Without this, removing the
+    // input from the DOM during renderModalGroups() fires its onblur
+    // with indices that may now point at a different subtask, duplicating
+    // or overwriting the wrong entry.
+    function commitPendingSubtaskEdit() {
+        const active = document.activeElement;
+        if (active && active.classList && active.classList.contains('glass-input-minimal')) {
+            active.blur();
+        }
+    }
 
     window.toggleModalSubtaskStatus = function (gIdx, sIdx) {
         const st = modalGroups[gIdx].subtasks[sIdx];
@@ -1103,6 +1180,7 @@
     };
 
     window.removeModalSubtask = function (gIdx, sIdx) {
+        commitPendingSubtaskEdit();
         modalGroups[gIdx].subtasks.splice(sIdx, 1);
         renderModalGroups();
     };
@@ -1114,11 +1192,15 @@
 
     window.handleModalSubtaskDrop = function(event, targetGIdx) {
         event.preventDefault();
+        event.stopPropagation();
         const sourceGIdx = parseInt(event.dataTransfer.getData('sourceGroupIdx'), 10);
         const sourceSIdx = parseInt(event.dataTransfer.getData('sourceSubtaskIdx'), 10);
-        
+
         if (isNaN(sourceGIdx) || isNaN(sourceSIdx)) return;
-        
+        if (!modalGroups[sourceGIdx] || !modalGroups[sourceGIdx].subtasks[sourceSIdx]) return;
+
+        commitPendingSubtaskEdit();
+
         // Move from source group to target group
         const [subtaskToMove] = modalGroups[sourceGIdx].subtasks.splice(sourceSIdx, 1);
         if (subtaskToMove) {

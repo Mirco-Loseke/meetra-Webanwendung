@@ -1714,6 +1714,10 @@ h1,
     display: none;
 }
 
+#btn-import-email-action .btn-label-short {
+    display: none;
+}
+
 /* BACK BUTTON */
 .btn-back-custom {
     background-color: rgba(255, 255, 255, 0.1) !important;
@@ -2177,6 +2181,15 @@ h1,
 @media (min-width: 769px) {
     .form-grid, .form-row {
         grid-template-columns: 1fr 1fr;
+    }
+
+    /* Aufgaben: größere Maschinennummer & Übergruppen-Überschriften auf Desktop */
+    .task-card-machine {
+        font-size: 1.35rem !important;
+    }
+
+    .subtask-group-title {
+        font-size: 0.9rem !important;
     }
 }
 
@@ -6148,6 +6161,16 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
 
 /* 2. Mobile Overrides (< 768px) */
 @media (max-width: 768px) {
+    .service-card-company {
+        white-space: normal !important;
+    }
+
+    .service-card-company span {
+        white-space: normal !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+    }
+
     #sidebar {
         transform: translateX(-100%);
         width: 280px !important;
@@ -6274,6 +6297,25 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     .view-header-right {
         width: 100% !important;
         justify-content: flex-start !important;
+    }
+
+    /* Vorgänge header: short button label + icon-only .msg dropzone */
+    #btn-import-email-action .btn-label-full {
+        display: none !important;
+    }
+    #btn-import-email-action .btn-label-short {
+        display: inline !important;
+    }
+    #process-header-msg-dropzone {
+        padding: 8px 12px !important;
+        font-size: var(--btn-font-size) !important;
+    }
+    #process-header-msg-dropzone .btn-label-full {
+        display: none !important;
+    }
+    #process-header-msg-dropzone svg {
+        width: 16px !important;
+        height: 16px !important;
     }
 
     .card-grid {
@@ -6568,13 +6610,30 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     }
 
     /* Handle specific modal widths */
-    #servicebericht-modal .modal-content, 
+    #servicebericht-modal .modal-content,
     #add-machine-modal .modal-content,
     #task-modal .modal-content,
     #procurement-modal .modal-content,
     #accounting-modal .modal-content {
         width: 96% !important;
         max-width: none !important;
+    }
+
+    /* Stundenübersicht: Vollbild auf dem Handy */
+    #work-log-summary-modal .modal-content {
+        width: 100% !important;
+        max-width: none !important;
+        height: 100% !important;
+        max-height: none !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    #work-log-summary-modal #work-log-summary-content {
+        max-height: none !important;
+        flex: 1 1 auto !important;
     }
 
     /* Stack grid forms on mobile */
@@ -7331,39 +7390,46 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
 
     /* ---- E-MAIL / VORGANG MODAL — MOBILE OPTIMIZATIONS ---- */
     #email-import-modal .modal-content,
-    #process-edit-modal .modal-content {
-        padding: 1rem !important;
+    #process-edit-modal .modal-content,
+    #process-add-modal .modal-content {
+        padding: 0.875rem !important;
     }
     #email-import-modal .modal-content > div:first-child,
-    #process-edit-modal .modal-content > div:first-child {
-        margin-bottom: 0.625rem !important;
+    #process-edit-modal .modal-content > div:first-child,
+    #process-add-modal .modal-content > div:first-child {
+        margin-bottom: 0.5rem !important;
     }
     #email-import-modal .modal-content > div:first-child h2,
-    #process-edit-modal .modal-content > div:first-child h2 {
+    #process-edit-modal .modal-content > div:first-child h2,
+    #process-add-modal .modal-content > div:first-child h2 {
         font-size: 1.05rem !important;
     }
     #email-import-modal .modal-content > div:first-child .btn-close svg,
-    #process-edit-modal .modal-content > div:first-child .btn-close svg {
+    #process-edit-modal .modal-content > div:first-child .btn-close svg,
+    #process-add-modal .modal-content > div:first-child .btn-close svg {
         width: 20px !important;
         height: 20px !important;
     }
 
     /* Form groups & labels */
     #email-import-modal .form-group,
-    #process-edit-modal .form-group {
-        margin-bottom: 0.5rem !important;
+    #process-edit-modal .form-group,
+    #process-add-modal .form-group {
+        margin-bottom: 0.4rem !important;
     }
     #email-import-modal .form-group label,
-    #process-edit-modal .form-group label {
-        font-size: 0.68rem !important;
-        margin-bottom: 0.25rem !important;
+    #process-edit-modal .form-group label,
+    #process-add-modal .form-group label {
+        font-size: 0.66rem !important;
+        margin-bottom: 0.2rem !important;
         letter-spacing: 0.5px !important;
     }
 
     /* Inputs / selects */
     #email-import-modal .glass-input,
-    #process-edit-modal .glass-input {
-        padding: 9px 12px !important;
+    #process-edit-modal .glass-input,
+    #process-add-modal .glass-input {
+        padding: 8px 11px !important;
         font-size: 0.85rem !important;
         border-radius: 10px !important;
     }
@@ -7383,30 +7449,76 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
 
     /* Textareas */
     #email-import-modal #email-paste-area {
-        height: 80px !important;
+        height: 70px !important;
     }
     #email-import-modal #email-body-input,
     #process-edit-modal #edit-process-body-input {
-        height: 100px !important;
+        height: 80px !important;
+    }
+    #email-import-modal #email-remark-input,
+    #process-edit-modal #edit-process-remark-input,
+    #process-add-modal #process-add-remark-input {
+        height: 70px !important;
     }
 
     /* 2-column grids inside the form */
     #email-import-modal [style*="display: grid"],
-    #process-edit-modal [style*="display: grid"] {
+    #process-edit-modal [style*="display: grid"],
+    #process-add-modal [style*="display: grid"] {
         gap: 0.5rem !important;
-        margin-bottom: 0.625rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    /* Mitarbeiter-zuweisen dropdown trigger */
+    #email-import-modal [id$="-tech-dropdown-trigger"],
+    #process-edit-modal [id$="-tech-dropdown-trigger"],
+    #process-add-modal [id$="-tech-dropdown-trigger"] {
+        min-height: 40px !important;
+        padding: 6px 12px !important;
     }
 
     /* Bottom action buttons */
     #email-import-form > div:last-child,
-    #process-edit-form > div:last-child {
+    #process-edit-form > div:last-child,
+    #process-add-form > div:last-child {
         gap: 8px !important;
     }
     #email-import-form > div:last-child button,
-    #process-edit-form > div:last-child button {
-        height: 42px !important;
-        font-size: 0.85rem !important;
+    #process-edit-form > div:last-child button,
+    #process-add-form > div:last-child button {
+        height: 40px !important;
+        font-size: 0.82rem !important;
     }
+}
+
+/* ---- VORGANG ANLEGEN / BEARBEITEN — KOMPAKTERE FELDER (auch Desktop) ---- */
+#process-add-modal .form-group,
+#process-edit-modal .form-group {
+    margin-bottom: 0.55rem !important;
+}
+#process-add-modal .form-group label,
+#process-edit-modal .form-group label {
+    font-size: 0.74rem !important;
+    margin-bottom: 5px !important;
+}
+#process-add-modal .glass-input,
+#process-edit-modal .glass-input {
+    padding: 10px 14px !important;
+    font-size: 0.9rem !important;
+    border-radius: 12px !important;
+}
+#process-add-modal textarea.glass-input,
+#process-edit-modal textarea.glass-input {
+    height: 72px !important;
+}
+#process-add-modal [style*="display: grid"],
+#process-edit-modal [style*="display: grid"] {
+    gap: 10px !important;
+}
+#process-add-modal [id$="-tech-dropdown-trigger"],
+#process-edit-modal [id$="-tech-dropdown-trigger"] {
+    min-height: 42px !important;
+    padding: 6px 12px !important;
 }
 
 /* Tablet Specific Optimizations (iPad sizes) */
@@ -10028,13 +10140,17 @@ body.focus-mode-active .view-header-row-top {
         flex: 0 0 auto !important;
         flex-shrink: 0 !important;
     }
-    /* Subtask-Kreis kleiner */
+    /* Subtask-Kreis */
     .subtask-text-row .task-quick-complete {
-        width: 15px !important;
-        height: 15px !important;
-        min-width: 15px !important;
+        width: 18px !important;
+        height: 18px !important;
+        min-width: 18px !important;
         align-self: center !important;
         margin-top: 0 !important;
+    }
+    .subtask-text-row .task-quick-complete svg {
+        width: 12px !important;
+        height: 12px !important;
     }
     /* Subtask-Text-Row (Kreis + Text): volle Breite → Text wraps */
     .subtask-text-row {
@@ -10047,7 +10163,7 @@ body.focus-mode-active .view-header-row-top {
     }
     .subtask-text-row span,
     .subtask-text-row .ghost-input {
-        font-size: 0.74rem !important;
+        font-size: 0.89rem !important;
         white-space: normal !important;
         word-break: break-word !important;
         overflow-wrap: break-word !important;

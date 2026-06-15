@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Webapp meetra</title>
     <link rel="icon" type="image/png" href="meetra_arrows_icon.png">
-    <link rel="stylesheet" href="style.css?v=40">
+    <link rel="stylesheet" href="style.css?v=42">
     <!-- Preloading standard fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1301,8 +1301,8 @@
                         <div class="view-header-row-bottom" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; width: 100%; position: relative; z-index: 1000;">
                             <div class="view-header-left" style="display: flex; gap: 16px; align-items: center;">
                                 <div class="calendar-view-tabs" style="margin-bottom: 0;">
-                                    <button class="calendar-tab-btn active" id="btn-events-view-calendar" onclick="window.switchEventsSubView('calendar')">Wartung</button>
                                     <button class="calendar-tab-btn" id="btn-events-view-processes" onclick="window.switchEventsSubView('processes')">Vorgänge</button>
+                                    <button class="calendar-tab-btn active" id="btn-events-view-calendar" onclick="window.switchEventsSubView('calendar')">Wartung</button>
                                 </div>
 
                                 <!-- Filter for Machine Categories in Events (Only visible for calendar view) -->
@@ -1347,13 +1347,27 @@
                                     </svg>
                                     Ereignis erstellen
                                 </button>
-                                <button class="btn-add-bg btn-red-animated" id="btn-import-email-action" style="display: none;" onclick="window.openEmailImportModal()">
+                                <div id="process-header-msg-dropzone"
+                                    onclick="document.getElementById('process-header-msg-file-input').click()"
+                                    ondragover="event.preventDefault(); this.style.borderColor='var(--color-primary-green)'; this.style.background='rgba(52,211,153,0.1)';"
+                                    ondragleave="this.style.borderColor='rgba(255,255,255,0.25)'; this.style.background='transparent';"
+                                    ondrop="window.handleProcessHeaderMsgDrop(event)"
+                                    title=".msg-Datei hierher ziehen oder klicken"
+                                    style="display: none; align-items: center; justify-content: center; gap: 10px; border: 2px dashed rgba(255,255,255,0.25); border-radius: 50px; padding: 0.95rem 2.5rem; min-width: 220px; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.6); cursor: pointer; transition: border-color 0.2s, background 0.2s;">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                    <span class="btn-label-full">.msg importieren</span>
+                                </div>
+                                <input type="file" id="process-header-msg-file-input" accept=".msg" style="display:none;" onchange="window.handleProcessHeaderMsgSelect(event)">
+                                <button class="btn-add-bg btn-red-animated" id="btn-import-email-action" style="display: none;" onclick="window.openProcessAddModal()">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                                        <polyline points="22,6 12,13 2,6"></polyline>
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
                                     </svg>
-                                    E-Mail importieren
+                                    <span class="btn-label-full">Vorgang hinzufügen</span>
+                                    <span class="btn-label-short">hinzufügen</span>
                                 </button>
                             </div>
                         </div>
@@ -1372,12 +1386,14 @@
                             <table class="task-table" style="width: 100%; border-collapse: separate; border-spacing: 0 12px;">
                                 <thead>
                                     <tr>
-                                        <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: left; padding: 0 16px 8px 16px; text-transform: uppercase; width: 60px;">Typ</th>
-                                        <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: left; padding: 0 16px 8px 16px; text-transform: uppercase;">Betreff / Titel</th>
-                                        <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: left; padding: 0 16px 8px 16px; text-transform: uppercase;">Maschine</th>
-                                        <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: left; padding: 0 16px 8px 16px; text-transform: uppercase; width: 140px;">Datum</th>
-                                        <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: center; padding: 0 16px 8px 16px; text-transform: uppercase; width: 150px;">Status</th>
-                                        <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: right; padding: 0 16px 8px 16px; text-transform: uppercase; width: 100px;">Aktionen</th>
+                                        <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: left; padding: 0 8px 6px 8px; text-transform: uppercase; width: 44px;">Typ</th>
+                                        <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: center; padding: 0 8px 6px 8px; text-transform: uppercase; width: 100px;">Status</th>
+                                        <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: left; padding: 0 8px 6px 8px; text-transform: uppercase; width: 230px;">Maschine / Auftrag</th>
+                                        <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: left; padding: 0 8px 6px 8px; text-transform: uppercase; width: 160px;">Betreff / Titel</th>
+                                        <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: left; padding: 0 8px 6px 8px; text-transform: uppercase;">Bemerkung / Beschreibung</th>
+                                        <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: center; padding: 0 8px 6px 8px; text-transform: uppercase; width: 90px;">Zuständig</th>
+                                        <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: left; padding: 0 8px 6px 8px; text-transform: uppercase; width: 95px;">Datum / Uhrzeit</th>
+                                        <th style="color: rgba(255,255,255,0.4); font-size: 0.85rem; font-weight: 600; text-align: right; padding: 0 8px 6px 8px; text-transform: uppercase; width: 80px;">Aktionen</th>
                                     </tr>
                                 </thead>
                                 <tbody id="processes-table-body">
@@ -8530,6 +8546,26 @@
             }
         };
 
+        // Hotel / Unterkunft Felder ein-/ausblenden
+        window.toggleHotelFields = function () {
+            const wrapper = document.getElementById('service-hotel-fields-wrapper');
+            const btn = document.getElementById('btn-toggle-hotel');
+            if (!wrapper) return;
+
+            const show = wrapper.classList.contains('hidden');
+            wrapper.classList.toggle('hidden', !show);
+            wrapper.style.display = show ? 'block' : 'none';
+
+            if (btn) btn.textContent = show ? '- Hotel entfernen' : '+ Hotel hinzufügen';
+
+            if (!show) {
+                ['service-hotel-company', 'service-hotel-street', 'service-hotel-zip', 'service-hotel-city', 'service-hotel-country'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = '';
+                });
+            }
+        };
+
         // Technician Dropdown Multi-Select Logic
         let selectedTechs = [];
 
@@ -8785,6 +8821,7 @@
                 travel_time_minutes: parseInt(document.getElementById('service-driving-time')?.value) || null,
                 customer_signature: document.getElementById('service-customer-signature')?.value || null,
                 customer_name: document.getElementById('service-customer-signee-name')?.value.trim() || null,
+                tech_signature: document.getElementById('service-tech-signature')?.value || null,
                 operating_hours: document.getElementById('service-operating-hours')?.value || null,
                 workshop_order_number: (function() {
                     const yearDigit = document.getElementById('service-workshop-year-digit')?.value.trim() || '';
@@ -8799,7 +8836,13 @@
                 materials: typeof window.getMaterialsTableData === 'function' ? window.getMaterialsTableData() : [],
                 checklist_payload: typeof window.getChecklistPayload === 'function' ? window.getChecklistPayload() : null,
                 status_repaired: document.getElementById('service-status-repaired')?.checked || false,
-                status_repaired_en: document.getElementById('service-status-repaired-en')?.checked || false
+                status_repaired_en: document.getElementById('service-status-repaired-en')?.checked || false,
+                contact_person: document.getElementById('service-contact-person')?.value.trim() || null,
+                hotel_company: document.getElementById('service-hotel-company')?.value.trim() || null,
+                hotel_street: document.getElementById('service-hotel-street')?.value.trim() || null,
+                hotel_zip: document.getElementById('service-hotel-zip')?.value.trim() || null,
+                hotel_city: document.getElementById('service-hotel-city')?.value.trim() || null,
+                hotel_country: document.getElementById('service-hotel-country')?.value.trim() || null
             };
 
             console.log('Sending Servicebericht data to Supabase:', reportData);
@@ -9641,7 +9684,7 @@
                                             </div>`}
                                         </div>
                                     </div>
-                                    <h4 style="margin: 0 0 0.5rem 0; color: #fff; font-size: 1.15rem; font-weight: 700; letter-spacing: -0.01em;">${item.title}</h4>
+                                    <h4 style="margin: 0 0 0.5rem 0; color: #fff; font-size: 1rem; font-weight: 700; letter-spacing: -0.01em;">${item.title}</h4>
                                     ${item.description ? `<p style="margin: 0; color: ${item.itemType === 'workshop' ? '#fff' : 'rgba(255,255,255,0.7)'}; font-size: 0.95rem; line-height: 1.6; font-weight: ${item.itemType === 'workshop' ? '700' : '400'};">${item.description}</p>` : ''}
                                     ${photoGallery}
                                     <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; align-items: center; width: 100%;">
@@ -10669,14 +10712,6 @@
                 }
             });
 
-            // Paste / input listener for email importer
-            const pasteArea = document.getElementById('email-paste-area');
-            if (pasteArea) {
-                pasteArea.addEventListener('input', (e) => {
-                    window.processPastedEmail(e.target.value);
-                });
-            }
-
             const senderInput = document.getElementById('email-sender-input');
             if (senderInput) {
                 senderInput.addEventListener('change', (e) => {
@@ -10685,7 +10720,7 @@
                     const emailMatch = val.match(/<([^>]+)>/) || val.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
                     if (emailMatch) email = emailMatch[1] || emailMatch[0];
                     if (email) {
-                        window.runSmartCustomerMatching(email, document.getElementById('email-paste-area')?.value || '');
+                        window.runSmartCustomerMatching(email, '');
                     }
                 });
             }
@@ -10703,12 +10738,14 @@
             if (emailTypeSelect) {
                 emailTypeSelect.addEventListener('change', () => {
                     window.syncAddressFromMachine('email-machine-select', 'email-type-select', 'email-sender-input', 'email-recipient-input');
+                    window.updateEmailBodyVisibility('email');
                 });
             }
             const editTypeSelect = document.getElementById('edit-process-type-select');
             if (editTypeSelect) {
                 editTypeSelect.addEventListener('change', () => {
                     window.syncAddressFromMachine('edit-process-machine-select', 'edit-process-type-select', 'edit-process-sender-input', 'edit-process-recipient-input');
+                    window.updateEmailBodyVisibility('edit-process');
                 });
             }
         });
@@ -10759,6 +10796,7 @@
             
             const btnAddEvent = document.getElementById('btn-add-event-action');
             const btnImportEmail = document.getElementById('btn-import-email-action');
+            const msgDropzoneHeader = document.getElementById('process-header-msg-dropzone');
             
             const searchInput = document.getElementById('calendar-search-input');
             
@@ -10773,7 +10811,8 @@
                 
                 if (btnAddEvent) btnAddEvent.style.display = 'none';
                 if (btnImportEmail) btnImportEmail.style.display = 'inline-flex';
-                
+                if (msgDropzoneHeader) msgDropzoneHeader.style.display = 'flex';
+
                 if (searchInput) {
                     searchInput.value = '';
                     searchInput.placeholder = "Vorgänge suchen...";
@@ -10791,7 +10830,8 @@
                 
                 if (btnAddEvent) btnAddEvent.style.display = 'inline-flex';
                 if (btnImportEmail) btnImportEmail.style.display = 'none';
-                
+                if (msgDropzoneHeader) msgDropzoneHeader.style.display = 'none';
+
                 if (searchInput) {
                     searchInput.value = '';
                     searchInput.placeholder = "Ereignisse suchen...";
@@ -10839,13 +10879,14 @@
             });
             
             // Reset fields
-            document.getElementById('email-paste-area').value = '';
             document.getElementById('email-title-input').value = '';
             document.getElementById('email-sender-input').value = '';
             document.getElementById('email-recipient-input').value = '';
             document.getElementById('email-body-input').value = '';
+            document.getElementById('email-remark-input').value = '';
             document.getElementById('email-type-select').value = 'email_incoming';
             document.getElementById('email-status-select').value = 'offen';
+            window.updateEmailBodyVisibility('email');
             
             // Set default date to now
             const now = new Date();
@@ -10856,11 +10897,19 @@
             // Reset machine search field
             window.processMachineRecommended.email = [];
             document.getElementById('email-machine-select').value = '';
+            document.getElementById('email-workshop-order-select').value = '';
+            window.fetchProcessOpenWorkshopOrders();
             const machineSearch = document.getElementById('email-machine-search');
             if (machineSearch) {
                 machineSearch.value = '';
                 machineSearch.style.color = '';
             }
+
+            // Reset assigned employees
+            window.processAssignedUsers['email'] = [];
+            document.getElementById('email-assigned-users').value = '';
+            document.getElementById('email-tech-dropdown-panel').style.display = 'none';
+            renderProcessTechDropdown('email');
         };
 
         window.closeEmailImportModal = function() {
@@ -10871,6 +10920,175 @@
                     modal.classList.add('hidden');
                     modal.style.display = 'none';
                 }, 300);
+            }
+        };
+
+        // ==========================================
+        // PROCESS MITARBEITER-ZUWEISUNG (Add / Edit / Email-Import)
+        // ==========================================
+        window.processAssignedUsers = { 'process-add': [], 'edit-process': [], 'email': [] };
+
+        function renderProcessTechDropdown(prefix) {
+            const list = document.getElementById(`${prefix}-tech-option-list`);
+            if (!list) return;
+
+            const selected = window.processAssignedUsers[prefix] || [];
+            const users = window.userList || [];
+            list.innerHTML = users.map(u => {
+                const isSelected = selected.includes(u.id);
+                const initials = u.initials || u.name.substring(0, 2).toUpperCase();
+                const color = u.color || '#666';
+                return `
+                        <div onclick="window.toggleProcessTech('${prefix}', ${u.id})"
+                             style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; cursor: pointer; transition: background 0.15s; background: ${isSelected ? 'rgba(16,185,129,0.12)' : 'transparent'};"
+                             onmouseover="if(!${isSelected}) this.style.background='rgba(255,255,255,0.04)'"
+                             onmouseout="this.style.background='${isSelected ? 'rgba(16,185,129,0.12)' : 'transparent'}'">
+                            <div style="width:34px; height:34px; border-radius:50%; background:${color}; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800; color:#fff; flex-shrink:0; font-family:'Inter',sans-serif;">${initials}</div>
+                            <span style="flex:1; color:#fff; font-size:0.95rem; font-weight:500; font-family:'Inter',sans-serif;">${u.name}</span>
+                            ${isSelected ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>` : ''}
+                        </div>
+                    `;
+            }).join('');
+
+            const pillsContainer = document.getElementById(`${prefix}-tech-selected-pills`);
+            const placeholder = document.getElementById(`${prefix}-tech-placeholder-text`);
+            if (!pillsContainer) return;
+
+            const selectedUsers = users.filter(u => selected.includes(u.id));
+            pillsContainer.innerHTML = selectedUsers.map(u => {
+                const initials = u.initials || u.name.substring(0, 2).toUpperCase();
+                const color = u.color || '#666';
+                return `<div style="display:inline-flex; align-items:center; gap:6px; background:${color}22; border:1px solid ${color}55; border-radius:20px; padding:3px 10px 3px 4px; font-size:0.82rem; font-weight:700; color:#fff; font-family:'Inter',sans-serif;">
+                        <div style="width:22px; height:22px; border-radius:50%; background:${color}; display:flex; align-items:center; justify-content:center; font-size:0.65rem; font-weight:800; color:#fff;">${initials}</div>
+                        ${u.name}
+                    </div>`;
+            }).join('');
+
+            if (placeholder) placeholder.style.display = selectedUsers.length > 0 ? 'none' : 'flex';
+        }
+
+        window.toggleProcessTechDropdown = function(prefix) {
+            const panel = document.getElementById(`${prefix}-tech-dropdown-panel`);
+            const trigger = document.getElementById(`${prefix}-tech-dropdown-trigger`);
+            if (!panel) return;
+            const isOpen = panel.style.display !== 'none';
+            panel.style.display = isOpen ? 'none' : 'block';
+            if (trigger) trigger.style.borderColor = isOpen ? 'rgba(255,255,255,0.1)' : 'rgba(16,185,129,0.5)';
+            if (!isOpen) renderProcessTechDropdown(prefix);
+        };
+
+        window.toggleProcessTech = function(prefix, id) {
+            const selected = window.processAssignedUsers[prefix] || (window.processAssignedUsers[prefix] = []);
+            const idx = selected.indexOf(id);
+            if (idx > -1) {
+                selected.splice(idx, 1);
+            } else {
+                selected.push(id);
+            }
+            const hidden = document.getElementById(`${prefix}-assigned-users`);
+            if (hidden) hidden.value = JSON.stringify(selected);
+            renderProcessTechDropdown(prefix);
+        };
+
+        document.addEventListener('click', function(e) {
+            ['process-add', 'edit-process', 'email'].forEach(prefix => {
+                const wrapper = document.getElementById(`${prefix}-tech-dropdown-wrapper`);
+                const panel = document.getElementById(`${prefix}-tech-dropdown-panel`);
+                const trigger = document.getElementById(`${prefix}-tech-dropdown-trigger`);
+                if (wrapper && !wrapper.contains(e.target) && panel && panel.style.display !== 'none') {
+                    panel.style.display = 'none';
+                    if (trigger) trigger.style.borderColor = 'rgba(255,255,255,0.1)';
+                }
+            });
+        });
+
+        window.openProcessAddModal = function() {
+            const modal = document.getElementById('process-add-modal');
+            if (!modal) return;
+
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            requestAnimationFrame(() => {
+                modal.classList.add('show');
+            });
+
+            // Reset fields
+            document.getElementById('process-add-title-input').value = '';
+            document.getElementById('process-add-remark-input').value = '';
+            document.getElementById('process-add-type-select').value = 'note';
+            document.getElementById('process-add-status-select').value = 'offen';
+
+            // Set default date to now
+            const now = new Date();
+            const tzOffset = now.getTimezoneOffset() * 60000;
+            const localISOTime = (new Date(now.getTime() - tzOffset)).toISOString().slice(0, 16);
+            document.getElementById('process-add-date-input').value = localISOTime;
+
+            // Reset machine search field
+            window.processMachineRecommended['process-add'] = [];
+            document.getElementById('process-add-machine-select').value = '';
+            document.getElementById('process-add-workshop-order-select').value = '';
+            window.fetchProcessOpenWorkshopOrders();
+            const machineSearch = document.getElementById('process-add-machine-search');
+            if (machineSearch) {
+                machineSearch.value = '';
+                machineSearch.style.color = '';
+            }
+
+            // Reset assigned employees
+            window.processAssignedUsers['process-add'] = [];
+            document.getElementById('process-add-assigned-users').value = '';
+            document.getElementById('process-add-tech-dropdown-panel').style.display = 'none';
+            renderProcessTechDropdown('process-add');
+        };
+
+        window.closeProcessAddModal = function() {
+            const modal = document.getElementById('process-add-modal');
+            if (modal) {
+                modal.classList.remove('show');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    modal.style.display = 'none';
+                }, 300);
+            }
+        };
+
+        window.saveNewProcess = async function(event) {
+            if (event) event.preventDefault();
+            if (!supabaseClient) return;
+
+            try {
+                const title = document.getElementById('process-add-title-input').value;
+                const type = document.getElementById('process-add-type-select').value;
+                const date = document.getElementById('process-add-date-input').value;
+                const machineId = document.getElementById('process-add-machine-select').value;
+                const workshopOrderNumber = document.getElementById('process-add-workshop-order-select').value;
+                const status = document.getElementById('process-add-status-select').value;
+                const remark = document.getElementById('process-add-remark-input').value;
+
+                const processDate = date ? new Date(date).toISOString() : new Date().toISOString();
+
+                const { error } = await supabaseClient
+                    .from('internal_processes')
+                    .insert([{
+                        title: title,
+                        process_type: type,
+                        process_date: processDate,
+                        machine_id: machineId ? parseInt(machineId) : null,
+                        workshop_order_number: workshopOrderNumber || null,
+                        status: status,
+                        remark: remark || null,
+                        assigned_users: window.processAssignedUsers['process-add'],
+                        user_id: window.currentUser?.id
+                    }]);
+
+                if (error) throw error;
+
+                window.closeProcessAddModal();
+                window.fetchProcesses();
+            } catch (err) {
+                console.error("Error saving new process:", err);
+                alert("Fehler beim Speichern: " + err.message);
             }
         };
 
@@ -10894,6 +11112,14 @@
             document.getElementById('edit-process-recipient-input').value = proc.recipient || '';
             document.getElementById('edit-process-status-select').value = proc.status || 'offen';
             document.getElementById('edit-process-body-input').value = proc.description || '';
+            document.getElementById('edit-process-remark-input').value = proc.remark || '';
+            window.updateEmailBodyVisibility('edit-process');
+
+            // Set up assigned employees
+            window.processAssignedUsers['edit-process'] = Array.isArray(proc.assigned_users) ? [...proc.assigned_users] : [];
+            document.getElementById('edit-process-assigned-users').value = JSON.stringify(window.processAssignedUsers['edit-process']);
+            document.getElementById('edit-process-tech-dropdown-panel').style.display = 'none';
+            renderProcessTechDropdown('edit-process');
             
             if (proc.process_date) {
                 const date = new Date(proc.process_date);
@@ -10908,12 +11134,15 @@
             window.processMachineRecommended['edit-process'] = [];
             const machineHidden = document.getElementById('edit-process-machine-select');
             const machineSearch = document.getElementById('edit-process-machine-search');
+            const workshopHidden = document.getElementById('edit-process-workshop-order-select');
+            if (workshopHidden) workshopHidden.value = '';
+            window.fetchProcessOpenWorkshopOrders();
             if (proc.machine_id) {
                 const activeMachine = (window.machineList || []).find(m => String(m.id) === String(proc.machine_id));
                 if (activeMachine) {
                     if (machineHidden) machineHidden.value = activeMachine.id;
                     if (machineSearch) {
-                        machineSearch.value = `${activeMachine.manufacturer || ''} ${activeMachine.name || ''} (#${activeMachine.serial || '?'})`.trim();
+                        machineSearch.value = window.processMachineLabel(activeMachine);
                         machineSearch.style.color = 'var(--color-primary-green)';
                     }
 
@@ -10937,6 +11166,14 @@
                         })();
                     }
                 }
+            } else if (proc.workshop_order_number) {
+                if (machineHidden) machineHidden.value = '';
+                if (workshopHidden) workshopHidden.value = proc.workshop_order_number;
+                if (machineSearch) {
+                    const match = (window.processOpenWorkshopOrders || []).find(t => t.workshop_order_number === proc.workshop_order_number);
+                    machineSearch.value = `Werkstattauftrag ${proc.workshop_order_number}${match && match.title ? ' – ' + match.title : ''}`;
+                    machineSearch.style.color = '#60a5fa';
+                }
             } else {
                 if (machineHidden) machineHidden.value = '';
                 if (machineSearch) {
@@ -10957,130 +11194,27 @@
             }
         };
 
-        function tryParseEmailDate(dateStr) {
-            if (!dateStr) return null;
-            dateStr = dateStr.trim();
-            
-            // Format: dd.mm.yyyy hh:mm or d.m.yyyy hh:mm
-            const deMatch = dateStr.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{2})/);
-            if (deMatch) {
-                return new Date(parseInt(deMatch[3]), parseInt(deMatch[2]) - 1, parseInt(deMatch[1]), parseInt(deMatch[4]), parseInt(deMatch[5]));
-            }
-            
-            // Month mappings for German text parsing
-            const deMonths = {
-                'januar': 0, 'februar': 1, 'märz': 2, 'april': 3, 'mai': 4, 'juni': 5,
-                'juli': 6, 'august': 7, 'september': 8, 'oktober': 9, 'november': 10, 'dezember': 11,
-                'jan': 0, 'feb': 1, 'mrz': 2, 'apr': 3, 'jun': 5, 'jul': 6, 'aug': 7, 'sep': 8, 'okt': 9, 'nov': 10, 'dez': 11
-            };
-            
-            // Format: 28. Mai 2026 14:32 or similar
-            const deMonthMatch = dateStr.match(/(\d{1,2})\.?\s+([a-zA-ZäÄöÖüÜß]+)\s+(\d{4})\s+(\d{1,2}):(\d{2})/);
-            if (deMonthMatch) {
-                const monthName = deMonthMatch[2].toLowerCase();
-                if (deMonths[monthName] !== undefined) {
-                    return new Date(parseInt(deMonthMatch[3]), deMonths[monthName], parseInt(deMonthMatch[1]), parseInt(deMonthMatch[4]), parseInt(deMonthMatch[5]));
-                }
-            }
-            
-            // Standard JS Date parsing
-            const parsed = Date.parse(dateStr);
-            if (!isNaN(parsed)) {
-                return new Date(parsed);
-            }
-            
-            return null;
-        }
+        // Zeigt das "E-Mail-Text"-Feld und Absender/Empfänger nur, wenn der Vorgangstyp eine E-Mail ist oder bereits Inhalt importiert wurde
+        window.updateEmailBodyVisibility = function(prefix) {
+            const typeSelect = document.getElementById(`${prefix}-type-select`);
+            const bodyInput = document.getElementById(`${prefix}-body-input`);
+            const type = typeSelect ? typeSelect.value : '';
+            const isEmailType = type === 'email_incoming' || type === 'email_outgoing';
+            const hasContent = !!(bodyInput && bodyInput.value.trim().length > 0);
+            const show = isEmailType || hasContent;
+
+            const group = document.getElementById(`${prefix}-body-group`);
+            if (group) group.style.display = show ? '' : 'none';
+
+            const senderRecipientGroup = document.getElementById(`${prefix}-sender-recipient-group`);
+            if (senderRecipientGroup) senderRecipientGroup.style.display = show ? 'grid' : 'none';
+        };
 
         function formatDateToLocalInput(date) {
             if (!date) date = new Date();
             const tzOffset = date.getTimezoneOffset() * 60000;
             return (new Date(date.getTime() - tzOffset)).toISOString().slice(0, 16);
         }
-
-        window.processPastedEmail = function(text) {
-            const lines = text.split('\n');
-            let title = '';
-            let sender = '';
-            let recipient = '';
-            let dateVal = null;
-            
-            let headerLinesCount = 0;
-            let foundHeaders = false;
-            
-            for (let i = 0; i < Math.min(lines.length, 15); i++) {
-                const line = lines[i].trim();
-                
-                const senderMatch = line.match(/^(Von|From):\s*(.*)$/i);
-                if (senderMatch) {
-                    sender = senderMatch[2].trim();
-                    headerLinesCount = i + 1;
-                    foundHeaders = true;
-                    continue;
-                }
-                
-                const recipientMatch = line.match(/^(An|To):\s*(.*)$/i);
-                if (recipientMatch) {
-                    recipient = recipientMatch[2].trim();
-                    headerLinesCount = i + 1;
-                    foundHeaders = true;
-                    continue;
-                }
-                
-                const subjectMatch = line.match(/^(Betreff|Subject):\s*(.*)$/i);
-                if (subjectMatch) {
-                    title = subjectMatch[2].trim();
-                    headerLinesCount = i + 1;
-                    foundHeaders = true;
-                    continue;
-                }
-                
-                const dateMatch = line.match(/^(Gesendet|Sent|Datum|Date):\s*(.*)$/i);
-                if (dateMatch) {
-                    dateVal = tryParseEmailDate(dateMatch[2]);
-                    headerLinesCount = i + 1;
-                    foundHeaders = true;
-                    continue;
-                }
-            }
-            
-            let body = '';
-            if (foundHeaders && headerLinesCount > 0) {
-                body = lines.slice(headerLinesCount).join('\n').trim();
-            } else {
-                body = text.trim();
-            }
-            
-            if (!title && lines[0]) {
-                title = lines[0].trim().substring(0, 100);
-            }
-            
-            if (title) document.getElementById('email-title-input').value = title;
-            if (sender) document.getElementById('email-sender-input').value = sender;
-            if (recipient) document.getElementById('email-recipient-input').value = recipient;
-            if (body) document.getElementById('email-body-input').value = body;
-            if (dateVal) document.getElementById('email-date-input').value = formatDateToLocalInput(dateVal);
-            
-            // Auto determine incoming or outgoing
-            if (sender && (sender.toLowerCase().includes('meetra') || sender.toLowerCase().includes('birco') || sender.toLowerCase().includes('info@') || sender.toLowerCase().includes('sales@'))) {
-                document.getElementById('email-type-select').value = 'email_outgoing';
-            } else {
-                document.getElementById('email-type-select').value = 'email_incoming';
-            }
-            
-            // Smart matching trigger
-            let senderEmail = '';
-            const emailMatch = sender.match(/<([^>]+)>/) || sender.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-            if (emailMatch) {
-                senderEmail = emailMatch[1] || emailMatch[0];
-            }
-            
-            if (senderEmail) {
-                window.runSmartCustomerMatching(senderEmail, text);
-            } else {
-                window.runSerialNumberMatching(text, null);
-            }
-        };
 
         // ==========================================
         // .MSG FILE IMPORT (Outlook Message Format)
@@ -11096,6 +11230,26 @@
         window.handleMsgFileSelect = function(event, prefix) {
             const file = event.target.files && event.target.files[0];
             if (file) window.processMsgFile(file, prefix || 'email');
+            event.target.value = '';
+        };
+
+        // Header dropzone (Vorgänge view): drop a .msg file to open the import modal pre-filled
+        window.handleProcessHeaderMsgDrop = function(event) {
+            event.preventDefault();
+            event.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)';
+            event.currentTarget.style.background = 'transparent';
+            const file = event.dataTransfer.files && event.dataTransfer.files[0];
+            if (!file) return;
+            window.openEmailImportModal();
+            window.processMsgFile(file, 'email');
+        };
+
+        window.handleProcessHeaderMsgSelect = function(event) {
+            const file = event.target.files && event.target.files[0];
+            if (file) {
+                window.openEmailImportModal();
+                window.processMsgFile(file, 'email');
+            }
             event.target.value = '';
         };
 
@@ -11160,6 +11314,7 @@
                     } else {
                         document.getElementById(`${prefix}-type-select`).value = 'email_incoming';
                     }
+                    window.updateEmailBodyVisibility(prefix);
 
                     // Smart matching trigger
                     const senderEmail = fileData.senderEmail || '';
@@ -11186,16 +11341,42 @@
             const hidden = document.getElementById(`${prefix}-machine-select`);
             if (machines.length > 0 && hidden && !hidden.value) {
                 const m = machines[0];
-                window.selectProcessMachine(prefix, m.id, `${m.manufacturer || ''} ${m.name || ''} (#${m.serial || '?'})`.trim());
+                window.selectProcessMachine(prefix, m.id, window.processMachineLabel(m));
             }
         };
 
         // ==========================================
         // PROCESS MACHINE SEARCH DROPDOWN (Email-Import / Vorgang bearbeiten)
         // ==========================================
-        window.processMachineRecommended = { 'email': [], 'edit-process': [] };
+        window.processMachineRecommended = { 'email': [], 'edit-process': [], 'process-add': [] };
 
-        function buildProcessMachineDropdown(prefix, machines) {
+        // Einheitliches Label "Hersteller Name (#Serie, Baujahr)" fuer die Maschinen-Suche in Vorgaengen
+        window.processMachineLabel = function(m) {
+            if (!m) return '';
+            const serialYear = `#${m.serial || '?'}${m.year ? ', ' + m.year : ''}`;
+            return `${m.manufacturer || ''} ${m.name || ''} (${serialYear})`.trim();
+        };
+
+        // Offene Werkstattauftraege (Aufgaben ohne Maschinenbezug) fuer die Maschinen-Suche in Vorgaengen
+        window.processOpenWorkshopOrders = [];
+        window.fetchProcessOpenWorkshopOrders = async function() {
+            if (!window.supabaseClient) return;
+            try {
+                const { data, error } = await window.supabaseClient
+                    .from('tasks')
+                    .select('id, title, workshop_order_number')
+                    .not('workshop_order_number', 'is', null)
+                    .is('machine_id', null)
+                    .neq('status', 'completed');
+                if (error) throw error;
+                window.processOpenWorkshopOrders = data || [];
+            } catch (err) {
+                console.error('Error fetching open workshop orders:', err);
+            }
+        };
+
+        function buildProcessMachineDropdown(prefix, machines, workshopOrders) {
+            workshopOrders = workshopOrders || window.processOpenWorkshopOrders || [];
             const portalId = `${prefix}-machine-dropdown-portal`;
             let dropdown = document.getElementById(portalId);
             if (!dropdown) {
@@ -11226,7 +11407,7 @@
             dropdown.innerHTML = '';
 
             const buildItem = (m) => {
-                const label = `${m.manufacturer || ''} ${m.name || ''} (#${m.serial || '?'})`.trim();
+                const label = window.processMachineLabel(m);
                 const item = document.createElement('div');
                 item.style.cssText = 'padding: 10px 14px; cursor: pointer; font-size: 0.9rem; border-top: 1px solid rgba(255,255,255,0.05);';
                 item.innerHTML = `<span style="color: var(--color-primary-green); font-weight: 600;">${label}</span>`;
@@ -11265,10 +11446,31 @@
 
             others.forEach(m => dropdown.appendChild(buildItem(m)));
 
+            if (workshopOrders.length > 0) {
+                const header3 = document.createElement('div');
+                header3.textContent = 'Werkstattaufträge';
+                header3.style.cssText = 'padding: 6px 14px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #60a5fa; border-top: 1px solid rgba(255,255,255,0.05);';
+                dropdown.appendChild(header3);
+
+                workshopOrders.forEach(t => {
+                    const label = `Werkstattauftrag ${t.workshop_order_number}${t.title ? ' – ' + t.title : ''}`;
+                    const item = document.createElement('div');
+                    item.style.cssText = 'padding: 10px 14px; cursor: pointer; font-size: 0.9rem; border-top: 1px solid rgba(255,255,255,0.05);';
+                    item.innerHTML = `<span style="color: #60a5fa; font-weight: 600;">${label}</span>`;
+                    item.onmousedown = (e) => { e.preventDefault(); window.selectProcessWorkshopOrder(prefix, t.workshop_order_number, t.title); };
+                    item.onmouseover = () => { item.style.background = 'rgba(255,255,255,0.06)'; };
+                    item.onmouseout = () => { item.style.background = ''; };
+                    dropdown.appendChild(item);
+                });
+            }
+
             dropdown.style.display = 'block';
         }
 
         window.showProcessMachineDropdown = function(prefix) {
+            if (!window.processOpenWorkshopOrders || window.processOpenWorkshopOrders.length === 0) {
+                window.fetchProcessOpenWorkshopOrders().then(() => buildProcessMachineDropdown(prefix, window.machineList || []));
+            }
             buildProcessMachineDropdown(prefix, window.machineList || []);
         };
 
@@ -11279,13 +11481,19 @@
                 const searchable = [m.manufacturer || '', m.name || '', m.serial || '', m.year ? String(m.year) : ''].join(' ').toLowerCase();
                 return tokens.length === 0 || tokens.every(token => searchable.includes(token));
             });
-            buildProcessMachineDropdown(prefix, filtered);
+            const workshopOrders = (window.processOpenWorkshopOrders || []).filter(t => {
+                const searchable = [t.workshop_order_number || '', t.title || ''].join(' ').toLowerCase();
+                return tokens.length === 0 || tokens.every(token => searchable.includes(token));
+            });
+            buildProcessMachineDropdown(prefix, filtered, workshopOrders);
         };
 
         window.selectProcessMachine = function(prefix, id, label) {
             const hidden = document.getElementById(`${prefix}-machine-select`);
             const search = document.getElementById(`${prefix}-machine-search`);
+            const workshopHidden = document.getElementById(`${prefix}-workshop-order-select`);
             if (hidden) hidden.value = id;
+            if (workshopHidden) workshopHidden.value = '';
             if (search) {
                 search.value = label || '';
                 search.style.color = id ? 'var(--color-primary-green)' : '';
@@ -11295,13 +11503,27 @@
 
             if (prefix === 'email') {
                 window.syncAddressFromMachine('email-machine-select', 'email-type-select', 'email-sender-input', 'email-recipient-input');
-            } else {
+            } else if (prefix === 'edit-process') {
                 window.syncAddressFromMachine('edit-process-machine-select', 'edit-process-type-select', 'edit-process-sender-input', 'edit-process-recipient-input');
             }
         };
 
+        window.selectProcessWorkshopOrder = function(prefix, orderNumber, title) {
+            const machineHidden = document.getElementById(`${prefix}-machine-select`);
+            const workshopHidden = document.getElementById(`${prefix}-workshop-order-select`);
+            const search = document.getElementById(`${prefix}-machine-search`);
+            if (machineHidden) machineHidden.value = '';
+            if (workshopHidden) workshopHidden.value = orderNumber;
+            if (search) {
+                search.value = `Werkstattauftrag ${orderNumber}${title ? ' – ' + title : ''}`;
+                search.style.color = '#60a5fa';
+            }
+            const dropdown = document.getElementById(`${prefix}-machine-dropdown-portal`);
+            if (dropdown) dropdown.style.display = 'none';
+        };
+
         document.addEventListener('click', (e) => {
-            ['email', 'edit-process'].forEach(prefix => {
+            ['email', 'edit-process', 'process-add'].forEach(prefix => {
                 const dropdown = document.getElementById(`${prefix}-machine-dropdown-portal`);
                 if (dropdown && !e.target.closest(`#${prefix}-machine-search`) && !e.target.closest(`#${prefix}-machine-dropdown-portal`)) {
                     dropdown.style.display = 'none';
@@ -11503,7 +11725,7 @@
             const targetId = matchedMachine ? matchedMachine.id : (defaultMachineId || '');
             if (targetId) {
                 const machine = matchedMachine || (window.machineList || []).find(m => String(m.id) === String(targetId));
-                const label = machine ? `${machine.manufacturer || ''} ${machine.name || ''} (#${machine.serial || '?'})`.trim() : '';
+                const label = machine ? window.processMachineLabel(machine) : '';
                 window.selectProcessMachine(prefix, targetId, label);
             } else {
                 window.selectProcessMachine(prefix, '', '');
@@ -11516,7 +11738,7 @@
             try {
                 const { data, error } = await supabaseClient
                     .from('internal_processes')
-                    .select('*, machines(id, name, manufacturer, serial)')
+                    .select('*, machines(id, name, manufacturer, serial, year)')
                     .order('process_date', { ascending: false });
                     
                 if (error) throw error;
@@ -11527,9 +11749,25 @@
                 console.error("Error loading internal processes:", err);
                 const tableBody = document.getElementById('processes-table-body');
                 if (tableBody) {
-                    tableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color: #f87171; padding: 2rem;">Fehler beim Laden der Vorgänge: ${err.message}</td></tr>`;
+                    tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; color: #f87171; padding: 2rem;">Fehler beim Laden der Vorgänge: ${err.message}</td></tr>`;
                 }
             }
+        };
+
+        // Vorgangs-Typ Metadaten: Icon, Farbe & Label je process_type
+        window.PROCESS_TYPE_INFO = {
+            email_incoming: { label: 'E-Mail Eingang', color: '#60a5fa', bg: 'rgba(59, 130, 246, 0.15)', border: 'rgba(59, 130, 246, 0.3)', icon: '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline>' },
+            email_outgoing: { label: 'E-Mail Ausgang', color: '#a78bfa', bg: 'rgba(167, 139, 250, 0.15)', border: 'rgba(167, 139, 250, 0.3)', icon: '<line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>' },
+            note: { label: 'Interne Notiz', color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.15)', border: 'rgba(251, 191, 36, 0.3)', icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline>' },
+            call: { label: 'Telefonat', color: '#34d399', bg: 'rgba(52, 211, 153, 0.15)', border: 'rgba(52, 211, 153, 0.3)', icon: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>' },
+            appointment: { label: 'Termin / Besuch', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.15)', border: 'rgba(56, 189, 248, 0.3)', icon: '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>' },
+            repair: { label: 'Reparatur', color: '#f87171', bg: 'rgba(248, 113, 113, 0.15)', border: 'rgba(248, 113, 113, 0.3)', icon: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"></path>' },
+            maintenance: { label: 'Wartung', color: '#fb923c', bg: 'rgba(251, 146, 60, 0.15)', border: 'rgba(251, 146, 60, 0.3)', icon: '<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>' },
+            offer: { label: 'Angebot', color: '#facc15', bg: 'rgba(250, 204, 21, 0.15)', border: 'rgba(250, 204, 21, 0.3)', icon: '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>' },
+            order: { label: 'Bestellung', color: '#818cf8', bg: 'rgba(129, 140, 248, 0.15)', border: 'rgba(129, 140, 248, 0.3)', icon: '<circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>' },
+            complaint: { label: 'Reklamation', color: '#fb7185', bg: 'rgba(251, 113, 133, 0.15)', border: 'rgba(251, 113, 133, 0.3)', icon: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line>' },
+            other: { label: 'Sonstiges', color: '#cbd5e1', bg: 'rgba(203, 213, 225, 0.15)', border: 'rgba(203, 213, 225, 0.3)', icon: '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>' },
+            manual: { label: 'Manuell', color: '#94a3b8', bg: 'rgba(148, 163, 184, 0.15)', border: 'rgba(148, 163, 184, 0.3)', icon: '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="12" y2="12"></line>' }
         };
 
         window.renderProcesses = function() {
@@ -11548,18 +11786,19 @@
             
             // Apply Search Query
             if (searchQuery) {
-                filtered = filtered.filter(p => 
+                filtered = filtered.filter(p =>
                     (p.title && p.title.toLowerCase().includes(searchQuery)) ||
                     (p.sender && p.sender.toLowerCase().includes(searchQuery)) ||
                     (p.recipient && p.recipient.toLowerCase().includes(searchQuery)) ||
-                    (p.description && p.description.toLowerCase().includes(searchQuery))
+                    (p.description && p.description.toLowerCase().includes(searchQuery)) ||
+                    (p.remark && p.remark.toLowerCase().includes(searchQuery))
                 );
             }
             
             if (filtered.length === 0) {
                 tableBody.innerHTML = `
                     <tr>
-                        <td colspan="6" style="padding: 4rem 2rem; text-align: center; border-radius: 12px; background: rgba(255,255,255,0.01); border: 1px dashed rgba(255,255,255,0.08);">
+                        <td colspan="8" style="padding: 4rem 2rem; text-align: center; border-radius: 12px; background: rgba(255,255,255,0.01); border: 1px dashed rgba(255,255,255,0.08);">
                             <p style="color: rgba(255,255,255,0.4); font-size: 1.1rem; margin: 0;">Keine internen Vorgänge gefunden.</p>
                         </td>
                     </tr>
@@ -11570,49 +11809,61 @@
             let html = '';
             filtered.forEach(p => {
                 // Type Icon & Text
-                let typeHtml = '';
-                if (p.process_type === 'email_incoming') {
-                    typeHtml = `<span title="E-Mail Eingang" style="color: #60a5fa; display: inline-flex; align-items: center; justify-content: center; background: rgba(59, 130, 246, 0.15); width: 36px; height: 36px; border-radius: 10px; border: 1px solid rgba(59, 130, 246, 0.3);">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                const typeInfo = window.PROCESS_TYPE_INFO[p.process_type] || window.PROCESS_TYPE_INFO.manual;
+                const typeHtml = `<span title="${typeInfo.label}" style="color: ${typeInfo.color}; display: inline-flex; align-items: center; justify-content: center; background: ${typeInfo.bg}; width: 36px; height: 36px; border-radius: 10px; border: 1px solid ${typeInfo.border};">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${typeInfo.icon}</svg>
                     </span>`;
-                } else if (p.process_type === 'email_outgoing') {
-                    typeHtml = `<span title="E-Mail Ausgang" style="color: #a78bfa; display: inline-flex; align-items: center; justify-content: center; background: rgba(167, 139, 250, 0.15); width: 36px; height: 36px; border-radius: 10px; border: 1px solid rgba(167, 139, 250, 0.3);">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                    </span>`;
-                } else if (p.process_type === 'note') {
-                    typeHtml = `<span title="Interne Notiz" style="color: #fbbf24; display: inline-flex; align-items: center; justify-content: center; background: rgba(251, 191, 36, 0.15); width: 36px; height: 36px; border-radius: 10px; border: 1px solid rgba(251, 191, 36, 0.3);">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                    </span>`;
-                } else {
-                    typeHtml = `<span title="Manuell" style="color: #94a3b8; display: inline-flex; align-items: center; justify-content: center; background: rgba(148, 163, 184, 0.15); width: 36px; height: 36px; border-radius: 10px; border: 1px solid rgba(148, 163, 184, 0.3);">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="12" y2="12"></line></svg>
-                    </span>`;
-                }
                 
-                // Status Badge styling
+                // Status Badge styling (clickable to change status inline)
                 let statusBadge = '';
+                let statusColor = '#10b981';
                 if (p.status === 'offen') {
-                    statusBadge = `<span style="font-size: 0.75rem; padding: 6px 14px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Offen</span>`;
+                    statusColor = '#ef4444';
+                    statusBadge = `<span style="font-size: 0.86rem; padding: 6px 14px; border-radius: 8px; background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Offen</span>`;
                 } else if (p.status === 'in_bearbeitung') {
-                    statusBadge = `<span style="font-size: 0.75rem; padding: 6px 14px; border-radius: 8px; background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">In Arbeit</span>`;
+                    statusColor = '#f59e0b';
+                    statusBadge = `<span style="font-size: 0.86rem; padding: 6px 14px; border-radius: 8px; background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">In Arbeit</span>`;
                 } else {
-                    statusBadge = `<span style="font-size: 0.75rem; padding: 6px 14px; border-radius: 8px; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Erledigt</span>`;
+                    statusColor = '#10b981';
+                    statusBadge = `<span style="font-size: 0.86rem; padding: 6px 14px; border-radius: 8px; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Erledigt</span>`;
                 }
-                
+
+                const statusCell = `
+                    <div class="process-status-wrapper" style="position: relative; display: inline-block;">
+                        <div onclick="window.toggleProcessStatusMenu(event, '${p.id}')" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                            ${statusBadge}
+                        </div>
+                        <div class="process-status-menu" id="process-status-menu-${p.id}" style="display: none; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 6px; background: rgba(15,23,42,0.98); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 6px; z-index: 50; min-width: 140px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                            <div onclick="window.setProcessStatus('${p.id}', 'offen')" style="padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 800; color: #ef4444; text-transform: uppercase; letter-spacing: 0.5px; transition: background 0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='transparent'">Offen</div>
+                            <div onclick="window.setProcessStatus('${p.id}', 'in_bearbeitung')" style="padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 800; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.5px; transition: background 0.15s;" onmouseover="this.style.background='rgba(245,158,11,0.15)'" onmouseout="this.style.background='transparent'">In Arbeit</div>
+                            <div onclick="window.setProcessStatus('${p.id}', 'erledigt')" style="padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 800; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px; transition: background 0.15s;" onmouseover="this.style.background='rgba(16,185,129,0.15)'" onmouseout="this.style.background='transparent'">Erledigt</div>
+                        </div>
+                    </div>
+                `;
+
                 // Machine info
                 let machineCell = '<span style="color: rgba(255,255,255,0.3); font-style: italic;">Nicht verknüpft</span>';
                 if (p.machines) {
                     const m = p.machines;
-                    machineCell = `<span class="machine-link-btn" onclick="window.switchView('machines'); window.openEditStammdaten(${m.id});" style="color: #34d399; font-weight: 700; cursor: pointer; text-decoration: underline; transition: color 0.2s; white-space: normal; word-break: break-word;" onmouseover="this.style.color='#10b981'" onmouseout="this.style.color='#34d399'">
-                        ${m.manufacturer} ${m.name} (#${m.serial || '?'})
-                    </span>`;
+                    const serialYear = `${m.serial ? `#${m.serial}` : ''}${m.year ? ` (${m.year})` : ''}`.trim();
+                    machineCell = `<div class="machine-link-btn" onclick="window.switchView('machines'); window.openEditStammdaten(${m.id});" style="cursor: pointer;">
+                        <div style="color: #34d399; font-weight: 800; font-size: 1.06rem; white-space: normal; word-break: break-word; line-height: 1.2;">${m.manufacturer} ${m.name}</div>
+                        ${serialYear ? `<div style="color: #34d399; opacity: 0.8; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; margin-top: 2px;">${serialYear}</div>` : ''}
+                    </div>`;
+                } else if (p.workshop_order_number) {
+                    machineCell = `<div style="color: #60a5fa; font-weight: 800; font-size: 1.06rem; white-space: normal; word-break: break-word; line-height: 1.2;">Werkstattauftrag</div>
+                        <div style="color: #60a5fa; opacity: 0.8; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; margin-top: 2px;">${p.workshop_order_number}</div>`;
                 }
                 
                 // Format Date
                 let dateStr = '-';
+                let timeStr = '';
+                let hasDate = false;
                 if (p.process_date) {
                     const d = new Date(p.process_date);
-                    dateStr = d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    dateStr = d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                    timeStr = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+                    hasDate = true;
                 }
                 
                 // Format title / details
@@ -11620,26 +11871,52 @@
                 let senderRecText = '';
                 if (p.sender) senderRecText += `Von: ${p.sender}`;
                 if (p.recipient) senderRecText += (senderRecText ? ' | ' : '') + `An: ${p.recipient}`;
-                
+
+                // Assigned employees: small avatar badges with Kürzel
+                let assignedHtml = '';
+                if (Array.isArray(p.assigned_users) && p.assigned_users.length > 0) {
+                    const users = window.userList || [];
+                    assignedHtml = `<div style="display: flex; gap: 4px; flex-wrap: wrap; justify-content: center;">` +
+                        p.assigned_users.map(uid => {
+                            const u = users.find(u => String(u.id) === String(uid));
+                            if (!u) return '';
+                            const initials = u.initials || u.name.substring(0, 2).toUpperCase();
+                            const color = u.color || '#666';
+                            return `<div title="${u.name}" style="width:24px; height:24px; border-radius:50%; background:${color}; display:flex; align-items:center; justify-content:center; font-size:0.69rem; font-weight:800; color:#fff; flex-shrink:0;">${initials}</div>`;
+                        }).join('') +
+                        `</div>`;
+                }
+
+                // Bemerkung / Beschreibung preview
+                const descriptionCell = p.remark
+                    ? `<div style="color: rgba(255,255,255,0.7); font-size: 1.01rem; white-space: normal; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${p.remark}</div>`
+                    : '<span style="color: rgba(255,255,255,0.3); font-style: italic;">-</span>';
+
                 html += `
                     <tr class="task-list-row-premium" style="background: rgba(255,255,255,0.02); transition: all 0.2s ease;">
-                        <td style="padding: 18px 16px; border-top-left-radius: 12px; border-bottom-left-radius: 12px; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); border-left: 1px solid rgba(255,255,255,0.05); text-align: center; vertical-align: middle;">
+                        <td style="padding: 18.5px 10px; border-top-left-radius: 12px; border-bottom-left-radius: 12px; border-top: 1px solid ${statusColor}33; border-bottom: 1px solid ${statusColor}33; border-left: 4px solid ${statusColor}; text-align: center; vertical-align: middle;">
                             ${typeHtml}
                         </td>
-                        <td style="padding: 18px 16px; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: middle;">
-                            <div style="font-weight: 700; color: #fff; font-size: 1.05rem; white-space: normal; word-break: break-word;">${cleanTitle}</div>
-                            ${senderRecText ? `<div style="font-size: 0.8rem; color: rgba(255,255,255,0.4); margin-top: 4px;">${senderRecText}</div>` : ''}
+                        <td style="padding: 18.5px 10px; border-top: 1px solid ${statusColor}33; border-bottom: 1px solid ${statusColor}33; text-align: center; vertical-align: middle; overflow: visible;">
+                            ${statusCell}
                         </td>
-                        <td style="padding: 18px 16px; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: middle;">
+                        <td style="padding: 18.5px 10px; border-top: 1px solid ${statusColor}33; border-bottom: 1px solid ${statusColor}33; vertical-align: middle;">
                             ${machineCell}
                         </td>
-                        <td style="padding: 18px 16px; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); color: rgba(255,255,255,0.6); font-size: 0.9rem; vertical-align: middle;">
-                            ${dateStr}
+                        <td style="padding: 18.5px 10px; border-top: 1px solid ${statusColor}33; border-bottom: 1px solid ${statusColor}33; vertical-align: middle;">
+                            <div style="font-weight: 700; color: #fff; font-size: 1.06rem; white-space: normal; word-break: break-word;">${cleanTitle}</div>
+                            ${senderRecText ? `<div style="font-size: 0.86rem; color: rgba(255,255,255,0.4); margin-top: 2px;">${senderRecText}</div>` : ''}
                         </td>
-                        <td style="padding: 18px 16px; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; vertical-align: middle;">
-                            ${statusBadge}
+                        <td style="padding: 18.5px 10px; border-top: 1px solid ${statusColor}33; border-bottom: 1px solid ${statusColor}33; vertical-align: middle;">
+                            ${descriptionCell}
                         </td>
-                        <td style="padding: 18px 16px; border-top-right-radius: 12px; border-bottom-right-radius: 12px; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05); border-right: 1px solid rgba(255,255,255,0.05); text-align: right; vertical-align: middle;">
+                        <td style="padding: 18.5px 10px; border-top: 1px solid ${statusColor}33; border-bottom: 1px solid ${statusColor}33; text-align: center; vertical-align: middle;">
+                            ${assignedHtml || '<span style="color: rgba(255,255,255,0.3); font-style: italic; font-size: 0.92rem;">-</span>'}
+                        </td>
+                        <td style="padding: 18.5px 10px; border-top: 1px solid ${statusColor}33; border-bottom: 1px solid ${statusColor}33; color: #fff; font-size: 0.98rem; vertical-align: middle;">
+                            <div style="font-weight: 800;">${dateStr}</div>${hasDate ? `<div style="font-weight: 400; color: rgba(255,255,255,0.5); font-size: 0.92rem; margin-top: 1px;">${timeStr} Uhr</div>` : ''}
+                        </td>
+                        <td style="padding: 18.5px 10px; border-top-right-radius: 12px; border-bottom-right-radius: 12px; border-top: 1px solid ${statusColor}33; border-bottom: 1px solid ${statusColor}33; border-right: 1px solid ${statusColor}33; text-align: right; vertical-align: middle;">
                             <div style="display: flex; gap: 8px; justify-content: flex-end;">
                                 <button onclick="window.openEditProcessModal('${p.id}')" class="btn-icon-soft" title="Bearbeiten" style="background: rgba(255,255,255,0.05); color: #60a5fa; border: 1px solid rgba(255,255,255,0.1); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"></path></svg>
@@ -11656,6 +11933,41 @@
             tableBody.innerHTML = html;
         };
 
+        // Inline status change for the Vorgänge table
+        window.toggleProcessStatusMenu = function(event, id) {
+            event.stopPropagation();
+            document.querySelectorAll('.process-status-menu').forEach(el => {
+                if (el.id !== `process-status-menu-${id}`) el.style.display = 'none';
+            });
+            const menu = document.getElementById(`process-status-menu-${id}`);
+            if (menu) menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+        };
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.process-status-wrapper')) {
+                document.querySelectorAll('.process-status-menu').forEach(el => el.style.display = 'none');
+            }
+        });
+
+        window.setProcessStatus = async function(id, status) {
+            if (!supabaseClient) return;
+            try {
+                const { error } = await supabaseClient
+                    .from('internal_processes')
+                    .update({ status: status })
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                const proc = (window.eventsState.processes || []).find(p => String(p.id) === String(id));
+                if (proc) proc.status = status;
+                window.renderProcesses();
+            } catch (err) {
+                console.error("Error updating process status:", err);
+                alert('Fehler beim Aktualisieren des Status: ' + err.message);
+            }
+        };
+
         window.saveImportedEmail = async function(event) {
             if (event) event.preventDefault();
             if (!supabaseClient) return;
@@ -11667,11 +11979,13 @@
                 const sender = document.getElementById('email-sender-input').value;
                 const recipient = document.getElementById('email-recipient-input').value;
                 const machineId = document.getElementById('email-machine-select').value;
+                const workshopOrderNumber = document.getElementById('email-workshop-order-select').value;
                 const status = document.getElementById('email-status-select').value;
                 const description = document.getElementById('email-body-input').value;
-                
+                const remark = document.getElementById('email-remark-input').value;
+
                 const processDate = date ? new Date(date).toISOString() : new Date().toISOString();
-                
+
                 const { error } = await supabaseClient
                     .from('internal_processes')
                     .insert([{
@@ -11681,13 +11995,16 @@
                         sender: sender || null,
                         recipient: recipient || null,
                         machine_id: machineId ? parseInt(machineId) : null,
+                        workshop_order_number: workshopOrderNumber || null,
                         status: status,
                         description: description || null,
+                        remark: remark || null,
+                        assigned_users: window.processAssignedUsers['email'],
                         user_id: window.currentUser?.id
                     }]);
-                    
+
                 if (error) throw error;
-                
+
                 window.closeEmailImportModal();
                 window.fetchProcesses();
             } catch (err) {
@@ -11708,11 +12025,13 @@
                 const sender = document.getElementById('edit-process-sender-input').value;
                 const recipient = document.getElementById('edit-process-recipient-input').value;
                 const machineId = document.getElementById('edit-process-machine-select').value;
+                const workshopOrderNumber = document.getElementById('edit-process-workshop-order-select').value;
                 const status = document.getElementById('edit-process-status-select').value;
                 const description = document.getElementById('edit-process-body-input').value;
-                
+                const remark = document.getElementById('edit-process-remark-input').value;
+
                 const processDate = date ? new Date(date).toISOString() : new Date().toISOString();
-                
+
                 const { error } = await supabaseClient
                     .from('internal_processes')
                     .update({
@@ -11722,8 +12041,11 @@
                         sender: sender || null,
                         recipient: recipient || null,
                         machine_id: machineId ? parseInt(machineId) : null,
+                        workshop_order_number: workshopOrderNumber || null,
                         status: status,
-                        description: description || null
+                        description: description || null,
+                        remark: remark || null,
+                        assigned_users: window.processAssignedUsers['edit-process']
                     })
                     .eq('id', id);
                     
@@ -11908,7 +12230,24 @@
                         locFieldsWrapper.classList.add('hidden');
                         locFieldsWrapper.style.display = 'none';
                     }
-                    
+
+                    // Reset Ansprechpartner / Telefon
+                    const contactPersonInput = document.getElementById('service-contact-person');
+                    if (contactPersonInput) contactPersonInput.value = '';
+
+                    // Reset Hotel / Unterkunft fields
+                    ['service-hotel-company', 'service-hotel-street', 'service-hotel-zip', 'service-hotel-city', 'service-hotel-country'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.value = '';
+                    });
+                    const hotelFieldsWrapper = document.getElementById('service-hotel-fields-wrapper');
+                    if (hotelFieldsWrapper) {
+                        hotelFieldsWrapper.classList.add('hidden');
+                        hotelFieldsWrapper.style.display = 'none';
+                    }
+                    const hotelToggleBtn = document.getElementById('btn-toggle-hotel');
+                    if (hotelToggleBtn) hotelToggleBtn.textContent = '+ Hotel hinzufügen';
+
                     // Reset signature preview
                     const sigPreviewImg = document.getElementById('signature-preview-img');
                     if (sigPreviewImg) {
@@ -11920,6 +12259,20 @@
                     if (sigPlaceholder) sigPlaceholder.classList.remove('hidden');
                     const sigClearBtn = document.getElementById('btn-clear-signature');
                     if (sigClearBtn) sigClearBtn.classList.add('hidden');
+
+                    // Reset tech signature preview
+                    const techSigInput = document.getElementById('service-tech-signature');
+                    if (techSigInput) techSigInput.value = '';
+                    const techSigPreviewImg = document.getElementById('tech-signature-preview-img');
+                    if (techSigPreviewImg) {
+                        techSigPreviewImg.src = '';
+                        techSigPreviewImg.classList.add('hidden');
+                        techSigPreviewImg.style.display = 'none';
+                    }
+                    const techSigPlaceholder = document.getElementById('tech-signature-placeholder');
+                    if (techSigPlaceholder) techSigPlaceholder.classList.remove('hidden');
+                    const techSigClearBtn = document.getElementById('btn-clear-tech-signature');
+                    if (techSigClearBtn) techSigClearBtn.classList.add('hidden');
 
                     serviceFiles = []; // Reset new files
                     existingServiceFiles = []; // Reset existing files
@@ -12029,6 +12382,9 @@
                                      window.addWorkLogTableRow(row);
                                  }
                              });
+                             if (typeof window.sortWorkLogTable === 'function') {
+                                 window.sortWorkLogTable();
+                             }
                          }
 
                          const tasksTableBody = document.getElementById('service-tasks-table-body');
@@ -12051,6 +12407,31 @@
                              });
                          }
 
+                        // Ansprechpartner / Telefon
+                        const contactPersonInput = document.getElementById('service-contact-person');
+                        if (contactPersonInput) contactPersonInput.value = editData.contact_person || '';
+
+                        // Hotel / Unterkunft
+                        const hotelValues = {
+                            'service-hotel-company': editData.hotel_company || '',
+                            'service-hotel-street': editData.hotel_street || '',
+                            'service-hotel-zip': editData.hotel_zip || '',
+                            'service-hotel-city': editData.hotel_city || '',
+                            'service-hotel-country': editData.hotel_country || ''
+                        };
+                        const hasHotelData = Object.values(hotelValues).some(v => v);
+                        Object.entries(hotelValues).forEach(([id, val]) => {
+                            const el = document.getElementById(id);
+                            if (el) el.value = val;
+                        });
+                        const hotelFieldsWrapper = document.getElementById('service-hotel-fields-wrapper');
+                        const hotelToggleBtn = document.getElementById('btn-toggle-hotel');
+                        if (hotelFieldsWrapper) {
+                            hotelFieldsWrapper.classList.toggle('hidden', !hasHotelData);
+                            hotelFieldsWrapper.style.display = hasHotelData ? 'block' : 'none';
+                        }
+                        if (hotelToggleBtn) hotelToggleBtn.textContent = hasHotelData ? '- Hotel entfernen' : '+ Hotel hinzufügen';
+
                         if (customerSigneeName) customerSigneeName.value = editData.customer_name || '';
                         if (customerSignature) {
                             customerSignature.value = editData.customer_signature || '';
@@ -12062,6 +12443,19 @@
                                 }
                                 if (sigPlaceholder) sigPlaceholder.classList.add('hidden');
                                 if (sigClearBtn) sigClearBtn.classList.remove('hidden');
+                            }
+                        }
+
+                        if (techSigInput) {
+                            techSigInput.value = editData.tech_signature || '';
+                            if (editData.tech_signature) {
+                                if (techSigPreviewImg) {
+                                    techSigPreviewImg.src = editData.tech_signature;
+                                    techSigPreviewImg.classList.remove('hidden');
+                                    techSigPreviewImg.style.display = 'block';
+                                }
+                                if (techSigPlaceholder) techSigPlaceholder.classList.add('hidden');
+                                if (techSigClearBtn) techSigClearBtn.classList.remove('hidden');
                             }
                         }
 
@@ -12185,7 +12579,7 @@
                 }
 
                 if (serviceViewMode === 'board') {
-                    list.innerHTML = entries.map(e => {
+                    const cardsHtml = entries.map(e => {
                         const machines = window.machineList || [];
                         const machine = machines.find(m => m.id === e.machine_id);
                         const machineImgFull = machine ? (machine.image_url || '') : '';
@@ -12320,6 +12714,13 @@
                                 : (e.datum_von ? new Date(e.datum_von).toLocaleDateString('de-DE') : dateStr)}${durationStr}
                                         </div>
 
+                                        <!-- Row 2b: Company Name -->
+                                        ${machine && machine.company ? `
+                                        <div class="service-card-company" style="display: flex; align-items: center; gap: 8px; color: #ffffff; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px; text-align: left; width: 100%; white-space: nowrap; overflow: hidden;">
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.8; flex-shrink: 0;"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path></svg>
+                                            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${machine.company}</span>
+                                        </div>` : ''}
+
                                         <!-- Row 3: Main Title: Machine Name (Manufacturer + Type) -->
                                         <div style="min-width: 0; text-align: left; width: 100%;">
                                             <h2 style="margin: 0; font-size: clamp(0.95rem, 3.2vw, 1.75rem); color: var(--color-primary-green); font-weight: 900; line-height: 1.2; font-family: 'Outfit', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -12394,10 +12795,33 @@
                                     </div>
                                 </div>
                                 `;
-                    }).join('');
+                    });
+
+                    const activeCards = [];
+                    const doneCards = [];
+                    entries.forEach((e, i) => {
+                        if (e.pdf_url) doneCards.push(cardsHtml[i]);
+                        else activeCards.push(cardsHtml[i]);
+                    });
+
+                    let boardHtml = activeCards.join('');
+                    if (doneCards.length > 0) {
+                        boardHtml += `
+                            <div style="grid-column: 1 / -1; margin-top: 1rem;">
+                                <div onclick="window.toggleServiceErledigtGroup()" style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 14px 22px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
+                                    <svg id="service-erledigt-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.25s; color: rgba(255,255,255,0.6); transform: rotate(180deg);"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                    <span style="font-weight: 800; font-size: 1rem; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 0.5px;">Erledigt (${doneCards.length})</span>
+                                </div>
+                                <div id="service-erledigt-group" class="card-grid" style="margin-top: 1rem;">
+                                    ${doneCards.join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    list.innerHTML = boardHtml;
                 } else {
                     // List View
-                    tbody.innerHTML = entries.map(e => {
+                    const rowsHtml = entries.map(e => {
                         const machines = window.machineList || [];
                         const machine = machines.find(m => m.id === e.machine_id);
                         const dateObj = new Date(e.date);
@@ -12499,10 +12923,50 @@
                                 </tr>
                             `;
 
-                    }).join('');
+                    });
+
+                    const activeRows = [];
+                    const doneRows = [];
+                    entries.forEach((e, i) => {
+                        if (e.pdf_url) doneRows.push(rowsHtml[i]);
+                        else activeRows.push(rowsHtml[i]);
+                    });
+
+                    let listHtml = activeRows.join('');
+                    if (doneRows.length > 0) {
+                        listHtml += `
+                            <tr onclick="window.toggleServiceErledigtGroup()" style="cursor: pointer; background: rgba(255,255,255,0.04); border-radius: 16px;">
+                                <td colspan="5" style="text-align: center; padding: 14px;">
+                                    <span style="display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1rem; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 0.5px;">
+                                        <svg id="service-erledigt-chevron-list" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.25s; color: rgba(255,255,255,0.6); transform: rotate(180deg);"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                        Erledigt (${doneRows.length})
+                                    </span>
+                                </td>
+                            </tr>
+                        `;
+                        listHtml += doneRows.map(r => r.replace('<tr ', '<tr class="service-erledigt-row" ')).join('');
+                    }
+                    tbody.innerHTML = listHtml;
                 }
             } catch (error) {
                 console.error('Error rendering service entries:', error);
+            }
+        };
+
+        window.toggleServiceErledigtGroup = function() {
+            const group = document.getElementById('service-erledigt-group');
+            const chevron = document.getElementById('service-erledigt-chevron');
+            if (group) {
+                group.classList.toggle('hidden');
+                if (chevron) chevron.style.transform = group.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+            }
+
+            const listRows = document.querySelectorAll('.service-erledigt-row');
+            const chevronList = document.getElementById('service-erledigt-chevron-list');
+            if (listRows.length > 0) {
+                const expand = listRows[0].classList.contains('hidden');
+                listRows.forEach(row => row.classList.toggle('hidden', !expand));
+                if (chevronList) chevronList.style.transform = expand ? 'rotate(180deg)' : 'rotate(0deg)';
             }
         };
 
@@ -13000,6 +13464,62 @@
             }
         };
 
+        window.computeWorkLogDuration = function(row) {
+            const zeitRaw = (row.zeit || row.arbeitszeit || row.fahrzeit || '').trim();
+            const timeParts = zeitRaw.split(' - ');
+            let totalH = 0;
+            if (timeParts.length === 2) {
+                const parseTime = (t) => {
+                    const m = t.trim().match(/^(\d{1,2}):(\d{2})/);
+                    return m ? parseInt(m[1]) + parseInt(m[2]) / 60 : null;
+                };
+                const vonH = parseTime(timeParts[0]);
+                const bisH = parseTime(timeParts[1]);
+                if (vonH !== null && bisH !== null) {
+                    totalH = bisH - vonH;
+                    if (totalH < 0) totalH += 24;
+                }
+            }
+
+            let pauseH = 0;
+            const pauseRaw = (row.pause || '').trim().toLowerCase().replace(',', '.');
+            const pauseMatch = pauseRaw.match(/([\d.]+)/);
+            if (pauseMatch) {
+                const val = parseFloat(pauseMatch[1]);
+                if (!isNaN(val)) {
+                    pauseH = (pauseRaw.includes('std') || pauseRaw.includes('h')) ? val : val / 60;
+                }
+            }
+
+            return { total: totalH, pause: pauseH, net: totalH - pauseH };
+        };
+
+        window.formatHoursDecimal = function(h) {
+            let str = (Math.round(h * 100) / 100).toFixed(2);
+            if (str.endsWith('0')) str = str.slice(0, -1);
+            return str.replace('.', ',');
+        };
+
+        window.sortWorkLogTable = function() {
+            const tbody = document.getElementById('service-work-log-table-body');
+            if (!tbody) return;
+            const typOrder = { 'Anfahrt': 0, 'Arbeitszeit': 1, 'Abfahrt': 2 };
+            const rows = Array.from(tbody.children);
+            rows.sort((a, b) => {
+                const datumA = a.querySelector('.log-datum')?.value || '';
+                const datumB = b.querySelector('.log-datum')?.value || '';
+                if (datumA !== datumB) {
+                    if (!datumA) return 1;
+                    if (!datumB) return -1;
+                    return datumA < datumB ? -1 : 1;
+                }
+                const typA = typOrder[a.querySelector('.log-typ')?.value] ?? 1;
+                const typB = typOrder[b.querySelector('.log-typ')?.value] ?? 1;
+                return typA - typB;
+            });
+            rows.forEach(row => tbody.appendChild(row));
+        };
+
         window.addWorkLogTableRow = function(data = null, forceTyp = null) {
             const tbody = document.getElementById('service-work-log-table-body');
             if (!tbody) return;
@@ -13071,7 +13591,7 @@
             const kmPlaceholder = typ === 'Arbeitszeit' ? '/' : 'z.B. 45';
 
             tr.innerHTML = `
-                <td style="padding: 6px;"><input type="date" class="glass-form-input log-datum" value="${datum}" style="padding: 6px 10px; height: 36px; border-radius: 8px; font-size: 0.85rem; width: 100%;"></td>
+                <td style="padding: 6px;"><input type="date" class="glass-form-input log-datum" value="${datum}" style="padding: 6px 10px; height: 36px; border-radius: 8px; font-size: 0.85rem; width: 100%;" onchange="window.sortWorkLogTable()"></td>
                 <td style="padding: 6px;">
                     <input type="text" class="glass-form-input log-typ" value="${typ}" readonly style="padding: 6px 10px; height: 36px; border-radius: 8px; font-size: 0.85rem; width: 100%; cursor: default; color: rgba(255,255,255,0.8); background: rgba(0,0,0,0.1);">
                 </td>
@@ -13090,26 +13610,8 @@
                     </button>
                 </td>
             `;
-            if (typ === 'Anfahrt') {
-                tbody.insertBefore(tr, tbody.firstChild);
-            } else if (typ === 'Abfahrt') {
-                tbody.appendChild(tr);
-            } else {
-                let abfahrtRow = null;
-                const rows = Array.from(tbody.children);
-                for (let i = 0; i < rows.length; i++) {
-                    const rowTyp = rows[i].querySelector('.log-typ')?.value;
-                    if (rowTyp === 'Abfahrt') {
-                        abfahrtRow = rows[i];
-                        break;
-                    }
-                }
-                if (abfahrtRow) {
-                    tbody.insertBefore(tr, abfahrtRow);
-                } else {
-                    tbody.appendChild(tr);
-                }
-            }
+            tbody.appendChild(tr);
+            window.sortWorkLogTable();
         };
         
         window.getWorkLogTableData = function() {
@@ -13137,6 +13639,127 @@
                 }
             });
             return data;
+        };
+
+        window.showWorkLogSummary = function() {
+            const data = typeof window.getWorkLogTableData === 'function' ? window.getWorkLogTableData() : [];
+            const fmt = window.formatHoursDecimal;
+            const days = {};
+            data.forEach(row => {
+                const datum = row.datum || '';
+                if (!days[datum]) days[datum] = { anfahrt: 0, arbeitszeit: 0, abfahrt: 0, pause: 0, pauseAnfahrt: 0, pauseArbeitszeit: 0, pauseAbfahrt: 0 };
+                const { net, pause } = window.computeWorkLogDuration(row);
+                if (row.typ === 'Anfahrt') { days[datum].anfahrt += net; days[datum].pauseAnfahrt += pause; }
+                else if (row.typ === 'Abfahrt') { days[datum].abfahrt += net; days[datum].pauseAbfahrt += pause; }
+                else { days[datum].arbeitszeit += net; days[datum].pauseArbeitszeit += pause; }
+                days[datum].pause += pause;
+            });
+
+            const MAX_REGULAR_HOURS = 8;
+            const sortedDates = Object.keys(days).sort();
+            let html = '';
+            let grandTotal = 0;
+            let totalOvertime = 0;
+            let totalFahrzeit = 0;
+            let totalLegalPause = 0;
+            let totalPause = 0;
+
+            sortedDates.forEach(datum => {
+                const d = days[datum];
+                const dayTotal = d.anfahrt + d.arbeitszeit + d.abfahrt;
+                grandTotal += dayTotal;
+                totalFahrzeit += d.anfahrt + d.abfahrt;
+
+                let requiredPause = 0;
+                let legalPauseSuffix = '';
+                if (dayTotal > 9) {
+                    requiredPause = 0.75;
+                    legalPauseSuffix = ' (mehr als 9 Std.)';
+                } else if (dayTotal > 6) {
+                    requiredPause = 0.5;
+                    legalPauseSuffix = ' (mehr als 6 Std.)';
+                }
+                const legalPause = Math.max(d.pause, requiredPause);
+
+                const effectiveNet = dayTotal - (legalPause - d.pause);
+                const overtime = Math.max(0, effectiveNet - MAX_REGULAR_HOURS);
+                totalOvertime += overtime;
+                totalLegalPause += legalPause;
+                totalPause += d.pause;
+
+                let dateLabel = 'Ohne Datum';
+                if (datum) {
+                    const parts = datum.split('-');
+                    if (parts.length === 3) dateLabel = `${parts[2]}.${parts[1]}.${parts[0]}`;
+                }
+
+                html += `
+                    <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 14px;">
+                        <div style="font-weight: 700; margin-bottom: 6px;">${dateLabel}</div>
+                        <div style="font-size: 0.85rem; color: rgba(255,255,255,0.75); display: flex; flex-direction: column; gap: 2px;">
+                            <span><span style="font-weight: 700;">Anfahrt: ${fmt(d.anfahrt)} Std.</span> (Pause Anfahrt: ${fmt(d.pauseAnfahrt)} Std.)</span>
+                            <span><span style="font-weight: 700;">Arbeitszeit: ${fmt(d.arbeitszeit)} Std.</span> (Pause Arbeitszeit: ${fmt(d.pauseArbeitszeit)} Std.)</span>
+                            <span><span style="font-weight: 700;">Abfahrt: ${fmt(d.abfahrt)} Std.</span> (Pause Abfahrt: ${fmt(d.pauseAbfahrt)} Std.)</span>
+                            <span style="font-size: 1rem; font-weight: 700;"><span style="color: #fff;">Gesamt: ${fmt(dayTotal + d.pause)} Std.</span> (Pause gesamt: ${fmt(d.pause)} Std.)</span>
+                            <span style="font-size: 1rem; font-weight: 700; color: #3b82f6;">Gesetzliche Pause${legalPauseSuffix}: ${fmt(legalPause)} Std.</span>
+                            <span style="font-size: 1rem; font-weight: 700; color: #ef4444;">Überstunden, ab 9. Std. abzgl. gesetzlichen Pausen: ${fmt(overtime)} Std.</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            if (sortedDates.length === 0) {
+                html = '<div style="color: rgba(255,255,255,0.5); text-align: center; padding: 1rem;">Keine Einträge vorhanden.</div>';
+            } else {
+                html += `
+                    <div style="border-top: 1.5px solid rgba(255,255,255,0.15); margin-top: 4px; padding-top: 10px; display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 800; font-size: 1.05rem;">Gesamte Arbeitszeit alle Tage</span>
+                        <span style="font-weight: 800; font-size: 1.05rem; color: #fff;">${fmt(grandTotal + totalPause)} Std.</span>
+                    </div>
+                    <div style="margin-top: 8px; display: flex; flex-direction: column; gap: 4px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; color: var(--color-primary-green);">Gesamtfahrzeit</span>
+                            <span style="font-weight: 700; color: var(--color-primary-green);">${fmt(totalFahrzeit)} Std.</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; color: var(--color-primary-green);">Überstunden (abzgl. gesetzlichen Pausen, ab 9 Std.)</span>
+                            <span style="font-weight: 700; color: var(--color-primary-green);">${fmt(totalOvertime)} Std.</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; color: var(--color-primary-green);">Servicestunden</span>
+                            <span style="font-weight: 700; color: var(--color-primary-green);">${fmt((grandTotal + totalPause) - totalOvertime - totalFahrzeit)} Std.</span>
+                        </div>
+                        <div style="text-align: center; color: rgba(255,255,255,0.6); font-size: 0.85rem; margin-top: 4px;">
+                            (Gesamt gesetzliche Pause: ${fmt(totalLegalPause)} Std.)
+                        </div>
+                        <div style="text-align: center; color: rgba(255,255,255,0.6); font-size: 0.85rem;">
+                            (Gesamt gesetzliche Arbeitszeit: ${fmt(sortedDates.length * MAX_REGULAR_HOURS)} Std.)
+                        </div>
+                    </div>
+                `;
+            }
+
+            const content = document.getElementById('work-log-summary-content');
+            if (content) content.innerHTML = html;
+
+            const modal = document.getElementById('work-log-summary-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.style.display = 'flex';
+                requestAnimationFrame(() => {
+                    modal.classList.add('show');
+                });
+            }
+        };
+
+        window.closeWorkLogSummary = function() {
+            const modal = document.getElementById('work-log-summary-modal');
+            if (modal) {
+                modal.classList.remove('show');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 300);
+            }
         };
 
         window.addTasksTableRow = function(data = null) {
@@ -13604,7 +14227,26 @@
                         if (locCountryVal) locationLines.push(locCountryVal);
                     }
                 }
-                
+
+                // Ansprechpartner / Telefon
+                const contactPersonVal = document.getElementById('service-contact-person')?.value.trim() || '';
+
+                // Hotel / Unterkunft
+                const hotelCompanyVal = document.getElementById('service-hotel-company')?.value.trim() || '';
+                const hotelStreetVal = document.getElementById('service-hotel-street')?.value.trim() || '';
+                const hotelZipVal = document.getElementById('service-hotel-zip')?.value.trim() || '';
+                const hotelCityVal = document.getElementById('service-hotel-city')?.value.trim() || '';
+                const hotelCountryVal = document.getElementById('service-hotel-country')?.value.trim() || '';
+
+                let hotelLines = [];
+                if (hotelCompanyVal) hotelLines.push(hotelCompanyVal);
+                if (hotelStreetVal) hotelLines.push(hotelStreetVal);
+                if (hotelZipVal || hotelCityVal) {
+                    hotelLines.push([hotelZipVal, hotelCityVal].filter(Boolean).join(' '));
+                }
+                if (hotelCountryVal) hotelLines.push(hotelCountryVal);
+                const hasHotel = hotelLines.length > 0;
+
                 const serviceYearDigitVal = document.getElementById('service-workshop-year-digit')?.value.trim() || '';
                 const serviceSuffixVal = document.getElementById('service-workshop-order-suffix')?.value.trim() || '';
                 const workshopOrderNumberVal = serviceSuffixVal ? `202${serviceYearDigitVal}-40${serviceSuffixVal.padStart(3, '0')}` : '';
@@ -13624,13 +14266,24 @@
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(10);
                 doc.setTextColor(0, 0, 0);
-                doc.text('Datum: ', 160, 36);
                 const dateW = doc.getTextWidth('Datum: ');
+                doc.text('Datum: ', 160, 36);
                 doc.setFont('helvetica', 'normal');
-                const formattedDate = dateStart ? new Date(dateStart).toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'}) : new Date().toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'});
-                doc.text(formattedDate, 160 + dateW, 36);
+                const formattedDateStart = dateStart ? new Date(dateStart).toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'}) : new Date().toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'});
+                const formattedDateEnd = dateEnd ? new Date(dateEnd).toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'}) : '';
+                doc.text(formattedDateStart, 160 + dateW, 36);
+
+                if (formattedDateEnd && formattedDateEnd !== formattedDateStart) {
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('Bis: ', 160, 43);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(formattedDateEnd, 160 + dateW, 43);
+                }
                 
                 // Content area start
+                // Fester oberer/unterer Rand für alle Seiten, damit der Druck nicht in Kopf- oder Fußbereich (Logo) der Hintergrundvorlage hineinläuft
+                const PAGE_CONTENT_TOP = 30;
+                const PAGE_CONTENT_BOTTOM = 270;
                 let currentY = 52;
                 
                 // Draw Betreiber/Rechnungsadresse
@@ -13644,9 +14297,25 @@
                     doc.text(line, 20, leftY);
                     leftY += 5;
                 });
-                
+
+                if (contactPersonVal) {
+                    leftY += 2;
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('Ansprechpartner / Telefon: ', 20, leftY);
+                    const cpW = doc.getTextWidth('Ansprechpartner / Telefon: ');
+                    doc.setFont('helvetica', 'normal');
+                    doc.text(contactPersonVal, 20 + cpW, leftY);
+                    leftY += 5;
+                }
+
+                // Wenn ein abweichender Maschinenstandort vorhanden ist, wandert das Hotel
+                // auf die rechte Seite, mit Überschrift auf gleicher Höhe wie "Maschinenstandort:"
+                const hotelOnRight = hasDifferentLocation && hasHotel;
+                let maschinenstandortY = null;
+
                 if (hasDifferentLocation) {
                     leftY += 2;
+                    maschinenstandortY = leftY;
                     doc.setFont('helvetica', 'bold');
                     doc.text('Maschinenstandort:', 20, leftY);
                     doc.setFont('helvetica', 'normal');
@@ -13656,7 +14325,19 @@
                         leftY += 5;
                     });
                 }
-                
+
+                if (hasHotel && !hotelOnRight) {
+                    leftY += 2;
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('Hotel / Unterkunft:', 20, leftY);
+                    doc.setFont('helvetica', 'normal');
+                    leftY += 6;
+                    hotelLines.forEach(line => {
+                        doc.text(line, 20, leftY);
+                        leftY += 5;
+                    });
+                }
+
                 // Draw Machine Details on the right
                 let rightY = currentY;
                 doc.setFont('helvetica', 'bold');
@@ -13689,14 +14370,29 @@
                     operatingHoursVal = `${operatingHoursVal} (h)`;
                 }
                 doc.text(String(operatingHoursVal), 120 + bhW, rightY);
-                
-                currentY = Math.max(leftY, rightY + 5) + 6;
+
+                let rightBottomY = rightY + 5;
+
+                if (hotelOnRight) {
+                    let hotelY = maschinenstandortY;
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('Hotel / Unterkunft:', 120, hotelY);
+                    doc.setFont('helvetica', 'normal');
+                    hotelY += 6;
+                    hotelLines.forEach(line => {
+                        doc.text(line, 120, hotelY);
+                        hotelY += 5;
+                    });
+                    rightBottomY = Math.max(rightBottomY, hotelY);
+                }
+
+                currentY = Math.max(leftY, rightBottomY) + 6;
                 
                 // Section 3: Beschreibung (nur wenn vorhanden)
                 if (description && description.trim() !== '') {
-                    if (currentY > 250) {
+                    if (currentY > PAGE_CONTENT_BOTTOM) {
                         doc.addPage();
-                        currentY = 30;
+                        currentY = PAGE_CONTENT_TOP;
                     }
                     doc.setFont('helvetica', 'bold');
                     doc.setFontSize(12);
@@ -13715,13 +14411,30 @@
                 // Work Log Table
                 const workLogData = typeof window.getWorkLogTableData === 'function' ? window.getWorkLogTableData() : [];
                 if (workLogData && workLogData.length > 0) {
-                    if (currentY > 210) {
+                    if (currentY > PAGE_CONTENT_BOTTOM) {
                         doc.addPage();
-                        currentY = 30;
+                        currentY = PAGE_CONTENT_TOP;
                     }
                     // Header removed
                     
                     const headers = [['Datum', 'Typ', 'Pause', 'Fahr.- / Arbeitszeit', 'Kilometer']];
+
+                    // Pro Tag die Gesamt-Nettozeit ermitteln, um die gesetzliche Pause zu bestimmen
+                    const dateGroups = {};
+                    workLogData.forEach(row => {
+                        const key = row.datum || '';
+                        if (!dateGroups[key]) dateGroups[key] = { count: 0, dayTotal: 0 };
+                        const { net } = window.computeWorkLogDuration(row);
+                        dateGroups[key].count += 1;
+                        dateGroups[key].dayTotal += net;
+                    });
+                    const getLegalPauseText = (dayTotal) => {
+                        if (dayTotal > 9) return '45 min';
+                        if (dayTotal > 6) return '30 min';
+                        return '/';
+                    };
+
+                    let lastDatum = null;
                     const body = workLogData.map(row => {
                         let formattedDate = row.datum;
                         if (row.datum) {
@@ -13730,21 +14443,15 @@
                                 if (parts.length === 3) formattedDate = `${parts[2]}.${parts[1]}.${parts[0]}`;
                             } catch(e){}
                         }
-                        
+
                         let typText = row.typ || 'Arbeitszeit';
-                        
+
                         let zeitRaw = (row.zeit || row.arbeitszeit || row.fahrzeit || '').trim();
                         let zeitText = '';
                         if (zeitRaw) {
                             zeitText = zeitRaw.toLowerCase().includes('uhr') ? zeitRaw : `${zeitRaw} Uhr`;
                         }
-                        
-                        let pauseVal = (row.pause || '').trim();
-                        let pauseText = '/';
-                        if (pauseVal && pauseVal !== '/') {
-                            pauseText = pauseVal.toLowerCase().includes('min') ? pauseVal : `${pauseVal} min`;
-                        }
-                        
+
                         let kmVal = '/';
                         if (row.typ !== 'Arbeitszeit') {
                             let kmRaw = (row.kilometer || '').trim();
@@ -13754,31 +14461,37 @@
                                 kmVal = kmRaw || '';
                             }
                         }
-                        
-                        return [
-                            formattedDate || '',
-                            typText,
-                            pauseText,
-                            zeitText,
-                            kmVal
-                        ];
+
+                        const datum = row.datum || '';
+                        const rowArr = [formattedDate || '', typText];
+                        if (datum !== lastDatum) {
+                            const group = dateGroups[datum];
+                            rowArr.push({ content: getLegalPauseText(group.dayTotal), rowSpan: group.count, styles: { halign: 'center', valign: 'middle' } });
+                        }
+                        lastDatum = datum;
+                        rowArr.push(zeitText, kmVal);
+                        return rowArr;
                     });
                     
                     doc.autoTable({
                         startY: currentY,
                         head: headers,
                         body: body,
-                        margin: { left: 20, right: 20 },
+                        margin: { top: PAGE_CONTENT_TOP, bottom: 297 - PAGE_CONTENT_BOTTOM, left: 20, right: 20 },
                         theme: 'grid',
                         styles: {
                             font: 'helvetica',
                             fontSize: 9,
-                            cellPadding: 4
+                            cellPadding: 4,
+                            halign: 'center',
+                            valign: 'middle'
                         },
                         headStyles: {
                             fillColor: [30, 41, 59],
                             textColor: [255, 255, 255],
-                            fontStyle: 'bold'
+                            fontStyle: 'bold',
+                            halign: 'center',
+                            valign: 'middle'
                         },
                         alternateRowStyles: {
                             fillColor: [248, 250, 252]
@@ -13786,9 +14499,9 @@
                         columnStyles: {
                             0: { cellWidth: 25 },
                             1: { cellWidth: 30 },
-                            2: { cellWidth: 25, halign: 'center' },
-                            3: { cellWidth: 50, halign: 'center' },
-                            4: { cellWidth: 40, halign: 'center' }
+                            2: { cellWidth: 25 },
+                            3: { cellWidth: 50, fontStyle: 'bold' },
+                            4: { cellWidth: 40 }
                         }
                     });
                     
@@ -13798,9 +14511,9 @@
                 // Arbeiten Table
                 const tasksData = typeof window.getTasksTableData === 'function' ? window.getTasksTableData() : [];
                 if (tasksData && tasksData.length > 0) {
-                    if (currentY > 210) {
+                    if (currentY > PAGE_CONTENT_BOTTOM) {
                         doc.addPage();
-                        currentY = 30;
+                        currentY = PAGE_CONTENT_TOP;
                     }
                     doc.setFont('helvetica', 'bold');
                     doc.setFontSize(12);
@@ -13818,7 +14531,7 @@
                         startY: currentY,
                         head: taskHeaders,
                         body: taskBody,
-                        margin: { left: 20, right: 20 },
+                        margin: { top: PAGE_CONTENT_TOP, bottom: 297 - PAGE_CONTENT_BOTTOM, left: 20, right: 20 },
                         theme: 'grid',
                         styles: {
                             font: 'helvetica',
@@ -13851,8 +14564,10 @@
                                 if (isCompleted) {
                                     doc.setDrawColor(30, 41, 59); // matching header / text color
                                     doc.setLineWidth(0.75);
+                                    doc.setLineCap('round');
                                     doc.line(x + 0.8, y + 2.3, x + 2, y + 3.5);
                                     doc.line(x + 2, y + 3.5, x + 3.8, y + 1.2);
+                                    doc.setLineCap('butt');
                                 }
                             }
                         }
@@ -13864,9 +14579,9 @@
                 // Materialien Table
                 const materialsData = typeof window.getMaterialsTableData === 'function' ? window.getMaterialsTableData() : [];
                 if (materialsData && materialsData.length > 0) {
-                    if (currentY > 210) {
+                    if (currentY > PAGE_CONTENT_BOTTOM) {
                         doc.addPage();
-                        currentY = 30;
+                        currentY = PAGE_CONTENT_TOP;
                     }
                     doc.setFont('helvetica', 'bold');
                     doc.setFontSize(12);
@@ -13885,7 +14600,7 @@
                         startY: currentY,
                         head: matHeaders,
                         body: matBody,
-                        margin: { left: 20, right: 20 },
+                        margin: { top: PAGE_CONTENT_TOP, bottom: 297 - PAGE_CONTENT_BOTTOM, left: 20, right: 20 },
                         theme: 'grid',
                         styles: {
                             font: 'helvetica',
@@ -13895,7 +14610,8 @@
                         headStyles: {
                             fillColor: [30, 41, 59],
                             textColor: [255, 255, 255],
-                            fontStyle: 'bold'
+                            fontStyle: 'bold',
+                            halign: 'center'
                         },
                         alternateRowStyles: {
                             fillColor: [248, 250, 252]
@@ -13914,11 +14630,11 @@
                 const statusRepairedChecked = document.getElementById('service-status-repaired')?.checked || false;
                 const statusRepairedEnChecked = document.getElementById('service-status-repaired-en')?.checked || false;
                 
-                if (currentY > 230) {
+                if (currentY + 22 > PAGE_CONTENT_BOTTOM) {
                     doc.addPage();
-                    currentY = 30;
+                    currentY = PAGE_CONTENT_TOP;
                 }
-                
+
                 // Draw checkboxes
                 doc.setDrawColor(100, 116, 139);
                 doc.setLineWidth(0.4);
@@ -13927,8 +14643,10 @@
                 doc.rect(20, currentY, 4, 4);
                 if (statusRepairedChecked) {
                     // Draw checkmark
+                    doc.setLineCap('round');
                     doc.line(20.5, currentY + 2, 21.5, currentY + 3.5);
                     doc.line(21.5, currentY + 3.5, 23.5, currentY + 0.5);
+                    doc.setLineCap('butt');
                 }
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(9);
@@ -13941,17 +14659,19 @@
                 doc.rect(20, currentY, 4, 4);
                 if (statusRepairedEnChecked) {
                     // Draw checkmark
+                    doc.setLineCap('round');
                     doc.line(20.5, currentY + 2, 21.5, currentY + 3.5);
                     doc.line(21.5, currentY + 3.5, 23.5, currentY + 0.5);
+                    doc.setLineCap('butt');
                 }
                 doc.text('The a. a. malfunction has been repaired and repair has fully completed.', 28, currentY + 3.2);
                 
                 currentY += 15;
                 
                 // Check page height for signatures
-                if (currentY > 230) {
+                if (currentY + 31 > PAGE_CONTENT_BOTTOM) {
                     doc.addPage();
-                    currentY = 30;
+                    currentY = PAGE_CONTENT_TOP;
                 }
                 
                 // Techniker & Unterschrift
@@ -14054,7 +14774,7 @@
                                 startY: 44,
                                 head: [['Pos', 'Prüfpunkt', 'i.O.', 'Bemerkung / Beanstandung']],
                                 body: checklistBody,
-                                margin: { top: 44, bottom: 45, left: 20, right: 20 },
+                                margin: { top: 44, bottom: 297 - PAGE_CONTENT_BOTTOM, left: 20, right: 20 },
                                 theme: 'grid',
                                 styles: {
                                     font: 'helvetica',
@@ -14065,7 +14785,8 @@
                                 headStyles: {
                                     fillColor: [30, 41, 59],
                                     textColor: [255, 255, 255],
-                                    fontStyle: 'bold'
+                                    fontStyle: 'bold',
+                                    halign: 'center'
                                 },
                                 columnStyles: {
                                     0: { cellWidth: 15 },
@@ -14116,7 +14837,7 @@
                             // General remarks section for UVV
                             let uvvY = doc.lastAutoTable.finalY + 10;
                             // Make sure there's enough space; add page if needed
-                            if (uvvY > 230) { doc.addPage(); uvvY = 20; }
+                            if (uvvY + 27 > PAGE_CONTENT_BOTTOM) { doc.addPage(); uvvY = PAGE_CONTENT_TOP; }
                             
                             doc.setFont('helvetica', 'bold');
                             doc.setFontSize(10);
@@ -14136,7 +14857,7 @@
                             uvvY += 30;
                             
                             // Signature section
-                            if (uvvY > 230) { doc.addPage(); uvvY = 20; }
+                            if (uvvY + 31 > PAGE_CONTENT_BOTTOM) { doc.addPage(); uvvY = PAGE_CONTENT_TOP; }
                             
                             // Technician name line
                             const uvvTechName = (typeof selectedTechs !== 'undefined' ? selectedTechs : []).map(id => {
@@ -14195,7 +14916,7 @@
                                 startY: 44,
                                 head: [['Pos', 'Wartungsarbeit / Prüfpunkt', 'Intervall / Frist', 'Erledigt', 'Bemerkung']],
                                 body: checklistBody,
-                                margin: { top: 44, bottom: 45, left: 20, right: 20 },
+                                margin: { top: 44, bottom: 297 - PAGE_CONTENT_BOTTOM, left: 20, right: 20 },
                                 theme: 'grid',
                                 styles: {
                                     font: 'helvetica',
@@ -14206,7 +14927,8 @@
                                 headStyles: {
                                     fillColor: [30, 41, 59],
                                     textColor: [255, 255, 255],
-                                    fontStyle: 'bold'
+                                    fontStyle: 'bold',
+                                    halign: 'center'
                                 },
                                 columnStyles: {
                                     0: { cellWidth: 15 },
@@ -14261,15 +14983,17 @@
                                         if (rowStatus === 'checked') {
                                             doc.setDrawColor(30, 41, 59);
                                             doc.setLineWidth(0.75);
+                                            doc.setLineCap('round');
                                             doc.line(x + 0.8, y + 2.3, x + 2, y + 3.5);
                                             doc.line(x + 2, y + 3.5, x + 3.8, y + 1.2);
+                                            doc.setLineCap('butt');
                                         }
                                     }
                                     // "Nicht zutreffend": Querstrich über die gesamte Zeile
                                     if (rowStatus === 'na' && data.cell.section === 'body') {
                                         const yMid = data.cell.y + data.cell.height / 2;
                                         doc.setDrawColor(30, 58, 95);
-                                        doc.setLineWidth(0.5);
+                                        doc.setLineWidth(0.3);
                                         doc.line(data.cell.x, yMid, data.cell.x + data.cell.width, yMid);
                                     }
                                 }
@@ -14466,6 +15190,18 @@
         }
     </script>
     <!-- Modal: Service Action Choice (View or Create) - Moved to root for better centering -->
+    <div id="work-log-summary-modal" class="modal-backdrop hidden" style="z-index: 10001;">
+        <div class="modal-content" style="max-width: 700px; width: 90%; padding: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2 style="margin: 0; font-size: 1.3rem;">Stundenübersicht</h2>
+                <button class="btn-close-modal" onclick="window.closeWorkLogSummary()">&times;</button>
+            </div>
+            <div id="work-log-summary-content" style="display: flex; flex-direction: column; gap: 12px; max-height: 75vh; overflow-y: auto;">
+                <!-- Dynamisch befüllt -->
+            </div>
+        </div>
+    </div>
+
     <div id="service-action-modal" class="modal-backdrop hidden">
         <div class="modal-content" style="max-width: 450px; padding: 1.5rem;">
             <h2 style="margin-bottom: 1.25rem; font-size: 1.4rem;">Aktionen für Maschine</h2>
@@ -14664,6 +15400,12 @@
                                 </div>
                             </div>
                             
+                            <!-- Ansprechpartner / Telefon -->
+                            <div style="margin-top: 1rem; padding: 1.25rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
+                                <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Ansprechpartner / Telefon</label>
+                                <input type="text" id="service-contact-person" class="glass-form-input" placeholder="z.B. Herr Mustermann / 0123 456789">
+                            </div>
+
                             <!-- Maschinenstandort Fields -->
                             <div id="service-location-fields-wrapper" class="hidden" style="margin-top: 1rem; padding: 1.25rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
                                 <div style="font-weight: 700; font-size: 0.95rem; color: white; margin-bottom: 0.75rem;">Maschinenstandort (falls abweichend)</div>
@@ -14688,6 +15430,36 @@
                                 <div style="margin-top: 0.75rem;">
                                     <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Land</label>
                                     <input type="text" id="service-location-country" class="glass-form-input" placeholder="Deutschland">
+                                </div>
+                            </div>
+
+                            <!-- Hotel hinzufügen Button -->
+                            <button type="button" id="btn-toggle-hotel" class="btn-secondary" onclick="window.toggleHotelFields()" style="margin-top: 1rem; width: 100%;">+ Hotel hinzufügen</button>
+
+                            <!-- Hotel / Unterkunft Fields -->
+                            <div id="service-hotel-fields-wrapper" class="hidden" style="margin-top: 1rem; padding: 1.25rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
+                                <div style="font-weight: 700; font-size: 0.95rem; color: white; margin-bottom: 0.75rem;">Hotel / Unterkunft</div>
+                                <div style="margin-bottom: 0.75rem;">
+                                    <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Firma / Name (Hotel)</label>
+                                    <input type="text" id="service-hotel-company" class="glass-form-input" placeholder="z.B. Hotel Mustername">
+                                </div>
+                                <div class="responsive-grid-location">
+                                    <div>
+                                        <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Straße & Hausnr.</label>
+                                        <input type="text" id="service-hotel-street" class="glass-form-input" placeholder="Straße & Hausnr.">
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">PLZ</label>
+                                        <input type="text" id="service-hotel-zip" class="glass-form-input" placeholder="PLZ">
+                                    </div>
+                                    <div>
+                                        <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Ort</label>
+                                        <input type="text" id="service-hotel-city" class="glass-form-input" placeholder="Ort">
+                                    </div>
+                                </div>
+                                <div style="margin-top: 0.75rem;">
+                                    <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Land</label>
+                                    <input type="text" id="service-hotel-country" class="glass-form-input" placeholder="Deutschland">
                                 </div>
                             </div>
                         </div>
@@ -14891,7 +15663,10 @@
 
                             <div class="form-section" style="margin-top: 1.5rem; margin-bottom: 1.5rem;">
                                 <label style="display: flex; justify-content: space-between; align-items: center;">
-                                    <span>Arbeitszeit- & Fahrzeit-Protokoll</span>
+                                    <span style="display: flex; align-items: center; gap: 8px;">
+                                        Arbeitszeit- & Fahrzeit-Protokoll
+                                        <button type="button" onclick="window.showWorkLogSummary()" title="Stundenübersicht anzeigen" style="width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.3); background: transparent; color: rgba(255,255,255,0.7); font-size: 0.75rem; font-weight: 700; font-style: italic; font-family: Georgia, serif; line-height: 1; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;">i</button>
+                                    </span>
                                     <div class="btn-row-responsive">
                                         <button type="button" class="btn-secondary" onclick="window.addWorkLogTableRow(null, 'Anfahrt')" style="font-size: 0.8rem; padding: 6px 12px; height: auto; border: 1.5px dashed rgba(255,255,255,0.2);">
                                             ➕ Anfahrt
@@ -15797,11 +16572,11 @@
     <!-- Task Details/Edit Modal -->
     <div id="task-modal" class="modal-backdrop hidden">
         <div class="modal-content glass-card"
-            style="max-width: 900px; position: relative; background: rgba(10,15,30,0.97); backdrop-filter: blur(40px); border: 1px solid rgba(255,255,255,0.1);">
-            <div class="modal-header" style="margin-bottom: 1.5rem; padding-right: 50px;">
-                <h2 id="task-modal-title">Aufgabe bearbeiten</h2>
+            style="max-width: 900px; position: relative; background: rgba(10,15,30,0.97); backdrop-filter: blur(40px); border: 1px solid rgba(255,255,255,0.1); padding-top: 1.25rem;">
+            <div class="modal-header" style="margin-bottom: 0.5rem; display: flex; justify-content: flex-start; align-items: flex-start;">
+                <h2 id="task-modal-title" style="margin: 0; font-size: 1.3rem;">Aufgabe bearbeiten</h2>
+                <button class="btn-close-modal task-modal-close" onclick="closeTaskModal()" style="margin: -0.75rem -0.75rem 0 auto; font-size: 1.8rem;">&times;</button>
             </div>
-            <button class="btn-close-modal task-modal-close" onclick="closeTaskModal()">&times;</button>
             <div class="modal-body">
                 <!-- Optimized Multi-column grid -->
                 <div style="display: grid; grid-template-columns: 1fr; gap: 20px; align-items: start;">
@@ -15818,6 +16593,17 @@
                                         border-radius:12px; max-height:250px; overflow-y:auto; margin-top:4px;
                                         box-shadow: 0 12px 40px rgba(0,0,0,0.6);">
                         </div>
+
+                        <!-- Werkstattauftrag ohne Maschinenbezug -->
+                        <div id="task-workshop-order-wrapper" style="display:none; margin-top: 12px;">
+                            <label style="color: #60a5fa; font-weight: 800; display: block; margin-bottom: 6px;">Werkstattauftragsnummer</label>
+                            <div class="glass-form-input" style="display: flex; align-items: center; gap: 4px; padding: 0.5rem 1rem; border-radius: 12px; background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.1); width: 100%; box-sizing: border-box;">
+                                <span style="color: white; font-weight: 600; font-size: 1.1rem; user-select: none;">202</span>
+                                <input type="text" id="task-workshop-year-digit" maxlength="1" style="background: transparent; border: none; outline: none; color: white; font-size: 1.1rem; font-weight: 600; width: 15px; padding: 0; text-align: center;" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                                <span style="color: white; font-weight: 600; font-size: 1.1rem; user-select: none;">-40</span>
+                                <input type="text" id="task-workshop-order-suffix" placeholder="000" maxlength="3" style="background: transparent; border: none; outline: none; color: white; font-size: 1.1rem; font-weight: 600; width: 100%; padding: 0;" oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Row 2: Title & Vorlagen -->
@@ -15828,12 +16614,6 @@
                                 style="font-size: 1.1rem; font-weight: 700;">
                         </div>
 
-                        <div class="form-group" style="margin-bottom: 1.5rem;">
-                            <label>Beschreibung</label>
-                            <textarea id="task-description" class="glass-input" rows="3"
-                                placeholder="Details zur Aufgabe..." style="line-height: 1.6;"></textarea>
-                        </div>
-                        
                         <!-- Zuständig Row -->
                         <div class="form-group" style="margin-bottom: 1.5rem;">
                             <label>Zuständig</label>
@@ -15870,6 +16650,15 @@
                                 + NEUE ÜBERGRUPPE HINZUFÜGEN
                             </button>
                         </div>
+
+                        <!-- Beschreibung: optionales, automatisch wachsendes Feld -->
+                        <div class="form-group" style="margin-top: 20px; margin-bottom: 0;">
+                            <label>Beschreibung (optional)</label>
+                            <textarea id="task-description" class="glass-input" rows="1"
+                                placeholder="Details zur Aufgabe..."
+                                style="line-height: 1.5; resize: none; overflow: hidden; min-height: 44px;"
+                                oninput="this.style.height='auto'; this.style.height=(this.scrollHeight)+'px';"></textarea>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -15903,7 +16692,7 @@
     </main>
     </div><!-- End main-wrapper -->
 
-    <script src="tasks.js?v=2"></script>
+    <script src="tasks.js?v=3"></script>
     <script src="task_templates.js?v=2"></script>
     <script>
         window.addEventListener('load', () => {
@@ -17230,41 +18019,44 @@
 
     <!-- EMAIL IMPORT MODAL -->
     <div id="email-import-modal" class="modal-new hidden" style="z-index: 10000; display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);">
-        <div class="modal-content glass-card" style="max-width: 750px; width: 90%; max-height: 90vh; overflow-y: auto !important; padding: 2.5rem; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <div class="modal-content glass-card" style="max-width: 750px; width: 90%; max-height: 90vh; overflow-y: auto !important; padding: 2rem; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
                 <h2 style="margin: 0; color: #fff; font-size: 1.8rem; font-weight: 800;">E-Mail / Vorgang importieren</h2>
                 <button class="btn-close" onclick="window.closeEmailImportModal()" style="background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer;">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
-            
-            <div class="form-group" style="margin-bottom: 1rem;">
+
+            <div class="form-group" style="margin-bottom: 0.75rem;">
                 <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Outlook-E-Mail (.msg) importieren</label>
                 <div id="email-msg-dropzone"
                     onclick="document.getElementById('email-msg-file-input').click()"
                     ondragover="event.preventDefault(); this.style.borderColor='var(--color-primary-green)'; this.style.background='rgba(52,211,153,0.06)';"
                     ondragleave="this.style.borderColor='rgba(255,255,255,0.15)'; this.style.background='transparent';"
                     ondrop="window.handleMsgFileDrop(event)"
-                    style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 18px; text-align: center; cursor: pointer; color: rgba(255,255,255,0.45); font-size: 0.85rem; font-weight: 600; transition: border-color 0.2s, background 0.2s;">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: 0 auto 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 30px; text-align: center; cursor: pointer; color: rgba(255,255,255,0.45); font-size: 0.95rem; font-weight: 600; transition: border-color 0.2s, background 0.2s;">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: 0 auto 10px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                     .msg-Datei hierher ziehen oder klicken
                 </div>
                 <input type="file" id="email-msg-file-input" accept=".msg" style="display:none;" onchange="window.handleMsgFileSelect(event)">
             </div>
 
-            <div class="form-group" style="margin-bottom: 1.5rem;">
-                <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Oder E-Mail-Text einfügen (Strg + V)</label>
-                <textarea id="email-paste-area" class="glass-input" style="height: 120px; resize: none; padding-top: 15px; border-color: rgba(52, 211, 153, 0.4);" placeholder="Kopieren Sie den gesamten Inhalt der E-Mail aus Outlook (Strg+A, Strg+C) und fügen Sie ihn hier ein..."></textarea>
-            </div>
-
             <form id="email-import-form" onsubmit="window.saveImportedEmail(event)">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 1.5rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 0.75rem;">
                     <div class="form-group">
                         <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Vorgangs-Typ</label>
                         <select id="email-type-select" class="glass-input" style="appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 15px center;">
                             <option value="email_incoming">E-Mail Eingang</option>
                             <option value="email_outgoing">E-Mail Ausgang</option>
                             <option value="note">Interne Notiz</option>
+                            <option value="call">Telefonat</option>
+                            <option value="appointment">Termin / Besuch</option>
+                            <option value="repair">Reparatur</option>
+                            <option value="maintenance">Wartung</option>
+                            <option value="offer">Angebot</option>
+                            <option value="order">Bestellung</option>
+                            <option value="complaint">Reklamation</option>
+                            <option value="other">Sonstiges</option>
                             <option value="manual">Manuell</option>
                         </select>
                     </div>
@@ -17274,12 +18066,22 @@
                     </div>
                 </div>
 
-                <div class="form-group" style="margin-bottom: 1.5rem;">
+                <div class="form-group" style="margin-bottom: 0.75rem;">
                     <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Betreff / Titel</label>
                     <input type="text" id="email-title-input" class="glass-input" required placeholder="Betreff der E-Mail...">
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 1.5rem;">
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Bemerkung / Beschreibung</label>
+                    <textarea id="email-remark-input" class="glass-input" style="height: 80px; resize: vertical; padding-top: 15px;" placeholder="Interne Bemerkung..."></textarea>
+                </div>
+
+                <div class="form-group" id="email-body-group" style="margin-bottom: 0.75rem; display: none;">
+                    <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">E-Mail-Text</label>
+                    <textarea id="email-body-input" class="glass-input" style="height: 100px; resize: vertical; padding-top: 15px;" placeholder="Textinhalt der E-Mail..."></textarea>
+                </div>
+
+                <div id="email-sender-recipient-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 0.75rem;">
                     <div class="form-group" style="position: relative;">
                         <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Absender (Von)</label>
                         <input type="text" id="email-sender-input" class="glass-input" placeholder="Name oder E-Mail...">
@@ -17292,10 +18094,11 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 15px; margin-bottom: 1.5rem;">
+                <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; margin-bottom: 0.75rem;">
                     <div class="form-group" style="position: relative;">
-                        <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Verknüpfte Maschine</label>
+                        <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Maschine / Werkstattauftrag</label>
                         <input type="hidden" id="email-machine-select" value="">
+                        <input type="hidden" id="email-workshop-order-select" value="">
                         <input type="text" id="email-machine-search" class="glass-input" placeholder="Maschine suchen..." autocomplete="off"
                             oninput="window.filterProcessMachineDropdown('email', this.value)"
                             onfocus="window.showProcessMachineDropdown('email')">
@@ -17310,14 +18113,116 @@
                     </div>
                 </div>
 
-                <div class="form-group" style="margin-bottom: 2rem;">
-                    <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Inhalt / Nachrichtentext</label>
-                    <textarea id="email-body-input" class="glass-input" style="height: 180px; resize: vertical; padding-top: 15px;" placeholder="Textinhalt der E-Mail..."></textarea>
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Mitarbeiter zuweisen</label>
+                    <div id="email-tech-dropdown-wrapper" style="position: relative;">
+                        <div id="email-tech-dropdown-trigger" onclick="window.toggleProcessTechDropdown('email')"
+                            style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-height: 48px; padding: 8px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; cursor: pointer; transition: border-color 0.2s; user-select: none;">
+                            <div id="email-tech-selected-pills" style="display: flex; flex-wrap: wrap; gap: 6px; flex: 1;"></div>
+                            <div id="email-tech-placeholder-text" style="display: flex; align-items: center; gap: 6px; color: rgba(255,255,255,0.4); font-size: 0.88rem; margin-left: auto;">Mitarbeiter wählen...</div>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                        <div id="email-tech-dropdown-panel"
+                            style="display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: rgba(15,23,42,0.97); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; z-index: 200; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); max-height: 240px; overflow-y: auto; box-shadow: 0 16px 48px rgba(0,0,0,0.5);">
+                            <div id="email-tech-option-list" style="padding: 8px;"></div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="email-assigned-users">
                 </div>
-                
+
                 <div style="display: flex; gap: 15px;">
-                    <button type="button" class="btn-secondary" onclick="window.closeEmailImportModal()" style="flex: 1; height: 55px; font-weight: 700;">Abbrechen</button>
-                    <button type="submit" class="btn-primary btn-red-animated" style="flex: 1; height: 55px; font-weight: 800;">VORGANG SPEICHERN</button>
+                    <button type="button" class="btn-secondary" onclick="window.closeEmailImportModal()" style="flex: 1; height: 44px; font-size: 0.92rem; font-weight: 700;">Abbrechen</button>
+                    <button type="submit" class="btn-primary btn-red-animated" style="flex: 1; height: 44px; font-size: 0.92rem; font-weight: 800;">VORGANG SPEICHERN</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- PROCESS ADD MODAL (Manueller Vorgang) -->
+    <div id="process-add-modal" class="modal-new hidden" style="z-index: 10000; display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);">
+        <div class="modal-content glass-card" style="max-width: 750px; width: 90%; max-height: 90vh; overflow-y: auto !important; padding: 2rem; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <h2 style="margin: 0; color: #fff; font-size: 1.8rem; font-weight: 800;">Vorgang hinzufügen</h2>
+                <button class="btn-close" onclick="window.closeProcessAddModal()" style="background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+
+            <form id="process-add-form" onsubmit="window.saveNewProcess(event)">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 0.75rem;">
+                    <div class="form-group">
+                        <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Vorgangs-Typ</label>
+                        <select id="process-add-type-select" class="glass-input" style="appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 15px center;">
+                            <option value="note">Interne Notiz</option>
+                            <option value="call">Telefonat</option>
+                            <option value="appointment">Termin / Besuch</option>
+                            <option value="repair">Reparatur</option>
+                            <option value="maintenance">Wartung</option>
+                            <option value="offer">Angebot</option>
+                            <option value="order">Bestellung</option>
+                            <option value="complaint">Reklamation</option>
+                            <option value="other">Sonstiges</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Datum / Uhrzeit</label>
+                        <input type="datetime-local" id="process-add-date-input" class="glass-input" required>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Betreff / Titel</label>
+                    <input type="text" id="process-add-title-input" class="glass-input" required placeholder="Titel des Vorgangs...">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Bemerkung / Beschreibung</label>
+                    <textarea id="process-add-remark-input" class="glass-input" style="height: 100px; resize: vertical; padding-top: 15px;" placeholder="Details zum Vorgang..."></textarea>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; margin-bottom: 0.75rem;">
+                    <div class="form-group" style="position: relative;">
+                        <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Maschine / Werkstattauftrag</label>
+                        <input type="hidden" id="process-add-machine-select" value="">
+                        <input type="hidden" id="process-add-workshop-order-select" value="">
+                        <input type="text" id="process-add-machine-search" class="glass-input" placeholder="Maschine suchen..." autocomplete="off"
+                            oninput="window.filterProcessMachineDropdown('process-add', this.value)"
+                            onfocus="window.showProcessMachineDropdown('process-add')">
+                    </div>
+                    <div class="form-group">
+                        <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Vorgangs-Status</label>
+                        <select id="process-add-status-select" class="glass-input" style="appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 15px center;">
+                            <option value="offen">Offen</option>
+                            <option value="in_bearbeitung">In Bearbeitung</option>
+                            <option value="erledigt">Erledigt</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Mitarbeiter zuweisen</label>
+                    <div id="process-add-tech-dropdown-wrapper" style="position: relative;">
+                        <div id="process-add-tech-dropdown-trigger" onclick="window.toggleProcessTechDropdown('process-add')"
+                            style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-height: 48px; padding: 8px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; cursor: pointer; transition: border-color 0.2s; user-select: none;">
+                            <div id="process-add-tech-selected-pills" style="display: flex; flex-wrap: wrap; gap: 6px; flex: 1;"></div>
+                            <div id="process-add-tech-placeholder-text" style="display: flex; align-items: center; gap: 6px; color: rgba(255,255,255,0.4); font-size: 0.88rem; margin-left: auto;">Mitarbeiter wählen...</div>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                        <div id="process-add-tech-dropdown-panel"
+                            style="display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: rgba(15,23,42,0.97); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; z-index: 200; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); max-height: 240px; overflow-y: auto; box-shadow: 0 16px 48px rgba(0,0,0,0.5);">
+                            <div id="process-add-tech-option-list" style="padding: 8px;"></div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="process-add-assigned-users">
+                </div>
+
+                <div style="display: flex; gap: 15px;">
+                    <button type="button" class="btn-secondary" onclick="window.closeProcessAddModal()" style="flex: 1; height: 44px; font-size: 0.92rem; font-weight: 700;">Abbrechen</button>
+                    <button type="submit" class="btn-primary btn-red-animated" style="flex: 1; height: 44px; font-size: 0.92rem; font-weight: 800;">VORGANG SPEICHERN</button>
                 </div>
             </form>
         </div>
@@ -17325,38 +18230,46 @@
 
     <!-- PROCESS EDIT MODAL -->
     <div id="process-edit-modal" class="modal-new hidden" style="z-index: 10000; display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);">
-        <div class="modal-content glass-card" style="max-width: 750px; width: 90%; max-height: 90vh; overflow-y: auto !important; padding: 2.5rem; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+        <div class="modal-content glass-card" style="max-width: 750px; width: 90%; max-height: 90vh; overflow-y: auto !important; padding: 2rem; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
                 <h2 style="margin: 0; color: #fff; font-size: 1.8rem; font-weight: 800;">Vorgang bearbeiten</h2>
                 <button class="btn-close" onclick="window.closeEditProcessModal()" style="background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer;">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
-            
+
             <form id="process-edit-form" onsubmit="window.updateProcess(event)">
                 <input type="hidden" id="edit-process-id">
 
-                <div class="form-group" style="margin-bottom: 1rem;">
+                <div class="form-group" style="margin-bottom: 0.6rem;">
                     <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Outlook-E-Mail (.msg) importieren</label>
                     <div id="edit-process-msg-dropzone"
                         onclick="document.getElementById('edit-process-msg-file-input').click()"
                         ondragover="event.preventDefault(); this.style.borderColor='var(--color-primary-green)'; this.style.background='rgba(52,211,153,0.06)';"
                         ondragleave="this.style.borderColor='rgba(255,255,255,0.15)'; this.style.background='transparent';"
                         ondrop="window.handleMsgFileDrop(event, 'edit-process')"
-                        style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 18px; text-align: center; cursor: pointer; color: rgba(255,255,255,0.45); font-size: 0.85rem; font-weight: 600; transition: border-color 0.2s, background 0.2s;">
+                        style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 12px; text-align: center; cursor: pointer; color: rgba(255,255,255,0.45); font-size: 0.85rem; font-weight: 600; transition: border-color 0.2s, background 0.2s;">
                         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: 0 auto 6px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                         .msg-Datei hierher ziehen oder klicken
                     </div>
                     <input type="file" id="edit-process-msg-file-input" accept=".msg" style="display:none;" onchange="window.handleMsgFileSelect(event, 'edit-process')">
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 1.5rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 0.75rem;">
                     <div class="form-group">
                         <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Vorgangs-Typ</label>
                         <select id="edit-process-type-select" class="glass-input" style="appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 15px center;">
                             <option value="email_incoming">E-Mail Eingang</option>
                             <option value="email_outgoing">E-Mail Ausgang</option>
                             <option value="note">Interne Notiz</option>
+                            <option value="call">Telefonat</option>
+                            <option value="appointment">Termin / Besuch</option>
+                            <option value="repair">Reparatur</option>
+                            <option value="maintenance">Wartung</option>
+                            <option value="offer">Angebot</option>
+                            <option value="order">Bestellung</option>
+                            <option value="complaint">Reklamation</option>
+                            <option value="other">Sonstiges</option>
                             <option value="manual">Manuell</option>
                         </select>
                     </div>
@@ -17366,12 +18279,22 @@
                     </div>
                 </div>
 
-                <div class="form-group" style="margin-bottom: 1.5rem;">
+                <div class="form-group" style="margin-bottom: 0.75rem;">
                     <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Betreff / Titel</label>
                     <input type="text" id="edit-process-title-input" class="glass-input" required placeholder="Betreff der E-Mail...">
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 1.5rem;">
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Bemerkung / Beschreibung</label>
+                    <textarea id="edit-process-remark-input" class="glass-input" style="height: 80px; resize: vertical; padding-top: 15px;" placeholder="Interne Bemerkung..."></textarea>
+                </div>
+
+                <div class="form-group" id="edit-process-body-group" style="margin-bottom: 0.75rem; display: none;">
+                    <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">E-Mail-Text</label>
+                    <textarea id="edit-process-body-input" class="glass-input" style="height: 100px; resize: vertical; padding-top: 15px;" placeholder="Textinhalt der E-Mail..."></textarea>
+                </div>
+
+                <div id="edit-process-sender-recipient-group" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 0.75rem;">
                     <div class="form-group" style="position: relative;">
                         <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Absender (Von)</label>
                         <input type="text" id="edit-process-sender-input" class="glass-input" placeholder="Name oder E-Mail...">
@@ -17384,10 +18307,11 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 15px; margin-bottom: 1.5rem;">
+                <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; margin-bottom: 0.75rem;">
                     <div class="form-group" style="position: relative;">
-                        <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Verknüpfte Maschine</label>
+                        <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Maschine / Werkstattauftrag</label>
                         <input type="hidden" id="edit-process-machine-select" value="">
+                        <input type="hidden" id="edit-process-workshop-order-select" value="">
                         <input type="text" id="edit-process-machine-search" class="glass-input" placeholder="Maschine suchen..." autocomplete="off"
                             oninput="window.filterProcessMachineDropdown('edit-process', this.value)"
                             onfocus="window.showProcessMachineDropdown('edit-process')">
@@ -17402,14 +18326,28 @@
                     </div>
                 </div>
 
-                <div class="form-group" style="margin-bottom: 2rem;">
-                    <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Inhalt / Nachrichtentext</label>
-                    <textarea id="edit-process-body-input" class="glass-input" style="height: 180px; resize: vertical; padding-top: 15px;" placeholder="Textinhalt der E-Mail..."></textarea>
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Mitarbeiter zuweisen</label>
+                    <div id="edit-process-tech-dropdown-wrapper" style="position: relative;">
+                        <div id="edit-process-tech-dropdown-trigger" onclick="window.toggleProcessTechDropdown('edit-process')"
+                            style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-height: 48px; padding: 8px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; cursor: pointer; transition: border-color 0.2s; user-select: none;">
+                            <div id="edit-process-tech-selected-pills" style="display: flex; flex-wrap: wrap; gap: 6px; flex: 1;"></div>
+                            <div id="edit-process-tech-placeholder-text" style="display: flex; align-items: center; gap: 6px; color: rgba(255,255,255,0.4); font-size: 0.88rem; margin-left: auto;">Mitarbeiter wählen...</div>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                        <div id="edit-process-tech-dropdown-panel"
+                            style="display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: rgba(15,23,42,0.97); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; z-index: 200; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); max-height: 240px; overflow-y: auto; box-shadow: 0 16px 48px rgba(0,0,0,0.5);">
+                            <div id="edit-process-tech-option-list" style="padding: 8px;"></div>
+                        </div>
+                    </div>
+                    <input type="hidden" id="edit-process-assigned-users">
                 </div>
-                
+
                 <div style="display: flex; gap: 15px;">
-                    <button type="button" class="btn-secondary" onclick="window.closeEditProcessModal()" style="flex: 1; height: 55px; font-weight: 700;">Abbrechen</button>
-                    <button type="submit" class="btn-primary btn-red-animated" style="flex: 1; height: 55px; font-weight: 800;">ÄNDERUNGEN SPEICHERN</button>
+                    <button type="button" class="btn-secondary" onclick="window.closeEditProcessModal()" style="flex: 1; height: 44px; font-size: 0.92rem; font-weight: 700;">Abbrechen</button>
+                    <button type="submit" class="btn-primary btn-red-animated" style="flex: 1; height: 44px; font-size: 0.92rem; font-weight: 400;">ÄNDERUNGEN SPEICHERN</button>
                 </div>
             </form>
         </div>
