@@ -1090,3 +1090,50 @@ ALTER TABLE public.service_entries
 ADD COLUMN IF NOT EXISTS hotel_city text;
 ALTER TABLE public.service_entries
 ADD COLUMN IF NOT EXISTS hotel_country text;
+
+
+
+/* ========================================================= */
+/* DATEI: add_manufacturer_and_machine_categories_to_categories.sql */
+/* ========================================================= */
+
+-- Zusatzfelder fuer Kategorien vom Typ 'series' (Maschinenserie):
+-- Hersteller der Serie + zugeordnete Maschinenkategorien (kommagetrennte Namen, analog zu documents.machine_categories)
+ALTER TABLE public.categories
+ADD COLUMN IF NOT EXISTS manufacturer text;
+ALTER TABLE public.categories
+ADD COLUMN IF NOT EXISTS machine_categories text;
+
+
+/* ========================================================= */
+/* DATEI: add_machine_series_to_documents.sql */
+/* ========================================================= */
+
+-- Zugeordnete Maschinenserien eines Dokuments (kommagetrennte Namen, analog zu documents.machine_categories)
+ALTER TABLE public.documents
+ADD COLUMN IF NOT EXISTS machine_series text;
+
+
+/* ========================================================= */
+/* DATEI: add_service_entry_id_to_documents.sql */
+/* ========================================================= */
+
+-- Verknuepfung eines Dokuments mit dem zugehoerigen Servicebericht (service_entries.id),
+-- damit ein erneutes Speichern/Erzeugen der PDF den bestehenden Dokumenten-Eintrag
+-- aktualisiert statt einen neuen (unzugeordneten) Eintrag anzulegen.
+ALTER TABLE public.documents
+ADD COLUMN IF NOT EXISTS service_entry_id bigint REFERENCES public.service_entries(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_documents_service_entry_id ON public.documents(service_entry_id);
+
+
+/* ========================================================= */
+/* DATEI: add_sig_dates_to_service_entries.sql */
+/* ========================================================= */
+
+-- Unterschriftsdaten Techniker und Kunde (anpassbar, Standard = erster Einsatztag)
+ALTER TABLE public.service_entries
+ADD COLUMN IF NOT EXISTS tech_sig_date date;
+
+ALTER TABLE public.service_entries
+ADD COLUMN IF NOT EXISTS customer_sig_date date;

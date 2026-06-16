@@ -295,7 +295,7 @@
                             <span style="font-size: 1.1rem; font-weight: 700;">${task.title}</span>
                             ${task.subtasks && task.subtasks.length > 0 ? `
                             <div class="task-list-subtasks" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
-                                ${task.subtasks.map((sub, index) => `
+                                ${task.subtasks.filter(sub => !(window.currentAppMode === 'focus' && !window.focusModeShowAll && sub.status === 'completed')).map((sub, index) => `
                                     <div class="subtask-item" style="display:flex; align-items:flex-start; gap: 6px; flex-wrap:wrap;">
                                         <div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; flex:1; min-width:0;">
                                         <div class="subtask-text-row" style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 100px;">
@@ -446,13 +446,16 @@
                                      if (!task.subtasks || task.subtasks.length === 0) return '';
                                      const grouped = {};
                                      task.subtasks.forEach((sub, idx) => {
+                                         if (window.currentAppMode === 'focus' && !window.focusModeShowAll && sub.status === 'completed') return;
                                          const sg = sub.supergroup || 'Allgemein';
                                          if (!grouped[sg]) grouped[sg] = [];
                                          grouped[sg].push({ ...sub, idx });
                                      });
-                                     
+                                     if (Object.keys(grouped).length === 0) return '';
+
                                      let html = '<div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">';
                                      for (const [groupName, subs] of Object.entries(grouped)) {
+                                         if (subs.length === 0) continue;
                                          html += `<div>
                                              <div style="font-size: 0.7rem; font-weight: 800; color: var(--color-primary-green); margin-bottom: 4px; text-transform: uppercase; opacity: 0.6;">${groupName}</div>`;
                                          subs.forEach(sub => {
@@ -620,10 +623,13 @@
                 if (!task.subtasks || task.subtasks.length === 0) return '';
                 const grouped = {};
                 task.subtasks.forEach((sub, idx) => {
+                    if (window.currentAppMode === 'focus' && !window.focusModeShowAll && sub.status === 'completed') return;
                     const sg = sub.supergroup || 'Allgemein';
                     if (!grouped[sg]) grouped[sg] = [];
                     grouped[sg].push({ ...sub, idx });
                 });
+
+                if (Object.keys(grouped).length === 0) return '';
 
                 // Open subtasks first, completed ones sink to the bottom (stable order within each group)
                 Object.values(grouped).forEach(subs => {
@@ -632,11 +638,12 @@
 
                 let html = '<div class="task-card-subtasks" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 12px;">';
                 for (const [groupName, subs] of Object.entries(grouped)) {
+                    if (subs.length === 0) continue;
                     html += `
                         <div class="subtask-group">
                             <div class="subtask-group-title" style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: var(--color-primary-green); margin-bottom: 6px; letter-spacing: 0.05em; opacity: 0.8;">${groupName}</div>
                             <div style="display: flex; flex-direction: column; gap: 6px;">`;
-                    
+
                     subs.forEach(sub => {
                         html += `
                             <div class="subtask-item" draggable="true"
@@ -1174,7 +1181,7 @@
         const taskData = {
             title: title,
             description: document.getElementById('task-description').value,
-            status: 'open',
+            status: currentTask ? (currentTask.status || 'open') : 'open',
             machine_id: document.getElementById('task-machine').value || null,
             workshop_order_number: workshopOrderNumber,
             updated_at: new Date().toISOString()
@@ -1798,19 +1805,16 @@
 
                     // Supabase update
                     try {
-                        let { error } = await window.supabaseClient.from('tasks').update({ 
+                        let { error } = await window.supabaseClient.from('tasks').update({
                             status: newStatus,
                             completed_at: completedAt,
                             completed_by: completedBy
                         }).eq('id', taskId);
 
-                        if (error && error.code === '42703') {
-                            console.warn('completed_at/completed_by columns missing, falling back to status only.');
+                        if (error) {
                             const retry = await window.supabaseClient.from('tasks').update({ status: newStatus }).eq('id', taskId);
-                            error = retry.error;
+                            if (retry.error) throw retry.error;
                         }
-
-                        if (error) throw error;
                     } catch (err) {
                         console.error('Drag drop save error:', err);
                         task.status = oldStatus;
@@ -1842,17 +1846,16 @@
         }
     };
 
-    window.handleFocusModeBtnClick = function() {
-        if (document.body.classList.contains('focus-mode-active')) {
-            // Turn off completely
-            window.toggleFocusMode(false);
-        } else {
-            // Show menu
-            const menu = document.getElementById('focus-mode-menu');
-            if (menu) {
-                menu.style.display = menu.style.display === 'none' ? 'flex' : 'none';
-            }
+    window.focusModeShowAll = false;
+
+    window.toggleShowAllSubtasks = function() {
+        window.focusModeShowAll = !window.focusModeShowAll;
+        const btn = document.getElementById('btn-show-all-subtasks');
+        if (btn) {
+            btn.textContent = window.focusModeShowAll ? 'Nur offene anzeigen' : 'Alle Aufgaben anzeigen';
+            btn.style.background = window.focusModeShowAll ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)';
         }
+        renderTasks();
     };
 
     window.activateMode = function(mode) {
@@ -1865,16 +1868,45 @@
         }
     };
 
+    let _focusModeContainerOriginalParent = null;
+    let _focusModeContainerNextSibling = null;
+
+    function _repositionFocusModeContainer(isActive) {
+        const container = document.getElementById('focus-mode-container');
+        if (!container) return;
+
+        if (isActive) {
+            _focusModeContainerOriginalParent = container.parentNode;
+            _focusModeContainerNextSibling = container.nextSibling;
+            document.body.appendChild(container);
+            container.style.cssText = 'position: fixed; bottom: 27px; right: 20px; z-index: 10000; display: flex; align-items: center; justify-content: center;';
+        } else {
+            if (_focusModeContainerOriginalParent) {
+                _focusModeContainerOriginalParent.insertBefore(container, _focusModeContainerNextSibling);
+                _focusModeContainerOriginalParent = null;
+                _focusModeContainerNextSibling = null;
+            }
+            container.style.cssText = 'display: flex; align-items: center; position: relative;';
+        }
+    }
+
     window.toggleFocusMode = function (keepMode = false) {
         document.body.classList.toggle('focus-mode-active');
         const isActive = document.body.classList.contains('focus-mode-active');
 
         if (!isActive) {
             window.currentAppMode = 'normal';
+            window.focusModeShowAll = false;
+            const showAllBtn = document.getElementById('btn-show-all-subtasks');
+            if (showAllBtn) {
+                showAllBtn.textContent = 'Alle Aufgaben anzeigen';
+                showAllBtn.style.background = 'rgba(255,255,255,0.08)';
+            }
         } else if (keepMode !== true) {
             window.currentAppMode = 'focus';
         }
-        
+
+        _repositionFocusModeContainer(isActive);
         window.updateFocusModeVisuals();
         renderTasks();
 
@@ -2110,19 +2142,17 @@
                 task.completed_by = completedBy;
                 renderTasks();
             }
-            let { error } = await window.supabaseClient.from('tasks').update({ 
+            let { error } = await window.supabaseClient.from('tasks').update({
                 status: newStatus,
                 completed_at: completedAt,
                 completed_by: completedBy
             }).eq('id', taskId);
 
-            if (error && error.code === '42703') {
-                console.warn('completed_at/completed_by columns missing, falling back to status only.');
+            if (error) {
+                // Fallback: column missing or NOT NULL constraint — try status-only update
                 const retry = await window.supabaseClient.from('tasks').update({ status: newStatus }).eq('id', taskId);
-                error = retry.error;
+                if (retry.error) throw retry.error;
             }
-
-            if (error) throw error;
         } catch (err) {
             console.error('Error toggling task status:', err);
             fetchTasks();

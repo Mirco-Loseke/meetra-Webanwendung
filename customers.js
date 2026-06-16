@@ -1028,19 +1028,34 @@
     window.loadPDFReader = async function () {
         if (window.pdfjsLib) return;
 
-        return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js';
-            script.onload = () => {
-                if (window['pdfjs-dist/build/pdf']) {
-                    window.pdfjsLib = window['pdfjs-dist/build/pdf'];
-                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-                }
-                resolve();
-            };
-            script.onerror = (err) => reject(new Error('PDF.js-Bibliothek konnte nicht geladen werden. Bitte Internetverbindung prüfen.'));
-            document.head.appendChild(script);
-        });
+        const LOCAL = 'lib/pdf.min.js';
+        const LOCAL_WORKER = 'lib/pdf.worker.min.js';
+        const CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js';
+        const CDN_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+        function tryLoad(src, workerSrc) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = () => {
+                    if (window['pdfjs-dist/build/pdf']) {
+                        window.pdfjsLib = window['pdfjs-dist/build/pdf'];
+                        window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+                    }
+                    resolve();
+                };
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        try {
+            await tryLoad(LOCAL, LOCAL_WORKER);
+        } catch {
+            await tryLoad(CDN, CDN_WORKER).catch(() => {
+                throw new Error('PDF.js konnte weder lokal noch per CDN geladen werden.');
+            });
+        }
     };
 
     // Dynamically load AWS-SDK (for Cloudflare R2 file uploads)

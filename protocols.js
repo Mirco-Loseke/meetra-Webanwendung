@@ -2239,19 +2239,28 @@
         if (!boardContainer && !listContainer) return;
 
         try {
-            // Fetch both types
-            const [intakeRes, acceptanceRes] = await Promise.all([
+            // Fetch both types + photo counts
+            const [intakeRes, acceptanceRes, photosRes] = await Promise.all([
                 window.supabaseClient.from('intake_protocols').select('*, machines(manufacturer, name, serial, year, image_url)').order('created_at', { ascending: false }),
-                window.supabaseClient.from('acceptance_protocols').select('*, machines(manufacturer, name, serial, year, image_url)').order('created_at', { ascending: false })
+                window.supabaseClient.from('acceptance_protocols').select('*, machines(manufacturer, name, serial, year, image_url)').order('created_at', { ascending: false }),
+                window.supabaseClient.from('protocol_photos').select('protocol_id, protocol_type, file_url')
             ]);
 
             if (intakeRes.error) throw intakeRes.error;
             if (acceptanceRes.error) throw acceptanceRes.error;
 
+            // Build photo lookup: { "intake:id": [url, ...], "acceptance:id": [url, ...] }
+            const photoMap = {};
+            (photosRes.data || []).forEach(ph => {
+                const key = `${ph.protocol_type}:${ph.protocol_id}`;
+                if (!photoMap[key]) photoMap[key] = [];
+                photoMap[key].push(ph.file_url);
+            });
+
             // Combine and sort
             allLoadedProtocols = [
-                ...intakeRes.data.map(p => ({ ...p, type: 'intake' })),
-                ...acceptanceRes.data.map(p => ({ ...p, type: 'acceptance' }))
+                ...intakeRes.data.map(p => ({ ...p, type: 'intake', _photoUrls: photoMap[`intake:${p.id}`] || [] })),
+                ...acceptanceRes.data.map(p => ({ ...p, type: 'acceptance', _photoUrls: photoMap[`acceptance:${p.id}`] || [] }))
             ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
             applyFilters();
@@ -2322,7 +2331,7 @@
 
         if (window.protocolViewMode === 'board') {
             // Render Board (like machine cards)
-            boardContainer.innerHTML = protocols.map(p => {
+            const cardsHtml = protocols.map(p => {
                 const isAcceptance = p.type === 'acceptance';
                 const createdDate = new Date(p.created_at).toLocaleDateString('de-DE');
                 const lastChangeDate = new Date(p.completed_at || p.updated_at || p.created_at).toLocaleDateString('de-DE');
@@ -2391,14 +2400,29 @@
                             
                             <!-- Action buttons -->
                             <div class="card-actions" style="margin-top: auto; padding-top: 0.75rem; display: flex; gap: 8px; align-items: center;">
-                                <button class="btn-reports" style="cursor: pointer !important; pointer-events: auto !important; display: flex; align-items: center; justify-content: center; gap: 8px; flex: 1; height: 44px; background: rgba(59, 130, 246, 0.2); border: 1.5px solid rgba(59, 130, 246, 0.5); color: #60a5fa; border-radius: 12px; font-weight: 700;" 
+                                <button style="cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; flex: 1; height: 44px; background: rgba(59,130,246,0.85); border: 2.5px solid rgba(147,197,253,0.8); color: #ffffff; border-radius: 20px; font-weight: 700; font-family: 'Inter', sans-serif; box-shadow: 0 4px 18px rgba(59,130,246,0.6); backdrop-filter: blur(12px); padding: 0 16px; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);"
+                                        onmouseover="this.style.transform='scale(1.05)'; this.style.background='rgba(59,130,246,0.95)'"
+                                        onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(59,130,246,0.85)'"
                                         onclick="event.stopPropagation(); ${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id || ''}', '${p.id || ''}')">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                                     Öffnen
                                 </button>
+                                ${p._photoUrls && p._photoUrls.length > 0 ? `
+                                <div style="position: relative; flex: none;">
+                                    <button onclick="event.stopPropagation(); window.openPhotosLightbox(${JSON.stringify(p._photoUrls).replace(/"/g, '&quot;')}, 0)" title="Fotos öffnen"
+                                        style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(139,92,246,0.85); border: 2.5px solid rgba(196,181,253,0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 4px 18px rgba(139,92,246,0.6); backdrop-filter: blur(12px); padding: 0;"
+                                        onmouseover="this.style.transform='scale(1.08)'; this.style.background='rgba(139,92,246,0.95)'"
+                                        onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(139,92,246,0.85)'">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                                    </button>
+                                    <span style="position: absolute; top: -4px; left: -4px; background: #ffffff; color: #7c3aed; font-size: 0.6rem; font-weight: 800; border-radius: 999px; min-width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; padding: 0 3px; line-height: 1; pointer-events: none;">${p._photoUrls.length}</span>
+                                </div>` : ''}
                                 ${p.status === 'completed' ? `
-                                <button class="btn-reports-red" onclick="event.stopPropagation(); window.openProtocolPDF('${p.machine_id}', '${p.id}', '${p.type}')">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="stroke: white;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                                <button onclick="event.stopPropagation(); window.openProtocolPDF('${p.machine_id}', '${p.id}', '${p.type}')" title="PDF öffnen"
+                                    style="flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(16,185,129,0.85); border: 2.5px solid rgba(167,243,208,0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 4px 18px rgba(16,185,129,0.6); backdrop-filter: blur(12px); padding: 0;"
+                                    onmouseover="this.style.transform='scale(1.08)'; this.style.background='rgba(16,185,129,0.95)'"
+                                    onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(16,185,129,0.85)'">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                                 </button>` : ''}
                                  <button class="btn-icon-circular delete delete-permission-required" title="Löschen"
                                          style="flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(239, 68, 68, 0.85); border: 2.5px solid rgba(252, 165, 165, 0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 18px rgba(239, 68, 68, 0.6); backdrop-filter: blur(12px); padding: 0;"
@@ -2414,7 +2438,30 @@
                         </div>
                     </div>
                 `;
-            }).join('');
+            });
+
+            const activeCards = [];
+            const doneCards = [];
+            protocols.forEach((p, i) => {
+                if (p.status === 'completed') doneCards.push(cardsHtml[i]);
+                else activeCards.push(cardsHtml[i]);
+            });
+
+            let boardHtml = activeCards.join('');
+            if (doneCards.length > 0) {
+                boardHtml += `
+                    <div style="grid-column: 1 / -1; margin-top: 1rem;">
+                        <div onclick="window.toggleProtocolAbgeschlossenGroup()" style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 14px 22px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
+                            <svg id="protocol-abgeschlossen-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.25s; color: rgba(255,255,255,0.6); transform: rotate(180deg);"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            <span style="font-weight: 800; font-size: 1rem; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 0.5px;">Abgeschlossen (${doneCards.length})</span>
+                        </div>
+                        <div id="protocol-abgeschlossen-group" class="card-grid" style="margin-top: 1rem;">
+                            ${doneCards.join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            boardContainer.innerHTML = boardHtml;
         } else {
             // Render List
             listBody.innerHTML = protocols.map(p => {
@@ -2630,5 +2677,14 @@
             console.error('Error opening protocol PDF from history:', err);
             alert('Fehler beim Öffnen des PDFs');
         }
+    };
+
+    window.toggleProtocolAbgeschlossenGroup = function() {
+        const group = document.getElementById('protocol-abgeschlossen-group');
+        const chevron = document.getElementById('protocol-abgeschlossen-chevron');
+        if (!group) return;
+        const isHidden = group.style.display === 'none';
+        group.style.display = isHidden ? '' : 'none';
+        if (chevron) chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
     };
 })();

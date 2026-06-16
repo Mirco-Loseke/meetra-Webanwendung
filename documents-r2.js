@@ -5,10 +5,14 @@ let allFolders = [];
 let filteredDocuments = [];
 let filteredFolders = [];
 let activeDocCategories = ['all'];
+let activeMachineCatFilters = ['all'];
+let activeSeriesFilters = ['all'];
 let activeUploadDocTypes = [];
 let activeUploadMachineCategories = [];
+let activeUploadSeries = [];
 let activeEditDocTypes = [];
 let activeEditMachineCategories = [];
+let activeEditSeries = [];
 let _filterDocsDebounceTimer = null;
 let selectedDocFile = null;
 let currentFolderId = null;
@@ -97,8 +101,8 @@ window.fetchDocuments = async function() {
         // 2. Fetch Documents in current folder
         let docQuery = window.supabaseClient
             .from('documents')
-            .select('*, machines(name)');
-        
+            .select('*, machines(name, serial, year, manufacturer)');
+
         if (currentFolderId) {
             docQuery = docQuery.eq('folder_id', currentFolderId);
         } else {
@@ -111,12 +115,32 @@ window.fetchDocuments = async function() {
 
         window.filterDocuments();
         window.updateBreadcrumbs();
+        window.updateTotalDocSize();
         if (typeof window.populateDocumentTypeDropdowns === 'function') {
             window.populateDocumentTypeDropdowns();
         }
     } catch (err) {
         console.error('Error fetching documents/folders:', err);
         if (grid) grid.innerHTML = '<div style="padding: 2rem; text-align: center; color: #ef4444; grid-column: 1/-1;">Fehler beim Laden des Inhalts.</div>';
+    }
+};
+
+// Gesamtgröße aller Dokumente (über alle Ordner hinweg) anzeigen
+window.updateTotalDocSize = async function() {
+    const label = document.getElementById('doc-total-size-label');
+    if (!label) return;
+
+    try {
+        const { data, error } = await window.supabaseClient
+            .from('documents')
+            .select('size');
+        if (error) throw error;
+
+        const totalBytes = (data || []).reduce((sum, d) => sum + (d.size || 0), 0);
+        label.textContent = `Gesamtgröße: ${window.formatSize(totalBytes)}`;
+    } catch (err) {
+        console.error('Error calculating total document size:', err);
+        label.textContent = '';
     }
 };
 
@@ -179,13 +203,19 @@ function applyDocFilters(docs, searchTerm) {
         const docCategories = (doc.category || '').split(',').map(c => c.trim()).filter(Boolean);
         const matchesCategory = activeDocCategories.includes('all') || docCategories.some(c => activeDocCategories.includes(c));
 
-        return matchesSearch && matchesCategory;
+        const docMachineCategories = (doc.machine_categories || '').split(',').map(c => c.trim()).filter(Boolean);
+        const matchesMachineCat = activeMachineCatFilters.includes('all') || docMachineCategories.some(c => activeMachineCatFilters.includes(c));
+
+        const docSeries = (doc.machine_series || '').split(',').map(c => c.trim()).filter(Boolean);
+        const matchesSeries = activeSeriesFilters.includes('all') || docSeries.some(c => activeSeriesFilters.includes(c));
+
+        return matchesSearch && matchesCategory && matchesMachineCat && matchesSeries;
     });
 }
 
 window.filterDocuments = function() {
     const searchTerm = document.getElementById('doc-search-input')?.value.toLowerCase() || '';
-    const isFiltering = !activeDocCategories.includes('all') || searchTerm.length > 0;
+    const isFiltering = !activeDocCategories.includes('all') || !activeMachineCatFilters.includes('all') || !activeSeriesFilters.includes('all') || searchTerm.length > 0;
 
     clearTimeout(_filterDocsDebounceTimer);
 
@@ -203,7 +233,7 @@ window.filterDocuments = function() {
             const [{ data: docs, error: docError }, { data: folders, error: folderError }] = await Promise.all([
                 window.supabaseClient
                     .from('documents')
-                    .select('*, machines(name)')
+                    .select('*, machines(name, serial, year, manufacturer)')
                     .order('created_at', { ascending: false }),
                 window.supabaseClient
                     .from('document_folders')
@@ -236,7 +266,8 @@ window.filterDocuments = function() {
 window.populateDocumentTypeDropdowns = function() {
     const docCategories = (window.categoryList || []).filter(c => c.type === 'document');
     const machineCategories = (window.categoryList || []).filter(c => c.type === 'machine');
-    
+    const seriesCategories = (window.categoryList || []).filter(c => c.type === 'series');
+
     // 1) Filter dropdown (multi-select)
     const filterList = document.getElementById('doc-category-options');
     if (filterList) {
@@ -331,6 +362,56 @@ window.populateDocumentTypeDropdowns = function() {
         });
         window.updateEditMachineCatLabel();
     }
+
+    // 6) Upload modal dropdown - Maschinenserie (Mehrfachauswahl, abhängig von Maschinenkategorie)
+    window.refreshUploadSeriesDropdown();
+
+    // 7) Edit modal dropdown - Maschinenserie (Mehrfachauswahl, abhängig von Maschinenkategorie)
+    window.refreshEditSeriesDropdown();
+
+    // 8) Filter dropdown - Maschinenkategorie (multi-select)
+    const machineCatFilterList = document.getElementById('doc-machine-cat-filter-options');
+    if (machineCatFilterList) {
+        machineCatFilterList.innerHTML = '';
+        const allLi = document.createElement('li');
+        allLi.dataset.value = 'all';
+        allLi.textContent = 'Alle';
+        if (activeMachineCatFilters.includes('all')) allLi.classList.add('active');
+        allLi.addEventListener('click', e => { e.stopPropagation(); window.toggleDocMachineCatFilter('all'); });
+        machineCatFilterList.appendChild(allLi);
+
+        machineCategories.forEach(cat => {
+            const li = document.createElement('li');
+            li.dataset.value = cat.name;
+            li.textContent = cat.name;
+            if (activeMachineCatFilters.includes(cat.name)) li.classList.add('active');
+            li.addEventListener('click', e => { e.stopPropagation(); window.toggleDocMachineCatFilter(cat.name); });
+            machineCatFilterList.appendChild(li);
+        });
+        window.updateDocMachineCatFilterLabel();
+    }
+
+    // 9) Filter dropdown - Maschinenserie (multi-select)
+    const seriesFilterList = document.getElementById('doc-series-filter-options');
+    if (seriesFilterList) {
+        seriesFilterList.innerHTML = '';
+        const allLi = document.createElement('li');
+        allLi.dataset.value = 'all';
+        allLi.textContent = 'Alle';
+        if (activeSeriesFilters.includes('all')) allLi.classList.add('active');
+        allLi.addEventListener('click', e => { e.stopPropagation(); window.toggleDocSeriesFilter('all'); });
+        seriesFilterList.appendChild(allLi);
+
+        seriesCategories.forEach(cat => {
+            const li = document.createElement('li');
+            li.dataset.value = cat.name;
+            li.textContent = cat.name;
+            if (activeSeriesFilters.includes(cat.name)) li.classList.add('active');
+            li.addEventListener('click', e => { e.stopPropagation(); window.toggleDocSeriesFilter(cat.name); });
+            seriesFilterList.appendChild(li);
+        });
+        window.updateDocSeriesFilterLabel();
+    }
 };
 
 window.toggleDocCategoryDropdown = function(event) {
@@ -340,6 +421,86 @@ window.toggleDocCategoryDropdown = function(event) {
     const isOpen = dropdown.classList.contains('active');
     document.querySelectorAll('.custom-filter-dropdown.active').forEach(d => d.classList.remove('active'));
     if (!isOpen) dropdown.classList.add('active');
+};
+
+window.toggleDocMachineCatFilterDropdown = function(event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById('doc-machine-cat-filter-dropdown');
+    if (!dropdown) return;
+    const isOpen = dropdown.classList.contains('active');
+    document.querySelectorAll('.custom-filter-dropdown.active').forEach(d => d.classList.remove('active'));
+    if (!isOpen) dropdown.classList.add('active');
+};
+
+window.toggleDocSeriesFilterDropdown = function(event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById('doc-series-filter-dropdown');
+    if (!dropdown) return;
+    const isOpen = dropdown.classList.contains('active');
+    document.querySelectorAll('.custom-filter-dropdown.active').forEach(d => d.classList.remove('active'));
+    if (!isOpen) dropdown.classList.add('active');
+};
+
+window.toggleDocMachineCatFilter = function(value) {
+    if (value === 'all') {
+        activeMachineCatFilters = ['all'];
+    } else {
+        activeMachineCatFilters = activeMachineCatFilters.filter(c => c !== 'all');
+        if (activeMachineCatFilters.includes(value)) {
+            activeMachineCatFilters = activeMachineCatFilters.filter(c => c !== value);
+        } else {
+            activeMachineCatFilters.push(value);
+        }
+        if (activeMachineCatFilters.length === 0) activeMachineCatFilters = ['all'];
+    }
+    window.updateDocMachineCatFilterLabel();
+    document.querySelectorAll('#doc-machine-cat-filter-options li').forEach(li => {
+        li.classList.toggle('active', activeMachineCatFilters.includes(li.dataset.value));
+    });
+    window.filterDocuments();
+};
+
+window.updateDocMachineCatFilterLabel = function() {
+    const label = document.getElementById('selected-machine-cat-filter-label');
+    if (!label) return;
+    label.textContent = activeMachineCatFilters.includes('all') ? 'Alle Maschinenkategorien' : activeMachineCatFilters.join(', ');
+
+    const dropdown = document.getElementById('doc-machine-cat-filter-dropdown');
+    if (dropdown) {
+        const hasSelection = !activeMachineCatFilters.includes('all') && activeMachineCatFilters.length > 0;
+        dropdown.classList.toggle('has-selection', hasSelection);
+    }
+};
+
+window.toggleDocSeriesFilter = function(value) {
+    if (value === 'all') {
+        activeSeriesFilters = ['all'];
+    } else {
+        activeSeriesFilters = activeSeriesFilters.filter(c => c !== 'all');
+        if (activeSeriesFilters.includes(value)) {
+            activeSeriesFilters = activeSeriesFilters.filter(c => c !== value);
+        } else {
+            activeSeriesFilters.push(value);
+        }
+        if (activeSeriesFilters.length === 0) activeSeriesFilters = ['all'];
+    }
+    window.updateDocSeriesFilterLabel();
+    document.querySelectorAll('#doc-series-filter-options li').forEach(li => {
+        li.classList.toggle('active', activeSeriesFilters.includes(li.dataset.value));
+    });
+    window.filterDocuments();
+};
+
+window.updateDocSeriesFilterLabel = function() {
+    const label = document.getElementById('selected-series-filter-label');
+    if (!label) return;
+    label.textContent = activeSeriesFilters.includes('all') ? 'Alle Maschinenserien' : activeSeriesFilters.join(', ');
+
+    const dropdown = document.getElementById('doc-series-filter-dropdown');
+    if (dropdown) {
+        const hasSelection = !activeSeriesFilters.includes('all') && activeSeriesFilters.length > 0;
+        dropdown.classList.toggle('has-selection', hasSelection);
+    }
 };
 
 window.toggleDocUploadTypeDropdown = function(event) {
@@ -407,6 +568,7 @@ window.toggleUploadMachineCategory = function(catName) {
     document.querySelectorAll('#doc-upload-machine-cat-options li').forEach(li => {
         li.classList.toggle('selected', activeUploadMachineCategories.includes(li.dataset.value));
     });
+    window.refreshUploadSeriesDropdown();
 };
 
 window.updateUploadMachineCatLabel = function() {
@@ -481,12 +643,146 @@ window.toggleEditMachineCategory = function(catName) {
     document.querySelectorAll('#doc-edit-machine-cat-options li').forEach(li => {
         li.classList.toggle('selected', activeEditMachineCategories.includes(li.dataset.value));
     });
+    window.refreshEditSeriesDropdown();
 };
 
 window.updateEditMachineCatLabel = function() {
     const label = document.getElementById('doc-edit-machine-cat-label');
     if (label) {
         label.textContent = activeEditMachineCategories.length > 0 ? activeEditMachineCategories.join(', ') : 'Maschinenkategorie wählen...';
+    }
+};
+
+// ─── Maschinenserie-Dropdowns (abhängig von ausgewählter Maschinenkategorie) ───
+
+window.getMatchingSeriesCategories = function(activeMachineCategories) {
+    if (!activeMachineCategories || activeMachineCategories.length === 0) return [];
+    return (window.categoryList || []).filter(cat => {
+        if (cat.type !== 'series') return false;
+        const seriesCats = (cat.machine_categories || '').split(',').map(s => s.trim()).filter(Boolean);
+        return seriesCats.some(sc => activeMachineCategories.includes(sc));
+    });
+};
+
+window.refreshUploadSeriesDropdown = function() {
+    const group = document.getElementById('doc-upload-series-group');
+    const list = document.getElementById('doc-upload-series-options');
+    if (!group || !list) return;
+
+    const matching = window.getMatchingSeriesCategories(activeUploadMachineCategories);
+    activeUploadSeries = activeUploadSeries.filter(s => matching.some(cat => cat.name === s));
+
+    list.innerHTML = '';
+    matching.forEach(cat => {
+        const li = document.createElement('li');
+        li.dataset.value = cat.name;
+        li.textContent = cat.name;
+        if (activeUploadSeries.includes(cat.name)) li.classList.add('selected');
+        li.addEventListener('click', e => {
+            e.stopPropagation();
+            window.toggleUploadSeries(cat.name);
+        });
+        list.appendChild(li);
+    });
+
+    group.style.display = matching.length > 0 ? 'block' : 'none';
+    window.updateUploadSeriesLabel();
+};
+
+window.toggleDocUploadSeriesDropdown = function(event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById('doc-upload-series-dropdown');
+    if (!dropdown) return;
+    const isOpen = dropdown.classList.contains('active');
+
+    document.querySelectorAll('.custom-filter-dropdown.active').forEach(d => {
+        d.classList.remove('active');
+        d.closest('.form-group')?.classList.remove('has-active-dropdown');
+    });
+
+    if (!isOpen) {
+        dropdown.classList.add('active');
+        dropdown.closest('.form-group')?.classList.add('has-active-dropdown');
+    }
+};
+
+window.toggleUploadSeries = function(seriesName) {
+    if (activeUploadSeries.includes(seriesName)) {
+        activeUploadSeries = activeUploadSeries.filter(s => s !== seriesName);
+    } else {
+        activeUploadSeries.push(seriesName);
+    }
+    window.updateUploadSeriesLabel();
+    document.querySelectorAll('#doc-upload-series-options li').forEach(li => {
+        li.classList.toggle('selected', activeUploadSeries.includes(li.dataset.value));
+    });
+};
+
+window.updateUploadSeriesLabel = function() {
+    const label = document.getElementById('doc-upload-series-label');
+    if (label) {
+        label.textContent = activeUploadSeries.length > 0 ? activeUploadSeries.join(', ') : 'Maschinenserie wählen...';
+    }
+};
+
+window.refreshEditSeriesDropdown = function() {
+    const group = document.getElementById('doc-edit-series-group');
+    const list = document.getElementById('doc-edit-series-options');
+    if (!group || !list) return;
+
+    const matching = window.getMatchingSeriesCategories(activeEditMachineCategories);
+    activeEditSeries = activeEditSeries.filter(s => matching.some(cat => cat.name === s));
+
+    list.innerHTML = '';
+    matching.forEach(cat => {
+        const li = document.createElement('li');
+        li.dataset.value = cat.name;
+        li.textContent = cat.name;
+        if (activeEditSeries.includes(cat.name)) li.classList.add('selected');
+        li.addEventListener('click', e => {
+            e.stopPropagation();
+            window.toggleEditSeries(cat.name);
+        });
+        list.appendChild(li);
+    });
+
+    group.style.display = matching.length > 0 ? 'block' : 'none';
+    window.updateEditSeriesLabel();
+};
+
+window.toggleDocEditSeriesDropdown = function(event) {
+    if (event) event.stopPropagation();
+    const dropdown = document.getElementById('doc-edit-series-dropdown');
+    if (!dropdown) return;
+    const isOpen = dropdown.classList.contains('active');
+
+    document.querySelectorAll('.custom-filter-dropdown.active').forEach(d => {
+        d.classList.remove('active');
+        d.closest('.form-group')?.classList.remove('has-active-dropdown');
+    });
+
+    if (!isOpen) {
+        dropdown.classList.add('active');
+        dropdown.closest('.form-group')?.classList.add('has-active-dropdown');
+    }
+};
+
+window.toggleEditSeries = function(seriesName) {
+    if (activeEditSeries.includes(seriesName)) {
+        activeEditSeries = activeEditSeries.filter(s => s !== seriesName);
+    } else {
+        activeEditSeries.push(seriesName);
+    }
+    window.updateEditSeriesLabel();
+    document.querySelectorAll('#doc-edit-series-options li').forEach(li => {
+        li.classList.toggle('selected', activeEditSeries.includes(li.dataset.value));
+    });
+};
+
+window.updateEditSeriesLabel = function() {
+    const label = document.getElementById('doc-edit-series-label');
+    if (label) {
+        label.textContent = activeEditSeries.length > 0 ? activeEditSeries.join(', ') : 'Maschinenserie wählen...';
     }
 };
 
@@ -594,7 +890,7 @@ window.renderDocuments = function() {
 
     // Wenn aktiv gefiltert/gesucht wird, kommen Treffer aus allen Ordnern - dann den Ordnernamen anzeigen
     const docSearchTerm = document.getElementById('doc-search-input')?.value.toLowerCase() || '';
-    const isGlobalSearch = !activeDocCategories.includes('all') || docSearchTerm.length > 0;
+    const isGlobalSearch = !activeDocCategories.includes('all') || !activeMachineCatFilters.includes('all') || !activeSeriesFilters.includes('all') || docSearchTerm.length > 0;
 
     // Render Folders
     filteredFolders.forEach(folder => {
@@ -613,10 +909,12 @@ window.renderDocuments = function() {
                  ondrop="window.handleDrop(event, '${folder.id}')">
                  
                 <div class="doc-info" style="margin-bottom: auto;">
-                     <div class="doc-title" style="display: flex; align-items: center; gap: 8px;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.8;">
+                     <div class="folder-title-icon">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
                         </svg>
+                    </div>
+                     <div class="doc-title" style="text-align: center;">
                         ${folder.name}
                     </div>
                 </div>
@@ -646,11 +944,15 @@ window.renderDocuments = function() {
     // Render Documents
     filteredDocuments.forEach(doc => {
         const isPdf = doc.mime_type === 'application/pdf' || doc.url.toLowerCase().endsWith('.pdf');
-        const machineName = doc.machines?.name || 'Keine Zuordnung';
+        const machineName = doc.machines
+            ? [doc.machines.manufacturer, doc.machines.name, (doc.machines.serial || doc.machines.serial_number) ? `#${doc.machines.serial || doc.machines.serial_number}` : null, doc.machines.year ? `(${doc.machines.year})` : null].filter(Boolean).join(' ')
+            : null;
+        const isServicebericht = (doc.category || '').split(',').map(c => c.trim()).includes('Servicebericht');
         const dateStr = new Date(doc.created_at).toLocaleDateString('de-DE');
         const escapedName = doc.name.replace(/'/g, "\\'");
         const escapedCategory = (doc.category || '').replace(/'/g, "\\'");
         const escapedMachineCategories = (doc.machine_categories || '').replace(/'/g, "\\'");
+        const escapedMachineSeries = (doc.machine_series || '').replace(/'/g, "\\'");
         const previewId = `pdf-preview-${doc.id}`;
         const folderName = doc._folderName;
 
@@ -659,6 +961,7 @@ window.renderDocuments = function() {
                  onclick="window.previewDocument('${doc.url}', '${escapedName}', '${doc.mime_type}')"
                  draggable="true"
                  ondragstart="window.handleDragStart(event, 'document', '${doc.id}')">
+                <div class="doc-date-label">${dateStr}</div>
                 <div class="doc-thumb" id="thumb-container-${doc.id}">
                     ${isPdf ?
                         `<canvas id="${previewId}" class="pdf-thumbnail-canvas"></canvas>
@@ -671,8 +974,8 @@ window.renderDocuments = function() {
                 <div class="doc-info">
                     <div class="doc-title">${doc.name}</div>
                     <div class="doc-meta">
-                        <span>${machineName}</span>
-                        <span>${dateStr}</span>
+                        ${doc.category ? `<div class="doc-meta-categories">${doc.category}</div>` : ''}
+                        ${isServicebericht && machineName ? `<div class="doc-meta-machine">Maschine: ${machineName}</div>` : ''}
                     </div>
                     ${isGlobalSearch && folderName ? `<div class="doc-meta" style="margin-top: 2px;"><span style="opacity: 0.7;">📁 ${folderName}</span></div>` : ''}
                 </div>
@@ -682,7 +985,7 @@ window.renderDocuments = function() {
                 </div>
 
                 <div class="doc-actions">
-                    <button class="btn-doc-action" onclick="event.stopPropagation(); window.openRenameModal('${doc.id}', 'document', '${escapedName}', '${escapedCategory}', '${escapedMachineCategories}')" title="Bearbeiten">
+                    <button class="btn-doc-action" onclick="event.stopPropagation(); window.openRenameModal('${doc.id}', 'document', '${escapedName}', '${escapedCategory}', '${escapedMachineCategories}', '${escapedMachineSeries}')" title="Bearbeiten">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                     </button>
                     <button class="btn-doc-action" onclick="event.stopPropagation(); window.downloadDoc('${doc.url}', '${escapedName}')">
@@ -777,6 +1080,7 @@ window.openDocumentUploadModal = async function() {
     // Reset category selections
     activeUploadDocTypes = [];
     activeUploadMachineCategories = [];
+    activeUploadSeries = [];
     window.populateDocumentTypeDropdowns(); // Redraw UI with empty selections
 
     // Populate machines dropdown
@@ -844,6 +1148,7 @@ window.saveDocument = async function(event) {
         const baseName = document.getElementById('doc-upload-name').value;
         const category = activeUploadDocTypes.join(', ');
         const machineCategories = activeUploadMachineCategories.join(', ');
+        const machineSeries = activeUploadSeries.join(', ');
         const machineId = document.getElementById('doc-upload-machine')?.value || null;
         
         const pathGenerator = (file, i) => {
@@ -872,6 +1177,7 @@ window.saveDocument = async function(event) {
             name: selectedDocFiles.length === 1 ? baseName : (selectedDocFiles[i].name.split('.').slice(0, -1).join('.') || baseName),
             category: category,
             machine_categories: machineCategories,
+            machine_series: machineSeries,
             machine_id: machineId,
             url: res.url,
             file_path: res.path,
@@ -897,77 +1203,180 @@ window.saveDocument = async function(event) {
     }
 };
 
+let _previewZoom = 1.0;
+let _previewRotation = 0;
+let _previewType = null; // 'pdf' | 'image' | 'other'
+let _pdfDocRef = null;
+let _pdfCacheBustedUrl = null;
+let _pinchRenderTimer = null;
+
+function _updateZoomLabel() {
+    const label = document.getElementById('doc-preview-zoom-label');
+    if (label) label.textContent = Math.round(_previewZoom * 100) + '%';
+}
+
+async function _renderPdfPages() {
+    if (!_pdfDocRef) return;
+    const container = document.getElementById('doc-preview-container');
+    const target = document.getElementById('doc-preview-inner') || container;
+    if (!target) return;
+    target.innerHTML = '';
+    // Base scale: fit page to container width at zoom 1.0
+    // We determine this from the first page's natural width vs container width
+    const firstPage = await _pdfDocRef.getPage(1);
+    const naturalVp = firstPage.getViewport({ scale: 1, rotation: _previewRotation });
+    const containerWidth = Math.max(300, (container ? container.clientWidth : 0) || (window.innerWidth - 40));
+    const fitScale = containerWidth / naturalVp.width;
+    const renderScale = fitScale * _previewZoom;
+
+    for (let pageNum = 1; pageNum <= _pdfDocRef.numPages; pageNum++) {
+        const page = await _pdfDocRef.getPage(pageNum);
+        const viewport = page.getViewport({ scale: renderScale, rotation: _previewRotation });
+        const pageWrapper = document.createElement('div');
+        // Display width in px so zoom actually changes visible size
+        pageWrapper.style.cssText = `margin: 20px auto; padding: 15px; background: white; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 8px; width: ${Math.round(viewport.width)}px; box-sizing: border-box;`;
+        const canvas = document.createElement('canvas');
+        canvas.style.display = 'block';
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        canvas.style.width = viewport.width + 'px';
+        canvas.style.height = viewport.height + 'px';
+        pageWrapper.appendChild(canvas);
+        target.appendChild(pageWrapper);
+        const context = canvas.getContext('2d');
+        await page.render({ canvasContext: context, viewport }).promise;
+    }
+}
+
+function _applyImageTransform() {
+    const inner = document.getElementById('doc-preview-inner');
+    if (!inner) return;
+    const img = inner.querySelector('img');
+    if (!img) return;
+    img.style.width = `${Math.round(_previewZoom * 100)}%`;
+    img.style.maxWidth = 'none';
+    img.style.transform = `rotate(${_previewRotation}deg)`;
+    img.style.transformOrigin = 'center center';
+}
+
+window.docPreviewZoom = async function(delta) {
+    _previewZoom = Math.min(5, Math.max(0.25, parseFloat((_previewZoom + delta).toFixed(2))));
+    _updateZoomLabel();
+    if (_previewType === 'pdf') await _renderPdfPages();
+    else _applyImageTransform();
+};
+
+window.docPreviewRotate = async function() {
+    _previewRotation = (_previewRotation + 90) % 360;
+    if (_previewType === 'pdf') await _renderPdfPages();
+    else _applyImageTransform();
+};
+
+// Set up pinch-to-zoom and ctrl+wheel on the container (once, lazily)
+let _previewEventsAttached = false;
+function _attachPreviewEvents() {
+    if (_previewEventsAttached) return;
+    _previewEventsAttached = true;
+    const container = document.getElementById('doc-preview-container');
+    if (!container) return;
+
+    // Ctrl+wheel (desktop zoom, also used by Chrome/Android for pinch)
+    container.addEventListener('wheel', function(e) {
+        if (e.ctrlKey) {
+            e.preventDefault();
+            const delta = e.deltaY < 0 ? 0.15 : -0.15;
+            _previewZoom = Math.min(5, Math.max(0.25, parseFloat((_previewZoom + delta).toFixed(2))));
+            _updateZoomLabel();
+            clearTimeout(_pinchRenderTimer);
+            _pinchRenderTimer = setTimeout(async () => {
+                if (_previewType === 'pdf') await _renderPdfPages();
+                else _applyImageTransform();
+            }, 250);
+        }
+    }, { passive: false });
+
+    // Native touch pinch (iOS Safari + Android)
+    let _pinchDist = null;
+    let _pinchZoomStart = 1;
+    container.addEventListener('touchstart', function(e) {
+        if (e.touches.length === 2) {
+            e.preventDefault();
+            _pinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            _pinchZoomStart = _previewZoom;
+        }
+    }, { passive: false });
+    container.addEventListener('touchmove', function(e) {
+        if (e.touches.length === 2 && _pinchDist !== null) {
+            e.preventDefault();
+            const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            _previewZoom = Math.min(5, Math.max(0.25, parseFloat((_pinchZoomStart * (dist / _pinchDist)).toFixed(2))));
+            _updateZoomLabel();
+            // Immediate visual feedback via CSS scale while re-render is pending
+            const inner = document.getElementById('doc-preview-inner');
+            if (inner) inner.style.transform = `scale(${_previewZoom / _pinchZoomStart})`;
+            clearTimeout(_pinchRenderTimer);
+            _pinchRenderTimer = setTimeout(async () => {
+                if (inner) inner.style.transform = '';
+                if (_previewType === 'pdf') await _renderPdfPages();
+                else _applyImageTransform();
+            }, 350);
+        }
+    }, { passive: false });
+    container.addEventListener('touchend', function() { _pinchDist = null; }, { passive: true });
+}
+
 window.previewDocument = async function(url, title, mimeType) {
     const modal = document.getElementById('document-preview-modal');
     const container = document.getElementById('doc-preview-container');
+    const inner = document.getElementById('doc-preview-inner');
     const titleEl = document.getElementById('doc-preview-title');
-    
     if (!modal) return;
-    
+
+    _previewZoom = 1.0;
+    _previewRotation = 0;
+    _pdfDocRef = null;
+    _previewType = null;
+    if (inner) { inner.innerHTML = ''; inner.style.transform = ''; }
+    _updateZoomLabel();
+
     titleEl.textContent = title;
-    
     const openNewTabBtn = document.getElementById('btn-open-preview-newtab');
-    if (openNewTabBtn) {
-        openNewTabBtn.href = url;
-    }
-    
+    if (openNewTabBtn) openNewTabBtn.href = url;
+
     modal.classList.remove('hidden');
     modal.style.display = 'flex';
-    
-    requestAnimationFrame(() => {
-        modal.classList.add('show');
-    });
-    
+    requestAnimationFrame(() => modal.classList.add('show'));
+
     window.currentPreviewUrl = url;
     window.currentPreviewName = title;
 
-    const isImage = mimeType.startsWith('image/') || url.match(/\.(jpg|jpeg|png|gif|webp)$/i);
-    const isPdf = mimeType === 'application/pdf' || url.toLowerCase().endsWith('.pdf') || url.startsWith('blob:');
+    _attachPreviewEvents();
 
-    // Cache-Buster, damit nach einem PDF-Update immer die aktuellste Version geladen wird
-    // (statt einer vom Browser zwischengespeicherten alten Version unter derselben URL)
+    const isImage = mimeType.startsWith('image/') || /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
+    const isPdf = mimeType === 'application/pdf' || url.toLowerCase().endsWith('.pdf') || url.startsWith('blob:');
     const cacheBustedUrl = url.startsWith('blob:') ? url : `${url}${url.includes('?') ? '&' : '?'}_cb=${Date.now()}`;
+    _pdfCacheBustedUrl = cacheBustedUrl;
+
+    const target = inner || container;
+    target.innerHTML = '';
 
     if (isImage) {
-        container.innerHTML = `<img src="${cacheBustedUrl}" style="max-width: 100%; max-height: 100%; display: block; margin: auto; object-fit: contain;">`;
+        _previewType = 'image';
+        target.innerHTML = `<img src="${cacheBustedUrl}" style="width: 100%; display: block; margin: auto; padding: 1rem;">`;
     } else if (isPdf) {
-        container.innerHTML = '<div style="padding: 2rem; text-align: center; color: rgba(255,255,255,0.4);">Dokument wird gerendert...</div>';
+        _previewType = 'pdf';
+        target.innerHTML = '<div style="padding: 2rem; text-align: center; color: rgba(255,255,255,0.4);">Dokument wird gerendert...</div>';
         try {
             await window.loadPDFReader();
-            const loadingTask = window.pdfjsLib.getDocument(cacheBustedUrl);
-            const pdf = await loadingTask.promise;
-            
-            container.innerHTML = ''; // Clear loader
-            
-            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-                const page = await pdf.getPage(pageNum);
-                
-                const pageWrapper = document.createElement('div');
-                pageWrapper.style.cssText = 'margin: 20px auto; padding: 15px; background: white; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 8px; max-width: 900px; width: 95%; display: block; box-sizing: border-box;';
-                
-                const canvas = document.createElement('canvas');
-                canvas.style.cssText = 'width: 100%; height: auto; display: block;';
-                pageWrapper.appendChild(canvas);
-                container.appendChild(pageWrapper);
-                
-                const context = canvas.getContext('2d');
-                const viewport = page.getViewport({ scale: 1.5 }); // Crisp high-res rendering
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-                
-                const renderContext = {
-                    canvasContext: context,
-                    viewport: viewport
-                };
-                
-                await page.render(renderContext).promise;
-            }
+            _pdfDocRef = await window.pdfjsLib.getDocument(cacheBustedUrl).promise;
+            await _renderPdfPages();
         } catch (err) {
             console.error('PDF.js rendering failed, falling back to iframe:', err);
-            container.innerHTML = `<iframe src="${cacheBustedUrl}" style="width: 100%; height: 100%; border: none; background: white;"></iframe>`;
+            target.innerHTML = `<iframe src="${cacheBustedUrl}" style="width: 100%; height: 100%; border: none; background: white;"></iframe>`;
         }
     } else {
-        container.innerHTML = `<iframe src="${url}" style="width: 100%; height: 100%; border: none; background: white;"></iframe>`;
+        _previewType = 'other';
+        target.innerHTML = `<iframe src="${url}" style="width: 100%; height: 100%; min-height: 80vh; border: none; background: white;"></iframe>`;
     }
 };
 
@@ -979,7 +1388,9 @@ window.closeDocumentPreviewModal = function() {
     setTimeout(() => {
         modal.classList.add('hidden');
         modal.style.display = 'none';
-        document.getElementById('doc-preview-container').innerHTML = '';
+        const inner = document.getElementById('doc-preview-inner');
+        if (inner) inner.innerHTML = '';
+        else document.getElementById('doc-preview-container').innerHTML = '';
     }, 300);
 };
 
@@ -1275,7 +1686,7 @@ window.getFolderIcon = function(name) {
 };
 
 // --- Renaming / Bearbeiten ---
-window.openRenameModal = function(id, type, currentName, category, machineCategories) {
+window.openRenameModal = function(id, type, currentName, category, machineCategories, machineSeries) {
     renamingItem = { id, type, currentName };
     const modal = document.getElementById('document-rename-modal');
     const input = document.getElementById('rename-input');
@@ -1291,6 +1702,7 @@ window.openRenameModal = function(id, type, currentName, category, machineCatego
         if (categoryFields) categoryFields.style.display = 'block';
         activeEditDocTypes = (category || '').split(',').map(c => c.trim()).filter(Boolean);
         activeEditMachineCategories = (machineCategories || '').split(',').map(c => c.trim()).filter(Boolean);
+        activeEditSeries = (machineSeries || '').split(',').map(c => c.trim()).filter(Boolean);
         window.populateDocumentTypeDropdowns();
     } else {
         if (titleEl) titleEl.textContent = 'Ordner umbenennen';
@@ -1341,7 +1753,8 @@ window.saveRename = async function(event) {
         if (isDocument) {
             let updatePayload = {
                 category: activeEditDocTypes.join(', '),
-                machine_categories: activeEditMachineCategories.join(', ')
+                machine_categories: activeEditMachineCategories.join(', '),
+                machine_series: activeEditSeries.join(', ')
             };
 
             if (nameChanged) {

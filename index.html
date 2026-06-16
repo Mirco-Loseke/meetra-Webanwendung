@@ -1091,9 +1091,9 @@
 
                         <!-- Bottom Row: Filters (Left) / Upload Button (Right) -->
                         <div class="view-header-row-bottom">
-                            <div class="view-header-left" style="display: flex; gap: 12px; align-items: center;">
+                            <div class="view-header-left" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
                                 <div class="custom-filter-dropdown" id="doc-category-dropdown"
-                                    onclick="window.toggleDocCategoryDropdown(event)">
+                                    onclick="window.toggleDocCategoryDropdown(event)" style="min-width: 200px;">
                                     <span class="filter-label" id="selected-categories-label">Alle Typen</span>
                                     <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
                                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
@@ -1103,6 +1103,34 @@
                                     <div class="custom-filter-menu">
                                         <ul class="dropdown-options" id="doc-category-options">
                                             <!-- dynamically populated by documents.js -->
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="custom-filter-dropdown" id="doc-machine-cat-filter-dropdown"
+                                    onclick="window.toggleDocMachineCatFilterDropdown(event)" style="min-width: 200px;">
+                                    <span class="filter-label" id="selected-machine-cat-filter-label">Alle Maschinenkategorien</span>
+                                    <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                    <div class="custom-filter-menu">
+                                        <ul class="dropdown-options" id="doc-machine-cat-filter-options">
+                                            <!-- dynamically populated by documents-r2.js -->
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="custom-filter-dropdown" id="doc-series-filter-dropdown"
+                                    onclick="window.toggleDocSeriesFilterDropdown(event)" style="min-width: 200px;">
+                                    <span class="filter-label" id="selected-series-filter-label">Alle Maschinenserien</span>
+                                    <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                    <div class="custom-filter-menu">
+                                        <ul class="dropdown-options" id="doc-series-filter-options">
+                                            <!-- dynamically populated by documents-r2.js -->
                                         </ul>
                                     </div>
                                 </div>
@@ -1134,6 +1162,9 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Gesamtgröße aller Dokumente -->
+                    <div id="doc-total-size-label" class="doc-total-size-label"></div>
 
                     <!-- Breadcrumbs -->
                     <div id="doc-breadcrumbs" class="doc-breadcrumbs"
@@ -1169,7 +1200,7 @@
                     <div class="view-header-layout">
                         <!-- Top Row: Title (Left) / Search (Right) -->
                         <div class="view-header-row-top">
-                            <div class="view-header-left">
+                            <div class="view-header-left" style="display: flex; align-items: center; gap: 10px;">
                                 <h1 style="margin: 0; display:flex; align-items:center; gap:12px;"><svg width="28"
                                         height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1178,8 +1209,21 @@
                                         <rect x="3" y="15" width="4" height="6" />
                                         <path d="M20 21H4" />
                                     </svg>Aufgaben</h1>
+                                <!-- Focus Mode Button – next to title on mobile, left of search on desktop -->
+                                <div id="focus-mode-container" style="display: flex; align-items: center; position: relative;">
+                                    <div id="focus-mode-btn" class="focus-mode-btn" onclick="window.toggleFocusMode()" title="Fokusmodus">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                            <line x1="12" y1="2" x2="12" y2="5"></line>
+                                            <line x1="12" y1="19" x2="12" y2="22"></line>
+                                            <line x1="2" y1="12" x2="5" y2="12"></line>
+                                            <line x1="19" y1="12" x2="22" y2="12"></line>
+                                        </svg>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="view-header-right">
+                            <div class="view-header-right" style="display: flex; align-items: center; gap: 10px;">
                                 <div class="custom-search-wrapper" style="width: 250px;">
                                     <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
                                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
@@ -1205,6 +1249,7 @@
                             <div class="view-header-right" style="display: flex; align-items: center; gap: 12px;">
                                 <!-- Cinema Mode Controls (Moved here next to Add Button) -->
                                 <div class="cinema-mode-controls">
+                                    <button id="btn-show-all-subtasks" onclick="window.toggleShowAllSubtasks()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: white; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.82rem; font-weight: 500; white-space: nowrap; transition: all 0.2s ease;" title="Erledigte Unteraufgaben anzeigen">Alle Aufgaben anzeigen</button>
                                     <button id="btn-cinema-toggle" class="btn-cinema-premium" onclick="window.toggleCinemaMode()" title="Kino-Modus">
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                             <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
@@ -2368,6 +2413,26 @@
                         </h3>
                         <ul id="category-list-document" class="user-list">
                             <!-- Document Type Categories rendered here -->
+                        </ul>
+                    </div>
+
+                    <div class="category-group">
+                        <h3 class="category-group-title">
+                            <div class="group-icon-wrapper" id="icon-group-series"
+                                onclick="document.getElementById('color-series').click()" title="Farbe ändern">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                                    <polyline points="2 17 12 22 22 17"></polyline>
+                                    <polyline points="2 12 12 17 22 12"></polyline>
+                                </svg>
+                            </div>
+                            <input type="color" id="color-series" class="hidden-color-input"
+                                onchange="updateGroupColor('series', this.value)">
+                            <span>Maschinenserie</span>
+                        </h3>
+                        <ul id="category-list-series" class="user-list">
+                            <!-- Machine Series Categories rendered here -->
                         </ul>
                     </div>
                 </div>
@@ -5064,6 +5129,7 @@
                 const listService = document.getElementById('category-list-service');
                 const listContact = document.getElementById('category-list-contact');
                 const listDocument = document.getElementById('category-list-document');
+                const listSeries = document.getElementById('category-list-series');
 
                 // Safety check
                 if (!listMachine || !listService) return;
@@ -5072,6 +5138,7 @@
                 listService.innerHTML = '';
                 if (listContact) listContact.innerHTML = '';
                 if (listDocument) listDocument.innerHTML = '';
+                if (listSeries) listSeries.innerHTML = '';
 
                 // Populate custom machine category filter dropdown
                 const filterOptionsList = document.getElementById('machine-category-filter-options');
@@ -5157,7 +5224,8 @@
                         machine: '#e67e22',
                         service: '#2980b9',
                         contact: '#9b59b6',
-                        document: '#f97316'
+                        document: '#f97316',
+                        series: '#06b6d4'
                     };
 
                     const type = cat.type || 'machine';
@@ -5173,6 +5241,7 @@
                                     <div class="user-details" style="display: flex; align-items: center; justify-content: space-between; padding-left: 0.5rem; width: 100%;">
                                         <span class="user-name-link" style="color: ${accentColor}; font-weight: 700; font-family: 'Inter', sans-serif; font-size: 1.1rem;">${cat.name}</span>
                                         ${type === 'machine' ? `<span style="font-size: 0.85rem; color: rgba(255,255,255,0.4); font-weight: 600; padding-right: 1rem;">Intervall: ${cat.default_maintenance_interval_months || 12}M</span>` : ''}
+                                        ${type === 'series' ? `<span style="font-size: 0.85rem; color: rgba(255,255,255,0.4); font-weight: 600; padding-right: 1rem; text-align: right;">${[cat.manufacturer, cat.machine_categories].filter(Boolean).join(' · ')}</span>` : ''}
                                     </div>
                                 <div class="user-actions">
                                     <button class="btn-icon-soft edit" onclick="editCategory(${cat.id})" title="Bearbeiten">
@@ -5193,6 +5262,8 @@
                         listContact.appendChild(li);
                     } else if (type === 'document' && listDocument) {
                         listDocument.appendChild(li);
+                    } else if (type === 'series' && listSeries) {
+                        listSeries.appendChild(li);
                     }
                 });
             }
@@ -5250,18 +5321,89 @@
             const catNameInput = document.getElementById('cat-name-input');
             const catIntervalInput = document.getElementById('cat-interval-input');
             const catIntervalGroup = document.getElementById('cat-interval-group');
+            const catSeriesGroup = document.getElementById('cat-series-group');
+            const catSeriesManufacturerInput = document.getElementById('cat-series-manufacturer');
             const catTypeRadios = document.getElementsByName('cat-type');
             const catModalId = document.getElementById('cat-modal-id');
             const catModalTitle = document.getElementById('cat-modal-title');
+            let activeCatSeriesMachineCategories = [];
 
-            // Toggle interval field visibility
+            // Toggle interval/series field visibility
             catTypeRadios.forEach(radio => {
                 radio.addEventListener('change', (e) => {
                     if (catIntervalGroup) {
                         catIntervalGroup.style.display = e.target.value === 'machine' ? 'block' : 'none';
                     }
+                    if (catSeriesGroup) {
+                        catSeriesGroup.style.display = e.target.value === 'series' ? 'block' : 'none';
+                    }
                 });
             });
+
+            // Hersteller-Vorschlaege (Datalist) aus bereits angelegten Maschinen, freie Eingabe bleibt moeglich
+            function populateCatSeriesManufacturerOptions() {
+                const datalist = document.getElementById('cat-series-manufacturer-options');
+                if (!datalist) return;
+                const manufacturers = [...new Set((window.machineList || [])
+                    .map(m => (m.manufacturer || '').trim())
+                    .filter(Boolean))].sort((a, b) => a.localeCompare(b));
+                datalist.innerHTML = manufacturers.map(m => `<option value="${m.replace(/"/g, '&quot;')}"></option>`).join('');
+            }
+
+            // Maschinenkategorie-Dropdown (Mehrfachauswahl) fuer Kategorie-Typ "Maschinenserie"
+            function populateCatSeriesMachineCatOptions() {
+                const list = document.getElementById('cat-series-machine-cat-options');
+                if (!list) return;
+                list.innerHTML = '';
+                (window.categoryList || []).filter(c => c.type === 'machine').forEach(cat => {
+                    const li = document.createElement('li');
+                    li.dataset.value = cat.name;
+                    li.textContent = cat.name;
+                    if (activeCatSeriesMachineCategories.includes(cat.name)) li.classList.add('selected');
+                    li.addEventListener('click', e => {
+                        e.stopPropagation();
+                        window.toggleCatSeriesMachineCategory(cat.name);
+                    });
+                    list.appendChild(li);
+                });
+                updateCatSeriesMachineCatLabel();
+            }
+
+            function updateCatSeriesMachineCatLabel() {
+                const label = document.getElementById('cat-series-machine-cat-label');
+                if (label) {
+                    label.textContent = activeCatSeriesMachineCategories.length > 0 ? activeCatSeriesMachineCategories.join(', ') : 'Maschinenkategorie wählen...';
+                }
+            }
+
+            window.toggleCatSeriesMachineCategory = function (catName) {
+                if (activeCatSeriesMachineCategories.includes(catName)) {
+                    activeCatSeriesMachineCategories = activeCatSeriesMachineCategories.filter(c => c !== catName);
+                } else {
+                    activeCatSeriesMachineCategories.push(catName);
+                }
+                updateCatSeriesMachineCatLabel();
+                document.querySelectorAll('#cat-series-machine-cat-options li').forEach(li => {
+                    li.classList.toggle('selected', activeCatSeriesMachineCategories.includes(li.dataset.value));
+                });
+            };
+
+            window.toggleCatSeriesMachineCatDropdown = function (event) {
+                if (event) event.stopPropagation();
+                const dropdown = document.getElementById('cat-series-machine-cat-dropdown');
+                if (!dropdown) return;
+                const isOpen = dropdown.classList.contains('active');
+
+                document.querySelectorAll('.custom-filter-dropdown.active').forEach(d => {
+                    d.classList.remove('active');
+                    d.closest('.form-group')?.classList.remove('has-active-dropdown');
+                });
+
+                if (!isOpen) {
+                    dropdown.classList.add('active');
+                    dropdown.closest('.form-group')?.classList.add('has-active-dropdown');
+                }
+            };
 
             function openModal(editData = null) {
                 if (catModal) {
@@ -5284,11 +5426,23 @@
                             } else if (r.checked && catIntervalGroup) {
                                 catIntervalGroup.style.display = 'none';
                             }
+                            if (r.checked && catSeriesGroup) {
+                                catSeriesGroup.style.display = r.value === 'series' ? 'block' : 'none';
+                            }
                         });
                     } else if (!editData && catTypeRadios) {
                         catTypeRadios[0].checked = true; // Default to machine
                         if (catIntervalGroup) catIntervalGroup.style.display = 'block';
+                        if (catSeriesGroup) catSeriesGroup.style.display = 'none';
                     }
+
+                    // Felder fuer Kategorie-Typ "Maschinenserie"
+                    if (catSeriesManufacturerInput) catSeriesManufacturerInput.value = editData ? (editData.manufacturer || '') : '';
+                    activeCatSeriesMachineCategories = (editData && editData.machine_categories)
+                        ? editData.machine_categories.split(',').map(c => c.trim()).filter(Boolean)
+                        : [];
+                    populateCatSeriesMachineCatOptions();
+                    populateCatSeriesManufacturerOptions();
 
                     catModal.classList.remove('hidden');
                     catModal.style.display = 'flex';
@@ -5359,7 +5513,9 @@
                         name: name,
                         type: typeValue,
                         default_maintenance_interval_months: intervalValue,
-                        color: colorValue ? colorValue.value : '#10b981'
+                        color: colorValue ? colorValue.value : '#10b981',
+                        manufacturer: typeValue === 'series' ? (catSeriesManufacturerInput?.value.trim() || null) : null,
+                        machine_categories: typeValue === 'series' ? activeCatSeriesMachineCategories.join(', ') : null
                     };
 
                     let response;
@@ -8837,6 +8993,8 @@
                 checklist_payload: typeof window.getChecklistPayload === 'function' ? window.getChecklistPayload() : null,
                 status_repaired: document.getElementById('service-status-repaired')?.checked || false,
                 status_repaired_en: document.getElementById('service-status-repaired-en')?.checked || false,
+                tech_sig_date: document.getElementById('service-tech-sig-date')?.value || null,
+                customer_sig_date: document.getElementById('service-customer-sig-date')?.value || null,
                 contact_person: document.getElementById('service-contact-person')?.value.trim() || null,
                 hotel_company: document.getElementById('service-hotel-company')?.value.trim() || null,
                 hotel_street: document.getElementById('service-hotel-street')?.value.trim() || null,
@@ -9391,7 +9549,8 @@
                             color: catColor,
                             icon: isWorkshopStatus ? '🔧' : '📄',
                             itemType: isWorkshopStatus ? 'workshop' : 'service',
-                            pdf_url: s.pdf_url
+                            pdf_url: s.pdf_url,
+                            files: s.files || []
                         });
                     });
                 }
@@ -9560,10 +9719,18 @@
                                 </button>
                             ` : '';
 
+                        const hasAttachments = item.files && item.files.length > 0;
+                        const attachmentIcon = hasAttachments ? `
+                                <button onclick="window.openServiceAttachments(${JSON.stringify(item.files).replace(/"/g, '&quot;')})" class="btn-icon-circular" style="background: rgba(139,92,246,0.15); border-color: rgba(139,92,246,0.4); color: #a78bfa;" title="Anhänge öffnen (${item.files.length})">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                                </button>
+                            ` : '';
+
                         actionButtons += `
                                 <button onclick="window.openEditServicebericht(${item.id})" class="btn-icon-circular edit" title="Öffnen">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                 </button>
+                                ${attachmentIcon}
                                 ${pdfIcon}
                             `;
                     } else if (item.itemType === 'intake' || item.itemType === 'acceptance') {
@@ -12086,7 +12253,7 @@
 
                           const { data, error } = await supabaseClient
                   .from('service_entries')
-                  .select('id, machine_id, category_id, category_ids, title, date, datum_von, datum_bis, hours, technicians, pdf_url, pdf_path')
+                  .select('id, machine_id, category_id, category_ids, title, date, datum_von, datum_bis, hours, technicians, pdf_url, pdf_path, files')
                   .order('date', { ascending: false });
 
             if (error) {
@@ -12263,6 +12430,11 @@
                     // Reset tech signature preview
                     const techSigInput = document.getElementById('service-tech-signature');
                     if (techSigInput) techSigInput.value = '';
+                    const todayISO = new Date().toISOString().split('T')[0];
+                    const techSigDate = document.getElementById('service-tech-sig-date');
+                    if (techSigDate) techSigDate.value = todayISO;
+                    const custSigDate = document.getElementById('service-customer-sig-date');
+                    if (custSigDate) custSigDate.value = todayISO;
                     const techSigPreviewImg = document.getElementById('tech-signature-preview-img');
                     if (techSigPreviewImg) {
                         techSigPreviewImg.src = '';
@@ -12305,7 +12477,12 @@
                         if (reportTitle) reportTitle.value = editData.title || '';
 
                         const dateStart = document.getElementById('service-date-start');
-                        if (dateStart) dateStart.value = editData.datum_von || editData.date || '';
+                        const dateStartVal = editData.datum_von || editData.date || '';
+                        if (dateStart) dateStart.value = dateStartVal;
+                        const techSigDateEl = document.getElementById('service-tech-sig-date');
+                        if (techSigDateEl) techSigDateEl.value = editData.tech_sig_date || dateStartVal || '';
+                        const custSigDateEl = document.getElementById('service-customer-sig-date');
+                        if (custSigDateEl) custSigDateEl.value = editData.customer_sig_date || dateStartVal || '';
 
                         const dateEnd = document.getElementById('service-date-end');
                         if (dateEnd) dateEnd.value = editData.datum_bis || '';
@@ -12670,6 +12847,8 @@
                             });
                         }
 
+                        window[`_sf${e.id}`] = e.files || [];
+
                         return `
                                 <div class="card" style="font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); border: 3px solid ${primaryCatColor}66; border-top: 7px solid ${primaryCatColor}; border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); position: relative; padding-top: 35px; width: 100%; box-sizing: border-box; min-width: 0;">
 
@@ -12739,29 +12918,6 @@
                                             <p style="margin: 0; font-size: 0.95rem; color: rgba(255,255,255,0.7); line-height: 1.6; font-weight: 500; white-space: pre-wrap;">${cleanDesc}</p>
                                         </div>` : ''}
 
-                                         <!-- Separated Buttons (Icons Only) -->
-                                         ${(images.length > 0 || docs.length > 0) ? `
-                                         <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 8px; margin-top: 0.5rem; text-align: left;">
-                                             ${images.length > 0 ? `
-                                            <div class="btn-meta-icon" onclick="openPhotosLightbox(${JSON.stringify(images).replace(/"/g, '&quot;')}, 0)" title="Bilder ansehen"
-                                                 style="background: rgba(168, 85, 247, 0.15); border: 1.5px solid rgba(168, 85, 247, 0.6); box-shadow: 0 0 12px rgba(168, 85, 247, 0.4);"
-                                                 onmouseover="this.style.background='rgba(168, 85, 247, 0.25)'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 0 18px rgba(168, 85, 247, 0.6)'"
-                                                 onmouseout="this.style.background='rgba(168, 85, 247, 0.15)'; this.style.transform='translateY(0)'; this.style.boxShadow='0 0 12px rgba(168, 85, 247, 0.4)'">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
-                                                (${images.length})
-                                            </div>` : ''}
-                                            
-                                             ${docs.length > 0 ? `
-                                            <div class="btn-meta-icon" onclick="window.openDocumentsModal(this)" 
-                                                 data-docs="${encodeURIComponent(JSON.stringify(docs))}" 
-                                                 title="Dokumente ansehen"
-                                                 style="background: rgba(239, 68, 68, 0.15); border: 1.5px solid rgba(239, 68, 68, 0.6); box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);"
-                                                 onmouseover="this.style.background='rgba(239, 68, 68, 0.25)'; this.style.transform='translateY(-2px)'; this.style.boxShadow='0 0 18px rgba(239, 68, 68, 0.6)'"
-                                                 onmouseout="this.style.background='rgba(239, 68, 68, 0.15)'; this.style.transform='translateY(0)'; this.style.boxShadow='0 0 12px rgba(239, 68, 68, 0.4)'">
-                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
-                                                (${docs.length})
-                                            </div>` : ''}
-                                         </div>` : ''}
                                     </div>
 
                                     <div class="service-card-actions" style="margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); margin-left: -0.25rem; margin-right: -0.25rem; padding-left: 1.25rem; padding-right: 1.25rem; padding-bottom: 1.25rem;">
@@ -12772,6 +12928,16 @@
                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                             Bearbeiten
                                         </button>
+                                        ${(images.length > 0 || docs.length > 0) ? `
+                                        <div style="position: relative; flex: none;">
+                                            <button onclick="event.stopPropagation(); window.openServiceAttachments(window._sf${e.id})" title="Anhänge öffnen"
+                                                style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(139,92,246,0.85); border: 2.5px solid rgba(196,181,253,0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 18px rgba(139,92,246,0.6); backdrop-filter: blur(12px); padding: 0;"
+                                                onmouseover="this.style.transform='scale(1.08)'; this.style.background='rgba(139,92,246,0.95)'; this.style.boxShadow='0 4px 24px rgba(139,92,246,0.7)'"
+                                                onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(139,92,246,0.85)'; this.style.boxShadow='0 4px 18px rgba(139,92,246,0.6)'">
+                                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                                            </button>
+                                            <span style="position: absolute; top: -4px; left: -4px; background: #ffffff; color: #7c3aed; font-size: 0.6rem; font-weight: 800; border-radius: 999px; min-width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; padding: 0 3px; line-height: 1; pointer-events: none;">${images.length + docs.length}</span>
+                                        </div>` : ''}
                                         ${e.pdf_url ? `
                                         <button onclick="event.stopPropagation(); window.previewDocument('${e.pdf_url}', 'Servicebericht', 'application/pdf')" title="PDF öffnen"
                                             style="flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(16, 185, 129, 0.85); border: 2.5px solid rgba(167, 243, 208, 0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 18px rgba(16, 185, 129, 0.6); backdrop-filter: blur(12px); padding: 0;"
@@ -14706,8 +14872,11 @@
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(8);
                 doc.setTextColor(100, 100, 100);
-                doc.text('Unterschrift Techniker', 20, currentY + 27);
-                doc.text('Unterschrift Kunde', 110, currentY + 27);
+                const _techSigDateRaw = document.getElementById('service-tech-sig-date')?.value || dateStart;
+                const _custSigDateRaw = document.getElementById('service-customer-sig-date')?.value || dateStart;
+                const _fmtSigDate = d => { if (!d) return ''; const p = d.split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : d; };
+                doc.text(`Unterschrift Techniker, ${_fmtSigDate(_techSigDateRaw)}`, 20, currentY + 27);
+                doc.text(`Unterschrift Kunde, ${_fmtSigDate(_custSigDateRaw)}`, 110, currentY + 27);
                 if (signatureName) {
                     doc.text(signatureName, 110, currentY + 31);
                 }
@@ -14891,8 +15060,11 @@
                             doc.setFont('helvetica', 'normal');
                             doc.setFontSize(8);
                             doc.setTextColor(100, 100, 100);
-                            doc.text('Unterschrift Techniker', 20, uvvY + 27);
-                            doc.text('Unterschrift Kunde', 110, uvvY + 27);
+                            const _uvvTechDate = document.getElementById('service-tech-sig-date')?.value || dateStart;
+                            const _uvvCustDate = document.getElementById('service-customer-sig-date')?.value || dateStart;
+                            const _uvvFmt = d => { if (!d) return ''; const p = d.split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : d; };
+                            doc.text(`Unterschrift Techniker, ${_uvvFmt(_uvvTechDate)}`, 20, uvvY + 27);
+                            doc.text(`Unterschrift Kunde, ${_uvvFmt(_uvvCustDate)}`, 110, uvvY + 27);
 
                             
                         } else {
@@ -15073,45 +15245,22 @@
                 
                 const wsFolderName = window.getMachineFolderName(wsMachine.id, wsMachine.manufacturer, wsMachine.name, wsMachine.serial || wsMachine.serial_number, wsMachine.year);
 
-                // Find or create the "Serviceberichte" folder for this machine in the Dokumente module
+                // Use the existing "Servicebericht" folder from the Dokumente module
                 const wsMachineIdInt = parseInt(machineId, 10);
-                const wsMachineDisplayName = [wsMachine.manufacturer, wsMachine.name, (wsMachine.serial || wsMachine.serial_number) ? `#${wsMachine.serial || wsMachine.serial_number}` : null].filter(Boolean).join(' ');
 
-                let { data: wsMachineFolder } = await window.supabaseClient
+                const { data: wsTargetFolder, error: wsFolderError } = await window.supabaseClient
                     .from('document_folders')
                     .select('id')
-                    .eq('machine_id', wsMachineIdInt)
-                    .is('parent_id', null)
+                    .eq('name', 'Servicebericht')
                     .maybeSingle();
 
-                if (!wsMachineFolder) {
-                    const { data: newMachineFolder, error: machineFolderError } = await window.supabaseClient
-                        .from('document_folders')
-                        .insert([{ name: wsMachineDisplayName, parent_id: null, machine_id: wsMachineIdInt }])
-                        .select('id')
-                        .single();
-                    if (machineFolderError) throw machineFolderError;
-                    wsMachineFolder = newMachineFolder;
-                }
+                if (wsFolderError) throw wsFolderError;
+                if (!wsTargetFolder) throw new Error('Ordner "Servicebericht" wurde in der Datenbank nicht gefunden.');
 
-                let { data: wsReportsFolder } = await window.supabaseClient
-                    .from('document_folders')
-                    .select('id')
-                    .eq('parent_id', wsMachineFolder.id)
-                    .eq('name', 'Serviceberichte')
-                    .maybeSingle();
+                const wsTargetFolderId = wsTargetFolder.id;
 
-                if (!wsReportsFolder) {
-                    const { data: newReportsFolder, error: reportsFolderError } = await window.supabaseClient
-                        .from('document_folders')
-                        .insert([{ name: 'Serviceberichte', parent_id: wsMachineFolder.id, machine_id: wsMachineIdInt }])
-                        .select('id')
-                        .single();
-                    if (reportsFolderError) throw reportsFolderError;
-                    wsReportsFolder = newReportsFolder;
-                }
-
-                const wsTargetFolderId = wsReportsFolder.id;
+                const _sbCat = (window.categoryList || []).find(c => c.type === 'document' && c.name.toLowerCase() === 'servicebericht');
+                const categoryValue = _sbCat?.name || 'Servicebericht';
 
                 const serviceYearDigitVal = document.getElementById('service-workshop-year-digit')?.value.trim() || '';
                 const serviceSuffixVal = document.getElementById('service-workshop-order-suffix')?.value.trim() || '';
@@ -15157,20 +15306,36 @@
                     
                 if (updateError) throw updateError;
                 
-                // Upsert in documents table
-                const { data: existingDoc } = await window.supabaseClient
+                // Upsert in documents table - primär über service_entry_id verknüpfen,
+                // damit ein erneutes Speichern immer den bestehenden Eintrag überschreibt
+                // (auch wenn sich Dateiname/Pfad durch Datum/Auftragsnummer geändert hat).
+                let { data: existingDoc } = await window.supabaseClient
                     .from('documents')
                     .select('id')
-                    .eq('file_path', uploadResult.path)
+                    .eq('service_entry_id', reportId)
                     .maybeSingle();
-                    
+
+                if (!existingDoc) {
+                    const { data: legacyDoc } = await window.supabaseClient
+                        .from('documents')
+                        .select('id')
+                        .eq('file_path', uploadResult.path)
+                        .maybeSingle();
+                    existingDoc = legacyDoc;
+                }
+
                 if (existingDoc) {
                     await window.supabaseClient
                         .from('documents')
                         .update({
+                            name: fileName.replace('.pdf', ''),
+                            category: categoryValue,
+                            url: uploadResult.url,
+                            file_path: uploadResult.path,
                             size: pdfFile.size,
                             created_at: nowISO,
-                            folder_id: wsTargetFolderId
+                            folder_id: wsTargetFolderId,
+                            service_entry_id: reportId
                         })
                         .eq('id', existingDoc.id);
                 } else {
@@ -15178,13 +15343,14 @@
                         .from('documents')
                         .insert([{
                             name: fileName.replace('.pdf', ''),
-                            category: 'Servicebericht',
+                            category: categoryValue,
                             machine_id: machineId,
                             url: uploadResult.url,
                             file_path: uploadResult.path,
                             size: pdfFile.size,
                             mime_type: 'application/pdf',
-                            folder_id: wsTargetFolderId
+                            folder_id: wsTargetFolderId,
+                            service_entry_id: reportId
                         }]);
                 }
                 
@@ -15554,7 +15720,7 @@
                                     <label for="service-next-maintenance-override"
                                         style="color: var(--secondary-green); font-weight: 800;">Manuelles Datum für NÄCHSTE Wartung (Optional)</label>
                                     <input type="date" id="service-next-maintenance-override" class="glass-form-input"
-                                        style="border-color: rgba(16, 185, 129, 0.3); margin-top: 2px;">
+                                        style="border-color: rgba(16, 185, 129, 0.3);">
                                 </div>
                             </div>
                         </div>
@@ -15861,6 +16027,10 @@
                                             <button type="button" id="btn-clear-tech-signature" class="hidden" onclick="event.stopPropagation(); window.clearTechSignature()" style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;">Löschen</button>
                                         </div>
                                         <input type="hidden" id="service-tech-signature">
+                                        <div style="margin-top: 0.5rem;">
+                                            <label style="display: block; font-size: 0.75rem; color: rgba(255,255,255,0.45); margin-bottom: 0.3rem;">Datum Techniker</label>
+                                            <input type="date" id="service-tech-sig-date" class="glass-form-input" style="font-size: 0.85rem; padding: 6px 10px;">
+                                        </div>
                                     </div>
                                     <!-- Kunden-Unterschrift (rechts) -->
                                     <div>
@@ -15871,6 +16041,10 @@
                                             <button type="button" id="btn-clear-signature" class="hidden" onclick="event.stopPropagation(); window.clearSignature()" style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;">Löschen</button>
                                         </div>
                                         <input type="hidden" id="service-customer-signature">
+                                        <div style="margin-top: 0.5rem;">
+                                            <label style="display: block; font-size: 0.75rem; color: rgba(255,255,255,0.45); margin-bottom: 0.3rem;">Datum Kunde</label>
+                                            <input type="date" id="service-customer-sig-date" class="glass-form-input" style="font-size: 0.85rem; padding: 6px 10px;">
+                                        </div>
                                         <div class="form-group" style="margin-top: 0.75rem;">
                                             <input type="text" id="service-customer-signee-name" class="glass-form-input" placeholder="Name des Unterzeichners (optional)">
                                         </div>
@@ -16048,6 +16222,10 @@
                             <input type="radio" name="cat-type" value="document">
                             <span class="option-text">Dokument</span>
                         </label>
+                        <label class="segmented-option">
+                            <input type="radio" name="cat-type" value="series">
+                            <span class="option-text">Maschinenserie</span>
+                        </label>
                     </div>
                 </div>
 
@@ -16055,6 +16233,31 @@
                     <label for="cat-interval-input">Standard-Wartungsintervall (Monate)</label>
                     <input type="number" id="cat-interval-input" class="glass-input" placeholder="z.B. 12" min="1"
                         value="12">
+                </div>
+
+                <div id="cat-series-group" style="display: none; margin-top: 1.5rem;">
+                    <div class="form-group">
+                        <label for="cat-series-manufacturer">Hersteller</label>
+                        <input type="text" id="cat-series-manufacturer" class="glass-input" placeholder="z.B. meetra" list="cat-series-manufacturer-options">
+                        <datalist id="cat-series-manufacturer-options"></datalist>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Maschinenkategorie (Mehrfachauswahl)</label>
+                        <div class="custom-filter-dropdown" id="cat-series-machine-cat-dropdown"
+                            onclick="window.toggleCatSeriesMachineCatDropdown(event)" style="width: 100%;">
+                            <span class="filter-label" id="cat-series-machine-cat-label">Maschinenkategorie wählen...</span>
+                            <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                            <div class="custom-filter-menu">
+                                <ul class="dropdown-options" id="cat-series-machine-cat-options">
+                                    <!-- dynamically populated -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -16750,74 +16953,133 @@
     </div><!-- End app-layout -->
     <!-- Lightbox UI -->
     <div id="photos-lightbox"
-        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 99999; backdrop-filter: blur(15px); flex-direction: column; align-items: center; justify-content: center; user-select: none;">
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 99999; backdrop-filter: blur(15px); overflow: hidden; user-select: none; touch-action: none;">
+
         <!-- Close Button -->
-        <button onclick="closePhotosLightbox()"
-            style="position: absolute; top: 30px; right: 30px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; width: 60px; height: 60px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; z-index: 100;"
-            onmouseover="this.style.background='rgba(239, 68, 68, 0.4)'"
-            onmouseout="this.style.background='rgba(255,255,255,0.1)'">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
+        <button onclick="closePhotosLightbox()" id="lbx-close"
+            style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); color: white; width: 38px; height: 38px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s, background 0.2s; z-index: 200;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
 
-        <!-- Navigation Buttons -->
-        <button id="lightbox-prev" onclick="navigateLightbox(-1)"
-            style="position: absolute; left: 40px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; width: 70px; height: 70px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; z-index: 100;"
-            onmouseover="this.style.background='rgba(59,130,246,0.2)'"
-            onmouseout="this.style.background='rgba(255,255,255,0.1)'">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="15 18 9 12 15 6"></polyline>
-            </svg>
-        </button>
-
-        <button id="lightbox-next" onclick="navigateLightbox(1)"
-            style="position: absolute; right: 40px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; width: 70px; height: 70px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; z-index: 100;"
-            onmouseover="this.style.background='rgba(59,130,246,0.2)'"
-            onmouseout="this.style.background='rgba(255,255,255,0.1)'">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-        </button>
-
-        <!-- Main Image Container -->
-        <div style="width: 90%; height: 85%; display: flex; align-items: center; justify-content: center;">
-            <img id="lightbox-img" src=""
-                style="max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 12px; box-shadow: 0 40px 100px rgba(0,0,0,0.6);">
+        <!-- Counter + zoom reset -->
+        <div style="position: absolute; top: 16px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; z-index: 200;">
+            <div id="lightbox-counter" style="color: rgba(255,255,255,0.8); font-size: 0.85rem; font-weight: 700; background: rgba(255,255,255,0.1); padding: 5px 14px; border-radius: 20px; font-family: 'Inter', sans-serif; white-space: nowrap;">1 / 1</div>
+            <button id="lbx-reset" onclick="lbxResetZoom()" style="display:none; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); color: white; border-radius: 20px; padding: 5px 12px; font-size: 0.75rem; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif;">Zoom zurücksetzen</button>
         </div>
 
-        <!-- Counter Indicator -->
-        <div id="lightbox-counter"
-            style="margin-top: 30px; color: rgba(255,255,255,0.7); font-size: 1.25rem; font-weight: 800; background: rgba(255,255,255,0.08); padding: 10px 30px; border-radius: 40px; font-family: 'Inter', sans-serif;">
-            1 / 1
-        </div>
+        <!-- Nav Prev -->
+        <button id="lightbox-prev" onclick="navigateLightbox(-1)" id="lbx-prev"
+            style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: white; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s, background 0.2s; z-index: 200;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+
+        <!-- Nav Next -->
+        <button id="lightbox-next" onclick="navigateLightbox(1)" id="lbx-next"
+            style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: white; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s, background 0.2s; z-index: 200;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+
+        <!-- Image -->
+        <img id="lightbox-img" src="" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 92vw; max-height: 92vh; object-fit: contain; border-radius: 8px; will-change: transform; cursor: grab;">
     </div>
 
     <script>
         let galleryImages = [];
         let currentGalleryIndex = 0;
 
-        window.openPhotosLightbox = function (images, startIndex) {
-            console.log('Opening Lightbox:', images, startIndex);
-            if (!images || images.length === 0 || !images[0]) return;
+        window.openServiceAttachments = function(files) {
+            if (!files || files.length === 0) return;
 
+            const existing = document.getElementById('service-attachments-modal');
+            if (existing) existing.remove();
+
+            const items = files.map((f, i) => {
+                const url = typeof f === 'string' ? f : f.url;
+                const name = typeof f === 'string' ? url.split('/').pop() : (f.name || url.split('/').pop());
+                const type = typeof f === 'string' ? '' : (f.type || '');
+                const isPdf = type.includes('pdf') || url.toLowerCase().endsWith('.pdf');
+                const isImage = type.startsWith('image/') || /\.(jpe?g|png|gif|webp|svg)$/i.test(url);
+
+                const thumb = isPdf
+                    ? `<div style="width:48px;height:48px;background:rgba(239,68,68,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg></div>`
+                    : isImage
+                        ? `<img src="${url}" style="width:48px;height:48px;object-fit:cover;border-radius:8px;flex-shrink:0;">`
+                        : `<div style="width:48px;height:48px;background:rgba(255,255,255,0.08);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg></div>`;
+
+                const onclick = isPdf
+                    ? `window.previewDocument('${url}', '${name.replace(/'/g,"\\'")}', 'application/pdf'); document.getElementById('service-attachments-modal').remove();`
+                    : isImage
+                        ? `window.openPhotosLightbox(${JSON.stringify(files.filter(f2 => { const u = typeof f2==='string'?f2:f2.url; return /\.(jpe?g|png|gif|webp|svg)$/i.test(u)||(typeof f2!=='string'&&f2.type?.startsWith('image/')); }).map(f2 => typeof f2==='string'?f2:f2.url))}, ${files.slice(0,i).filter(f2=>{ const u=typeof f2==='string'?f2:f2.url; return /\.(jpe?g|png|gif|webp|svg)$/i.test(u)||(typeof f2!=='string'&&f2.type?.startsWith('image/')); }).length})`
+                        : `window.open('${url}', '_blank')`;
+
+                return `<div onclick="${onclick}" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;cursor:pointer;transition:background 0.15s;background:rgba(255,255,255,0.03);" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+                    ${thumb}
+                    <span style="font-size:0.85rem;color:rgba(255,255,255,0.8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span>
+                </div>`;
+            }).join('');
+
+            const imageUrls = files
+                .map(f => typeof f === 'string' ? f : f.url)
+                .filter(u => /\.(jpe?g|png|gif|webp|svg)$/i.test(u) || (files.find(f => (typeof f !== 'string' ? f.url : f) === u) && typeof files.find(f => (typeof f !== 'string' ? f.url : f) === u) !== 'string' && files.find(f => (typeof f !== 'string' ? f.url : f) === u).type?.startsWith('image/')));
+            const allImageUrls = files.map(f => typeof f === 'string' ? f : f.url).filter(u => { const f = files.find(x => (typeof x === 'string' ? x : x.url) === u); const t = typeof f === 'string' ? '' : (f?.type || ''); return t.startsWith('image/') || /\.(jpe?g|png|gif|webp|svg)$/i.test(u); });
+
+            const grossansichtBtn = allImageUrls.length > 0
+                ? `<button onclick="document.getElementById('service-attachments-modal').remove(); window.openPhotosLightbox(${JSON.stringify(allImageUrls).replace(/"/g, '&quot;')}, 0)" style="background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.5);color:#a78bfa;border-radius:8px;padding:4px 10px;font-size:0.72rem;font-weight:700;cursor:pointer;white-space:nowrap;">Großansicht</button>`
+                : '';
+
+            const modal = document.createElement('div');
+            modal.id = 'service-attachments-modal';
+            modal.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);';
+            modal.innerHTML = `
+                <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:1.5rem;width:min(420px,90vw);max-height:80vh;display:flex;flex-direction:column;gap:12px;box-shadow:0 25px 60px rgba(0,0,0,0.5);">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                        <span style="font-size:1rem;font-weight:600;color:white;display:flex;align-items:center;gap:8px;min-width:0;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                            Anhänge (${files.length})
+                        </span>
+                        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+                            ${grossansichtBtn}
+                            <button onclick="document.getElementById('service-attachments-modal').remove()" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.6);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;">✕</button>
+                        </div>
+                    </div>
+                    <div style="overflow-y:auto;display:flex;flex-direction:column;gap:4px;">${items}</div>
+                </div>`;
+            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+            document.body.appendChild(modal);
+        };
+
+        let lbxZoom = 1, lbxPanX = 0, lbxPanY = 0;
+        let lbxDragging = false, lbxDragStartX = 0, lbxDragStartY = 0, lbxDragPanX = 0, lbxDragPanY = 0;
+        let lbxPinchDist = null, lbxSwipeStartX = 0, lbxLastTap = 0;
+
+        function lbxApplyTransform(animate) {
+            const img = document.getElementById('lightbox-img');
+            if (!img) return;
+            img.style.transition = animate ? 'transform 0.2s ease' : 'none';
+            img.style.transform = `translate(calc(-50% + ${lbxPanX}px), calc(-50% + ${lbxPanY}px)) scale(${lbxZoom})`;
+            img.style.cursor = lbxZoom > 1 ? 'grab' : 'default';
+            const resetBtn = document.getElementById('lbx-reset');
+            if (resetBtn) resetBtn.style.display = lbxZoom > 1 ? 'block' : 'none';
+            ['lightbox-prev','lightbox-next','lbx-close'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.opacity = lbxZoom > 1 ? '0.25' : '1';
+            });
+        }
+
+        function lbxResetZoom() {
+            lbxZoom = 1; lbxPanX = 0; lbxPanY = 0;
+            lbxApplyTransform(true);
+        }
+
+        window.openPhotosLightbox = function (images, startIndex) {
+            if (!images || images.length === 0 || !images[0]) return;
             galleryImages = images;
             currentGalleryIndex = startIndex || 0;
-
             const lightbox = document.getElementById('photos-lightbox');
-            if (!lightbox) {
-                console.error('Lightbox element not found!');
-                return;
-            }
-
-            lightbox.style.display = 'flex';
+            if (!lightbox) return;
+            lbxResetZoom();
+            lightbox.style.display = 'block';
             updateLightboxUI();
-
-            // Lock background scroll
             document.body.style.overflow = 'hidden';
         };
 
@@ -16825,10 +17087,12 @@
             const lightbox = document.getElementById('photos-lightbox');
             if (lightbox) lightbox.style.display = 'none';
             document.body.style.overflow = '';
+            lbxResetZoom();
         };
 
         window.navigateLightbox = function (direction) {
             if (galleryImages.length <= 1) return;
+            lbxResetZoom();
             currentGalleryIndex = (currentGalleryIndex + direction + galleryImages.length) % galleryImages.length;
             updateLightboxUI();
         };
@@ -16838,29 +17102,127 @@
             const counter = document.getElementById('lightbox-counter');
             const prevBtn = document.getElementById('lightbox-prev');
             const nextBtn = document.getElementById('lightbox-next');
-
             if (img) img.src = galleryImages[currentGalleryIndex];
             if (counter) counter.innerText = `${currentGalleryIndex + 1} / ${galleryImages.length}`;
-
-            // Navigation visibility
-            if (galleryImages.length <= 1) {
-                if (prevBtn) prevBtn.style.display = 'none';
-                if (nextBtn) nextBtn.style.display = 'none';
-            } else {
-                if (prevBtn) prevBtn.style.display = 'flex';
-                if (nextBtn) nextBtn.style.display = 'flex';
-            }
+            const single = galleryImages.length <= 1;
+            if (prevBtn) prevBtn.style.display = single ? 'none' : 'flex';
+            if (nextBtn) nextBtn.style.display = single ? 'none' : 'flex';
+            lbxApplyTransform(false);
         }
 
-        // Keyboard Navigation
-        document.addEventListener('keydown', (e) => {
-            const lightbox = document.getElementById('photos-lightbox');
-            if (lightbox && lightbox.style.display === 'flex') {
+        (function initLightboxEvents() {
+            const lb = document.getElementById('photos-lightbox');
+            if (!lb) return;
+
+            // Wheel zoom
+            lb.addEventListener('wheel', e => {
+                e.preventDefault();
+                const rect = lb.getBoundingClientRect();
+                const cx = (e.clientX - rect.left) - rect.width / 2;
+                const cy = (e.clientY - rect.top) - rect.height / 2;
+                const factor = e.deltaY < 0 ? 1.12 : 0.89;
+                const newZoom = Math.min(Math.max(lbxZoom * factor, 1), 8);
+                const dz = newZoom / lbxZoom;
+                lbxPanX = cx * (1 - dz) + lbxPanX * dz;
+                lbxPanY = cy * (1 - dz) + lbxPanY * dz;
+                lbxZoom = newZoom;
+                if (lbxZoom === 1) { lbxPanX = 0; lbxPanY = 0; }
+                lbxApplyTransform(false);
+            }, { passive: false });
+
+            // Mouse drag
+            lb.addEventListener('mousedown', e => {
+                if (lbxZoom <= 1 || e.button !== 0) return;
+                lbxDragging = true;
+                lbxDragStartX = e.clientX; lbxDragStartY = e.clientY;
+                lbxDragPanX = lbxPanX; lbxDragPanY = lbxPanY;
+                const img = document.getElementById('lightbox-img');
+                if (img) img.style.cursor = 'grabbing';
+                e.preventDefault();
+            });
+            document.addEventListener('mousemove', e => {
+                if (!lbxDragging) return;
+                lbxPanX = lbxDragPanX + (e.clientX - lbxDragStartX);
+                lbxPanY = lbxDragPanY + (e.clientY - lbxDragStartY);
+                lbxApplyTransform(false);
+            });
+            document.addEventListener('mouseup', () => {
+                if (!lbxDragging) return;
+                lbxDragging = false;
+                const img = document.getElementById('lightbox-img');
+                if (img) img.style.cursor = lbxZoom > 1 ? 'grab' : 'default';
+            });
+
+            // Touch
+            lb.addEventListener('touchstart', e => {
+                if (e.touches.length === 2) {
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    lbxPinchDist = Math.hypot(dx, dy);
+                    lbxDragStartX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                    lbxDragStartY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                    lbxDragPanX = lbxPanX; lbxDragPanY = lbxPanY;
+                } else if (e.touches.length === 1) {
+                    lbxSwipeStartX = e.touches[0].clientX;
+                    if (lbxZoom > 1) {
+                        lbxDragging = true;
+                        lbxDragStartX = e.touches[0].clientX; lbxDragStartY = e.touches[0].clientY;
+                        lbxDragPanX = lbxPanX; lbxDragPanY = lbxPanY;
+                    }
+                }
+            }, { passive: true });
+
+            lb.addEventListener('touchmove', e => {
+                e.preventDefault();
+                if (e.touches.length === 2 && lbxPinchDist !== null) {
+                    const dx = e.touches[0].clientX - e.touches[1].clientX;
+                    const dy = e.touches[0].clientY - e.touches[1].clientY;
+                    const newDist = Math.hypot(dx, dy);
+                    const rect = lb.getBoundingClientRect();
+                    const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+                    const cx = midX - rect.left - rect.width / 2;
+                    const cy = midY - rect.top - rect.height / 2;
+                    const newZoom = Math.min(Math.max(lbxZoom * (newDist / lbxPinchDist), 1), 8);
+                    const dz = newZoom / lbxZoom;
+                    lbxPanX = cx * (1 - dz) + lbxPanX * dz + (midX - lbxDragStartX);
+                    lbxPanY = cy * (1 - dz) + lbxPanY * dz + (midY - lbxDragStartY);
+                    lbxZoom = newZoom;
+                    lbxPinchDist = newDist;
+                    lbxDragStartX = midX; lbxDragStartY = midY;
+                    if (lbxZoom === 1) { lbxPanX = 0; lbxPanY = 0; }
+                    lbxApplyTransform(false);
+                } else if (e.touches.length === 1 && lbxDragging) {
+                    lbxPanX = lbxDragPanX + (e.touches[0].clientX - lbxDragStartX);
+                    lbxPanY = lbxDragPanY + (e.touches[0].clientY - lbxDragStartY);
+                    lbxApplyTransform(false);
+                }
+            }, { passive: false });
+
+            lb.addEventListener('touchend', e => {
+                if (e.touches.length < 2) lbxPinchDist = null;
+                if (e.touches.length === 0) {
+                    lbxDragging = false;
+                    if (lbxZoom <= 1) {
+                        const dx = (e.changedTouches[0]?.clientX ?? lbxSwipeStartX) - lbxSwipeStartX;
+                        if (Math.abs(dx) > 60) navigateLightbox(dx < 0 ? 1 : -1);
+                    }
+                    const now = Date.now();
+                    if (now - lbxLastTap < 300) lbxResetZoom();
+                    lbxLastTap = now;
+                }
+            }, { passive: true });
+
+            // Keyboard
+            document.addEventListener('keydown', e => {
+                const lightbox = document.getElementById('photos-lightbox');
+                if (!lightbox || lightbox.style.display === 'none') return;
                 if (e.key === 'Escape') closePhotosLightbox();
                 if (e.key === 'ArrowLeft') navigateLightbox(-1);
                 if (e.key === 'ArrowRight') navigateLightbox(1);
-            }
-        });
+                if (e.key === '0') lbxResetZoom();
+            });
+        })();
     </script>
 
     <!-- Modal: History Timeline -->
@@ -17874,6 +18236,23 @@
                     </div>
                 </div>
 
+                <div class="form-group" id="doc-upload-series-group" style="display: none; margin-bottom: 1.5rem;">
+                    <label
+                        style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Maschinenserie (Mehrfachauswahl)</label>
+                    <div class="custom-filter-dropdown" id="doc-upload-series-dropdown"
+                        onclick="window.toggleDocUploadSeriesDropdown(event)" style="width: 100%;">
+                        <span class="filter-label" id="doc-upload-series-label">Maschinenserie wählen...</span>
+                        <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                        <div class="custom-filter-menu">
+                            <ul class="dropdown-options" id="doc-upload-series-options">
+                                <!-- dynamically populated -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="form-group" style="margin-bottom: 2rem;">
                     <div id="doc-dropzone" class="file-drop-zone"
@@ -17902,19 +18281,30 @@
         style="z-index: 10100; align-items: center; justify-content: center; background: rgba(0,0,0,0.9); padding: 0;">
         <div class="modal-content glass-card"
             style="max-width: 100vw; width: 100vw; height: 100dvh; max-height: 100dvh; padding: 0.5rem 0.75rem; display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); border-radius: 0; margin: 0;">
-            <div
-                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; padding: 0.25rem 0.5rem;">
-                <span id="doc-preview-title" style="font-size: 0.8rem; color: rgba(255,255,255,0.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%;">Vorschau</span>
-                <div style="display: flex; align-items: center; gap: 12px; margin-left: auto; margin-right: 12px;">
-                    <a id="btn-open-preview-newtab" href="#" target="_blank" class="btn-secondary" style="font-size: 0.75rem; padding: 4px 10px; height: auto; text-decoration: none; display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: white;">
+            <div id="doc-preview-header"
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; padding: 0.25rem 0.5rem; gap: 8px;">
+                <span id="doc-preview-title" style="font-size: 0.8rem; color: rgba(255,255,255,0.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 50%; flex-shrink: 1;">Vorschau</span>
+                <div style="display: flex; align-items: center; gap: 6px; margin-left: auto; flex-shrink: 0;">
+                    <!-- Zoom controls -->
+                    <button id="doc-zoom-out" onclick="window.docPreviewZoom(-0.25)" title="Verkleinern" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: white; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; line-height: 1; padding: 0;">−</button>
+                    <span id="doc-preview-zoom-label" style="font-size: 0.72rem; color: rgba(255,255,255,0.5); min-width: 34px; text-align: center;">100%</span>
+                    <button id="doc-zoom-in" onclick="window.docPreviewZoom(+0.25)" title="Vergrößern" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: white; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; line-height: 1; padding: 0;">+</button>
+                    <!-- Rotate -->
+                    <button onclick="window.docPreviewRotate()" title="Drehen" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: white; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                    </button>
+                    <!-- Extern öffnen -->
+                    <a id="btn-open-preview-newtab" href="#" target="_blank" class="btn-secondary" style="font-size: 0.75rem; padding: 4px 10px; height: auto; text-decoration: none; display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: white; white-space: nowrap;">
                         <span>↗️ Extern öffnen</span>
                     </a>
                 </div>
-                <button class="btn-close-modal" onclick="window.closeDocumentPreviewModal()" style="font-size: 1.5rem; padding: 0; line-height: 1; margin-top: -2px;">&times;</button>
+                <button class="btn-close-modal" onclick="window.closeDocumentPreviewModal()" style="font-size: 1.5rem; padding: 0; line-height: 1; margin-top: -2px; flex-shrink: 0;">&times;</button>
             </div>
             <div id="doc-preview-container"
-                style="flex: 1; background: rgba(0,0,0,0.2); border-radius: 12px; position: relative; overflow-y: auto;">
-                <!-- File content (img or iframe) -->
+                style="flex: 1; background: rgba(0,0,0,0.2); border-radius: 12px; position: relative; overflow: auto; touch-action: pan-x pan-y;">
+                <div id="doc-preview-inner" style="min-width: 100%; min-height: 100%; display: flex; flex-direction: column; align-items: center;">
+                    <!-- File content rendered here -->
+                </div>
             </div>
         </div>
     </div>
@@ -18009,6 +18399,24 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="form-group" id="doc-edit-series-group" style="display: none; margin-bottom: 1.5rem;">
+                        <label
+                            style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Maschinenserie (Mehrfachauswahl)</label>
+                        <div class="custom-filter-dropdown" id="doc-edit-series-dropdown"
+                            onclick="window.toggleDocEditSeriesDropdown(event)" style="width: 100%;">
+                            <span class="filter-label" id="doc-edit-series-label">Maschinenserie wählen...</span>
+                            <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                            <div class="custom-filter-menu">
+                                <ul class="dropdown-options" id="doc-edit-series-options">
+                                    <!-- dynamically populated -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div style="display: flex; gap: 12px;">
@@ -18023,32 +18431,6 @@
     <!-- Hidden Folder Cover Input -->
     <input type="file" id="folder-cover-input" class="hidden" accept="image/*"
         onchange="window.handleFolderCoverUpload(event)">
-    <!-- Floating Focus Mode Container -->
-    <div id="focus-mode-container" style="position: fixed; bottom: 30px; right: 30px; display: flex; flex-direction: column; align-items: flex-end; z-index: 9999;">
-        <!-- Dropdown Menu -->
-        <div id="focus-mode-menu" style="display: none; flex-direction: column; gap: 8px; margin-bottom: 12px; background: rgba(15,23,42,0.95); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.6);">
-            <button onclick="document.getElementById('focus-mode-menu').style.display='none'; window.activateMode('focus')" style="background: transparent; border: none; color: var(--primary-red); padding: 12px 20px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 1rem;" onmouseover="this.style.background='rgba(190, 30, 45, 0.15)'" onmouseout="this.style.background='transparent'">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg>
-                Fokusmodus
-            </button>
-            <button onclick="document.getElementById('focus-mode-menu').style.display='none'; window.activateMode('service')" style="background: transparent; border: none; color: var(--color-primary-green); padding: 12px 20px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 1rem;" onmouseover="this.style.background='rgba(34,197,94,0.15)'" onmouseout="this.style.background='transparent'">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
-                Servicemodus
-            </button>
-        </div>
-        
-        <!-- The actual Button -->
-        <div id="focus-mode-btn" class="focus-mode-btn" style="position: static;" onclick="window.handleFocusModeBtnClick()" title="Modus whlen">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <circle cx="12" cy="12" r="3"></circle>
-                <line x1="12" y1="2" x2="12" y2="5"></line>
-                <line x1="12" y1="19" x2="12" y2="22"></line>
-                <line x1="2" y1="12" x2="5" y2="12"></line>
-                <line x1="19" y1="12" x2="22" y2="12"></line>
-            </svg>
-        </div>
-    </div>
 
     <!-- Floating Cinema Mode Stop Button -->
     <div id="cinema-floating-btn" class="cinema-floating-btn" onclick="window.toggleCinemaMode()" title="Kino-Modus stoppen">
@@ -18616,6 +18998,11 @@
         </div>
     </div>
 
+<script>
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
 </body>
 
 </html>
