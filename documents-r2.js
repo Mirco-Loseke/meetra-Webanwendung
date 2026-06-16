@@ -1295,34 +1295,62 @@ function _attachPreviewEvents() {
         }
     }, { passive: false });
 
-    // Native touch pinch (iOS Safari + Android)
+    // Native touch pinch — CSS scale during gesture, single re-render on release
     let _pinchDist = null;
     let _pinchZoomStart = 1;
+    let _pinchActive = false;
+
     container.addEventListener('touchstart', function(e) {
         if (e.touches.length === 2) {
             e.preventDefault();
-            _pinchDist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+            clearTimeout(_pinchRenderTimer);
+            _pinchActive = true;
+            _pinchDist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
             _pinchZoomStart = _previewZoom;
+            const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+            const cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+            const rect = container.getBoundingClientRect();
+            const inner = document.getElementById('doc-preview-inner');
+            if (inner) {
+                inner.style.transformOrigin = `${cx - rect.left + container.scrollLeft}px ${cy - rect.top + container.scrollTop}px`;
+                inner.style.transform = '';
+            }
         }
     }, { passive: false });
+
     container.addEventListener('touchmove', function(e) {
         if (e.touches.length === 2 && _pinchDist !== null) {
             e.preventDefault();
-            const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-            _previewZoom = Math.min(5, Math.max(0.25, parseFloat((_pinchZoomStart * (dist / _pinchDist)).toFixed(2))));
+            const dist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            const ratio = dist / _pinchDist;
+            _previewZoom = Math.min(5, Math.max(0.25, parseFloat((_pinchZoomStart * ratio).toFixed(2))));
             _updateZoomLabel();
-            // Immediate visual feedback via CSS scale while re-render is pending
+            // Only CSS scale — no re-render during gesture
             const inner = document.getElementById('doc-preview-inner');
-            if (inner) inner.style.transform = `scale(${_previewZoom / _pinchZoomStart})`;
-            clearTimeout(_pinchRenderTimer);
-            _pinchRenderTimer = setTimeout(async () => {
-                if (inner) inner.style.transform = '';
-                if (_previewType === 'pdf') await _renderPdfPages();
-                else _applyImageTransform();
-            }, 350);
+            if (inner) inner.style.transform = `scale(${ratio})`;
         }
     }, { passive: false });
-    container.addEventListener('touchend', function() { _pinchDist = null; }, { passive: true });
+
+    container.addEventListener('touchend', function(e) {
+        if (!_pinchActive) return;
+        if (e.touches.length < 2) {
+            _pinchActive = false;
+            _pinchDist = null;
+            clearTimeout(_pinchRenderTimer);
+            _pinchRenderTimer = setTimeout(async () => {
+                const inner = document.getElementById('doc-preview-inner');
+                if (inner) { inner.style.transform = ''; inner.style.transformOrigin = ''; }
+                if (_previewType === 'pdf') await _renderPdfPages();
+                else _applyImageTransform();
+            }, 120);
+        }
+    }, { passive: true });
 }
 
 window.previewDocument = async function(url, title, mimeType) {

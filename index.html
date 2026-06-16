@@ -8583,18 +8583,29 @@
                     locFieldsWrapper.classList.add('hidden');
                     locFieldsWrapper.style.display = 'none';
                 }
+                const locToggleBtnReset = document.getElementById('btn-toggle-location');
+                if (locToggleBtnReset) locToggleBtnReset.textContent = '+ Abw. Maschinenstandort hinzufügen';
                 return;
             }
 
             const locFieldsWrapper = document.getElementById('service-location-fields-wrapper');
+            const locToggleBtn = document.getElementById('btn-toggle-location');
             if (locFieldsWrapper) {
-                locFieldsWrapper.classList.remove('hidden');
-                locFieldsWrapper.style.display = 'block';
                 document.getElementById('service-location-company').value = machine.location_company || '';
                 document.getElementById('service-location-street').value = machine.location_street || '';
                 document.getElementById('service-location-zip').value = machine.location_zip || '';
                 document.getElementById('service-location-city').value = machine.location_city || '';
                 document.getElementById('service-location-country').value = machine.location_country || 'Deutschland';
+                const hasLocation = !!(machine.location_street || machine.location_city || machine.location_zip);
+                const norm = s => (s || '').trim().toLowerCase();
+                const sameAsOperator = hasLocation &&
+                    norm(machine.location_street) === norm(machine.operator_street) &&
+                    norm(machine.location_zip) === norm(machine.operator_zip) &&
+                    norm(machine.location_city) === norm(machine.operator_city);
+                const showLocation = hasLocation && !sameAsOperator;
+                locFieldsWrapper.classList.toggle('hidden', !showLocation);
+                locFieldsWrapper.style.display = showLocation ? 'block' : 'none';
+                if (locToggleBtn) locToggleBtn.textContent = showLocation ? '- Abw. Maschinenstandort entfernen' : '+ Abw. Maschinenstandort hinzufügen';
             }
 
             if (machine.customer_id) {
@@ -8709,6 +8720,7 @@
             if (!wrapper) return;
 
             const show = wrapper.classList.contains('hidden');
+            if (!show && !confirm('Hotel / Unterkunft wirklich entfernen?')) return;
             wrapper.classList.toggle('hidden', !show);
             wrapper.style.display = show ? 'block' : 'none';
 
@@ -8720,6 +8732,61 @@
                     if (el) el.value = '';
                 });
             }
+        };
+
+        // Ansprechpartner toggle
+        window.toggleContactPersonField = function() {
+            const wrapper = document.getElementById('service-contact-person-wrapper');
+            const btn = document.getElementById('btn-toggle-contact-person');
+            if (!wrapper) return;
+            const show = wrapper.classList.contains('hidden');
+            if (!show && !confirm('Ansprechpartner wirklich entfernen?')) return;
+            wrapper.classList.toggle('hidden', !show);
+            wrapper.style.display = show ? 'block' : 'none';
+            if (btn) btn.textContent = show ? '- Ansprechpartner entfernen' : '+ Ansprechpartner hinzufügen';
+        };
+
+        // Maschinenstandort toggle
+        window.toggleLocationFields = function() {
+            const wrapper = document.getElementById('service-location-fields-wrapper');
+            const btn = document.getElementById('btn-toggle-location');
+            if (!wrapper) return;
+            const show = wrapper.classList.contains('hidden');
+            if (!show && !confirm('Abweichenden Maschinenstandort wirklich entfernen?')) return;
+            wrapper.classList.toggle('hidden', !show);
+            wrapper.style.display = show ? 'block' : 'none';
+            if (btn) btn.textContent = show ? '- Abw. Maschinenstandort entfernen' : '+ Abw. Maschinenstandort hinzufügen';
+        };
+
+        // Google Maps route helpers
+        window.openMapsRoute = function(destAddress) {
+            if (!destAddress || !destAddress.trim()) return;
+            let origin = '';
+            try {
+                const hq = JSON.parse(localStorage.getItem('meetra_company_hq') || '{}');
+                if (hq.street || hq.city) {
+                    origin = [hq.street, hq.zip, hq.city, hq.country].filter(Boolean).join(', ');
+                }
+            } catch(e) {}
+            const url = 'https://www.google.com/maps/dir/?api=1' +
+                (origin ? '&origin=' + encodeURIComponent(origin) : '') +
+                '&destination=' + encodeURIComponent(destAddress);
+            window.open(url, '_blank');
+        };
+        window.openMapsRouteForBetreiber = function() {
+            const name = document.getElementById('service-customer-name')?.textContent?.trim() || '';
+            const addr = document.getElementById('service-customer-address')?.textContent?.trim() || '';
+            window.openMapsRoute([name, addr].filter(Boolean).join(', '));
+        };
+        window.openMapsRouteForLocation = function() {
+            const parts = ['service-location-street','service-location-zip','service-location-city','service-location-country']
+                .map(id => document.getElementById(id)?.value?.trim() || '').filter(Boolean);
+            window.openMapsRoute(parts.join(', '));
+        };
+        window.openMapsRouteForHotel = function() {
+            const parts = ['service-hotel-company','service-hotel-street','service-hotel-zip','service-hotel-city','service-hotel-country']
+                .map(id => document.getElementById(id)?.value?.trim() || '').filter(Boolean);
+            window.openMapsRoute(parts.join(', '));
         };
 
         // Technician Dropdown Multi-Select Logic
@@ -12401,6 +12468,10 @@
                     // Reset Ansprechpartner / Telefon
                     const contactPersonInput = document.getElementById('service-contact-person');
                     if (contactPersonInput) contactPersonInput.value = '';
+                    const cpWrapper = document.getElementById('service-contact-person-wrapper');
+                    if (cpWrapper) { cpWrapper.classList.add('hidden'); cpWrapper.style.display = 'none'; }
+                    const cpBtn = document.getElementById('btn-toggle-contact-person');
+                    if (cpBtn) cpBtn.textContent = '+ Ansprechpartner hinzufügen';
 
                     // Reset Hotel / Unterkunft fields
                     ['service-hotel-company', 'service-hotel-street', 'service-hotel-zip', 'service-hotel-city', 'service-hotel-country'].forEach(id => {
@@ -12587,6 +12658,11 @@
                         // Ansprechpartner / Telefon
                         const contactPersonInput = document.getElementById('service-contact-person');
                         if (contactPersonInput) contactPersonInput.value = editData.contact_person || '';
+                        const hasContactPerson = !!(editData.contact_person);
+                        const cpWrapperEdit = document.getElementById('service-contact-person-wrapper');
+                        if (cpWrapperEdit) { cpWrapperEdit.classList.toggle('hidden', !hasContactPerson); cpWrapperEdit.style.display = hasContactPerson ? 'block' : 'none'; }
+                        const cpBtnEdit = document.getElementById('btn-toggle-contact-person');
+                        if (cpBtnEdit) cpBtnEdit.textContent = hasContactPerson ? '- Ansprechpartner entfernen' : '+ Ansprechpartner hinzufügen';
 
                         // Hotel / Unterkunft
                         const hotelValues = {
@@ -15602,20 +15678,36 @@
                             <!-- Customer & Address Preview -->
                             <div id="selected-machine-customer-preview" class="hidden"
                                 style="margin-top: 1rem; padding: 1.25rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
-                                <div style="font-weight: 700; font-size: 0.95rem; color: white; margin-bottom: 0.5rem;" id="service-customer-name">Kunde</div>
+                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem;">
+                                    <div style="font-weight: 700; font-size: 0.95rem; color: white;" id="service-customer-name">Kunde</div>
+                                    <button type="button" onclick="window.openMapsRouteForBetreiber()" title="Route in Google Maps öffnen" style="background: none; border: none; cursor: pointer; padding: 2px 4px; color: #be1e2d; flex-shrink: 0; display: flex; align-items: center; gap: 4px;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                        <span style="font-size: 0.65rem; color: rgba(255,255,255,0.6); font-weight: 400; white-space: nowrap;">Google Route</span>
+                                    </button>
+                                </div>
                                 <div style="font-size: 0.9rem; color: rgba(255,255,255,0.6); line-height: 1.4;" id="service-customer-address">Adresse</div>
                                 </div>
                             </div>
                             
                             <!-- Ansprechpartner / Telefon -->
-                            <div style="margin-top: 1rem; padding: 1.25rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
+                            <button type="button" id="btn-toggle-contact-person" class="btn-secondary" onclick="window.toggleContactPersonField()" style="margin-top: 1rem; width: 100%;">+ Ansprechpartner hinzufügen</button>
+                            <div id="service-contact-person-wrapper" class="hidden" style="margin-top: 1rem; padding: 1.25rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
                                 <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Ansprechpartner / Telefon</label>
                                 <input type="text" id="service-contact-person" class="glass-form-input" placeholder="z.B. Herr Mustermann / 0123 456789">
                             </div>
 
+                            <!-- Maschinenstandort hinzufügen Button -->
+                            <button type="button" id="btn-toggle-location" class="btn-secondary" onclick="window.toggleLocationFields()" style="margin-top: 1rem; width: 100%;">+ Abw. Maschinenstandort hinzufügen</button>
+
                             <!-- Maschinenstandort Fields -->
                             <div id="service-location-fields-wrapper" class="hidden" style="margin-top: 1rem; padding: 1.25rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
-                                <div style="font-weight: 700; font-size: 0.95rem; color: white; margin-bottom: 0.75rem;">Maschinenstandort (falls abweichend)</div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                    <div style="font-weight: 700; font-size: 0.95rem; color: white;">Maschinenstandort (falls abweichend)</div>
+                                    <button type="button" onclick="window.openMapsRouteForLocation()" title="Route in Google Maps öffnen" style="background: none; border: none; cursor: pointer; padding: 2px 4px; color: #be1e2d; flex-shrink: 0; display: flex; align-items: center; gap: 4px;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                        <span style="font-size: 0.65rem; color: rgba(255,255,255,0.6); font-weight: 400; white-space: nowrap;">Google Route</span>
+                                    </button>
+                                </div>
                                 <div style="margin-bottom: 0.75rem;">
                                     <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Firma / Name (Maschinenstandort)</label>
                                     <input type="text" id="service-location-company" class="glass-form-input" placeholder="z.B. Baustelle XY / Zweigstelle">
@@ -15645,7 +15737,13 @@
 
                             <!-- Hotel / Unterkunft Fields -->
                             <div id="service-hotel-fields-wrapper" class="hidden" style="margin-top: 1rem; padding: 1.25rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px;">
-                                <div style="font-weight: 700; font-size: 0.95rem; color: white; margin-bottom: 0.75rem;">Hotel / Unterkunft</div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                    <div style="font-weight: 700; font-size: 0.95rem; color: white;">Hotel / Unterkunft</div>
+                                    <button type="button" onclick="window.openMapsRouteForHotel()" title="Route in Google Maps öffnen" style="background: none; border: none; cursor: pointer; padding: 2px 4px; color: #be1e2d; flex-shrink: 0; display: flex; align-items: center; gap: 4px;">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                        <span style="font-size: 0.65rem; color: rgba(255,255,255,0.6); font-weight: 400; white-space: nowrap;">Google Route</span>
+                                    </button>
+                                </div>
                                 <div style="margin-bottom: 0.75rem;">
                                     <label style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block;">Firma / Name (Hotel)</label>
                                     <input type="text" id="service-hotel-company" class="glass-form-input" placeholder="z.B. Hotel Mustername">
