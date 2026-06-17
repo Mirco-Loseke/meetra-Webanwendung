@@ -5139,8 +5139,28 @@
 
             categoryList = [];
 
+            function applyCategoryList(data) {
+                categoryList = data || [];
+                window.categoryList = categoryList; // GLOBAL EXPOSURE
+                renderCategoryList();
+                if (typeof renderServiceCategoryFilterList === 'function') renderServiceCategoryFilterList();
+                if (typeof renderMachines === 'function') renderMachines();
+                if (typeof window.populateDocumentTypeDropdowns === 'function') {
+                    window.populateDocumentTypeDropdowns();
+                }
+            }
+
             async function fetchCategories() {
                 if (!supabaseClient) return;
+
+                // Offline: sofort aus Cache laden
+                if (!navigator.onLine) {
+                    try {
+                        const cached = localStorage.getItem('offline_categories');
+                        if (cached) applyCategoryList(JSON.parse(cached));
+                    } catch(e) {}
+                    return;
+                }
 
                 const { data, error } = await supabaseClient
                     .from('categories')
@@ -5149,23 +5169,18 @@
 
                 if (error) {
                     console.error('Error fetching categories:', error);
+                    // Fallback auf Cache
+                    try {
+                        const cached = localStorage.getItem('offline_categories');
+                        if (cached) applyCategoryList(JSON.parse(cached));
+                    } catch(e) {}
                     return;
                 }
 
-                categoryList = data || [];
-                window.categoryList = categoryList; // GLOBAL EXPOSURE
-                renderCategoryList();
-                if (typeof renderServiceCategoryFilterList === 'function') renderServiceCategoryFilterList();
+                // Cache für Offline speichern
+                try { localStorage.setItem('offline_categories', JSON.stringify(data || [])); } catch(e) {}
 
-                // Re-render machines to ensure category names are correctly resolved
-                if (typeof renderMachines === 'function') {
-                    renderMachines();
-                }
-
-                // Populate document type dropdowns if documents module is loaded
-                if (typeof window.populateDocumentTypeDropdowns === 'function') {
-                    window.populateDocumentTypeDropdowns();
-                }
+                applyCategoryList(data);
             }
 
             window.renderCategoryList = function () {
@@ -12635,12 +12650,28 @@
             allServiceEntries = data || [];
             window.serviceEntryList = allServiceEntries;
 
-            // Cache für Offline speichern
+            // Cache für Offline speichern (Listen-Felder sofort, vollständige Datensätze im Hintergrund)
             if (window.offlineService) {
                 window.offlineService.cacheEntries(allServiceEntries);
+                syncFullServiceEntriesForOffline();
             }
 
             renderServiceEntries();
+        }
+
+        // Lädt im Hintergrund alle Serviceberichte komplett (alle Felder) und cached sie,
+        // damit jeder Bericht offline vom letzten Online-Stand aus weiterbearbeitet werden kann.
+        async function syncFullServiceEntriesForOffline() {
+            if (!supabaseClient || !navigator.onLine || !window.offlineService) return;
+            try {
+                const { data, error } = await supabaseClient
+                    .from('service_entries')
+                    .select('*');
+                if (error || !data) return;
+                await window.offlineService.cacheEntries(data);
+            } catch (e) {
+                console.warn('Offline-Vollsync der Serviceberichte fehlgeschlagen:', e);
+            }
         }
 
         // ── Bearbeitungssperre (Soft Lock) ──────────────────────────────
@@ -12687,6 +12718,20 @@
             const entryHeader = allServiceEntries.find(e => e.id === id);
             if (!entryHeader) return;
 
+            // Offline: direkt aus dem vollständigen Cache öffnen, kein Netzwerk-Versuch
+            // (Bearbeitungssperre entfällt offline bewusst — die 3-Wege-Merge-Logik beim Sync fängt Konflikte ab)
+            if (!navigator.onLine) {
+                if (window.offlineService) {
+                    const cached = await window.offlineService.getCachedEntry(id);
+                    if (cached && cached.description !== undefined) {
+                        openServiceberichtModal(cached);
+                        return;
+                    }
+                }
+                alert('Dieser Servicebericht wurde noch nicht vollständig offline gespeichert. Bitte einmal mit Internet öffnen, danach kann offline weiterbearbeitet werden.');
+                return;
+            }
+
             try {
                 // Show temporary cursor loader
                 document.body.style.cursor = 'wait';
@@ -12701,6 +12746,7 @@
                 if (data) {
                     const canOpen = await tryAcquireServiceberichtLock(data);
                     if (!canOpen) return;
+                    if (window.offlineService) window.offlineService.cacheEntries([data]);
                     openServiceberichtModal(data);
                 }
             } catch (err) {
