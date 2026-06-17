@@ -18,11 +18,10 @@
 </head>
 
 <body>
-    <!-- Offline status banner -->
-    <div id="offline-status-banner" style="display:none; position:fixed; top:0; left:0; right:0; z-index:99999; background:#dc2626; color:#fff; padding:8px 16px; align-items:center; justify-content:center; gap:8px; font-size:0.85rem; font-weight:600;">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path><path d="M10.71 5.05A16 16 0 0 1 22.56 9"></path><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
-        Kein Internet — Serviceberichte werden lokal gespeichert und beim nächsten Start synchronisiert.
-        <span id="offline-pending-badge" style="display:none; background:rgba(255,255,255,0.25); border-radius:20px; padding:1px 8px; font-size:0.8rem;"></span>
+    <!-- Offline status indicator -->
+    <div id="offline-status-banner" title="Kein Internet — Änderungen werden lokal gespeichert und später synchronisiert" style="display:none; position:fixed; top:12px; right:12px; z-index:99999; background:#dc2626; color:#fff; width:36px; height:36px; border-radius:50%; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,0.4);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"></path><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"></path><path d="M10.71 5.05A16 16 0 0 1 22.56 9"></path><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+        <span id="offline-pending-badge" style="display:none; position:absolute; top:-6px; right:-6px; background:#f59e0b; color:#fff; border-radius:20px; padding:1px 6px; font-size:0.7rem; font-weight:800; min-width:18px; text-align:center;"></span>
     </div>
 
     <!-- Supabase Auth Login Screen -->
@@ -3266,6 +3265,17 @@
             alert('Datenbank-Fehler: ' + err.message + '\nBitte prüfen Sie Ihre Internetverbindung und laden Sie die Seite neu.');
         }
 
+        // Verhindert endloses Hängen, wenn das Gerät zwar mit einem WLAN verbunden ist,
+        // dieses WLAN aber kein echtes Internet hat (navigator.onLine bleibt dann "true").
+        // Nach WITH_TIMEOUT_MS wird der Request als fehlgeschlagen behandelt, damit zuverlässig
+        // auf den Offline-Cache zurückgefallen werden kann, statt dass die Seite "leer" bleibt.
+        window.withTimeout = function (promise, ms = 6000) {
+            return Promise.race([
+                promise,
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Zeitüberschreitung — keine Antwort vom Server')), ms))
+            ]);
+        };
+
         // Global Error Handler for user feedback
         window.onerror = function (msg, url, lineNo, columnNo, error) {
             const message = [
@@ -3803,7 +3813,29 @@
                     return;
                 }
 
-                const { data: { session }, error } = await supabaseClient.auth.getSession();
+                let session, error;
+                try {
+                    const result = await window.withTimeout(supabaseClient.auth.getSession());
+                    session = result.data.session; error = result.error;
+                } catch (timeoutErr) {
+                    // Netzwerk hängt (z.B. WLAN ohne echtes Internet) — wie offline behandeln,
+                    // statt den Nutzer am Login-Bildschirm zu blockieren
+                    document.getElementById('supabase-login-screen').style.display = 'none';
+                    await fetchUsers();
+                    await fetchCategories();
+                    await fetchMachines();
+                    if (typeof fetchServiceEntries === 'function') await fetchServiceEntries();
+                    const lastUserId = localStorage.getItem('activeUserId');
+                    const lastUser = lastUserId ? userList.find(u => String(u.id) === String(lastUserId)) : null;
+                    if (lastUser) {
+                        executeLogin(lastUser.id);
+                    } else if (userList.length > 0) {
+                        executeLogin(userList[0].id);
+                    } else {
+                        window.showLoginError('Keine Internetverbindung und keine zwischengespeicherten Benutzerdaten vorhanden.');
+                    }
+                    return;
+                }
 
                 if (error || !session) {
                     document.getElementById('app-layout').style.display = 'none';
@@ -5208,10 +5240,15 @@
                     return;
                 }
 
-                const { data, error } = await supabaseClient
-                    .from('categories')
-                    .select('*')
-                    .order('name', { ascending: true });
+                let data, error;
+                try {
+                    const result = await window.withTimeout(
+                        supabaseClient.from('categories').select('*').order('name', { ascending: true })
+                    );
+                    data = result.data; error = result.error;
+                } catch (timeoutErr) {
+                    error = timeoutErr;
+                }
 
                 if (error) {
                     console.error('Error fetching categories:', error);
@@ -5910,10 +5947,15 @@
                     return;
                 }
 
-                const { data, error } = await supabaseClient
-                    .from('machines')
-                    .select('*')
-                    .order('created_at', { ascending: true });
+                let data, error;
+                try {
+                    const result = await window.withTimeout(
+                        supabaseClient.from('machines').select('*').order('created_at', { ascending: true })
+                    );
+                    data = result.data; error = result.error;
+                } catch (timeoutErr) {
+                    error = timeoutErr;
+                }
 
                 if (error) {
                     console.error('Error fetching machines:', error);
@@ -12662,32 +12704,47 @@
             if (!navigator.onLine) {
                 if (list) list.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: rgba(255,255,255,0.5); padding: 1rem;">Offline – zeige gespeicherte Daten</div>';
                 if (window.offlineService) {
-                    const cached = await window.offlineService.getAllCachedEntries();
-                    allServiceEntries = cached || [];
-                    window.serviceEntryList = allServiceEntries;
-                    renderServiceEntries();
+                    try {
+                        const cached = await window.offlineService.getAllCachedEntries();
+                        allServiceEntries = cached || [];
+                        window.serviceEntryList = allServiceEntries;
+                        renderServiceEntries();
+                    } catch (e) {
+                        console.error('Offline-Cache konnte nicht geladen werden:', e);
+                        if (list) list.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: rgba(255,200,200,0.8);">Offline-Speicher nicht verfügbar: ${e.message || e}</div>`;
+                    }
                 }
                 return;
             }
 
             if (list) list.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: white;">Lade Serviceeinsätze...</div>';
 
-            const { data, error } = await supabaseClient
-                .from('service_entries')
-                .select('id, machine_id, category_id, category_ids, title, date, datum_von, datum_bis, hours, technicians, pdf_url, pdf_path, files')
-                .order('date', { ascending: false });
+            let data, error;
+            try {
+                const result = await window.withTimeout(
+                    supabaseClient
+                        .from('service_entries')
+                        .select('id, machine_id, category_id, category_ids, title, date, datum_von, datum_bis, hours, technicians, pdf_url, pdf_path, files')
+                        .order('date', { ascending: false })
+                );
+                data = result.data; error = result.error;
+            } catch (timeoutErr) {
+                error = timeoutErr;
+            }
 
             if (error) {
                 console.error('Error fetching service entries:', error);
                 // Fallback auf Cache
                 if (window.offlineService) {
-                    const cached = await window.offlineService.getAllCachedEntries();
-                    if (cached && cached.length) {
-                        allServiceEntries = cached;
-                        window.serviceEntryList = allServiceEntries;
-                        renderServiceEntries();
-                        return;
-                    }
+                    try {
+                        const cached = await window.offlineService.getAllCachedEntries();
+                        if (cached && cached.length) {
+                            allServiceEntries = cached;
+                            window.serviceEntryList = allServiceEntries;
+                            renderServiceEntries();
+                            return;
+                        }
+                    } catch (e) { console.error('Offline-Cache Fallback fehlgeschlagen:', e); }
                 }
                 if (list) list.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: rgba(255,200,200,0.8);">Fehler beim Laden: ${error.message}</div>`;
                 return;
@@ -12768,9 +12825,15 @@
             // (Bearbeitungssperre entfällt offline bewusst — die 3-Wege-Merge-Logik beim Sync fängt Konflikte ab)
             if (!navigator.onLine) {
                 if (window.offlineService) {
-                    const cached = await window.offlineService.getCachedFullEntry(id);
-                    if (cached) {
-                        openServiceberichtModal(cached);
+                    try {
+                        const cached = await window.offlineService.getCachedFullEntry(id);
+                        if (cached) {
+                            openServiceberichtModal(cached);
+                            return;
+                        }
+                    } catch (e) {
+                        console.error('Offline-Cache konnte nicht geladen werden:', e);
+                        alert('Offline-Speicher nicht verfügbar: ' + (e.message || e));
                         return;
                     }
                 }

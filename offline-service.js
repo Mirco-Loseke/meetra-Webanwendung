@@ -14,7 +14,10 @@
     const SERVER_ONLY  = ['id', 'created_at', 'updated_at', 'pdf_url', 'pdf_path', 'pdf_created_at'];
 
     // ── IndexedDB ────────────────────────────────────────────────────
+    let cachedDB = null;
+
     function openDB() {
+        if (cachedDB) return Promise.resolve(cachedDB);
         return new Promise((resolve, reject) => {
             const req = indexedDB.open(DB_NAME, DB_VERSION);
             req.onupgradeneeded = (e) => {
@@ -31,8 +34,19 @@
                     db.createObjectStore(STORE_FULL, { keyPath: 'id' });
                 }
             };
-            req.onsuccess  = (e) => resolve(e.target.result);
-            req.onerror    = (e) => reject(e.target.error);
+            req.onsuccess = (e) => {
+                const db = e.target.result;
+                // Andere offene Verbindung (anderer Tab/Fenster) blockiert sonst künftige
+                // Versions-Upgrades unbegrenzt — daher selbst schließen, sobald eine neuere
+                // Version geöffnet werden will.
+                db.onversionchange = () => { db.close(); cachedDB = null; };
+                cachedDB = db;
+                resolve(db);
+            };
+            req.onerror = (e) => reject(e.target.error);
+            // Eine andere offene Verbindung mit alter Version blockiert das Upgrade —
+            // ohne diesen Handler würde das Promise sonst für immer haengen bleiben.
+            req.onblocked = () => reject(new Error('Offline-Speicher ist in einem anderen Tab/Fenster der App noch geöffnet. Bitte alle anderen Tabs/Fenster schließen und neu laden.'));
         });
     }
 
