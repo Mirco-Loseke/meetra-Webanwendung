@@ -1,7 +1,22 @@
-const CACHE_NAME = 'meetra-docs-v1';
+const CACHE_NAME = 'meetra-app-v2';
 
-// Local assets always cached on install
+// App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
+    'index.html',
+    'style.css',
+    'offline-service.js',
+    'vorlage_base64.js',
+    'machines-grouped.js',
+    'protocols.js',
+    'tasks.js',
+    'task_templates.js',
+    'protocol_templates.js',
+    'file-upload-service-r2.js',
+    'accounting.js',
+    'documents-r2.js',
+    'checklists.js',
+    'customers.js',
+    'app.js',
     'lib/pdf.min.js',
     'lib/pdf.worker.min.js',
 ];
@@ -25,15 +40,53 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
-    // Cache-first for local lib files
-    if (url.pathname.startsWith('/lib/')) {
+    // Navigation (Seite öffnen): erst Netzwerk, bei Fehler Cache
+    if (event.request.mode === 'navigate') {
         event.respondWith(
-            caches.match(event.request).then(cached => cached || fetch(event.request))
+            fetch(event.request)
+                .then(response => {
+                    if (response.ok) {
+                        caches.open(CACHE_NAME).then(c => c.put(event.request, response.clone()));
+                    }
+                    return response;
+                })
+                .catch(() => caches.match('index.html'))
         );
         return;
     }
 
-    // Network-first for R2 document URLs, cache on success so they work offline after first open
+    // Lokale JS/CSS-Dateien: aus Cache sofort liefern, im Hintergrund aktualisieren
+    if (url.origin === self.location.origin) {
+        event.respondWith(
+            caches.match(event.request, { ignoreSearch: true }).then(cached => {
+                const networkFetch = fetch(event.request).then(response => {
+                    if (response.ok) {
+                        caches.open(CACHE_NAME).then(c => c.put(event.request, response.clone()));
+                    }
+                    return response;
+                }).catch(() => null);
+                return cached || networkFetch;
+            })
+        );
+        return;
+    }
+
+    // Supabase-CDN: erst Cache, dann Netzwerk (damit es offline funktioniert)
+    if (url.hostname.includes('unpkg.com') || url.hostname.includes('supabase')) {
+        event.respondWith(
+            caches.match(event.request).then(cached =>
+                cached || fetch(event.request).then(response => {
+                    if (response.ok) {
+                        caches.open(CACHE_NAME).then(c => c.put(event.request, response.clone()));
+                    }
+                    return response;
+                }).catch(() => cached)
+            )
+        );
+        return;
+    }
+
+    // R2-Dokumente (PDF, Bilder): erst Netzwerk, bei Fehler Cache
     const isDocument = url.hostname.includes('r2') ||
         url.hostname.includes('cloudflare') ||
         /\.(pdf|jpg|jpeg|png|gif|webp|docx|xlsx|csv)$/i.test(url.pathname);
@@ -43,8 +96,7 @@ self.addEventListener('fetch', event => {
             fetch(event.request)
                 .then(response => {
                     if (response.ok) {
-                        const clone = response.clone();
-                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+                        caches.open(CACHE_NAME).then(c => c.put(event.request, response.clone()));
                     }
                     return response;
                 })
