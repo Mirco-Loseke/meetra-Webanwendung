@@ -3,9 +3,10 @@
     'use strict';
 
     const DB_NAME = 'meetra_offline';
-    const DB_VERSION = 1;
+    const DB_VERSION = 2;
     const STORE_PENDING = 'pending_service';
-    const STORE_CACHE   = 'service_cache';
+    const STORE_CACHE   = 'service_cache';      // schlanke Listenfelder (wie online geladen)
+    const STORE_FULL    = 'service_full_cache';  // vollständige Datensätze (alle Felder) fuer Offline-Bearbeitung
 
     // Array fields: union-merged (new local items appended to server list)
     const ARRAY_MERGE = ['work_log', 'tasks', 'materials', 'technicians', 'contact_persons'];
@@ -25,6 +26,9 @@
                 if (!db.objectStoreNames.contains(STORE_CACHE)) {
                     const c = db.createObjectStore(STORE_CACHE, { keyPath: 'id' });
                     c.createIndex('machine_id', 'machine_id');
+                }
+                if (!db.objectStoreNames.contains(STORE_FULL)) {
+                    db.createObjectStore(STORE_FULL, { keyPath: 'id' });
                 }
             };
             req.onsuccess  = (e) => resolve(e.target.result);
@@ -106,6 +110,23 @@
             return idbReq(db.transaction(STORE_CACHE, 'readonly').objectStore(STORE_CACHE), 'get', Number(id));
         },
 
+        // Vollständige Datensätze (alle Felder) — separat vom schlanken Listen-Cache,
+        // damit Felder wie "description", die in der Liste absichtlich nicht geladen werden,
+        // dort nicht versehentlich auftauchen.
+        cacheFullEntries: async function (entries) {
+            if (!entries || !entries.length) return;
+            const db  = await openDB();
+            const tx  = db.transaction(STORE_FULL, 'readwrite');
+            const st  = tx.objectStore(STORE_FULL);
+            entries.forEach(e => st.put(e));
+            return new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = (e) => rej(e.target.error); });
+        },
+
+        getCachedFullEntry: async function (id) {
+            const db = await openDB();
+            return idbReq(db.transaction(STORE_FULL, 'readonly').objectStore(STORE_FULL), 'get', Number(id));
+        },
+
         // 3-way merge: local changes win unless server also changed the same field.
         // For array fields: union (server list + new local items not in baseline).
         mergeReport: function (baseline, localData, serverData) {
@@ -164,7 +185,7 @@
                         await this.deleteDraft(draft.local_id);
                         synced++;
                         if (inserted && inserted[0]) {
-                            await this.cacheEntries([{ ...draft.data, id: inserted[0].id }]);
+                            await this.cacheFullEntries([{ ...draft.data, id: inserted[0].id }]);
                         }
 
                     } else if (draft.action === 'update' && draft.server_id) {
@@ -187,11 +208,11 @@
 
                         await this.deleteDraft(draft.local_id);
                         synced++;
-                        await this.cacheEntries([{ ...merged, id: draft.server_id }]);
+                        await this.cacheFullEntries([{ ...merged, id: draft.server_id }]);
                     }
                 } catch (err) {
                     console.error('[offlineService] Sync error for draft', draft.local_id, err);
-                    errors.push({ draft, err });
+                    errors.push({ draft, err: err && (err.message || err.error_description || JSON.stringify(err)) });
                 }
             }
 
@@ -268,7 +289,9 @@
                 );
             }
             if (result.errors && result.errors.length) {
-                window.showSyncToast(`${result.errors.length} Fehler beim Synchronisieren.`, 'error');
+                const firstErr = result.errors[0].err;
+                window.showSyncToast(`${result.errors.length} Fehler beim Synchronisieren: ${firstErr}`, 'error');
+                console.error('[offlineService] Sync-Fehler Details:', result.errors);
             }
         } catch (e) {
             window.showSyncToast('Fehler beim Synchronisieren.', 'error');

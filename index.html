@@ -9934,7 +9934,7 @@
 
                 // Cache for offline access
                 if (serviceRes.data && window.offlineService) {
-                    window.offlineService.cacheEntries(serviceRes.data).catch(() => {});
+                    window.offlineService.cacheFullEntries(serviceRes.data).catch(() => {});
                 }
 
                 let historyItems = [];
@@ -12714,7 +12714,7 @@
                     .from('service_entries')
                     .select('*');
                 if (error || !data) return;
-                await window.offlineService.cacheEntries(data);
+                await window.offlineService.cacheFullEntries(data);
             } catch (e) {
                 console.warn('Offline-Vollsync der Serviceberichte fehlgeschlagen:', e);
             }
@@ -12768,8 +12768,8 @@
             // (Bearbeitungssperre entfällt offline bewusst — die 3-Wege-Merge-Logik beim Sync fängt Konflikte ab)
             if (!navigator.onLine) {
                 if (window.offlineService) {
-                    const cached = await window.offlineService.getCachedEntry(id);
-                    if (cached && cached.description !== undefined) {
+                    const cached = await window.offlineService.getCachedFullEntry(id);
+                    if (cached) {
                         openServiceberichtModal(cached);
                         return;
                     }
@@ -12792,7 +12792,7 @@
                 if (data) {
                     const canOpen = await tryAcquireServiceberichtLock(data);
                     if (!canOpen) return;
-                    if (window.offlineService) window.offlineService.cacheEntries([data]);
+                    if (window.offlineService) window.offlineService.cacheFullEntries([data]);
                     openServiceberichtModal(data);
                 }
             } catch (err) {
