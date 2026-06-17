@@ -3241,8 +3241,8 @@
     <!-- ========================================================= -->
     <!-- ========================================================= -->
     
-    <!-- Supabase JS -->
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <!-- Supabase JS (lokal gehostet, damit es offline aus dem Service-Worker-Cache geladen werden kann) -->
+    <script src="lib/supabase.min.js"></script>
 
     <script>
         // Supabase Configuration
@@ -8558,6 +8558,9 @@
                 return;
             }
             serviceberichtIsDirty = false;
+            if (currentEditingServiceId) {
+                window.releaseServiceberichtLock(currentEditingServiceId);
+            }
             const modal = document.getElementById('servicebericht-modal');
             if (modal) {
                 modal.removeEventListener('input', onServiceberichtFieldChange);
@@ -12640,7 +12643,47 @@
             renderServiceEntries();
         }
 
-                window.openEditServicebericht = async function (id) {
+        // ── Bearbeitungssperre (Soft Lock) ──────────────────────────────
+        // Verhindert, dass zwei Nutzer gleichzeitig denselben Servicebericht bearbeiten.
+        // Laeuft nach SERVICEBERICHT_LOCK_TIMEOUT_MIN automatisch ab, falls die Sperre
+        // (z.B. wegen Browser-Absturz) nicht ordnungsgemaess freigegeben wurde.
+        const SERVICEBERICHT_LOCK_TIMEOUT_MIN = 10;
+
+        async function tryAcquireServiceberichtLock(entry) {
+            const myName = (window.activeUser && window.activeUser.name) || 'Unbekannt';
+            const lockedAtMs = entry.locked_at ? new Date(entry.locked_at).getTime() : 0;
+            const lockAgeMin = (Date.now() - lockedAtMs) / 60000;
+
+            if (entry.locked_by && entry.locked_by !== myName && lockAgeMin < SERVICEBERICHT_LOCK_TIMEOUT_MIN) {
+                const minutesAgo = Math.max(1, Math.round(lockAgeMin));
+                alert(`Dieser Servicebericht wird gerade von ${entry.locked_by} bearbeitet (seit ${minutesAgo} Min.) und kann daher nicht geöffnet werden.`);
+                return false;
+            }
+
+            try {
+                await supabaseClient
+                    .from('service_entries')
+                    .update({ locked_by: myName, locked_at: new Date().toISOString() })
+                    .eq('id', entry.id);
+            } catch (e) {
+                console.warn('Konnte Bearbeitungssperre nicht setzen:', e);
+            }
+            return true;
+        }
+
+        window.releaseServiceberichtLock = async function (id) {
+            if (!id || !navigator.onLine || !supabaseClient) return;
+            try {
+                await supabaseClient
+                    .from('service_entries')
+                    .update({ locked_by: null, locked_at: null })
+                    .eq('id', id);
+            } catch (e) {
+                console.warn('Konnte Bearbeitungssperre nicht freigeben:', e);
+            }
+        };
+
+        window.openEditServicebericht = async function (id) {
             const entryHeader = allServiceEntries.find(e => e.id === id);
             if (!entryHeader) return;
 
@@ -12656,6 +12699,8 @@
 
                 if (error) throw error;
                 if (data) {
+                    const canOpen = await tryAcquireServiceberichtLock(data);
+                    if (!canOpen) return;
                     openServiceberichtModal(data);
                 }
             } catch (err) {

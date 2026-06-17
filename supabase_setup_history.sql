@@ -1152,3 +1152,16 @@ ALTER TABLE machines
 -- Stores [{name, phone, position}] per service report
 ALTER TABLE service_entries
     ADD COLUMN IF NOT EXISTS contact_persons jsonb DEFAULT '[]'::jsonb;
+
+
+/* ========================================================= */
+/* DATEI: add_lock_to_service_entries.sql */
+/* ========================================================= */
+
+-- Soft-Lock fuer Serviceberichte: verhindert, dass zwei Nutzer gleichzeitig
+-- denselben Bericht bearbeiten. locked_at laeuft nach SERVICEBERICHT_LOCK_TIMEOUT_MIN
+-- (siehe index.html) automatisch ab, falls die Sperre nicht ordnungsgemaess freigegeben wurde.
+ALTER TABLE service_entries
+ADD COLUMN IF NOT EXISTS locked_by text;
+ALTER TABLE service_entries
+ADD COLUMN IF NOT EXISTS locked_at timestamptz;

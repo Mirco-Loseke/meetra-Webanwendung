@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meetra-app-v2';
+const CACHE_NAME = 'meetra-app-v3';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
@@ -19,6 +19,7 @@ const PRECACHE = [
     'app.js',
     'lib/pdf.min.js',
     'lib/pdf.worker.min.js',
+    'lib/supabase.min.js',
 ];
 
 self.addEventListener('install', event => {
@@ -71,18 +72,10 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Supabase-CDN: erst Cache, dann Netzwerk (damit es offline funktioniert)
-    if (url.hostname.includes('unpkg.com') || url.hostname.includes('supabase')) {
-        event.respondWith(
-            caches.match(event.request).then(cached =>
-                cached || fetch(event.request).then(response => {
-                    if (response.ok) {
-                        caches.open(CACHE_NAME).then(c => c.put(event.request, response.clone()));
-                    }
-                    return response;
-                }).catch(() => cached)
-            )
-        );
+    // Supabase-API-Calls (rest/v1, auth, storage) NIE abfangen — immer frisch vom Netzwerk,
+    // damit Daten online niemals veraltet aus dem Cache kommen. Offline schlägt der Request
+    // natürlich fehl; das fängt die App selbst über den localStorage/IndexedDB-Cache auf.
+    if (url.hostname.endsWith('.supabase.co')) {
         return;
     }
 
