@@ -3781,8 +3781,30 @@
             window.checkAuth = async function() {
                 if (!supabaseClient) return;
 
+                // Offline: Session lässt sich nicht prüfen/erneuern — App trotzdem mit
+                // zwischengespeicherten Daten öffnen, statt am Login-Bildschirm zu blockieren
+                if (!navigator.onLine) {
+                    document.getElementById('supabase-login-screen').style.display = 'none';
+
+                    await fetchUsers();
+                    await fetchCategories();
+                    await fetchMachines();
+                    if (typeof fetchServiceEntries === 'function') await fetchServiceEntries();
+
+                    const lastUserId = localStorage.getItem('activeUserId');
+                    const lastUser = lastUserId ? userList.find(u => String(u.id) === String(lastUserId)) : null;
+                    if (lastUser) {
+                        executeLogin(lastUser.id);
+                    } else if (userList.length > 0) {
+                        executeLogin(userList[0].id);
+                    } else {
+                        window.showLoginError('Offline: Es sind noch keine Benutzerdaten zwischengespeichert. Bitte einmal mit Internet anmelden.');
+                    }
+                    return;
+                }
+
                 const { data: { session }, error } = await supabaseClient.auth.getSession();
-                
+
                 if (error || !session) {
                     document.getElementById('app-layout').style.display = 'none';
                     document.getElementById('supabase-login-screen').style.display = 'flex';
@@ -4622,6 +4644,19 @@
             async function fetchUsers() {
                 if (!supabaseClient) return;
 
+                if (!navigator.onLine) {
+                    try {
+                        const cached = localStorage.getItem('offline_users');
+                        if (cached) {
+                            userList = JSON.parse(cached);
+                            window.userList = userList;
+                            renderUserList();
+                            renderUserDropdown();
+                        }
+                    } catch(e) {}
+                    return;
+                }
+
                 const { data, error } = await supabaseClient
                     .from('users')
                     .select('*')
@@ -4629,8 +4664,19 @@
 
                 if (error) {
                     console.error('Error fetching users:', error);
+                    try {
+                        const cached = localStorage.getItem('offline_users');
+                        if (cached) {
+                            userList = JSON.parse(cached);
+                            window.userList = userList;
+                            renderUserList();
+                            renderUserDropdown();
+                        }
+                    } catch(e) {}
                     return;
                 }
+
+                try { localStorage.setItem('offline_users', JSON.stringify(data || [])); } catch(e) {}
 
                 userList = data || [];
                 window.userList = userList; // Ensure global access for service report

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meetra-app-v3';
+const CACHE_NAME = 'meetra-app-v4';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
@@ -56,18 +56,18 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Lokale JS/CSS-Dateien: aus Cache sofort liefern, im Hintergrund aktualisieren
+    // Lokale JS/CSS-Dateien: IMMER zuerst frisch vom Netzwerk (damit Code-Updates sofort
+    // ankommen, nicht erst nach 2 Reloads), nur bei Offline/Fehler auf Cache zurückfallen
     if (url.origin === self.location.origin) {
         event.respondWith(
-            caches.match(event.request, { ignoreSearch: true }).then(cached => {
-                const networkFetch = fetch(event.request).then(response => {
+            fetch(event.request)
+                .then(response => {
                     if (response.ok) {
                         caches.open(CACHE_NAME).then(c => c.put(event.request, response.clone()));
                     }
                     return response;
-                }).catch(() => null);
-                return cached || networkFetch;
-            })
+                })
+                .catch(() => caches.match(event.request, { ignoreSearch: true }))
         );
         return;
     }
