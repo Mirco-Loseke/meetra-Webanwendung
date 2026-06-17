@@ -1137,3 +1137,18 @@ ADD COLUMN IF NOT EXISTS tech_sig_date date;
 
 ALTER TABLE public.service_entries
 ADD COLUMN IF NOT EXISTS customer_sig_date date;
+
+
+/* ========================================================= */
+/* DATEI: add_contact_persons.sql */
+/* ========================================================= */
+
+-- Add contact_persons JSONB column to machines table
+-- Stores [{name, phone, position}] per machine
+ALTER TABLE machines
+    ADD COLUMN IF NOT EXISTS contact_persons jsonb DEFAULT '[]'::jsonb;
+
+-- Add contact_persons JSONB column to service_entries table
+-- Stores [{name, phone, position}] per service report
+ALTER TABLE service_entries
+    ADD COLUMN IF NOT EXISTS contact_persons jsonb DEFAULT '[]'::jsonb;

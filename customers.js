@@ -897,7 +897,7 @@
                 }
             }
         } else {
-            if (customerGroup) customerGroup.style.display = 'block';
+            // customerGroup stays hidden (removed from UI)
             if (operatorGroup) operatorGroup.style.display = 'block';
             if (locationGroup) locationGroup.style.display = 'block';
             if (displayGroup) {

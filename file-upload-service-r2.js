@@ -1,328 +1,159 @@
 /**
- * file-upload-service.js
- * Centralized service for file compression and parallel uploads.
+ * file-upload-service-r2.js
+ * Credentials-free upload service — all signing happens in the Supabase Edge Function r2-sign.
  */
 
+const R2_SIGN_URL = 'https://rtnpyziwyaqrlfazxkyr.supabase.co/functions/v1/r2-sign';
+
+async function r2Sign(payload) {
+    const { data: { session } } = await window.supabaseClient.auth.getSession();
+    const token = session?.access_token;
+    if (!token) throw new Error('Nicht eingeloggt');
+
+    const res = await fetch(R2_SIGN_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'R2 sign error');
+    return data;
+}
+
 window.FileUploadService = {
-    /**
-     * Compresses an image file and converts it to WebP.
-     * @param {File} file 
-     * @returns {Promise<File|Blob>}
-     */
+
     async compressImage(file) {
         if (!file.type.startsWith('image/')) return file;
-        
         const options = {
             maxSizeMB: 1,
             maxWidthOrHeight: 1920,
             useWebWorker: true,
-            fileType: 'image/webp'
+            fileType: 'image/webp',
         };
-        
         try {
-            console.log(`Compressing ${file.name}...`);
-            const compressedBlob = await imageCompression(file, options);
-            return new File([compressedBlob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+            const compressed = await imageCompression(file, options);
+            return new File([compressed], file.name.replace(/\.[^/.]+$/, '') + '.webp', {
                 type: 'image/webp',
-                lastModified: Date.now()
+                lastModified: Date.now(),
             });
-        } catch (error) {
-            console.error('Compression failed, using original file:', error);
+        } catch {
             return file;
         }
     },
 
-    /**
-     * Generates a small thumbnail version of an image using Canvas.
-     * @param {File} file - The original image file
-     * @param {number} maxSize - Maximum width/height in pixels (default: 400)
-     * @returns {Promise<File|null>} - The thumbnail File or null on failure
-     */
     async generateThumbnail(file, maxSize = 400) {
         if (!file || !file.type || !file.type.startsWith('image/')) return null;
 
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             const img = new Image();
             const url = URL.createObjectURL(file);
 
             img.onload = () => {
                 URL.revokeObjectURL(url);
-
                 const canvas = document.createElement('canvas');
-                let width = img.width;
-                let height = img.height;
-
-                // Scale down proportionally
-                if (width > height) {
-                    if (width > maxSize) {
-                        height = Math.round(height * maxSize / width);
-                        width = maxSize;
-                    }
-                } else {
-                    if (height > maxSize) {
-                        width = Math.round(width * maxSize / height);
-                        height = maxSize;
-                    }
-                }
-
-                canvas.width = width;
-                canvas.height = height;
-
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-
+                let w = img.width, h = img.height;
+                if (w > h) { if (w > maxSize) { h = Math.round(h * maxSize / w); w = maxSize; } }
+                else        { if (h > maxSize) { w = Math.round(w * maxSize / h); h = maxSize; } }
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
                 canvas.toBlob(blob => {
                     if (blob) {
-                        const baseName = file.name.replace(/\.[^/.]+$/, '');
-                        const thumbFile = new File(
-                            [blob],
-                            baseName + '_thumb.webp',
-                            { type: 'image/webp', lastModified: Date.now() }
-                        );
-                        console.log(`Thumbnail generated: ${thumbFile.name} (${(thumbFile.size / 1024).toFixed(1)} KB)`);
-                        resolve(thumbFile);
+                        resolve(new File([blob], file.name.replace(/\.[^/.]+$/, '') + '_thumb.webp', {
+                            type: 'image/webp', lastModified: Date.now(),
+                        }));
                     } else {
-                        reject(new Error('Thumbnail blob generation failed'));
+                        resolve(null);
                     }
                 }, 'image/webp', 0.7);
             };
-
-            img.onerror = () => {
-                URL.revokeObjectURL(url);
-                console.warn('Failed to load image for thumbnail generation');
-                resolve(null); // Don't break the upload flow
-            };
-
+            img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
             img.src = url;
         });
     },
 
-    /**
-     * Uploads a single file to the specified storage provider.
-     * @param {File} file 
-     * @param {Object} options { bucket, path, compress, provider, folderPath }
-     */
-    async uploadFile(file, { bucket, path, compress = true, provider = 'supabase', folderPath = null }) {
-        let fileToUpload = file;
-        
-        if (compress && file.type.startsWith('image/')) {
-            fileToUpload = await this.compressImage(file);
-        }
+    async uploadFile(file, { bucket, path, compress = true, provider = 'supabase' }) {
+        let fileToUpload = compress && file.type.startsWith('image/')
+            ? await this.compressImage(file)
+            : file;
 
-        // --- CLOUDFLARE R2 PROVIDER (TEST) ---
         if (provider === 'cloudflare-r2') {
-            try {
-                await window.loadAWSSDK();
-                // Initialize AWS S3 Client for Cloudflare R2
-                const s3 = new AWS.S3({
-                    endpoint: 'https://855feaccf4d0215922275100e91c4656.r2.cloudflarestorage.com',
-                    accessKeyId: '49a3cbad28594d9d5a90e46f3965133b',
-                    secretAccessKey: '0642e23714ce5c9f805d0c2f8f59e7c9df01ba8ba7a728b9640b0db5341de797',
-                    region: 'auto',
-                    signatureVersion: 'v4'
-                });
-
-                // User needs to define these or replace them later
-                const R2_BUCKET_NAME = window.R2_BUCKET_NAME || 'dateien'; 
-                const R2_PUBLIC_URL = window.R2_PUBLIC_URL || 'https://pub-28aab7dd73f540f38b6358d78f889a27.r2.dev';
-
-                console.log(`Uploading ${fileToUpload.name} to Cloudflare R2...`);
-                
-                const params = {
-                    Bucket: R2_BUCKET_NAME,
-                    Key: path,
-                    Body: fileToUpload,
-                    ContentType: fileToUpload.type
-                };
-
-                await s3.upload(params).promise();
-
-                return {
-                    url: `${R2_PUBLIC_URL}/${path}`,
-                    path: path,
-                    size: fileToUpload.size,
-                    type: fileToUpload.type,
-                    name: fileToUpload.name,
-                    provider: 'cloudflare-r2'
-                };
-            } catch (err) {
-                console.error('Cloudflare R2 upload failed:', err);
-                throw err;
-            }
-        }
-
-
-
-        // --- SUPABASE PROVIDER (Standard / Fallback) ---
-        const { data, error } = await window.supabaseClient.storage
-            .from(bucket || 'meetra-storage')
-            .upload(path, fileToUpload, {
-                cacheControl: '3600',
-                upsert: true
+            const { uploadUrl, publicUrl } = await r2Sign({
+                action: 'upload',
+                path,
+                contentType: fileToUpload.type || 'application/octet-stream',
             });
 
+            const uploadRes = await fetch(uploadUrl, {
+                method: 'PUT',
+                headers: { 'Content-Type': fileToUpload.type || 'application/octet-stream' },
+                body: fileToUpload,
+            });
+            if (!uploadRes.ok) throw new Error(`R2 upload failed: ${uploadRes.status}`);
+
+            return { url: publicUrl, path, size: fileToUpload.size, type: fileToUpload.type, name: fileToUpload.name, provider: 'cloudflare-r2' };
+        }
+
+        // Supabase Storage fallback
+        const { error } = await window.supabaseClient.storage
+            .from(bucket || 'meetra-storage')
+            .upload(path, fileToUpload, { cacheControl: '3600', upsert: true });
         if (error) throw error;
 
         const { data: { publicUrl } } = window.supabaseClient.storage
             .from(bucket || 'meetra-storage')
             .getPublicUrl(path);
 
-        return {
-            url: publicUrl,
-            path: path,
-            size: fileToUpload.size,
-            type: fileToUpload.type,
-            name: fileToUpload.name,
-            provider: 'supabase'
-        };
+        return { url: publicUrl, path, size: fileToUpload.size, type: fileToUpload.type, name: fileToUpload.name, provider: 'supabase' };
     },
 
-    /**
-     * Uploads multiple files in parallel with a concurrency limit.
-     * @param {File[]} files 
-     * @param {Function} pathGenerator (file, index) => string
-     * @param {Object} options { bucket, compress, concurrency }
-     */
     async uploadFiles(files, pathGenerator, { bucket, compress = true, concurrency = 5, provider = 'supabase' }) {
         const results = [];
         const queue = [...files.entries()];
-        
         const workers = Array(Math.min(concurrency, files.length)).fill(null).map(async () => {
             while (queue.length > 0) {
                 const [index, file] = queue.shift();
-                const path = pathGenerator(file, index);
-                const result = await this.uploadFile(file, { bucket, path, compress, provider });
-                results[index] = result;
+                results[index] = await this.uploadFile(file, { bucket, path: pathGenerator(file, index), compress, provider });
             }
         });
-
         await Promise.all(workers);
         return results;
     },
 
-    /**
-     * Deletes a single file from the specified storage provider.
-     * @param {string} path 
-     * @param {Object} options { bucket, provider }
-     */
     async deleteFile(path, { bucket, provider = 'supabase' }) {
         if (!path) return;
 
         if (provider === 'cloudflare-r2') {
-            try {
-                await window.loadAWSSDK();
-                const s3 = new AWS.S3({
-                    endpoint: 'https://855feaccf4d0215922275100e91c4656.r2.cloudflarestorage.com',
-                    accessKeyId: '49a3cbad28594d9d5a90e46f3965133b',
-                    secretAccessKey: '0642e23714ce5c9f805d0c2f8f59e7c9df01ba8ba7a728b9640b0db5341de797',
-                    region: 'auto',
-                    signatureVersion: 'v4'
-                });
-
-                const R2_BUCKET_NAME = window.R2_BUCKET_NAME || 'dateien';
-
-                console.log(`Deleting ${path} from Cloudflare R2...`);
-                
-                const params = {
-                    Bucket: R2_BUCKET_NAME,
-                    Key: path
-                };
-
-                await s3.deleteObject(params).promise();
-                return { success: true, provider: 'cloudflare-r2' };
-            } catch (err) {
-                console.error('Cloudflare R2 deletion failed:', err);
-                throw err;
-            }
+            const { deleteUrl } = await r2Sign({ action: 'delete', path });
+            const res = await fetch(deleteUrl, { method: 'DELETE' });
+            if (!res.ok) throw new Error(`R2 delete failed: ${res.status}`);
+            return { success: true, provider: 'cloudflare-r2' };
         }
 
-        // Supabase Provider Fallback
-        const { data, error } = await window.supabaseClient.storage
+        const { error } = await window.supabaseClient.storage
             .from(bucket || 'meetra-storage')
             .remove([path]);
-
         if (error) throw error;
         return { success: true, provider: 'supabase' };
     },
 
-    /**
-     * Renames a single file by copying it to the new path and deleting the old one.
-     * @param {string} oldPath 
-     * @param {string} newPath 
-     * @param {Object} options { bucket, provider }
-     */
     async renameFile(oldPath, newPath, { bucket, provider = 'supabase' }) {
         if (!oldPath || !newPath || oldPath === newPath) return { success: true };
 
         if (provider === 'cloudflare-r2') {
-            try {
-                await window.loadAWSSDK();
-                const s3 = new AWS.S3({
-                    endpoint: 'https://855feaccf4d0215922275100e91c4656.r2.cloudflarestorage.com',
-                    accessKeyId: '49a3cbad28594d9d5a90e46f3965133b',
-                    secretAccessKey: '0642e23714ce5c9f805d0c2f8f59e7c9df01ba8ba7a728b9640b0db5341de797',
-                    region: 'auto',
-                    signatureVersion: 'v4'
-                });
-
-                const R2_BUCKET_NAME = window.R2_BUCKET_NAME || 'dateien';
-
-                console.log(`Renaming (Copy + Delete) from ${oldPath} to ${newPath} in R2...`);
-
-                // 1. Copy file
-                await s3.copyObject({
-                    Bucket: R2_BUCKET_NAME,
-                    CopySource: encodeURIComponent(`${R2_BUCKET_NAME}/${oldPath}`),
-                    Key: newPath
-                }).promise();
-
-                // 2. Delete old file
-                await s3.deleteObject({
-                    Bucket: R2_BUCKET_NAME,
-                    Key: oldPath
-                }).promise();
-
-                const R2_PUBLIC_URL = window.R2_PUBLIC_URL || 'https://pub-28aab7dd73f540f38b6358d78f889a27.r2.dev';
-                return {
-                    success: true,
-                    url: `${R2_PUBLIC_URL}/${newPath}`,
-                    path: newPath,
-                    provider: 'cloudflare-r2'
-                };
-            } catch (err) {
-                console.error('Cloudflare R2 rename failed:', err);
-                throw err;
-            }
+            const result = await r2Sign({ action: 'rename', fromPath: oldPath, toPath: newPath });
+            return { success: true, url: result.publicUrl, path: newPath, provider: 'cloudflare-r2' };
         }
 
-        // Supabase Rename (Copy + Remove)
-        try {
-            const b = bucket || 'meetra-storage';
-            const { error: copyError } = await window.supabaseClient.storage
-                .from(b)
-                .copy(oldPath, newPath);
-
-            if (copyError) throw copyError;
-
-            const { error: removeError } = await window.supabaseClient.storage
-                .from(b)
-                .remove([oldPath]);
-
-            if (removeError) throw removeError;
-
-            const { data: { publicUrl } } = window.supabaseClient.storage
-                .from(b)
-                .getPublicUrl(newPath);
-
-            return {
-                success: true,
-                url: publicUrl,
-                path: newPath,
-                provider: 'supabase'
-            };
-        } catch (err) {
-            console.error('Supabase rename failed:', err);
-            throw err;
-        }
-    }
+        const b = bucket || 'meetra-storage';
+        const { error: copyErr } = await window.supabaseClient.storage.from(b).copy(oldPath, newPath);
+        if (copyErr) throw copyErr;
+        const { error: removeErr } = await window.supabaseClient.storage.from(b).remove([oldPath]);
+        if (removeErr) throw removeErr;
+        const { data: { publicUrl } } = window.supabaseClient.storage.from(b).getPublicUrl(newPath);
+        return { success: true, url: publicUrl, path: newPath, provider: 'supabase' };
+    },
 };

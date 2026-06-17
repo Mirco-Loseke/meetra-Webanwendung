@@ -343,6 +343,7 @@
                         </div>
                     </div>
                 </div>
+                ${machine.company ? `<div style="font-size: 0.95rem; color: #fff; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0.75rem; margin-top: -0.75rem; display:flex; align-items:center; gap:5px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;opacity:0.6;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>${machine.company}</div>` : ''}
 
                 <div class="machine-info-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 1rem; margin-bottom: 0.6rem; background: rgba(0,0,0,0.15); padding: 18px 1.25rem; border-radius: 14px; border: 1px solid rgba(255,255,255,0.06); margin-left: -1.25rem; margin-right: -1.25rem; position: relative;">
                     <div style="border-right: 1px solid rgba(255,255,255,0.05); padding-right: 12px; display: flex; flex-direction: column; align-items: center; text-align: center;">
