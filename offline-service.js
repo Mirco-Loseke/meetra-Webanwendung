@@ -96,6 +96,11 @@
             );
         },
 
+        getAllCachedEntries: async function () {
+            const db = await openDB();
+            return idbReq(db.transaction(STORE_CACHE, 'readonly').objectStore(STORE_CACHE), 'getAll');
+        },
+
         // 3-way merge: local changes win unless server also changed the same field.
         // For array fields: union (server list + new local items not in baseline).
         mergeReport: function (baseline, localData, serverData) {

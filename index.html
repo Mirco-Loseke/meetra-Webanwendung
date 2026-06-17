@@ -5814,8 +5814,40 @@
             // ==========================================
 
 
+            function applyMachineList(data) {
+                machineList = (data || []).sort((a, b) => {
+                    const mA = (a.manufacturer || '').trim().toLowerCase();
+                    const mB = (b.manufacturer || '').trim().toLowerCase();
+                    if (mA !== mB) return mA.localeCompare(mB, 'de', { sensitivity: 'base' });
+                    const tA = (a.name || '').trim().toLowerCase();
+                    const tB = (b.name || '').trim().toLowerCase();
+                    if (tA !== tB) return tA.localeCompare(tB, 'de', { numeric: true, sensitivity: 'base' });
+                    const sA = a.serial || a.serial_number || '';
+                    const sB = b.serial || b.serial_number || '';
+                    return sA.localeCompare(sB, 'de', { numeric: true, sensitivity: 'base' });
+                });
+                window.machineList = machineList;
+                renderMachines();
+                const homeView = document.getElementById('home');
+                if (homeView && !homeView.classList.contains('hidden')) renderDashboard();
+                const serviceView = document.getElementById('service');
+                if (serviceView && !serviceView.classList.contains('hidden')) {
+                    if (typeof renderServiceEntries === 'function') renderServiceEntries();
+                }
+                if (typeof window.renderEvents === 'function') window.renderEvents();
+            }
+
             async function fetchMachines() {
                 if (!supabaseClient) return;
+
+                // Offline: sofort aus Cache laden
+                if (!navigator.onLine) {
+                    try {
+                        const cached = localStorage.getItem('offline_machines');
+                        if (cached) applyMachineList(JSON.parse(cached));
+                    } catch(e) {}
+                    return;
+                }
 
                 const { data, error } = await supabaseClient
                     .from('machines')
@@ -5824,46 +5856,18 @@
 
                 if (error) {
                     console.error('Error fetching machines:', error);
+                    // Fallback auf Cache
+                    try {
+                        const cached = localStorage.getItem('offline_machines');
+                        if (cached) applyMachineList(JSON.parse(cached));
+                    } catch(e) {}
                     return;
                 }
 
-                // Sort machines: Manufacturer -> Type (name) -> Serial number ascending
-                machineList = (data || []).sort((a, b) => {
-                    const mA = (a.manufacturer || '').trim().toLowerCase();
-                    const mB = (b.manufacturer || '').trim().toLowerCase();
-                    if (mA !== mB) {
-                        return mA.localeCompare(mB, 'de', { sensitivity: 'base' });
-                    }
-                    
-                    const tA = (a.name || '').trim().toLowerCase();
-                    const tB = (b.name || '').trim().toLowerCase();
-                    if (tA !== tB) {
-                        return tA.localeCompare(tB, 'de', { numeric: true, sensitivity: 'base' });
-                    }
-                    
-                    const sA = a.serial || a.serial_number || '';
-                    const sB = b.serial || b.serial_number || '';
-                    return sA.localeCompare(sB, 'de', { numeric: true, sensitivity: 'base' });
-                });
-                window.machineList = machineList; // GLOBAL EXPOSURE
-                renderMachines();
+                // Cache für Offline speichern
+                try { localStorage.setItem('offline_machines', JSON.stringify(data || [])); } catch(e) {}
 
-                // Refresh dashboard if on home view
-                const homeView = document.getElementById('home');
-                if (homeView && !homeView.classList.contains('hidden')) {
-                    renderDashboard();
-                }
-
-                // Re-render service entries if on that view, as they depend on machineList
-                const serviceView = document.getElementById('service');
-                if (serviceView && !serviceView.classList.contains('hidden')) {
-                    if (typeof renderServiceEntries === 'function') renderServiceEntries();
-                }
-
-                // Refresh calendar as well
-                if (typeof window.renderEvents === 'function') {
-                    window.renderEvents();
-                }
+                applyMachineList(data);
             }
             function getStatusColor(status) {
                 if (status === 'Betriebsbereit') return 'var(--color-primary-green)';
@@ -12589,22 +12593,50 @@
             if (!supabaseClient) return;
 
             const list = document.getElementById('service-entries-list');
+
+            // Offline: sofort aus IndexedDB Cache laden
+            if (!navigator.onLine) {
+                if (list) list.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: rgba(255,255,255,0.5); padding: 1rem;">Offline – zeige gespeicherte Daten</div>';
+                if (window.offlineService) {
+                    const cached = await window.offlineService.getAllCachedEntries();
+                    allServiceEntries = cached || [];
+                    window.serviceEntryList = allServiceEntries;
+                    renderServiceEntries();
+                }
+                return;
+            }
+
             if (list) list.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: white;">Lade Serviceeinsätze...</div>';
 
-                          const { data, error } = await supabaseClient
-                  .from('service_entries')
-                  .select('id, machine_id, category_id, category_ids, title, date, datum_von, datum_bis, hours, technicians, pdf_url, pdf_path, files')
-                  .order('date', { ascending: false });
+            const { data, error } = await supabaseClient
+                .from('service_entries')
+                .select('id, machine_id, category_id, category_ids, title, date, datum_von, datum_bis, hours, technicians, pdf_url, pdf_path, files')
+                .order('date', { ascending: false });
 
             if (error) {
                 console.error('Error fetching service entries:', error);
-                if (list) list.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: rgba(255,200,200,0.8);">
-                            Fehler beim Laden: ${error.message}</div>`;
+                // Fallback auf Cache
+                if (window.offlineService) {
+                    const cached = await window.offlineService.getAllCachedEntries();
+                    if (cached && cached.length) {
+                        allServiceEntries = cached;
+                        window.serviceEntryList = allServiceEntries;
+                        renderServiceEntries();
+                        return;
+                    }
+                }
+                if (list) list.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: rgba(255,200,200,0.8);">Fehler beim Laden: ${error.message}</div>`;
                 return;
             }
 
             allServiceEntries = data || [];
-            window.serviceEntryList = allServiceEntries; // Expose globally for dashboard
+            window.serviceEntryList = allServiceEntries;
+
+            // Cache für Offline speichern
+            if (window.offlineService) {
+                window.offlineService.cacheEntries(allServiceEntries);
+            }
+
             renderServiceEntries();
         }
 
