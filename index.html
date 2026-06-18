@@ -685,7 +685,7 @@
     <!-- Edit User Modal -->
     <div id="user-edit-modal"
         style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999999; backdrop-filter: blur(10px); flex-direction: column; align-items: center; justify-content: center;">
-        <div class="glass-card" style="padding: 2.5rem; max-width: 500px; width: 90%; position: relative; max-height: 90vh; overflow-y: auto;">
+        <div class="glass-card" style="padding: 2.5rem; max-width: 500px; width: 90%; position: relative; max-height: 90vh; overflow-y: auto; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px); border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
             <button onclick="closeEditUserModal()"
                 style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: white; cursor: pointer;">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -3767,6 +3767,7 @@
                     await fetchCategories();
                     await fetchMachines();
                     if (typeof fetchServiceEntries === 'function') await fetchServiceEntries();
+                    if (typeof window.loadUvvWartungsplaene === 'function') await window.loadUvvWartungsplaene();
 
                     // Login-Screen ausblenden
                     document.getElementById('supabase-login-screen').style.display = 'none';
@@ -3811,6 +3812,7 @@
                     await fetchCategories();
                     await fetchMachines();
                     if (typeof fetchServiceEntries === 'function') await fetchServiceEntries();
+                    if (typeof window.loadUvvWartungsplaene === 'function') await window.loadUvvWartungsplaene();
 
                     const lastUserId = localStorage.getItem('activeUserId');
                     const lastUser = lastUserId ? userList.find(u => String(u.id) === String(lastUserId)) : null;
@@ -3836,6 +3838,7 @@
                     await fetchCategories();
                     await fetchMachines();
                     if (typeof fetchServiceEntries === 'function') await fetchServiceEntries();
+                    if (typeof window.loadUvvWartungsplaene === 'function') await window.loadUvvWartungsplaene();
                     const lastUserId = localStorage.getItem('activeUserId');
                     const lastUser = lastUserId ? userList.find(u => String(u.id) === String(lastUserId)) : null;
                     if (lastUser) {
@@ -3859,6 +3862,7 @@
                     await fetchCategories();
                     await fetchMachines();
                     if (typeof fetchServiceEntries === 'function') await fetchServiceEntries();
+                    if (typeof window.loadUvvWartungsplaene === 'function') await window.loadUvvWartungsplaene();
 
                     // Profil automatisch auswählen, wenn E-Mail übereinstimmt
                     const sessionEmail = session?.user?.email;
@@ -6635,6 +6639,7 @@
                         .eq('key', 'uvv_plan_assignments').maybeSingle();
                     uvvPlanAssignments = (data && !error && data.value) ? data.value : {};
                 } catch(e) { uvvPlanAssignments = {}; }
+                window.uvvPlanAssignments = uvvPlanAssignments;
 
                 // Merge built-in + custom templates
                 try {

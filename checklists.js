@@ -221,17 +221,32 @@ window.evaluateChecklistVisibility = function() {
 window.populateChecklistSelector = function() {
     const container = document.getElementById('service-checklist-selector-container');
     if (!container) return;
-    
+
     const machineName = document.getElementById('preview-name')?.textContent || '';
     const categoryText = document.getElementById('service-category-text')?.textContent.toLowerCase() || '';
-    
+
+    // Aktuell ausgewählte Maschine ermitteln, um Wartungspläne nach Maschinentyp zu filtern
+    const selectedMachineId = document.getElementById('selected-machine-id')?.value;
+    const selectedMachine = selectedMachineId ? (window.machineList || []).find(m => String(m.id) === String(selectedMachineId)) : null;
+    const machineCategoryId = selectedMachine ? String(selectedMachine.category_id) : null;
+    const planAssignments = window.uvvPlanAssignments || {};
+
+    // Alle Pläne (eingebaute + in den Einstellungen angelegte), gefiltert auf zum Maschinentyp passende
+    // (Pläne ohne hinterlegte Maschinentyp-Zuordnung gelten als universell und werden immer angezeigt)
+    const allTemplates = window.ACTIVE_CHECKLIST_TEMPLATES || window.MOCK_CHECKLIST_TEMPLATES || [];
+    const templates = allTemplates.filter(t => {
+        const assignedCatIds = planAssignments[t.id]?.category_ids || [];
+        if (!assignedCatIds.length) return true;
+        return machineCategoryId && assignedCatIds.map(String).includes(machineCategoryId);
+    });
+
     // Check if there are active checklists already loaded or entered.
     // If it's a completely new servicebericht or we haven't selected anything yet, we auto-enable the recommended ones.
     const isNew = Object.keys(activeChecklists).length === 0;
-    
+
     let html = '';
-    MOCK_CHECKLIST_TEMPLATES.forEach(t => {
-        const matchesMachine = machineName.toLowerCase().includes(t.machine_model.toLowerCase());
+    templates.forEach(t => {
+        const matchesMachine = machineName.toLowerCase().includes((t.machine_model || '').toLowerCase());
         const suffix = matchesMachine ? ' (Empfohlen)' : '';
         
         let isChecked = activeChecklists[t.id] ? 'checked' : '';
@@ -320,7 +335,7 @@ window.onChecklistToggle = function(templateId, checked) {
         window.renderActiveChecklists();
     } else {
         // Checking on: create template layout structure
-        const template = MOCK_CHECKLIST_TEMPLATES.find(t => t.id === templateId);
+        const template = (window.ACTIVE_CHECKLIST_TEMPLATES || MOCK_CHECKLIST_TEMPLATES).find(t => t.id === templateId);
         if (!template) return;
         
         const answers = template.items.map(item => ({
