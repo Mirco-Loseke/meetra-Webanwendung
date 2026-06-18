@@ -711,6 +711,17 @@
                 <input type="text" id="edit-user-pin" class="glass-input" placeholder="Z.B. 1234 oder leer lassen">
             </div>
 
+            <div class="form-group">
+                <label style="display: block; margin-bottom: 0.5rem;">Unterschrift</label>
+                <div id="user-signature-preview-container" style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; height: 120px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.25); cursor: pointer; position: relative; margin-bottom: 0.5rem;" onclick="window.openUserSignaturePad()">
+                    <span id="user-signature-placeholder" style="color: rgba(255,255,255,0.45); font-size: 0.9rem;">👉 Klicken zum Unterschreiben</span>
+                    <img id="user-signature-preview-img" class="hidden" style="max-height: 100%; max-width: 100%; object-fit: contain; padding: 10px;">
+                    <button type="button" id="btn-clear-user-signature" class="hidden" onclick="event.stopPropagation(); window.clearUserSignature()" style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;">Löschen</button>
+                </div>
+                <input type="hidden" id="edit-user-signature">
+                <p style="font-size: 0.78rem; color: rgba(255,255,255,0.4); margin: 0;">Wird bei neuen Serviceberichten automatisch als Techniker-Unterschrift vorausgefüllt.</p>
+            </div>
+
             <div id="edit-permissions-section" class="form-group" style="margin-top: 1.5rem;">
                 <label style="margin-bottom: 0.5rem; display: block; color: var(--color-primary-green);">Berechtigungen
                     (Ansichten):</label>
@@ -3240,8 +3251,8 @@
     <!-- ========================================================= -->
     <!-- ========================================================= -->
     
-    <!-- Supabase JS (lokal gehostet, damit es offline aus dem Service-Worker-Cache geladen werden kann) -->
-    <script src="lib/supabase.min.js"></script>
+    <!-- Supabase JS -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
     <script>
         // Supabase Configuration
@@ -4676,45 +4687,53 @@
             async function fetchUsers() {
                 if (!supabaseClient) return;
 
+                // 1. Zuerst sofort aus Cache laden (falls vorhanden)
+                let cacheLoaded = false;
+                try {
+                    const cached = localStorage.getItem('offline_users');
+                    if (cached) {
+                        userList = JSON.parse(cached);
+                        window.userList = userList;
+                        renderUserList();
+                        renderUserDropdown();
+                        cacheLoaded = true;
+                    }
+                } catch(e) {}
+
                 if (!navigator.onLine) {
-                    try {
-                        const cached = localStorage.getItem('offline_users');
-                        if (cached) {
-                            userList = JSON.parse(cached);
-                            window.userList = userList;
-                            renderUserList();
-                            renderUserDropdown();
-                        }
-                    } catch(e) {}
+                    // Re-render service entries offline too as they depend on userList
+                    const serviceView = document.getElementById('service');
+                    if (serviceView && !serviceView.classList.contains('hidden')) {
+                        if (typeof renderServiceEntries === 'function') renderServiceEntries();
+                    }
                     return;
                 }
 
-                const { data, error } = await supabaseClient
-                    .from('users')
-                    .select('*')
-                    .order('created_at', { ascending: true });
+                // 2. Im Hintergrund frisch vom Netzwerk laden
+                let data, error;
+                try {
+                    const result = await window.withTimeout(
+                        supabaseClient
+                            .from('users')
+                            .select('*')
+                            .order('created_at', { ascending: true }),
+                        6000
+                    );
+                    data = result.data; error = result.error;
+                } catch (timeoutErr) {
+                    error = timeoutErr;
+                }
 
                 if (error) {
                     console.error('Error fetching users:', error);
-                    try {
-                        const cached = localStorage.getItem('offline_users');
-                        if (cached) {
-                            userList = JSON.parse(cached);
-                            window.userList = userList;
-                            renderUserList();
-                            renderUserDropdown();
-                        }
-                    } catch(e) {}
                     return;
                 }
 
                 try { localStorage.setItem('offline_users', JSON.stringify(data || [])); } catch(e) {}
 
                 userList = data || [];
-                window.userList = userList; // Ensure global access for service report
+                window.userList = userList;
                 renderUserList();
-
-                // Init Switcher
                 renderUserDropdown();
 
                 // Update global list for service report if needed
@@ -4722,7 +4741,6 @@
                     renderTechDropdown();
                 }
                 if (window.activeUser) {
-                    // Update active user data with fresh values from updated list
                     const freshActiveUser = userList.find(u => String(u.id) === String(window.activeUser.id));
                     if (freshActiveUser) {
                         if (freshActiveUser.permissions && typeof freshActiveUser.permissions === 'string') {
@@ -4740,7 +4758,6 @@
                             nameEl.textContent = `Willkommen zurück, ${window.activeUser.name}! Schön Sie zu sehen.`;
                         }
                         
-                        // Force modules to reload/re-render lists to reflect permission updates in real-time
                         if (typeof window.fetchDocuments === 'function') {
                             window.fetchDocuments();
                         }
@@ -4753,7 +4770,6 @@
                     }
                 }
 
-                // Re-render service entries if on that view, as they depend on userList for technicians dropdown
                 const serviceView = document.getElementById('service');
                 if (serviceView && !serviceView.classList.contains('hidden')) {
                     if (typeof renderServiceEntries === 'function') renderServiceEntries();
@@ -4900,6 +4916,21 @@
                 document.getElementById('edit-user-name').value = user.name || '';
                 document.getElementById('edit-user-email').value = user.email || '';
 
+                // Hinterlegte Unterschrift anzeigen
+                document.getElementById('edit-user-signature').value = user.saved_signature || '';
+                const sigImg = document.getElementById('user-signature-preview-img');
+                const sigPh = document.getElementById('user-signature-placeholder');
+                const sigBtn = document.getElementById('btn-clear-user-signature');
+                if (user.saved_signature) {
+                    if (sigImg) { sigImg.src = user.saved_signature; sigImg.classList.remove('hidden'); sigImg.style.display = 'block'; }
+                    if (sigPh) sigPh.classList.add('hidden');
+                    if (sigBtn) sigBtn.classList.remove('hidden');
+                } else {
+                    if (sigImg) { sigImg.src = ''; sigImg.classList.add('hidden'); sigImg.style.display = 'none'; }
+                    if (sigPh) sigPh.classList.remove('hidden');
+                    if (sigBtn) sigBtn.classList.add('hidden');
+                }
+
                 // PIN Logic: Admin sees all, users see their own
                 const pinInput = document.getElementById('edit-user-pin');
                 if (pinInput) {
@@ -4944,6 +4975,7 @@
                 const newName = document.getElementById('edit-user-name').value;
                 const newPin = document.getElementById('edit-user-pin').value;
                 const newEmail = document.getElementById('edit-user-email').value.trim() || null;
+                const newSignature = document.getElementById('edit-user-signature').value || null;
 
                 const activeUserObj = window.activeUser || {};
                 const currentName = (activeUserObj.name || "").toLowerCase().trim();
@@ -4980,7 +5012,8 @@
                 const updatePayload = {
                     pin: newPin,
                     email: newEmail,
-                    permissions: permsToSave
+                    permissions: permsToSave,
+                    saved_signature: newSignature
                 };
 
                 // Only update name/initials if not Mirco
@@ -5231,19 +5264,20 @@
             async function fetchCategories() {
                 if (!supabaseClient) return;
 
-                // Offline: sofort aus Cache laden
-                if (!navigator.onLine) {
-                    try {
-                        const cached = localStorage.getItem('offline_categories');
-                        if (cached) applyCategoryList(JSON.parse(cached));
-                    } catch(e) {}
-                    return;
-                }
+                // 1. Zuerst sofort aus Cache laden (falls vorhanden)
+                try {
+                    const cached = localStorage.getItem('offline_categories');
+                    if (cached) applyCategoryList(JSON.parse(cached));
+                } catch(e) {}
 
+                if (!navigator.onLine) return;
+
+                // 2. Frische Daten aus der DB holen
                 let data, error;
                 try {
                     const result = await window.withTimeout(
-                        supabaseClient.from('categories').select('*').order('name', { ascending: true })
+                        supabaseClient.from('categories').select('*').order('name', { ascending: true }),
+                        6000
                     );
                     data = result.data; error = result.error;
                 } catch (timeoutErr) {
@@ -5252,11 +5286,6 @@
 
                 if (error) {
                     console.error('Error fetching categories:', error);
-                    // Fallback auf Cache
-                    try {
-                        const cached = localStorage.getItem('offline_categories');
-                        if (cached) applyCategoryList(JSON.parse(cached));
-                    } catch(e) {}
                     return;
                 }
 
@@ -5938,19 +5967,20 @@
             async function fetchMachines() {
                 if (!supabaseClient) return;
 
-                // Offline: sofort aus Cache laden
-                if (!navigator.onLine) {
-                    try {
-                        const cached = localStorage.getItem('offline_machines');
-                        if (cached) applyMachineList(JSON.parse(cached));
-                    } catch(e) {}
-                    return;
-                }
+                // 1. Zuerst sofort aus Cache laden (falls vorhanden)
+                try {
+                    const cached = localStorage.getItem('offline_machines');
+                    if (cached) applyMachineList(JSON.parse(cached));
+                } catch(e) {}
 
+                if (!navigator.onLine) return;
+
+                // 2. Frische Daten aus der DB holen
                 let data, error;
                 try {
                     const result = await window.withTimeout(
-                        supabaseClient.from('machines').select('*').order('created_at', { ascending: true })
+                        supabaseClient.from('machines').select('*').order('created_at', { ascending: true }),
+                        6000
                     );
                     data = result.data; error = result.error;
                 } catch (timeoutErr) {
@@ -5959,11 +5989,6 @@
 
                 if (error) {
                     console.error('Error fetching machines:', error);
-                    // Fallback auf Cache
-                    try {
-                        const cached = localStorage.getItem('offline_machines');
-                        if (cached) applyMachineList(JSON.parse(cached));
-                    } catch(e) {}
                     return;
                 }
 
@@ -6514,19 +6539,37 @@
                 }
 
                 try {
-                    const { data: opData, error: opErr } = await window.supabaseClient
-                        .from('service_entries')
-                        .select('operating_hours, date')
-                        .eq('machine_id', id)
-                        .not('operating_hours', 'is', null)
-                        .neq('operating_hours', '')
-                        .order('date', { ascending: false })
-                        .limit(1);
+                    const [opRes, manualHoursRes] = await Promise.all([
+                        window.supabaseClient
+                            .from('service_entries')
+                            .select('operating_hours, date')
+                            .eq('machine_id', id)
+                            .not('operating_hours', 'is', null)
+                            .neq('operating_hours', '')
+                            .order('date', { ascending: false })
+                            .limit(1),
+                        window.supabaseClient
+                            .from('manual_history_entries')
+                            .select('content, created_at')
+                            .eq('machine_id', id)
+                            .eq('type', 'hours')
+                            .order('created_at', { ascending: false })
+                            .limit(1)
+                    ]);
 
-                    if (opData && opData.length > 0 && !opErr) {
-                        hoursEl.textContent = `${opData[0].operating_hours} Std.`;
-                        const opDateStr = new Date(opData[0].date).toLocaleDateString('de-DE');
-                        hoursDateEl.textContent = `Letzte Ablesung: ${opDateStr}`;
+                    const opCandidate = (opRes.data && opRes.data[0]) ? { hours: opRes.data[0].operating_hours, date: new Date(opRes.data[0].date) } : null;
+                    const manualCandidate = (manualHoursRes.data && manualHoursRes.data[0]) ? { hours: manualHoursRes.data[0].content, date: new Date(manualHoursRes.data[0].created_at) } : null;
+
+                    let latestHours = null;
+                    if (opCandidate && manualCandidate) {
+                        latestHours = opCandidate.date >= manualCandidate.date ? opCandidate : manualCandidate;
+                    } else {
+                        latestHours = opCandidate || manualCandidate;
+                    }
+
+                    if (latestHours) {
+                        hoursEl.textContent = `${latestHours.hours} Std.`;
+                        hoursDateEl.textContent = `Letzte Ablesung: ${latestHours.date.toLocaleDateString('de-DE')}`;
                     } else {
                         hoursEl.textContent = '0 Std.';
                         hoursDateEl.textContent = 'Keine Betriebsstunden erfasst';
@@ -9152,7 +9195,37 @@
             const hiddenInput = document.getElementById('selected-technician-ids');
             if (hiddenInput) hiddenInput.value = JSON.stringify(selectedTechs);
             renderTechDropdown();
+            applyAutoTechSignature();
         };
+
+        // Füllt die Techniker-Unterschrift mit der hinterlegten Unterschrift des ersten
+        // ausgewählten Technikers (bei mehreren Technikern bewusst nur einer, nicht alle).
+        // Rührt eine vom Nutzer selbst gezeichnete/gelöschte Unterschrift nicht an.
+        function applyAutoTechSignature() {
+            const techSigInput = document.getElementById('service-tech-signature');
+            if (!techSigInput) return;
+            if (techSigInput.value && !window._techSigIsAutofilled) return;
+
+            const primaryTechId = selectedTechs.length > 0 ? selectedTechs[0] : null;
+            const primaryTech = primaryTechId != null ? (window.userList || []).find(u => String(u.id) === String(primaryTechId)) : null;
+            const sig = primaryTech?.saved_signature || '';
+
+            techSigInput.value = sig;
+            const img = document.getElementById('tech-signature-preview-img');
+            const ph = document.getElementById('tech-signature-placeholder');
+            const btn = document.getElementById('btn-clear-tech-signature');
+            if (sig) {
+                if (img) { img.src = sig; img.classList.remove('hidden'); img.style.display = 'block'; }
+                if (ph) ph.classList.add('hidden');
+                if (btn) btn.classList.remove('hidden');
+                window._techSigIsAutofilled = true;
+            } else {
+                if (img) { img.src = ''; img.classList.add('hidden'); img.style.display = 'none'; }
+                if (ph) ph.classList.remove('hidden');
+                if (btn) btn.classList.add('hidden');
+                window._techSigIsAutofilled = false;
+            }
+        }
 
         // Close dropdown when clicking outside
         document.addEventListener('click', function (e) {
@@ -10096,7 +10169,8 @@
                                     label: (m.files && Array.isArray(m.files) && m.files.length > 0) ? `Foto <span style="display:inline-flex; align-items:center; background:rgba(139,92,246,0.2); padding:2px 8px; border-radius:12px; font-size:0.7rem; margin-left:8px; color:#c4b5fd; border: 1px solid rgba(139,92,246,0.3);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px;"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>${m.files.length}</span>` : 'Foto',
                                     icon: '📸',
                                     color: '#8b5cf6'
-                                }
+                                },
+                                'hours': { label: 'Betriebsstunden', icon: '⏱️', color: '#06b6d4' }
                             };
                             const config = typeMap[m.type] || { label: 'Eintrag', icon: '📄', color: '#9ca3af' };
 
@@ -10108,7 +10182,7 @@
                                 date: new Date(m.created_at),
                                 type: config.label,
                                 title: m.title,
-                                description: m.content,
+                                description: m.type === 'hours' && m.content ? `${m.content} Std.` : m.content,
                                 color: config.color,
                                 icon: config.icon,
                                 source: 'manuell',
@@ -10440,6 +10514,12 @@
                         <input type="file" id="manual-email-msg-file-input" accept=".msg" style="display:none;" onchange="window.handleManualHistoryMsgSelect(event)">
                         <textarea id="manual-content" placeholder="Von / An / Inhalt der E-Mail..." class="glass-input" style="min-height: 80px;"></textarea>
                     `;
+            } else if (type === 'hours') {
+                html = `
+                        <input type="hidden" id="manual-title" value="Betriebsstunden">
+                        <label style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.4rem; display: block;">Betriebsstunden</label>
+                        <input type="number" id="manual-content" placeholder="z.B. 1234" class="glass-input" min="0" step="1" style="margin-bottom: 0.75rem;">
+                    `;
             }
             const todayStr = new Date().toISOString().split('T')[0];
             const dateRow = `
@@ -10679,6 +10759,11 @@
 
             if (!title) {
                 alert('Bitte geben Sie einen Titel/Betreff ein.');
+                return;
+            }
+            if (type === 'hours' && !content.trim()) {
+                alert('Bitte Betriebsstunden eingeben.');
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitBtn.dataset.originalText || 'Speichern'; }
                 return;
             }
 
@@ -12700,32 +12785,44 @@
 
             const list = document.getElementById('service-entries-list');
 
-            // Offline: sofort aus IndexedDB Cache laden
-            if (!navigator.onLine) {
-                if (list) list.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: rgba(255,255,255,0.5); padding: 1rem;">Offline – zeige gespeicherte Daten</div>';
-                if (window.offlineService) {
-                    try {
-                        const cached = await window.offlineService.getAllCachedEntries();
-                        allServiceEntries = cached || [];
+            // 1. Zuerst SOFORT aus IndexedDB Cache laden (falls vorhanden)
+            let cacheLoaded = false;
+            if (window.offlineService) {
+                try {
+                    const cached = await window.offlineService.getAllCachedEntries();
+                    if (cached && cached.length > 0) {
+                        allServiceEntries = cached;
                         window.serviceEntryList = allServiceEntries;
                         renderServiceEntries();
-                    } catch (e) {
-                        console.error('Offline-Cache konnte nicht geladen werden:', e);
-                        if (list) list.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: rgba(255,200,200,0.8);">Offline-Speicher nicht verfügbar: ${e.message || e}</div>`;
+                        cacheLoaded = true;
                     }
+                } catch (e) {
+                    console.error('Offline-Cache beim Vorsortieren nicht ladbar:', e);
+                }
+            }
+
+            // Wenn offline, brechen wir nach dem Cache-Laden ab
+            if (!navigator.onLine) {
+                if (!cacheLoaded && list) {
+                    list.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: rgba(255,255,255,0.4); padding: 2rem;">Offline: Keine zwischengespeicherten Daten vorhanden.</div>';
                 }
                 return;
             }
 
-            if (list) list.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: white;">Lade Serviceeinsätze...</div>';
+            // Wenn kein Cache geladen wurde, Lade-Indikator zeigen
+            if (!cacheLoaded && list) {
+                list.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: white; padding: 2rem;">Lade Serviceeinsätze...</div>';
+            }
 
+            // 2. Frische Daten vom Server holen
             let data, error;
             try {
                 const result = await window.withTimeout(
                     supabaseClient
                         .from('service_entries')
                         .select('id, machine_id, category_id, category_ids, title, date, datum_von, datum_bis, hours, technicians, pdf_url, pdf_path, files')
-                        .order('date', { ascending: false })
+                        .order('date', { ascending: false }),
+                    6000 // 6 Sekunden Timeout
                 );
                 data = result.data; error = result.error;
             } catch (timeoutErr) {
@@ -12734,44 +12831,49 @@
 
             if (error) {
                 console.error('Error fetching service entries:', error);
-                // Fallback auf Cache
-                if (window.offlineService) {
-                    try {
-                        const cached = await window.offlineService.getAllCachedEntries();
-                        if (cached && cached.length) {
-                            allServiceEntries = cached;
-                            window.serviceEntryList = allServiceEntries;
-                            renderServiceEntries();
-                            return;
-                        }
-                    } catch (e) { console.error('Offline-Cache Fallback fehlgeschlagen:', e); }
+                // Wenn wir bereits Cache-Daten geladen haben, stören wir den Benutzer nicht
+                if (!cacheLoaded && list) {
+                    list.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: rgba(255,200,200,0.8);">Fehler beim Laden: ${error.message}</div>`;
                 }
-                if (list) list.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: rgba(255,200,200,0.8);">Fehler beim Laden: ${error.message}</div>`;
                 return;
             }
 
             allServiceEntries = data || [];
             window.serviceEntryList = allServiceEntries;
+            renderServiceEntries();
 
-            // Cache für Offline speichern (Listen-Felder sofort, vollständige Datensätze im Hintergrund)
+            // Cache aktualisieren (sowohl Listen-Cache als auch im Hintergrund den inkrementellen Voll-Sync starten)
             if (window.offlineService) {
                 window.offlineService.cacheEntries(allServiceEntries);
                 syncFullServiceEntriesForOffline();
             }
-
-            renderServiceEntries();
         }
 
         // Lädt im Hintergrund alle Serviceberichte komplett (alle Felder) und cached sie,
         // damit jeder Bericht offline vom letzten Online-Stand aus weiterbearbeitet werden kann.
+        // Optimiert: Inkrementelle Synchronisation basierend auf updated_at, um Datenvolumen zu minimieren.
         async function syncFullServiceEntriesForOffline() {
             if (!supabaseClient || !navigator.onLine || !window.offlineService) return;
             try {
+                const lastSync = localStorage.getItem('last_service_entries_sync') || '1970-01-01T00:00:00.000Z';
+                
+                // Nur geänderte/neue Einträge abrufen
                 const { data, error } = await supabaseClient
                     .from('service_entries')
-                    .select('*');
-                if (error || !data) return;
-                await window.offlineService.cacheFullEntries(data);
+                    .select('*')
+                    .gt('updated_at', lastSync);
+                
+                if (error) throw error;
+                
+                if (data && data.length > 0) {
+                    await window.offlineService.cacheFullEntries(data);
+                    // Den Cache für die Listenansicht ebenfalls mit aktualisieren
+                    await window.offlineService.cacheEntries(data);
+                    console.log(`[offlineSync] Inkrementeller Sync durchgeführt: ${data.length} Berichte aktualisiert.`);
+                }
+                
+                // Neuen Zeitstempel speichern
+                localStorage.setItem('last_service_entries_sync', new Date().toISOString());
             } catch (e) {
                 console.warn('Offline-Vollsync der Serviceberichte fehlgeschlagen:', e);
             }
@@ -13044,6 +13146,7 @@
 
                     if (editData) {
                         currentEditingServiceId = editData.id;
+                        window._techSigIsAutofilled = false;
                         // Baseline snapshot for 3-way offline merge
                         window._serviceReportBaseline = Object.assign({}, editData);
                         if (titleEl) titleEl.textContent = 'Servicebericht bearbeiten';
@@ -13254,6 +13357,7 @@
                     } else {
                         currentEditingServiceId = null;
                         window._serviceReportBaseline = null;
+                        window._techSigIsAutofilled = false;
                         if (titleEl) titleEl.textContent = 'Neuer Servicebericht';
 
                         // Pre-select machine if opened from Machine Details context
@@ -13277,17 +13381,11 @@
                     if (typeof userList !== 'undefined') renderTechDropdown();
                     renderServiceCategoryList();
 
-                    // Dirty tracking: reset flag, re-attach delegation
+                    // Dirty tracking: reset flag
                     serviceberichtIsDirty = false;
-                    const sbModal = document.getElementById('servicebericht-modal');
-                    sbModal.removeEventListener('input', onServiceberichtFieldChange);
-                    sbModal.removeEventListener('change', onServiceberichtFieldChange);
-                    sbModal.addEventListener('input', onServiceberichtFieldChange);
-                    sbModal.addEventListener('change', onServiceberichtFieldChange);
-                }
-            } catch (error) {
-                console.error('Error opening service report modal:', error);
-                alert('Fehler beim Öffnen des Formulars: ' + error.message);
+                };
+            } catch (err) {
+                console.error('Error opening Servicebericht modal:', err);
             }
         };
 
@@ -13297,6 +13395,17 @@
                 const tbody = document.getElementById('service-table-body');
                 const searchInput = document.getElementById('service-search-input');
                 if (!list || !tbody) return;
+
+                // Automatische Reset-Logik bei Filter- oder Suchen-Änderungen
+                const searchVal = searchInput ? searchInput.value.trim() : '';
+                const activeFiltersStr = JSON.stringify(window.activeServiceCategoryFilters);
+                if (window._lastServiceSearchVal !== searchVal || window._lastActiveServiceCategoryFilters !== activeFiltersStr) {
+                    window.serviceEntriesLimit = 40;
+                    window._lastServiceSearchVal = searchVal;
+                    window._lastActiveServiceCategoryFilters = activeFiltersStr;
+                }
+
+                window.serviceEntriesLimit = window.serviceEntriesLimit || 40;
 
                 let entries = (allServiceEntries || []).filter(e =>
                     e.title !== 'Werkstattaufenthalt Beginn' &&
@@ -13328,18 +13437,36 @@
                 }
 
                 if (entries.length === 0) {
+                    // Unterscheiden: Cache ist wirklich leer vs. Filter/Suche blendet alles aus —
+                    // sonst sieht "0 Treffer durch Filter" online wie offline exakt gleich aus wie "kein Cache".
+                    const rawCount = (allServiceEntries || []).length;
+                    const hasActiveFilter = (window.activeServiceCategoryFilters && !window.activeServiceCategoryFilters.includes('all'))
+                        || (searchInput && searchInput.value.trim() !== '');
+                    let message = 'Keine Serviceeinsätze gefunden.';
+                    let showResetBtn = false;
+                    if (rawCount > 0 && hasActiveFilter) {
+                        message = `${rawCount} Servicebericht${rawCount > 1 ? 'e' : ''} vorhanden, aber durch Suche/Filter ausgeblendet.`;
+                        showResetBtn = true;
+                    } else if (!navigator.onLine && rawCount === 0) {
+                        message = 'Offline: Noch keine Serviceberichte zwischengespeichert. Bitte einmal mit Internet öffnen.';
+                    }
                     const emptyState = `
         <div class="empty-state"
             style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; background: rgba(255,255,255,0.02); border-radius: 24px; border: 1px dashed rgba(255,255,255,0.1);">
-            <p style="color: rgba(255,255,255,0.4); font-size: 1.1rem;">Keine Serviceeinsätze gefunden.</p>
+            <p style="color: rgba(255,255,255,0.4); font-size: 1.1rem;">${message}</p>
+            ${showResetBtn ? `<button onclick="window.activeServiceCategoryFilters=['all']; const si=document.getElementById('service-search-input'); if(si) si.value=''; renderServiceEntries();" style="margin-top:1rem; padding:8px 18px; border-radius:10px; background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); cursor:pointer; font-weight:700;">Filter zurücksetzen</button>` : ''}
         </div>`;
                     list.innerHTML = emptyState;
-                    if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: rgba(255,255,255,0.4);">Keine Serviceeinsätze gefunden.</td></tr>`;
+                    if (tbody) tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 2rem; color: rgba(255,255,255,0.4);">${message}</td></tr>`;
                     return;
                 }
 
+                const totalEntriesCount = entries.length;
+                const hasMore = totalEntriesCount > window.serviceEntriesLimit;
+                const slicedEntries = entries.slice(0, window.serviceEntriesLimit);
+
                 if (serviceViewMode === 'board') {
-                    const cardsHtml = entries.map(e => {
+                    const cardsHtml = slicedEntries.map(e => {
                         const machines = window.machineList || [];
                         const machine = machines.find(m => m.id === e.machine_id);
                         const machineImgFull = machine ? (machine.image_url || '') : '';
@@ -13548,7 +13675,7 @@
 
                     const activeCards = [];
                     const doneCards = [];
-                    entries.forEach((e, i) => {
+                    slicedEntries.forEach((e, i) => {
                         if (e.pdf_url) doneCards.push(cardsHtml[i]);
                         else activeCards.push(cardsHtml[i]);
                     });
@@ -13567,10 +13694,21 @@
                             </div>
                         `;
                     }
+
+                    if (hasMore) {
+                        boardHtml += `
+                            <div style="grid-column: 1 / -1; display: flex; justify-content: center; margin-top: 2rem; margin-bottom: 2rem; width: 100%;">
+                                <button onclick="window.loadMoreServiceEntries()" class="btn-premium" style="padding: 12px 30px; border-radius: 14px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; font-weight: 700; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); transition: transform 0.2s;">
+                                    Mehr Berichte laden (${totalEntriesCount - window.serviceEntriesLimit} verbleibend)
+                                </button>
+                            </div>
+                        `;
+                    }
+
                     list.innerHTML = boardHtml;
                 } else {
                     // List View
-                    const rowsHtml = entries.map(e => {
+                    const rowsHtml = slicedEntries.map(e => {
                         const machines = window.machineList || [];
                         const machine = machines.find(m => m.id === e.machine_id);
                         const dateObj = new Date(e.date);
@@ -13651,37 +13789,49 @@
                                                      <polyline points="13 2 13 9 20 9"></polyline>
                                                  </svg>
                                              </button>` : ''}
-                                            <button onclick="event.stopPropagation(); openEditServicebericht(${e.id})" title="Bearbeiten"
-                                                style="width:36px; height:36px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
-                                                onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                                    <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                                </svg>
-                                            </button>
-                                            <button class="delete-permission-required" onclick="event.stopPropagation(); deleteServiceEntry(${e.id})" title="Löschen"
-                                                style="width:36px; height:36px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
-                                                onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                                    <polyline points="3 6 5 6 21 6"></polyline>
-                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path>
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            `;
+                                             <button onclick="event.stopPropagation(); openEditServicebericht(${e.id})" title="Bearbeiten"
+                                                 style="width:36px; height:36px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
+                                                 onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
+                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                                     <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                                 </svg>
+                                             </button>
+                                             <button class="delete-permission-required" onclick="event.stopPropagation(); deleteServiceEntry(${e.id})" title="Löschen"
+                                                 style="width:36px; height:36px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
+                                                 onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
+                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                     <polyline points="3 6 5 6 21 6"></polyline>
+                                                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path>
+                                                 </svg>
+                                             </button>
+                                         </div>
+                                     </td>
+                                 </tr>
+                             `;
 
                     });
 
                     const activeRows = [];
                     const doneRows = [];
-                    entries.forEach((e, i) => {
+                    slicedEntries.forEach((e, i) => {
                         if (e.pdf_url) doneRows.push(rowsHtml[i]);
                         else activeRows.push(rowsHtml[i]);
                     });
 
                     let listHtml = activeRows.join('');
+                    if (hasMore) {
+                        listHtml += `
+                            <tr>
+                                <td colspan="4" style="text-align: center; padding: 1.5rem;">
+                                    <button onclick="window.loadMoreServiceEntries()" class="btn-premium" style="padding: 10px 24px; border-radius: 12px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; font-weight: 700; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);">
+                                        Mehr Berichte laden (${totalEntriesCount - window.serviceEntriesLimit} verbleibend)
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                    }
+
                     if (doneRows.length > 0) {
                         listHtml += `
                             <tr onclick="window.toggleServiceErledigtGroup()" style="cursor: pointer; background: rgba(255,255,255,0.04); border-radius: 16px;">
@@ -13700,6 +13850,11 @@
             } catch (error) {
                 console.error('Error rendering service entries:', error);
             }
+        };
+
+        window.loadMoreServiceEntries = function () {
+            window.serviceEntriesLimit = (window.serviceEntriesLimit || 40) + 40;
+            window.renderServiceEntries();
         };
 
         window.toggleServiceErledigtGroup = function() {
@@ -14820,6 +14975,7 @@
                 if (ph) ph.classList.add('hidden');
                 const btn = document.getElementById('btn-clear-tech-signature');
                 if (btn) btn.classList.remove('hidden');
+                window._techSigIsAutofilled = false; // manuell gezeichnet, nicht mehr automatisch überschreiben
                 window.closeTechSignaturePad();
             }
         };
@@ -14832,6 +14988,94 @@
             const ph = document.getElementById('tech-signature-placeholder');
             if (ph) ph.classList.remove('hidden');
             const btn = document.getElementById('btn-clear-tech-signature');
+            if (btn) btn.classList.add('hidden');
+            window._techSigIsAutofilled = false; // bewusst entfernt, nicht erneut automatisch befüllen
+        };
+        // ─────────────────────────────────────────────────────────────────────
+
+        // ── User Settings Signature Pad (eigene hinterlegte Unterschrift) ──────
+        let userSignatureCanvas, userSignatureCtx, isUserSigDrawing = false;
+
+        window.openUserSignaturePad = function() {
+            const modal = document.getElementById('user-signature-modal');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            requestAnimationFrame(() => modal.classList.add('show'));
+            setTimeout(() => {
+                userSignatureCanvas = document.getElementById('user-signature-canvas');
+                if (userSignatureCanvas) {
+                    userSignatureCanvas.width = userSignatureCanvas.offsetWidth || 560;
+                    userSignatureCanvas.height = userSignatureCanvas.offsetHeight || 300;
+                    userSignatureCtx = userSignatureCanvas.getContext('2d');
+                    userSignatureCtx.strokeStyle = '#0f172a';
+                    userSignatureCtx.lineWidth = 3;
+                    userSignatureCtx.lineCap = 'round';
+                    userSignatureCtx.lineJoin = 'round';
+                    userSignatureCtx.fillStyle = '#ffffff';
+                    userSignatureCtx.fillRect(0, 0, userSignatureCanvas.width, userSignatureCanvas.height);
+                    const existingSig = document.getElementById('edit-user-signature').value;
+                    if (existingSig && existingSig.startsWith('data:image')) {
+                        const img = new Image();
+                        img.onload = function() { userSignatureCtx.drawImage(img, 0, 0, userSignatureCanvas.width, userSignatureCanvas.height); };
+                        img.src = existingSig;
+                    }
+                    const getPos = (e) => {
+                        const rect = userSignatureCanvas.getBoundingClientRect();
+                        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                        return { x: clientX - rect.left, y: clientY - rect.top };
+                    };
+                    const startDraw = (e) => { isUserSigDrawing = true; const p = getPos(e); userSignatureCtx.beginPath(); userSignatureCtx.moveTo(p.x, p.y); e.preventDefault(); };
+                    const draw = (e) => { if (!isUserSigDrawing) return; const p = getPos(e); userSignatureCtx.lineTo(p.x, p.y); userSignatureCtx.stroke(); e.preventDefault(); };
+                    const stopDraw = () => { isUserSigDrawing = false; };
+                    userSignatureCanvas.onmousedown = startDraw;
+                    userSignatureCanvas.onmousemove = draw;
+                    userSignatureCanvas.onmouseup = stopDraw;
+                    userSignatureCanvas.onmouseleave = stopDraw;
+                    userSignatureCanvas.ontouchstart = startDraw;
+                    userSignatureCanvas.ontouchmove = draw;
+                    userSignatureCanvas.ontouchend = stopDraw;
+                    userSignatureCanvas.ontouchcancel = stopDraw;
+                }
+            }, 50);
+        };
+
+        window.closeUserSignaturePad = function() {
+            const modal = document.getElementById('user-signature-modal');
+            if (modal) { modal.classList.remove('show'); modal.classList.add('hidden'); modal.style.display = 'none'; }
+        };
+
+        window.clearUserSignatureCanvas = function() {
+            if (!confirm("Möchten Sie die Zeichnung der Unterschrift wirklich zurücksetzen?")) return;
+            if (userSignatureCtx && userSignatureCanvas) {
+                userSignatureCtx.fillStyle = '#ffffff';
+                userSignatureCtx.fillRect(0, 0, userSignatureCanvas.width, userSignatureCanvas.height);
+            }
+        };
+
+        window.saveUserSignatureCanvas = function() {
+            if (userSignatureCanvas) {
+                const dataUrl = userSignatureCanvas.toDataURL('image/png');
+                document.getElementById('edit-user-signature').value = dataUrl;
+                const img = document.getElementById('user-signature-preview-img');
+                if (img) { img.src = dataUrl; img.classList.remove('hidden'); img.style.display = 'block'; }
+                const ph = document.getElementById('user-signature-placeholder');
+                if (ph) ph.classList.add('hidden');
+                const btn = document.getElementById('btn-clear-user-signature');
+                if (btn) btn.classList.remove('hidden');
+                window.closeUserSignaturePad();
+            }
+        };
+
+        window.clearUserSignature = function() {
+            if (!confirm("Möchten Sie die gespeicherte Unterschrift wirklich löschen?")) return;
+            document.getElementById('edit-user-signature').value = '';
+            const img = document.getElementById('user-signature-preview-img');
+            if (img) { img.src = ''; img.classList.add('hidden'); img.style.display = 'none'; }
+            const ph = document.getElementById('user-signature-placeholder');
+            if (ph) ph.classList.remove('hidden');
+            const btn = document.getElementById('btn-clear-user-signature');
             if (btn) btn.classList.add('hidden');
         };
         // ─────────────────────────────────────────────────────────────────────
@@ -16915,6 +17159,23 @@
         </div>
     </div>
 
+    <!-- User (Settings) Signature Pad Modal -->
+    <div id="user-signature-modal" class="modal-backdrop hidden" style="z-index: 99999999 !important; align-items: center; justify-content: center; position: fixed; inset: 0;">
+        <div class="modal-content glass-card" style="max-width: 600px; width: 95%; padding: 1.5rem; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 style="margin: 0; color: white;">Unterschrift hinterlegen</h3>
+                <button type="button" class="btn-close-modal" onclick="window.closeUserSignaturePad()" style="font-size: 1.5rem; padding: 0; line-height: 1;">&times;</button>
+            </div>
+            <div style="background: white; border-radius: 8px; overflow: hidden; height: 300px; position: relative;">
+                <canvas id="user-signature-canvas" style="width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; background: white;"></canvas>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 1.5rem;">
+                <button type="button" class="btn-secondary" onclick="window.clearUserSignatureCanvas()">Zurücksetzen</button>
+                <button type="button" class="btn-primary" onclick="window.saveUserSignatureCanvas()">Fertig</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Add Machine Modal -->
     <div id="add-machine-modal" class="modal-backdrop hidden">
         <div class="modal-content"
@@ -18017,6 +18278,21 @@
                                 </div>
                                 <span
                                     style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.3px;">E-Mail</span>
+                            </button>
+                            <!-- Betriebsstunden -->
+                            <button onclick="window.toggleManualHistoryForm('hours')"
+                                style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0.5rem;">
+                                <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(6,182,212,0.12); border: 1.5px solid rgba(6,182,212,0.5); display: flex; align-items: center; justify-content: center; color: #06b6d4; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 0 14px rgba(6,182,212,0.35), 0 0 28px rgba(6,182,212,0.15);"
+                                    onmouseover="this.style.transform='scale(1.15)'; this.style.background='rgba(6,182,212,0.22)'; this.style.boxShadow='0 0 24px rgba(6,182,212,0.6), 0 0 48px rgba(6,182,212,0.3)'"
+                                    onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(6,182,212,0.12)'; this.style.boxShadow='0 0 14px rgba(6,182,212,0.35), 0 0 28px rgba(6,182,212,0.15)'">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <circle cx="12" cy="12" r="10"></circle>
+                                        <polyline points="12 6 12 12 16 14"></polyline>
+                                    </svg>
+                                </div>
+                                <span
+                                    style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.3px;">Betriebsstd.</span>
                             </button>
                         </div>
 

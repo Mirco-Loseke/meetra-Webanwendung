@@ -16,8 +16,18 @@
     // ── IndexedDB ────────────────────────────────────────────────────
     let cachedDB = null;
 
-    function openDB() {
-        if (cachedDB) return Promise.resolve(cachedDB);
+    // iOS Safari hat einen bekannten Fehler: nachdem die Seite im Hintergrund war
+    // (z.B. weil man kurz zu den Einstellungen wechselt, um WLAN auszuschalten),
+    // antwortet IndexedDB manchmal gar nicht mehr — weder Erfolg noch Fehler.
+    // Deshalb JEDE IndexedDB-Operation mit einem Zeitlimit absichern, statt endlos zu warten.
+    function withDBTimeout(promise, ms = 5000) {
+        return Promise.race([
+            promise,
+            new Promise((_, reject) => setTimeout(() => reject(new Error('Offline-Speicher antwortet nicht (bekannter iOS-Fehler nach Hintergrund-Wechsel). Bitte die Seite einmal neu laden.')), ms))
+        ]);
+    }
+
+    function openDBRaw() {
         return new Promise((resolve, reject) => {
             const req = indexedDB.open(DB_NAME, DB_VERSION);
             req.onupgradeneeded = (e) => {
@@ -50,12 +60,31 @@
         });
     }
 
+    function openDB() {
+        if (cachedDB) return Promise.resolve(cachedDB);
+        return withDBTimeout(openDBRaw()).catch(err => {
+            cachedDB = null;
+            throw err;
+        });
+    }
+
+    // iOS Safari: nach Rückkehr aus dem Hintergrund (z.B. Wechsel zu den Einstellungen,
+    // um WLAN umzuschalten) kann die bisherige IndexedDB-Verbindung "einfrieren" und nie
+    // mehr antworten. Beim Sichtbarwerden vorsorglich verwerfen, damit der nächste Zugriff
+    // eine frische Verbindung öffnet statt an der alten haengen zu bleiben.
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && cachedDB) {
+            try { cachedDB.close(); } catch (e) {}
+            cachedDB = null;
+        }
+    });
+
     function idbReq(store, method, ...args) {
-        return new Promise((resolve, reject) => {
+        return withDBTimeout(new Promise((resolve, reject) => {
             const req = store[method](...args);
             req.onsuccess = () => resolve(req.result);
             req.onerror   = (e) => reject(e.target.error);
-        });
+        }));
     }
 
     // ── Public API ───────────────────────────────────────────────────
@@ -103,7 +132,7 @@
             const tx  = db.transaction(STORE_CACHE, 'readwrite');
             const st  = tx.objectStore(STORE_CACHE);
             entries.forEach(e => st.put(e));
-            return new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = (e) => rej(e.target.error); });
+            return withDBTimeout(new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = (e) => rej(e.target.error); }));
         },
 
         getCachedEntries: async function (machineId) {
@@ -133,7 +162,7 @@
             const tx  = db.transaction(STORE_FULL, 'readwrite');
             const st  = tx.objectStore(STORE_FULL);
             entries.forEach(e => st.put(e));
-            return new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = (e) => rej(e.target.error); });
+            return withDBTimeout(new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = (e) => rej(e.target.error); }));
         },
 
         getCachedFullEntry: async function (id) {

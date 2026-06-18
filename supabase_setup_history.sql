@@ -1165,3 +1165,27 @@ ALTER TABLE service_entries
 ADD COLUMN IF NOT EXISTS locked_by text;
 ALTER TABLE service_entries
 ADD COLUMN IF NOT EXISTS locked_at timestamptz;
+
+
+/* ========================================================= */
+/* DATEI: add_hours_type_to_manual_history_entries.sql */
+/* ========================================================= */
+
+-- Schnelleintrag "Betriebsstunden" in der Historie: erlaubt den neuen type 'hours'
+-- (Wert wird in content als Zahl gespeichert, analog zu den anderen Schnelleintrag-Typen).
+ALTER TABLE public.manual_history_entries
+DROP CONSTRAINT IF EXISTS manual_history_entries_type_check;
+
+ALTER TABLE public.manual_history_entries
+ADD CONSTRAINT manual_history_entries_type_check
+CHECK (type IN ('email', 'phone', 'note', 'photo', 'hours'));
+
+
+/* ========================================================= */
+/* DATEI: add_saved_signature_to_users.sql */
+/* ========================================================= */
+
+-- Persoenliche Unterschrift je Benutzer (Base64 PNG), wird in den Benutzer-Einstellungen
+-- hinterlegt und bei neuen Serviceberichten automatisch als Techniker-Unterschrift vorausgefuellt.
+ALTER TABLE public.users
+ADD COLUMN IF NOT EXISTS saved_signature text;

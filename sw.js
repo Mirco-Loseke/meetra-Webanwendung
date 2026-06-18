@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meetra-app-v4';
+const CACHE_NAME = 'meetra-app-v6';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
@@ -19,7 +19,6 @@ const PRECACHE = [
     'app.js',
     'lib/pdf.min.js',
     'lib/pdf.worker.min.js',
-    'lib/supabase.min.js',
 ];
 
 self.addEventListener('install', event => {
@@ -41,33 +40,38 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
-    // Navigation (Seite öffnen): erst Netzwerk, bei Fehler Cache
+    // Navigation (Seite öffnen): Stale-While-Revalidate für index.html (sofortiger Start, Update im Hintergrund)
     if (event.request.mode === 'navigate') {
         event.respondWith(
-            fetch(event.request)
-                .then(response => {
-                    if (response.ok) {
-                        caches.open(CACHE_NAME).then(c => c.put(event.request, response.clone()));
-                    }
-                    return response;
-                })
-                .catch(() => caches.match('index.html'))
+            caches.match('index.html').then(cachedResponse => {
+                const fetchPromise = fetch(event.request)
+                    .then(response => {
+                        if (response.ok) {
+                            caches.open(CACHE_NAME).then(c => c.put(event.request, response.clone()));
+                        }
+                        return response;
+                    })
+                    .catch(() => {});
+                return cachedResponse || fetchPromise;
+            })
         );
         return;
     }
 
-    // Lokale JS/CSS-Dateien: IMMER zuerst frisch vom Netzwerk (damit Code-Updates sofort
-    // ankommen, nicht erst nach 2 Reloads), nur bei Offline/Fehler auf Cache zurückfallen
+    // Lokale JS/CSS-Dateien: Stale-While-Revalidate (sofort aus Cache für schnelle Ladezeiten, Update im Hintergrund)
     if (url.origin === self.location.origin) {
         event.respondWith(
-            fetch(event.request)
-                .then(response => {
-                    if (response.ok) {
-                        caches.open(CACHE_NAME).then(c => c.put(event.request, response.clone()));
-                    }
-                    return response;
-                })
-                .catch(() => caches.match(event.request, { ignoreSearch: true }))
+            caches.match(event.request, { ignoreSearch: true }).then(cachedResponse => {
+                const fetchPromise = fetch(event.request)
+                    .then(response => {
+                        if (response.ok) {
+                            caches.open(CACHE_NAME).then(c => c.put(event.request, response.clone()));
+                        }
+                        return response;
+                    })
+                    .catch(() => {});
+                return cachedResponse || fetchPromise;
+            })
         );
         return;
     }
@@ -79,21 +83,25 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // R2-Dokumente (PDF, Bilder): erst Netzwerk, bei Fehler Cache
+    // R2-Dokumente (PDF, Bilder): Cache-First (Bilder/PDFs laden sofort offline/online aus dem Cache)
     const isDocument = url.hostname.includes('r2') ||
         url.hostname.includes('cloudflare') ||
         /\.(pdf|jpg|jpeg|png|gif|webp|docx|xlsx|csv)$/i.test(url.pathname);
 
     if (isDocument) {
         event.respondWith(
-            fetch(event.request)
-                .then(response => {
-                    if (response.ok) {
-                        caches.open(CACHE_NAME).then(c => c.put(event.request, response.clone()));
-                    }
-                    return response;
-                })
-                .catch(() => caches.match(event.request))
+            caches.match(event.request).then(cachedResponse => {
+                if (cachedResponse) return cachedResponse; // Cache-Treffer sofort zurückgeben
+
+                return fetch(event.request)
+                    .then(response => {
+                        if (response.ok) {
+                            caches.open(CACHE_NAME).then(c => c.put(event.request, response.clone()));
+                        }
+                        return response;
+                    })
+                    .catch(() => {});
+            })
         );
     }
 });
