@@ -6,6 +6,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Webapp meetra</title>
     <link rel="icon" type="image/png" href="meetra_arrows_icon.png">
+    <script>
+        // Geräte-Leistungstest: läuft VOR dem Laden des Stylesheets, damit Glas-/Blur-Effekte
+        // bei schwächeren Geräten von Anfang an reduziert werden (kein Flackern). Ergebnis wird
+        // gecacht, damit der Test nicht bei jedem Seitenaufruf erneut läuft.
+        (function () {
+            try {
+                var cached = localStorage.getItem('meetra_perf_class');
+                if (cached === 'low' || cached === 'high') {
+                    document.documentElement.classList.add(cached === 'low' ? 'reduced-fx' : 'full-fx');
+                    return;
+                }
+                var cores = navigator.hardwareConcurrency || 4;
+                var start = performance.now();
+                var x = 0;
+                for (var i = 0; i < 3000000; i++) {
+                    x += Math.sqrt(i) * Math.sin(i);
+                }
+                var elapsed = performance.now() - start;
+                // Schwellenwert grob gewählt — bei Bedarf nach echten Gerätetests nachjustieren.
+                var isLowPower = elapsed > 25 || cores <= 2;
+                var result = isLowPower ? 'low' : 'high';
+                localStorage.setItem('meetra_perf_class', result);
+                document.documentElement.classList.add(isLowPower ? 'reduced-fx' : 'full-fx');
+            } catch (e) {
+                document.documentElement.classList.add('full-fx');
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="style.css?v=42">
     <!-- Preloading standard fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -7866,10 +7894,15 @@
                             contact_persons: typeof window.collectMachineContactPersons === 'function' ? window.collectMachineContactPersons() : []
                         };
 
-                        const updateResult = await supabaseClient
-                            .from('machines')
-                            .update(machineData)
-                            .eq('id', machineId);
+                        let updateResult;
+                        try {
+                            updateResult = await window.withTimeout(
+                                supabaseClient.from('machines').update(machineData).eq('id', machineId),
+                                8000
+                            );
+                        } catch (timeoutErr) {
+                            throw new Error('Keine Verbindung zum Server — bitte Internetverbindung prüfen und erneut versuchen.');
+                        }
 
                         if (updateResult.error) throw updateResult.error;
 
@@ -7913,10 +7946,15 @@
                             contact_persons: typeof window.collectMachineContactPersons === 'function' ? window.collectMachineContactPersons() : []
                         };
 
-                        const insertResult = await supabaseClient
-                            .from('machines')
-                            .insert([tempMachineData])
-                            .select('id');
+                        let insertResult;
+                        try {
+                            insertResult = await window.withTimeout(
+                                supabaseClient.from('machines').insert([tempMachineData]).select('id'),
+                                8000
+                            );
+                        } catch (timeoutErr) {
+                            throw new Error('Keine Verbindung zum Server — bitte Internetverbindung prüfen und erneut versuchen.');
+                        }
 
                         if (insertResult.error) throw insertResult.error;
                         machineId = insertResult.data[0].id;

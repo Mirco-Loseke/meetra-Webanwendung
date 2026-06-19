@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meetra-app-v9';
+const CACHE_NAME = 'meetra-app-v11';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
@@ -42,9 +42,14 @@ self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
     // Navigation (Seite öffnen): Network-First — bei bestehendem Internet immer die aktuellste
-    // Version laden (kein "ein Reload zu spät"-Effekt mehr). Der Cache greift nur als Fallback,
-    // wenn das Netzwerk nicht erreichbar ist (offline).
+    // Version laden (kein "ein Reload zu spät"-Effekt mehr). Ist das Gerät bereits als offline
+    // erkannt, wird das Netzwerk gar nicht erst versucht — sonst wartet jede einzelne Datei auf
+    // einen Netzwerk-Timeout, bevor sie aus dem Cache kommt, was auf dem iPad spürbar bremst.
     if (event.request.mode === 'navigate') {
+        if (!self.navigator.onLine) {
+            event.respondWith(caches.match('index.html').then(r => r || fetch(event.request)));
+            return;
+        }
         event.respondWith(
             fetch(event.request)
                 .then(response => {
@@ -59,9 +64,13 @@ self.addEventListener('fetch', event => {
     }
 
     // Lokale JS/CSS-Dateien: Network-First — bei bestehendem Internet immer den aktuellsten Code
-    // laden (kein veralteter Stand mehr durch zwischengespeicherte alte Versionen). Der Cache
-    // greift nur als Fallback, wenn das Netzwerk nicht erreichbar ist (offline).
+    // laden. Offline wird das Netzwerk gar nicht erst versucht (siehe oben) — direkt aus dem
+    // Cache, ohne auf einen Timeout zu warten.
     if (url.origin === self.location.origin) {
+        if (!self.navigator.onLine) {
+            event.respondWith(caches.match(event.request, { ignoreSearch: true }).then(r => r || fetch(event.request)));
+            return;
+        }
         event.respondWith(
             fetch(event.request)
                 .then(response => {

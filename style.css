@@ -1,4 +1,12 @@
-﻿:root {
+﻿/* Schwächere Geräte: Glas-/Blur-Effekte abschalten (GPU-teuerstes CSS-Feature der App).
+   Greift sowohl bei Klassen-basiertem als auch bei Inline-Style-gesetztem backdrop-filter. */
+.reduced-fx,
+.reduced-fx * {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+:root {
     /* Midnight Glass Color Palette */
     --midnight-deep: #0f172a;
     --midnight-blue: #1e293b;
