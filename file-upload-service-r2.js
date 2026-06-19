@@ -145,7 +145,11 @@ window.FileUploadService = {
                     ContentType: fileToUpload.type
                 };
 
-                await s3.upload(params).promise();
+                // putObject statt upload(): erzwingt einen einzelnen PUT-Request statt eines
+                // mehrteiligen (multipart) Uploads bei größeren Dateien. Multipart braucht zusätzliche
+                // CORS-Freigaben auf dem R2-Bucket, die dort fehlen können — das verursacht bei größeren
+                // Dokumenten "blocked"/CORS-Fehler im Browser, während kleine Fotos unauffällig bleiben.
+                await s3.putObject(params).promise();
 
                 return {
                     url: `${R2_PUBLIC_URL}/${path}`,
