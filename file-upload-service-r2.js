@@ -14,9 +14,11 @@ window.FileUploadService = {
 
         const options = {
             maxSizeMB: 1,
-            maxWidthOrHeight: 1920,
+            maxWidthOrHeight: 1600,
             useWebWorker: true,
-            fileType: 'image/webp'
+            fileType: 'image/webp',
+            initialQuality: 0.75,
+            maxIteration: 12
         };
 
         try {
