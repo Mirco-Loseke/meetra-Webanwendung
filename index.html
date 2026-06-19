@@ -9355,10 +9355,6 @@
 
             const dateStart = document.getElementById('service-date-start')?.value;
             const dateEnd   = document.getElementById('service-date-end')?.value;
-            const locStreet  = document.getElementById('service-location-street')?.value.trim() || null;
-            const locZip     = document.getElementById('service-location-zip')?.value.trim() || null;
-            const locCity    = document.getElementById('service-location-city')?.value.trim() || null;
-            const locCountry = document.getElementById('service-location-country')?.value.trim() || null;
 
             return {
                 machine_id:             parseInt(machineId),
@@ -9396,12 +9392,7 @@
                 hotel_street:           document.getElementById('service-hotel-street')?.value.trim() || null,
                 hotel_zip:              document.getElementById('service-hotel-zip')?.value.trim() || null,
                 hotel_city:             document.getElementById('service-hotel-city')?.value.trim() || null,
-                hotel_country:          document.getElementById('service-hotel-country')?.value.trim() || null,
-                location_company:       document.getElementById('service-location-company')?.value.trim() || null,
-                location_street:        locStreet,
-                location_zip:           locZip,
-                location_city:          locCity,
-                location_country:       locCountry
+                hotel_country:          document.getElementById('service-hotel-country')?.value.trim() || null
             };
         };
 
@@ -12861,22 +12852,31 @@
             if (!supabaseClient || !navigator.onLine || !window.offlineService) return;
             try {
                 const lastSync = localStorage.getItem('last_service_entries_sync') || '1970-01-01T00:00:00.000Z';
-                
+
                 // Nur geänderte/neue Einträge abrufen
-                const { data, error } = await supabaseClient
+                let { data, error } = await supabaseClient
                     .from('service_entries')
                     .select('*')
                     .gt('updated_at', lastSync);
-                
+
+                // Falls die Spalte updated_at (noch) nicht existiert oder der Filter sonst fehlschlägt:
+                // ungefiltert alle Berichte laden, damit der Offline-Download trotzdem zuverlässig funktioniert.
+                if (error) {
+                    console.warn('Inkrementeller Filter fehlgeschlagen, lade alle Berichte ungefiltert:', error);
+                    const fullResult = await supabaseClient.from('service_entries').select('*');
+                    data = fullResult.data;
+                    error = fullResult.error;
+                }
+
                 if (error) throw error;
-                
+
                 if (data && data.length > 0) {
                     await window.offlineService.cacheFullEntries(data);
                     // Den Cache für die Listenansicht ebenfalls mit aktualisieren
                     await window.offlineService.cacheEntries(data);
-                    console.log(`[offlineSync] Inkrementeller Sync durchgeführt: ${data.length} Berichte aktualisiert.`);
+                    console.log(`[offlineSync] Sync durchgeführt: ${data.length} Berichte für Offline-Nutzung zwischengespeichert.`);
                 }
-                
+
                 // Neuen Zeitstempel speichern
                 localStorage.setItem('last_service_entries_sync', new Date().toISOString());
             } catch (e) {
