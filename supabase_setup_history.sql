@@ -1189,3 +1189,21 @@ CHECK (type IN ('email', 'phone', 'note', 'photo', 'hours'));
 -- hinterlegt und bei neuen Serviceberichten automatisch als Techniker-Unterschrift vorausgefuellt.
 ALTER TABLE public.users
 ADD COLUMN IF NOT EXISTS saved_signature text;
+
+
+/* ========================================================= */
+/* DATEI: add_whatsapp_wartung_types_to_manual_history_entries.sql */
+/* ========================================================= */
+
+-- Neue Schnelleintrag-Typen "whatsapp" (Kontakt, Datum, optional Bis-Datum, Nachrichtentext),
+-- "wartung" (Datum, angekreuzte Wartungsarten als Text in content) und "auslieferung" (nur Datum).
+ALTER TABLE public.manual_history_entries
+DROP CONSTRAINT IF EXISTS manual_history_entries_type_check;
+
+ALTER TABLE public.manual_history_entries
+ADD CONSTRAINT manual_history_entries_type_check
+CHECK (type IN ('email', 'phone', 'note', 'photo', 'hours', 'whatsapp', 'wartung', 'auslieferung'));
+
+-- Optionales Enddatum fuer Zeitraeume (z.B. WhatsApp-Verlauf ueber mehrere Tage).
+ALTER TABLE public.manual_history_entries
+ADD COLUMN IF NOT EXISTS end_date date;

@@ -6142,6 +6142,18 @@
                 }
             };
 
+            // Baut eine Google-Maps-Routenplanung (Start: meetra-Firmenadresse) statt nur einer Orts-Suche.
+            window.buildGoogleRouteUrl = function (destinationQuery) {
+                let hq = null;
+                try { hq = JSON.parse(localStorage.getItem('meetra_company_hq') || 'null'); } catch (e) {}
+                const street = hq?.street || 'Am Alten Bahnhof 6';
+                const zipCity = [hq?.zip || '38122', hq?.city || 'Braunschweig'].filter(Boolean).join(' ');
+                const country = hq?.country || 'Deutschland';
+                const hqName = hq?.name || 'Meetra GmbH';
+                const origin = [hqName, street, zipCity, country].filter(Boolean).join(', ');
+                return `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destinationQuery)}`;
+            };
+
             window.openMachineDetails = async function (id) {
                 const machines = window.machineList || [];
                 const machine = machines.find(m => m.id == id);
@@ -6328,13 +6340,13 @@
                         locAddressEl.innerHTML = locParts.join('<br>');
                         locAddressEl.style.textAlign = '';
                         locAddressEl.style.paddingLeft = '20px';
-                        locMapsLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`;
+                        locMapsLink.href = window.buildGoogleRouteUrl(mapQuery);
                         locMapsLink.style.display = 'inline-flex';
                     } else if (machine.location && !_locDflt(machine.location.trim())) {
                         const locCompanyRaw = machine.location_company || machine.company;
                         locAddressEl.innerHTML = (locCompanyRaw ? `<strong>${locCompanyRaw}</strong><br>` : '') + machine.location;
                         const mapQuery = [locCompanyRaw, machine.location].filter(Boolean).join(', ');
-                        locMapsLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`;
+                        locMapsLink.href = window.buildGoogleRouteUrl(mapQuery);
                         locMapsLink.style.display = 'inline-flex';
                     } else {
                         locAddressEl.textContent = '/';
@@ -6442,6 +6454,44 @@
                 const custMapsLink = document.getElementById('machine-details-cust-maps-link');
                 const _isDfltCountry = (c) => !c || ['de', 'deutschland', 'germany'].includes(c.trim().toLowerCase());
 
+                // Fallback-Anzeige der Betreiberadresse direkt aus den Maschinenfeldern
+                // (operator_street/zip/city/country) — greift, wenn kein Sage-Kunde verknüpft ist
+                // oder der Kundenabruf fehlschlägt, damit eine über die Sage-Suche korrekt
+                // hinterlegte Adresse trotzdem vollständig angezeigt wird, statt nur Firma+Kdnr.
+                function renderOperatorAddressFallback(m, addressEl, mapsLink) {
+                    const kdnrLine = m.customer_number ? `Kundennummer: ${m.customer_number}` : '';
+                    const parts = [
+                        kdnrLine,
+                        m.company ? `<strong>${m.company}</strong>` : '',
+                        m.operator_street,
+                        [m.operator_zip, m.operator_city].filter(Boolean).join(' '),
+                        !_isDfltCountry(m.operator_country) ? m.operator_country : ''
+                    ].filter(Boolean);
+
+                    if (parts.length > 0) {
+                        addressEl.innerHTML = parts.join('<br>');
+                        const mapParts = [m.operator_street, [m.operator_zip, m.operator_city].filter(Boolean).join(' '), m.operator_country].filter(Boolean);
+                        const mapQuery = [m.company, ...mapParts].filter(Boolean).join(', ');
+                        mapsLink.href = window.buildGoogleRouteUrl(mapQuery);
+                        mapsLink.style.display = 'inline-flex';
+                    } else {
+                        addressEl.textContent = 'Kein Kunde verknüpft';
+                        mapsLink.style.display = 'none';
+                    }
+                }
+
+                // Leerer Zustand "Letzter Service": nur ein großes "/" statt mehrerer Text-Zeilen.
+                function renderEmptyLastService(titleEl, dateEl, techsEl, descEl) {
+                    titleEl.style.textAlign = 'center';
+                    titleEl.style.fontSize = '1.8rem';
+                    titleEl.textContent = '/';
+                    dateEl.textContent = '';
+                    techsEl.textContent = '';
+                    techsEl.style.display = 'none';
+                    descEl.textContent = '';
+                    descEl.style.display = 'none';
+                }
+
                 const initialKdnrLine = machine.customer_number ? `Kundennummer: ${machine.customer_number}` : '';
                 const initialCustParts = [
                     initialKdnrLine,
@@ -6459,7 +6509,7 @@
                         machine.operator_country
                     ].filter(Boolean);
                     const mapQuery = [machine.company, ...rawCustPartsForMap].filter(Boolean).join(', ');
-                    custMapsLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`;
+                    custMapsLink.href = window.buildGoogleRouteUrl(mapQuery);
                     custMapsLink.style.display = 'inline-flex';
                 } else {
                     custAddressEl.textContent = 'Kein Kunde verknüpft';
@@ -6494,9 +6544,13 @@
                 const serviceTechsEl = document.getElementById('machine-details-last-service-techs');
                 const serviceDescEl = document.getElementById('machine-details-last-service-desc');
                 
+                serviceTitleEl.style.textAlign = '';
+                serviceTitleEl.style.fontSize = '';
                 serviceTitleEl.textContent = 'Suche nach Einträgen...';
                 serviceDateEl.textContent = '';
+                serviceTechsEl.style.display = '';
                 serviceTechsEl.textContent = 'Techniker: /';
+                serviceDescEl.style.display = '';
                 serviceDescEl.textContent = 'Wird geladen...';
 
                 if (machine.customer_id) {
@@ -6533,7 +6587,7 @@
                                 custCountry
                             ].filter(Boolean);
                             const fullCustAddrForMap = [custName, ...mapQueryParts].join(', ');
-                            custMapsLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullCustAddrForMap)}`;
+                            custMapsLink.href = window.buildGoogleRouteUrl(fullCustAddrForMap);
                             custMapsLink.style.display = 'inline-flex';
 
                             if (!isInWorkshop) {
@@ -6553,7 +6607,7 @@
                                         machine.location_country
                                     ].filter(Boolean);
                                     const locMapQuery = [locCompanyRawAsync, ...rawLocPartsForMap].filter(Boolean).join(', ');
-                                    locMapsLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locMapQuery)}`;
+                                    locMapsLink.href = window.buildGoogleRouteUrl(locMapQuery);
                                     locMapsLink.style.display = 'inline-flex';
                                 } else if (machine.location && !_isDfltCountry(machine.location.trim())) {
                                     const locCompanyRawAsync = machine.location_company || custData.name;
@@ -6567,25 +6621,14 @@
                                 }
                             }
                         } else {
-                            if (machine.company) {
-                                custAddressEl.innerHTML = (machine.customer_number ? `Kundennummer: ${machine.customer_number}<br>` : '') + `<strong>${machine.company}</strong>`;
-                            } else {
-                                custAddressEl.textContent = 'Kein Kunde verknüpft';
-                            }
+                            renderOperatorAddressFallback(machine, custAddressEl, custMapsLink);
                         }
                     } catch (err) {
                         console.error('Error loading customer details for machine view:', err);
+                        renderOperatorAddressFallback(machine, custAddressEl, custMapsLink);
                     }
                 } else {
-                    if (machine.company) {
-                        const kdnrLine = machine.customer_number ? `Kundennummer: ${machine.customer_number}<br>` : '';
-                        custAddressEl.innerHTML = kdnrLine + `<strong>${machine.company}</strong>`;
-                        custMapsLink.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(machine.company)}`;
-                        custMapsLink.style.display = 'inline-flex';
-                    } else {
-                        custAddressEl.textContent = 'Kein Kunde verknüpft';
-                        custMapsLink.style.display = 'none';
-                    }
+                    renderOperatorAddressFallback(machine, custAddressEl, custMapsLink);
                 }
 
                 try {
@@ -6640,10 +6683,13 @@
 
                     if (serviceData && serviceData.length > 0 && !serviceErr) {
                         const entry = serviceData[0];
+                        serviceTitleEl.style.textAlign = '';
+                        serviceTitleEl.style.fontSize = '';
                         serviceTitleEl.textContent = entry.title || 'Servicebericht';
                         const sDate = entry.date ? new Date(entry.date).toLocaleDateString('de-DE') : '/';
                         serviceDateEl.textContent = sDate;
 
+                        serviceTechsEl.style.display = '';
                         if (entry.technicians && Array.isArray(entry.technicians) && entry.technicians.length > 0) {
                             const techNames = entry.technicians.map(tid => {
                                 const u = (window.userList || []).find(user => user.id == tid);
@@ -6654,19 +6700,14 @@
                             serviceTechsEl.textContent = 'Techniker: /';
                         }
 
+                        serviceDescEl.style.display = '';
                         serviceDescEl.textContent = entry.description || 'Keine Beschreibung hinterlegt.';
                     } else {
-                        serviceTitleEl.textContent = 'Keine Serviceeinträge vorhanden';
-                        serviceDateEl.textContent = '';
-                        serviceTechsEl.textContent = 'Techniker: /';
-                        serviceDescEl.textContent = 'Für diese Maschine wurde noch kein Servicebericht oder Werkstattaufenthalt dokumentiert.';
+                        renderEmptyLastService(serviceTitleEl, serviceDateEl, serviceTechsEl, serviceDescEl);
                     }
                 } catch (err) {
                     console.error('Error loading latest service entry:', err);
-                    serviceTitleEl.textContent = 'Fehler beim Laden';
-                    serviceDateEl.textContent = '';
-                    serviceTechsEl.textContent = 'Techniker: /';
-                    serviceDescEl.textContent = 'Die Serviceberichte konnten nicht geladen werden.';
+                    renderEmptyLastService(serviceTitleEl, serviceDateEl, serviceTechsEl, serviceDescEl);
                 }
             };
 
@@ -7309,6 +7350,7 @@
                     document.getElementById('machine-location-input').value = editData ? (editData.location || '') : '';
                     document.getElementById('machine-last-maintenance').value = editData ? (editData.last_maintenance || '') : '';
                     document.getElementById('machine-next-maintenance').value = editData ? (editData.next_maintenance || '') : '';
+                    document.getElementById('machine-maintenance-interval').value = editData ? (editData.maintenance_interval_months || '') : '';
                     document.getElementById('machine-image-url').value = editData ? (editData.image_url || '') : '';
 
                     // Populating in_workshop status
@@ -7742,13 +7784,19 @@
             window.calculateNextMaintenanceDate = function () {
                 const lastDateVal = document.getElementById('machine-last-maintenance').value;
                 const catId = document.getElementById('machine-category').value;
+                const manualIntervalVal = document.getElementById('machine-maintenance-interval')?.value.trim();
 
-                if (!lastDateVal || !catId) return;
+                if (!lastDateVal) return;
 
-                const cat = (window.categoryList || []).find(c => c.id == catId);
-                if (!cat) return;
+                // Manueller Wartungsintervall (pro Maschine) hat Vorrang vor dem Kategorie-Standard.
+                let months = manualIntervalVal ? parseInt(manualIntervalVal) : null;
+                if (!months) {
+                    if (!catId) return;
+                    const cat = (window.categoryList || []).find(c => c.id == catId);
+                    if (!cat) return;
+                    months = cat.default_maintenance_interval_months || 12;
+                }
 
-                const months = cat.default_maintenance_interval_months || 12;
                 const lastDate = new Date(lastDateVal);
                 if (isNaN(lastDate.getTime())) return;
 
@@ -7790,7 +7838,6 @@
 
                 try {
                     if (!supabaseClient) throw new Error('Supabase ist nicht initialisiert!');
-                    if (!navigator.onLine) throw new Error('Keine Internetverbindung — Maschinen können nur online bearbeitet/gespeichert werden. Bitte später erneut versuchen.');
 
                                         // 1. Gather Data
                     const categoryId = document.getElementById('machine-category').value;
@@ -7801,6 +7848,8 @@
                     const contactType = document.getElementById('machine-contact-type').value; // JSON string
                     const lastMaintenance = document.getElementById('machine-last-maintenance').value;
                     const nextMaintenance = document.getElementById('machine-next-maintenance').value;
+                    const maintenanceIntervalVal = document.getElementById('machine-maintenance-interval')?.value.trim();
+                    const maintenanceIntervalMonths = maintenanceIntervalVal ? parseInt(maintenanceIntervalVal) : null;
                     
                     const inWorkshop = document.getElementById('machine-in-workshop')?.checked || false;
 
@@ -7834,6 +7883,71 @@
 
                     const isAuto = !document.getElementById('maint-auto-badge').classList.contains('hidden');
                     let machineId = currentEditingId;
+
+                    // ── Offline-Pfad: nur Bearbeiten bestehender Maschinen, kein Neuanlegen ──────────
+                    if (!navigator.onLine) {
+                        if (!machineId) {
+                            throw new Error('Neue Maschinen können nur online angelegt werden. Bitte später erneut versuchen.');
+                        }
+                        if (!window.offlineService) {
+                            throw new Error('Keine Internetverbindung — Offline-Speicher nicht verfügbar.');
+                        }
+
+                        const machineDataOffline = {
+                            name: name,
+                            category_id: parseInt(categoryId),
+                            manufacturer: manufacturer,
+                            serial: serial,
+                            year: year ? parseInt(year) : null,
+                            contact_type: (contactType && contactType.trim() !== '') ? JSON.parse(contactType) : [],
+                            last_maintenance: lastMaintenance || null,
+                            next_maintenance: nextMaintenance || null,
+                            maintenance_interval_months: maintenanceIntervalMonths,
+                            company: owner,
+                            operator_address: operatorAddress,
+                            operator_street: operatorStreet,
+                            operator_zip: operatorZip,
+                            operator_city: operatorCity,
+                            operator_country: operatorCountry,
+                            location: locationAddress,
+                            location_company: locationCompany,
+                            location_street: locationStreet,
+                            location_zip: locationZip,
+                            location_city: locationCity,
+                            location_country: locationCountry,
+                            customer_id: customerId,
+                            customer_number: customerNumber,
+                            status: 'Betriebsbereit',
+                            in_workshop: inWorkshop,
+                            contact_persons: typeof window.collectMachineContactPersons === 'function' ? window.collectMachineContactPersons() : [],
+                            // Wird erst beim Sync (online) final mit hochgeladenen Dateien zusammengeführt:
+                            existing_files: [...existingMachineFiles],
+                            main_image_url_raw: machineMainImage,
+                            is_auto: isAuto,
+                            related_machine_ids: (window.machineRelatedIds || []).map(String).filter(id => id && id !== 'null'),
+                            additional_equipment: (typeof window.collectMachineEquipmentFromUI === 'function')
+                                ? window.collectMachineEquipmentFromUI()
+                                : (window.machineAdditionalEquipment || [])
+                        };
+
+                        const pendingFiles = [...machineFiles];
+                        const removedFiles = [...removedMachineFiles];
+
+                        await window.offlineService.saveMachineDraft(
+                            machineId, machineDataOffline, pendingFiles, removedFiles,
+                            manufacturer, name, serial, year
+                        );
+
+                        machineFiles = [];
+                        removedMachineFiles = [];
+                        window.updatePendingBadge();
+                        const fileNote = pendingFiles.length > 0
+                            ? ` Inkl. ${pendingFiles.length} Datei${pendingFiles.length > 1 ? 'en' : ''}, wird automatisch mit hochgeladen.`
+                            : '';
+                        window.showSyncToast('Offline gespeichert — wird synchronisiert sobald Verbindung besteht.' + fileNote, 'info');
+                        closeAddMachineModal();
+                        return;
+                    }
 
                     if (machineId) {
                         // 1. Upload files first since we have the ID
@@ -7873,6 +7987,7 @@
                             contact_type: (contactType && contactType.trim() !== '') ? JSON.parse(contactType) : [],
                             last_maintenance: lastMaintenance || null,
                             next_maintenance: nextMaintenance || null,
+                            maintenance_interval_months: maintenanceIntervalMonths,
                             company: owner,
                             operator_address: operatorAddress,
                             operator_street: operatorStreet,
@@ -7925,6 +8040,7 @@
                             contact_type: (contactType && contactType.trim() !== '') ? JSON.parse(contactType) : [],
                             last_maintenance: lastMaintenance || null,
                             next_maintenance: nextMaintenance || null,
+                            maintenance_interval_months: maintenanceIntervalMonths,
                             company: owner,
                             operator_address: operatorAddress,
                             operator_street: operatorStreet,
@@ -8137,6 +8253,7 @@
             }
         }
 
+        window.syncBidirectionalLinks = syncBidirectionalLinks;
         async function syncBidirectionalLinks(machineId, newRelatedIds, prevRelatedIds) {
             const machineIdStr = String(machineId);
             const newSet = new Set(newRelatedIds.map(String));
@@ -8185,6 +8302,7 @@
         // Trägt die Ansprechpartner dieser Maschine zusätzlich bei allen verknüpften Maschinen ein,
         // damit sie dort ebenfalls angezeigt werden und später z.B. bei Serviceberichten auswählbar sind.
         // Bereits vorhandene Ansprechpartner (gleicher Name + Telefon) werden nicht doppelt eingetragen.
+        window.syncContactPersonsToRelatedMachines = syncContactPersonsToRelatedMachines;
         async function syncContactPersonsToRelatedMachines(machineId, relatedIds, contactPersons) {
             if (!relatedIds.length || !contactPersons.length) return;
 
@@ -10275,19 +10393,30 @@
                                     icon: '📸',
                                     color: '#8b5cf6'
                                 },
-                                'hours': { label: 'Betriebsstunden', icon: '⏱️', color: '#06b6d4' }
+                                'hours': { label: 'Betriebsstunden', icon: '⏱️', color: '#06b6d4' },
+                                'whatsapp': { label: 'WhatsApp', icon: '💬', color: '#22c55e' },
+                                'wartung': { label: 'Wartung', icon: '🔧', color: '#f97316' },
+                                'auslieferung': { label: 'Auslieferung', icon: '🚚', color: '#6366f1' }
                             };
                             const config = typeMap[m.type] || { label: 'Eintrag', icon: '📄', color: '#9ca3af' };
 
                             // Find user from global list since join might fail without FK
                             const user = window.userList?.find(u => u.id == m.created_by);
 
+                            let mDescription = m.content;
+                            if (m.type === 'hours' && m.content) {
+                                mDescription = `${m.content} Std.`;
+                            } else if (m.type === 'whatsapp' && m.end_date) {
+                                const bisStr = new Date(m.end_date).toLocaleDateString('de-DE');
+                                mDescription = `Zeitraum bis ${bisStr}\n\n${m.content || ''}`;
+                            }
+
                             historyItems.push({
                                 id: m.id,
                                 date: new Date(m.created_at),
                                 type: config.label,
                                 title: m.title,
-                                description: m.type === 'hours' && m.content ? `${m.content} Std.` : m.content,
+                                description: mDescription,
                                 color: config.color,
                                 icon: config.icon,
                                 source: 'manuell',
@@ -10625,6 +10754,33 @@
                         <label style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.4rem; display: block;">Betriebsstunden</label>
                         <input type="number" id="manual-content" placeholder="z.B. 1234" class="glass-input" min="0" step="1" style="margin-bottom: 0.75rem;">
                     `;
+            } else if (type === 'whatsapp') {
+                html = `
+                        <input type="text" id="manual-title" placeholder="Kontakt (Name)" class="glass-input" style="margin-bottom: 0.75rem;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.75rem;">
+                            <label style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; white-space: nowrap;">Bis (optional)</label>
+                            <input type="date" id="manual-end-date" class="glass-input" style="flex: 1; padding: 6px 12px; font-size: 0.85rem; color-scheme: dark;">
+                        </div>
+                        <textarea id="manual-content" placeholder="WhatsApp-Nachrichten hier einfügen..." class="glass-input" style="min-height: 120px;"></textarea>
+                    `;
+            } else if (type === 'wartung') {
+                html = `
+                        <input type="hidden" id="manual-title" value="Wartung">
+                        <label style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; display: block;">Art der Wartung</label>
+                        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 0.75rem;">
+                            ${['Motorwartung', 'SBA-Wartung', 'Hydraulikwartung', 'UVV-Wartung'].map(label => `
+                                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #fff; font-size: 0.9rem; padding: 8px 12px; border-radius: 8px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);">
+                                    <input type="checkbox" class="manual-wartung-type" value="${label}" style="width: 18px; height: 18px; accent-color: #f97316; cursor: pointer;">
+                                    ${label}
+                                </label>
+                            `).join('')}
+                        </div>
+                        <input type="hidden" id="manual-content">
+                    `;
+            } else if (type === 'auslieferung') {
+                html = `
+                        <input type="hidden" id="manual-title" value="Auslieferung">
+                    `;
             }
             const todayStr = new Date().toISOString().split('T')[0];
             const dateRow = `
@@ -10791,6 +10947,20 @@
                     dateInput.value = new Date(entry.created_at).toISOString().split('T')[0];
                 }
 
+                // WhatsApp: optionales Bis-Datum vorausfüllen
+                const endDateInput = document.getElementById('manual-end-date');
+                if (endDateInput) {
+                    endDateInput.value = entry.end_date || '';
+                }
+
+                // Wartung: angekreuzte Wartungsarten aus content (komma-getrennt) wiederherstellen
+                if (entry.type === 'wartung' && entry.content) {
+                    const checkedLabels = entry.content.split(',').map(s => s.trim());
+                    document.querySelectorAll('.manual-wartung-type').forEach(cb => {
+                        cb.checked = checkedLabels.includes(cb.value);
+                    });
+                }
+
                 // 4.5 Change button text and show delete button
                 const saveBtn = document.querySelector('#manual-history-form-container .btn-primary');
                 const deleteBtn = document.getElementById('btn-delete-manual');
@@ -10857,10 +11027,22 @@
             const id = document.getElementById('manual-history-id').value;
             const type = document.getElementById('manual-history-type').value;
             const title = document.getElementById('manual-title').value;
-            const content = document.getElementById('manual-content') ? document.getElementById('manual-content').value : '';
+            let content = document.getElementById('manual-content') ? document.getElementById('manual-content').value : '';
             const machineId = window.currentHistoryMachineId;
             const entryDateInput = document.getElementById('manual-entry-date');
             const entryDate = entryDateInput ? entryDateInput.value : null;
+            const endDateInput = document.getElementById('manual-end-date');
+            const endDate = endDateInput ? (endDateInput.value || null) : null;
+
+            if (type === 'wartung') {
+                const checkedTypes = Array.from(document.querySelectorAll('.manual-wartung-type:checked')).map(cb => cb.value);
+                if (checkedTypes.length === 0) {
+                    alert('Bitte mindestens eine Wartungsart ankreuzen.');
+                    if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitBtn.dataset.originalText || 'Speichern'; }
+                    return;
+                }
+                content = checkedTypes.join(', ');
+            }
 
             if (!title) {
                 alert('Bitte geben Sie einen Titel/Betreff ein.');
@@ -10903,6 +11085,7 @@
                         title: title,
                         content: content,
                         files: filesArray,
+                        end_date: endDate,
                         updated_at: new Date()
                     };
                     if (entryDate) updatePayload.created_at = new Date(entryDate + 'T12:00:00').toISOString();
@@ -10918,6 +11101,7 @@
                         title: title,
                         content: content,
                         files: filesArray,
+                        end_date: endDate,
                         created_by: window.activeUser?.id
                     };
                     if (entryDate) insertPayload.created_at = new Date(entryDate + 'T12:00:00').toISOString();
@@ -17417,6 +17601,10 @@
                                 </label>
                                 <input type="date" id="machine-next-maintenance" class="glass-input">
                             </div>
+                            <div class="form-group" style="margin-bottom:0; grid-column: 1 / -1;">
+                                <label>Manueller Wartungsintervall (Monate)</label>
+                                <input type="number" id="machine-maintenance-interval" class="glass-input" placeholder="leer = Standard der Kategorie verwenden" min="1" step="1" oninput="if (typeof window.calculateNextMaintenanceDate === 'function') window.calculateNextMaintenanceDate()">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -18331,7 +18519,7 @@
                     <div id="schnelleintrag-content"
                         style="display: none; padding: 1.25rem; border-top: 1px solid rgba(255,255,255,0.05);">
                         <div
-                            style="display: flex; justify-content: space-around; align-items: center; padding: 0.5rem 0;">
+                            style="display: grid; grid-template-columns: repeat(4, 1fr); justify-items: center; align-items: start; row-gap: 12px; padding: 0.5rem 0;">
                             <!-- Telefon -->
                             <button onclick="window.toggleManualHistoryForm('phone')"
                                 style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0.5rem;">
@@ -18409,6 +18597,51 @@
                                 </div>
                                 <span
                                     style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.3px;">Betriebsstd.</span>
+                            </button>
+                            <!-- WhatsApp -->
+                            <button onclick="window.toggleManualHistoryForm('whatsapp')"
+                                style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0.5rem;">
+                                <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(34,197,94,0.12); border: 1.5px solid rgba(34,197,94,0.5); display: flex; align-items: center; justify-content: center; color: #22c55e; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 0 14px rgba(34,197,94,0.35), 0 0 28px rgba(34,197,94,0.15);"
+                                    onmouseover="this.style.transform='scale(1.15)'; this.style.background='rgba(34,197,94,0.22)'; this.style.boxShadow='0 0 24px rgba(34,197,94,0.6), 0 0 48px rgba(34,197,94,0.3)'"
+                                    onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(34,197,94,0.12)'; this.style.boxShadow='0 0 14px rgba(34,197,94,0.35), 0 0 28px rgba(34,197,94,0.15)'">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M17.498 14.382c-.301-.15-1.767-.867-2.04-.966-.273-.101-.473-.15-.673.15-.197.295-.771 1.0-.945 1.196-.174.195-.346.21-.643.075-.3-.15-1.263-.465-2.403-1.485-.888-.795-1.484-1.77-1.66-2.07-.174-.3-.018-.465.131-.615.15-.15.3-.345.45-.523.146-.181.194-.301.297-.5.099-.2.05-.351-.05-.501-.099-.15-.6-1.65-.6-1.65-.156-.42-.3-.36-.502-.366-.183-.005-.394-.005-.605-.005-.211 0-.527.075-.717.27-.205.21-.78.766-.78 1.866 0 1.1.804 2.146.93 2.296.135.15 1.5 2.295 3.645 3.122 1.798.68 2.16.59 2.554.54.394-.045 1.268-.51 1.448-.997.18-.487.18-.906.135-.997-.045-.09-.187-.166-.488-.31z"/>
+                                        <path d="M12 2C6.477 2 2 6.477 2 12c0 1.821.487 3.53 1.338 5L2 22l5.116-1.317C8.564 21.524 10.236 22 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18c-1.61 0-3.122-.43-4.426-1.18l-.318-.185-3.04.782.81-2.96-.207-.327A7.94 7.94 0 0 1 4 12c0-4.418 3.582-8 8-8s8 3.582 8 8-3.582 8-8 8z"/>
+                                    </svg>
+                                </div>
+                                <span
+                                    style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.3px;">WhatsApp</span>
+                            </button>
+                            <!-- Wartung -->
+                            <button onclick="window.toggleManualHistoryForm('wartung')"
+                                style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0.5rem;">
+                                <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(249,115,22,0.12); border: 1.5px solid rgba(249,115,22,0.5); display: flex; align-items: center; justify-content: center; color: #f97316; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 0 14px rgba(249,115,22,0.35), 0 0 28px rgba(249,115,22,0.15);"
+                                    onmouseover="this.style.transform='scale(1.15)'; this.style.background='rgba(249,115,22,0.22)'; this.style.boxShadow='0 0 24px rgba(249,115,22,0.6), 0 0 48px rgba(249,115,22,0.3)'"
+                                    onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(249,115,22,0.12)'; this.style.boxShadow='0 0 14px rgba(249,115,22,0.35), 0 0 28px rgba(249,115,22,0.15)'">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                                    </svg>
+                                </div>
+                                <span
+                                    style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.3px;">Wartung</span>
+                            </button>
+                            <!-- Auslieferung -->
+                            <button onclick="window.toggleManualHistoryForm('auslieferung')"
+                                style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 0.5rem;">
+                                <div style="width: 46px; height: 46px; border-radius: 50%; background: rgba(99,102,241,0.12); border: 1.5px solid rgba(99,102,241,0.5); display: flex; align-items: center; justify-content: center; color: #6366f1; transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); box-shadow: 0 0 14px rgba(99,102,241,0.35), 0 0 28px rgba(99,102,241,0.15);"
+                                    onmouseover="this.style.transform='scale(1.15)'; this.style.background='rgba(99,102,241,0.22)'; this.style.boxShadow='0 0 24px rgba(99,102,241,0.6), 0 0 48px rgba(99,102,241,0.3)'"
+                                    onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(99,102,241,0.12)'; this.style.boxShadow='0 0 14px rgba(99,102,241,0.35), 0 0 28px rgba(99,102,241,0.15)'">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="1" y="3" width="15" height="13"></rect>
+                                        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                                        <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                                        <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                                    </svg>
+                                </div>
+                                <span
+                                    style="font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.6); letter-spacing: 0.3px;">Auslieferung</span>
                             </button>
                         </div>
 

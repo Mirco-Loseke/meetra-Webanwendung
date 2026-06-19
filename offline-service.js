@@ -3,10 +3,11 @@
     'use strict';
 
     const DB_NAME = 'meetra_offline';
-    const DB_VERSION = 2;
+    const DB_VERSION = 3;
     const STORE_PENDING = 'pending_service';
     const STORE_CACHE   = 'service_cache';      // schlanke Listenfelder (wie online geladen)
     const STORE_FULL    = 'service_full_cache';  // vollständige Datensätze (alle Felder) fuer Offline-Bearbeitung
+    const STORE_MACHINES = 'pending_machines';   // Maschinen-Bearbeitungen, offline gespeichert
 
     // Array fields: union-merged (new local items appended to server list)
     const ARRAY_MERGE = ['work_log', 'tasks', 'materials', 'technicians', 'contact_persons'];
@@ -63,6 +64,9 @@
                 }
                 if (!db.objectStoreNames.contains(STORE_FULL)) {
                     db.createObjectStore(STORE_FULL, { keyPath: 'id' });
+                }
+                if (!db.objectStoreNames.contains(STORE_MACHINES)) {
+                    db.createObjectStore(STORE_MACHINES, { keyPath: 'local_id', autoIncrement: true });
                 }
             };
             req.onsuccess = (e) => {
@@ -325,6 +329,170 @@
 
         countPending: async function () {
             return (await this.getDrafts()).length;
+        },
+
+        // ── Maschinen-Bearbeitungen offline (nur Bearbeiten bestehender Maschinen) ──────
+        saveMachineDraft: async function (machineId, data, pendingFiles, removedFiles, manufacturer, name, serial, year) {
+            const db = await openDB();
+            return idbReq(
+                db.transaction(STORE_MACHINES, 'readwrite').objectStore(STORE_MACHINES),
+                'add',
+                {
+                    machine_id: machineId,
+                    data,
+                    pending_files: pendingFiles && pendingFiles.length ? pendingFiles : [],
+                    removed_files: removedFiles && removedFiles.length ? removedFiles : [],
+                    manufacturer, name, serial, year,
+                    offline_at: new Date().toISOString()
+                }
+            );
+        },
+
+        getMachineDrafts: async function () {
+            const db = await openDB();
+            return idbReq(db.transaction(STORE_MACHINES, 'readonly').objectStore(STORE_MACHINES), 'getAll');
+        },
+
+        deleteMachineDraft: async function (localId) {
+            const db = await openDB();
+            return idbReq(
+                db.transaction(STORE_MACHINES, 'readwrite').objectStore(STORE_MACHINES),
+                'delete', localId
+            );
+        },
+
+        countPendingMachines: async function () {
+            return (await this.getMachineDrafts()).length;
+        },
+
+        // Lädt offline angehängte Maschinen-Fotos/Dokumente hoch (inkl. Vorschaubild für Fotos),
+        // sobald wieder online — spiegelt die Logik von uploadMachineFiles() in index.html.
+        uploadPendingMachineFiles: async function (draft) {
+            if (!draft.pending_files || !draft.pending_files.length) return [];
+            if (!window.FileUploadService) return [];
+
+            const folderName = window.getMachineFolderName
+                ? window.getMachineFolderName(draft.machine_id, draft.manufacturer, draft.name, draft.serial, draft.year)
+                : `Maschinen/${draft.machine_id}`;
+
+            const pathGenerator = (file, i) => {
+                const isImg = file.type && file.type.startsWith('image/');
+                const subfolder = isImg ? 'Vorschaubilder' : 'Dokumente';
+                const fileExt = file.name.split('.').pop();
+                const cleanName = file.name.split('.').slice(0, -1).join('.').replace(/[^a-zA-Z0-9_\- ]/g, '_');
+                return `${folderName}/${subfolder}/${cleanName}_${Date.now()}-${i}.${fileExt}`;
+            };
+
+            const uploadResults = await window.FileUploadService.uploadFiles(
+                draft.pending_files,
+                pathGenerator,
+                { bucket: 'dateien', compress: true, concurrency: 5, provider: 'cloudflare-r2' }
+            );
+
+            const fileEntries = [];
+            for (let i = 0; i < uploadResults.length; i++) {
+                const res = uploadResults[i];
+                const originalFile = draft.pending_files[i];
+                const entry = { name: res.name, type: res.type, url: res.url };
+
+                if (originalFile.type && originalFile.type.startsWith('image/') && res.path) {
+                    try {
+                        const thumbFile = await window.FileUploadService.generateThumbnail(originalFile);
+                        if (thumbFile) {
+                            const thumbPath = res.path.replace('/Vorschaubilder/', '/Vorschaubilder/thumbs/');
+                            const thumbResult = await window.FileUploadService.uploadFile(thumbFile, {
+                                bucket: 'dateien', path: thumbPath, compress: false, provider: 'cloudflare-r2'
+                            });
+                            entry.thumbnail_url = thumbResult.url;
+                        }
+                    } catch (e) {
+                        console.warn('Thumbnail-Erstellung fehlgeschlagen:', e);
+                    }
+                }
+                fileEntries.push(entry);
+            }
+            return fileEntries;
+        },
+
+        // Verarbeitet alle offline gespeicherten Maschinen-Bearbeitungen nach Wiederverbindung
+        syncPendingMachines: async function () {
+            const drafts = await this.getMachineDrafts();
+            if (!drafts.length) return { synced: 0, errors: [] };
+
+            const supabase = window.supabaseClient;
+            if (!supabase) return { synced: 0, errors: [] };
+
+            let synced = 0;
+            const errors = [];
+
+            for (const draft of drafts) {
+                try {
+                    const newFiles = await this.uploadPendingMachineFiles(draft);
+
+                    // Entfernte Dateien aus R2 löschen
+                    if (draft.removed_files && draft.removed_files.length && window.FileUploadService) {
+                        for (const f of draft.removed_files) {
+                            try {
+                                if (f.path) await window.FileUploadService.deleteFile(f.path, { bucket: 'dateien', provider: 'cloudflare-r2' });
+                            } catch (e) {
+                                console.warn('Löschen einer entfernten Datei fehlgeschlagen:', e);
+                            }
+                        }
+                    }
+
+                    const finalFiles = [...(draft.data.existing_files || []), ...newFiles]
+                        .filter(f => !(f.type === 'meta' && ['related_machine_ids', 'additional_equipment', 'is_next_maintenance_auto'].includes(f.key)));
+
+                    if (draft.data.related_machine_ids && draft.data.related_machine_ids.length) {
+                        finalFiles.push({ type: 'meta', key: 'related_machine_ids', property: JSON.stringify(draft.data.related_machine_ids) });
+                    }
+                    if (draft.data.additional_equipment && draft.data.additional_equipment.length) {
+                        finalFiles.push({ type: 'meta', key: 'additional_equipment', property: JSON.stringify(draft.data.additional_equipment) });
+                    }
+                    if (draft.data.is_auto) {
+                        finalFiles.push({ type: 'meta', key: 'is_next_maintenance_auto', property: 'true' });
+                    }
+
+                    let mainImageUrl = draft.data.main_image_url_raw;
+                    if (!mainImageUrl || mainImageUrl.startsWith('data:')) {
+                        const firstImage = finalFiles.find(f => (f.type && f.type.startsWith('image/')) || (f.url && /\.(jpg|jpeg|png|gif|webp|bmp|tif|tiff)(\?.*)?$/i.test(f.url)));
+                        mainImageUrl = firstImage ? firstImage.url : null;
+                    }
+
+                    const updatePayload = Object.assign({}, draft.data);
+                    delete updatePayload.existing_files;
+                    delete updatePayload.main_image_url_raw;
+                    delete updatePayload.related_machine_ids;
+                    delete updatePayload.additional_equipment;
+                    delete updatePayload.is_auto;
+                    updatePayload.files = finalFiles;
+                    updatePayload.image_url = mainImageUrl;
+
+                    const { error } = await supabase.from('machines').update(updatePayload).eq('id', draft.machine_id);
+                    if (error) throw error;
+
+                    // Verknüpfungs- und Ansprechpartner-Sync nachträglich anwenden (wie beim Online-Speichern)
+                    try {
+                        if (typeof window.syncBidirectionalLinks === 'function') {
+                            await window.syncBidirectionalLinks(draft.machine_id, draft.data.related_machine_ids || [], []);
+                        }
+                        if (typeof window.syncContactPersonsToRelatedMachines === 'function') {
+                            const cps = (draft.data.contact_persons || []).filter(p => p.name);
+                            await window.syncContactPersonsToRelatedMachines(draft.machine_id, draft.data.related_machine_ids || [], cps);
+                        }
+                    } catch (syncErr) {
+                        console.warn('Verknüpfungs-/Ansprechpartner-Sync nach Offline-Speicherung fehlgeschlagen:', syncErr);
+                    }
+
+                    await this.deleteMachineDraft(draft.local_id);
+                    synced++;
+                } catch (err) {
+                    console.error('[offlineService] Machine sync error for draft', draft.local_id, err);
+                    errors.push({ draft, err: err && (err.message || err.error_description || JSON.stringify(err)) });
+                }
+            }
+
+            return { synced, errors };
         }
     };
 
@@ -367,7 +535,9 @@
     };
 
     window.updatePendingBadge = async function () {
-        const count  = await window.offlineService.countPending();
+        const serviceCount = await window.offlineService.countPending();
+        const machineCount = await window.offlineService.countPendingMachines();
+        const count = serviceCount + machineCount;
         const badge  = document.getElementById('offline-pending-badge');
         if (!badge) return;
         badge.textContent    = count || '';
@@ -377,25 +547,32 @@
     async function onBackOnline() {
         updateOfflineBanner();
         const drafts = await window.offlineService.getDrafts();
-        if (!drafts.length) return;
+        const machineDrafts = await window.offlineService.getMachineDrafts();
+        if (!drafts.length && !machineDrafts.length) return;
 
+        const totalCount = drafts.length + machineDrafts.length;
         window.showSyncToast(
-            `${drafts.length} Servicebericht${drafts.length > 1 ? 'e' : ''} werden synchronisiert…`,
+            `${totalCount} Änderung${totalCount > 1 ? 'en' : ''} werden synchronisiert…`,
             'syncing'
         );
 
         try {
             const result = await window.offlineService.syncPending();
-            if (result.synced > 0) {
+            const machineResult = await window.offlineService.syncPendingMachines();
+
+            const totalSynced = result.synced + machineResult.synced;
+            if (totalSynced > 0) {
                 window.showSyncToast(
-                    `${result.synced} Servicebericht${result.synced > 1 ? 'e' : ''} erfolgreich synchronisiert.`,
+                    `${totalSynced} Änderung${totalSynced > 1 ? 'en' : ''} erfolgreich synchronisiert.`,
                     'success'
                 );
             }
-            if (result.errors && result.errors.length) {
-                const firstErr = result.errors[0].err;
-                window.showSyncToast(`${result.errors.length} Fehler beim Synchronisieren: ${firstErr}`, 'error');
-                console.error('[offlineService] Sync-Fehler Details:', result.errors);
+
+            const allErrors = [...(result.errors || []), ...(machineResult.errors || [])];
+            if (allErrors.length) {
+                const firstErr = allErrors[0].err;
+                window.showSyncToast(`${allErrors.length} Fehler beim Synchronisieren: ${firstErr}`, 'error');
+                console.error('[offlineService] Sync-Fehler Details:', allErrors);
             }
         } catch (e) {
             window.showSyncToast('Fehler beim Synchronisieren.', 'error');
