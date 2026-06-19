@@ -22,6 +22,15 @@ window.FileUploadService = {
         try {
             console.log(`Compressing ${file.name}...`);
             const compressedBlob = await imageCompression(file, options);
+
+            // iPhone-Fotos liegen oft als HEIC vor, das deutlich effizienter komprimiert als WebP —
+            // nach der Umwandlung kann die Datei dadurch trotz "Komprimierung" größer werden.
+            // In diesem Fall lieber das Original behalten statt eine größere Datei hochzuladen.
+            if (compressedBlob.size >= file.size) {
+                console.warn(`Komprimiert wäre größer (${(compressedBlob.size/1024).toFixed(0)}KB) als Original (${(file.size/1024).toFixed(0)}KB) — Original wird verwendet.`);
+                return file;
+            }
+
             return new File([compressedBlob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
                 type: 'image/webp',
                 lastModified: Date.now()
