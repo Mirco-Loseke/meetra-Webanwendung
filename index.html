@@ -12934,9 +12934,11 @@
                 if (error) throw error;
 
                 if (data && data.length > 0) {
+                    // Nur in den Voll-Cache schreiben (zum Bearbeiten offline) — NICHT in den
+                    // schlanken Listen-Cache, sonst tauchen Felder wie "description" dort auf,
+                    // die online (bewusst schlanker Listen-Query) nie geladen werden. Der
+                    // Listen-Cache wird bereits oben in fetchServiceEntries() konsistent befüllt.
                     await window.offlineService.cacheFullEntries(data);
-                    // Den Cache für die Listenansicht ebenfalls mit aktualisieren
-                    await window.offlineService.cacheEntries(data);
                     console.log(`[offlineSync] Sync durchgeführt: ${data.length} Berichte für Offline-Nutzung zwischengespeichert.`);
                 }
 
