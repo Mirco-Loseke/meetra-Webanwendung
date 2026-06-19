@@ -3251,8 +3251,13 @@
     <!-- ========================================================= -->
     <!-- ========================================================= -->
     
-    <!-- Supabase JS -->
+    <!-- Supabase JS (mit Fallback-CDN, falls die erste Quelle gerade nicht erreichbar ist) -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script>
+        if (typeof supabase === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>');
+        }
+    </script>
 
     <script>
         // Supabase Configuration
@@ -7938,6 +7943,10 @@
                     await syncBidirectionalLinks(machineId, finalRelatedIds, prevRelatedIds);
                     window.machineRelatedIdsBefore = [];
 
+                    // Ansprechpartner dieser Maschine auch bei allen verknüpften Maschinen eintragen
+                    const machineContactPersonsForSync = (typeof window.collectMachineContactPersons === 'function' ? window.collectMachineContactPersons() : []).filter(p => p.name);
+                    await syncContactPersonsToRelatedMachines(machineId, finalRelatedIds, machineContactPersonsForSync);
+
                     // Success
                     alert(typeof currentEditingId !== 'undefined' && currentEditingId ? 'Maschine aktualisiert!' : 'Maschine erfolgreich angelegt!');
                     closeAddMachineModal();
@@ -8117,6 +8126,44 @@
                     await supabaseClient.from('machines').update({ files: otherFiles }).eq('id', otherId);
                 } catch(e) {
                     console.error('Bidirektionale Sync fehlgeschlagen für Maschine', otherId, e);
+                }
+            }
+        }
+
+        // Trägt die Ansprechpartner dieser Maschine zusätzlich bei allen verknüpften Maschinen ein,
+        // damit sie dort ebenfalls angezeigt werden und später z.B. bei Serviceberichten auswählbar sind.
+        // Bereits vorhandene Ansprechpartner (gleicher Name + Telefon) werden nicht doppelt eingetragen.
+        async function syncContactPersonsToRelatedMachines(machineId, relatedIds, contactPersons) {
+            if (!relatedIds.length || !contactPersons.length) return;
+
+            for (const otherId of relatedIds) {
+                try {
+                    const { data: otherMachine, error } = await supabaseClient
+                        .from('machines')
+                        .select('id, contact_persons')
+                        .eq('id', otherId)
+                        .maybeSingle();
+                    if (error || !otherMachine) continue;
+
+                    const existing = Array.isArray(otherMachine.contact_persons) ? [...otherMachine.contact_persons] : [];
+                    let changed = false;
+
+                    contactPersons.forEach(cp => {
+                        const alreadyThere = existing.some(e =>
+                            (e.name || '').trim().toLowerCase() === cp.name.trim().toLowerCase() &&
+                            (e.phone || '').trim() === (cp.phone || '').trim()
+                        );
+                        if (!alreadyThere) {
+                            existing.push(cp);
+                            changed = true;
+                        }
+                    });
+
+                    if (changed) {
+                        await supabaseClient.from('machines').update({ contact_persons: existing }).eq('id', otherId);
+                    }
+                } catch (e) {
+                    console.error('Ansprechpartner-Sync fehlgeschlagen für Maschine', otherId, e);
                 }
             }
         }
@@ -9430,15 +9477,15 @@
                 const action   = (typeof currentEditingServiceId !== 'undefined' && currentEditingServiceId) ? 'update' : 'insert';
                 const serverId = (typeof currentEditingServiceId !== 'undefined') ? currentEditingServiceId : null;
                 const baseline = window._serviceReportBaseline || null;
+                const pendingFiles = [...serviceFiles]; // Fotos/Dokumente: Upload erfolgt automatisch beim nächsten Sync
 
-                if (serviceFiles.length > 0) {
-                    window.showSyncToast('Offline: Dateianhänge werden übersprungen und können später hinzugefügt werden.', 'info');
-                    serviceFiles = [];
-                }
-
-                await window.offlineService.saveDraft(action, serverId, baseline, reportDataOffline);
+                await window.offlineService.saveDraft(action, serverId, baseline, reportDataOffline, pendingFiles);
+                serviceFiles = [];
                 window.updatePendingBadge();
-                window.showSyncToast('Offline gespeichert — wird synchronisiert sobald Verbindung besteht.', 'info');
+                const fileNote = pendingFiles.length > 0
+                    ? ` Inkl. ${pendingFiles.length} Anhang${pendingFiles.length > 1 ? 'ängen' : ''}, wird automatisch mit hochgeladen.`
+                    : '';
+                window.showSyncToast('Offline gespeichert — wird synchronisiert sobald Verbindung besteht.' + fileNote, 'info');
                 return; // skip online save
             }
 

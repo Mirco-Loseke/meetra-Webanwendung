@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meetra-app-v6';
+const CACHE_NAME = 'meetra-app-v8';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
@@ -40,38 +40,36 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
-    // Navigation (Seite öffnen): Stale-While-Revalidate für index.html (sofortiger Start, Update im Hintergrund)
+    // Navigation (Seite öffnen): Network-First — bei bestehendem Internet immer die aktuellste
+    // Version laden (kein "ein Reload zu spät"-Effekt mehr). Der Cache greift nur als Fallback,
+    // wenn das Netzwerk nicht erreichbar ist (offline).
     if (event.request.mode === 'navigate') {
         event.respondWith(
-            caches.match('index.html').then(cachedResponse => {
-                const fetchPromise = fetch(event.request)
-                    .then(response => {
-                        if (response.ok) {
-                            caches.open(CACHE_NAME).then(c => c.put(event.request, response.clone()));
-                        }
-                        return response;
-                    })
-                    .catch(() => {});
-                return cachedResponse || fetchPromise;
-            })
+            fetch(event.request)
+                .then(response => {
+                    if (response.ok) {
+                        caches.open(CACHE_NAME).then(c => c.put(event.request, response.clone()));
+                    }
+                    return response;
+                })
+                .catch(() => caches.match('index.html'))
         );
         return;
     }
 
-    // Lokale JS/CSS-Dateien: Stale-While-Revalidate (sofort aus Cache für schnelle Ladezeiten, Update im Hintergrund)
+    // Lokale JS/CSS-Dateien: Network-First — bei bestehendem Internet immer den aktuellsten Code
+    // laden (kein veralteter Stand mehr durch zwischengespeicherte alte Versionen). Der Cache
+    // greift nur als Fallback, wenn das Netzwerk nicht erreichbar ist (offline).
     if (url.origin === self.location.origin) {
         event.respondWith(
-            caches.match(event.request, { ignoreSearch: true }).then(cachedResponse => {
-                const fetchPromise = fetch(event.request)
-                    .then(response => {
-                        if (response.ok) {
-                            caches.open(CACHE_NAME).then(c => c.put(event.request, response.clone()));
-                        }
-                        return response;
-                    })
-                    .catch(() => {});
-                return cachedResponse || fetchPromise;
-            })
+            fetch(event.request)
+                .then(response => {
+                    if (response.ok) {
+                        caches.open(CACHE_NAME).then(c => c.put(event.request, response.clone()));
+                    }
+                    return response;
+                })
+                .catch(() => caches.match(event.request, { ignoreSearch: true }))
         );
         return;
     }

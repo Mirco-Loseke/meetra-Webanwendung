@@ -112,20 +112,23 @@
     window.offlineService = {
 
         // Queue a create/update for later sync.
-        // action   : 'insert' | 'update'
-        // serverId : null (new) or existing DB id
-        // baseline : snapshot of server data at the moment the user opened the form
-        // data     : the full reportData object to save
-        saveDraft: async function (action, serverId, baseline, data) {
+        // action       : 'insert' | 'update'
+        // serverId     : null (new) or existing DB id
+        // baseline     : snapshot of server data at the moment the user opened the form
+        // data         : the full reportData object to save
+        // pendingFiles : File objects selected offline, not yet uploaded — IndexedDB can store
+        //                File/Blob natively, upload happens once back online (see syncPending)
+        saveDraft: async function (action, serverId, baseline, data, pendingFiles) {
             const db = await openDB();
             return idbReq(
                 db.transaction(STORE_PENDING, 'readwrite').objectStore(STORE_PENDING),
                 'add',
                 {
                     action,
-                    server_id:  serverId || null,
-                    baseline:   baseline || null,
+                    server_id:    serverId || null,
+                    baseline:     baseline || null,
                     data,
+                    pending_files: pendingFiles && pendingFiles.length ? pendingFiles : [],
                     machine_id: data.machine_id,
                     title:      data.title || 'Servicebericht',
                     offline_at: new Date().toISOString()
@@ -227,6 +230,35 @@
             return result;
         },
 
+        // Uploads File objects that were attached while offline (stored as-is in IndexedDB)
+        // and returns them in the same {name, type, url} shape the online upload path produces.
+        uploadPendingFiles: async function (draft) {
+            if (!draft.pending_files || !draft.pending_files.length) return [];
+            if (!window.FileUploadService) return [];
+
+            const machine = (window.machineList || []).find(m => String(m.id) === String(draft.machine_id));
+            const folderName = (machine && window.getMachineFolderName)
+                ? window.getMachineFolderName(machine.id, machine.manufacturer, machine.name, machine.serial || machine.serial_number, machine.year)
+                : `Maschinen/${draft.machine_id}`;
+
+            const pathGenerator = (file, i) => {
+                const cleanName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+                return `${folderName}/Serviceberichte/${Date.now()}-${i}-${cleanName}`;
+            };
+
+            const uploadResults = await window.FileUploadService.uploadFiles(
+                draft.pending_files,
+                pathGenerator,
+                { bucket: 'dateien', compress: true, concurrency: 5, provider: 'cloudflare-r2' }
+            );
+
+            return uploadResults.map((result, i) => ({
+                name: draft.pending_files[i].name,
+                type: draft.pending_files[i].type,
+                url: result.url
+            }));
+        },
+
         // Process all pending drafts after reconnect
         syncPending: async function () {
             const drafts  = await this.getDrafts();
@@ -240,8 +272,14 @@
 
             for (const draft of drafts) {
                 try {
+                    // Offline angehängte Fotos/Dokumente zuerst hochladen (jetzt online),
+                    // bevor der Bericht selbst gespeichert wird.
+                    const newFiles = await this.uploadPendingFiles(draft);
+
                     if (draft.action === 'insert') {
                         const insertPayload = sanitizeForServiceEntries(draft.data);
+                        if (newFiles.length) insertPayload.files = [...(insertPayload.files || []), ...newFiles];
+
                         const { data: inserted, error } = await supabase
                             .from('service_entries')
                             .insert([insertPayload])
@@ -262,6 +300,7 @@
                         if (fetchErr) throw fetchErr;
 
                         const merged = sanitizeForServiceEntries(this.mergeReport(draft.baseline, draft.data, serverArr));
+                        if (newFiles.length) merged.files = [...(merged.files || []), ...newFiles];
                         // Never overwrite PDF fields that were generated server-side
                         SERVER_ONLY.forEach(k => { if (serverArr[k] != null) merged[k] = serverArr[k]; });
 
