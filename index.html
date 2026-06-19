@@ -8639,32 +8639,40 @@
                 );
 
                 // For each uploaded file, generate thumbnail if it's an image
-                for (let i = 0; i < uploadResults.length; i++) {
-                    const res = uploadResults[i];
-                    const originalFile = machineFiles[i];
-                    const fileEntry = { name: res.name, type: res.type, url: res.url };
+                // (parallelized with a small concurrency pool — sequential was the main bottleneck for many photos)
+                const thumbConcurrency = 5;
+                const thumbQueue = [...uploadResults.entries()];
+                const thumbResultsOrdered = new Array(uploadResults.length);
+                const thumbWorkers = Array(Math.min(thumbConcurrency, uploadResults.length)).fill(null).map(async () => {
+                    while (thumbQueue.length > 0) {
+                        const [i, res] = thumbQueue.shift();
+                        const originalFile = machineFiles[i];
+                        const fileEntry = { name: res.name, type: res.type, url: res.url };
 
-                    if (originalFile.type && originalFile.type.startsWith('image/') && res.path) {
-                        try {
-                            const thumbFile = await window.FileUploadService.generateThumbnail(originalFile);
-                            if (thumbFile) {
-                                const thumbPath = res.path.replace('/Vorschaubilder/', '/Vorschaubilder/thumbs/');
-                                const thumbResult = await window.FileUploadService.uploadFile(thumbFile, {
-                                    bucket: 'dateien',
-                                    path: thumbPath,
-                                    compress: false,
-                                    provider: 'cloudflare-r2'
-                                });
-                                fileEntry.thumbnail_url = thumbResult.url;
-                                console.log(`Thumbnail uploaded: ${thumbResult.url}`);
+                        if (originalFile.type && originalFile.type.startsWith('image/') && res.path) {
+                            try {
+                                const thumbFile = await window.FileUploadService.generateThumbnail(originalFile);
+                                if (thumbFile) {
+                                    const thumbPath = res.path.replace('/Vorschaubilder/', '/Vorschaubilder/thumbs/');
+                                    const thumbResult = await window.FileUploadService.uploadFile(thumbFile, {
+                                        bucket: 'dateien',
+                                        path: thumbPath,
+                                        compress: false,
+                                        provider: 'cloudflare-r2'
+                                    });
+                                    fileEntry.thumbnail_url = thumbResult.url;
+                                    console.log(`Thumbnail uploaded: ${thumbResult.url}`);
+                                }
+                            } catch (thumbErr) {
+                                console.warn('Thumbnail generation failed for', originalFile.name, thumbErr);
                             }
-                        } catch (thumbErr) {
-                            console.warn('Thumbnail generation failed for', originalFile.name, thumbErr);
                         }
-                    }
 
-                    uploadedFiles.push(fileEntry);
-                }
+                        thumbResultsOrdered[i] = fileEntry;
+                    }
+                });
+                await Promise.all(thumbWorkers);
+                uploadedFiles.push(...thumbResultsOrdered);
             }
             return uploadedFiles;
         }
@@ -9439,25 +9447,27 @@
             // 1. Prepare Final Files Array
             const finalFiles = [...existingServiceFiles];
 
-            // 2. Upload New Files via Cloudflare R2
-            for (const file of serviceFiles) {
-                const cleanName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+            // 2. Upload New Files via Cloudflare R2 (parallelisiert statt nacheinander)
+            if (serviceFiles.length > 0) {
                 const machine = (window.machineList || []).find(m => m.id == machineId);
                 const folderName = machine ? window.getMachineFolderName(machine.id, machine.manufacturer, machine.name, machine.serial || machine.serial_number, machine.year) : `Maschinen/${machineId}`;
-                const filePath = `${folderName}/Serviceberichte/${Date.now()}-${cleanName}`;
-                console.log('Uploading service file to R2:', file.name, 'as', filePath);
+                const pathGenerator = (file, i) => {
+                    const cleanName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+                    return `${folderName}/Serviceberichte/${Date.now()}-${i}-${cleanName}`;
+                };
 
-                const result = await window.FileUploadService.uploadFile(file, {
-                    bucket: 'dateien',
-                    path: filePath,
-                    compress: true,
-                    provider: 'cloudflare-r2'
-                });
+                const uploadResults = await window.FileUploadService.uploadFiles(
+                    serviceFiles,
+                    pathGenerator,
+                    { bucket: 'dateien', compress: true, concurrency: 5, provider: 'cloudflare-r2' }
+                );
 
-                finalFiles.push({
-                    name: file.name,
-                    type: file.type,
-                    url: result.url
+                uploadResults.forEach((result, i) => {
+                    finalFiles.push({
+                        name: serviceFiles[i].name,
+                        type: serviceFiles[i].type,
+                        url: result.url
+                    });
                 });
             }
             

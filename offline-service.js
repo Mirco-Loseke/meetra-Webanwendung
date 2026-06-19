@@ -13,6 +13,27 @@
     // Fields that must never overwrite the server (IDs, PDF artifacts)
     const SERVER_ONLY  = ['id', 'created_at', 'updated_at', 'pdf_url', 'pdf_path', 'pdf_created_at'];
 
+    // Tatsächliche Spalten von service_entries — schützt vor "column not found"-Fehlern beim Sync,
+    // falls ein alter/fehlerhafter lokaler Entwurf (z.B. aus einer früheren App-Version) noch
+    // Felder enthält, die es in dieser Tabelle nicht gibt (z.B. location_* gehört zu "machines").
+    const VALID_FIELDS = new Set([
+        'id', 'machine_id', 'category_id', 'category_ids', 'title', 'date', 'datum_von', 'datum_bis',
+        'hours', 'technicians', 'files', 'description', 'travel_distance_km', 'travel_time_minutes',
+        'customer_signature', 'customer_name', 'tech_signature', 'operating_hours', 'workshop_order_number',
+        'work_log', 'tasks', 'materials', 'checklist_payload', 'status_repaired', 'status_repaired_en',
+        'tech_sig_date', 'customer_sig_date', 'contact_persons', 'hotel_company', 'hotel_street',
+        'hotel_zip', 'hotel_city', 'hotel_country', 'created_at', 'updated_at',
+        'pdf_url', 'pdf_path', 'pdf_created_at', 'locked_by', 'locked_at'
+    ]);
+
+    function sanitizeForServiceEntries(obj) {
+        const clean = {};
+        for (const key of Object.keys(obj || {})) {
+            if (VALID_FIELDS.has(key)) clean[key] = obj[key];
+        }
+        return clean;
+    }
+
     // ── IndexedDB ────────────────────────────────────────────────────
     let cachedDB = null;
 
@@ -220,15 +241,16 @@
             for (const draft of drafts) {
                 try {
                     if (draft.action === 'insert') {
+                        const insertPayload = sanitizeForServiceEntries(draft.data);
                         const { data: inserted, error } = await supabase
                             .from('service_entries')
-                            .insert([draft.data])
+                            .insert([insertPayload])
                             .select('id');
                         if (error) throw error;
                         await this.deleteDraft(draft.local_id);
                         synced++;
                         if (inserted && inserted[0]) {
-                            await this.cacheFullEntries([{ ...draft.data, id: inserted[0].id }]);
+                            await this.cacheFullEntries([{ ...insertPayload, id: inserted[0].id }]);
                         }
 
                     } else if (draft.action === 'update' && draft.server_id) {
@@ -239,7 +261,7 @@
                             .single();
                         if (fetchErr) throw fetchErr;
 
-                        const merged = this.mergeReport(draft.baseline, draft.data, serverArr);
+                        const merged = sanitizeForServiceEntries(this.mergeReport(draft.baseline, draft.data, serverArr));
                         // Never overwrite PDF fields that were generated server-side
                         SERVER_ONLY.forEach(k => { if (serverArr[k] != null) merged[k] = serverArr[k]; });
 

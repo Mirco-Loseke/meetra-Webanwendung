@@ -542,6 +542,23 @@
     let operatorSearchTimeout = null;
     let locationSearchTimeout = null;
 
+    // Verschiebt eine Vorschlagsliste nach document.body und positioniert sie fixiert über dem
+    // zugehörigen Eingabefeld — sonst bleibt sie hinter dem backdrop-filter des Modals "unsichtbar"/durchsichtig.
+    window.positionSuggestionsBoxFixed = function (inputId, boxId) {
+        const input = document.getElementById(inputId);
+        const box = document.getElementById(boxId);
+        if (!input || !box) return;
+        if (box.parentElement !== document.body) {
+            document.body.appendChild(box);
+        }
+        const rect = input.getBoundingClientRect();
+        box.style.position = 'fixed';
+        box.style.top = `${rect.bottom + 4}px`;
+        box.style.left = `${rect.left}px`;
+        box.style.width = `${rect.width}px`;
+        box.style.zIndex = '999999';
+    };
+
     window.searchCustomersForMachine = function () {
         clearTimeout(machineSearchTimeout);
         machineSearchTimeout = setTimeout(async () => {
@@ -618,6 +635,7 @@
 
             suggestionsBox.style.display = 'block';
             suggestionsBox.innerHTML = '<div style="padding:10px; color:rgba(255,255,255,0.5);">Suche...</div>';
+            window.positionSuggestionsBoxFixed('machine-operator-search', 'machine-operator-suggestions');
 
             try {
                 if (!window.supabaseClient) throw new Error('Supabase Client nicht initialisiert');
@@ -699,6 +717,7 @@
 
             suggestionsBox.style.display = 'block';
             suggestionsBox.innerHTML = '<div style="padding:10px; color:rgba(255,255,255,0.5);">Suche...</div>';
+            window.positionSuggestionsBoxFixed('machine-location-search', 'machine-location-suggestions');
 
             try {
                 if (!window.supabaseClient) throw new Error('Supabase Client nicht initialisiert');
