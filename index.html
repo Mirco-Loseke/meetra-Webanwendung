@@ -4107,6 +4107,9 @@
 
             async function updateLastViewed(machineId) {
                 if (!activeUser) return;
+                // Offline: nicht versuchen — nur eine "zuletzt angesehen"-Markierung, nicht kritisch,
+                // würde sonst mit einem unbehandelten Netzwerkfehler abbrechen (z.B. "TypeError: Load failed").
+                if (!navigator.onLine) return;
 
                 console.log('Updating last viewed for machine:', machineId);
 
@@ -4132,21 +4135,25 @@
                 // Update local object
                 activeUser.last_viewed = lastViewed;
 
-                // Update Supabase
-                const { error } = await supabaseClient
-                    .from('users')
-                    .update({ last_viewed: lastViewed })
-                    .eq('id', activeUser.id);
+                try {
+                    // Update Supabase
+                    const { error } = await supabaseClient
+                        .from('users')
+                        .update({ last_viewed: lastViewed })
+                        .eq('id', activeUser.id);
 
-                if (error) {
-                    console.error('Error updating last viewed:', error);
-                } else {
-                    console.log('Successfully updated last viewed in Supabase');
-                    // Refresh dashboard if we are on home view
-                    const homeView = document.getElementById('home');
-                    if (homeView && !homeView.classList.contains('hidden')) {
-                        renderDashboard();
+                    if (error) {
+                        console.error('Error updating last viewed:', error);
+                    } else {
+                        console.log('Successfully updated last viewed in Supabase');
+                        // Refresh dashboard if we are on home view
+                        const homeView = document.getElementById('home');
+                        if (homeView && !homeView.classList.contains('hidden')) {
+                            renderDashboard();
+                        }
                     }
+                } catch (err) {
+                    console.error('Error updating last viewed (network):', err);
                 }
             }
 
@@ -7755,6 +7762,7 @@
 
                 try {
                     if (!supabaseClient) throw new Error('Supabase ist nicht initialisiert!');
+                    if (!navigator.onLine) throw new Error('Keine Internetverbindung — Maschinen können nur online bearbeitet/gespeichert werden. Bitte später erneut versuchen.');
 
                                         // 1. Gather Data
                     const categoryId = document.getElementById('machine-category').value;
