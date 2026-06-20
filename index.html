@@ -2098,9 +2098,12 @@
                         <div class="form-group">
                             <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Bild</label>
                             <div id="beschriftung-image-dropzone" onclick="document.getElementById('beschriftung-image-input').click()" style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 16px; padding: 1.5rem; text-align: center; cursor: pointer;">
-                                <input type="file" id="beschriftung-image-input" accept="image/*" capture="environment" style="display:none;" onchange="window.handleBeschriftungImage(this.files[0])">
-                                <p style="color: rgba(255,255,255,0.5); margin: 0; font-size: 0.85rem;">Bild hochladen oder Foto aufnehmen — klicken</p>
+                                <input type="file" id="beschriftung-image-input" accept="image/*" style="display:none;" onchange="window.handleBeschriftungImage(this.files[0])">
+                                <p style="color: rgba(255,255,255,0.5); margin: 0; font-size: 0.85rem;">Bild hinzufügen — aus Galerie wählen oder Foto aufnehmen</p>
                             </div>
+                            <button onclick="window.removeBeschriftungImage()" style="margin-top: 8px; padding: 8px 16px; border-radius: 8px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; font-weight:700; font-size:0.8rem; cursor:pointer;">
+                                Bild entfernen
+                            </button>
                         </div>
 
                         <label style="display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.8); font-size: 0.9rem; cursor: pointer;">
@@ -3546,6 +3549,16 @@
                 promise,
                 new Promise((_, reject) => setTimeout(() => reject(new Error('Zeitüberschreitung — keine Antwort vom Server')), ms))
             ]);
+        };
+
+        // Beim Wechsel von WLAN auf Mobilfunk (oder umgekehrt) kann navigator.onLine für einen
+        // kurzen Moment "false" melden, obwohl gleich wieder eine Verbindung besteht (Handover).
+        // Vor Aktionen, die deshalb fälschlich in den Offline-Modus wechseln würden (z.B. Speichern),
+        // hiermit kurz nachprüfen statt dem ersten Signal sofort zu vertrauen.
+        window.isLikelyOffline = async function () {
+            if (navigator.onLine) return false;
+            await new Promise(r => setTimeout(r, 1500));
+            return !navigator.onLine;
         };
 
         // Global Error Handler for user feedback
@@ -8112,7 +8125,7 @@
                     let machineId = currentEditingId;
 
                     // ── Offline-Pfad: nur Bearbeiten bestehender Maschinen, kein Neuanlegen ──────────
-                    if (!navigator.onLine) {
+                    if (await window.isLikelyOffline()) {
                         if (!machineId) {
                             throw new Error('Neue Maschinen können nur online angelegt werden. Bitte später erneut versuchen.');
                         }
@@ -9869,7 +9882,7 @@
             }
 
             // ── Offline path ───────────────────────────────────────────────
-            if (!navigator.onLine && window.offlineService) {
+            if (window.offlineService && await window.isLikelyOffline()) {
                 const reportDataOffline = window._buildServiceReportData();
                 const action   = (typeof currentEditingServiceId !== 'undefined' && currentEditingServiceId) ? 'update' : 'insert';
                 const serverId = (typeof currentEditingServiceId !== 'undefined') ? currentEditingServiceId : null;

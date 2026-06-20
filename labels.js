@@ -465,6 +465,17 @@
         });
     }
 
+    // Logo in Farbe (für die Beschriftung — auf den kleinen Etiketten bleibt es schwarz/weiß)
+    function loadEmbeddedLogoColor() {
+        return new Promise((resolve, reject) => {
+            if (!window.MEETRA_LOGO_BASE64) { reject(new Error('Logo-Daten nicht gefunden (meetra_logo_base64.js nicht geladen).')); return; }
+            const img = new Image();
+            img.onload = () => resolve({ url: window.MEETRA_LOGO_BASE64, ratio: img.naturalWidth / img.naturalHeight });
+            img.onerror = () => reject(new Error('Logo konnte nicht geladen werden.'));
+            img.src = window.MEETRA_LOGO_BASE64;
+        });
+    }
+
     // Etiketten-Formate zur Auswahl.
     // mode "sheet": Raster mehrerer Etiketten auf einer Seite (mit Start-Position). pageFormat
     // kann ein jsPDF-Name ('a4') oder eine eigene [Breite,Höhe]-Größe sein, falls der reale
@@ -996,6 +1007,15 @@
         reader.readAsDataURL(file);
     };
 
+    window.removeBeschriftungImage = function () {
+        const page = getCurrentBeschriftungPage();
+        page.imageDataUrl = null;
+        page.imageRatio = 1;
+        const input = document.getElementById('beschriftung-image-input');
+        if (input) input.value = '';
+        window.renderBeschriftungPreview();
+    };
+
     window.toggleBeschriftungStueckliste = function (checked) {
         const page = getCurrentBeschriftungPage();
         page.stuecklisteEnabled = checked;
@@ -1071,12 +1091,12 @@
         const ROW2_TOP = ROW1_TOP + ROW1_H + 2, ROW2_H = 8;
         const IMAGE_TOP = ROW2_TOP + ROW2_H + 4;
 
-        const logoW = 22;
+        const logoW = 30;
         const logoRightEdge = pageW - 10 - logoW;
 
-        // Logo oben rechts (schwarz/weiß)
+        // Logo oben rechts (in Farbe — auf den kleinen Etiketten bleibt es schwarz/weiß)
         if (window.MEETRA_LOGO_BASE64) {
-            html += `<img src="${window.MEETRA_LOGO_BASE64}" style="position:absolute; top:${ROW1_TOP * scale}px; right:${10 * scale}px; width:${logoW * scale}px; filter:grayscale(1);">`;
+            html += `<img src="${window.MEETRA_LOGO_BASE64}" style="position:absolute; top:${ROW1_TOP * scale}px; right:${10 * scale}px; width:${logoW * scale}px;">`;
         }
 
         // Titel — in derselben Reihe wie das Logo, zentriert im verbleibenden Platz davor
@@ -1089,12 +1109,12 @@
             html += `<div style="position:absolute; top:${ROW2_TOP * scale}px; left:${10 * scale}px; right:${10 * scale}px; text-align:center; font-weight:500; font-size:${4 * scale}px; color:#444; font-family:Helvetica,Arial,sans-serif;">${escapeHtml(page.bez2)}</div>`;
         }
 
-        // Bild mittig, mittelgroße Box — erst eine Reihe unter Titel/Logo und Kurzbeschreibung,
+        // Bild mittig, großzügige Box — erst eine Reihe unter Titel/Logo und Kurzbeschreibung,
         // wird bei großen Bildern automatisch passend verkleinert
         let imageBottomMm = IMAGE_TOP;
         if (page.imageDataUrl) {
-            const maxW = pageW - 70;
-            const maxH = pageH * 0.33;
+            const maxW = pageW - 40;
+            const maxH = pageH * 0.45;
             const box = fitBox(page.imageRatio, maxW, maxH);
             const imgX = (pageW - box.w) / 2;
             const imgY = IMAGE_TOP;
@@ -1118,7 +1138,7 @@
             html += `
                 <table style="position:absolute; left:${20 * scale}px; top:${tableY * scale}px; width:${tableW * scale}px; border-collapse:collapse; font-size:${3.2 * scale}px; font-family:Helvetica,Arial,sans-serif; color:#141414;">
                     <thead>
-                        <tr style="background:#2a2a2a; color:#fff;">
+                        <tr style="background:#1e293b; color:#fff;">
                             <th style="border:1px solid #ccc; padding:4px 6px; text-align:left;">Art.-Nr.</th>
                             <th style="border:1px solid #ccc; padding:4px 6px; text-align:left;">Bezeichnung 1</th>
                             <th style="border:1px solid #ccc; padding:4px 6px; text-align:left;">Bezeichnung 2</th>
@@ -1141,7 +1161,7 @@
         const ROW2_TOP = ROW1_TOP + ROW1_H + 2, ROW2_H = 8;
         const IMAGE_TOP = ROW2_TOP + ROW2_H + 4;
 
-        const logoW = 22;
+        const logoW = 30;
         const logoRightEdge = pageW - 10 - logoW;
 
         if (logo) {
@@ -1162,12 +1182,12 @@
             fitCenteredText(doc, page.bez2, pageW / 2, ROW2_TOP + ROW2_H / 2 + 1.5, pageW - 20, 11, 7, 'normal');
         }
 
-        // Bild mittig, mittelgroße Box — erst eine Reihe unter Titel/Logo und Kurzbeschreibung,
+        // Bild mittig, großzügige Box — erst eine Reihe unter Titel/Logo und Kurzbeschreibung,
         // wird bei großen Bildern automatisch passend verkleinert
         let imageBottomMm = IMAGE_TOP;
         if (page.imageDataUrl) {
-            const maxW = pageW - 70;
-            const maxH = pageH * 0.33;
+            const maxW = pageW - 40;
+            const maxH = pageH * 0.45;
             const box = fitBox(page.imageRatio, maxW, maxH);
             const imgX = (pageW - box.w) / 2;
             const imgY = IMAGE_TOP;
@@ -1182,7 +1202,7 @@
                 head: [['Art.-Nr.', 'Bezeichnung 1', 'Bezeichnung 2', 'Menge', 'Einheit']],
                 body: page.rows.map(r => [r.nummer, r.bez1, r.bez2, r.menge, r.einheit || 'stk']),
                 styles: { fontSize: 10, font: 'helvetica' },
-                headStyles: { fillColor: [40, 40, 40] }
+                headStyles: { fillColor: [30, 41, 59] }
             });
         }
     }
@@ -1200,7 +1220,7 @@
             }
 
             let logo = null;
-            try { logo = await loadEmbeddedLogoGrayscale(); } catch (e) { console.warn(e); }
+            try { logo = await loadEmbeddedLogoColor(); } catch (e) { console.warn(e); }
 
             const { jsPDF } = window.jspdf;
             let doc = null;
