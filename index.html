@@ -77,7 +77,7 @@
         <div class="nixon-card login-card-responsive" style="max-width: 420px; width: 90%; padding: clamp(2rem, 5vw, 3rem) 2rem;">
             <!-- Vertical Branding Stack -->
             <div class="branding-header-responsive" style="margin-bottom: 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                <img src="meetra logo remove.png" alt="Logo" class="logo-responsive" style="display: block; margin: 0 auto; height: clamp(64px, 12vw, 94px);">
+                <img src="meetra-logo-bw-source.png" alt="Logo" class="logo-responsive" style="display: block; margin: 0 auto; height: clamp(64px, 12vw, 94px);">
             </div>
 
             <!-- Login Form -->
@@ -800,7 +800,7 @@
         <aside id="sidebar">
             <div class="sidebar-header">
                 <!-- Full logo (desktop expanded) -->
-                <img src="meetra logo remove.png" alt="meetra Logo" class="logo">
+                <img src="meetra-logo-bw-source.png" alt="meetra Logo" class="logo">
                 <!-- Small icon logo (collapsed sidebar + iPad) -->
                 <img src="meetra_arrows_icon.png" alt="meetra" class="logo-icon">
             </div>
@@ -893,6 +893,16 @@
                                 <path d="M9 8h6"></path>
                             </svg>
                             <span>Protokolle</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#settings-etiketten" class="nav-link" data-target="settings-etiketten">
+                            <!-- Tag/Label Icon -->
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M20.59 13.41 11 3.83a2 2 0 0 0-1.41-.58H4a1 1 0 0 0-1 1v5.59a2 2 0 0 0 .58 1.41l9.58 9.59a2 2 0 0 0 2.83 0l4.6-4.6a2 2 0 0 0 0-2.83Z"></path>
+                                <circle cx="7.5" cy="7.5" r="1.5"></circle>
+                            </svg>
+                            <span>Etiketten</span>
                         </a>
                     </li>
 
@@ -1981,10 +1991,222 @@
                             </div>
                         </div>
 
+                        <!-- Etikettendrucker Card -->
+                        <div class="settings-card" data-target="settings-etiketten">
+                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
+                                <div class="settings-icon-container"
+                                    style="background: rgba(236, 72, 153, 0.1); color: #ec4899; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0;">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M20.59 13.41 11 3.83a2 2 0 0 0-1.41-.58H4a1 1 0 0 0-1 1v5.59a2 2 0 0 0 .58 1.41l9.58 9.59a2 2 0 0 0 2.83 0l4.6-4.6a2 2 0 0 0 0-2.83Z"></path>
+                                        <circle cx="7.5" cy="7.5" r="1.5"></circle>
+                                    </svg>
+                                </div>
+                                <h2 style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">Etiketten<wbr>drucker</h2>
+                            </div>
+                            <div class="settings-content">
+                                <p class="settings-card-desc">Artikel verwalten und Etiketten mit Barcode drucken</p>
+                            </div>
+                        </div>
+
                     </div>
 
 
         </section>
+
+        <!-- Etikettendrucker Settings View -->
+        <section id="settings-etiketten" class="view hidden">
+            <div class="users-header-container">
+                <h1>Etikettendrucker</h1>
+                <div class="users-header-actions">
+                    <button class="btn-back-custom" data-target="settings">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg>
+                        ZURÜCK
+                    </button>
+                </div>
+            </div>
+
+            <!-- Ansicht umschalten -->
+            <div class="calendar-view-tabs" style="margin: 1.25rem 0;">
+                <button class="calendar-tab-btn active" id="label-tab-btn-etiketten" onclick="window.switchLabelTab('etiketten')">Etiketten</button>
+                <button class="calendar-tab-btn" id="label-tab-btn-beschriftung" onclick="window.switchLabelTab('beschriftung')">Beschriftung</button>
+            </div>
+
+            <!-- Tab: Etiketten -->
+            <div id="label-tab-content-etiketten">
+                <div class="users-header-actions" style="display:flex; justify-content:flex-end; gap:10px; margin-bottom: 1rem;">
+                    <button class="btn-add-bg" style="background: rgba(255,255,255,0.06); color: #fff;" onclick="window.openLabelImportModal()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        IMPORTIEREN
+                    </button>
+                    <button class="btn-add-bg" onclick="window.openLabelArticleModal(null)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        ANLEGEN
+                    </button>
+                </div>
+
+                <!-- Toolbar: Search + Print Selected -->
+                <div style="display: flex; gap: 12px; align-items: center; margin: 0 0 1rem 0; flex-wrap: wrap;">
+                    <input type="text" id="label-search-input" class="glass-form-input" placeholder="Suche nach Artikelnummer oder Bezeichnung..." style="flex: 1; min-width: 220px; height: 42px;" oninput="window.renderLabelArticles()">
+                    <label style="display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.6); font-size: 0.85rem; cursor: pointer; white-space: nowrap;">
+                        <input type="checkbox" id="label-select-all" onchange="window.toggleAllLabelSelection(this.checked)">
+                        Alle auswählen
+                    </label>
+                    <span id="label-selected-count" style="color: rgba(255,255,255,0.4); font-size: 0.85rem; white-space: nowrap;">0 ausgewählt</span>
+                    <button class="btn-primary" style="padding: 10px 20px; font-weight: 700; white-space: nowrap;" onclick="window.printSelectedLabels()">
+                        Etiketten drucken
+                    </button>
+                </div>
+
+                <!-- Article List -->
+                <div id="label-articles-container" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+            </div>
+
+            <!-- Tab: Beschriftung (A4-Aushang fürs Palette aufkleben) -->
+            <div id="label-tab-content-beschriftung" class="hidden">
+                <!-- Seiten-Navigation -->
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom: 1.25rem; flex-wrap: wrap;">
+                    <div id="beschriftung-page-tabs" style="display:flex; gap:6px;"></div>
+                    <button onclick="window.addBeschriftungPage()" style="padding: 6px 14px; border-radius: 8px; background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: #10b981; font-weight:700; font-size:0.8rem; cursor:pointer;">
+                        + Seite hinzufügen
+                    </button>
+                    <button onclick="window.removeBeschriftungPage()" style="padding: 6px 14px; border-radius: 8px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; font-weight:700; font-size:0.8rem; cursor:pointer;">
+                        Seite löschen
+                    </button>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start;">
+                    <!-- Formular -->
+                    <div style="display:flex; flex-direction:column; gap: 1.25rem;">
+                        <div class="form-group">
+                            <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Ausrichtung</label>
+                            <div style="display:flex; gap:8px;">
+                                <button id="beschriftung-orientation-p" onclick="window.setBeschriftungOrientation('p')" style="padding:8px 18px; border-radius: 10px; border:1.5px solid #ef4444; background:#ef4444; color:#fff; font-weight:700; font-size:0.85rem; cursor:pointer;">Hochformat</button>
+                                <button id="beschriftung-orientation-l" onclick="window.setBeschriftungOrientation('l')" style="padding:8px 18px; border-radius: 10px; border:1.5px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.6); font-weight:700; font-size:0.85rem; cursor:pointer;">Querformat</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Titel (in einer Reihe mit dem Logo)</label>
+                            <input type="text" id="beschriftung-title" class="glass-form-input" placeholder="z.B. Kabinenfilter JT 580" style="height:44px; width: 100%;" oninput="window.updateBeschriftungTitle(this.value)">
+                        </div>
+
+                        <div class="form-group">
+                            <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Kurzbeschreibung / Bezeichnung 2</label>
+                            <input type="text" id="beschriftung-bez2" class="glass-form-input" placeholder="z.B. Achtung Ausgetauscht" style="height:44px; width: 100%;" oninput="window.updateBeschriftungBez2(this.value)">
+                        </div>
+
+                        <div class="form-group">
+                            <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Bild</label>
+                            <div id="beschriftung-image-dropzone" onclick="document.getElementById('beschriftung-image-input').click()" style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 16px; padding: 1.5rem; text-align: center; cursor: pointer;">
+                                <input type="file" id="beschriftung-image-input" accept="image/*" capture="environment" style="display:none;" onchange="window.handleBeschriftungImage(this.files[0])">
+                                <p style="color: rgba(255,255,255,0.5); margin: 0; font-size: 0.85rem;">Bild hochladen oder Foto aufnehmen — klicken</p>
+                            </div>
+                        </div>
+
+                        <label style="display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.8); font-size: 0.9rem; cursor: pointer;">
+                            <input type="checkbox" id="beschriftung-stueckliste-toggle" onchange="window.toggleBeschriftungStueckliste(this.checked)" style="width:18px; height:18px; cursor:pointer;">
+                            Stückliste hinzufügen
+                        </label>
+
+                        <div id="beschriftung-stueckliste-editor" class="hidden" style="display:flex; flex-direction:column; gap: 0.6rem;">
+                            <div style="display:grid; grid-template-columns: 1fr 1.3fr 1.3fr 70px 80px 32px; gap:6px; font-size:0.68rem; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.4px; padding: 0 2px;">
+                                <span>Art.-Nr.</span><span>Bez. 1</span><span>Bez. 2</span><span>Menge</span><span>Einheit</span><span></span>
+                            </div>
+                            <div id="beschriftung-stueckliste-rows" style="display:flex; flex-direction:column; gap:6px;"></div>
+                            <button onclick="window.addBeschriftungRow()" style="align-self:flex-start; padding: 6px 14px; border-radius: 8px; background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: #10b981; font-weight:700; font-size:0.8rem; cursor:pointer;">
+                                + Zeile
+                            </button>
+                        </div>
+
+                        <button class="btn-primary" style="padding: 12px 24px; font-weight: 700; align-self:flex-start;" onclick="window.printBeschriftung()">
+                            Beschriftung drucken
+                        </button>
+                    </div>
+
+                    <!-- Live-Vorschau -->
+                    <div>
+                        <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Vorschau (A4)</label>
+                        <div id="beschriftung-preview-page" style="position:relative; width:100%; max-width:480px; aspect-ratio: 210/297; background:#fff; border-radius:6px; box-shadow:0 4px 24px rgba(0,0,0,0.35);"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Label Article Add/Edit Modal -->
+        <div id="label-article-modal" style="display:none; position:fixed; inset:0; z-index:100000; background:rgba(5,7,10,0.88); backdrop-filter:blur(12px); align-items:center; justify-content:center;">
+            <div class="glass-card" style="width:92%; max-width:480px; padding:2rem; border-radius:20px; border:1.5px solid rgba(255,255,255,0.1); position:relative;">
+                <h2 id="label-article-modal-title" style="margin:0 0 1.5rem 0; font-family:'Outfit',sans-serif; font-size:1.35rem; color:#fff;">Artikel anlegen</h2>
+                <button onclick="window.closeLabelArticleModal()" class="btn-close-modal" style="position:absolute; top:12px; right:16px;">&times;</button>
+                <input type="hidden" id="label-article-id">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Artikelnummer</label>
+                    <input type="text" id="label-article-number" class="glass-form-input" placeholder="z.B. 10234" inputmode="numeric" maxlength="8" oninput="this.value=this.value.replace(/[^0-9]/g,'').slice(0,8);" style="height:44px; width: 100%;">
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Bezeichnung 1</label>
+                    <input type="text" id="label-article-bez1" class="glass-form-input" placeholder="z.B. Hydraulikfilter" style="height:44px; width: 100%;">
+                </div>
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Bezeichnung 2</label>
+                    <input type="text" id="label-article-bez2" class="glass-form-input" placeholder="z.B. passend für JT 580" style="height:44px; width: 100%;">
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px;">
+                    <button onclick="window.closeLabelArticleModal()" class="btn-secondary" style="padding:9px 20px;">Abbrechen</button>
+                    <button onclick="window.saveLabelArticle()" class="btn-primary" style="padding:9px 26px; font-weight:700;">Speichern</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Label Import Modal (CSV/Excel) -->
+        <div id="label-import-modal" style="display:none; position:fixed; inset:0; z-index:100000; background:rgba(5,7,10,0.88); backdrop-filter:blur(12px); align-items:center; justify-content:center;">
+            <div class="glass-card" style="width:92%; max-width:600px; max-height:88vh; overflow-y:auto; padding:2rem; border-radius:20px; border:1.5px solid rgba(255,255,255,0.1); position:relative;">
+                <h2 style="margin:0 0 1.5rem 0; font-family:'Outfit',sans-serif; font-size:1.35rem; color:#fff;">Artikel importieren</h2>
+                <button onclick="window.closeLabelImportModal()" class="btn-close-modal" style="position:absolute; top:12px; right:16px;">&times;</button>
+
+                <div id="label-import-dropzone" style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 16px; padding: 2.5rem 1.5rem; text-align: center; cursor: pointer; transition: all 0.2s;">
+                    <input type="file" id="label-import-input" accept=".csv, .xls, .xlsx" style="display:none;">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 0.75rem;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                    <p style="color: rgba(255,255,255,0.6); margin: 0 0 4px 0;">Excel- oder CSV-Datei hier ablegen oder klicken</p>
+                    <span style="font-size: 0.8rem; color: rgba(255,255,255,0.35);">Unterstützte Formate: .xlsx, .xls, .csv</span>
+                </div>
+
+                <div id="label-import-mapping" class="hidden" style="margin-top: 1.5rem;">
+                    <p style="color: rgba(255,255,255,0.5); font-size: 0.85rem; margin-bottom: 1rem;">Bitte ordne die Spalten deiner Datei den Feldern zu:</p>
+                    <div id="label-import-mapping-fields" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+                    <div style="display:flex; justify-content:flex-end; gap:10px; margin-top: 1.5rem;">
+                        <button onclick="window.closeLabelImportModal()" class="btn-secondary" style="padding:9px 20px;">Abbrechen</button>
+                        <button onclick="window.confirmLabelImport()" class="btn-primary" style="padding:9px 26px; font-weight:700;">Importieren</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Label Print Preview Modal -->
+        <div id="label-preview-modal" style="display:none; position:fixed; inset:0; z-index:100001; background:#05070a; flex-direction:column; padding: 0; margin: 0; width: 100vw; height: 100vh;">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding: 14px 20px; flex-shrink: 0; border-bottom: 1px solid rgba(255,255,255,0.08); flex-wrap: wrap; gap: 12px;">
+                <h2 style="margin:0; font-family:'Outfit',sans-serif; font-size:1.25rem; color:#fff;">Vorschau — Etiketten</h2>
+                <div style="display:flex; align-items:center; gap:16px; flex-wrap: wrap;">
+                    <label style="color: rgba(255,255,255,0.6); font-size:0.85rem; display:flex; align-items:center; gap:8px;">
+                        Format
+                        <select id="label-format-select" onchange="window.updateLabelFormat(this.value)" class="glass-input" style="height:38px; padding: 0 10px;">
+                            <option value="a5_80">A5 - 38 x 19mm (80 Etiketten)</option>
+                            <option value="a4_65">A4 - 38,1 x 21,2mm (65 Etiketten)</option>
+                            <option value="dymo_duo">DYMO LabelWriter Duo - 89 x 36mm</option>
+                        </select>
+                    </label>
+                    <label id="label-start-position-wrapper" style="color: rgba(255,255,255,0.6); font-size:0.85rem; display:flex; align-items:center; gap:8px;">
+                        Start bei Etikett Nr.
+                        <input type="number" id="label-start-position" min="1" max="40" value="1" oninput="window.updateLabelStartPosition(this.value)" class="glass-form-input" style="width:64px; height:38px; text-align:center;">
+                        <span id="label-position-max" style="color: rgba(255,255,255,0.35);">von 40</span>
+                    </label>
+                    <button onclick="window.closeLabelPreview()" class="btn-secondary" style="padding:9px 20px;">Schließen</button>
+                    <button onclick="window.downloadLabelPreviewPDF()" class="btn-primary" style="padding:9px 26px; font-weight:700;">Herunterladen / Drucken</button>
+                </div>
+            </div>
+            <div style="flex:1; overflow-y:auto; padding: 28px 16px;">
+                <div id="label-preview-pages"></div>
+            </div>
+        </div>
 
         <!-- UVV & Wartungspläne Settings View -->
         <section id="settings-uvv-wartungsplaene" class="view hidden">
@@ -3495,6 +3717,7 @@
                             'settings-textbausteine',
                             'settings-ai',
                             'settings-uvv-wartungsplaene',
+                            'settings-etiketten',
                             'users',
                             'categories',
                             'protocol-templates',
@@ -3565,6 +3788,10 @@
                 } else if (targetId === 'settings-uvv-wartungsplaene') {
                     if (typeof window.loadUvvWartungsplaene === 'function') {
                         window.loadUvvWartungsplaene();
+                    }
+                } else if (targetId === 'settings-etiketten') {
+                    if (typeof window.fetchLabelArticles === 'function') {
+                        window.fetchLabelArticles();
                     }
                 }
 
@@ -10240,6 +10467,38 @@
             }
         };
 
+        // Zerlegt eingefügten WhatsApp-Verlauf ("[10:13, 19.6.2026] Name: Text") in einzelne
+        // Nachrichten und stellt sie als Liste dar (Datum/Uhrzeit links, Text daneben) statt
+        // als einen durchgehenden Fließtext. Mehrzeilige Nachrichten ohne neuen Zeitstempel
+        // werden der vorherigen Nachricht angehängt.
+        function renderWhatsAppMessages(text) {
+            if (!text) return '';
+            const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const headerRegex = /^\[(\d{1,2}:\d{2}),\s*(\d{1,2}\.\d{1,2}\.\d{4})\]\s*([^:]+):\s*(.*)$/;
+            const lines = text.split('\n');
+            const messages = [];
+
+            lines.forEach(line => {
+                const match = line.match(headerRegex);
+                if (match) {
+                    messages.push({ time: match[1], date: match[2], sender: match[3].trim(), text: match[4] });
+                } else if (messages.length > 0) {
+                    messages[messages.length - 1].text += '\n' + line;
+                } else if (line.trim()) {
+                    messages.push({ time: '', date: '', sender: '', text: line });
+                }
+            });
+
+            if (messages.length === 0) return '';
+
+            return messages.map(m => `
+                <div style="display:flex; gap:10px; margin-bottom:10px; align-items:flex-start;">
+                    ${m.date ? `<div style="flex-shrink:0; min-width:88px; font-size:0.72rem; color:rgba(255,255,255,0.45); font-weight:700; line-height:1.4; white-space:nowrap;">${esc(m.date)}<br>${esc(m.time)}</div>` : ''}
+                    <div style="flex:1; font-size:0.9rem; color:rgba(255,255,255,0.85); line-height:1.5; white-space:pre-wrap;">${m.sender ? `<strong style="color:#22c55e;">${esc(m.sender)}:</strong> ` : ''}${esc(m.text)}</div>
+                </div>
+            `).join('');
+        }
+
         window.openHistoryModal = async function (machineId) {
             window.currentHistoryMachineId = machineId;
             window.toggleManualHistoryForm(null); // Reset form
@@ -10406,9 +10665,6 @@
                             let mDescription = m.content;
                             if (m.type === 'hours' && m.content) {
                                 mDescription = `${m.content} Std.`;
-                            } else if (m.type === 'whatsapp' && m.end_date) {
-                                const bisStr = new Date(m.end_date).toLocaleDateString('de-DE');
-                                mDescription = `Zeitraum bis ${bisStr}\n\n${m.content || ''}`;
                             }
 
                             historyItems.push({
@@ -10417,6 +10673,8 @@
                                 type: config.label,
                                 title: m.title,
                                 description: mDescription,
+                                rawType: m.type,
+                                endDate: m.end_date || null,
                                 color: config.color,
                                 icon: config.icon,
                                 source: 'manuell',
@@ -10610,7 +10868,12 @@
                                         </div>
                                     </div>
                                     <h4 style="margin: 0 0 0.5rem 0; color: #fff; font-size: 1rem; font-weight: 700; letter-spacing: -0.01em;">${item.title}</h4>
-                                    ${item.description ? `<p style="margin: 0; color: ${item.itemType === 'workshop' ? '#fff' : 'rgba(255,255,255,0.7)'}; font-size: 0.95rem; line-height: 1.6; font-weight: ${item.itemType === 'workshop' ? '700' : '400'};">${item.description}</p>` : ''}
+                                    ${item.rawType === 'whatsapp' && item.description ? `
+                                        <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 0.6rem; margin-top: 0.25rem;">
+                                            ${item.endDate ? `<div style="font-size:0.75rem; color:rgba(255,255,255,0.4); font-weight:700; margin-bottom:10px;">Zeitraum bis ${new Date(item.endDate).toLocaleDateString('de-DE')}</div>` : ''}
+                                            ${renderWhatsAppMessages(item.description)}
+                                        </div>
+                                    ` : (item.description ? `<p style="margin: 0; color: ${item.itemType === 'workshop' ? '#fff' : 'rgba(255,255,255,0.7)'}; font-size: 0.95rem; line-height: 1.6; font-weight: ${item.itemType === 'workshop' ? '700' : '400'};">${item.description}</p>` : '')}
                                     ${photoGallery}
                                     <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; align-items: center; width: 100%;">
                                         <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -19641,6 +19904,8 @@
     <script src="documents-r2.js?v=5"></script>
     <script src="checklists.js?v=1"></script>
     <script src="customers.js"></script>
+    <script src="meetra_logo_base64.js"></script>
+    <script src="labels.js"></script>
     <script src="offline-service.js?v=1"></script>
     <!-- Renaming Modal -->
     <div id="document-rename-modal" class="modal-backdrop hidden"

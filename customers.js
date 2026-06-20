@@ -184,6 +184,7 @@
             document.head.appendChild(script);
         });
     }
+    window.loadXLSXLibrary = loadXLSXLibrary;
 
     async function parseExcelFile(file) {
         try {

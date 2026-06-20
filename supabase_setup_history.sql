@@ -1207,3 +1207,25 @@ CHECK (type IN ('email', 'phone', 'note', 'photo', 'hours', 'whatsapp', 'wartung
 -- Optionales Enddatum fuer Zeitraeume (z.B. WhatsApp-Verlauf ueber mehrere Tage).
 ALTER TABLE public.manual_history_entries
 ADD COLUMN IF NOT EXISTS end_date date;
+
+
+/* ========================================================= */
+/* DATEI: create_label_articles_table.sql */
+/* ========================================================= */
+
+-- Artikel fuer den Etikettendrucker (Settings): manuell angelegt oder per CSV/Excel importiert.
+-- Der Barcode wird beim Drucken aus article_number generiert, nicht gespeichert.
+CREATE TABLE IF NOT EXISTS public.label_articles (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    article_number TEXT NOT NULL,
+    bezeichnung_1 TEXT,
+    bezeichnung_2 TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.label_articles ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow all operations for label_articles" ON public.label_articles
+    FOR ALL USING (true) WITH CHECK (true);
+
+CREATE INDEX IF NOT EXISTS idx_label_articles_article_number ON public.label_articles (article_number);
