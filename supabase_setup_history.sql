@@ -1259,3 +1259,30 @@ UPDATE public.categories c
 SET sort_order = ranked.rn
 FROM ranked
 WHERE c.id = ranked.id AND c.sort_order IS NULL;
+
+
+/* ========================================================= */
+/* DATEI: repair_missing_servicebericht_documents.sql */
+/* ========================================================= */
+
+-- Einmalige Reparatur: Vor dem Fix in saveServiceberichtPDFToR2 (fehlende Fehlerbehandlung beim
+-- documents-Insert) konnte ein Servicebericht als abgeschlossen markiert werden, obwohl der
+-- zugehörige Eintrag unter "Dokumente" nicht angelegt wurde. Die PDF liegt aber bereits sicher
+-- in Cloudflare R2 (pdf_url/pdf_path sind gesetzt) — wird hier nachträglich verknüpft.
+INSERT INTO public.documents (name, category, machine_id, url, file_path, size, mime_type, folder_id, service_entry_id, created_at)
+SELECT
+  regexp_replace(split_part(se.pdf_path, '/', -1), '\.pdf$', '') AS name,
+  'Servicebericht' AS category,
+  se.machine_id,
+  se.pdf_url,
+  se.pdf_path,
+  0 AS size,
+  'application/pdf' AS mime_type,
+  (SELECT id FROM public.document_folders WHERE name = 'Servicebericht' LIMIT 1) AS folder_id,
+  se.id AS service_entry_id,
+  COALESCE(se.pdf_created_at, now()) AS created_at
+FROM public.service_entries se
+WHERE se.is_finalized = true
+  AND se.pdf_url IS NOT NULL
+  AND se.pdf_path IS NOT NULL
+  AND NOT EXISTS (SELECT 1 FROM public.documents d WHERE d.service_entry_id = se.id);

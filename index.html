@@ -6149,14 +6149,7 @@
                         }
 
                         if (shouldUpdate) {
-                            const lastParts = m.last_maintenance.split('-');
-                            const lastDate = new Date(lastParts[0], lastParts[1] - 1, lastParts[2]);
-                            lastDate.setMonth(lastDate.getMonth() + parseInt(newInterval));
-
-                            const yyyy = lastDate.getFullYear();
-                            const mm = String(lastDate.getMonth() + 1).padStart(2, '0');
-                            const dd = String(lastDate.getDate()).padStart(2, '0');
-                            const nextDateStr = `${yyyy}-${mm}-${dd}`;
+                            const nextDateStr = window.computeRolledNextMaintenance(m.last_maintenance, newInterval);
 
                             // Update machine and ensure meta is set
                             let finalFiles = m.files ? [...m.files] : [];
@@ -8126,6 +8119,26 @@
                 setMapPin(lat, lon);
             }
 
+            // Berechnet die nächste Wartung ausgehend vom letzten Wartungsdatum — rollt dabei aber
+            // so oft um das Intervall vor, bis ein wirklich in der Zukunft liegendes Datum erreicht
+            // ist. Sonst würde z.B. bei einer nachträglich für 2024 erfassten Wartung mit 1 Jahr
+            // Intervall "nächste Wartung 2025" herauskommen, obwohl das längst vergangen ist —
+            // "nächste Wartung" soll immer wirklich die nächste sein, egal wie alt der letzte Eintrag ist.
+            window.computeRolledNextMaintenance = function (lastDateStr, intervalMonths) {
+                const parts = String(lastDateStr).split('-');
+                const next = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+                const months = parseInt(intervalMonths, 10) || 12;
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                while (next < today) {
+                    next.setMonth(next.getMonth() + months);
+                }
+                const yyyy = next.getFullYear();
+                const mm = String(next.getMonth() + 1).padStart(2, '0');
+                const dd = String(next.getDate()).padStart(2, '0');
+                return `${yyyy}-${mm}-${dd}`;
+            };
+
             window.calculateNextMaintenanceDate = function () {
                 const lastDateVal = document.getElementById('machine-last-maintenance').value;
                 const catId = document.getElementById('machine-category').value;
@@ -8142,18 +8155,7 @@
                     months = cat.default_maintenance_interval_months || 12;
                 }
 
-                const lastDate = new Date(lastDateVal);
-                if (isNaN(lastDate.getTime())) return;
-
-                const nextDate = new Date(lastDate);
-                nextDate.setMonth(nextDate.getMonth() + months);
-
-                // Format to YYYY-MM-DD
-                const yyyy = nextDate.getFullYear();
-                const mm = String(nextDate.getMonth() + 1).padStart(2, '0');
-                const dd = String(nextDate.getDate()).padStart(2, '0');
-
-                document.getElementById('machine-next-maintenance').value = `${yyyy}-${mm}-${dd}`;
+                document.getElementById('machine-next-maintenance').value = window.computeRolledNextMaintenance(lastDateVal, months);
 
                 // Show "Auto" badge
                 const badge = document.getElementById('maint-auto-badge');
@@ -10156,9 +10158,7 @@
                     nextMaintDate = new Date(overrideDate).toISOString();
                 } else {
                     const interval = machineRef.maintenance_interval_months || (categoryRef ? categoryRef.default_maintenance_interval_months : 12) || 12;
-                    const calcDate = new Date(serviceDate);
-                    calcDate.setMonth(calcDate.getMonth() + parseInt(interval));
-                    nextMaintDate = calcDate.toISOString();
+                    nextMaintDate = window.computeRolledNextMaintenance(serviceDate, interval);
                 }
 
                 let updatedFiles = machineRef.files ? [...machineRef.files] : [];
@@ -11574,6 +11574,47 @@
                         .from('manual_history_entries')
                         .insert([insertPayload]);
                     if (error) throw error;
+                }
+
+                // Schnelleintrag "Wartung" soll nicht nur in der Historie stehen, sondern auch
+                // Letzte/Nächste Wartung auf der Maschinenkarte aktualisieren (und damit automatisch
+                // auch auf der Ereignisse-Seite auftauchen, die next_maintenance direkt anzeigt).
+                // Nur anwenden, wenn dieser Eintrag tatsächlich der neueste Wartungstermin ist —
+                // sonst könnte ein nachträglich erfasster älterer Eintrag eine neuere Wartung überschreiben.
+                if (type === 'wartung' && entryDate) {
+                    try {
+                        const { data: machineRow, error: machineFetchErr } = await window.supabaseClient
+                            .from('machines')
+                            .select('id, category_id, maintenance_interval_months, last_maintenance, files')
+                            .eq('id', machineId)
+                            .single();
+
+                        if (!machineFetchErr && machineRow) {
+                            const isNewer = !machineRow.last_maintenance || entryDate > machineRow.last_maintenance;
+                            if (isNewer) {
+                                const cat = (window.categoryList || []).find(c => c.id === machineRow.category_id);
+                                const interval = machineRow.maintenance_interval_months || (cat ? cat.default_maintenance_interval_months : 12) || 12;
+                                const nextMaintDate = window.computeRolledNextMaintenance(entryDate, interval);
+
+                                let updatedFiles = machineRow.files ? [...machineRow.files] : [];
+                                updatedFiles = updatedFiles.filter(f => f.type !== 'meta' || f.key !== 'is_next_maintenance_auto');
+                                updatedFiles.push({ type: 'meta', key: 'is_next_maintenance_auto', property: 'true' });
+
+                                await window.supabaseClient
+                                    .from('machines')
+                                    .update({
+                                        last_maintenance: entryDate,
+                                        next_maintenance: nextMaintDate,
+                                        files: updatedFiles
+                                    })
+                                    .eq('id', machineId);
+
+                                if (typeof fetchMachines === 'function') await fetchMachines();
+                            }
+                        }
+                    } catch (maintErr) {
+                        console.error('Error syncing Wartung-Schnelleintrag to machine:', maintErr);
+                    }
                 }
 
                 window.toggleManualHistoryForm(null);
@@ -16954,21 +16995,12 @@
                 });
                 
                 const nowISO = new Date().toISOString();
-                
-                // Update service_entries in Supabase
-                const { error: updateError } = await window.supabaseClient
-                    .from('service_entries')
-                    .update({
-                        pdf_url: uploadResult.url,
-                        pdf_path: uploadResult.path,
-                        pdf_created_at: nowISO,
-                        is_finalized: true,
-                        finalized_at: nowISO
-                    })
-                    .eq('id', reportId);
-                    
-                if (updateError) throw updateError;
-                
+
+                // Erst das Dokument unter "Dokumente" anlegen/aktualisieren — der Bericht wird
+                // erst danach als abgeschlossen markiert (siehe unten). Würde man zuerst
+                // abschließen und das Dokument schlägt fehl, bliebe ein abgeschlossener, aber
+                // nicht mehr bearbeitbarer Bericht ohne zugehöriges Dokument zurück.
+
                 // Upsert in documents table - primär über service_entry_id verknüpfen,
                 // damit ein erneutes Speichern immer den bestehenden Eintrag überschreibt
                 // (auch wenn sich Dateiname/Pfad durch Datum/Auftragsnummer geändert hat).
@@ -16988,7 +17020,7 @@
                 }
 
                 if (existingDoc) {
-                    await window.supabaseClient
+                    const { error: docUpdateError } = await window.supabaseClient
                         .from('documents')
                         .update({
                             name: fileName.replace('.pdf', ''),
@@ -17001,13 +17033,17 @@
                             service_entry_id: reportId
                         })
                         .eq('id', existingDoc.id);
+                    if (docUpdateError) {
+                        console.error('Error updating document entry:', docUpdateError);
+                        throw new Error('PDF wurde erzeugt, aber das Dokument unter "Dokumente" konnte nicht aktualisiert werden: ' + docUpdateError.message);
+                    }
                 } else {
-                    await window.supabaseClient
+                    const { error: docInsertError } = await window.supabaseClient
                         .from('documents')
                         .insert([{
                             name: fileName.replace('.pdf', ''),
                             category: categoryValue,
-                            machine_id: machineId,
+                            machine_id: wsMachineIdInt,
                             url: uploadResult.url,
                             file_path: uploadResult.path,
                             size: pdfFile.size,
@@ -17015,8 +17051,26 @@
                             folder_id: wsTargetFolderId,
                             service_entry_id: reportId
                         }]);
+                    if (docInsertError) {
+                        console.error('Error inserting document entry:', docInsertError);
+                        throw new Error('PDF wurde erzeugt, aber das Dokument unter "Dokumente" konnte nicht gespeichert werden: ' + docInsertError.message);
+                    }
                 }
-                
+
+                // Dokument ist sicher gespeichert — jetzt erst den Bericht als abgeschlossen markieren.
+                const { error: updateError } = await window.supabaseClient
+                    .from('service_entries')
+                    .update({
+                        pdf_url: uploadResult.url,
+                        pdf_path: uploadResult.path,
+                        pdf_created_at: nowISO,
+                        is_finalized: true,
+                        finalized_at: nowISO
+                    })
+                    .eq('id', reportId);
+
+                if (updateError) throw updateError;
+
                 // Update local allServiceEntries list so history lists get updated
                 const entry = allServiceEntries.find(e => e.id === reportId);
                 if (entry) {
