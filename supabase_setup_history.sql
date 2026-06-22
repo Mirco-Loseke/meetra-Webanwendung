@@ -1240,3 +1240,22 @@ CREATE INDEX IF NOT EXISTS idx_label_articles_article_number ON public.label_art
 -- verschwindet in der Liste, openEditServicebericht blockt zusaetzlich serverseitig/clientseitig).
 ALTER TABLE public.service_entries ADD COLUMN IF NOT EXISTS is_finalized boolean DEFAULT false;
 ALTER TABLE public.service_entries ADD COLUMN IF NOT EXISTS finalized_at timestamptz;
+
+
+/* ========================================================= */
+/* DATEI: add_sort_order_to_categories.sql */
+/* ========================================================= */
+
+-- Manuelle Reihenfolge der Kategorien (per Ziehen-und-Halten in den Einstellungen).
+ALTER TABLE public.categories ADD COLUMN IF NOT EXISTS sort_order integer;
+
+-- Bestehende Kategorien bekommen eine Startreihenfolge (alphabetisch je Typ), damit nach
+-- der Migration nichts durcheinander springt, bevor zum ersten Mal manuell sortiert wird.
+WITH ranked AS (
+  SELECT id, ROW_NUMBER() OVER (PARTITION BY type ORDER BY name ASC) AS rn
+  FROM public.categories
+)
+UPDATE public.categories c
+SET sort_order = ranked.rn
+FROM ranked
+WHERE c.id = ranked.id AND c.sort_order IS NULL;

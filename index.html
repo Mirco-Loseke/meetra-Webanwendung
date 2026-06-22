@@ -5576,7 +5576,7 @@
                 let data, error;
                 try {
                     const result = await window.withTimeout(
-                        supabaseClient.from('categories').select('*').order('name', { ascending: true }),
+                        supabaseClient.from('categories').select('*').order('sort_order', { ascending: true }).order('name', { ascending: true }),
                         6000
                     );
                     data = result.data; error = result.error;
@@ -5706,9 +5706,17 @@
                     accentColor = cat.color || savedColor || colors[type] || '#999';
 
                     li.style.setProperty('--user-color', accentColor);
+                    li.dataset.catId = cat.id;
+
+                    // Maschinenkategorien: per Ziehen-und-Halten in der Reihenfolge sortierbar
+                    const dragHandle = type === 'machine' ? `
+                                <span class="cat-drag-handle" title="Ziehen zum Sortieren" style="cursor: grab; touch-action: none; color: rgba(255,255,255,0.35); display: inline-flex; align-items: center; padding: 4px 8px; margin-right: 2px; flex-shrink: 0;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="8" cy="6" r="1.6"></circle><circle cx="16" cy="6" r="1.6"></circle><circle cx="8" cy="12" r="1.6"></circle><circle cx="16" cy="12" r="1.6"></circle><circle cx="8" cy="18" r="1.6"></circle><circle cx="16" cy="18" r="1.6"></circle></svg>
+                                </span>` : '';
 
                     li.innerHTML = `
-                            <div class="user-item-content">
+                            <div class="user-item-content" style="display: flex; align-items: center;">
+                                    ${dragHandle}
                                     <div class="user-details" style="display: flex; align-items: center; justify-content: space-between; padding-left: 0.5rem; width: 100%;">
                                         <span class="user-name-link" style="color: ${accentColor}; font-weight: 700; font-family: 'Inter', sans-serif; font-size: 1.1rem;">${cat.name}</span>
                                         ${type === 'machine' ? `<span style="font-size: 0.85rem; color: rgba(255,255,255,0.4); font-weight: 600; padding-right: 1rem;">Intervall: ${cat.default_maintenance_interval_months || 12}M</span>` : ''}
@@ -5737,7 +5745,90 @@
                         listSeries.appendChild(li);
                     }
                 });
+
+                window.setupCategoryDragReorder(listMachine, 'machine');
             }
+
+            // ── Kategorien per Ziehen-und-Halten sortieren (Pointer Events statt HTML5
+            // Drag&Drop, damit es auch auf iPad/Touch zuverlässig funktioniert) ──
+            // Sobald ein Element über die Mitte eines Nachbarn gezogen wird, tauschen beide
+            // sofort die Position im DOM — die finale Reihenfolge wird beim Loslassen gespeichert.
+            const categoryDragBoundLists = new WeakSet();
+            window.setupCategoryDragReorder = function (listEl, type) {
+                if (!listEl || categoryDragBoundLists.has(listEl)) return;
+                categoryDragBoundLists.add(listEl);
+
+                let dragEl = null;
+
+                listEl.addEventListener('pointerdown', (e) => {
+                    const handle = e.target.closest('.cat-drag-handle');
+                    if (!handle) return;
+                    dragEl = handle.closest('li');
+                    if (!dragEl) return;
+                    dragEl.style.opacity = '0.5';
+                    dragEl.style.background = 'rgba(255,255,255,0.08)';
+                    try { handle.setPointerCapture(e.pointerId); } catch (err) {}
+                    e.preventDefault();
+                });
+
+                listEl.addEventListener('pointermove', (e) => {
+                    if (!dragEl) return;
+                    const siblings = Array.from(listEl.children);
+                    for (const sib of siblings) {
+                        if (sib === dragEl) continue;
+                        const rect = sib.getBoundingClientRect();
+                        if (e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                            const midY = rect.top + rect.height / 2;
+                            if (e.clientY < midY) {
+                                listEl.insertBefore(dragEl, sib);
+                            } else {
+                                listEl.insertBefore(dragEl, sib.nextElementSibling);
+                            }
+                            break;
+                        }
+                    }
+                });
+
+                const finishDrag = () => {
+                    if (!dragEl) return;
+                    dragEl.style.opacity = '';
+                    dragEl.style.background = '';
+                    const orderedIds = Array.from(listEl.children)
+                        .map(li => parseInt(li.dataset.catId, 10))
+                        .filter(id => !isNaN(id));
+                    dragEl = null;
+                    window.saveCategoryOrder(type, orderedIds);
+                };
+                listEl.addEventListener('pointerup', finishDrag);
+                listEl.addEventListener('pointercancel', finishDrag);
+            };
+
+            // Speichert die neue Reihenfolge in der DB und hält window.categoryList synchron,
+            // damit sich die geänderte Reihenfolge sofort überall (Filter, Dropdowns, Maschinenliste) zeigt.
+            window.saveCategoryOrder = async function (type, orderedIds) {
+                if (!orderedIds || !orderedIds.length) return;
+                try {
+                    await Promise.all(orderedIds.map((id, index) =>
+                        supabaseClient.from('categories').update({ sort_order: index }).eq('id', id)
+                    ));
+
+                    (window.categoryList || []).forEach(c => {
+                        const idx = orderedIds.indexOf(c.id);
+                        if (idx !== -1) c.sort_order = idx;
+                    });
+                    window.categoryList.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+                    categoryList = window.categoryList;
+
+                    if (typeof renderServiceCategoryFilterList === 'function') renderServiceCategoryFilterList();
+                    if (typeof renderMachines === 'function') renderMachines();
+                    if (typeof window.populateDocumentTypeDropdowns === 'function') window.populateDocumentTypeDropdowns();
+                    renderCategoryList();
+                } catch (err) {
+                    console.error('Error saving category order:', err);
+                    alert('Fehler beim Speichern der Reihenfolge: ' + (err.message || err));
+                    fetchCategories();
+                }
+            };
 
             window.editCategory = async function (id) {
                 if (!supabaseClient) { alert('Datenbank nicht verbunden'); return; }
@@ -6006,7 +6097,11 @@
                             await updateAffectedMachines(editingId, intervalValue);
                         }
                     } else {
-                        // INSERT
+                        // INSERT — ans Ende der Liste dieses Typs anhängen
+                        const sameTypeCats = (window.categoryList || []).filter(c => c.type === typeValue);
+                        const maxOrder = sameTypeCats.reduce((max, c) => Math.max(max, c.sort_order || 0), 0);
+                        payload.sort_order = maxOrder + 1;
+
                         response = await supabaseClient
                             .from('categories')
                             .insert([payload]);
@@ -9899,7 +9994,15 @@
                 const baseline = window._serviceReportBaseline || null;
                 const pendingFiles = [...serviceFiles]; // Fotos/Dokumente: Upload erfolgt automatisch beim nächsten Sync
 
-                await window.offlineService.saveDraft(action, serverId, baseline, reportDataOffline, pendingFiles);
+                // Stabiler Schlüssel für noch nicht angelegte Berichte (action 'insert'): bleibt
+                // über mehrere Offline-Speicherungen DERSELBEN Sitzung gleich, damit saveDraft
+                // denselben Entwurf aktualisiert statt jedes Mal einen weiteren anzulegen
+                // (sonst würden beim Sync mehrere doppelte Berichte entstehen).
+                if (action === 'insert' && !window._offlineDraftKey) {
+                    window._offlineDraftKey = 'tmp_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+                }
+
+                await window.offlineService.saveDraft(action, serverId, baseline, reportDataOffline, pendingFiles, window._offlineDraftKey);
                 serviceFiles = [];
                 window.updatePendingBadge();
                 const fileNote = pendingFiles.length > 0
@@ -10357,6 +10460,15 @@
                         throw error;
                     }
                     console.log('Service entry deleted successfully');
+
+                    // Sofort aus allen lokalen/offline Caches entfernen, sonst kann der gelöschte
+                    // Bericht aus dem Listen-Cache (Offline-Vorlade-Anzeige) wieder auftauchen.
+                    allServiceEntries = (allServiceEntries || []).filter(e => e.id !== id);
+                    window.serviceEntryList = allServiceEntries;
+                    if (window.offlineService) {
+                        try { await window.offlineService.deleteCachedEntry(id); } catch (e) { console.warn('Cache-Bereinigung fehlgeschlagen:', e); }
+                    }
+
                     fetchServiceEntries();
                     if (typeof window.fetchDocuments === 'function') window.fetchDocuments();
                 } catch (err) {
@@ -10634,12 +10746,14 @@
                 if (calRes.data) {
                     calRes.data.forEach(c => {
                         historyItems.push({
+                            id: c.id,
                             date: new Date(c.start_time || c.created_at),
                             type: 'Termin',
                             title: c.title || 'Termin',
                             description: c.description || '',
                             color: '#10b981',
-                            icon: '📅'
+                            icon: '📅',
+                            itemType: 'calendar'
                         });
                     });
                 }
@@ -10898,16 +11012,30 @@
                                         </div>
                                         <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
                                             ${sourceTag}
-                                            ${item.source === 'manuell' ? `
+                                            ${(() => {
+                                                const systemEditableTypes = ['service', 'workshop', 'procurement', 'intake', 'acceptance', 'calendar'];
+                                                if (item.source === 'manuell') {
+                                                    return `
                                             <div style="position: relative; display: inline-flex; align-items: center;" title="Datum bearbeiten">
                                                 <div onclick="this.nextElementSibling.showPicker ? this.nextElementSibling.showPicker() : this.nextElementSibling.click()" style="font-size: clamp(0.6rem, 1.5vw, 0.75rem); color: rgba(255,255,255,0.6); font-weight: 700; text-align: right; background: rgba(16,185,129,0.06); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(16,185,129,0.2); white-space: nowrap; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.15)'; this.style.borderColor='rgba(16,185,129,0.4)'" onmouseout="this.style.background='rgba(16,185,129,0.06)'; this.style.borderColor='rgba(16,185,129,0.2)'">
                                                     ✏️ ${dateStr}
                                                 </div>
                                                 <input type="date" value="${item.date.toISOString().split('T')[0]}" style="position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none;" onchange="window.updateManualEntryDate('${item.id}', this.value)">
-                                            </div>` : `
+                                            </div>`;
+                                                } else if (isAdmin && item.id && systemEditableTypes.includes(item.itemType)) {
+                                                    return `
+                                            <div style="position: relative; display: inline-flex; align-items: center;" title="Datum bearbeiten (Admin)">
+                                                <div onclick="this.nextElementSibling.showPicker ? this.nextElementSibling.showPicker() : this.nextElementSibling.click()" style="font-size: clamp(0.6rem, 1.5vw, 0.75rem); color: rgba(255,255,255,0.6); font-weight: 700; text-align: right; background: rgba(0,0,0,0.35); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); white-space: nowrap; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'; this.style.borderColor='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(0,0,0,0.35)'; this.style.borderColor='rgba(255,255,255,0.08)'">
+                                                    ✏️ ${dateStr}
+                                                </div>
+                                                <input type="date" value="${item.date.toISOString().split('T')[0]}" style="position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none;" onchange="window.updateSystemEntryDate('${item.itemType}', '${item.id}', this.value)">
+                                            </div>`;
+                                                }
+                                                return `
                                             <div style="font-size: clamp(0.6rem, 1.5vw, 0.75rem); color: rgba(255,255,255,0.6); font-weight: 700; text-align: right; background: rgba(0,0,0,0.35); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); white-space: nowrap;">
                                                 ${dateStr}
-                                            </div>`}
+                                            </div>`;
+                                            })()}
                                         </div>
                                     </div>
                                     <h4 style="margin: 0 0 0.5rem 0; color: #fff; font-size: 1rem; font-weight: 700; letter-spacing: -0.01em;">${item.title}</h4>
@@ -10983,6 +11111,37 @@
                 window.openHistoryModal(window.currentHistoryMachineId);
             } catch (err) {
                 console.error('Error updating date:', err);
+                alert('Fehler beim Aktualisieren des Datums: ' + err.message);
+            }
+        };
+
+        // Datum von "System"-Einträgen (nicht manuell angelegt) anpassen — nur für Admins
+        // sichtbar (siehe isAdmin-Check beim Rendern der Historie). Jeder itemType liegt in
+        // einer anderen Tabelle/Spalte, daher die Zuordnung hier zentral.
+        window.updateSystemEntryDate = async function (itemType, id, newDate) {
+            if (!id || !newDate) return;
+            const newDateIso = new Date(newDate + 'T12:00:00').toISOString();
+
+            const tableMap = {
+                service:     { table: 'service_entries',     column: 'date' },
+                workshop:    { table: 'service_entries',     column: 'date' },
+                procurement: { table: 'tasks',                column: 'completed_at' },
+                intake:      { table: 'intake_protocols',     column: 'created_at' },
+                acceptance:  { table: 'acceptance_protocols', column: 'created_at' },
+                calendar:    { table: 'calendar_events',      column: 'start_time' }
+            };
+            const target = tableMap[itemType];
+            if (!target) return;
+
+            try {
+                const { error } = await window.supabaseClient
+                    .from(target.table)
+                    .update({ [target.column]: newDateIso })
+                    .eq('id', id);
+                if (error) throw error;
+                window.openHistoryModal(window.currentHistoryMachineId);
+            } catch (err) {
+                console.error('Error updating system entry date:', err);
                 alert('Fehler beim Aktualisieren des Datums: ' + err.message);
             }
         };
@@ -11533,6 +11692,16 @@
                     .eq('id', id);
 
                 if (error) throw error;
+
+                // Bei Serviceberichten auch sofort aus den Offline-Caches entfernen, sonst kann
+                // der gelöschte Bericht im Servicebericht-Listen-Cache wieder auftauchen (siehe deleteServiceEntry).
+                if (type === 'service' || type === 'workshop') {
+                    allServiceEntries = (allServiceEntries || []).filter(e => e.id !== id);
+                    window.serviceEntryList = allServiceEntries;
+                    if (window.offlineService) {
+                        try { await window.offlineService.deleteCachedEntry(id); } catch (e) { console.warn('Cache-Bereinigung fehlgeschlagen:', e); }
+                    }
+                }
 
                 // Close manual form if open
                 if (type === 'manual') {
@@ -13994,6 +14163,7 @@
                     } else {
                         currentEditingServiceId = null;
                         window._serviceReportBaseline = null;
+                        window._offlineDraftKey = null;
                         window._techSigIsAutofilled = false;
                         if (titleEl) titleEl.textContent = 'Neuer Servicebericht';
 
@@ -16728,14 +16898,25 @@
                 // Use the existing "Servicebericht" folder from the Dokumente module
                 const wsMachineIdInt = parseInt(machineId, 10);
 
-                const { data: wsTargetFolder, error: wsFolderError } = await window.supabaseClient
+                let { data: wsTargetFolder, error: wsFolderError } = await window.supabaseClient
                     .from('document_folders')
                     .select('id')
                     .eq('name', 'Servicebericht')
                     .maybeSingle();
 
                 if (wsFolderError) throw wsFolderError;
-                if (!wsTargetFolder) throw new Error('Ordner "Servicebericht" wurde in der Datenbank nicht gefunden.');
+
+                // Ordner existiert noch nicht (z.B. frische Installation oder versehentlich
+                // gelöscht/umbenannt) — automatisch anlegen statt mit Fehler abzubrechen.
+                if (!wsTargetFolder) {
+                    const { data: createdFolder, error: createFolderError } = await window.supabaseClient
+                        .from('document_folders')
+                        .insert([{ name: 'Servicebericht', parent_id: null, machine_id: null }])
+                        .select('id')
+                        .single();
+                    if (createFolderError) throw createFolderError;
+                    wsTargetFolder = createdFolder;
+                }
 
                 const wsTargetFolderId = wsTargetFolder.id;
 

@@ -123,21 +123,46 @@
         // data         : the full reportData object to save
         // pendingFiles : File objects selected offline, not yet uploaded — IndexedDB can store
         //                File/Blob natively, upload happens once back online (see syncPending)
-        saveDraft: async function (action, serverId, baseline, data, pendingFiles) {
+        // draftKey     : nur für action 'insert' — stabiler Client-Schlüssel, damit mehrfaches
+        //                Speichern desselben noch nicht angelegten Berichts (während man offline
+        //                bleibt) denselben Entwurf aktualisiert statt jedes Mal eine neue, separate
+        //                Kopie anzulegen (die beim Sync sonst als mehrere doppelte Berichte landen würde).
+        //
+        // Speichert NIE einfach einen weiteren Entwurf an — sucht zuerst nach einem bereits
+        // wartenden Entwurf für denselben Bericht (gleiche server_id bzw. gleicher draftKey) und
+        // aktualisiert diesen stattdessen. Sonst würde jedes erneute Offline-Speichern denselben
+        // Berichts einen weiteren Entwurf mit demselben, alten baseline-Stand anlegen — beim Sync
+        // werden dann alle nacheinander gegen den (inzwischen veralteten) baseline-Stand gemerged,
+        // was Listen-Felder wie Arbeitszeit/Material mehrfach dupliziert.
+        saveDraft: async function (action, serverId, baseline, data, pendingFiles, draftKey) {
             const db = await openDB();
+            const existing = (await idbReq(db.transaction(STORE_PENDING, 'readonly').objectStore(STORE_PENDING), 'getAll'))
+                .find(d => d.action === action && (
+                    (action === 'update' && serverId && d.server_id === serverId) ||
+                    (action === 'insert' && draftKey && d.draft_key === draftKey)
+                ));
+
+            const newFiles = pendingFiles && pendingFiles.length ? pendingFiles : [];
+            const record = {
+                action,
+                server_id:    serverId || null,
+                draft_key:    action === 'insert' ? (draftKey || null) : null,
+                // Baseline NIE überschreiben, falls schon ein Entwurf existiert — sie muss den
+                // echten Server-Stand von VOR dem ersten Offline-Speichern dieser Sitzung behalten.
+                baseline:     existing ? existing.baseline : (baseline || null),
+                data,
+                pending_files: existing ? [...existing.pending_files, ...newFiles] : newFiles,
+                machine_id: data.machine_id,
+                title:      data.title || 'Servicebericht',
+                offline_at: new Date().toISOString()
+            };
+
+            if (existing) record.local_id = existing.local_id;
+
             return idbReq(
                 db.transaction(STORE_PENDING, 'readwrite').objectStore(STORE_PENDING),
-                'add',
-                {
-                    action,
-                    server_id:    serverId || null,
-                    baseline:     baseline || null,
-                    data,
-                    pending_files: pendingFiles && pendingFiles.length ? pendingFiles : [],
-                    machine_id: data.machine_id,
-                    title:      data.title || 'Servicebericht',
-                    offline_at: new Date().toISOString()
-                }
+                existing ? 'put' : 'add',
+                record
             );
         },
 
@@ -154,12 +179,16 @@
             );
         },
 
-        // Cache fetched service entries for offline reading
+        // Cache fetched service entries for offline reading. Wird immer mit der KOMPLETTEN
+        // aktuellen Liste vom Server aufgerufen — daher Store erst leeren statt nur put(), sonst
+        // bleiben in der Zwischenzeit (z.B. von einem anderen Gerät) gelöschte Berichte als
+        // "Geister-Einträge" für immer im Cache und tauchen beim nächsten Laden wieder auf.
         cacheEntries: async function (entries) {
-            if (!entries || !entries.length) return;
+            if (!entries) return;
             const db  = await openDB();
             const tx  = db.transaction(STORE_CACHE, 'readwrite');
             const st  = tx.objectStore(STORE_CACHE);
+            st.clear();
             entries.forEach(e => st.put(e));
             return withDBTimeout(new Promise((res, rej) => { tx.oncomplete = res; tx.onerror = (e) => rej(e.target.error); }));
         },
@@ -199,6 +228,17 @@
             return idbReq(db.transaction(STORE_FULL, 'readonly').objectStore(STORE_FULL), 'get', Number(id));
         },
 
+        // Entfernt einen gelöschten Bericht sofort aus beiden Caches (Liste + Volldaten),
+        // statt auf den nächsten kompletten Re-Fetch zu warten.
+        deleteCachedEntry: async function (id) {
+            const db = await openDB();
+            const numId = Number(id);
+            await Promise.all([
+                idbReq(db.transaction(STORE_CACHE, 'readwrite').objectStore(STORE_CACHE), 'delete', numId),
+                idbReq(db.transaction(STORE_FULL, 'readwrite').objectStore(STORE_FULL), 'delete', numId)
+            ]);
+        },
+
         // 3-way merge: local changes win unless server also changed the same field.
         // For array fields: union (server list + new local items not in baseline).
         mergeReport: function (baseline, localData, serverData) {
@@ -220,9 +260,15 @@
                     const srv  = Array.isArray(serverVal) ? serverVal : [];
                     const loc  = Array.isArray(localVal)  ? localVal  : [];
                     const base = Array.isArray(baseVal)   ? baseVal   : [];
-                    // Items added locally since baseline
+                    // Items added locally since baseline UND noch nicht auf dem Server vorhanden.
+                    // Die srv-Prüfung ist entscheidend: Werden mehrere Offline-Entwürfe desselben
+                    // Berichts nacheinander synchronisiert, hat der Server nach dem ersten Entwurf
+                    // bereits die neuen Einträge — ohne diese Prüfung würden sie bei jedem weiteren
+                    // Entwurf erneut als "neu" erkannt und dupliziert (basierend auf dem immer
+                    // gleichen, alten baseline-Stand).
                     const newLocal = loc.filter(li =>
-                        !base.some(bi => JSON.stringify(bi) === JSON.stringify(li))
+                        !base.some(bi => JSON.stringify(bi) === JSON.stringify(li)) &&
+                        !srv.some(si => JSON.stringify(si) === JSON.stringify(li))
                     );
                     result[key] = [...srv, ...newLocal];
                 } else if (localChanged && !serverChanged) {
@@ -587,5 +633,13 @@
     document.addEventListener('DOMContentLoaded', () => {
         updateOfflineBanner();
         window.updatePendingBadge();
+
+        // Pending Entwürfe können auch entstehen, ohne dass der Browser je ein "online"-Event
+        // feuert (z.B. App offline gespeichert, dann Tab geschlossen, später mit bereits
+        // bestehender Verbindung neu geöffnet — kein Offline→Online-Übergang in dieser Sitzung).
+        // Daher hier zusätzlich beim Start prüfen, falls schon online.
+        if (navigator.onLine) {
+            onBackOnline();
+        }
     });
 })();
