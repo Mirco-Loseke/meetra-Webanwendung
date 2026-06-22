@@ -5708,8 +5708,8 @@
                     li.style.setProperty('--user-color', accentColor);
                     li.dataset.catId = cat.id;
 
-                    // Maschinenkategorien: per Ziehen-und-Halten in der Reihenfolge sortierbar
-                    const dragHandle = type === 'machine' ? `
+                    // Maschinenkategorien & Maschinenserien: per Ziehen-und-Halten in der Reihenfolge sortierbar
+                    const dragHandle = (type === 'machine' || type === 'series') ? `
                                 <span class="cat-drag-handle" title="Ziehen zum Sortieren" style="cursor: grab; touch-action: none; color: rgba(255,255,255,0.35); display: inline-flex; align-items: center; padding: 4px 8px; margin-right: 2px; flex-shrink: 0;">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="8" cy="6" r="1.6"></circle><circle cx="16" cy="6" r="1.6"></circle><circle cx="8" cy="12" r="1.6"></circle><circle cx="16" cy="12" r="1.6"></circle><circle cx="8" cy="18" r="1.6"></circle><circle cx="16" cy="18" r="1.6"></circle></svg>
                                 </span>` : '';
@@ -5747,6 +5747,7 @@
                 });
 
                 window.setupCategoryDragReorder(listMachine, 'machine');
+                if (listSeries) window.setupCategoryDragReorder(listSeries, 'series');
             }
 
             // ── Kategorien per Ziehen-und-Halten sortieren (Pointer Events statt HTML5
@@ -8137,6 +8138,54 @@
                 const mm = String(next.getMonth() + 1).padStart(2, '0');
                 const dd = String(next.getDate()).padStart(2, '0');
                 return `${yyyy}-${mm}-${dd}`;
+            };
+
+            // Berechnet "Letzte Wartung" für eine Maschine komplett neu, als jüngstes Datum aus
+            // ALLEN echten Serviceberichten UND ALLEN Wartung-Schnelleinträgen — bewusst nicht nur
+            // "ist der gerade gespeicherte Eintrag neuer als der bisherige Wert", denn das würde
+            // beim Korrigieren eines Datums (z.B. von 22.06. auf 12.06.) die Korrektur ignorieren,
+            // weil der alte, falsche Wert zufällig später lag. So spiegelt last_maintenance immer
+            // den tatsächlich aktuellen Stand aller bekannten Wartungs-/Service-Termine wider.
+            window.recalculateMachineMaintenanceFromHistory = async function (machineId) {
+                try {
+                    const [wartungRes, serviceRes, machineRes] = await Promise.all([
+                        window.supabaseClient.from('manual_history_entries').select('created_at').eq('machine_id', machineId).eq('type', 'wartung'),
+                        window.supabaseClient.from('service_entries').select('date').eq('machine_id', machineId),
+                        window.supabaseClient.from('machines').select('id, category_id, maintenance_interval_months, files').eq('id', machineId).single()
+                    ]);
+
+                    if (machineRes.error || !machineRes.data) return;
+
+                    const dates = [];
+                    (wartungRes.data || []).forEach(e => { if (e.created_at) dates.push(e.created_at.split('T')[0]); });
+                    (serviceRes.data || []).forEach(e => { if (e.date) dates.push(String(e.date).split('T')[0]); });
+
+                    if (!dates.length) return;
+
+                    const latestDate = dates.sort().slice(-1)[0]; // YYYY-MM-DD Strings sortieren sich lexikografisch korrekt chronologisch
+
+                    const machineRow = machineRes.data;
+                    const cat = (window.categoryList || []).find(c => c.id === machineRow.category_id);
+                    const interval = machineRow.maintenance_interval_months || (cat ? cat.default_maintenance_interval_months : 12) || 12;
+                    const nextMaintDate = window.computeRolledNextMaintenance(latestDate, interval);
+
+                    let updatedFiles = machineRow.files ? [...machineRow.files] : [];
+                    updatedFiles = updatedFiles.filter(f => f.type !== 'meta' || f.key !== 'is_next_maintenance_auto');
+                    updatedFiles.push({ type: 'meta', key: 'is_next_maintenance_auto', property: 'true' });
+
+                    await window.supabaseClient
+                        .from('machines')
+                        .update({
+                            last_maintenance: latestDate,
+                            next_maintenance: nextMaintDate,
+                            files: updatedFiles
+                        })
+                        .eq('id', machineId);
+
+                    if (typeof fetchMachines === 'function') await fetchMachines();
+                } catch (err) {
+                    console.error('Error recalculating machine maintenance from history:', err);
+                }
             };
 
             window.calculateNextMaintenanceDate = function () {
@@ -11579,42 +11628,8 @@
                 // Schnelleintrag "Wartung" soll nicht nur in der Historie stehen, sondern auch
                 // Letzte/Nächste Wartung auf der Maschinenkarte aktualisieren (und damit automatisch
                 // auch auf der Ereignisse-Seite auftauchen, die next_maintenance direkt anzeigt).
-                // Nur anwenden, wenn dieser Eintrag tatsächlich der neueste Wartungstermin ist —
-                // sonst könnte ein nachträglich erfasster älterer Eintrag eine neuere Wartung überschreiben.
-                if (type === 'wartung' && entryDate) {
-                    try {
-                        const { data: machineRow, error: machineFetchErr } = await window.supabaseClient
-                            .from('machines')
-                            .select('id, category_id, maintenance_interval_months, last_maintenance, files')
-                            .eq('id', machineId)
-                            .single();
-
-                        if (!machineFetchErr && machineRow) {
-                            const isNewer = !machineRow.last_maintenance || entryDate > machineRow.last_maintenance;
-                            if (isNewer) {
-                                const cat = (window.categoryList || []).find(c => c.id === machineRow.category_id);
-                                const interval = machineRow.maintenance_interval_months || (cat ? cat.default_maintenance_interval_months : 12) || 12;
-                                const nextMaintDate = window.computeRolledNextMaintenance(entryDate, interval);
-
-                                let updatedFiles = machineRow.files ? [...machineRow.files] : [];
-                                updatedFiles = updatedFiles.filter(f => f.type !== 'meta' || f.key !== 'is_next_maintenance_auto');
-                                updatedFiles.push({ type: 'meta', key: 'is_next_maintenance_auto', property: 'true' });
-
-                                await window.supabaseClient
-                                    .from('machines')
-                                    .update({
-                                        last_maintenance: entryDate,
-                                        next_maintenance: nextMaintDate,
-                                        files: updatedFiles
-                                    })
-                                    .eq('id', machineId);
-
-                                if (typeof fetchMachines === 'function') await fetchMachines();
-                            }
-                        }
-                    } catch (maintErr) {
-                        console.error('Error syncing Wartung-Schnelleintrag to machine:', maintErr);
-                    }
+                if (type === 'wartung') {
+                    await window.recalculateMachineMaintenanceFromHistory(machineId);
                 }
 
                 window.toggleManualHistoryForm(null);
@@ -11727,12 +11742,28 @@
                     if (photoDelError) console.error('Failed to delete protocol photos from DB:', photoDelError);
                 }
 
+                // Vor dem Löschen merken, ob es ein Wartung-Schnelleintrag war, damit danach
+                // last_maintenance/next_maintenance der Maschine neu berechnet werden kann.
+                let wasWartungEntry = false;
+                if (type === 'manual') {
+                    const { data: manualEntry } = await window.supabaseClient
+                        .from('manual_history_entries')
+                        .select('type')
+                        .eq('id', id)
+                        .maybeSingle();
+                    wasWartungEntry = manualEntry && manualEntry.type === 'wartung';
+                }
+
                 const { error } = await window.supabaseClient
                     .from(table)
                     .delete()
                     .eq('id', id);
 
                 if (error) throw error;
+
+                if (wasWartungEntry && window.currentHistoryMachineId) {
+                    await window.recalculateMachineMaintenanceFromHistory(window.currentHistoryMachineId);
+                }
 
                 // Bei Serviceberichten auch sofort aus den Offline-Caches entfernen, sonst kann
                 // der gelöschte Bericht im Servicebericht-Listen-Cache wieder auftauchen (siehe deleteServiceEntry).

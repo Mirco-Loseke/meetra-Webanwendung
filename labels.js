@@ -15,12 +15,8 @@
         return labelQuantities[id] || { qty: 1, unit: '' };
     }
 
-    // "Ausdruck"-Haken (rechts): separat von der normalen Auswahl links — steuert, ob
-    // Menge + Einheit als "QTY: ..."-Text auf das Etikett gedruckt werden.
-    let labelMultiPrintEnabled = new Set();
-
     // "Mehrere" — eigenständiges Feld, das NUR die Druckanzahl steuert (wie oft dasselbe
-    // Etikett hintereinander gedruckt wird), unabhängig von Menge/Einheit/Ausdruck.
+    // Etikett hintereinander gedruckt wird), unabhängig von Menge/Einheit.
     let labelRepeatCounts = {}; // { [articleId]: number }
     function getLabelRepeatCount(id) {
         return labelRepeatCounts[id] || 1;
@@ -74,14 +70,13 @@
 
         container.innerHTML = entries.map(a => {
             const checked = selectedLabelIds.has(a.id) ? 'checked' : '';
-            const multiChecked = labelMultiPrintEnabled.has(a.id) ? 'checked' : '';
             const q = getLabelQty(a.id);
             const repeatCount = getLabelRepeatCount(a.id);
             return `
                 <div style="display:flex; align-items:center; gap:14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px 16px;">
                     <input type="checkbox" ${checked} onchange="window.toggleLabelSelection(${a.id}, this.checked)" style="width:18px; height:18px; cursor:pointer; flex-shrink:0;" title="Für Druck auswählen">
                     <div style="flex: 1; min-width: 0;">
-                        <div style="color:#ec4899; font-weight:800; font-size:0.95rem;">${escapeHtml(a.article_number)}</div>
+                        <div style="color:#ef4444; font-weight:800; font-size:0.95rem;">${escapeHtml(a.article_number)}</div>
                         <div style="color:#fff; font-size:0.88rem; margin-top:2px;">${escapeHtml(a.bezeichnung_1 || '')}</div>
                         ${a.bezeichnung_2 ? `<div style="color:rgba(255,255,255,0.5); font-size:0.8rem; margin-top:1px;">${escapeHtml(a.bezeichnung_2)}</div>` : ''}
                     </div>
@@ -92,10 +87,6 @@
                     <div style="display:flex; flex-direction:column; align-items:center; gap:3px; flex-shrink:0;">
                         <label style="font-size:0.62rem; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.4px;">Einheit</label>
                         <input type="text" value="${escapeHtml(q.unit)}" placeholder="stk" onchange="window.updateLabelUnit(${a.id}, this.value)" class="glass-form-input" style="width:64px; height:32px; text-align:center; padding: 0 4px;">
-                    </div>
-                    <div style="display:flex; flex-direction:column; align-items:center; gap:3px; flex-shrink:0;">
-                        <label style="font-size:0.62rem; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.4px;">Ausdruck</label>
-                        <input type="checkbox" ${multiChecked} onchange="window.toggleLabelMultiPrint(${a.id}, this.checked)" style="width:18px; height:18px; cursor:pointer;" title="Menge + Einheit als QTY-Text aufs Etikett drucken">
                     </div>
                     <div style="display:flex; flex-direction:column; align-items:center; gap:3px; flex-shrink:0;">
                         <label style="font-size:0.62rem; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.4px;">Mehrere</label>
@@ -120,10 +111,6 @@
         if (isNaN(qty) || qty < 1) qty = 1;
         const current = getLabelQty(id);
         labelQuantities[id] = { qty, unit: current.unit };
-    };
-
-    window.toggleLabelMultiPrint = function (id, checked) {
-        if (checked) labelMultiPrintEnabled.add(id); else labelMultiPrintEnabled.delete(id);
     };
 
     window.updateLabelRepeatCount = function (id, value) {
@@ -566,19 +553,18 @@
             }
 
             // "Mehrere" reiht dasselbe Etikett entsprechend oft hintereinander ein — unabhängig
-            // von Menge/Einheit/Ausdruck. "Ausdruck" steuert separat nur, ob zusätzlich
-            // "QTY: <Menge> <Einheit>" auf das Etikett gedruckt wird.
+            // von Menge/Einheit. Menge + Einheit werden immer als "QTY: <Menge> <Einheit>" auf
+            // das Etikett gedruckt.
             previewArticles = [];
             selected.forEach(article => {
                 const q = getLabelQty(article.id);
-                const multiEnabled = labelMultiPrintEnabled.has(article.id);
                 const copies = getLabelRepeatCount(article.id);
                 const barcodeUrl = safeBarcodeUrl(article.article_number);
                 for (let i = 0; i < copies; i++) {
                     previewArticles.push({
                         article, barcodeUrl,
-                        qty: multiEnabled ? q.qty : null,
-                        unit: multiEnabled ? (q.unit || 'stk') : null
+                        qty: q.qty,
+                        unit: q.unit || 'stk'
                     });
                 }
             });
@@ -851,8 +837,7 @@
         doc.setTextColor(20, 20, 20);
         fitCenteredText(doc, numberText, fullCenterX, y + labelH - padding - 0.6 * scaleH, fullW, 5 * scaleH, 3.5 * scaleH, 'bold');
 
-        // QTY (Menge + Einheit) — unten rechts, klein. Nur wenn der "Ausdruck"-Haken für
-        // diesen Artikel gesetzt war (siehe printSelectedLabels). Wird nicht gespeichert.
+        // QTY (Menge + Einheit) — unten rechts, klein. Wird nicht in der Datenbank gespeichert.
         if (qtyInfo && qtyInfo.qty) {
             const qtyText = `QTY: ${qtyInfo.qty} ${qtyInfo.unit || ''}`.trim();
             doc.setFont('helvetica', 'bold');
