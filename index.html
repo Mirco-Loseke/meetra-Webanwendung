@@ -2088,11 +2088,21 @@
                         <div class="form-group">
                             <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Titel (in einer Reihe mit dem Logo)</label>
                             <input type="text" id="beschriftung-title" class="glass-form-input" placeholder="z.B. Kabinenfilter JT 580" style="height:44px; width: 100%;" oninput="window.updateBeschriftungTitle(this.value)">
+                            <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+                                <label style="font-size:0.78rem; color:rgba(255,255,255,0.5); white-space:nowrap;">Schriftgröße</label>
+                                <input type="range" id="beschriftung-title-fontsize" min="6" max="40" step="1" value="18" oninput="window.updateBeschriftungTitleFontSize(this.value)" style="flex:1;">
+                                <span id="beschriftung-title-fontsize-value" style="font-size:0.78rem; color:rgba(255,255,255,0.6); width:24px; text-align:right;">18</span>
+                            </div>
                         </div>
 
                         <div class="form-group">
                             <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Kurzbeschreibung / Bezeichnung 2</label>
                             <input type="text" id="beschriftung-bez2" class="glass-form-input" placeholder="z.B. Achtung Ausgetauscht" style="height:44px; width: 100%;" oninput="window.updateBeschriftungBez2(this.value)">
+                            <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+                                <label style="font-size:0.78rem; color:rgba(255,255,255,0.5); white-space:nowrap;">Schriftgröße</label>
+                                <input type="range" id="beschriftung-bez2-fontsize" min="6" max="40" step="1" value="11" oninput="window.updateBeschriftungBez2FontSize(this.value)" style="flex:1;">
+                                <span id="beschriftung-bez2-fontsize-value" style="font-size:0.78rem; color:rgba(255,255,255,0.6); width:24px; text-align:right;">11</span>
+                            </div>
                         </div>
 
                         <div class="form-group">
@@ -10318,6 +10328,25 @@
                         }
                     }
 
+                    // Auch das verknüpfte PDF-Dokument unter "Dokumente" (documents-Tabelle,
+                    // verknüpft über service_entry_id) inkl. Datei in Cloudflare R2 löschen,
+                    // sonst bleibt es dort verwaist liegen.
+                    const { data: linkedDocs, error: docsFetchError } = await supabaseClient
+                        .from('documents')
+                        .select('id, url')
+                        .eq('service_entry_id', id);
+
+                    if (!docsFetchError && linkedDocs && linkedDocs.length > 0) {
+                        console.log('Deleting linked documents for service entry ID:', id);
+                        for (const doc of linkedDocs) {
+                            await deleteFileEntryStorage({ url: doc.url });
+                        }
+                        await supabaseClient
+                            .from('documents')
+                            .delete()
+                            .eq('service_entry_id', id);
+                    }
+
                     const { error } = await supabaseClient
                         .from('service_entries')
                         .delete()
@@ -10329,6 +10358,7 @@
                     }
                     console.log('Service entry deleted successfully');
                     fetchServiceEntries();
+                    if (typeof window.fetchDocuments === 'function') window.fetchDocuments();
                 } catch (err) {
                     alert('Fehler beim Löschen: ' + (err.message || JSON.stringify(err)));
                 }
@@ -11442,6 +11472,23 @@
                         for (const file of entry.files) {
                             await deleteFileEntryStorage(file);
                         }
+                    }
+
+                    // Auch das verknüpfte PDF-Dokument unter "Dokumente" löschen (siehe deleteServiceEntry)
+                    const { data: linkedDocs, error: docsFetchError } = await window.supabaseClient
+                        .from('documents')
+                        .select('id, url')
+                        .eq('service_entry_id', id);
+
+                    if (!docsFetchError && linkedDocs && linkedDocs.length > 0) {
+                        for (const doc of linkedDocs) {
+                            await deleteFileEntryStorage({ url: doc.url });
+                        }
+                        await window.supabaseClient
+                            .from('documents')
+                            .delete()
+                            .eq('service_entry_id', id);
+                        if (typeof window.fetchDocuments === 'function') window.fetchDocuments();
                     }
                 }
 
@@ -13385,7 +13432,7 @@
                 const result = await window.withTimeout(
                     supabaseClient
                         .from('service_entries')
-                        .select('id, machine_id, category_id, category_ids, title, date, datum_von, datum_bis, hours, technicians, pdf_url, pdf_path, files')
+                        .select('id, machine_id, category_id, category_ids, title, date, datum_von, datum_bis, hours, technicians, pdf_url, pdf_path, files, is_finalized, finalized_at')
                         .order('date', { ascending: false }),
                     6000 // 6 Sekunden Timeout
                 );
@@ -13499,6 +13546,11 @@
             const entryHeader = allServiceEntries.find(e => e.id === id);
             if (!entryHeader) return;
 
+            if (entryHeader.is_finalized) {
+                alert('Dieser Servicebericht wurde abgeschlossen und kann nicht mehr bearbeitet werden.');
+                return;
+            }
+
             // Offline: direkt aus dem vollständigen Cache öffnen, kein Netzwerk-Versuch
             // (Bearbeitungssperre entfällt offline bewusst — die 3-Wege-Merge-Logik beim Sync fängt Konflikte ab)
             if (!navigator.onLine) {
@@ -13506,6 +13558,10 @@
                     try {
                         const cached = await window.offlineService.getCachedFullEntry(id);
                         if (cached) {
+                            if (cached.is_finalized) {
+                                alert('Dieser Servicebericht wurde abgeschlossen und kann nicht mehr bearbeitet werden.');
+                                return;
+                            }
                             openServiceberichtModal(cached);
                             return;
                         }
@@ -13531,6 +13587,11 @@
 
                 if (error) throw error;
                 if (data) {
+                    if (data.is_finalized) {
+                        alert('Dieser Servicebericht wurde abgeschlossen und kann nicht mehr bearbeitet werden.');
+                        if (typeof window.fetchServiceEntries === 'function') window.fetchServiceEntries();
+                        return;
+                    }
                     const canOpen = await tryAcquireServiceberichtLock(data);
                     if (!canOpen) return;
                     if (window.offlineService) window.offlineService.cacheFullEntries([data]);
@@ -14207,6 +14268,7 @@
                                     </div>
 
                                     <div class="service-card-actions" style="margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); margin-left: -0.25rem; margin-right: -0.25rem; padding-left: 1.25rem; padding-right: 1.25rem; padding-bottom: 1.25rem;">
+                                        ${!e.is_finalized ? `
                                         <button class="btn-primary" onclick="openEditServicebericht(${e.id})" title="Bearbeiten"
                                             style="flex: 1; height: 44px; background: rgba(59, 130, 246, 0.85); color: #ffffff; border: 2.5px solid rgba(147, 197, 253, 0.8); border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 18px rgba(59, 130, 246, 0.6); backdrop-filter: blur(12px); padding: 0 16px; font-weight: 700; font-family: 'Inter', sans-serif;"
                                             onmouseover="this.style.transform='scale(1.08)'; this.style.background='rgba(59, 130, 246, 0.95)'; this.style.boxShadow='0 4px 24px rgba(59, 130, 246, 0.7)'; this.style.borderColor='rgba(147, 197, 253, 1)'"
@@ -14214,6 +14276,12 @@
                                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                             Bearbeiten
                                         </button>
+                                        ` : `
+                                        <div title="Abgeschlossen — keine Bearbeitung mehr möglich" style="flex: 1; height: 44px; background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.45); border: 2px solid rgba(255,255,255,0.1); border-radius: 20px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; font-family: 'Inter', sans-serif;">
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                            Abgeschlossen
+                                        </div>
+                                        `}
                                         ${(images.length > 0 || docs.length > 0) ? `
                                         <div style="position: relative; flex: none;">
                                             <button onclick="event.stopPropagation(); window.openServiceAttachments(window._sf${e.id})" title="Anhänge öffnen"
@@ -14330,7 +14398,7 @@
                             : (e.datum_von ? new Date(e.datum_von).toLocaleDateString('de-DE') : dateStr);
 
                         return `
-                                <tr onclick="openEditServicebericht(${e.id})" style="cursor: pointer; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: inset 5px 0 0 0 ${primaryCatColor}, inset 0 1.5px 0 0 ${primaryCatColor}66, inset -1.5px 0 0 0 ${primaryCatColor}66, inset 0 -1.5px 0 0 ${primaryCatColor}66, 0 10px 30px rgba(0,0,0,0.4); border-radius: 16px; overflow: hidden;">
+                                <tr ${e.is_finalized ? '' : `onclick="openEditServicebericht(${e.id})"`} style="cursor: ${e.is_finalized ? 'default' : 'pointer'}; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: inset 5px 0 0 0 ${primaryCatColor}, inset 0 1.5px 0 0 ${primaryCatColor}66, inset -1.5px 0 0 0 ${primaryCatColor}66, inset 0 -1.5px 0 0 ${primaryCatColor}66, 0 10px 30px rgba(0,0,0,0.4); border-radius: 16px; overflow: hidden;">
                                     <td data-label="Maschine" style="color: var(--color-primary-green); font-weight: 700; font-size: 0.98rem; line-height: 1.3;">
                                         ${machine ? `
                                             <div>${[machine.manufacturer, machine.name].filter(Boolean).join(' ')}</div>
@@ -14365,6 +14433,7 @@
                                                      <polyline points="13 2 13 9 20 9"></polyline>
                                                  </svg>
                                              </button>` : ''}
+                                             ${!e.is_finalized ? `
                                              <button onclick="event.stopPropagation(); openEditServicebericht(${e.id})" title="Bearbeiten"
                                                  style="width:36px; height:36px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
                                                  onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
@@ -14373,6 +14442,11 @@
                                                      <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
                                                  </svg>
                                              </button>
+                                             ` : `
+                                             <span title="Abgeschlossen — keine Bearbeitung mehr möglich" style="width:36px; height:36px; border-radius:50%; background: rgba(255,255,255,0.04); border: 1.5px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.4); display:flex; align-items:center; justify-content:center;">
+                                                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                             </span>
+                                             `}
                                              <button class="delete-permission-required" onclick="event.stopPropagation(); deleteServiceEntry(${e.id})" title="Löschen"
                                                  style="width:36px; height:36px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
                                                  onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
@@ -16617,9 +16691,12 @@
         };
 
         window.saveServiceberichtPDFToR2 = async function() {
+            const confirmed = confirm('Soll dieser Bericht abgeschlossen werden?\n\nAnschließend ist keine Bearbeitung mehr möglich.');
+            if (!confirmed) return;
+
             const btn = document.getElementById('btn-servicebericht-cloud-pdf');
             const statusEl = document.getElementById('servicebericht-pdf-status');
-            
+
             if (btn) {
                 btn.disabled = true;
                 btn.style.opacity = '0.7';
@@ -16703,7 +16780,9 @@
                     .update({
                         pdf_url: uploadResult.url,
                         pdf_path: uploadResult.path,
-                        pdf_created_at: nowISO
+                        pdf_created_at: nowISO,
+                        is_finalized: true,
+                        finalized_at: nowISO
                     })
                     .eq('id', reportId);
                     
@@ -16763,6 +16842,8 @@
                     entry.pdf_url = uploadResult.url;
                     entry.pdf_path = uploadResult.path;
                     entry.pdf_created_at = nowISO;
+                    entry.is_finalized = true;
+                    entry.finalized_at = nowISO;
                 }
                 
                 // Re-render list
@@ -16778,7 +16859,10 @@
                     statusEl.textContent = `Zuletzt gespeichert: ${dStr}, ${tStr} Uhr`;
                 }
                 
-                alert('PDF erfolgreich generiert, in der Cloud gespeichert und dem Bericht zugeordnet!');
+                alert('Bericht abgeschlossen: PDF erfolgreich generiert, in der Cloud gespeichert und dem Bericht zugeordnet.');
+                if (typeof window.closeServiceberichtModal === 'function') {
+                    window.closeServiceberichtModal(true);
+                }
             } catch (err) {
                 console.error('Failed to save PDF to R2:', err);
                 alert('Fehler beim Speichern der PDF: ' + err.message);

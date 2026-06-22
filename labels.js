@@ -897,8 +897,12 @@
     // ── Beschriftung: A4/A3-Aushang mit Titel, Bild, Logo und optionaler Stückliste —
     // mehrere Seiten möglich, jede mit eigener Ausrichtung, werden zu einem PDF zusammengefasst.
     function createEmptyBeschriftungPage() {
-        return { title: '', bez2: '', imageDataUrl: null, imageRatio: 1, stuecklisteEnabled: false, rows: [], orientation: 'p' };
+        return { title: '', titleFontSize: 18, bez2: '', bez2FontSize: 11, imageDataUrl: null, imageRatio: 1, imageWidthMm: null, stuecklisteEnabled: false, rows: [], orientation: 'p' };
     }
+
+    // jsPDF interpretiert setFontSize() immer in Punkt (pt), unabhängig von der Dokument-Einheit
+    // (hier 'mm') — für die HTML-Live-Vorschau wird daher in mm umgerechnet (1pt = 0.3528mm).
+    function ptToMm(pt) { return pt * 0.3528; }
 
     let beschriftungPages = [createEmptyBeschriftungPage()];
     let currentBeschriftungPageIndex = 0;
@@ -928,8 +932,16 @@
         const page = getCurrentBeschriftungPage();
         const titleInput = document.getElementById('beschriftung-title');
         if (titleInput) titleInput.value = page.title;
+        const fontSizeInput = document.getElementById('beschriftung-title-fontsize');
+        if (fontSizeInput) fontSizeInput.value = page.titleFontSize || 18;
+        const fontSizeValue = document.getElementById('beschriftung-title-fontsize-value');
+        if (fontSizeValue) fontSizeValue.textContent = page.titleFontSize || 18;
         const bez2Input = document.getElementById('beschriftung-bez2');
         if (bez2Input) bez2Input.value = page.bez2 || '';
+        const bez2FontSizeInput = document.getElementById('beschriftung-bez2-fontsize');
+        if (bez2FontSizeInput) bez2FontSizeInput.value = page.bez2FontSize || 11;
+        const bez2FontSizeValue = document.getElementById('beschriftung-bez2-fontsize-value');
+        if (bez2FontSizeValue) bez2FontSizeValue.textContent = page.bez2FontSize || 11;
         const stuecklisteToggle = document.getElementById('beschriftung-stueckliste-toggle');
         if (stuecklisteToggle) stuecklisteToggle.checked = page.stuecklisteEnabled;
         const editor = document.getElementById('beschriftung-stueckliste-editor');
@@ -986,8 +998,28 @@
         window.renderBeschriftungPreview();
     };
 
+    window.updateBeschriftungTitleFontSize = function (value) {
+        let n = parseInt(value, 10);
+        if (isNaN(n) || n < 6) n = 6;
+        if (n > 40) n = 40;
+        getCurrentBeschriftungPage().titleFontSize = n;
+        const valueLabel = document.getElementById('beschriftung-title-fontsize-value');
+        if (valueLabel) valueLabel.textContent = n;
+        window.renderBeschriftungPreview();
+    };
+
     window.updateBeschriftungBez2 = function (value) {
         getCurrentBeschriftungPage().bez2 = value;
+        window.renderBeschriftungPreview();
+    };
+
+    window.updateBeschriftungBez2FontSize = function (value) {
+        let n = parseInt(value, 10);
+        if (isNaN(n) || n < 6) n = 6;
+        if (n > 40) n = 40;
+        getCurrentBeschriftungPage().bez2FontSize = n;
+        const valueLabel = document.getElementById('beschriftung-bez2-fontsize-value');
+        if (valueLabel) valueLabel.textContent = n;
         window.renderBeschriftungPreview();
     };
 
@@ -1000,6 +1032,7 @@
                 const page = getCurrentBeschriftungPage();
                 page.imageDataUrl = e.target.result;
                 page.imageRatio = img.naturalWidth / img.naturalHeight;
+                page.imageWidthMm = null;
                 window.renderBeschriftungPreview();
             };
             img.src = e.target.result;
@@ -1011,6 +1044,7 @@
         const page = getCurrentBeschriftungPage();
         page.imageDataUrl = null;
         page.imageRatio = 1;
+        page.imageWidthMm = null;
         const input = document.getElementById('beschriftung-image-input');
         if (input) input.value = '';
         window.renderBeschriftungPreview();
@@ -1074,6 +1108,66 @@
         return { w, h };
     }
 
+    // Liefert die aktuelle Bild-Box (mm): per Ziehpunkt manuell gesetzte Breite (imageWidthMm)
+    // hat Vorrang, sonst die automatische Anpassung wie bisher.
+    function getBeschriftungImageBox(page, pageW, pageH) {
+        if (page.imageWidthMm) {
+            const w = page.imageWidthMm;
+            return { w, h: w / page.imageRatio };
+        }
+        const maxW = pageW - 40;
+        const maxH = pageH * 0.45;
+        return fitBox(page.imageRatio, maxW, maxH);
+    }
+
+    // ── Bild per Ziehpunkt größer/kleiner ziehen (Live-Vorschau) ────
+    // Während des Ziehens wird NICHT die ganze Vorschau neu gerendert (innerHTML würde den
+    // Ziehpunkt mitten in der Geste aus dem DOM entfernen und die Pointer-Capture abbrechen) —
+    // stattdessen nur die Wrapper-Größe direkt per Style aktualisiert, am Ende einmal final neu gerendert.
+    let imageResizeDrag = null;
+
+    document.addEventListener('pointerdown', (e) => {
+        const handle = e.target.closest('.beschriftung-image-resize-handle');
+        if (!handle) return;
+        const wrapper = handle.closest('.beschriftung-image-wrapper');
+        const pageEl = document.getElementById('beschriftung-preview-page');
+        if (!wrapper || !pageEl) return;
+
+        const page = getCurrentBeschriftungPage();
+        const { w: pageWmm, h: pageHmm } = getPageDimensions(page.orientation);
+        const scale = pageEl.clientWidth / pageWmm;
+        const currentBox = getBeschriftungImageBox(page, pageWmm, pageHmm);
+
+        imageResizeDrag = {
+            page, wrapper, scale, pageWmm,
+            startX: e.clientX,
+            startWidthMm: currentBox.w
+        };
+        handle.setPointerCapture(e.pointerId);
+        e.preventDefault();
+    });
+
+    document.addEventListener('pointermove', (e) => {
+        if (!imageResizeDrag) return;
+        const { page, wrapper, scale, pageWmm, startX, startWidthMm } = imageResizeDrag;
+        const deltaMm = ((e.clientX - startX) / scale) * 2; // *2: Bild bleibt zentriert, beide Kanten wandern
+        let widthMm = startWidthMm + deltaMm;
+        widthMm = Math.max(15, Math.min(pageWmm - 20, widthMm));
+        const heightMm = widthMm / page.imageRatio;
+
+        page.imageWidthMm = widthMm;
+        const imgXmm = (pageWmm - widthMm) / 2;
+        wrapper.style.left = (imgXmm * scale) + 'px';
+        wrapper.style.width = (widthMm * scale) + 'px';
+        wrapper.style.height = (heightMm * scale) + 'px';
+    });
+
+    document.addEventListener('pointerup', () => {
+        if (!imageResizeDrag) return;
+        imageResizeDrag = null;
+        window.renderBeschriftungPreview();
+    });
+
     window.renderBeschriftungPreview = function () {
         const page = getCurrentBeschriftungPage();
         const pageEl = document.getElementById('beschriftung-preview-page');
@@ -1091,34 +1185,39 @@
         const ROW2_TOP = ROW1_TOP + ROW1_H + 2, ROW2_H = 8;
         const IMAGE_TOP = ROW2_TOP + ROW2_H + 4;
 
-        const logoW = 30;
-        const logoRightEdge = pageW - 10 - logoW;
+        const logoW = 36;
 
         // Logo oben rechts (in Farbe — auf den kleinen Etiketten bleibt es schwarz/weiß)
         if (window.MEETRA_LOGO_BASE64) {
             html += `<img src="${window.MEETRA_LOGO_BASE64}" style="position:absolute; top:${ROW1_TOP * scale}px; right:${10 * scale}px; width:${logoW * scale}px;">`;
         }
 
-        // Titel — in derselben Reihe wie das Logo, zentriert im verbleibenden Platz davor
+        // Titel — eigene Reihe wie das Logo, aber unabhängig vom Logo mittig auf der gesamten
+        // Seite zentriert (nicht im verbleibenden Platz neben dem Logo)
         if (page.title) {
-            html += `<div style="position:absolute; top:${ROW1_TOP * scale}px; left:${10 * scale}px; width:${(logoRightEdge - 16 - 10) * scale}px; height:${ROW1_H * scale}px; display:flex; align-items:center; justify-content:center; text-align:center; font-weight:800; font-size:${6.5 * scale}px; line-height:1.1; color:#141414; font-family:Helvetica,Arial,sans-serif; overflow:hidden;">${escapeHtml(page.title)}</div>`;
+            const titleFontSizeMm = ptToMm(page.titleFontSize || 18);
+            html += `<div style="position:absolute; top:${ROW1_TOP * scale}px; left:${10 * scale}px; right:${10 * scale}px; height:${ROW1_H * scale}px; display:flex; align-items:center; justify-content:center; text-align:center; font-weight:800; font-size:${titleFontSizeMm * scale}px; line-height:1.1; color:#141414; font-family:Helvetica,Arial,sans-serif; overflow:hidden;">${escapeHtml(page.title)}</div>`;
         }
 
         // Kurzbeschreibung / Bezeichnung 2 — eigene Reihe darunter, zentriert über volle Breite
         if (page.bez2) {
-            html += `<div style="position:absolute; top:${ROW2_TOP * scale}px; left:${10 * scale}px; right:${10 * scale}px; text-align:center; font-weight:500; font-size:${4 * scale}px; color:#444; font-family:Helvetica,Arial,sans-serif;">${escapeHtml(page.bez2)}</div>`;
+            const bez2FontSizeMm = ptToMm(page.bez2FontSize || 11);
+            html += `<div style="position:absolute; top:${ROW2_TOP * scale}px; left:${10 * scale}px; right:${10 * scale}px; text-align:center; font-weight:500; font-size:${bez2FontSizeMm * scale}px; color:#444; font-family:Helvetica,Arial,sans-serif;">${escapeHtml(page.bez2)}</div>`;
         }
 
         // Bild mittig, großzügige Box — erst eine Reihe unter Titel/Logo und Kurzbeschreibung,
-        // wird bei großen Bildern automatisch passend verkleinert
+        // wird bei großen Bildern automatisch passend verkleinert. Ist imageWidthMm gesetzt
+        // (Nutzer hat per Ziehpunkt skaliert), wird diese Größe statt der Auto-Anpassung verwendet.
         let imageBottomMm = IMAGE_TOP;
         if (page.imageDataUrl) {
-            const maxW = pageW - 40;
-            const maxH = pageH * 0.45;
-            const box = fitBox(page.imageRatio, maxW, maxH);
+            const box = getBeschriftungImageBox(page, pageW, pageH);
             const imgX = (pageW - box.w) / 2;
             const imgY = IMAGE_TOP;
-            html += `<img src="${page.imageDataUrl}" style="position:absolute; left:${imgX * scale}px; top:${imgY * scale}px; width:${box.w * scale}px; height:${box.h * scale}px; object-fit:contain;">`;
+            html += `
+                <div class="beschriftung-image-wrapper" style="position:absolute; left:${imgX * scale}px; top:${imgY * scale}px; width:${box.w * scale}px; height:${box.h * scale}px;">
+                    <img src="${page.imageDataUrl}" style="width:100%; height:100%; object-fit:contain; pointer-events:none; user-select:none;">
+                    <div class="beschriftung-image-resize-handle" style="position:absolute; right:-7px; bottom:-7px; width:18px; height:18px; border-radius:50%; background:#ef4444; border:2px solid #fff; cursor:nwse-resize; box-shadow:0 2px 6px rgba(0,0,0,0.4); touch-action:none;"></div>
+                </div>`;
             imageBottomMm = imgY + box.h;
         }
 
@@ -1161,7 +1260,7 @@
         const ROW2_TOP = ROW1_TOP + ROW1_H + 2, ROW2_H = 8;
         const IMAGE_TOP = ROW2_TOP + ROW2_H + 4;
 
-        const logoW = 30;
+        const logoW = 36;
         const logoRightEdge = pageW - 10 - logoW;
 
         if (logo) {
@@ -1169,26 +1268,27 @@
             doc.addImage(logo.url, 'PNG', logoRightEdge, ROW1_TOP, logoW, logoH);
         }
 
-        // Titel — in derselben Reihe wie das Logo, zentriert im verbleibenden Platz davor
+        // Titel — eigene Reihe wie das Logo, aber unabhängig vom Logo mittig auf der gesamten
+        // Seite zentriert (nicht im verbleibenden Platz neben dem Logo)
         if (page.title) {
             doc.setTextColor(20, 20, 20);
-            const titleAreaW = logoRightEdge - 16 - 10;
-            fitCenteredText(doc, page.title, 10 + titleAreaW / 2, ROW1_TOP + ROW1_H / 2 + 3, titleAreaW, 18, 9, 'bold');
+            const titleFontSize = page.titleFontSize || 18;
+            fitCenteredText(doc, page.title, pageW / 2, ROW1_TOP + ROW1_H / 2 + 3, pageW - 20, titleFontSize, Math.min(9, titleFontSize), 'bold');
         }
 
         // Kurzbeschreibung / Bezeichnung 2 — eigene Reihe darunter, zentriert über volle Breite
         if (page.bez2) {
             doc.setTextColor(70, 70, 70);
-            fitCenteredText(doc, page.bez2, pageW / 2, ROW2_TOP + ROW2_H / 2 + 1.5, pageW - 20, 11, 7, 'normal');
+            const bez2FontSize = page.bez2FontSize || 11;
+            fitCenteredText(doc, page.bez2, pageW / 2, ROW2_TOP + ROW2_H / 2 + 1.5, pageW - 20, bez2FontSize, Math.min(7, bez2FontSize), 'normal');
         }
 
         // Bild mittig, großzügige Box — erst eine Reihe unter Titel/Logo und Kurzbeschreibung,
-        // wird bei großen Bildern automatisch passend verkleinert
+        // wird bei großen Bildern automatisch passend verkleinert (oder per Ziehpunkt in der
+        // Vorschau manuell skaliert, siehe getBeschriftungImageBox)
         let imageBottomMm = IMAGE_TOP;
         if (page.imageDataUrl) {
-            const maxW = pageW - 40;
-            const maxH = pageH * 0.45;
-            const box = fitBox(page.imageRatio, maxW, maxH);
+            const box = getBeschriftungImageBox(page, pageW, pageH);
             const imgX = (pageW - box.w) / 2;
             const imgY = IMAGE_TOP;
             doc.addImage(page.imageDataUrl, imgX, imgY, box.w, box.h);

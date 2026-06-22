@@ -1229,3 +1229,14 @@ CREATE POLICY "Allow all operations for label_articles" ON public.label_articles
     FOR ALL USING (true) WITH CHECK (true);
 
 CREATE INDEX IF NOT EXISTS idx_label_articles_article_number ON public.label_articles (article_number);
+
+
+/* ========================================================= */
+/* DATEI: add_finalized_to_service_entries.sql */
+/* ========================================================= */
+
+-- Abschluss-Status fuer Serviceberichte: Beim "PDF erstellen/speichern" wird gefragt, ob der
+-- Bericht abgeschlossen werden soll. Danach ist keine Bearbeitung mehr moeglich (Bearbeiten-Button
+-- verschwindet in der Liste, openEditServicebericht blockt zusaetzlich serverseitig/clientseitig).
+ALTER TABLE public.service_entries ADD COLUMN IF NOT EXISTS is_finalized boolean DEFAULT false;
+ALTER TABLE public.service_entries ADD COLUMN IF NOT EXISTS finalized_at timestamptz;

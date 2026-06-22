@@ -12,7 +12,7 @@
     // Array fields: union-merged (new local items appended to server list)
     const ARRAY_MERGE = ['work_log', 'tasks', 'materials', 'technicians', 'contact_persons'];
     // Fields that must never overwrite the server (IDs, PDF artifacts)
-    const SERVER_ONLY  = ['id', 'created_at', 'updated_at', 'pdf_url', 'pdf_path', 'pdf_created_at'];
+    const SERVER_ONLY  = ['id', 'created_at', 'updated_at', 'pdf_url', 'pdf_path', 'pdf_created_at', 'is_finalized', 'finalized_at'];
 
     // Tatsächliche Spalten von service_entries — schützt vor "column not found"-Fehlern beim Sync,
     // falls ein alter/fehlerhafter lokaler Entwurf (z.B. aus einer früheren App-Version) noch
@@ -24,7 +24,8 @@
         'work_log', 'tasks', 'materials', 'checklist_payload', 'status_repaired', 'status_repaired_en',
         'tech_sig_date', 'customer_sig_date', 'contact_persons', 'hotel_company', 'hotel_street',
         'hotel_zip', 'hotel_city', 'hotel_country', 'created_at', 'updated_at',
-        'pdf_url', 'pdf_path', 'pdf_created_at', 'locked_by', 'locked_at'
+        'pdf_url', 'pdf_path', 'pdf_created_at', 'locked_by', 'locked_at',
+        'is_finalized', 'finalized_at'
     ]);
 
     function sanitizeForServiceEntries(obj) {
