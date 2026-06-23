@@ -34,6 +34,7 @@
         // Main machines view: Apply all filters
         const catFilters = window.activeMachineCategoryFilters || ['all'];
         const conFilters = window.activeMachineContactFilters || ['all'];
+        const seriesFilters = window.activeMachineSeriesFilters || ['all'];
         const searchFilter = window.machineSearchFilter || '';
 
         let displayMachines = allMachines.filter(m => {
@@ -49,6 +50,9 @@
                 } catch (e) { }
             }
 
+            // Machine Series Filter
+            const matchSeries = seriesFilters.includes('all') || (m.machine_series && seriesFilters.includes(m.machine_series));
+
             // Search Keyword Filter
             let matchSearch = true;
             if (searchFilter.trim() !== '') {
@@ -56,7 +60,7 @@
                 const searchableText = [m.name, m.manufacturer, m.serial ? `#${m.serial}` : '', m.year ? `(${m.year})` : ''].join(' ').toLowerCase();
                 matchSearch = queryTerms.every(term => searchableText.includes(term));
             }
-            return matchCat && matchCon && matchSearch;
+            return matchCat && matchCon && matchSeries && matchSearch;
         });
 
         // Group by category

@@ -1595,6 +1595,22 @@
                                     </div>
                                 </div>
 
+                                <!-- Machine Series Filter -->
+                                <div class="custom-filter-dropdown" id="machine-series-filter-trigger">
+                                    <span class="filter-label" id="current-series-filter-name">Maschinenserie</span>
+                                    <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+
+                                    <div class="custom-filter-menu" id="machine-series-filter-menu">
+                                        <ul id="machine-series-filter-options">
+                                            <!-- Dynamically populated -->
+                                        </ul>
+                                    </div>
+                                </div>
+
 
                                 <button id="add-machine-btn" class="btn-add-bg" onclick="openAddMachineModal()">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1924,7 +1940,7 @@
                             </div>
                         </div>
 
-                        <!-- Firmeneinstellungen Card -->
+                        <!-- Firmendaten Card -->
                         <div class="settings-card" data-target="settings-firmeneinstellungen">
                             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
                                 <div class="settings-icon-container"
@@ -1938,13 +1954,34 @@
                                 </div>
                                 <h2
                                     style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">
-                                    Firmen<wbr>einstellungen</h2>
+                                    Firmendaten</h2>
                             </div>
                             <div class="settings-content">
-                                <p class="settings-card-desc">Firmendaten &amp;<wbr> Kunden-Adressimport (Sage 100)</p>
+                                <p class="settings-card-desc">Eigene Firmenadresse für die Routenplanung verwalten</p>
                             </div>
                         </div>
-                        
+
+                        <!-- Import Card -->
+                        <div class="settings-card" data-target="settings-import">
+                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
+                                <div class="settings-icon-container"
+                                    style="background: rgba(16, 185, 129, 0.1); color: #10b981; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0;">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="7 10 12 15 17 10"></polyline>
+                                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                                    </svg>
+                                </div>
+                                <h2
+                                    style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">
+                                    Import</h2>
+                            </div>
+                            <div class="settings-content">
+                                <p class="settings-card-desc">Adress- und Artikelimport</p>
+                            </div>
+                        </div>
+
                         <!-- UVV & Wartungspläne Card -->
                         <div class="settings-card" data-target="settings-uvv-wartungsplaene">
                             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
@@ -1956,7 +1993,7 @@
                                         <path d="m9 12 2 2 4-4"></path>
                                     </svg>
                                 </div>
-                                <h2 style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">UVV &amp; Wartungs&shy;pläne</h2>
+                                <h2 style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">UVV, Wartungs&shy;pläne &amp; Einweisung</h2>
                             </div>
                             <div class="settings-content">
                                 <p class="settings-card-desc">Prüf- &amp; Wartungspläne verwalten und Maschinen zuordnen</p>
@@ -1991,23 +2028,6 @@
                             </div>
                         </div>
 
-                        <!-- Etikettendrucker Card -->
-                        <div class="settings-card" data-target="settings-etiketten">
-                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
-                                <div class="settings-icon-container"
-                                    style="background: rgba(236, 72, 153, 0.1); color: #ec4899; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0;">
-                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M20.59 13.41 11 3.83a2 2 0 0 0-1.41-.58H4a1 1 0 0 0-1 1v5.59a2 2 0 0 0 .58 1.41l9.58 9.59a2 2 0 0 0 2.83 0l4.6-4.6a2 2 0 0 0 0-2.83Z"></path>
-                                        <circle cx="7.5" cy="7.5" r="1.5"></circle>
-                                    </svg>
-                                </div>
-                                <h2 style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">Etiketten<wbr>drucker</h2>
-                            </div>
-                            <div class="settings-content">
-                                <p class="settings-card-desc">Artikel verwalten und Etiketten mit Barcode drucken</p>
-                            </div>
-                        </div>
-
                     </div>
 
 
@@ -2025,15 +2045,13 @@
                 </div>
             </div>
 
-            <!-- Ansicht umschalten -->
-            <div class="calendar-view-tabs" style="margin: 1.25rem 0;">
-                <button class="calendar-tab-btn active" id="label-tab-btn-etiketten" onclick="window.switchLabelTab('etiketten')">Etiketten</button>
-                <button class="calendar-tab-btn" id="label-tab-btn-beschriftung" onclick="window.switchLabelTab('beschriftung')">Beschriftung</button>
-            </div>
-
-            <!-- Tab: Etiketten -->
-            <div id="label-tab-content-etiketten">
-                <div class="users-header-actions" style="display:flex; justify-content:flex-end; gap:10px; margin-bottom: 1rem;">
+            <!-- Ansicht umschalten + Aktionen (in einer Reihe) -->
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin: 1.25rem 0;">
+                <div class="calendar-view-tabs" style="margin:0;">
+                    <button class="calendar-tab-btn active" id="label-tab-btn-etiketten" onclick="window.switchLabelTab('etiketten')">Etiketten</button>
+                    <button class="calendar-tab-btn" id="label-tab-btn-beschriftung" onclick="window.switchLabelTab('beschriftung')">Beschriftung</button>
+                </div>
+                <div id="label-etiketten-actions" style="display:flex; gap:10px; flex-wrap:wrap;">
                     <button class="btn-add-bg" style="background: rgba(255,255,255,0.06); color: #fff;" onclick="window.openLabelImportModal()">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                         IMPORTIEREN
@@ -2043,10 +2061,18 @@
                         ANLEGEN
                     </button>
                 </div>
+            </div>
 
+            <!-- Tab: Etiketten -->
+            <div id="label-tab-content-etiketten">
                 <!-- Toolbar: Search + Print Selected -->
                 <div style="display: flex; gap: 12px; align-items: center; margin: 0 0 1rem 0; flex-wrap: wrap;">
-                    <input type="text" id="label-search-input" class="glass-form-input" placeholder="Suche nach Artikelnummer oder Bezeichnung..." style="flex: 1; min-width: 220px; height: 42px;" oninput="window.renderLabelArticles()">
+                    <input type="text" id="label-search-input" class="glass-form-input" placeholder="Suche nach Artikelnummer oder Bezeichnung..." style="flex: 0 1 440px; min-width: 160px; height: 42px;" oninput="window.renderLabelArticles()">
+                    <div style="flex: 1;"></div>
+                    <label style="display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.6); font-size: 0.85rem; cursor: pointer; white-space: nowrap;">
+                        <input type="checkbox" id="label-qty-disabled">
+                        QTY nicht drucken
+                    </label>
                     <label style="display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.6); font-size: 0.85rem; cursor: pointer; white-space: nowrap;">
                         <input type="checkbox" id="label-select-all" onchange="window.toggleAllLabelSelection(this.checked)">
                         Alle auswählen
@@ -2074,7 +2100,7 @@
                     </button>
                 </div>
 
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start;">
+                <div class="beschriftung-grid" style="display:grid; grid-template-columns: 1fr 600px; gap: 1.5rem; align-items: start;">
                     <!-- Formular -->
                     <div style="display:flex; flex-direction:column; gap: 1.25rem;">
                         <div class="form-group">
@@ -2139,7 +2165,7 @@
                     <!-- Live-Vorschau -->
                     <div>
                         <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Vorschau (A4)</label>
-                        <div id="beschriftung-preview-page" style="position:relative; width:100%; max-width:480px; aspect-ratio: 210/297; background:#fff; border-radius:6px; box-shadow:0 4px 24px rgba(0,0,0,0.35);"></div>
+                        <div id="beschriftung-preview-page" style="position:relative; width:100%; max-width:600px; aspect-ratio: 210/297; background:#fff; border-radius:6px; box-shadow:0 4px 24px rgba(0,0,0,0.35);"></div>
                     </div>
                 </div>
             </div>
@@ -2224,7 +2250,7 @@
         <!-- UVV & Wartungspläne Settings View -->
         <section id="settings-uvv-wartungsplaene" class="view hidden">
             <div class="users-header-container">
-                <h1>UVV &amp; Wartungspläne</h1>
+                <h1>UVV, Wartungspläne &amp; Einweisung</h1>
                 <div class="users-header-actions">
                     <button class="btn-back-custom" data-target="settings">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg>
@@ -2251,6 +2277,10 @@
                     style="padding: 7px 18px; border-radius: 20px; border: 1.5px solid rgba(59,130,246,0.4); background: rgba(59,130,246,0.08); color: #60a5fa; font-weight: 700; font-size: 0.83rem; cursor: pointer; transition: all 0.2s;">
                     Wartung
                 </button>
+                <button class="uvv-filter-btn" data-filter="einweisung" onclick="filterUvvPlanCards('einweisung')"
+                    style="padding: 7px 18px; border-radius: 20px; border: 1.5px solid rgba(139,92,246,0.4); background: rgba(139,92,246,0.08); color: #a78bfa; font-weight: 700; font-size: 0.83rem; cursor: pointer; transition: all 0.2s;">
+                    Einweisung
+                </button>
             </div>
 
             <!-- Plan Cards Container -->
@@ -2270,8 +2300,16 @@
                         <input type="text" id="pme-title" class="glass-form-input" placeholder="z.B. Wartungsplan JT 580" style="height:44px;">
                     </div>
                     <div class="form-group" style="margin-bottom:0;">
-                        <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Maschinenmodell</label>
-                        <input type="text" id="pme-model" class="glass-form-input" placeholder="z.B. JT 580 oder generic" style="height:44px;">
+                        <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Maschinenserie</label>
+                        <div class="custom-filter-dropdown" id="pme-series-dropdown" onclick="window.togglePmeSeriesDropdown(event)" style="width: 100%; height: 44px; box-sizing: border-box;">
+                            <span class="filter-label" id="pme-series-label">Maschinenserie wählen...</span>
+                            <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            <div class="custom-filter-menu">
+                                <ul class="dropdown-options" id="pme-series-options">
+                                    <!-- Populated by JS -->
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div style="margin-bottom:1.25rem;">
@@ -2279,6 +2317,7 @@
                     <div style="display:flex; gap:8px;">
                         <button id="pme-type-wartung" onclick="setPmeType('wartung')" style="padding:7px 18px; border-radius:20px; border:1.5px solid rgba(59,130,246,0.55); background:rgba(59,130,246,0.22); color:#60a5fa; font-weight:700; font-size:0.83rem; cursor:pointer; transition:all 0.15s;">Wartung</button>
                         <button id="pme-type-uvv" onclick="setPmeType('uvv')" style="padding:7px 18px; border-radius:20px; border:1.5px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.4); font-weight:700; font-size:0.83rem; cursor:pointer; transition:all 0.15s;">UVV</button>
+                        <button id="pme-type-einweisung" onclick="setPmeType('einweisung')" style="padding:7px 18px; border-radius:20px; border:1.5px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.4); font-weight:700; font-size:0.83rem; cursor:pointer; transition:all 0.15s;">Einweisung</button>
                     </div>
                 </div>
                 <div style="margin-bottom:0.75rem; display:flex; align-items:center; justify-content:space-between;">
@@ -2291,7 +2330,7 @@
                 <!-- Scrollable table wrapper -->
                 <div class="pme-table-scroll">
                     <div class="pme-items-header" style="display:grid; grid-template-columns:20px 55px 1fr 2fr 110px 32px; gap:6px; padding:0 10px 6px; font-size:0.72rem; color:rgba(255,255,255,0.35); font-weight:700; text-transform:uppercase; letter-spacing:0.4px;">
-                        <span></span><span>Pos.</span><span>Kategorie</span><span>Beschreibung</span><span>Intervall</span><span></span>
+                        <span></span><span>Pos.</span><span>Kategorie</span><span>Beschreibung</span><span id="pme-col5-header">Intervall</span><span></span>
                     </div>
                     <div id="pme-items" style="display:flex; flex-direction:column; gap:6px; max-height:300px; overflow-y:auto; padding-right:2px;"></div>
                 </div>
@@ -2302,10 +2341,59 @@
             </div>
         </div>
 
-        <!-- Firmeneinstellungen Settings View -->
+        <!-- Firmendaten Settings View -->
         <section id="settings-firmeneinstellungen" class="view hidden">
             <div class="users-header-container">
-                <h1>Firmeneinstellungen</h1>
+                <h1>Firmendaten</h1>
+                <div class="users-header-actions">
+                    <button class="btn-back-custom" data-target="settings">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 12H5"></path>
+                            <path d="M12 19l-7-7 7-7"></path>
+                        </svg>
+                        ZURÜCK
+                    </button>
+                </div>
+            </div>
+
+            <div class="glass-card" style="padding: 2rem; margin-top: 1.5rem;">
+                <h3 style="margin-bottom: 1.5rem; color: #fff;">Eigene Firmendaten</h3>
+                <p style="font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-bottom: 1.5rem;">
+                    Geben Sie hier die Adresse Ihres Hauptquartiers ein. Diese Adresse dient als Ausgangspunkt für die Google Maps Routenplanung zu den Maschinenstandorten.
+                </p>
+                <form id="firmendaten-form" onsubmit="saveFirmendaten(event)">
+                    <div class="form-group" style="margin-bottom: 1.25rem;">
+                        <label for="company-hq-name">Firmenname</label>
+                        <input type="text" id="company-hq-name" class="glass-form-input" placeholder="z.B. Meetra GmbH" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1.25rem;">
+                        <label for="company-hq-street">Straße &amp; Hausnummer</label>
+                        <input type="text" id="company-hq-street" class="glass-form-input" placeholder="Musterstraße 12" required>
+                    </div>
+                    <div class="form-row" style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <div class="form-group">
+                            <label for="company-hq-zip">PLZ</label>
+                            <input type="text" id="company-hq-zip" class="glass-form-input" placeholder="12345" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="company-hq-city">Ort</label>
+                            <input type="text" id="company-hq-city" class="glass-form-input" placeholder="Musterstadt" required>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1.5rem;">
+                        <label for="company-hq-country">Land</label>
+                        <input type="text" id="company-hq-country" class="glass-form-input" value="Deutschland" placeholder="Deutschland" required>
+                    </div>
+                    <button type="submit" class="btn-primary" style="padding: 12px 24px; font-weight: 700;">Einstellungen speichern</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Import Settings View -->
+        <section id="settings-import" class="view hidden">
+            <div class="users-header-container">
+                <h1>Import</h1>
                 <div class="users-header-actions">
                     <button class="btn-back-custom" data-target="settings">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -2320,48 +2408,13 @@
 
             <div class="settings-tabs-container" style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
                 <div class="settings-tabs" style="display: flex; gap: 20px; overflow-x: auto; padding-bottom: 0; border-bottom: none; margin: 0;">
-                    <button class="settings-tab active" data-tab="firmendaten" onclick="switchFirmeneinstellungenTab('firmendaten')">Firmendaten</button>
-                    <button class="settings-tab" data-tab="adressimport" onclick="switchFirmeneinstellungenTab('adressimport')">Adressimport</button>
-                </div>
-            </div>
-
-            <!-- Tab: Firmendaten -->
-            <div id="firmendaten-tab-content" class="tab-content active">
-                <div class="glass-card" style="padding: 2rem;">
-                    <h3 style="margin-bottom: 1.5rem; color: #fff;">Eigene Firmendaten</h3>
-                    <p style="font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-bottom: 1.5rem;">
-                        Geben Sie hier die Adresse Ihres Hauptquartiers ein. Diese Adresse dient als Ausgangspunkt für die Google Maps Routenplanung zu den Maschinenstandorten.
-                    </p>
-                    <form id="firmendaten-form" onsubmit="saveFirmendaten(event)">
-                        <div class="form-group" style="margin-bottom: 1.25rem;">
-                            <label for="company-hq-name">Firmenname</label>
-                            <input type="text" id="company-hq-name" class="glass-form-input" placeholder="z.B. Meetra GmbH" required>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 1.25rem;">
-                            <label for="company-hq-street">Straße &amp; Hausnummer</label>
-                            <input type="text" id="company-hq-street" class="glass-form-input" placeholder="Musterstraße 12" required>
-                        </div>
-                        <div class="form-row" style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; margin-bottom: 1.5rem;">
-                            <div class="form-group">
-                                <label for="company-hq-zip">PLZ</label>
-                                <input type="text" id="company-hq-zip" class="glass-form-input" placeholder="12345" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="company-hq-city">Ort</label>
-                                <input type="text" id="company-hq-city" class="glass-form-input" placeholder="Musterstadt" required>
-                            </div>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 1.5rem;">
-                            <label for="company-hq-country">Land</label>
-                            <input type="text" id="company-hq-country" class="glass-form-input" value="Deutschland" placeholder="Deutschland" required>
-                        </div>
-                        <button type="submit" class="btn-primary" style="padding: 12px 24px; font-weight: 700;">Einstellungen speichern</button>
-                    </form>
+                    <button class="settings-tab active" data-tab="adressimport" onclick="switchImportTab('adressimport')">Adressimport</button>
+                    <button class="settings-tab" data-tab="artikelimport" onclick="switchImportTab('artikelimport')">Artikel Import</button>
                 </div>
             </div>
 
             <!-- Tab: Adressimport -->
-            <div id="adressimport-tab-content" class="tab-content hidden">
+            <div id="adressimport-tab-content" class="tab-content active">
                 <div class="glass-card" style="padding: 2rem;">
                     <h3 style="margin-bottom: 0.5rem; color: #fff;">Sage 100 Kunden- &amp; Adressimport</h3>
                     <p style="font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-bottom: 1.5rem;">
@@ -2386,7 +2439,7 @@
                         <p style="font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-bottom: 1.5rem;">
                             Bitte weisen Sie den Datenbankfeldern die Spalten aus Ihrer Datei zu:
                         </p>
-                        
+
                         <div class="mapping-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
                             <div class="form-group">
                                 <label for="map-address-num" style="font-size: 0.85rem; color: rgba(255,255,255,0.7);">Adressnummer *</label>
@@ -2459,6 +2512,16 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Tab: Artikel Import -->
+            <div id="artikelimport-tab-content" class="tab-content hidden">
+                <div class="glass-card" style="padding: 2rem;">
+                    <h3 style="margin-bottom: 0.5rem; color: #fff;">Artikel-Import</h3>
+                    <p style="font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-bottom: 1.5rem;">
+                        Hier entsteht der Import von Artikeln. Folgt in Kürze.
+                    </p>
                 </div>
             </div>
         </section>
@@ -2750,6 +2813,24 @@
                         </h3>
                         <ul id="category-list-series" class="user-list">
                             <!-- Machine Series Categories rendered here -->
+                        </ul>
+                    </div>
+
+                    <div class="category-group">
+                        <h3 class="category-group-title">
+                            <div class="group-icon-wrapper" id="icon-group-equipment"
+                                onclick="document.getElementById('color-equipment').click()" title="Farbe ändern">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                                </svg>
+                            </div>
+                            <input type="color" id="color-equipment" class="hidden-color-input"
+                                onchange="updateGroupColor('equipment', this.value)">
+                            <span>Zusatzausrüstung</span>
+                        </h3>
+                        <ul id="category-list-equipment" class="user-list">
+                            <!-- Equipment Categories rendered here -->
                         </ul>
                     </div>
                 </div>
@@ -3673,6 +3754,12 @@
                     categoryFilterTrigger.addEventListener('click', toggleCategoryFilter);
                 }
 
+                // Initialize Machine Series Filter Trigger
+                const seriesFilterTrigger = document.getElementById('machine-series-filter-trigger');
+                if (seriesFilterTrigger) {
+                    seriesFilterTrigger.addEventListener('click', toggleSeriesFilter);
+                }
+
                 // Initialize Machine Contact Filter Trigger
                 const contactFilterTrigger = document.getElementById('machine-contact-filter-trigger');
                 if (contactFilterTrigger) {
@@ -3692,6 +3779,7 @@
                     // Filter zurücksetzen bei Klick auf "Maschinen gesamt"
                     window.activeMachineCategoryFilters = ['all'];
                     window.activeMachineContactFilters = ['all'];
+                    window.activeMachineSeriesFilters = ['all'];
                     window.machineSearchFilter = '';
                     const searchInput = document.getElementById('machine-search-input');
                     if (searchInput) searchInput.value = '';
@@ -3737,6 +3825,7 @@
                         const settingsSubViews = [
                             'settings',
                             'settings-firmeneinstellungen',
+                            'settings-import',
                             'settings-textbausteine',
                             'settings-ai',
                             'settings-uvv-wartungsplaene',
@@ -4057,6 +4146,7 @@
                     await fetchMachines();
                     if (typeof fetchServiceEntries === 'function') await fetchServiceEntries();
                     if (typeof window.loadUvvWartungsplaene === 'function') await window.loadUvvWartungsplaene();
+                    if (typeof window.initRealtimeSubscriptions === 'function') window.initRealtimeSubscriptions();
 
                     // Login-Screen ausblenden
                     document.getElementById('supabase-login-screen').style.display = 'none';
@@ -4102,6 +4192,7 @@
                     await fetchMachines();
                     if (typeof fetchServiceEntries === 'function') await fetchServiceEntries();
                     if (typeof window.loadUvvWartungsplaene === 'function') await window.loadUvvWartungsplaene();
+                    if (typeof window.initRealtimeSubscriptions === 'function') window.initRealtimeSubscriptions();
 
                     const lastUserId = localStorage.getItem('activeUserId');
                     const lastUser = lastUserId ? userList.find(u => String(u.id) === String(lastUserId)) : null;
@@ -4128,6 +4219,7 @@
                     await fetchMachines();
                     if (typeof fetchServiceEntries === 'function') await fetchServiceEntries();
                     if (typeof window.loadUvvWartungsplaene === 'function') await window.loadUvvWartungsplaene();
+                    if (typeof window.initRealtimeSubscriptions === 'function') window.initRealtimeSubscriptions();
                     const lastUserId = localStorage.getItem('activeUserId');
                     const lastUser = lastUserId ? userList.find(u => String(u.id) === String(lastUserId)) : null;
                     if (lastUser) {
@@ -4152,6 +4244,7 @@
                     await fetchMachines();
                     if (typeof fetchServiceEntries === 'function') await fetchServiceEntries();
                     if (typeof window.loadUvvWartungsplaene === 'function') await window.loadUvvWartungsplaene();
+                    if (typeof window.initRealtimeSubscriptions === 'function') window.initRealtimeSubscriptions();
 
                     // Profil automatisch auswählen, wenn E-Mail übereinstimmt
                     const sessionEmail = session?.user?.email;
@@ -4870,6 +4963,124 @@
             };
 
             // ==========================================
+            // MACHINE SERIES FILTER LOGIC
+            // ==========================================
+            window.activeMachineSeriesFilters = ['all'];
+
+            function toggleSeriesFilter(event) {
+                event.stopPropagation();
+                const menu = document.getElementById('machine-series-filter-menu');
+                const trigger = document.getElementById('machine-series-filter-trigger');
+                if (!menu || !trigger) return;
+
+                const isShowing = menu.classList.contains('show');
+
+                // Close other dropdowns
+                const catMenu = document.getElementById('machine-category-filter-menu');
+                const catTrigger = document.getElementById('machine-category-filter-trigger');
+                if (catMenu) catMenu.classList.remove('show');
+                if (catTrigger) catTrigger.classList.remove('active');
+
+                const userDropdown = document.querySelector('.user-dropdown-menu');
+                if (userDropdown) {
+                    userDropdown.classList.remove('show');
+                    userDropdown.style.display = 'none';
+                }
+
+                if (isShowing) {
+                    menu.classList.remove('show');
+                    trigger.classList.remove('active');
+                } else {
+                    menu.classList.add('show');
+                    trigger.classList.add('active');
+                }
+            }
+
+            // Maschinenserie wird pro Maschine als Name (Text) gespeichert, nicht als ID —
+            // daher arbeitet dieser Filter direkt mit den Serien-Namen statt mit IDs.
+            window.selectSeriesFilter = function (name) {
+                if (name === 'all') {
+                    window.activeMachineSeriesFilters = ['all'];
+                } else {
+                    window.activeMachineSeriesFilters = window.activeMachineSeriesFilters.filter(f => f !== 'all');
+
+                    const idx = window.activeMachineSeriesFilters.indexOf(name);
+                    if (idx > -1) {
+                        window.activeMachineSeriesFilters.splice(idx, 1);
+                    } else {
+                        window.activeMachineSeriesFilters.push(name);
+                    }
+
+                    if (window.activeMachineSeriesFilters.length === 0) {
+                        window.activeMachineSeriesFilters = ['all'];
+                    }
+                }
+
+                // Update Trigger Label
+                const label = document.getElementById('current-series-filter-name');
+                if (label) {
+                    if (window.activeMachineSeriesFilters.includes('all')) {
+                        label.textContent = 'Maschinenserie';
+                    } else if (window.activeMachineSeriesFilters.length === 1) {
+                        label.textContent = window.activeMachineSeriesFilters[0];
+                    } else {
+                        label.textContent = `${window.activeMachineSeriesFilters[0]} +${window.activeMachineSeriesFilters.length - 1}`;
+                    }
+                }
+
+                // Re-render options/machines
+                renderMachineSeriesFilterOptions();
+                renderMachines();
+
+                // Only close menu if 'all' was selected
+                if (name === 'all') {
+                    const menu = document.getElementById('machine-series-filter-menu');
+                    const trigger = document.getElementById('machine-series-filter-trigger');
+                    if (menu) menu.classList.remove('show');
+                    if (trigger) trigger.classList.remove('active');
+                }
+            };
+
+            function renderMachineSeriesFilterOptions() {
+                const list = document.getElementById('machine-series-filter-options');
+                if (!list) return;
+                list.innerHTML = '';
+
+                const allLi = document.createElement('li');
+                allLi.textContent = 'Maschinenserie';
+                allLi.setAttribute('data-id', 'all');
+                if (window.activeMachineSeriesFilters.includes('all')) allLi.classList.add('selected');
+                allLi.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    window.selectSeriesFilter('all');
+                });
+                list.appendChild(allLi);
+
+                const allSeries = (typeof categoryList !== 'undefined' && Array.isArray(categoryList))
+                    ? categoryList.filter(c => c.type === 'series')
+                    : [];
+                allSeries.forEach(cat => {
+                    const li = document.createElement('li');
+                    li.setAttribute('data-id', cat.name);
+
+                    const isSelected = window.activeMachineSeriesFilters.includes(cat.name);
+                    if (isSelected) li.classList.add('selected');
+
+                    li.innerHTML = `
+                            <span>${cat.name}</span>
+                            ${isSelected ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+                        `;
+
+                    li.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        window.selectSeriesFilter(cat.name);
+                    });
+                    list.appendChild(li);
+                });
+            }
+            window.renderMachineSeriesFilterOptions = renderMachineSeriesFilterOptions;
+
+            // ==========================================
             // MACHINE CONTACT FILTER LOGIC
             // ==========================================
             window.activeMachineContactFilters = ['all'];
@@ -4956,6 +5167,7 @@
             document.addEventListener('click', (e) => {
                 const dropdowns = [
                     { menuId: 'machine-category-filter-menu', triggerId: 'machine-category-filter-trigger' },
+                    { menuId: 'machine-series-filter-menu', triggerId: 'machine-series-filter-trigger' },
                     { menuId: 'machine-contact-filter-menu', triggerId: 'machine-contact-filter-trigger' }
                 ];
 
@@ -5601,6 +5813,7 @@
                 const listContact = document.getElementById('category-list-contact');
                 const listDocument = document.getElementById('category-list-document');
                 const listSeries = document.getElementById('category-list-series');
+                const listEquipment = document.getElementById('category-list-equipment');
 
                 // Safety check
                 if (!listMachine || !listService) return;
@@ -5610,6 +5823,7 @@
                 if (listContact) listContact.innerHTML = '';
                 if (listDocument) listDocument.innerHTML = '';
                 if (listSeries) listSeries.innerHTML = '';
+                if (listEquipment) listEquipment.innerHTML = '';
 
                 // Populate custom machine category filter dropdown
                 const filterOptionsList = document.getElementById('machine-category-filter-options');
@@ -5646,6 +5860,9 @@
                         filterOptionsList.appendChild(li);
                     });
                 }
+
+                // Populate custom machine series filter dropdown
+                if (typeof renderMachineSeriesFilterOptions === 'function') renderMachineSeriesFilterOptions();
 
                 // Populate custom contact type filter dropdown
                 const contactFilterOptionsList = document.getElementById('machine-contact-filter-options');
@@ -5696,7 +5913,8 @@
                         service: '#2980b9',
                         contact: '#9b59b6',
                         document: '#f97316',
-                        series: '#06b6d4'
+                        series: '#06b6d4',
+                        equipment: '#a855f7'
                     };
 
                     const type = cat.type || 'machine';
@@ -5721,6 +5939,7 @@
                                         <span class="user-name-link" style="color: ${accentColor}; font-weight: 700; font-family: 'Inter', sans-serif; font-size: 1.1rem;">${cat.name}</span>
                                         ${type === 'machine' ? `<span style="font-size: 0.85rem; color: rgba(255,255,255,0.4); font-weight: 600; padding-right: 1rem;">Intervall: ${cat.default_maintenance_interval_months || 12}M</span>` : ''}
                                         ${type === 'series' ? `<span style="font-size: 0.85rem; color: rgba(255,255,255,0.4); font-weight: 600; padding-right: 1rem; text-align: right;">${[cat.manufacturer, cat.machine_categories].filter(Boolean).join(' · ')}</span>` : ''}
+                                        ${type === 'equipment' && cat.remark ? `<span style="font-size: 0.85rem; color: rgba(255,255,255,0.4); font-weight: 500; padding-right: 1rem; text-align: right;">${cat.remark}</span>` : ''}
                                     </div>
                                 <div class="user-actions">
                                     <button class="btn-icon-soft edit" onclick="editCategory(${cat.id})" title="Bearbeiten">
@@ -5743,6 +5962,8 @@
                         listDocument.appendChild(li);
                     } else if (type === 'series' && listSeries) {
                         listSeries.appendChild(li);
+                    } else if (type === 'equipment' && listEquipment) {
+                        listEquipment.appendChild(li);
                     }
                 });
 
@@ -5886,12 +6107,14 @@
             const catIntervalGroup = document.getElementById('cat-interval-group');
             const catSeriesGroup = document.getElementById('cat-series-group');
             const catSeriesManufacturerInput = document.getElementById('cat-series-manufacturer');
+            const catEquipmentGroup = document.getElementById('cat-equipment-group');
+            const catEquipmentRemarkInput = document.getElementById('cat-equipment-remark');
             const catTypeRadios = document.getElementsByName('cat-type');
             const catModalId = document.getElementById('cat-modal-id');
             const catModalTitle = document.getElementById('cat-modal-title');
             let activeCatSeriesMachineCategories = [];
 
-            // Toggle interval/series field visibility
+            // Toggle interval/series/equipment field visibility
             catTypeRadios.forEach(radio => {
                 radio.addEventListener('change', (e) => {
                     if (catIntervalGroup) {
@@ -5899,6 +6122,9 @@
                     }
                     if (catSeriesGroup) {
                         catSeriesGroup.style.display = e.target.value === 'series' ? 'block' : 'none';
+                    }
+                    if (catEquipmentGroup) {
+                        catEquipmentGroup.style.display = e.target.value === 'equipment' ? 'block' : 'none';
                     }
                 });
             });
@@ -5992,11 +6218,15 @@
                             if (r.checked && catSeriesGroup) {
                                 catSeriesGroup.style.display = r.value === 'series' ? 'block' : 'none';
                             }
+                            if (r.checked && catEquipmentGroup) {
+                                catEquipmentGroup.style.display = r.value === 'equipment' ? 'block' : 'none';
+                            }
                         });
                     } else if (!editData && catTypeRadios) {
                         catTypeRadios[0].checked = true; // Default to machine
                         if (catIntervalGroup) catIntervalGroup.style.display = 'block';
                         if (catSeriesGroup) catSeriesGroup.style.display = 'none';
+                        if (catEquipmentGroup) catEquipmentGroup.style.display = 'none';
                     }
 
                     // Felder fuer Kategorie-Typ "Maschinenserie"
@@ -6006,6 +6236,9 @@
                         : [];
                     populateCatSeriesMachineCatOptions();
                     populateCatSeriesManufacturerOptions();
+
+                    // Feld fuer Kategorie-Typ "Zusatzausrüstung"
+                    if (catEquipmentRemarkInput) catEquipmentRemarkInput.value = editData ? (editData.remark || '') : '';
 
                     catModal.classList.remove('hidden');
                     catModal.style.display = 'flex';
@@ -6078,7 +6311,8 @@
                         default_maintenance_interval_months: intervalValue,
                         color: colorValue ? colorValue.value : '#10b981',
                         manufacturer: typeValue === 'series' ? (catSeriesManufacturerInput?.value.trim() || null) : null,
-                        machine_categories: typeValue === 'series' ? activeCatSeriesMachineCategories.join(', ') : null
+                        machine_categories: typeValue === 'series' ? activeCatSeriesMachineCategories.join(', ') : null,
+                        remark: typeValue === 'equipment' ? (catEquipmentRemarkInput?.value.trim() || null) : null
                     };
 
                     let response;
@@ -6386,6 +6620,79 @@
 
                 applyMachineList(data);
             }
+
+            // ==========================================
+            // LIVE-AKTUALISIERUNG (Supabase Realtime)
+            // ==========================================
+            // Eine einzige dauerhafte Verbindung pro geöffnetem Tab — kein Polling. Aktualisiert
+            // nur die Hintergrund-Listen (allServiceEntries / machineList) und rendert sie neu;
+            // ein gerade offenes Bearbeitungsformular (Servicebericht-/Maschinen-Modal) wird NIE
+            // angefasst, damit niemandem mitten im Tippen Daten überschrieben werden — das Modal
+            // arbeitet ohnehin mit einer eigenen Kopie, die erst beim Speichern abgeglichen wird.
+            let realtimeSubscribed = false;
+            window.initRealtimeSubscriptions = function () {
+                if (realtimeSubscribed || !window.supabaseClient) return;
+                realtimeSubscribed = true;
+
+                window.supabaseClient
+                    .channel('service_entries_live')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'service_entries' }, (payload) => {
+                        try { window.handleServiceEntryRealtimeChange(payload); } catch (e) { console.error('Realtime service_entries Fehler:', e); }
+                    })
+                    .subscribe();
+
+                window.supabaseClient
+                    .channel('machines_live')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'machines' }, (payload) => {
+                        try { window.handleMachineRealtimeChange(payload); } catch (e) { console.error('Realtime machines Fehler:', e); }
+                    })
+                    .subscribe();
+            };
+
+            window.handleServiceEntryRealtimeChange = function (payload) {
+                if (!Array.isArray(allServiceEntries)) return;
+                if (payload.eventType === 'DELETE') {
+                    const id = payload.old && payload.old.id;
+                    if (id == null) return;
+                    allServiceEntries = allServiceEntries.filter(e => e.id !== id);
+                } else {
+                    const r = payload.new;
+                    if (!r) return;
+                    // Auf dieselbe schlanke Form bringen wie fetchServiceEntries, damit die Liste
+                    // konsistent bleibt (keine schweren JSONB-Felder wie work_log/materials anhäufen).
+                    const slim = {
+                        id: r.id, machine_id: r.machine_id, category_id: r.category_id, category_ids: r.category_ids,
+                        title: r.title, date: r.date, datum_von: r.datum_von, datum_bis: r.datum_bis,
+                        hours: r.hours, technicians: r.technicians, pdf_url: r.pdf_url, pdf_path: r.pdf_path,
+                        files: r.files, is_finalized: r.is_finalized, finalized_at: r.finalized_at
+                    };
+                    const idx = allServiceEntries.findIndex(e => e.id === slim.id);
+                    if (idx !== -1) allServiceEntries[idx] = slim; else allServiceEntries.push(slim);
+                }
+
+                window.serviceEntryList = allServiceEntries;
+                if (typeof renderServiceEntries === 'function') renderServiceEntries();
+                if (window.offlineService) window.offlineService.cacheEntries(allServiceEntries).catch(() => {});
+            };
+
+            window.handleMachineRealtimeChange = function (payload) {
+                if (!Array.isArray(machineList)) return;
+                let merged;
+                if (payload.eventType === 'DELETE') {
+                    const id = payload.old && payload.old.id;
+                    if (id == null) return;
+                    merged = machineList.filter(m => m.id !== id);
+                } else {
+                    const r = payload.new;
+                    if (!r) return;
+                    const idx = machineList.findIndex(m => m.id === r.id);
+                    merged = [...machineList];
+                    if (idx !== -1) merged[idx] = r; else merged.push(r);
+                }
+                applyMachineList(merged);
+                try { localStorage.setItem('offline_machines', JSON.stringify(merged)); } catch (e) {}
+            };
+
             function getStatusColor(status) {
                 if (status === 'Betriebsbereit') return 'var(--color-primary-green)';
                 if (status === 'Wartung') return '#FFA000'; // Orange
@@ -6742,6 +7049,9 @@
                     ...normalizeEquipList(machine.additional_equipment),
                     ...normalizeEquipList(extractMetaVal(machine.files, 'additional_equipment'))
                 ];
+                const equipmentCatalogItems = (Array.isArray(machine.equipment_category_ids) ? machine.equipment_category_ids : [])
+                    .map(id => (window.categoryList || []).find(c => c.type === 'equipment' && String(c.id) === String(id)))
+                    .filter(Boolean);
 
                 const extrasWrapper = document.getElementById('machine-details-extras-wrapper');
                 const relatedCard = document.getElementById('machine-details-related-card');
@@ -6750,7 +7060,7 @@
                 const equipList = document.getElementById('machine-details-equipment-list');
 
                 const hasRelated = relatedIds.length > 0;
-                const hasEquip = additionalEquip.length > 0;
+                const hasEquip = additionalEquip.length > 0 || equipmentCatalogItems.length > 0;
 
                 if (extrasWrapper) extrasWrapper.style.display = (hasRelated || hasEquip) ? 'grid' : 'none';
 
@@ -6776,14 +7086,22 @@
 
                 if (equipList) {
                     if (hasEquip) {
-                        equipList.innerHTML = additionalEquip.map(eq => {
+                        const escEquip = (val) => String(val || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        const catalogEntries = equipmentCatalogItems.map(cat => {
+                            return `<div style="padding: 10px 12px; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: 10px;">
+                                        <div style="font-size: 0.95rem; color: white; font-weight: 700; line-height: 1.3;">${escEquip(cat.name)}</div>
+                                        ${cat.remark ? `<div style="font-size: 0.78rem; color: rgba(255,255,255,0.4); font-weight: 400; margin-top: 3px;">${escEquip(cat.remark)}</div>` : ''}
+                                    </div>`;
+                        });
+                        const freeEntries = additionalEquip.map(eq => {
                             const title = [eq.designation, eq.type].filter(Boolean).join(' · ') || 'Unbekannt';
                             const sub = [eq.serial ? `SN: ${eq.serial}` : '', eq.year ? eq.year : ''].filter(Boolean).join(' · ');
                             return `<div style="padding: 10px 12px; background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.2); border-radius: 10px;">
-                                        <div style="font-size: 0.95rem; color: white; font-weight: 700; line-height: 1.3;">${title}</div>
-                                        ${sub ? `<div style="font-size: 0.78rem; color: rgba(255,255,255,0.4); font-weight: 400; margin-top: 3px;">${sub}</div>` : ''}
+                                        <div style="font-size: 0.95rem; color: white; font-weight: 700; line-height: 1.3;">${escEquip(title)}</div>
+                                        ${sub ? `<div style="font-size: 0.78rem; color: rgba(255,255,255,0.4); font-weight: 400; margin-top: 3px;">${escEquip(sub)}</div>` : ''}
                                     </div>`;
-                        }).join('');
+                        });
+                        equipList.innerHTML = [...catalogEntries, ...freeEntries].join('');
                     } else {
                         equipList.innerHTML = '<div style="font-size: 0.85rem; color: rgba(255,255,255,0.3); padding: 4px 0;">Keine Zusatzausrüstung erfasst</div>';
                     }
@@ -7101,16 +7419,22 @@
 
                 const builtInIds = new Set((window.MOCK_CHECKLIST_TEMPLATES || []).map(t => t.id));
 
+                const planTypeStyles = {
+                    uvv: { color: '#ef4444', bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.4)', label: 'UVV' },
+                    wartung: { color: '#3b82f6', bg: 'rgba(59,130,246,0.15)', border: 'rgba(59,130,246,0.4)', label: 'WARTUNG' },
+                    einweisung: { color: '#8b5cf6', bg: 'rgba(139,92,246,0.15)', border: 'rgba(139,92,246,0.4)', label: 'EINWEISUNG' }
+                };
+
                 container.innerHTML = filtered.map(plan => {
-                    const assignment = uvvPlanAssignments[plan.id] || { category_ids: [], machine_models: [] };
-                    const isUvv = plan.type === 'uvv';
-                    const badgeColor = isUvv ? '#ef4444' : '#3b82f6';
-                    const badgeBg = isUvv ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.15)';
-                    const badgeBorder = isUvv ? 'rgba(239,68,68,0.4)' : 'rgba(59,130,246,0.4)';
-                    const badgeLabel = isUvv ? 'UVV' : 'WARTUNG';
+                    const assignment = uvvPlanAssignments[plan.id] || { category_ids: [], machine_series: [] };
+                    const planStyle = planTypeStyles[plan.type] || planTypeStyles.wartung;
+                    const badgeColor = planStyle.color;
+                    const badgeBg = planStyle.bg;
+                    const badgeBorder = planStyle.border;
+                    const badgeLabel = planStyle.label;
                     const itemCount = plan.items ? plan.items.length : 0;
-                    const assignedModels = assignment.machine_models || [];
-                    const models = assignedModels.length > 0 ? assignedModels.join(', ') : (plan.machine_model && plan.machine_model !== 'generic' ? plan.machine_model : 'Alle Maschinen');
+                    const assignedSeries = assignment.machine_series || [];
+                    const models = assignedSeries.length > 0 ? assignedSeries.join(', ') : ((plan.machine_series || []).length ? plan.machine_series.join(', ') : 'Alle Maschinen');
                     const isCustom = !builtInIds.has(plan.id);
 
                     // Category dropdown + tags
@@ -7132,12 +7456,25 @@
                         return `<span style="display:inline-flex; align-items:center; gap:6px; background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.35); border-radius:20px; padding:4px 12px; font-size:0.82rem; color:#60a5fa; font-weight:700;">${cat.name}<span onclick="uvvToggleCat('${plan.id}','${cat.id}')" style="cursor:pointer; opacity:0.7; font-size:1rem; line-height:1;">&times;</span></span>`;
                     }).join('');
 
-                    // Assigned model type chips
-                    const chipHtml = (assignment.machine_models || []).map(model => {
-                        const safe = model.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+                    // Maschinenserie dropdown + tags (Vorschläge aus den Kategorien vom Typ "series")
+                    const allSeriesCats = (window.categoryList || []).filter(c => c.type === 'series');
+                    const selectedSeriesNames = new Set(assignedSeries);
+                    const seriesDropdownItems = allSeriesCats.map(s => {
+                        const sel = selectedSeriesNames.has(s.name);
+                        const safe = s.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+                        const bg = sel ? 'rgba(16,185,129,0.15)' : 'transparent';
+                        const bgHover = sel ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.06)';
+                        return `<div onclick="uvvToggleSeries('${plan.id}','${safe}')"
+                            style="padding:9px 14px; cursor:pointer; font-size:0.88rem; color:${sel ? '#10b981' : 'white'};
+                            border-bottom:1px solid rgba(255,255,255,0.06); transition:background 0.15s; background:${bg};"
+                            onmouseover="this.style.background='${bgHover}'"
+                            onmouseout="this.style.background='${bg}'">${sel ? '✓ ' : ''}${s.name}</div>`;
+                    }).join('');
+                    const seriesSelectedTags = [...selectedSeriesNames].map(name => {
+                        const safe = name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
                         return `<span style="display:inline-flex; align-items:center; gap:6px; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); border-radius:20px; padding:4px 12px; font-size:0.82rem; color:#10b981; font-weight:700;">
-                            ${model}
-                            <span onclick="uvvRemoveMachineType('${plan.id}','${safe}')" style="cursor:pointer; opacity:0.7; font-size:1rem; line-height:1;">&times;</span>
+                            ${name}
+                            <span onclick="uvvToggleSeries('${plan.id}','${safe}')" style="cursor:pointer; opacity:0.7; font-size:1rem; line-height:1;">&times;</span>
                         </span>`;
                     }).join('');
 
@@ -7175,15 +7512,18 @@
                                     <div id="uvv-cat-tags-${plan.id}" style="display:flex; flex-wrap:wrap; gap:5px; margin-top:8px;">${catSelectedTags}</div>
                                 </div>
                                 <div>
-                                    <label style="font-size:0.75rem; color:rgba(255,255,255,0.4); text-transform:uppercase; font-weight:700; letter-spacing:0.5px; display:block; margin-bottom:6px;">Maschinenmodell</label>
+                                    <label style="font-size:0.75rem; color:rgba(255,255,255,0.4); text-transform:uppercase; font-weight:700; letter-spacing:0.5px; display:block; margin-bottom:7px;">Maschinenserie</label>
                                     <div style="position:relative;">
-                                        <input type="text" id="uvv-machine-search-${plan.id}"
-                                            placeholder="Maschine suchen..."
-                                            oninput="uvvSearchMachineType('${plan.id}', this.value)"
-                                            style="width:100%; padding:9px 12px; border-radius:9px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.04); color:white; font-family:'Inter',sans-serif; font-size:0.86rem; box-sizing:border-box;">
-                                        <div id="uvv-machine-dropdown-${plan.id}" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:500; background:#0b1220; border:1px solid rgba(255,255,255,0.15); border-radius:10px; margin-top:4px; max-height:180px; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.7);"></div>
+                                        <button onclick="uvvToggleSeriesDropdown('${plan.id}')" id="uvv-series-btn-${plan.id}"
+                                            style="width:100%; padding:9px 12px; border-radius:9px; border:1px solid rgba(255,255,255,0.12); background:rgba(255,255,255,0.04); color:${selectedSeriesNames.size ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)'}; font-family:'Inter',sans-serif; font-size:0.86rem; cursor:pointer; text-align:left; display:flex; justify-content:space-between; align-items:center;">
+                                            <span id="uvv-series-btn-text-${plan.id}">${selectedSeriesNames.size ? selectedSeriesNames.size + ' ausgewählt' : 'Maschinenserie wählen...'}</span>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:0.5; flex-shrink:0;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                        </button>
+                                        <div id="uvv-series-dropdown-${plan.id}" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:500; background:#0b1220; border:1px solid rgba(255,255,255,0.15); border-radius:10px; margin-top:4px; max-height:200px; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.7);">
+                                            ${seriesDropdownItems || '<div style="padding:10px 14px; color:rgba(255,255,255,0.4); font-size:0.85rem;">Keine Maschinenserien angelegt</div>'}
+                                        </div>
                                     </div>
-                                    <div id="uvv-machine-chips-${plan.id}" style="display:flex; flex-wrap:wrap; gap:5px; margin-top:8px;">${chipHtml}</div>
+                                    <div id="uvv-series-tags-${plan.id}" style="display:flex; flex-wrap:wrap; gap:5px; margin-top:8px;">${seriesSelectedTags}</div>
                                 </div>
                             </div>
                         </div>
@@ -7200,82 +7540,72 @@
             }
 
             window.filterUvvPlanCards = function (filter) {
+                const filterColors = {
+                    uvv: { bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.4)' },
+                    wartung: { bg: 'rgba(59,130,246,0.08)', border: 'rgba(59,130,246,0.4)' },
+                    einweisung: { bg: 'rgba(139,92,246,0.08)', border: 'rgba(139,92,246,0.4)' }
+                };
                 document.querySelectorAll('.uvv-filter-btn').forEach(btn => {
                     const isActive = btn.dataset.filter === filter;
-                    btn.style.background = isActive ? 'rgba(255,255,255,0.15)' : (btn.dataset.filter === 'uvv' ? 'rgba(239,68,68,0.08)' : btn.dataset.filter === 'wartung' ? 'rgba(59,130,246,0.08)' : 'rgba(255,255,255,0.08)');
-                    btn.style.borderColor = isActive ? 'rgba(255,255,255,0.4)' : (btn.dataset.filter === 'uvv' ? 'rgba(239,68,68,0.4)' : btn.dataset.filter === 'wartung' ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.2)');
+                    const c = filterColors[btn.dataset.filter];
+                    btn.style.background = isActive ? 'rgba(255,255,255,0.15)' : (c ? c.bg : 'rgba(255,255,255,0.08)');
+                    btn.style.borderColor = isActive ? 'rgba(255,255,255,0.4)' : (c ? c.border : 'rgba(255,255,255,0.2)');
                 });
                 renderUvvPlanCards(filter);
             };
 
-            // Search distinct machine model types from machineList
-            window.uvvSearchMachineType = function (planId, query) {
-                const dropdown = document.getElementById(`uvv-machine-dropdown-${planId}`);
+            // Maschinenserie-Dropdown auf der Plan-Karte: Mehrfachauswahl aus den Kategorien
+            // vom Typ "series" (analog zum Maschinentyp-Dropdown daneben).
+            window.uvvToggleSeriesDropdown = function (planId) {
+                const dropdown = document.getElementById(`uvv-series-dropdown-${planId}`);
                 if (!dropdown) return;
-                if (!query.trim()) { dropdown.style.display = 'none'; return; }
+                const isOpen = dropdown.style.display !== 'none';
+                document.querySelectorAll('[id^="uvv-series-dropdown-"]').forEach(d => { d.style.display = 'none'; });
+                if (!isOpen) dropdown.style.display = 'block';
+            };
 
-                const current = new Set((uvvPlanAssignments[planId] || {}).machine_models || []);
-                const q = query.toLowerCase();
-                const seen = new Set();
-                const matches = [];
-                for (const m of (window.machineList || [])) {
-                    const key = `${m.manufacturer || ''} ${m.name || ''}`.trim();
-                    if (!key || seen.has(key) || current.has(key)) continue;
-                    if (key.toLowerCase().includes(q)) { seen.add(key); matches.push(key); }
-                    if (matches.length >= 10) break;
+            window.uvvToggleSeries = function (planId, name) {
+                if (!uvvPlanAssignments[planId]) uvvPlanAssignments[planId] = { category_ids: [], machine_series: [] };
+                if (!uvvPlanAssignments[planId].machine_series) uvvPlanAssignments[planId].machine_series = [];
+                const arr = uvvPlanAssignments[planId].machine_series;
+                const idx = arr.indexOf(name);
+                if (idx === -1) { arr.push(name); } else { arr.splice(idx, 1); }
+                const selectedSeriesNames = new Set(arr);
+
+                // Dropdown-Liste (Häkchen) neu zeichnen
+                const dropdown = document.getElementById(`uvv-series-dropdown-${planId}`);
+                if (dropdown) {
+                    const allSeriesCats = (window.categoryList || []).filter(c => c.type === 'series');
+                    dropdown.innerHTML = allSeriesCats.map(s => {
+                        const sel = selectedSeriesNames.has(s.name);
+                        const safe = s.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+                        const bg = sel ? 'rgba(16,185,129,0.15)' : 'transparent';
+                        const bgHover = sel ? 'rgba(16,185,129,0.25)' : 'rgba(255,255,255,0.06)';
+                        return `<div onclick="uvvToggleSeries('${planId}','${safe}')"
+                            style="padding:9px 14px; cursor:pointer; font-size:0.88rem; color:${sel ? '#10b981' : 'white'};
+                            border-bottom:1px solid rgba(255,255,255,0.06); transition:background 0.15s; background:${bg};"
+                            onmouseover="this.style.background='${bgHover}'"
+                            onmouseout="this.style.background='${bg}'">${sel ? '✓ ' : ''}${s.name}</div>`;
+                    }).join('') || '<div style="padding:10px 14px; color:rgba(255,255,255,0.4); font-size:0.85rem;">Keine Maschinenserien angelegt</div>';
                 }
-
-                if (!matches.length) {
-                    dropdown.innerHTML = '<div style="padding:10px 14px; color:rgba(255,255,255,0.4); font-size:0.85rem;">Keine Ergebnisse</div>';
-                } else {
-                    dropdown.innerHTML = matches.map(model => {
-                        const safe = model.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-                        return `<div onclick="uvvAddMachineType('${planId}','${safe}')"
-                             style="padding:10px 14px; cursor:pointer; font-size:0.88rem; color:white; border-bottom:1px solid rgba(255,255,255,0.06); transition:background 0.15s;"
-                             onmouseover="this.style.background='rgba(16,185,129,0.15)'"
-                             onmouseout="this.style.background='transparent'">
-                            <strong>${model}</strong>
-                        </div>`;
+                // Tags neu zeichnen
+                const tagsEl = document.getElementById(`uvv-series-tags-${planId}`);
+                if (tagsEl) {
+                    tagsEl.innerHTML = [...selectedSeriesNames].map(name2 => {
+                        const safe = name2.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+                        return `<span style="display:inline-flex; align-items:center; gap:6px; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); border-radius:20px; padding:4px 12px; font-size:0.82rem; color:#10b981; font-weight:700;">
+                            ${name2}
+                            <span onclick="uvvToggleSeries('${planId}','${safe}')" style="cursor:pointer; opacity:0.7; font-size:1rem; line-height:1;">&times;</span>
+                        </span>`;
                     }).join('');
                 }
-                dropdown.style.display = 'block';
+                // Button-Label aktualisieren
+                const btnText = document.getElementById(`uvv-series-btn-text-${planId}`);
+                if (btnText) btnText.textContent = selectedSeriesNames.size ? selectedSeriesNames.size + ' ausgewählt' : 'Maschinenserie wählen...';
             };
-
-            window.uvvAddMachineType = function (planId, model) {
-                if (!uvvPlanAssignments[planId]) uvvPlanAssignments[planId] = { category_ids: [], machine_models: [] };
-                if (!uvvPlanAssignments[planId].machine_models) uvvPlanAssignments[planId].machine_models = [];
-                if (!uvvPlanAssignments[planId].machine_models.includes(model)) {
-                    uvvPlanAssignments[planId].machine_models.push(model);
-                }
-                const input = document.getElementById(`uvv-machine-search-${planId}`);
-                const dropdown = document.getElementById(`uvv-machine-dropdown-${planId}`);
-                if (input) input.value = '';
-                if (dropdown) dropdown.style.display = 'none';
-                refreshUvvModelChips(planId);
-            };
-
-            window.uvvRemoveMachineType = function (planId, model) {
-                if (uvvPlanAssignments[planId] && uvvPlanAssignments[planId].machine_models) {
-                    uvvPlanAssignments[planId].machine_models = uvvPlanAssignments[planId].machine_models.filter(m => m !== model);
-                }
-                refreshUvvModelChips(planId);
-            };
-
-            function refreshUvvModelChips(planId) {
-                const container = document.getElementById(`uvv-machine-chips-${planId}`);
-                if (!container) return;
-                const models = (uvvPlanAssignments[planId] || {}).machine_models || [];
-                container.innerHTML = models.map(model => {
-                    const safe = model.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-                    return `<span style="display:inline-flex; align-items:center; gap:6px; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.35); border-radius:20px; padding:4px 12px; font-size:0.82rem; color:#10b981; font-weight:700;">
-                        ${model}
-                        <span onclick="uvvRemoveMachineType('${planId}','${safe}')" style="cursor:pointer; opacity:0.7; font-size:1rem; line-height:1;">&times;</span>
-                    </span>`;
-                }).join('');
-            }
 
             window.saveUvvPlanAssignment = async function (planId) {
-                if (!uvvPlanAssignments[planId]) uvvPlanAssignments[planId] = { category_ids: [], machine_models: [] };
+                if (!uvvPlanAssignments[planId]) uvvPlanAssignments[planId] = { category_ids: [], machine_series: [] };
 
                 try {
                     const { data: existing } = await supabaseClient
@@ -7303,10 +7633,10 @@
                 }
             };
 
-            // Close machine dropdowns on outside click
+            // Close machine series dropdowns on outside click
             document.addEventListener('click', function(e) {
-                if (!e.target.closest('[id^="uvv-machine-search-"]') && !e.target.closest('[id^="uvv-machine-dropdown-"]')) {
-                    document.querySelectorAll('[id^="uvv-machine-dropdown-"]').forEach(d => d.style.display = 'none');
+                if (!e.target.closest('[id^="uvv-series-btn-"]') && !e.target.closest('[id^="uvv-series-dropdown-"]')) {
+                    document.querySelectorAll('[id^="uvv-series-dropdown-"]').forEach(d => d.style.display = 'none');
                 }
             });
 
@@ -7364,6 +7694,7 @@
 
             // Plan Editor Modal
             let planEditorState = { id: null, isNew: false, type: 'wartung', items: [] };
+            let pmeSelectedSeries = [];
 
             window.openPlanModal = function(planId) {
                 const modal = document.getElementById('plan-editor-modal');
@@ -7372,7 +7703,7 @@
                     planEditorState = { id: 'custom-' + Date.now(), isNew: true, type: 'wartung', items: [] };
                     document.getElementById('plan-modal-title').textContent = 'Neuer Wartungsplan';
                     document.getElementById('pme-title').value = '';
-                    document.getElementById('pme-model').value = '';
+                    pmeSelectedSeries = [];
                     setPmeType('wartung');
                 } else {
                     const templates = window.ACTIVE_CHECKLIST_TEMPLATES || window.MOCK_CHECKLIST_TEMPLATES || [];
@@ -7381,16 +7712,77 @@
                     planEditorState = { id: planId, isNew: false, type: plan.type || 'wartung', items: (plan.items || []).map(item => ({...item})) };
                     document.getElementById('plan-modal-title').textContent = 'Wartungsplan bearbeiten';
                     document.getElementById('pme-title').value = plan.title || '';
-                    // Pre-fill machine model from assignment's selected types, fallback to plan's machine_model
+                    // Vorbelegen aus der Zuordnung (Plan-Karten-Auswahl), sonst aus dem Plan selbst
                     const asgn = uvvPlanAssignments[planId] || {};
-                    const preModels = (asgn.machine_models && asgn.machine_models.length)
-                        ? asgn.machine_models.join(', ')
-                        : (plan.machine_model !== 'generic' ? (plan.machine_model || '') : '');
-                    document.getElementById('pme-model').value = preModels;
+                    pmeSelectedSeries = (asgn.machine_series && asgn.machine_series.length)
+                        ? [...asgn.machine_series]
+                        : [...(plan.machine_series || [])];
                     setPmeType(plan.type || 'wartung');
                 }
+                populatePmeSeriesOptions();
                 renderPmeItems();
                 modal.style.display = 'flex';
+            };
+
+            // Maschinenserie (Mehrfachauswahl) im Plan-Editor: Vorschläge kommen aus den
+            // Kategorien vom Typ "series" (Einstellungen) — analog zu cat-series-machine-cat-*.
+            function populatePmeSeriesOptions() {
+                const list = document.getElementById('pme-series-options');
+                if (!list) return;
+                list.innerHTML = '';
+                const allSeries = (typeof categoryList !== 'undefined' && Array.isArray(categoryList))
+                    ? categoryList.filter(c => c.type === 'series')
+                    : [];
+                if (!allSeries.length) {
+                    list.innerHTML = '<li style="padding:9px 14px; color:rgba(255,255,255,0.4); font-size:0.85rem; cursor:default;">Keine Maschinenserien angelegt</li>';
+                } else {
+                    allSeries.forEach(cat => {
+                        const li = document.createElement('li');
+                        li.dataset.value = cat.name;
+                        li.textContent = cat.name;
+                        if (pmeSelectedSeries.includes(cat.name)) li.classList.add('selected');
+                        li.addEventListener('click', e => {
+                            e.stopPropagation();
+                            window.togglePmeSeriesItem(cat.name);
+                        });
+                        list.appendChild(li);
+                    });
+                }
+                updatePmeSeriesLabel();
+            }
+
+            function updatePmeSeriesLabel() {
+                const label = document.getElementById('pme-series-label');
+                if (label) label.textContent = pmeSelectedSeries.length > 0 ? pmeSelectedSeries.join(', ') : 'Maschinenserie wählen...';
+            }
+
+            window.togglePmeSeriesItem = function (name) {
+                if (pmeSelectedSeries.includes(name)) {
+                    pmeSelectedSeries = pmeSelectedSeries.filter(n => n !== name);
+                } else {
+                    pmeSelectedSeries.push(name);
+                }
+                updatePmeSeriesLabel();
+                document.querySelectorAll('#pme-series-options li').forEach(li => {
+                    li.classList.toggle('selected', pmeSelectedSeries.includes(li.dataset.value));
+                });
+            };
+
+            window.togglePmeSeriesDropdown = function (event) {
+                if (event) event.stopPropagation();
+                const dropdown = document.getElementById('pme-series-dropdown');
+                if (!dropdown) return;
+                const isOpen = dropdown.classList.contains('active');
+
+                document.querySelectorAll('.custom-filter-dropdown.active').forEach(d => {
+                    d.classList.remove('active');
+                    d.closest('.form-group')?.classList.remove('has-active-dropdown');
+                });
+
+                if (!isOpen) {
+                    dropdown.classList.add('active');
+                    dropdown.closest('.form-group')?.classList.add('has-active-dropdown');
+                }
             };
 
             window.closePlanModal = function() {
@@ -7402,14 +7794,28 @@
                 planEditorState.type = type;
                 const wBtn = document.getElementById('pme-type-wartung');
                 const uBtn = document.getElementById('pme-type-uvv');
-                if (!wBtn || !uBtn) return;
+                const eBtn = document.getElementById('pme-type-einweisung');
+                if (!wBtn || !uBtn || !eBtn) return;
+
+                const inactiveStyle = 'padding:7px 18px; border-radius:20px; border:1.5px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.4); font-weight:700; font-size:0.83rem; cursor:pointer; transition:all 0.15s;';
+                wBtn.style.cssText = inactiveStyle;
+                uBtn.style.cssText = inactiveStyle;
+                eBtn.style.cssText = inactiveStyle;
+
                 if (type === 'wartung') {
                     wBtn.style.cssText = 'padding:7px 18px; border-radius:20px; border:1.5px solid rgba(59,130,246,0.55); background:rgba(59,130,246,0.22); color:#60a5fa; font-weight:700; font-size:0.83rem; cursor:pointer; transition:all 0.15s;';
-                    uBtn.style.cssText = 'padding:7px 18px; border-radius:20px; border:1.5px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.4); font-weight:700; font-size:0.83rem; cursor:pointer; transition:all 0.15s;';
-                } else {
+                } else if (type === 'uvv') {
                     uBtn.style.cssText = 'padding:7px 18px; border-radius:20px; border:1.5px solid rgba(239,68,68,0.55); background:rgba(239,68,68,0.22); color:#f87171; font-weight:700; font-size:0.83rem; cursor:pointer; transition:all 0.15s;';
-                    wBtn.style.cssText = 'padding:7px 18px; border-radius:20px; border:1.5px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.4); font-weight:700; font-size:0.83rem; cursor:pointer; transition:all 0.15s;';
+                } else if (type === 'einweisung') {
+                    eBtn.style.cssText = 'padding:7px 18px; border-radius:20px; border:1.5px solid rgba(139,92,246,0.55); background:rgba(139,92,246,0.22); color:#a78bfa; font-weight:700; font-size:0.83rem; cursor:pointer; transition:all 0.15s;';
                 }
+
+                // Bei Einweisung gibt es kein Intervall, dafür pro Punkt ein Ja/Nein- oder
+                // Bemerkungsfeld — Spaltenkopf entsprechend umbenennen und Zeilen neu zeichnen,
+                // damit der Editor sofort die passende Spalte zeigt (auch bei Typwechsel mitten im Bearbeiten).
+                const col5Header = document.getElementById('pme-col5-header');
+                if (col5Header) col5Header.textContent = type === 'einweisung' ? 'Erledigt / Bemerkung' : 'Intervall';
+                renderPmeItems();
             };
 
             let pmeDragSrc = null;
@@ -7439,11 +7845,38 @@
                             style="background:transparent; border:none; border-bottom:1px solid rgba(255,255,255,0.15); color:white; font-size:0.81rem; padding:2px 3px; outline:none; width:100%;">
                         <input type="text" value="${(item.description||'').replace(/"/g,'&quot;')}" oninput="uvvUpdateItem(${i},'description',this.value)" placeholder="Beschreibung"
                             style="background:transparent; border:none; border-bottom:1px solid rgba(255,255,255,0.15); color:white; font-size:0.81rem; padding:2px 3px; outline:none; width:100%;">
+                        ${planEditorState.type === 'einweisung' ? pmeAnswerTypeToggleHtml(item, i) : `
                         <input type="text" value="${(item.interval||'').replace(/"/g,'&quot;')}" oninput="uvvUpdateItem(${i},'interval',this.value)" placeholder="Intervall"
                             style="background:transparent; border:none; border-bottom:1px solid rgba(255,255,255,0.15); color:white; font-size:0.81rem; padding:2px 3px; outline:none; width:100%;">
+                        `}
                         <button onclick="uvvRemoveItem(${i})" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25); border-radius:6px; color:#ef4444; cursor:pointer; width:28px; height:28px; display:flex; align-items:center; justify-content:center; font-size:1rem; flex-shrink:0;">&times;</button>
                     </div>`).join('');
             }
+
+            // Einweisung-Punkt: standardmäßig ein rundes Ja/Nein-Ankreuzfeld; per Klick auf das
+            // kleine Icon oben rechts wird daraus ein Bemerkungsfeld (und zurück) — entscheidet,
+            // welches Eingabefeld später beim Ausfüllen der Einweisungserklärung erscheint.
+            function pmeAnswerTypeToggleHtml(item, i) {
+                const isRemark = item.answerType === 'remark';
+                const icon = isRemark
+                    ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"></line><line x1="4" y1="12" x2="20" y2="12"></line><line x1="4" y1="17" x2="14" y2="17"></line></svg>`
+                    : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M8 12.5l2.5 2.5L16 9.5"></path></svg>`;
+                const title = isRemark ? 'Bemerkungsfeld — klicken für Ankreuzfeld' : 'Ankreuzfeld (Ja/Nein) — klicken für Bemerkungsfeld';
+                return `
+                        <div style="position:relative; height:28px; display:flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:6px;" title="${title}">
+                            ${icon}
+                            <button onclick="pmeToggleAnswerType(${i})" title="Feldtyp umschalten" style="position:absolute; top:-6px; right:-6px; width:16px; height:16px; border-radius:50%; background:#1f2937; border:1px solid rgba(255,255,255,0.25); color:rgba(255,255,255,0.6); display:flex; align-items:center; justify-content:center; cursor:pointer; padding:0; line-height:1;">
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+                            </button>
+                        </div>`;
+            }
+
+            window.pmeToggleAnswerType = function(idx) {
+                const item = planEditorState.items[idx];
+                if (!item) return;
+                item.answerType = item.answerType === 'remark' ? 'checkbox' : 'remark';
+                renderPmeItems();
+            };
 
             window.pmeItemDragStart = function(e, idx) {
                 pmeDragSrc = idx;
@@ -7511,32 +7944,38 @@
 
             window.savePlanModal = async function() {
                 const title = document.getElementById('pme-title').value.trim();
-                const modelRaw = document.getElementById('pme-model').value.trim();
                 if (!title) { alert('Bitte einen Plan-Titel eingeben.'); return; }
-                // Parse comma-separated models for assignment sync
-                const modelArr = modelRaw ? modelRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
                 const plan = {
                     id: planEditorState.id,
                     title,
                     type: planEditorState.type,
-                    machine_model: modelArr.length ? modelArr.join(', ') : 'generic',
+                    machine_series: [...pmeSelectedSeries],
                     items: planEditorState.items
                 };
-                // Sync machine_models in assignment
-                if (!uvvPlanAssignments[plan.id]) uvvPlanAssignments[plan.id] = { category_ids: [], machine_models: [] };
-                if (modelArr.length) uvvPlanAssignments[plan.id].machine_models = modelArr;
+                // Maschinenserie-Zuordnung synchronisieren (steuert die "Empfohlen"-Markierung)
+                if (!uvvPlanAssignments[plan.id]) uvvPlanAssignments[plan.id] = { category_ids: [], machine_series: [] };
+                if (pmeSelectedSeries.length) uvvPlanAssignments[plan.id].machine_series = [...pmeSelectedSeries];
                 let custom = await loadCustomTemplates();
                 const idx = custom.findIndex(t => t.id === plan.id);
                 if (idx !== -1) { custom[idx] = plan; } else { custom.push(plan); }
-                await saveCustomTemplates(custom);
+                const savedOk = await saveCustomTemplates(custom);
+                if (!savedOk) return; // Fehler wurde bereits per alert() gemeldet — Modal nicht schließen, Auswahl bleibt erhalten
                 // Sync existing service entries with updated template
                 syncServiceEntriesWithTemplate(plan).catch(e => console.error('Sync failed:', e));
-                // Persist updated assignments (machine_models sync)
+                // Persist updated assignments (machine_series sync) — Fehler hier NICHT mehr
+                // stillschweigend verschlucken, sonst wirkt das Speichern erfolgreich, obwohl die
+                // Maschinenserie-Zuordnung in der Datenbank gar nicht ankommt.
                 try {
                     const { data: ex } = await supabaseClient.from('app_settings').select('key').eq('key', 'uvv_plan_assignments').maybeSingle();
-                    if (ex) { await supabaseClient.from('app_settings').update({ value: uvvPlanAssignments }).eq('key', 'uvv_plan_assignments'); }
-                    else { await supabaseClient.from('app_settings').insert([{ key: 'uvv_plan_assignments', value: uvvPlanAssignments }]); }
-                } catch(e) {}
+                    const assignResult = ex
+                        ? await supabaseClient.from('app_settings').update({ value: uvvPlanAssignments }).eq('key', 'uvv_plan_assignments')
+                        : await supabaseClient.from('app_settings').insert([{ key: 'uvv_plan_assignments', value: uvvPlanAssignments }]);
+                    if (assignResult.error) {
+                        alert('Plan wurde gespeichert, aber die Maschinenserie-Zuordnung konnte nicht gespeichert werden: ' + assignResult.error.message);
+                    }
+                } catch(e) {
+                    alert('Plan wurde gespeichert, aber die Maschinenserie-Zuordnung konnte nicht gespeichert werden: ' + (e.message || e));
+                }
                 closePlanModal();
                 await window.loadUvvWartungsplaene();
             };
@@ -7600,12 +8039,25 @@
                 try {
                     const { data: ex } = await supabaseClient.from('app_settings').select('key')
                         .eq('key', 'custom_checklist_templates').maybeSingle();
+                    // .update()/.insert() werfen bei RLS-Verweigerung oder Spalten-/Schemafehlern
+                    // KEINE Exception, sondern liefern nur { error: ... } zurück — das muss explizit
+                    // geprüft werden, sonst "speichert" es scheinbar erfolgreich, ohne dass etwas
+                    // in der Datenbank ankommt.
+                    let result;
                     if (ex) {
-                        await supabaseClient.from('app_settings').update({ value: templates }).eq('key', 'custom_checklist_templates');
+                        result = await supabaseClient.from('app_settings').update({ value: templates }).eq('key', 'custom_checklist_templates');
                     } else {
-                        await supabaseClient.from('app_settings').insert([{ key: 'custom_checklist_templates', value: templates }]);
+                        result = await supabaseClient.from('app_settings').insert([{ key: 'custom_checklist_templates', value: templates }]);
                     }
-                } catch(e) { alert('Fehler beim Speichern: ' + (e.message || e)); }
+                    if (result.error) {
+                        alert('Fehler beim Speichern der Pläne: ' + result.error.message);
+                        return false;
+                    }
+                    return true;
+                } catch(e) {
+                    alert('Fehler beim Speichern: ' + (e.message || e));
+                    return false;
+                }
             }
 
             // Group Color Persistence
@@ -7683,6 +8135,19 @@
                     document.getElementById('machine-name').value = editData ? (editData.name || '') : '';
                     document.getElementById('machine-manufacturer').value = editData ? (editData.manufacturer || '') : '';
                     document.getElementById('machine-serial').value = editData ? (editData.serial || '') : '';
+                    document.getElementById('machine-series').value = editData ? (editData.machine_series || '') : '';
+                    {
+                        const seriesTextEl = document.getElementById('machine-series-text');
+                        if (seriesTextEl) {
+                            if (editData && editData.machine_series) {
+                                seriesTextEl.textContent = editData.machine_series;
+                                seriesTextEl.style.color = 'white';
+                            } else {
+                                seriesTextEl.textContent = 'Bitte wählen...';
+                                seriesTextEl.style.color = '';
+                            }
+                        }
+                    }
                     document.getElementById('machine-year').value = editData ? (editData.year || '') : '';
                     document.getElementById('machine-owner').value = editData ? (editData.company || '') : '';
                     document.getElementById('machine-address-input').value = editData ? (editData.operator_address || '') : '';
@@ -7854,6 +8319,10 @@
                         await fetchCategories();
                     }
 
+                    // Maschinenserie-Vorschläge (gefiltert auf den bereits eingetragenen Hersteller)
+                    // erst jetzt befüllen, da sie von categoryList abhängen, das ggf. erst eben geladen wurde.
+                    populateMachineSeriesDropdown();
+
                     // Populate Machine Categories
                     if (catList && catText && catInput) {
                         catList.innerHTML = '';
@@ -7942,6 +8411,12 @@
                         window.loadMachineExtrasFromEditData(editData);
                     }
 
+                    // Zusatzausrüstung aus Katalog (Mehrfachauswahl) vorbelegen
+                    window.machineEquipmentCatalogIds = (editData && Array.isArray(editData.equipment_category_ids))
+                        ? [...editData.equipment_category_ids]
+                        : [];
+                    if (typeof populateMachineEquipmentCatalogDropdown === 'function') populateMachineEquipmentCatalogDropdown();
+
                 } catch (e) {
                     alert('Ein Fehler ist aufgetreten: ' + e.message);
                     console.error(e);
@@ -7964,6 +8439,69 @@
 
                 // Auto-calculate next maintenance date if category changes
                 if (typeof calculateNextMaintenanceDate === 'function') calculateNextMaintenanceDate();
+            };
+
+            // Maschinenserie: Einzelauswahl, Vorschläge kommen aus den Kategorien vom Typ
+            // "series" (in den Einstellungen angelegt) — gefiltert auf den dort hinterlegten
+            // Hersteller, damit z.B. bei "Hersteller: BACKHUS" nur BACKHUS-Serien erscheinen.
+            window.toggleMachineSeriesDropdown = function (e) {
+                if (e) e.stopPropagation();
+                const dropdown = document.getElementById('machine-series-dropdown');
+                if (dropdown) dropdown.classList.toggle('show');
+            };
+
+            window.selectMachineSeries = function (name) {
+                document.getElementById('machine-series').value = name;
+                document.getElementById('machine-series-text').textContent = name;
+                document.getElementById('machine-series-text').style.color = 'white';
+                const dropdown = document.getElementById('machine-series-dropdown');
+                if (dropdown) dropdown.classList.remove('show');
+            };
+
+            function populateMachineSeriesDropdown() {
+                const list = document.getElementById('machine-series-list');
+                if (!list) return;
+                const manufacturerVal = (document.getElementById('machine-manufacturer').value || '').trim().toLowerCase();
+                const allSeries = (typeof categoryList !== 'undefined' && Array.isArray(categoryList))
+                    ? categoryList.filter(cat => cat.type === 'series')
+                    : [];
+                const filtered = manufacturerVal
+                    ? allSeries.filter(cat => (cat.manufacturer || '').trim().toLowerCase() === manufacturerVal)
+                    : allSeries;
+
+                list.innerHTML = '';
+                if (filtered.length === 0) {
+                    list.innerHTML = `<li class="suggestion-item" style="color: #aaa;">${manufacturerVal ? 'Keine Serien für diesen Hersteller' : 'Keine Maschinenserien gefunden'}</li>`;
+                    return;
+                }
+                filtered.forEach(cat => {
+                    const li = document.createElement('li');
+                    li.className = 'suggestion-item';
+                    li.textContent = cat.name;
+                    li.onclick = (e) => {
+                        e.stopPropagation();
+                        selectMachineSeries(cat.name);
+                    };
+                    list.appendChild(li);
+                });
+            }
+
+            // Bei Hersteller-Änderung Vorschläge neu filtern; eine bereits gewählte Serie,
+            // die zum neuen Hersteller nicht mehr passt, wird wieder zurückgesetzt.
+            window.onMachineManufacturerChange = function () {
+                populateMachineSeriesDropdown();
+                const currentVal = document.getElementById('machine-series').value;
+                if (!currentVal) return;
+                const manufacturerVal = (document.getElementById('machine-manufacturer').value || '').trim().toLowerCase();
+                const match = (typeof categoryList !== 'undefined' && Array.isArray(categoryList))
+                    ? categoryList.find(cat => cat.type === 'series' && cat.name === currentVal)
+                    : null;
+                const stillValid = match && (!manufacturerVal || (match.manufacturer || '').trim().toLowerCase() === manufacturerVal);
+                if (!stillValid) {
+                    document.getElementById('machine-series').value = '';
+                    const textEl = document.getElementById('machine-series-text');
+                    if (textEl) { textEl.textContent = 'Bitte wählen...'; textEl.style.color = ''; }
+                }
             };
 
             window.toggleContactDropdown = function (e) {
@@ -8014,6 +8552,13 @@
                 if (contactDropdown && contactDropdown.classList.contains('show') &&
                     !contactTrigger.contains(e.target) && !contactDropdown.contains(e.target)) {
                     contactDropdown.classList.remove('show');
+                }
+
+                // Machine Series Dropdown
+                const seriesDropdown = document.getElementById('machine-series-dropdown');
+                const seriesTrigger = document.getElementById('machine-series-trigger');
+                if (seriesDropdown && seriesDropdown.classList.contains('show') && seriesTrigger && !seriesTrigger.contains(e.target)) {
+                    seriesDropdown.classList.remove('show');
                 }
 
                 const relatedSearch = document.getElementById('machine-related-search');
@@ -8120,20 +8665,23 @@
                 setMapPin(lat, lon);
             }
 
-            // Berechnet die nächste Wartung ausgehend vom letzten Wartungsdatum — rollt dabei aber
-            // so oft um das Intervall vor, bis ein wirklich in der Zukunft liegendes Datum erreicht
-            // ist. Sonst würde z.B. bei einer nachträglich für 2024 erfassten Wartung mit 1 Jahr
-            // Intervall "nächste Wartung 2025" herauskommen, obwohl das längst vergangen ist —
-            // "nächste Wartung" soll immer wirklich die nächste sein, egal wie alt der letzte Eintrag ist.
+            // Berechnet die nächste Wartung ausgehend vom letzten Wartungsdatum — einfache Addition
+            // des Intervalls. Liegt das Ergebnis in einem bereits vergangenen Jahr (z.B. letzte
+            // Wartung 2024 + 1 Jahr = 2025, aktuelles Jahr aber schon 2026), wird NUR das Jahr auf
+            // das aktuelle Jahr angehoben (Monat/Tag bleiben gleich) — kein Vorrollen über mehrere
+            // Jahre/Intervalle, nur eine Mindestgrenze: "nächste Wartung" zeigt nie ein Jahr, das
+            // schon komplett vorbei ist.
             window.computeRolledNextMaintenance = function (lastDateStr, intervalMonths) {
                 const parts = String(lastDateStr).split('-');
                 const next = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
                 const months = parseInt(intervalMonths, 10) || 12;
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                while (next < today) {
-                    next.setMonth(next.getMonth() + months);
+                next.setMonth(next.getMonth() + months);
+
+                const currentYear = new Date().getFullYear();
+                if (next.getFullYear() < currentYear) {
+                    next.setFullYear(currentYear);
                 }
+
                 const yyyy = next.getFullYear();
                 const mm = String(next.getMonth() + 1).padStart(2, '0');
                 const dd = String(next.getDate()).padStart(2, '0');
@@ -8147,20 +8695,31 @@
             // weil der alte, falsche Wert zufällig später lag. So spiegelt last_maintenance immer
             // den tatsächlich aktuellen Stand aller bekannten Wartungs-/Service-Termine wider.
             window.recalculateMachineMaintenanceFromHistory = async function (machineId) {
+                const numericMachineId = parseInt(machineId, 10);
                 try {
                     const [wartungRes, serviceRes, machineRes] = await Promise.all([
-                        window.supabaseClient.from('manual_history_entries').select('created_at').eq('machine_id', machineId).eq('type', 'wartung'),
-                        window.supabaseClient.from('service_entries').select('date').eq('machine_id', machineId),
-                        window.supabaseClient.from('machines').select('id, category_id, maintenance_interval_months, files').eq('id', machineId).single()
+                        window.supabaseClient.from('manual_history_entries').select('created_at').eq('machine_id', numericMachineId).eq('type', 'wartung'),
+                        window.supabaseClient.from('service_entries').select('date').eq('machine_id', numericMachineId),
+                        window.supabaseClient.from('machines').select('id, category_id, maintenance_interval_months, files').eq('id', numericMachineId).single()
                     ]);
 
-                    if (machineRes.error || !machineRes.data) return;
+                    if (wartungRes.error) console.warn('recalculateMachineMaintenanceFromHistory: Wartung-Abfrage Fehler:', wartungRes.error);
+                    if (serviceRes.error) console.warn('recalculateMachineMaintenanceFromHistory: Servicebericht-Abfrage Fehler:', serviceRes.error);
+
+                    if (machineRes.error || !machineRes.data) {
+                        console.error('recalculateMachineMaintenanceFromHistory: Maschine konnte nicht geladen werden:', machineRes.error);
+                        if (window.showSyncToast) window.showSyncToast('Wartungsdatum konnte nicht auf der Maschine gespeichert werden (Maschine nicht gefunden).', 'error');
+                        return;
+                    }
 
                     const dates = [];
                     (wartungRes.data || []).forEach(e => { if (e.created_at) dates.push(e.created_at.split('T')[0]); });
                     (serviceRes.data || []).forEach(e => { if (e.date) dates.push(String(e.date).split('T')[0]); });
 
-                    if (!dates.length) return;
+                    if (!dates.length) {
+                        console.warn('recalculateMachineMaintenanceFromHistory: Keine Wartungs-/Service-Daten für Maschine', numericMachineId, 'gefunden.');
+                        return;
+                    }
 
                     const latestDate = dates.sort().slice(-1)[0]; // YYYY-MM-DD Strings sortieren sich lexikografisch korrekt chronologisch
 
@@ -8173,18 +8732,28 @@
                     updatedFiles = updatedFiles.filter(f => f.type !== 'meta' || f.key !== 'is_next_maintenance_auto');
                     updatedFiles.push({ type: 'meta', key: 'is_next_maintenance_auto', property: 'true' });
 
-                    await window.supabaseClient
+                    const { error: updateErr } = await window.supabaseClient
                         .from('machines')
                         .update({
                             last_maintenance: latestDate,
                             next_maintenance: nextMaintDate,
                             files: updatedFiles
                         })
-                        .eq('id', machineId);
+                        .eq('id', numericMachineId);
+
+                    if (updateErr) {
+                        console.error('recalculateMachineMaintenanceFromHistory: Update fehlgeschlagen:', updateErr);
+                        if (window.showSyncToast) window.showSyncToast('Fehler beim Speichern der Wartungsdaten: ' + updateErr.message, 'error');
+                        return;
+                    }
 
                     if (typeof fetchMachines === 'function') await fetchMachines();
+                    if (window.showSyncToast) {
+                        window.showSyncToast(`Letzte Wartung aktualisiert: ${new Date(latestDate + 'T12:00:00').toLocaleDateString('de-DE')}`, 'success');
+                    }
                 } catch (err) {
                     console.error('Error recalculating machine maintenance from history:', err);
+                    if (window.showSyncToast) window.showSyncToast('Fehler beim Aktualisieren der Wartungsdaten: ' + (err.message || err), 'error');
                 }
             };
 
@@ -8239,6 +8808,7 @@
                     const categoryId = document.getElementById('machine-category').value;
                     const manufacturer = document.getElementById('machine-manufacturer').value;
                     const name = document.getElementById('machine-name').value;
+                    const machineSeries = document.getElementById('machine-series').value;
                     const serial = document.getElementById('machine-serial').value;
                     const year = document.getElementById('machine-year').value;
                     const contactType = document.getElementById('machine-contact-type').value; // JSON string
@@ -8293,6 +8863,7 @@
                             name: name,
                             category_id: parseInt(categoryId),
                             manufacturer: manufacturer,
+                            machine_series: machineSeries || null,
                             serial: serial,
                             year: year ? parseInt(year) : null,
                             contact_type: (contactType && contactType.trim() !== '') ? JSON.parse(contactType) : [],
@@ -8323,7 +8894,8 @@
                             related_machine_ids: (window.machineRelatedIds || []).map(String).filter(id => id && id !== 'null'),
                             additional_equipment: (typeof window.collectMachineEquipmentFromUI === 'function')
                                 ? window.collectMachineEquipmentFromUI()
-                                : (window.machineAdditionalEquipment || [])
+                                : (window.machineAdditionalEquipment || []),
+                            equipment_category_ids: window.machineEquipmentCatalogIds || []
                         };
 
                         const pendingFiles = [...machineFiles];
@@ -8378,6 +8950,7 @@
                             name: name,
                             category_id: parseInt(categoryId),
                             manufacturer: manufacturer,
+                            machine_series: machineSeries || null,
                             serial: serial,
                             year: year ? parseInt(year) : null,
                             contact_type: (contactType && contactType.trim() !== '') ? JSON.parse(contactType) : [],
@@ -8402,7 +8975,8 @@
                             files: finalFiles,
                             status: 'Betriebsbereit',
                             in_workshop: inWorkshop,
-                            contact_persons: typeof window.collectMachineContactPersons === 'function' ? window.collectMachineContactPersons() : []
+                            contact_persons: typeof window.collectMachineContactPersons === 'function' ? window.collectMachineContactPersons() : [],
+                            equipment_category_ids: window.machineEquipmentCatalogIds || []
                         };
 
                         let updateResult;
@@ -8431,6 +9005,7 @@
                             name: name,
                             category_id: parseInt(categoryId),
                             manufacturer: manufacturer,
+                            machine_series: machineSeries || null,
                             serial: serial,
                             year: year ? parseInt(year) : null,
                             contact_type: (contactType && contactType.trim() !== '') ? JSON.parse(contactType) : [],
@@ -8455,7 +9030,8 @@
                             files: [],
                             status: 'Betriebsbereit',
                             in_workshop: inWorkshop,
-                            contact_persons: typeof window.collectMachineContactPersons === 'function' ? window.collectMachineContactPersons() : []
+                            contact_persons: typeof window.collectMachineContactPersons === 'function' ? window.collectMachineContactPersons() : [],
+                            equipment_category_ids: window.machineEquipmentCatalogIds || []
                         };
 
                         let insertResult;
@@ -8995,6 +9571,73 @@
             window.machineAdditionalEquipment.push({ designation, type, serial, year });
             window.renderMachineEquipmentRows();
             window.cancelAddEquipmentRow();
+        };
+
+        // Zusatzausrüstung aus Katalog (Mehrfachauswahl) — Vorschläge kommen aus den
+        // Kategorien vom Typ "equipment" (Einstellungen), unabhängig von der freien Eingabe oben.
+        window.machineEquipmentCatalogIds = [];
+
+        function populateMachineEquipmentCatalogDropdown() {
+            const list = document.getElementById('machine-equipment-catalog-options');
+            if (!list) return;
+            const allEquipment = (typeof categoryList !== 'undefined' && Array.isArray(categoryList))
+                ? categoryList.filter(c => c.type === 'equipment')
+                : [];
+            list.innerHTML = '';
+            if (!allEquipment.length) {
+                list.innerHTML = '<li style="padding:9px 14px; color:rgba(255,255,255,0.4); font-size:0.85rem; cursor:default;">Keine Zusatzausrüstung angelegt</li>';
+            } else {
+                allEquipment.forEach(cat => {
+                    const li = document.createElement('li');
+                    li.dataset.value = String(cat.id);
+                    li.textContent = cat.name;
+                    if (window.machineEquipmentCatalogIds.map(String).includes(String(cat.id))) li.classList.add('selected');
+                    li.addEventListener('click', e => {
+                        e.stopPropagation();
+                        window.toggleMachineEquipmentCatalogItem(cat.id);
+                    });
+                    list.appendChild(li);
+                });
+            }
+            updateMachineEquipmentCatalogLabel();
+        }
+
+        function updateMachineEquipmentCatalogLabel() {
+            const label = document.getElementById('machine-equipment-catalog-label');
+            if (!label) return;
+            const allEquipment = (typeof categoryList !== 'undefined' && Array.isArray(categoryList)) ? categoryList : [];
+            const names = window.machineEquipmentCatalogIds
+                .map(id => allEquipment.find(c => String(c.id) === String(id)))
+                .filter(Boolean)
+                .map(c => c.name);
+            label.textContent = names.length ? names.join(', ') : 'Zusatzausrüstung wählen...';
+        }
+
+        window.toggleMachineEquipmentCatalogItem = function (id) {
+            const idStr = String(id);
+            if (window.machineEquipmentCatalogIds.map(String).includes(idStr)) {
+                window.machineEquipmentCatalogIds = window.machineEquipmentCatalogIds.filter(i => String(i) !== idStr);
+            } else {
+                window.machineEquipmentCatalogIds.push(id);
+            }
+            populateMachineEquipmentCatalogDropdown();
+        };
+
+        window.toggleMachineEquipmentCatalogDropdown = function (event) {
+            if (event) event.stopPropagation();
+            const dropdown = document.getElementById('machine-equipment-catalog-dropdown');
+            if (!dropdown) return;
+            const isOpen = dropdown.classList.contains('active');
+
+            document.querySelectorAll('.custom-filter-dropdown.active').forEach(d => {
+                d.classList.remove('active');
+                d.closest('.form-group')?.classList.remove('has-active-dropdown');
+            });
+
+            if (!isOpen) {
+                dropdown.classList.add('active');
+                dropdown.closest('.form-group')?.classList.add('has-active-dropdown');
+            }
         };
 
         async function deleteR2FileHelper(url) {
@@ -10726,16 +11369,23 @@
                     intakeRes,
                     acceptanceRes
                 ] = await Promise.all([
-                    window.supabaseClient.from('service_entries').select('*').eq('machine_id', machineId),
+                    // Schlanke Spaltenauswahl für die Zeitleisten-Anzeige — die schweren JSONB-Felder
+                    // (work_log, materials, checklist_payload) werden hier nicht gebraucht, da das
+                    // Öffnen zum Bearbeiten (openEditServicebericht) ohnehin nochmal alles frisch lädt.
+                    window.supabaseClient.from('service_entries').select('id, machine_id, category_id, title, date, created_at, description, pdf_url, files').eq('machine_id', machineId),
                     window.supabaseClient.from('tasks').select('*').eq('machine_id', machineId),
                     window.supabaseClient.from('calendar_events').select('*').eq('machine_id', machineId),
                     window.supabaseClient.from('intake_protocols').select('*').eq('machine_id', machineId),
                     window.supabaseClient.from('acceptance_protocols').select('*').eq('machine_id', machineId)
                 ]);
 
-                // Cache for offline access
-                if (serviceRes.data && window.offlineService) {
-                    window.offlineService.cacheFullEntries(serviceRes.data).catch(() => {});
+                // Volle Datensätze weiterhin für die Offline-Bearbeitung cachen — bewusst NICHT
+                // Teil des Promise.all oben, damit die Historie nicht auf die schweren JSONB-Felder
+                // warten muss; läuft einfach im Hintergrund nach, sobald fertig.
+                if (window.offlineService) {
+                    window.supabaseClient.from('service_entries').select('*').eq('machine_id', machineId)
+                        .then(({ data }) => { if (data) window.offlineService.cacheFullEntries(data).catch(() => {}); })
+                        .catch(() => {});
                 }
 
                 let historyItems = [];
@@ -16372,7 +17022,9 @@
                             valign: 'middle'
                         },
                         headStyles: {
-                            fillColor: [30, 41, 59],
+                            // 2 Stufen helleres Blau (Slate-600) als die Wartungs-/UVV-Protokolle,
+                            // damit "Arbeiten und Material" auf den ersten Blick unterscheidbar ist.
+                            fillColor: [71, 85, 105],
                             textColor: [255, 255, 255],
                             fontStyle: 'bold',
                             halign: 'center',
@@ -16402,7 +17054,7 @@
                     }
                     doc.setFont('helvetica', 'bold');
                     doc.setFontSize(12);
-                    doc.setTextColor(30, 41, 59);
+                    doc.setTextColor(71, 85, 105);
                     doc.text('Ausgeführte Arbeiten', 20, currentY);
                     currentY += 6;
                     
@@ -16424,7 +17076,7 @@
                             cellPadding: 4
                         },
                         headStyles: {
-                            fillColor: [30, 41, 59],
+                            fillColor: [71, 85, 105],
                             textColor: [255, 255, 255],
                             fontStyle: 'bold',
                             halign: 'center'
@@ -16443,11 +17095,11 @@
                                 const size = 4.5;
                                 const x = xc - size / 2;
                                 const y = yc - size / 2;
-                                
+
                                 // Draw checkmark if task is completed
                                 const isCompleted = tasksData[data.row.index]?.completed;
                                 if (isCompleted) {
-                                    doc.setDrawColor(30, 41, 59); // matching header / text color
+                                    doc.setDrawColor(71, 85, 105); // matching header / text color
                                     doc.setLineWidth(0.75);
                                     doc.setLineCap('round');
                                     doc.line(x + 0.8, y + 2.3, x + 2, y + 3.5);
@@ -16470,7 +17122,7 @@
                     }
                     doc.setFont('helvetica', 'bold');
                     doc.setFontSize(12);
-                    doc.setTextColor(30, 41, 59);
+                    doc.setTextColor(71, 85, 105);
                     doc.text('Eingesetztes Material', 20, currentY);
                     currentY += 6;
                     
@@ -16493,7 +17145,7 @@
                             cellPadding: 4
                         },
                         headStyles: {
-                            fillColor: [30, 41, 59],
+                            fillColor: [71, 85, 105],
                             textColor: [255, 255, 255],
                             fontStyle: 'bold',
                             halign: 'center'
@@ -16618,17 +17270,22 @@
                     checklistsToPrint.forEach(checklist => {
                         if (!checklist.answers || checklist.answers.length === 0) return;
                         
-                        const isUvv = checklist.type === 'uvv' || (checklist.template_id && checklist.template_id.includes('uvv'));
+                        const isUvv = checklist.type === 'uvv' || checklist.type === 'einweisung' || (checklist.template_id && checklist.template_id.includes('uvv'));
                         
                         doc.addPage();
                         
                         // Clean title from emojis
                         const cleanTitle = (checklist.title || 'Zusatzprotokoll').replace(/[^\w\s\/\-äöüÄÖÜß()]/g, '').trim();
-                        
+
+                        // Farblich unterscheidbar je Protokoll-Typ: Wartung & UVV bleiben beim
+                        // bisherigen dunklen Blau (Slate-800), Einweisung ist 3 Stufen heller
+                        // (Slate-500) — auf der Tabellen-Kopfzeile UND der Seitenüberschrift.
+                        const checklistThemeColor = checklist.type === 'einweisung' ? [100, 116, 139] : [30, 41, 59];
+
                         // Draw Checklist Title
                         doc.setFont('helvetica', 'bold');
                         doc.setFontSize(16);
-                        doc.setTextColor(30, 41, 59);
+                        doc.setTextColor(checklistThemeColor[0], checklistThemeColor[1], checklistThemeColor[2]);
                         doc.text(cleanTitle, 20, 30);
                         
                         // Meta Info
@@ -16636,12 +17293,130 @@
                         doc.setFontSize(10);
                         doc.setTextColor(100, 100, 100);
                         doc.text(`Maschine: ${machineTitle} | Seriennummer: ${serialNumber} | Betriebsstunden: ${operatingHoursVal}`, 20, 37);
-                        
+
+                        // Ausfüllhinweise nur bei der Einweisungserklärung, nur auf dem Ausdruck (nicht
+                        // im Formular) und nur auf dieser ersten Seite (steht NICHT im didDrawPage-Callback,
+                        // das die Kopfzeile bei mehrseitigen Protokollen auf Folgeseiten wiederholt).
+                        // Jede Zeile zeigt einen echten kleinen Kasten mit dem jeweiligen Symbol, statt
+                        // es nur in Worten zu beschreiben — so sieht es genauso aus wie in der Tabelle.
+                        if (checklist.type === 'einweisung') {
+                            const legendX = 145;
+                            let legendY = 22;
+
+                            const boxSize = 4;
+                            const drawLegendRow = (symbol, symbolColor, label) => {
+                                doc.setDrawColor(150, 150, 150);
+                                doc.setLineWidth(0.25);
+                                doc.rect(legendX, legendY, boxSize, boxSize);
+                                if (symbol) {
+                                    doc.setFont('helvetica', 'bold');
+                                    doc.setFontSize(7);
+                                    doc.setTextColor(symbolColor[0], symbolColor[1], symbolColor[2]);
+                                    doc.text(symbol, legendX + boxSize / 2, legendY + boxSize - 1, { align: 'center' });
+                                }
+                                doc.setFont('helvetica', 'normal');
+                                doc.setFontSize(7.5);
+                                doc.setTextColor(80, 80, 80);
+                                doc.text(label, legendX + boxSize + 2, legendY + boxSize - 1);
+                                legendY += boxSize + 2;
+                            };
+
+                            drawLegendRow('x', [5, 150, 105], '= O.k.');
+                            drawLegendRow('-', [217, 119, 6], '= nicht gegeben');
+                            drawLegendRow('', [0, 0, 0], '= noch offen');
+                        }
+
                         let currentCatCL = "";
                         const checklistBody = [];
                         const categoryRowsCL = [];
-                        
+                        const isEinweisungPdf = checklist.type === 'einweisung';
+
                         if (isUvv) {
+                            if (isEinweisungPdf) {
+                                // Einweisung-Layout: Pos | Einweisungspunkt | Erledigt / Bemerkung (zusammengelegt —
+                                // pro Punkt entweder x/-/frei ODER der Bemerkungstext, je nach answerType, genau
+                                // wie im Formular; keine eigene Bemerkungsspalte mehr nötig).
+                                checklist.answers.forEach((ans) => {
+                                    if (ans.category !== currentCatCL) {
+                                        currentCatCL = ans.category;
+                                        checklistBody.push([currentCatCL.toUpperCase(), '', '']);
+                                        categoryRowsCL.push(checklistBody.length - 1);
+                                    }
+                                    const cellText = ans.answerType === 'remark'
+                                        ? ((ans.comment && ans.comment.trim()) ? ans.comment : '')
+                                        : (ans.io === 'x' ? 'x' : (ans.io === 'dash' ? '-' : ''));
+                                    checklistBody.push([ans.pos || '', ans.description || '', cellText]);
+                                });
+
+                                doc.autoTable({
+                                    startY: 44,
+                                    head: [['Pos', 'Einweisungspunkt', 'Erledigt / Bemerkung']],
+                                    body: checklistBody,
+                                    margin: { top: 44, bottom: 297 - PAGE_CONTENT_BOTTOM, left: 20, right: 20 },
+                                    theme: 'grid',
+                                    styles: {
+                                        font: 'helvetica',
+                                        fontSize: 7.5,
+                                        cellPadding: 2,
+                                        valign: 'middle'
+                                    },
+                                    headStyles: {
+                                        fillColor: checklistThemeColor,
+                                        textColor: [255, 255, 255],
+                                        fontStyle: 'bold',
+                                        halign: 'center'
+                                    },
+                                    columnStyles: {
+                                        0: { cellWidth: 15 },
+                                        1: { cellWidth: 110 },
+                                        2: { cellWidth: 45, halign: 'center' }
+                                    },
+                                    didParseCell: function(data) {
+                                        if (data.cell.section === 'head' && data.column.index === 2) {
+                                            data.cell.styles.halign = 'center';
+                                        }
+                                        if (categoryRowsCL.includes(data.row.index)) {
+                                            if (data.cell.section === 'body') {
+                                                data.cell.styles.fillColor = [241, 245, 249];
+                                                data.cell.styles.fontStyle = 'bold';
+                                                data.cell.styles.textColor = [15, 23, 42];
+                                                if (data.column.index === 0) {
+                                                    data.cell.colSpan = 3;
+                                                }
+                                            }
+                                            return;
+                                        }
+                                        // Spalte 3: x/- mittig & farbig, Bemerkungstext linksbündig & normal
+                                        if (data.column.index === 2 && data.cell.section === 'body') {
+                                            if (data.cell.raw === 'x') {
+                                                data.cell.styles.textColor = [5, 150, 105];
+                                                data.cell.styles.fontStyle = 'bold';
+                                                data.cell.styles.halign = 'center';
+                                            } else if (data.cell.raw === '-') {
+                                                data.cell.styles.textColor = [217, 119, 6];
+                                                data.cell.styles.fontStyle = 'bold';
+                                                data.cell.styles.halign = 'center';
+                                            } else if (data.cell.raw === '') {
+                                                data.cell.styles.halign = 'center';
+                                            } else {
+                                                data.cell.styles.halign = 'left';
+                                            }
+                                        }
+                                    },
+                                    didDrawPage: function(data) {
+                                        if (data.pageNumber > 1) {
+                                            doc.setFont('helvetica', 'bold');
+                                            doc.setFontSize(16);
+                                            doc.setTextColor(checklistThemeColor[0], checklistThemeColor[1], checklistThemeColor[2]);
+                                            doc.text(cleanTitle, 20, 30);
+                                            doc.setFont('helvetica', 'normal');
+                                            doc.setFontSize(10);
+                                            doc.setTextColor(100, 100, 100);
+                                            doc.text(`Maschine: ${machineTitle} | Seriennummer: ${serialNumber} | Betriebsstunden: ${operatingHoursVal}`, 20, 37);
+                                        }
+                                    }
+                                });
+                            } else {
                             // UVV Layout: Pos | Prüfpunkt | i.O. | Bemerkung / Beanstandung (no Intervall)
                             checklist.answers.forEach((ans) => {
                                 if (ans.category !== currentCatCL) {
@@ -16657,7 +17432,7 @@
                                     (ans.comment && ans.comment.trim()) ? ans.comment : 'keine Beanstandung'
                                 ]);
                             });
-                            
+
                             doc.autoTable({
                                 startY: 44,
                                 head: [['Pos', 'Prüfpunkt', 'i.O.', 'Bemerkung / Beanstandung']],
@@ -16721,7 +17496,8 @@
                                     }
                                 }
                             });
-                            
+                            }
+
                             // General remarks section for UVV
                             let uvvY = doc.lastAutoTable.finalY + 10;
                             // Make sure there's enough space; add page if needed
@@ -17589,7 +18365,7 @@
                             onmouseout="this.style.background='rgba(255,255,255,0.04)'; this.style.borderColor='rgba(255,255,255,0.08)'">
                             <div style="display: flex; align-items: center; gap: 12px;">
                                 <h3 class="section-title"
-                                    style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0; color: var(--secondary-green);">Zusatzprotokoll (Wartung / UVV)</h3>
+                                    style="margin: 0; font-size: 1.1rem; border-bottom: none; padding-bottom: 0; color: var(--secondary-green);">Zusatzprotokoll (Wartung / UVV / Einweisung)</h3>
                             </div>
                             <svg class="toggle-chevron" width="20" height="20" viewBox="0 0 24 24" fill="none"
                                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
@@ -17599,7 +18375,7 @@
                         </div>
                         <div class="section-content" style="display: none; transition: all 0.3s ease;">
                              <div class="form-group" style="margin-top: 1rem; margin-bottom: 1rem;">
-                                 <label style="color: rgba(255,255,255,0.7); font-weight: 600; font-size: 0.95rem; margin-bottom: 0.5rem; display: block;">Wartungspläne und UVV-Protokolle aktivieren (Mehrfachauswahl möglich)</label>
+                                 <label style="color: rgba(255,255,255,0.7); font-weight: 600; font-size: 0.95rem; margin-bottom: 0.5rem; display: block;">Wartungspläne, UVV-Protokolle und Einweisungserklärungen aktivieren (Mehrfachauswahl möglich)</label>
                                  <div id="service-checklist-selector-container" style="display: flex; flex-direction: column; gap: 8px; margin-top: 0.5rem; margin-bottom: 1rem;">
                                      <!-- Populated dynamically -->
                                  </div>
@@ -18007,6 +18783,10 @@
                             <input type="radio" name="cat-type" value="series">
                             <span class="option-text">Maschinenserie</span>
                         </label>
+                        <label class="segmented-option">
+                            <input type="radio" name="cat-type" value="equipment">
+                            <span class="option-text">Zusatzausrüstung</span>
+                        </label>
                     </div>
                 </div>
 
@@ -18014,6 +18794,11 @@
                     <label for="cat-interval-input">Standard-Wartungsintervall (Monate)</label>
                     <input type="number" id="cat-interval-input" class="glass-input" placeholder="z.B. 12" min="1"
                         value="12">
+                </div>
+
+                <div id="cat-equipment-group" class="form-group" style="display: none; margin-top: 1.5rem;">
+                    <label for="cat-equipment-remark">Bemerkung</label>
+                    <textarea id="cat-equipment-remark" class="glass-input" rows="3" placeholder="z.B. Hinweise zu dieser Zusatzausrüstung"></textarea>
                 </div>
 
                 <div id="cat-series-group" style="display: none; margin-top: 1.5rem;">
@@ -18156,12 +18941,31 @@
                     <div class="form-group">
                         <label>Hersteller</label>
                         <input type="text" id="machine-manufacturer" class="glass-input"
-                            placeholder="z.B. meetra, BACKHUS">
+                            placeholder="z.B. meetra, BACKHUS" oninput="window.onMachineManufacturerChange()">
                     </div>
 
                     <div class="form-group">
                         <label>Typbezeichnung</label>
                         <input type="text" id="machine-name" placeholder="z.B. 17.50">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Maschinenserie</label>
+                        <div id="machine-series-wrapper" style="position: relative;">
+                            <div id="machine-series-trigger" class="glass-select"
+                                style="cursor: pointer; display: flex; align-items: center; justify-content: space-between;"
+                                onclick="toggleMachineSeriesDropdown(event)">
+                                <span id="machine-series-text">Bitte wählen...</span>
+                            </div>
+                            <input type="hidden" id="machine-series">
+
+                            <div id="machine-series-dropdown" class="user-dropdown-menu"
+                                style="width: 100%; top: 105%; right: auto; left: 0;">
+                                <ul id="machine-series-list">
+                                    <!-- Populated by JS -->
+                                </ul>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -18445,6 +19249,19 @@
                                 <div style="display:flex; gap:8px;">
                                     <button type="button" class="btn-primary" onclick="window.confirmAddEquipmentRow()" style="flex:1; padding:6px 12px; font-size:0.85rem;">✓ Hinzufügen</button>
                                     <button type="button" class="btn-secondary" onclick="window.cancelAddEquipmentRow()" style="padding:6px 12px; font-size:0.85rem;">Abbrechen</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 1.25rem; margin-bottom: 0;">
+                            <label style="font-size:0.92rem; font-weight:700; color:rgba(255,255,255,0.8); display:block; margin-bottom:0.5rem;">Zusatzausrüstung (aus Katalog)</label>
+                            <div class="custom-filter-dropdown" id="machine-equipment-catalog-dropdown" onclick="window.toggleMachineEquipmentCatalogDropdown(event)" style="width: 100%;">
+                                <span class="filter-label" id="machine-equipment-catalog-label">Zusatzausrüstung wählen...</span>
+                                <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                <div class="custom-filter-menu">
+                                    <ul class="dropdown-options" id="machine-equipment-catalog-options">
+                                        <!-- Populated by JS -->
+                                    </ul>
                                 </div>
                             </div>
                         </div>
@@ -19768,23 +20585,19 @@
             try {
                 let uploadedUrls = [];
 
-                // Upload photos via Cloudflare R2
+                // Upload photos via Cloudflare R2 (parallelisiert statt nacheinander)
                 const wsMachine = (window.machineList || []).find(m => m.id == machineId);
                 const wsFolderName = wsMachine ? window.getMachineFolderName(wsMachine.id, wsMachine.manufacturer, wsMachine.name, wsMachine.serial || wsMachine.serial_number, wsMachine.year) : `Maschinen/${machineId}`;
-                for (let i = 0; i < window.workshopPhotosToUpload.length; i++) {
-                    const file = window.workshopPhotosToUpload[i];
+                const wsPathGenerator = (file, i) => {
                     const ext = file.name.split('.').pop();
-                    const filePath = `${wsFolderName}/Werkstatt/${Date.now()}-${i}.${ext}`;
-
-                    const result = await window.FileUploadService.uploadFile(file, {
-                        bucket: 'dateien',
-                        path: filePath,
-                        compress: true,
-                        provider: 'cloudflare-r2'
-                    });
-
-                    uploadedUrls.push(result.url);
-                }
+                    return `${wsFolderName}/Werkstatt/${Date.now()}-${i}.${ext}`;
+                };
+                const wsUploadResults = await window.FileUploadService.uploadFiles(
+                    window.workshopPhotosToUpload,
+                    wsPathGenerator,
+                    { bucket: 'dateien', compress: true, concurrency: 5, provider: 'cloudflare-r2' }
+                );
+                uploadedUrls = wsUploadResults.map(r => r.url);
 
                 // Create manual entry
                 const { error: insertError } = await window.supabaseClient
@@ -19863,23 +20676,19 @@
                 listContainer.style.opacity = '0.5';
                 listContainer.style.pointerEvents = 'none';
 
-                // Upload new photos via Cloudflare R2
+                // Upload new photos via Cloudflare R2 (parallelisiert statt nacheinander)
                 const appMachine = (window.machineList || []).find(m => m.id == machineId);
                 const appFolderName = appMachine ? window.getMachineFolderName(appMachine.id, appMachine.manufacturer, appMachine.name, appMachine.serial || appMachine.serial_number, appMachine.year) : `Maschinen/${machineId}`;
-                for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
+                const appPathGenerator = (file, i) => {
                     const ext = file.name.split('.').pop();
-                    const filePath = `${appFolderName}/Werkstatt/${Date.now()}-append-${i}.${ext}`;
-
-                    const result = await window.FileUploadService.uploadFile(file, {
-                        bucket: 'dateien',
-                        path: filePath,
-                        compress: true,
-                        provider: 'cloudflare-r2'
-                    });
-
-                    newUploadedUrls.push(result.url);
-                }
+                    return `${appFolderName}/Werkstatt/${Date.now()}-append-${i}.${ext}`;
+                };
+                const appUploadResults = await window.FileUploadService.uploadFiles(
+                    Array.from(files),
+                    appPathGenerator,
+                    { bucket: 'dateien', compress: true, concurrency: 5, provider: 'cloudflare-r2' }
+                );
+                newUploadedUrls = appUploadResults.map(r => r.url);
 
                 const updatedFilesList = [...existingFiles, ...newUploadedUrls];
 

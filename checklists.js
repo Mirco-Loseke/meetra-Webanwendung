@@ -206,8 +206,8 @@ window.evaluateChecklistVisibility = function() {
     if (!textEl || !container) return;
     
     const categoryText = textEl.textContent.toLowerCase();
-    const isWartungOrUvv = categoryText.includes('wartung') || categoryText.includes('uvv');
-    
+    const isWartungOrUvv = categoryText.includes('wartung') || categoryText.includes('uvv') || categoryText.includes('einweisung');
+
     if (isWartungOrUvv) {
         container.style.display = 'block';
         window.populateChecklistSelector();
@@ -231,10 +231,15 @@ window.populateChecklistSelector = function() {
     const machineCategoryId = selectedMachine ? String(selectedMachine.category_id) : null;
     const planAssignments = window.uvvPlanAssignments || {};
 
-    // Alle Pläne (eingebaute + in den Einstellungen angelegte), gefiltert auf zum Maschinentyp passende
-    // (Pläne ohne hinterlegte Maschinentyp-Zuordnung gelten als universell und werden immer angezeigt)
+    // Alle Pläne (eingebaute + in den Einstellungen angelegte), gefiltert auf:
+    // 1) den Plan-Typ passend zur gerade gewählten Service-Kategorie (bei "UVV" nur UVV-Pläne,
+    //    bei "Wartung" nur Wartungspläne, bei "Einweisung" nur Einweisungserklärungen — sonst
+    //    stehen alle drei Plan-Arten unübersichtlich gemischt in der Liste),
+    // 2) den zum Maschinentyp passenden Maschinenkategorie-Bezug (Pläne ohne hinterlegte
+    //    Maschinentyp-Zuordnung gelten als universell und werden immer angezeigt).
     const allTemplates = window.ACTIVE_CHECKLIST_TEMPLATES || window.MOCK_CHECKLIST_TEMPLATES || [];
     const templates = allTemplates.filter(t => {
+        if (!categoryText.includes(t.type)) return false;
         const assignedCatIds = planAssignments[t.id]?.category_ids || [];
         if (!assignedCatIds.length) return true;
         return machineCategoryId && assignedCatIds.map(String).includes(machineCategoryId);
@@ -246,37 +251,28 @@ window.populateChecklistSelector = function() {
 
     let html = '';
     templates.forEach(t => {
-        const matchesMachine = machineName.toLowerCase().includes((t.machine_model || '').toLowerCase());
+        // Maschinenserie-Zuordnung hat Vorrang (Plan-Karte in den Einstellungen) — fällt auf den
+        // alten Maschinenmodell-Textvergleich zurück, solange ein Plan noch keine Serie zugewiesen hat.
+        const assignedSeries = planAssignments[t.id]?.machine_series || t.machine_series || [];
+        const matchesMachine = assignedSeries.length
+            ? !!(selectedMachine && selectedMachine.machine_series && assignedSeries.includes(selectedMachine.machine_series))
+            : machineName.toLowerCase().includes((t.machine_model || '').toLowerCase());
         const suffix = matchesMachine ? ' (Empfohlen)' : '';
         
         let isChecked = activeChecklists[t.id] ? 'checked' : '';
         if (isNew) {
-            // Recommend Wartungsplan if matches machine AND category contains Wartung
-            if (matchesMachine && t.type === 'wartung' && categoryText.includes('wartung')) {
+            // Auto-Aktivierung: der Plan-Typ passt bereits (siehe Filter oben), hier reicht die
+            // Maschinenserie als zusätzliche Bedingung — einheitlich für Wartung, UVV und
+            // Einweisung (vorher war UVV fest auf "uvv-allgemein" verdrahtet und Einweisung
+            // ignorierte den Maschinen-Abgleich komplett).
+            if (matchesMachine) {
                 isChecked = 'checked';
                 const answers = t.items.map(item => ({
                     pos: item.pos,
                     category: item.category,
                     description: item.description,
                     interval: item.interval,
-                    checked: false,
-                    comment: ""
-                }));
-                activeChecklists[t.id] = {
-                    template_id: t.id,
-                    title: t.title,
-                    type: t.type,
-                    answers: answers
-                };
-            }
-            // Recommend UVV if category contains UVV and template is the general UVV
-            if (t.id === 'uvv-allgemein' && categoryText.includes('uvv')) {
-                isChecked = 'checked';
-                const answers = t.items.map(item => ({
-                    pos: item.pos,
-                    category: item.category,
-                    description: item.description,
-                    interval: item.interval,
+                    answerType: item.answerType,
                     checked: false,
                     comment: ""
                 }));
@@ -288,13 +284,19 @@ window.populateChecklistSelector = function() {
                 };
             }
         }
-        
+
+        const typeBadgeStyle = t.type === 'wartung'
+            ? 'background: rgba(16, 185, 129, 0.2); color: #10b981;'
+            : t.type === 'einweisung'
+                ? 'background: rgba(139, 92, 246, 0.2); color: #a78bfa;'
+                : 'background: rgba(59, 130, 246, 0.2); color: #60a5fa;';
+
         html += `
-            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: white; padding: 8px 12px; border-radius: 8px; background: rgba(255,255,255,0.05); transition: background 0.2s;" 
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: white; padding: 8px 12px; border-radius: 8px; background: rgba(255,255,255,0.05); transition: background 0.2s;"
                    onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
                 <input type="checkbox" data-template-id="${t.id}" ${isChecked} onchange="window.onChecklistToggle('${t.id}', this.checked)" style="width: 18px; height: 18px; accent-color: var(--color-primary-green); cursor: pointer;">
                 <span style="font-weight: 500; font-size: 0.9rem;">${t.title}${suffix}</span>
-                <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; background: ${t.type === 'wartung' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(59, 130, 246, 0.2)'}; color: ${t.type === 'wartung' ? '#10b981' : '#60a5fa'}; font-weight: 700; margin-left: auto;">
+                <span style="font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; ${typeBadgeStyle} font-weight: 700; margin-left: auto;">
                     ${t.type.toUpperCase()}
                 </span>
             </label>
@@ -311,7 +313,7 @@ window.handleChecklistMachineChange = function() {
     const textEl = document.getElementById('service-category-text');
     if (!textEl) return;
     const categoryText = textEl.textContent.toLowerCase();
-    if (categoryText.includes('wartung') || categoryText.includes('uvv')) {
+    if (categoryText.includes('wartung') || categoryText.includes('uvv') || categoryText.includes('einweisung')) {
         window.populateChecklistSelector();
     }
 };
@@ -343,6 +345,7 @@ window.onChecklistToggle = function(templateId, checked) {
             category: item.category,
             description: item.description,
             interval: item.interval,
+            answerType: item.answerType,
             checked: false,
             comment: ""
         }));
@@ -369,11 +372,20 @@ window.renderActiveChecklists = function() {
     
     let html = '';
     activeList.forEach(checklist => {
+        // UVV & Einweisung teilen sich dasselbe Layout (Ja/Nein statt Tri-State-Haken, keine
+        // Intervall-Spalte) — nur Beschriftung/Farbe unterscheiden sich je Typ.
+        const isYesNoStyle = checklist.type === 'uvv' || checklist.type === 'einweisung';
+        const isEinweisung = checklist.type === 'einweisung';
+        const headerBadgeBg = checklist.type === 'wartung' ? 'var(--color-primary-green)' : isEinweisung ? '#7c3aed' : '#2563eb';
+        const pointLabel = isEinweisung ? 'Einweisungspunkt' : 'Wartungsarbeit / Prüfpunkt';
+        const ioLabel = isYesNoStyle ? 'i.O.' : 'Erledigt';
+        const commentLabel = isYesNoStyle ? 'Bemerkung / Beanstandung' : 'Bemerkung';
+
         html += `
             <div class="active-checklist-box" data-active-template-id="${checklist.template_id}" style="margin-top: 1.5rem; background: rgba(0,0,0,0.2); border: 1.5px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 1.25rem;">
                 <h4 style="color: white; margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; display: flex; align-items: center; justify-content: space-between;">
                     <span>📋 ${checklist.title}</span>
-                    <span style="font-size: 0.8rem; background: ${checklist.type === 'wartung' ? 'var(--color-primary-green)' : '#2563eb'}; color: white; padding: 2px 10px; border-radius: 20px; font-weight: 500;">
+                    <span style="font-size: 0.8rem; background: ${headerBadgeBg}; color: white; padding: 2px 10px; border-radius: 20px; font-weight: 500;">
                         ${checklist.type.toUpperCase()}
                     </span>
                 </h4>
@@ -382,10 +394,13 @@ window.renderActiveChecklists = function() {
                         <thead>
                             <tr style="border-bottom: 2px solid rgba(255,255,255,0.15);">
                                 <th style="padding: 10px; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 6%;">Pos</th>
-                                <th style="padding: 10px; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: ${checklist.type === 'uvv' ? '52%' : '34%'};">Wartungsarbeit / Prüfpunkt</th>
-                                ${checklist.type !== 'uvv' ? `<th style="padding: 10px; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 18%; text-align: center;">Intervall / Frist</th>` : ''}
-                                <th style="padding: 10px; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: ${checklist.type === 'uvv' ? '18%' : '12%'}; text-align: center;">${checklist.type === 'uvv' ? 'i.O.' : 'Erledigt'}</th>
-                                <th style="padding: 10px; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 24%; text-align: center;">${checklist.type === 'uvv' ? 'Bemerkung / Beanstandung' : 'Bemerkung'}</th>
+                                <th style="padding: 10px; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: ${isYesNoStyle ? '52%' : '34%'};">${pointLabel}</th>
+                                ${!isYesNoStyle ? `<th style="padding: 10px; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 18%; text-align: center;">Intervall / Frist</th>` : ''}
+                                ${isEinweisung
+                                    ? `<th style="padding: 10px; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 42%; text-align: center;">Erledigt / Bemerkung</th>`
+                                    : `<th style="padding: 10px; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: ${isYesNoStyle ? '18%' : '12%'}; text-align: center;">${ioLabel}</th>
+                                <th style="padding: 10px; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 24%; text-align: center;">${commentLabel}</th>`
+                                }
                             </tr>
                         </thead>
                         <tbody>
@@ -395,7 +410,7 @@ window.renderActiveChecklists = function() {
         checklist.answers.forEach((item, index) => {
             if (item.category !== currentCategory) {
                 currentCategory = item.category;
-                const colspan = checklist.type === 'uvv' ? 4 : 5;
+                const colspan = isEinweisung ? 3 : (isYesNoStyle ? 4 : 5);
                 html += `
                     <tr style="background: rgba(255,255,255,0.03);">
                         <td colspan="${colspan}" style="padding: 8px 10px; font-size: 0.85rem; font-weight: 800; color: var(--accent-color); text-transform: uppercase; letter-spacing: 0.5px;">
@@ -404,11 +419,37 @@ window.renderActiveChecklists = function() {
                     </tr>
                 `;
             }
-            
+
             const commentVal = item.comment || '';
-            
-            if (checklist.type === 'uvv') {
-                // UVV: Ja/Nein radio buttons, no interval column
+
+            if (isYesNoStyle && isEinweisung) {
+                // Einweisung: pro Punkt entweder ein Ankreuzfeld ODER ein Bemerkungsfeld — welches
+                // der beiden es ist, wird im Plan-Editor pro Punkt festgelegt (item.answerType).
+                // Ankreuzfeld ist ein Klick-Kasten mit drei Zuständen (frei -> x (grün) -> - (orange)
+                // -> frei), statt Ja/Nein-Radiobuttons.
+                const ioValue = item.io || '';
+                const isRemarkField = item.answerType === 'remark';
+                const ioBoxStyle = einweisungIoBoxStyle(ioValue);
+                html += `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);" onmouseover="this.style.background='rgba(255,255,255,0.01)'" onmouseout="this.style.background='transparent'">
+                        <td style="padding: 10px 10px; color: rgba(255,255,255,0.6); font-size: 0.9rem; font-weight: 600;">${item.pos}</td>
+                        <td style="padding: 10px 10px;">
+                            <div style="color: white; font-size: 0.9rem; font-weight: 500; line-height: 1.4;">${item.description}</div>
+                        </td>
+                        <td style="padding: 10px 10px; text-align: center;">
+                            ${isRemarkField ? `
+                            <input type="text" value="${commentVal}" placeholder="Bemerkung" oninput="window.setChecklistItemComment('${checklist.template_id}', ${index}, this.value)"
+                                   style="width: 100%; height: 34px; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 0.85rem; outline: none; transition: border-color 0.2s; text-align: left;"
+                                   onfocus="this.style.borderColor='var(--color-primary-green)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
+                            ` : `
+                            <div id="io-box-${checklist.template_id}-${index}" onclick="window.cycleChecklistItemIO('${checklist.template_id}', ${index})" title="Klicken zum Umschalten: frei -> x -> -"
+                                style="width: 36px; height: 36px; margin: 0 auto; border-radius: 8px; border: 2px solid ${ioBoxStyle.border}; background: ${ioBoxStyle.bg}; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.3rem; font-weight: 900; color: ${ioBoxStyle.color}; user-select: none; transition: all 0.15s;">${ioBoxStyle.symbol}</div>
+                            `}
+                        </td>
+                    </tr>
+                `;
+            } else if (isYesNoStyle) {
+                // UVV: Ja/Nein radio buttons + separate Bemerkungsfeld, no interval column
                 const ioValue = item.io || ''; // 'ja', 'nein', or ''
                 html += `
                     <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);" onmouseover="this.style.background='rgba(255,255,255,0.01)'" onmouseout="this.style.background='transparent'">
@@ -427,7 +468,7 @@ window.renderActiveChecklists = function() {
                             </div>
                         </td>
                         <td style="padding: 10px 10px; text-align: center;">
-                            <input type="text" value="${commentVal}" placeholder="Beanstandung/Bemerkung" oninput="window.setChecklistItemComment('${checklist.template_id}', ${index}, this.value)" 
+                            <input type="text" value="${commentVal}" placeholder="Beanstandung/Bemerkung" oninput="window.setChecklistItemComment('${checklist.template_id}', ${index}, this.value)"
                                    style="width: 100%; height: 34px; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 0.85rem; outline: none; transition: border-color 0.2s; text-align: left;"
                                    onfocus="this.style.borderColor='var(--color-primary-green)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
                         </td>
@@ -491,8 +532,8 @@ window.renderActiveChecklists = function() {
                 </div>
         `;
         
-        // For UVV: add general remarks field only (signatures are in the main form section 5)
-        if (checklist.type === 'uvv') {
+        // For UVV & Einweisung: add general remarks field only (signatures are in the main form section 5)
+        if (isYesNoStyle) {
             const generalRemark = checklist.generalRemark || '';
             html += `
                 <div style="margin-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.25rem;">
@@ -531,6 +572,34 @@ window.toggleChecklistItemIO = function(templateId, index, value) {
     if (activeChecklists[templateId] && activeChecklists[templateId].answers[index]) {
         activeChecklists[templateId].answers[index].io = value;
     }
+};
+
+// Einweisungs-Ankreuzfeld: frei -> x (grün) -> - (orange) -> frei. Liefert die Darstellung
+// für einen gegebenen io-Wert, damit Render und Klick-Handler dieselbe Logik benutzen.
+function einweisungIoBoxStyle(ioValue) {
+    if (ioValue === 'x') {
+        return { symbol: '✕', color: '#10b981', border: '#10b981', bg: 'rgba(16,185,129,0.12)' };
+    }
+    if (ioValue === 'dash') {
+        return { symbol: '−', color: '#f59e0b', border: '#f59e0b', bg: 'rgba(245,158,11,0.12)' };
+    }
+    return { symbol: '', color: 'transparent', border: 'rgba(255,255,255,0.25)', bg: 'rgba(255,255,255,0.03)' };
+}
+
+window.cycleChecklistItemIO = function(templateId, index) {
+    const answer = activeChecklists[templateId] && activeChecklists[templateId].answers[index];
+    if (!answer) return;
+    const current = answer.io || '';
+    const next = current === '' ? 'x' : (current === 'x' ? 'dash' : '');
+    answer.io = next;
+
+    const box = document.getElementById(`io-box-${templateId}-${index}`);
+    if (!box) return;
+    const style = einweisungIoBoxStyle(next);
+    box.textContent = style.symbol;
+    box.style.color = style.color;
+    box.style.borderColor = style.border;
+    box.style.background = style.bg;
 };
 
 window.setChecklistItemComment = function(templateId, index, comment) {
@@ -577,7 +646,7 @@ window.loadChecklistPayload = function(payload) {
     
     // Re-render UI selector and tables
     const categoryText = document.getElementById('service-category-text')?.textContent.toLowerCase() || '';
-    if (categoryText.includes('wartung') || categoryText.includes('uvv')) {
+    if (categoryText.includes('wartung') || categoryText.includes('uvv') || categoryText.includes('einweisung')) {
         window.populateChecklistSelector();
     }
     window.renderActiveChecklists();

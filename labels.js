@@ -73,7 +73,7 @@
             const q = getLabelQty(a.id);
             const repeatCount = getLabelRepeatCount(a.id);
             return `
-                <div style="display:flex; align-items:center; gap:14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px 16px;">
+                <div class="label-article-row" style="display:flex; align-items:center; gap:14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 12px 16px;">
                     <input type="checkbox" ${checked} onchange="window.toggleLabelSelection(${a.id}, this.checked)" style="width:18px; height:18px; cursor:pointer; flex-shrink:0;" title="Für Druck auswählen">
                     <div style="flex: 1; min-width: 0;">
                         <div style="color:#ef4444; font-weight:800; font-size:0.95rem;">${escapeHtml(a.article_number)}</div>
@@ -553,8 +553,10 @@
             }
 
             // "Mehrere" reiht dasselbe Etikett entsprechend oft hintereinander ein — unabhängig
-            // von Menge/Einheit. Menge + Einheit werden immer als "QTY: <Menge> <Einheit>" auf
-            // das Etikett gedruckt.
+            // von Menge/Einheit. Menge + Einheit werden als "QTY: <Menge> <Einheit>" auf das
+            // Etikett gedruckt, außer der "QTY nicht drucken"-Haken ist gesetzt — dann wird qty
+            // hier auf null gesetzt, wodurch drawLabelCell/filledPreviewCell die Zeile ganz weglassen.
+            const qtyDisabled = document.getElementById('label-qty-disabled')?.checked;
             previewArticles = [];
             selected.forEach(article => {
                 const q = getLabelQty(article.id);
@@ -563,7 +565,7 @@
                 for (let i = 0; i < copies; i++) {
                     previewArticles.push({
                         article, barcodeUrl,
-                        qty: q.qty,
+                        qty: qtyDisabled ? null : q.qty,
                         unit: q.unit || 'stk'
                     });
                 }
@@ -665,7 +667,7 @@
                 if (slot < startSlot || articleIdx >= total) {
                     cellsHtml += emptyPreviewCell(cx, cy, labelW, labelH);
                 } else {
-                    cellsHtml += filledPreviewCell(cx, cy, labelW, labelH, previewArticles[articleIdx], previewLogo);
+                    cellsHtml += filledPreviewCell(cx, cy, labelW, labelH, previewArticles[articleIdx], previewLogo, false);
                     articleIdx++;
                 }
             }
@@ -697,7 +699,7 @@
             pagesHtml += `
                 <div style="position:relative; width:${pageW}px; height:${pageH}px; background:#fff; border-radius:6px; box-shadow:0 4px 24px rgba(0,0,0,0.35); margin: 0 auto 20px auto;">
                     <div style="position:absolute; top:4px; left:8px; font-size:9px; color:rgba(0,0,0,0.25); font-family:Arial,sans-serif;">Etikett ${idx + 1} / ${previewArticles.length}</div>
-                    ${filledPreviewCell(0, 0, pageW, pageH, item, previewLogo)}
+                    ${filledPreviewCell(0, 0, pageW, pageH, item, previewLogo, true)}
                 </div>
             `;
         });
@@ -709,22 +711,55 @@
         return `<div style="position:absolute; left:${x}px; top:${y}px; width:${w}px; height:${h}px; border-radius:4px; border:1px dashed rgba(0,0,0,0.12); background:rgba(0,0,0,0.02);"></div>`;
     }
 
-    function filledPreviewCell(x, y, w, h, item, logo) {
+    function filledPreviewCell(x, y, w, h, item, logo, isSingleLabel) {
         const a = item.article;
         const bez1 = escapeHtml(a.bezeichnung_1 || '');
         const bez2 = escapeHtml(a.bezeichnung_2 || '');
         const num = escapeHtml(a.article_number || '');
-        const logoImg = (logo && logo.url) ? `<img src="${logo.url}" style="position:absolute; bottom:4%; left:3%; height:13%; max-width:30%; object-fit:contain;">` : '';
-        const barcodeImg = item.barcodeUrl ? `<img src="${item.barcodeUrl}" style="position:absolute; top:54%; left:50%; transform:translateX(-50%); height:23%; object-fit:contain;">` : '';
+        // DYMO: alle Werte 1:1 aus den echten mm/pt-Werten von drawLabelCell umgerechnet
+        // (Etikett 89 x 36mm), damit die Vorschau wirklich genau dem späteren PDF entspricht
+        // (Prozent = mm bzw. pt-in-mm geteilt durch 36mm Etikettenhöhe). jsPDF zeichnet Text
+        // anhand der BASELINE, ein <div> mit "top" positioniert Text aber an dessen OBERKANTE —
+        // deshalb wird hier von der Unterkante aus positioniert (wie bei Artikelnummer/QTY),
+        // das trifft die echte Baseline-Position viel genauer als "top".
+        const DYMO_H = 36;
+        const ptToFrac = (pt) => (pt * 0.3528) / DYMO_H;
+        const bottomFromBaseline = (baselineMm) => ((DYMO_H - baselineMm) / DYMO_H) * 100 + '%';
+
+        const logoHeightPct = isSingleLabel ? ((7 / DYMO_H) * 100) + '%' : '13%';
+        const logoBottomPct = isSingleLabel ? ((1 / DYMO_H) * 100) + '%' : '4%';
+        const logoMaxWidthPct = isSingleLabel ? '36%' : '30%';
+        const logoImg = (logo && logo.url) ? `<img src="${logo.url}" style="position:absolute; bottom:${logoBottomPct}; left:3%; height:${logoHeightPct}; max-width:${logoMaxWidthPct}; object-fit:contain;">` : '';
+
+        const bez1Bottom = bottomFromBaseline(10);
+        const bez1Size = isSingleLabel ? h * ptToFrac(14) : h * 0.115;
+        const bez2Bottom = bottomFromBaseline(17);
+        const bez2Size = isSingleLabel ? h * ptToFrac(11.5) : h * 0.095;
+        const barcodeTop = isSingleLabel ? ((20 / DYMO_H) * 100) + '%' : '54%';
+        const barcodeHeightPct = isSingleLabel ? ((7 / DYMO_H) * 100) + '%' : '23%';
+        // Breite exakt wie im PDF berechnen (statt der natürlichen Bildbreite zu folgen) —
+        // addImage() im PDF streckt den Barcode IMMER auf diese feste Breite, unabhängig vom
+        // Seitenverhältnis des erzeugten Barcode-Bilds; ohne das war die Vorschau bei kurzen/
+        // langen Artikelnummern schmaler bzw. breiter als später im PDF.
+        const DYMO_W = 89;
+        const barcodeWidthPct = isSingleLabel ? ((Math.min(26 * (DYMO_W / 38), (DYMO_W - 2) * 0.78) / DYMO_W) * 100) + '%' : null;
+        const barcodeImg = item.barcodeUrl
+            ? (isSingleLabel
+                ? `<img src="${item.barcodeUrl}" style="position:absolute; top:${barcodeTop}; left:50%; transform:translateX(-50%); width:${barcodeWidthPct}; height:${barcodeHeightPct};">`
+                : `<img src="${item.barcodeUrl}" style="position:absolute; top:${barcodeTop}; left:50%; transform:translateX(-50%); height:${barcodeHeightPct}; object-fit:contain;">`)
+            : '';
+        const numSize = isSingleLabel ? h * ptToFrac(11) : h * 0.105;
+        const numBottom = isSingleLabel ? bottomFromBaseline(36 - 1 - 0.6 * (36 / 19)) : '3%';
         const qtyText = item.qty ? escapeHtml(`QTY: ${item.qty} ${item.unit || ''}`.trim()) : '';
+        const qtySize = isSingleLabel ? h * ptToFrac(7.5) : h * 0.075;
         return `
             <div style="position:absolute; left:${x}px; top:${y}px; width:${w}px; height:${h}px; border-radius:4px; border:1px solid rgba(0,0,0,0.15); background:#fff; overflow:hidden; box-sizing:border-box; font-family:Helvetica,Arial,sans-serif;">
-                <div style="position:absolute; top:6%; left:2%; right:2%; text-align:center; font-weight:700; font-size:${h * 0.115}px; color:#141414; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${bez1}</div>
-                <div style="position:absolute; top:24%; left:2%; right:2%; text-align:center; font-weight:400; font-size:${h * 0.095}px; color:#464646; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${bez2}</div>
+                <div style="position:absolute; ${isSingleLabel ? `bottom:${bez1Bottom};` : 'top:6%;'} left:2%; right:2%; text-align:center; font-weight:700; font-size:${bez1Size}px; color:#141414; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${bez1}</div>
+                <div style="position:absolute; ${isSingleLabel ? `bottom:${bez2Bottom};` : 'top:24%;'} left:2%; right:2%; text-align:center; font-weight:400; font-size:${bez2Size}px; color:#464646; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${bez2}</div>
                 ${barcodeImg}
                 ${logoImg}
-                <div style="position:absolute; bottom:3%; left:2%; right:2%; text-align:center; font-weight:700; font-size:${h * 0.105}px; color:#141414; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${num}</div>
-                ${qtyText ? `<div style="position:absolute; bottom:3%; right:3%; text-align:right; font-weight:700; font-size:${h * 0.075}px; color:#141414; white-space:nowrap;">${qtyText}</div>` : ''}
+                <div style="position:absolute; bottom:${numBottom}; left:2%; right:2%; text-align:center; font-weight:700; font-size:${numSize}px; color:#141414; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${num}</div>
+                ${qtyText ? `<div style="position:absolute; bottom:${numBottom}; right:3%; text-align:right; font-weight:700; font-size:${qtySize}px; color:#141414; white-space:nowrap;">${qtyText}</div>` : ''}
             </div>
         `;
     }
@@ -805,29 +840,47 @@
         // bewusst keine Schnittlinie mitgedruckt (die abgerundeten Linien in der
         // Live-Vorschau sind nur eine Bildschirm-Hilfe, kein Bestandteil des PDFs).
 
+        // DYMO (Einzel-Etikettendrucker, "single" Modus): deutlich größeres Etikett (89x36mm)
+        // als die kleinen Bogen-Etiketten (Referenz 38x19mm) — eigene, großzügigere Positionen
+        // für Bezeichnung 1/2 statt der für die kleinen Etiketten austarierten Proportional-Skalierung,
+        // da sonst oben viel Platz frei bliebe.
+        const isSingleLabel = format.mode === 'single';
+
         // Bezeichnung 1 — fett, mittig zentriert, oben
         doc.setTextColor(20, 20, 20);
-        fitCenteredText(doc, article.bezeichnung_1 || '', fullCenterX, y + 3.2 * scaleH, fullW, 5.5 * scaleH, 3.2 * scaleH, 'bold');
-
-        // Bezeichnung 2 — normal, mittig zentriert, etwas mehr Abstand zu Bezeichnung 1
-        if (article.bezeichnung_2) {
-            doc.setTextColor(70, 70, 70);
-            fitCenteredText(doc, article.bezeichnung_2, fullCenterX, y + 5.6 * scaleH, fullW, 4.5 * scaleH, 2.8 * scaleH, 'normal');
+        if (isSingleLabel) {
+            fitCenteredText(doc, article.bezeichnung_1 || '', fullCenterX, y + 10, fullW, 14, 10, 'bold');
+        } else {
+            fitCenteredText(doc, article.bezeichnung_1 || '', fullCenterX, y + 3.2 * scaleH, fullW, 5.5 * scaleH, 3.2 * scaleH, 'bold');
         }
 
-        // Barcode — zentriert, etwas weniger Abstand zu Bezeichnung 2; Breite skaliert mit der
-        // Etikettenbreite, damit er auf einem großen Etikett (z.B. DYMO) nicht winzig wirkt
+        // Bezeichnung 2 — normal, mittig zentriert, mehr Abstand zu Bezeichnung 1 (bei DYMO
+        // ist unten noch Luft, daher rutscht Bezeichnung 2 dafür weiter runter)
+        if (article.bezeichnung_2) {
+            doc.setTextColor(70, 70, 70);
+            if (isSingleLabel) {
+                fitCenteredText(doc, article.bezeichnung_2, fullCenterX, y + 17, fullW, 11.5, 8.5, 'normal');
+            } else {
+                fitCenteredText(doc, article.bezeichnung_2, fullCenterX, y + 5.6 * scaleH, fullW, 4.5 * scaleH, 2.8 * scaleH, 'normal');
+            }
+        }
+
+        // Barcode — zentriert, bei DYMO mehr Abstand zu Bezeichnung 2 (rutscht weiter runter,
+        // da dort noch Platz bis zum Logo ist) und größer (höher + breiter). Breite skaliert
+        // mit der Etikettenbreite, damit er auf einem großen Etikett (z.B. DYMO) nicht winzig wirkt.
         try {
             const barcodeUrl = generateBarcodeDataUrl(numberText || '0');
-            const barcodeW = Math.min(22 * scaleW, fullW * 0.7);
-            const barcodeH = 4.2 * scaleH;
-            doc.addImage(barcodeUrl, 'PNG', fullCenterX - barcodeW / 2, y + 9.6 * scaleH, barcodeW, barcodeH);
+            const barcodeW = isSingleLabel ? Math.min(26 * scaleW, fullW * 0.78) : Math.min(22 * scaleW, fullW * 0.7);
+            const barcodeH = isSingleLabel ? 7 : 4.2 * scaleH;
+            const barcodeY = isSingleLabel ? y + 20 : y + 9.6 * scaleH;
+            doc.addImage(barcodeUrl, 'PNG', fullCenterX - barcodeW / 2, barcodeY, barcodeW, barcodeH);
         } catch (e) { console.warn('Barcode generation failed for', numberText, e); }
 
-        // Logo (sehr klein, schwarz/weiß), unten links — in derselben Zeile wie die Artikelnummer
+        // Logo (sehr klein, schwarz/weiß), unten links — in derselben Zeile wie die Artikelnummer.
+        // Bei DYMO etwas größer (höher + breiter), da dort genug Platz vorhanden ist.
         if (logo) {
             try {
-                const logoH = 2.3 * scaleH;
+                const logoH = isSingleLabel ? 7 : 2.3 * scaleH;
                 const logoW = logoH * logo.ratio;
                 doc.addImage(logo.url, 'PNG', x + padding, y + labelH - padding - logoH, logoW, logoH);
             } catch (e) {}
@@ -835,13 +888,17 @@
 
         // Artikelnummer — letzte Zeile unten, bleibt mittig zentriert
         doc.setTextColor(20, 20, 20);
-        fitCenteredText(doc, numberText, fullCenterX, y + labelH - padding - 0.6 * scaleH, fullW, 5 * scaleH, 3.5 * scaleH, 'bold');
+        if (isSingleLabel) {
+            fitCenteredText(doc, numberText, fullCenterX, y + labelH - padding - 0.6 * scaleH, fullW, 11, 8, 'bold');
+        } else {
+            fitCenteredText(doc, numberText, fullCenterX, y + labelH - padding - 0.6 * scaleH, fullW, 5 * scaleH, 3.5 * scaleH, 'bold');
+        }
 
         // QTY (Menge + Einheit) — unten rechts, klein. Wird nicht in der Datenbank gespeichert.
         if (qtyInfo && qtyInfo.qty) {
             const qtyText = `QTY: ${qtyInfo.qty} ${qtyInfo.unit || ''}`.trim();
             doc.setFont('helvetica', 'bold');
-            doc.setFontSize(3 * scaleH);
+            doc.setFontSize(isSingleLabel ? 7.5 : 3 * scaleH);
             doc.setTextColor(20, 20, 20);
             doc.text(qtyText, x + labelW - padding, y + labelH - padding - 0.6 * scaleH, { align: 'right' });
         }
@@ -872,6 +929,8 @@
         document.getElementById('label-tab-content-beschriftung').classList.toggle('hidden', isEtiketten);
         document.getElementById('label-tab-btn-etiketten').classList.toggle('active', isEtiketten);
         document.getElementById('label-tab-btn-beschriftung').classList.toggle('active', !isEtiketten);
+        const actions = document.getElementById('label-etiketten-actions');
+        if (actions) actions.classList.toggle('hidden', !isEtiketten);
 
         if (!isEtiketten) {
             renderBeschriftungPageTabs();

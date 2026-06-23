@@ -539,7 +539,7 @@ body {
     right: 0;
     left: auto;
     margin-top: 10px;
-    background-color: rgba(15, 23, 42, 0.9);
+    background-color: rgba(15, 23, 42, 1);
     backdrop-filter: blur(32px);
     -webkit-backdrop-filter: blur(32px);
     border-radius: 20px;
@@ -1054,7 +1054,7 @@ body {
     top: 100%;
     right: 0;
     margin-top: 10px;
-    background-color: rgba(15, 23, 42, 0.7);
+    background-color: rgba(15, 23, 42, 1);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border-radius: var(--border-radius);
@@ -1213,7 +1213,7 @@ body {
     top: calc(100% + 5px);
     left: 0;
     margin-top: 10px;
-    background-color: rgba(15, 23, 42, 0.85);
+    background-color: rgba(15, 23, 42, 1);
     backdrop-filter: blur(32px);
     -webkit-backdrop-filter: blur(32px);
     border-radius: 20px;
@@ -5818,6 +5818,29 @@ MACHINE HISTORY TIMELINE
     table:not(.task-table) {
         min-width: 640px;
         font-size: 0.85rem;
+    }
+
+    /* ---- Etiketten-Artikelliste: Zeilen sind zu breit für Handy (Checkbox + Text +
+       3 Eingabefelder + 2 Buttons) — statt alles zu quetschen, lieber horizontal
+       scrollbar lassen wie bei den Tabellen oben ---- */
+    #label-articles-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .label-article-row {
+        min-width: 600px;
+    }
+
+    #label-search-input {
+        flex: 1 1 100% !important;
+    }
+
+    /* Beschriftung-Formular/Vorschau-Grid hat jetzt eine feste Vorschau-Spaltenbreite
+       (1fr 480px statt 1fr 1fr) und wird daher von den generischen "1fr 1fr"-Regeln
+       weiter unten nicht mehr erfasst — hier explizit wieder auf 1 Spalte stapeln */
+    .beschriftung-grid {
+        grid-template-columns: 1fr !important;
     }
 
     /* ---- View headers: stack vertically ---- */

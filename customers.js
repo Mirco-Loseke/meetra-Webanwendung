@@ -25,9 +25,9 @@
     // ==========================================
     // TAB NAVIGATION
     // ==========================================
-    window.switchFirmeneinstellungenTab = function (tabName) {
+    window.switchImportTab = function (tabName) {
         // Toggle tabs
-        document.querySelectorAll('#settings-firmeneinstellungen .settings-tab').forEach(tab => {
+        document.querySelectorAll('#settings-import .settings-tab').forEach(tab => {
             if (tab.getAttribute('data-tab') === tabName) {
                 tab.classList.add('active');
             } else {
@@ -36,7 +36,7 @@
         });
 
         // Toggle contents
-        document.querySelectorAll('#settings-firmeneinstellungen .tab-content').forEach(content => {
+        document.querySelectorAll('#settings-import .tab-content').forEach(content => {
             if (content.id === `${tabName}-tab-content`) {
                 content.classList.remove('hidden');
                 content.classList.add('active');

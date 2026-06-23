@@ -1286,3 +1286,66 @@ WHERE se.is_finalized = true
   AND se.pdf_url IS NOT NULL
   AND se.pdf_path IS NOT NULL
   AND NOT EXISTS (SELECT 1 FROM public.documents d WHERE d.service_entry_id = se.id);
+
+
+/* ========================================================= */
+/* DATEI: add_missing_performance_indexes.sql */
+/* ========================================================= */
+
+-- documents.folder_id wird bei jeder Ordner-Navigation in "Dokumente" gefiltert (.eq('folder_id', ...)),
+-- war aber bisher nicht indiziert.
+CREATE INDEX IF NOT EXISTS idx_documents_folder_id ON public.documents(folder_id);
+
+-- tasks.machine_id wird in der Maschinenhistorie gefiltert (.eq('machine_id', ...)), war aber
+-- bisher nicht indiziert.
+CREATE INDEX IF NOT EXISTS idx_tasks_machine_id ON public.tasks(machine_id);
+
+
+/* ========================================================= */
+/* DATEI: enable_realtime_service_entries_machines.sql */
+/* ========================================================= */
+
+-- Live-Aktualisierung (Supabase Realtime) fuer Servicebericht-Liste und Maschinen — damit
+-- Aenderungen bei allen gerade geoeffneten Geraeten automatisch ankommen, ohne dass jemand
+-- die Seite neu laden muss. Idempotent, kann mehrfach ausgefuehrt werden.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'service_entries'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.service_entries;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_publication_tables
+    WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'machines'
+  ) THEN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.machines;
+  END IF;
+END $$;
+
+
+/* ========================================================= */
+/* DATEI: add_machine_series_to_machines.sql */
+/* ========================================================= */
+
+-- Ausgewaehlte Maschinenserie pro Maschine (Einzelauswahl, Name der Kategorie vom Typ
+-- 'series' — analog zu documents.machine_series, dort aber kommagetrennt fuer Mehrfachauswahl).
+ALTER TABLE public.machines
+ADD COLUMN IF NOT EXISTS machine_series text;
+
+
+/* ========================================================= */
+/* DATEI: add_equipment_category_type.sql */
+/* ========================================================= */
+
+-- Neuer Kategorie-Typ "Zusatzausrüstung" (Katalog mit Bezeichnung [= categories.name] +
+-- Bemerkung), nutzbar fuer beliebige Kategorie-Typen, aktuell aber nur von 'equipment' befuellt.
+ALTER TABLE public.categories
+ADD COLUMN IF NOT EXISTS remark text;
+
+-- Mehrfachauswahl der Zusatzausrüstungs-Katalogeintraege pro Maschine (Array von
+-- categories.id), unabhaengig von der bestehenden freien additional_equipment-Eingabe.
+ALTER TABLE public.machines
+ADD COLUMN IF NOT EXISTS equipment_category_ids jsonb DEFAULT '[]'::jsonb;
