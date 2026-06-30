@@ -231,18 +231,33 @@ window.populateChecklistSelector = function() {
     const machineCategoryId = selectedMachine ? String(selectedMachine.category_id) : null;
     const planAssignments = window.uvvPlanAssignments || {};
 
+    // Maschinenserie-Zuordnung hat Vorrang (Plan-Karte in den Einstellungen) — fällt auf den
+    // alten Maschinenmodell-Textvergleich zurück, solange ein Plan noch keine Serie zugewiesen hat.
+    const getAssignedSeries = (t) => planAssignments[t.id]?.machine_series || t.machine_series || [];
+    const matchesMachineSeries = (t) => {
+        const assignedSeries = getAssignedSeries(t);
+        return assignedSeries.length
+            ? !!(selectedMachine && selectedMachine.machine_series && assignedSeries.includes(selectedMachine.machine_series))
+            : machineName.toLowerCase().includes((t.machine_model || '').toLowerCase());
+    };
+
     // Alle Pläne (eingebaute + in den Einstellungen angelegte), gefiltert auf:
     // 1) den Plan-Typ passend zur gerade gewählten Service-Kategorie (bei "UVV" nur UVV-Pläne,
     //    bei "Wartung" nur Wartungspläne, bei "Einweisung" nur Einweisungserklärungen — sonst
     //    stehen alle drei Plan-Arten unübersichtlich gemischt in der Liste),
     // 2) den zum Maschinentyp passenden Maschinenkategorie-Bezug (Pläne ohne hinterlegte
-    //    Maschinentyp-Zuordnung gelten als universell und werden immer angezeigt).
+    //    Maschinentyp-Zuordnung gelten als universell und werden immer angezeigt),
+    // 3) der zugewiesenen Maschinenserie — ist eine Serie hinterlegt (z.B. "JT 580 / JT 630"),
+    //    wird der Plan für alle anderen Maschinen komplett ausgeblendet statt nur unmarkiert
+    //    angezeigt zu werden (vorher tauchte er trotz Serien-Zuordnung immer in der Liste auf).
     const allTemplates = window.ACTIVE_CHECKLIST_TEMPLATES || window.MOCK_CHECKLIST_TEMPLATES || [];
     const templates = allTemplates.filter(t => {
         if (!categoryText.includes(t.type)) return false;
         const assignedCatIds = planAssignments[t.id]?.category_ids || [];
-        if (!assignedCatIds.length) return true;
-        return machineCategoryId && assignedCatIds.map(String).includes(machineCategoryId);
+        if (assignedCatIds.length && !(machineCategoryId && assignedCatIds.map(String).includes(machineCategoryId))) return false;
+        const assignedSeries = getAssignedSeries(t);
+        if (assignedSeries.length && !matchesMachineSeries(t)) return false;
+        return true;
     });
 
     // Check if there are active checklists already loaded or entered.
@@ -251,12 +266,7 @@ window.populateChecklistSelector = function() {
 
     let html = '';
     templates.forEach(t => {
-        // Maschinenserie-Zuordnung hat Vorrang (Plan-Karte in den Einstellungen) — fällt auf den
-        // alten Maschinenmodell-Textvergleich zurück, solange ein Plan noch keine Serie zugewiesen hat.
-        const assignedSeries = planAssignments[t.id]?.machine_series || t.machine_series || [];
-        const matchesMachine = assignedSeries.length
-            ? !!(selectedMachine && selectedMachine.machine_series && assignedSeries.includes(selectedMachine.machine_series))
-            : machineName.toLowerCase().includes((t.machine_model || '').toLowerCase());
+        const matchesMachine = matchesMachineSeries(t);
         const suffix = matchesMachine ? ' (Empfohlen)' : '';
         
         let isChecked = activeChecklists[t.id] ? 'checked' : '';
@@ -410,14 +420,34 @@ window.renderActiveChecklists = function() {
         checklist.answers.forEach((item, index) => {
             if (item.category !== currentCategory) {
                 currentCategory = item.category;
-                const colspan = isEinweisung ? 3 : (isYesNoStyle ? 4 : 5);
-                html += `
-                    <tr style="background: rgba(255,255,255,0.03);">
-                        <td colspan="${colspan}" style="padding: 8px 10px; font-size: 0.85rem; font-weight: 800; color: var(--accent-color); text-transform: uppercase; letter-spacing: 0.5px;">
-                            ${currentCategory}
-                        </td>
-                    </tr>
-                `;
+                if (isEinweisung) {
+                    // Bei Einweisung bekommt auch die Überschrift/Kategorie selbst ein eigenes
+                    // Ankreuzfeld (z.B. "ganze Kategorie abgenommen"), unabhängig von den einzelnen
+                    // Punkten darunter — gleiche frei/x(grün)/-(orange)-Logik wie bei den Punkten.
+                    const catStatus = (checklist.categoryStatus && checklist.categoryStatus[currentCategory]) || '';
+                    const catBoxStyle = einweisungIoBoxStyle(catStatus);
+                    const catNameSafe = currentCategory.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    html += `
+                        <tr style="background: rgba(255,255,255,0.03);">
+                            <td colspan="2" style="padding: 8px 10px; font-size: 0.85rem; font-weight: 800; color: var(--accent-color); text-transform: uppercase; letter-spacing: 0.5px;">
+                                ${currentCategory}
+                            </td>
+                            <td style="padding: 5px 10px; text-align: center;">
+                                <div onclick="window.cycleChecklistCategoryIO('${checklist.template_id}', '${catNameSafe}')" title="Klicken zum Umschalten: frei -> x -> -"
+                                    style="width: 42px; height: 42px; margin: 0 auto; border-radius: 8px; border: 2px solid ${catBoxStyle.border}; background: ${catBoxStyle.bg}; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.8rem; font-weight: 900; color: ${catBoxStyle.color}; user-select: none; transition: all 0.15s;">${catBoxStyle.symbol}</div>
+                            </td>
+                        </tr>
+                    `;
+                } else {
+                    const colspan = isYesNoStyle ? 4 : 5;
+                    html += `
+                        <tr style="background: rgba(255,255,255,0.03);">
+                            <td colspan="${colspan}" style="padding: 8px 10px; font-size: 0.85rem; font-weight: 800; color: var(--accent-color); text-transform: uppercase; letter-spacing: 0.5px;">
+                                ${currentCategory}
+                            </td>
+                        </tr>
+                    `;
+                }
             }
 
             const commentVal = item.comment || '';
@@ -443,7 +473,7 @@ window.renderActiveChecklists = function() {
                                    onfocus="this.style.borderColor='var(--color-primary-green)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">
                             ` : `
                             <div id="io-box-${checklist.template_id}-${index}" onclick="window.cycleChecklistItemIO('${checklist.template_id}', ${index})" title="Klicken zum Umschalten: frei -> x -> -"
-                                style="width: 36px; height: 36px; margin: 0 auto; border-radius: 8px; border: 2px solid ${ioBoxStyle.border}; background: ${ioBoxStyle.bg}; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.3rem; font-weight: 900; color: ${ioBoxStyle.color}; user-select: none; transition: all 0.15s;">${ioBoxStyle.symbol}</div>
+                                style="width: 30px; height: 30px; margin: 0 auto; border-radius: 8px; border: 2px solid ${ioBoxStyle.border}; background: ${ioBoxStyle.bg}; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 1.3rem; font-weight: 900; color: ${ioBoxStyle.color}; user-select: none; transition: all 0.15s;">${ioBoxStyle.symbol}</div>
                             `}
                         </td>
                     </tr>
@@ -543,6 +573,41 @@ window.renderActiveChecklists = function() {
                         onfocus="this.style.borderColor='var(--color-primary-green)'" onblur="this.style.borderColor='rgba(255,255,255,0.1)'">${generalRemark}</textarea>
                 </div>
             `;
+
+            // Bei Einweisung: beliebig viele Unterschriften für die unterwiesenen Fahrer/Mechaniker
+            // (unabhängig von Techniker/Kunde im Hauptformular) — je Eintrag Datum + Unterschriftenfeld.
+            if (isEinweisung) {
+                const driverSigs = checklist.driverSignatures || [];
+                html += `
+                    <div style="margin-top: 1.25rem;">
+                        <button type="button" onclick="window.addDriverSignature('${checklist.template_id}')"
+                            style="padding: 8px 16px; border-radius: 8px; background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: #10b981; font-weight:700; font-size:0.82rem; cursor:pointer; display:inline-flex; align-items:center; gap:6px;">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            Unterschrift hinzufügen
+                        </button>
+                    </div>
+                    ${driverSigs.map((sig, sigIdx) => `
+                        <div style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; position: relative;">
+                            <button type="button" onclick="window.removeDriverSignature('${checklist.template_id}', ${sigIdx})" title="Entfernen"
+                                style="position:absolute; top:8px; right:8px; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); color:#ef4444; border-radius:50%; width:24px; height:24px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:1rem; line-height:1; padding:0;">&times;</button>
+                            <div style="display:flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap;">
+                                <div style="flex: 0 0 150px;">
+                                    <label style="display:block; font-size:0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px;">Datum</label>
+                                    <input type="date" value="${sig.date || ''}" onchange="window.setDriverSignatureDate('${checklist.template_id}', ${sigIdx}, this.value)"
+                                        style="width:100%; height: 38px; padding: 0 10px; border-radius: 8px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; font-size: 0.85rem; outline: none;">
+                                </div>
+                                <div style="flex: 1; min-width: 220px;">
+                                    <label style="display:block; font-size:0.75rem; color: rgba(255,255,255,0.5); margin-bottom: 4px;">Unterschrift Fahrer/Mechaniker</label>
+                                    <div onclick="window.openDriverSignaturePad('${checklist.template_id}', ${sigIdx})"
+                                        style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 10px; height: 80px; display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,0.2); cursor:pointer; overflow:hidden;">
+                                        ${sig.signature ? `<img src="${sig.signature}" style="max-height:100%; max-width:100%; object-fit:contain;">` : `<span style="color: rgba(255,255,255,0.4); font-size:0.82rem;">👉 Klicken zum Unterschreiben</span>`}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                `;
+            }
         }
         
         html += `
@@ -602,6 +667,21 @@ window.cycleChecklistItemIO = function(templateId, index) {
     box.style.background = style.bg;
 };
 
+// Gleiches frei -> x -> - Ankreuzfeld, aber auf Kategorie-Ebene statt pro Punkt (z.B. um eine
+// ganze Kategorie als komplett abgenommen zu markieren). Wird pro Checklisten-Typ in
+// checklist.categoryStatus[kategorieName] gespeichert und landet automatisch im checklist_payload.
+window.cycleChecklistCategoryIO = function(templateId, categoryName) {
+    const checklist = activeChecklists[templateId];
+    if (!checklist) return;
+    if (!checklist.categoryStatus) checklist.categoryStatus = {};
+    const current = checklist.categoryStatus[categoryName] || '';
+    const next = current === '' ? 'x' : (current === 'x' ? 'dash' : '');
+    checklist.categoryStatus[categoryName] = next;
+    // Voller Re-Render, da derselbe Kategoriename theoretisch mehrfach vorkommen könnte
+    // (anders als bei Einzelpunkten gibt es hier keine eindeutige Index-ID pro Box).
+    window.renderActiveChecklists();
+};
+
 window.setChecklistItemComment = function(templateId, index, comment) {
     if (activeChecklists[templateId] && activeChecklists[templateId].answers[index]) {
         activeChecklists[templateId].answers[index].comment = comment;
@@ -612,6 +692,47 @@ window.setUVVGeneralRemark = function(templateId, value) {
     if (activeChecklists[templateId]) {
         activeChecklists[templateId].generalRemark = value;
     }
+};
+
+// Fahrer/Mechaniker-Unterschriften bei Einweisung — beliebig viele, je eine pro unterwiesener
+// Person (anders als Techniker/Kunde, die fest im Hauptformular stehen). Liegt in
+// checklist.driverSignatures = [{ date, signature }, ...] und landet automatisch im
+// checklist_payload, da getChecklistPayload() die ganzen activeChecklists-Objekte zurückgibt.
+// Das eigentliche Zeichnen (Canvas) übernimmt der generische Signatur-Pad in index.html — diese
+// Funktionen halten nur die Liste/Daten aktuell, da activeChecklists nur hier direkt erreichbar ist.
+window.addDriverSignature = function(templateId) {
+    const checklist = activeChecklists[templateId];
+    if (!checklist) return;
+    if (!Array.isArray(checklist.driverSignatures)) checklist.driverSignatures = [];
+    checklist.driverSignatures.push({ date: '', signature: '' });
+    window.renderActiveChecklists();
+};
+
+window.removeDriverSignature = function(templateId, index) {
+    const checklist = activeChecklists[templateId];
+    if (!checklist || !Array.isArray(checklist.driverSignatures)) return;
+    checklist.driverSignatures.splice(index, 1);
+    window.renderActiveChecklists();
+};
+
+window.setDriverSignatureDate = function(templateId, index, value) {
+    const checklist = activeChecklists[templateId];
+    if (checklist && checklist.driverSignatures && checklist.driverSignatures[index]) {
+        checklist.driverSignatures[index].date = value;
+    }
+};
+
+window.getDriverSignatureImage = function(templateId, index) {
+    const checklist = activeChecklists[templateId];
+    return (checklist && checklist.driverSignatures && checklist.driverSignatures[index]) ? checklist.driverSignatures[index].signature : '';
+};
+
+window.setDriverSignatureImage = function(templateId, index, dataUrl) {
+    const checklist = activeChecklists[templateId];
+    if (checklist && checklist.driverSignatures && checklist.driverSignatures[index]) {
+        checklist.driverSignatures[index].signature = dataUrl;
+    }
+    window.renderActiveChecklists();
 };
 
 window.getChecklistPayload = function() {

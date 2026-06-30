@@ -1398,6 +1398,19 @@ body {
     display: none;
 }
 
+/* Listen-Seite: nur die Tabellen-Karte rutscht näher an die Sidebar heran, damit die breite
+   Angebote-Tabelle (viele Spalten) mehr horizontalen Platz hat — Überschrift und Tab-Zeile
+   bleiben an ihrer normalen Position, ohne #main-content global zu verändern. */
+#listen #listen-tab-content-angebote {
+    margin-left: -1.5rem;
+}
+
+@media (max-width: 1024px) {
+    #listen #listen-tab-content-angebote {
+        margin-left: 0;
+    }
+}
+
 .view.active {
     display: block;
     opacity: 1;
@@ -3291,7 +3304,7 @@ input[type="date"].glass-form-input::-webkit-calendar-picker-indicator:hover {
 }
 
 .protocol-modal {
-    background: rgba(30, 41, 59, 0.7);
+    background: rgba(30, 41, 59, 1);
     backdrop-filter: blur(40px) saturate(180%);
     -webkit-backdrop-filter: blur(40px) saturate(180%);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -3327,7 +3340,7 @@ input[type="date"].glass-form-input::-webkit-calendar-picker-indicator:hover {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgba(15, 23, 42, 0.97);
+    background: rgba(15, 23, 42, 1);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     position: sticky;

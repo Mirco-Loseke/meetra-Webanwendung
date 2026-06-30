@@ -488,11 +488,14 @@
                 address_number: addressNum,
                 customer_number: custNum || null,
                 name: name,
-                matchcode: mapMatchcode !== '' ? (row[mapMatchcode]?.toString().trim() || name) : name,
+                // Matchcode/Land vorerst NICHT mit Fallback befüllen: ein Re-Import einer Liste, die
+                // diese Spalte nicht enthält (z.B. reine Kundenliste ohne Matchcode), soll einen
+                // zuvor gesetzten Wert nicht mit einem Platzhalter überschreiben (siehe Merge unten).
+                matchcode: mapMatchcode !== '' ? (row[mapMatchcode]?.toString().trim() || null) : null,
                 street: street || null,
                 zip_code: zip || null,
                 city: city || null,
-                country: mapCountry !== '' ? formatCountryName(row[mapCountry]) : 'Deutschland',
+                country: mapCountry !== '' ? formatCountryName(row[mapCountry]) : null,
                 phone: mapPhone !== '' ? (row[mapPhone]?.toString().trim() || null) : null,
                 email: mapEmail !== '' ? (row[mapEmail]?.toString().trim() || null) : null
             });
@@ -507,28 +510,183 @@
         try {
             if (!window.supabaseClient) throw new Error('Supabase Client nicht initialisiert');
 
-            const chunkSize = 100;
-            const total = customersToUpsert.length;
+            // Bestehende Kunden zu den importierten Adressnummern laden: Adress- und Kundenliste
+            // werden oft abwechselnd importiert und enthalten meist nicht dieselben Spalten (z.B.
+            // hat die Kundenliste eine Kundennummer aber keine Straße, die Adressliste umgekehrt).
+            // Ohne diesen Merge würde ein Re-Import die jeweils fehlenden Felder auf NULL setzen
+            // statt sie zu ergänzen — Felder, die in DIESEM Import nicht zugeordnet sind, werden
+            // daher mit dem bisherigen Wert aufgefüllt statt überschrieben.
+            const addressNumbers = [...new Set(customersToUpsert.map(c => c.address_number))];
+            const existingByAddressNumber = {};
+            const lookupChunkSize = 500;
+            for (let i = 0; i < addressNumbers.length; i += lookupChunkSize) {
+                const numChunk = addressNumbers.slice(i, i + lookupChunkSize);
+                const { data: existing, error: lookupError } = await window.supabaseClient
+                    .from('customers')
+                    .select('id, address_number, customer_number, matchcode, street, zip_code, city, country, phone, email')
+                    .in('address_number', numChunk);
+                if (lookupError) throw lookupError;
+                (existing || []).forEach(c => { existingByAddressNumber[c.address_number] = c; });
+            }
 
-            for (let i = 0; i < total; i += chunkSize) {
-                const chunk = customersToUpsert.slice(i, i + chunkSize);
-                
+            const normalize = (s) => (s || '').toString().trim().toLowerCase().replace(/\s+/g, ' ');
+            const unmatched = customersToUpsert.filter(c => !existingByAddressNumber[c.address_number]);
+
+            // Sage selbst legt Firmen manchmal versehentlich doppelt an (zwei ECHTE, unterschiedliche
+            // Adressnummern für dieselbe Firma). Das System darf das nicht stumpf übernehmen, sondern
+            // muss erkennen können "die gibt es schon" — aber auch nicht blind zusammenführen, denn
+            // zwei unterschiedliche Adressnummern können auch zwei echte Standorte sein. Deshalb hier
+            // nur warnen + nachfragen, statt automatisch zu entscheiden.
+            if (unmatched.length > 0) {
+                const { data: realCandidates, error: realCandError } = await window.supabaseClient
+                    .from('customers')
+                    .select('name, address_number, customer_number, zip_code, street')
+                    .not('address_number', 'is', null);
+                if (realCandError) throw realCandError;
+
+                const realByName = {};
+                (realCandidates || []).forEach(c => {
+                    const key = normalize(c.name);
+                    if (!key) return;
+                    if (!realByName[key]) realByName[key] = [];
+                    realByName[key].push(c);
+                });
+
+                const possibleDuplicates = [];
+                unmatched.forEach(c => {
+                    const candidates = realByName[normalize(c.name)] || [];
+                    const matched = candidates.find(o =>
+                        (c.zip_code && o.zip_code && normalize(o.zip_code) === normalize(c.zip_code)) ||
+                        (c.street && o.street && normalize(o.street) === normalize(c.street))
+                    );
+                    if (matched) {
+                        possibleDuplicates.push(
+                            `${c.name} (PLZ ${c.zip_code || '?'}) — neu: Adressnr. ${c.address_number}, bestehend: Adressnr. ${matched.address_number}${matched.customer_number ? `, Kdnr. ${matched.customer_number}` : ''}`
+                        );
+                    }
+                });
+
+                if (possibleDuplicates.length > 0) {
+                    const proceed = confirm(
+                        `${possibleDuplicates.length} Firma(n) im Import sehen wie bereits vorhandene Kunden mit einer ANDEREN Adressnummer aus (evtl. Dopplung in Sage):\n\n` +
+                        possibleDuplicates.slice(0, 15).join('\n') +
+                        (possibleDuplicates.length > 15 ? `\n... und ${possibleDuplicates.length - 15} weitere` : '') +
+                        `\n\nTrotzdem als separate/neue Kunden importieren? "Abbrechen" stoppt den gesamten Import, damit du das vorher prüfen kannst.`
+                    );
+                    if (!proceed) {
+                        resetImportUI();
+                        return;
+                    }
+                }
+            }
+
+            // Alte Datensätze ohne Adressnummer (z.B. aus der Zeit vor Einführung des Felds, oder
+            // weil Adress- und Kundenliste für dieselbe Firma unterschiedliche Nummern mitbringen)
+            // per Name + PLZ/Straße erkennen, statt versehentlich einen zweiten Datensatz anzulegen.
+            // Nur bei eindeutigem Treffer übernommen — bleibt es mehrdeutig, lieber nichts anfassen.
+            const orphansByName = {};
+
+            if (unmatched.length > 0) {
+                const { data: orphans, error: orphanError } = await window.supabaseClient
+                    .from('customers')
+                    .select('id, name, customer_number, matchcode, street, zip_code, city, country, phone, email')
+                    .is('address_number', null);
+                if (orphanError) throw orphanError;
+
+                (orphans || []).forEach(c => {
+                    const key = normalize(c.name);
+                    if (!key) return;
+                    if (!orphansByName[key]) orphansByName[key] = [];
+                    orphansByName[key].push(c);
+                });
+            }
+
+            const toUpdateOrphan = []; // { id, payload }
+
+            unmatched.forEach(c => {
+                const candidates = orphansByName[normalize(c.name)] || [];
+                if (candidates.length === 0) return;
+
+                let match = candidates[0];
+                if (candidates.length > 1) {
+                    const refined = candidates.filter(o =>
+                        (c.zip_code && o.zip_code && normalize(o.zip_code) === normalize(c.zip_code)) ||
+                        (c.street && o.street && normalize(o.street) === normalize(c.street))
+                    );
+                    if (refined.length !== 1) return; // weiterhin mehrdeutig -> nicht automatisch zusammenführen
+                    match = refined[0];
+                }
+
+                existingByAddressNumber[c.address_number] = match;
+                c._mergeIntoOrphanId = match.id;
+            });
+
+            customersToUpsert.forEach(c => {
+                const existing = existingByAddressNumber[c.address_number];
+                if (existing) {
+                    Object.keys(c).forEach(key => {
+                        if (key === 'address_number' || key === 'name' || key === '_mergeIntoOrphanId') return;
+                        if (c[key] == null && existing[key] != null) c[key] = existing[key];
+                    });
+                }
+                // Endgültiger Fallback erst NACH dem Merge, also nur falls wirklich nirgends ein
+                // Wert bekannt ist (weder in diesem Import noch beim bisherigen Datensatz).
+                if (c.matchcode == null) c.matchcode = c.name;
+                if (c.country == null) c.country = 'Deutschland';
+
+                if (c._mergeIntoOrphanId) {
+                    const orphanId = c._mergeIntoOrphanId;
+                    delete c._mergeIntoOrphanId;
+                    toUpdateOrphan.push({ id: orphanId, payload: c });
+                }
+            });
+
+            // Per Name/PLZ/Straße gefundene alte Datensätze (ohne Adressnummer) gezielt per id
+            // aktualisieren — die bekommen dadurch jetzt eine Adressnummer und werden bei
+            // zukünftigen Importen ganz normal über diese gefunden, statt erneut zu duplizieren.
+            for (const { id, payload } of toUpdateOrphan) {
+                const { error: orphanUpdError } = await window.supabaseClient
+                    .from('customers')
+                    .update(payload)
+                    .eq('id', id);
+                if (orphanUpdError) throw orphanUpdError;
+            }
+
+            const toUpsert = customersToUpsert.filter(c => !toUpdateOrphan.some(o => o.payload === c));
+            const total = customersToUpsert.length;
+            const chunkSize = 100;
+            let processed = toUpdateOrphan.length;
+            if (progressBar) progressBar.style.width = `${Math.min(100, Math.round((processed / total) * 100))}%`;
+            if (progressDetails) progressDetails.textContent = `${processed} von ${total} verarbeitet...`;
+
+            for (let i = 0; i < toUpsert.length; i += chunkSize) {
+                const chunk = toUpsert.slice(i, i + chunkSize);
+
                 const { error } = await window.supabaseClient
                     .from('customers')
                     .upsert(chunk, { onConflict: 'address_number' });
 
                 if (error) throw error;
 
-                const progress = Math.min(100, Math.round(((i + chunk.length) / total) * 100));
+                processed += chunk.length;
+                const progress = Math.min(100, Math.round((processed / total) * 100));
                 if (progressBar) progressBar.style.width = `${progress}%`;
-                if (progressDetails) progressDetails.textContent = `${Math.min(total, i + chunk.length)} von ${total} verarbeitet...`;
+                if (progressDetails) progressDetails.textContent = `${processed} von ${total} verarbeitet...`;
             }
 
             // Success
             if (progressSection) progressSection.classList.add('hidden');
             if (resultSection) resultSection.classList.remove('hidden');
             if (resultMessage) {
-                resultMessage.textContent = `Erfolgreich ${total} Kundenadressen aus Sage 100 importiert und aktualisiert.`;
+                resultMessage.textContent = `Erfolgreich ${total} Kundenadressen aus Sage 100 importiert und aktualisiert${toUpdateOrphan.length > 0 ? ` (davon ${toUpdateOrphan.length} mit bestehendem Kunden ohne Adressnummer zusammengeführt)` : ''}.`;
+            }
+
+            // Neu importierte/aktualisierte Kunden können bislang unzuordenbare Angebote
+            // (Kundenmatchcode ohne passenden Kunden) jetzt eindeutig machen.
+            if (typeof window.autoAssignAngeboteMachines === 'function') {
+                window.autoAssignAngeboteMachines().then(() => {
+                    if (typeof window.fetchAngebote === 'function') window.fetchAngebote();
+                });
             }
         } catch (err) {
             alert('Fehler beim Datenbankimport: ' + err.message);
