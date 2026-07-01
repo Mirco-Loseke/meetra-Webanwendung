@@ -295,7 +295,7 @@
                             <span style="font-size: 1.1rem; font-weight: 700;">${task.title}</span>
                             ${task.subtasks && task.subtasks.length > 0 ? `
                             <div class="task-list-subtasks" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
-                                ${task.subtasks.filter(sub => !(window.currentAppMode === 'focus' && !window.focusModeShowAll && sub.status === 'completed')).map((sub, index) => `
+                                ${task.subtasks.filter(sub => !(window.currentAppMode === 'focus' && sub.status === 'completed')).map((sub, index) => `
                                     <div class="subtask-item" style="display:flex; align-items:flex-start; gap: 6px; flex-wrap:wrap;">
                                         <div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; flex:1; min-width:0;">
                                         <div class="subtask-text-row" style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 100px;">
@@ -446,7 +446,7 @@
                                      if (!task.subtasks || task.subtasks.length === 0) return '';
                                      const grouped = {};
                                      task.subtasks.forEach((sub, idx) => {
-                                         if (window.currentAppMode === 'focus' && !window.focusModeShowAll && sub.status === 'completed') return;
+                                         if (window.currentAppMode === 'focus' && sub.status === 'completed') return;
                                          const sg = sub.supergroup || 'Allgemein';
                                          if (!grouped[sg]) grouped[sg] = [];
                                          grouped[sg].push({ ...sub, idx });
@@ -623,7 +623,7 @@
                 if (!task.subtasks || task.subtasks.length === 0) return '';
                 const grouped = {};
                 task.subtasks.forEach((sub, idx) => {
-                    if (window.currentAppMode === 'focus' && !window.focusModeShowAll && sub.status === 'completed') return;
+                    if (window.currentAppMode === 'focus' && sub.status === 'completed') return;
                     const sg = sub.supergroup || 'Allgemein';
                     if (!grouped[sg]) grouped[sg] = [];
                     grouped[sg].push({ ...sub, idx });
@@ -1846,18 +1846,6 @@
         }
     };
 
-    window.focusModeShowAll = false;
-
-    window.toggleShowAllSubtasks = function() {
-        window.focusModeShowAll = !window.focusModeShowAll;
-        const btn = document.getElementById('btn-show-all-subtasks');
-        if (btn) {
-            btn.textContent = window.focusModeShowAll ? 'Nur offene anzeigen' : 'Alle Aufgaben anzeigen';
-            btn.style.background = window.focusModeShowAll ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)';
-        }
-        renderTasks();
-    };
-
     window.activateMode = function(mode) {
         window.currentAppMode = mode;
         if (!document.body.classList.contains('focus-mode-active')) {
@@ -1896,12 +1884,6 @@
 
         if (!isActive) {
             window.currentAppMode = 'normal';
-            window.focusModeShowAll = false;
-            const showAllBtn = document.getElementById('btn-show-all-subtasks');
-            if (showAllBtn) {
-                showAllBtn.textContent = 'Alle Aufgaben anzeigen';
-                showAllBtn.style.background = 'rgba(255,255,255,0.08)';
-            }
         } else if (keepMode !== true) {
             window.currentAppMode = 'focus';
         }

@@ -1518,3 +1518,46 @@ CREATE POLICY "Allow all operations for angebot_notizen" ON public.angebot_notiz
     FOR ALL USING (true) WITH CHECK (true);
 
 CREATE INDEX IF NOT EXISTS idx_angebot_notizen_angebot_id ON public.angebot_notizen(angebot_id);
+
+
+/* ========================================================= */
+/* DATEI: add_motor_fields_and_maintenance_source_to_machines.sql */
+/* ========================================================= */
+
+-- Motortyp/Motorseriennummer als zusaetzliche Stammdaten-Felder.
+ALTER TABLE public.machines
+ADD COLUMN IF NOT EXISTS motor_type TEXT,
+ADD COLUMN IF NOT EXISTS motor_serial TEXT;
+
+-- Herkunft von "Letzte Wartung" (manueller Wartung-Schnelleintrag vs. vollstaendiger
+-- Servicebericht) + die dazugehoerige Notiz (bei manuellen Eintraegen die angekreuzten
+-- Wartungsarten, z.B. "Motorwartung, SBA-Wartung"), damit die Maschinenkarte erkennbar
+-- markieren kann, wenn die letzte Wartung nur ein manueller Eintrag war.
+-- Wird von window.recalculateMachineMaintenanceFromHistory() in index.html gepflegt.
+ALTER TABLE public.machines
+ADD COLUMN IF NOT EXISTS last_maintenance_source TEXT,
+ADD COLUMN IF NOT EXISTS last_maintenance_note TEXT;
+
+
+/* ========================================================= */
+/* DATEI: add_email_fields_to_manual_history_entries.sql */
+/* ========================================================= */
+
+-- Strukturierte E-Mail-Felder fuer manuelle Historieneintraege (Typ 'email'), analog zu
+-- internal_processes (Vorgaenge): Absender/Empfaenger getrennt vom eigentlichen E-Mail-Text
+-- (content) sowie eine separate interne Bemerkung. Bei anderen Eintragstypen bleiben diese
+-- Spalten NULL. Wird von window.saveManualHistoryEntry() in index.html gepflegt.
+ALTER TABLE public.manual_history_entries
+ADD COLUMN IF NOT EXISTS sender TEXT,
+ADD COLUMN IF NOT EXISTS recipient TEXT,
+ADD COLUMN IF NOT EXISTS remark TEXT;
+
+
+/* ========================================================= */
+/* DATEI: add_power_field_to_machines.sql */
+/* ========================================================= */
+
+-- Freitextfeld fuer die Leistung der Maschine bzw. ihres Motors (z.B. "240 PS / 280 kW"
+-- oder "50 Hz"), da je nach Maschinentyp unterschiedliche Einheiten/Formate gebraucht werden.
+ALTER TABLE public.machines
+ADD COLUMN IF NOT EXISTS power TEXT;

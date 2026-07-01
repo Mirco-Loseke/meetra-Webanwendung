@@ -2,6 +2,13 @@
 (function () {
     'use strict';
 
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        const div = document.createElement('div');
+        div.textContent = String(str);
+        return div.innerHTML;
+    }
+
     function renderMachinesGrouped(targetId = 'machine-list-container') {
         const container = document.getElementById(targetId);
         if (!container) return;
@@ -53,11 +60,17 @@
             // Machine Series Filter
             const matchSeries = seriesFilters.includes('all') || (m.machine_series && seriesFilters.includes(m.machine_series));
 
-            // Search Keyword Filter
+            // Search Keyword Filter — Name/Hersteller/Seriennummer/Baujahr sowie Firma,
+            // Betreiberstandort (operator_*) und Maschinenstandort (location*).
             let matchSearch = true;
             if (searchFilter.trim() !== '') {
                 const queryTerms = searchFilter.toLowerCase().trim().split(/\s+/);
-                const searchableText = [m.name, m.manufacturer, m.serial ? `#${m.serial}` : '', m.year ? `(${m.year})` : ''].join(' ').toLowerCase();
+                const searchableText = [
+                    m.name, m.manufacturer, m.serial ? `#${m.serial}` : '', m.year ? `(${m.year})` : '',
+                    m.company,
+                    m.operator_address, m.operator_street, m.operator_zip, m.operator_city,
+                    m.location, m.location_street, m.location_zip, m.location_city
+                ].join(' ').toLowerCase();
                 matchSearch = queryTerms.every(term => searchableText.includes(term));
             }
             return matchCat && matchCon && matchSeries && matchSearch;
@@ -245,6 +258,8 @@
 
         // Maintenance logic
         const lastMaintDate = machine.last_maintenance ? new Date(machine.last_maintenance).toLocaleDateString('de-DE') : '/';
+        const lastMaintIsManual = machine.last_maintenance_source === 'manual';
+        const lastMaintNote = machine.last_maintenance_note || '';
         const nextMaintDate = machine.next_maintenance ? new Date(machine.next_maintenance) : null;
         const nextMaintStr = nextMaintDate ? nextMaintDate.toLocaleDateString('de-DE') : '/';
 
@@ -356,6 +371,12 @@
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: rgba(255,255,255,0.4);"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
                             ${lastMaintDate}
                         </div>
+                        ${lastMaintIsManual ? `
+                        <div style="margin-top:4px; display:flex; flex-direction:column; align-items:center; gap:2px;">
+                            <span style="font-size:0.65rem; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; color:#a78bfa; background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.35); border-radius:8px; padding:2px 6px;">Manueller Eintrag</span>
+                            ${lastMaintNote ? `<span style="font-size:0.7rem; color:rgba(255,255,255,0.5); text-align:center;">${escapeHtml(lastMaintNote)}</span>` : ''}
+                        </div>
+                        ` : ''}
                     </div>
                     <div style="padding-left: 6px; display: flex; flex-direction: column; align-items: center; text-align: center;">
                         <div style="font-size: 0.85rem; color: rgba(255,255,255,0.4); margin-bottom: 5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; width: 100%;">Nächste Wartung</div>

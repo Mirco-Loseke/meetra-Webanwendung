@@ -283,6 +283,48 @@
             box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
         }
 
+        .history-clamp-wrap {
+            position: relative;
+            max-height: 130px;
+            overflow: hidden;
+        }
+
+        .history-clamp-wrap.expanded {
+            max-height: none;
+        }
+
+        .history-clamp-fade {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 48px;
+            background: linear-gradient(to bottom, transparent, rgba(20, 25, 38, 0.96));
+            pointer-events: none;
+        }
+
+        .history-readmore-btn {
+            display: none;
+            align-items: center;
+            gap: 4px;
+            margin-top: 6px;
+            background: none;
+            border: none;
+            color: var(--color-primary-green, #34d399);
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            padding: 4px 0;
+        }
+
+        .history-readmore-btn:hover {
+            text-decoration: underline;
+        }
+
+        .history-readmore-btn svg {
+            transition: transform 0.2s ease;
+        }
+
         .history-tag-badge {
             position: absolute;
             top: -10px;
@@ -1320,7 +1362,8 @@
                                         <circle cx="17.5" cy="17.5" r="4.5" />
                                         <path d="m15.8 17.6 1.1 1.1 2.2-2.4" />
                                     </svg>Aufgaben</h1>
-                                <!-- Focus Mode Button – next to title on mobile, left of search on desktop -->
+                            </div>
+                            <div class="view-header-right" style="display: flex; align-items: center; gap: 10px;">
                                 <div id="focus-mode-container" style="display: flex; align-items: center; position: relative;">
                                     <div id="focus-mode-btn" class="focus-mode-btn" onclick="window.toggleFocusMode()" title="Fokusmodus">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -1333,8 +1376,6 @@
                                         </svg>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="view-header-right" style="display: flex; align-items: center; gap: 10px;">
                                 <div class="custom-search-wrapper" style="width: 250px;">
                                     <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
                                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
@@ -1360,7 +1401,6 @@
                             <div class="view-header-right" style="display: flex; align-items: center; gap: 12px;">
                                 <!-- Cinema Mode Controls (Moved here next to Add Button) -->
                                 <div class="cinema-mode-controls">
-                                    <button id="btn-show-all-subtasks" onclick="window.toggleShowAllSubtasks()" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: white; padding: 6px 14px; border-radius: 20px; cursor: pointer; font-size: 0.82rem; font-weight: 500; white-space: nowrap; transition: all 0.2s ease;" title="Erledigte Unteraufgaben anzeigen">Alle Aufgaben anzeigen</button>
                                     <button id="btn-cinema-toggle" class="btn-cinema-premium" onclick="window.toggleCinemaMode()" title="Kino-Modus">
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                             <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
@@ -3063,6 +3103,10 @@
                     <button class="calendar-tab-btn" id="listen-tab-btn-maschinen" onclick="window.switchListenTab('maschinen')">Maschinen</button>
                 </div>
                 <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:nowrap; flex-shrink:0;">
+                    <select id="angebote-filter-jahr" class="glass-form-input" onchange="window.renderAngeboteList()"
+                        style="width:115px; height:38px; font-size:0.85rem; flex-shrink:0;">
+                        <option value="">Alle Jahre</option>
+                    </select>
                     <select id="angebote-filter-status" class="glass-form-input" onchange="window.renderAngeboteList()"
                         style="width:150px; height:38px; font-size:0.85rem; flex-shrink:0;">
                         <option value="">Alle Status</option>
@@ -7089,6 +7133,11 @@
                     nextMaintIconBg.style.color = nextMaintColor;
                 }
 
+                const maintenanceCard = document.getElementById('machine-details-maintenance-card');
+                if (maintenanceCard) {
+                    maintenanceCard.style.display = (machine.last_maintenance || machine.next_maintenance) ? 'flex' : 'none';
+                }
+
                 const titleEl = document.getElementById('machine-details-title');
                 if (titleEl) {
                     titleEl.textContent = `${machine.manufacturer || ''} ${machine.name || ''}`.trim();
@@ -7100,6 +7149,20 @@
                     const serialStr = machine.serial ? `#${machine.serial}` : '/';
                     const yearStr = machine.year ? machine.year : '/';
                     subtitleEl.textContent = `Seriennummer: ${serialStr} | Baujahr: ${yearStr}`;
+                }
+
+                const motorLineEl = document.getElementById('machine-details-motor-line');
+                if (motorLineEl) {
+                    if (machine.motor_type || machine.motor_serial || machine.power) {
+                        const motorTypeStr = machine.motor_type || '/';
+                        const motorSerialStr = machine.motor_serial ? `#${machine.motor_serial}` : '/';
+                        let text = `Motortyp: ${motorTypeStr} | Motornummer: ${motorSerialStr}`;
+                        if (machine.power) text += ` | Leistung: ${machine.power}`;
+                        motorLineEl.textContent = text;
+                        motorLineEl.style.display = 'block';
+                    } else {
+                        motorLineEl.style.display = 'none';
+                    }
                 }
 
                 const imageContainer = document.getElementById('machine-details-image-container');
@@ -7250,7 +7313,6 @@
                     .map(id => (window.categoryList || []).find(c => c.type === 'equipment' && String(c.id) === String(id)))
                     .filter(Boolean);
 
-                const extrasWrapper = document.getElementById('machine-details-extras-wrapper');
                 const relatedCard = document.getElementById('machine-details-related-card');
                 const relatedList = document.getElementById('machine-details-related-list');
                 const equipCard = document.getElementById('machine-details-equipment-card');
@@ -7259,7 +7321,8 @@
                 const hasRelated = relatedIds.length > 0;
                 const hasEquip = additionalEquip.length > 0 || equipmentCatalogItems.length > 0;
 
-                if (extrasWrapper) extrasWrapper.style.display = (hasRelated || hasEquip) ? 'grid' : 'none';
+                if (relatedCard) relatedCard.style.display = hasRelated ? 'flex' : 'none';
+                if (equipCard) equipCard.style.display = hasEquip ? 'flex' : 'none';
 
                 if (relatedList) {
                     if (hasRelated) {
@@ -7277,7 +7340,7 @@
                                     </div>`;
                         }).join('');
                     } else {
-                        relatedList.innerHTML = '<div style="font-size: 0.85rem; color: rgba(255,255,255,0.3); padding: 4px 0;">Keine verknüpften Maschinen</div>';
+                        relatedList.innerHTML = '';
                     }
                 }
 
@@ -7300,7 +7363,7 @@
                         });
                         equipList.innerHTML = [...catalogEntries, ...freeEntries].join('');
                     } else {
-                        equipList.innerHTML = '<div style="font-size: 0.85rem; color: rgba(255,255,255,0.3); padding: 4px 0;">Keine Zusatzausrüstung erfasst</div>';
+                        equipList.innerHTML = '';
                     }
                 }
 
@@ -8346,6 +8409,9 @@
                         }
                     }
                     document.getElementById('machine-year').value = editData ? (editData.year || '') : '';
+                    document.getElementById('machine-motor-type').value = editData ? (editData.motor_type || '') : '';
+                    document.getElementById('machine-motor-serial').value = editData ? (editData.motor_serial || '') : '';
+                    document.getElementById('machine-power').value = editData ? (editData.power || '') : '';
                     document.getElementById('machine-owner').value = editData ? (editData.company || '') : '';
                     document.getElementById('machine-address-input').value = editData ? (editData.operator_address || '') : '';
                     document.getElementById('machine-location-input').value = editData ? (editData.location || '') : '';
@@ -8895,7 +8961,7 @@
                 const numericMachineId = parseInt(machineId, 10);
                 try {
                     const [wartungRes, serviceRes, machineRes] = await Promise.all([
-                        window.supabaseClient.from('manual_history_entries').select('created_at').eq('machine_id', numericMachineId).eq('type', 'wartung'),
+                        window.supabaseClient.from('manual_history_entries').select('created_at, content').eq('machine_id', numericMachineId).eq('type', 'wartung'),
                         window.supabaseClient.from('service_entries').select('date').eq('machine_id', numericMachineId),
                         window.supabaseClient.from('machines').select('id, category_id, maintenance_interval_months, files').eq('id', numericMachineId).single()
                     ]);
@@ -8909,16 +8975,25 @@
                         return;
                     }
 
-                    const dates = [];
-                    (wartungRes.data || []).forEach(e => { if (e.created_at) dates.push(e.created_at.split('T')[0]); });
-                    (serviceRes.data || []).forEach(e => { if (e.date) dates.push(String(e.date).split('T')[0]); });
+                    // Jeder Termin mit Datum + Herkunft (manueller Schnelleintrag vs. Servicebericht) +
+                    // ggf. Beschreibung, damit die Maschinenkarte erkennen kann, ob "Letzte Wartung" aus
+                    // einem manuellen Eintrag stammt und was dabei angekreuzt wurde.
+                    const entries = [];
+                    (wartungRes.data || []).forEach(e => {
+                        if (e.created_at) entries.push({ date: e.created_at.split('T')[0], source: 'manual', note: e.content || null });
+                    });
+                    (serviceRes.data || []).forEach(e => {
+                        if (e.date) entries.push({ date: String(e.date).split('T')[0], source: 'service', note: null });
+                    });
 
-                    if (!dates.length) {
+                    if (!entries.length) {
                         console.warn('recalculateMachineMaintenanceFromHistory: Keine Wartungs-/Service-Daten für Maschine', numericMachineId, 'gefunden.');
                         return;
                     }
 
-                    const latestDate = dates.sort().slice(-1)[0]; // YYYY-MM-DD Strings sortieren sich lexikografisch korrekt chronologisch
+                    entries.sort((a, b) => a.date.localeCompare(b.date)); // YYYY-MM-DD sortiert sich lexikografisch korrekt chronologisch
+                    const latest = entries[entries.length - 1];
+                    const latestDate = latest.date;
 
                     const machineRow = machineRes.data;
                     const cat = (window.categoryList || []).find(c => c.id === machineRow.category_id);
@@ -8934,6 +9009,8 @@
                         .update({
                             last_maintenance: latestDate,
                             next_maintenance: nextMaintDate,
+                            last_maintenance_source: latest.source,
+                            last_maintenance_note: latest.note,
                             files: updatedFiles
                         })
                         .eq('id', numericMachineId);
@@ -9008,6 +9085,9 @@
                     const machineSeries = document.getElementById('machine-series').value;
                     const serial = document.getElementById('machine-serial').value;
                     const year = document.getElementById('machine-year').value;
+                    const motorType = document.getElementById('machine-motor-type').value.trim() || null;
+                    const motorSerial = document.getElementById('machine-motor-serial').value.trim() || null;
+                    const power = document.getElementById('machine-power').value.trim() || null;
                     const contactType = document.getElementById('machine-contact-type').value; // JSON string
                     const lastMaintenance = document.getElementById('machine-last-maintenance').value;
                     const nextMaintenance = document.getElementById('machine-next-maintenance').value;
@@ -9063,6 +9143,9 @@
                             machine_series: machineSeries || null,
                             serial: serial,
                             year: year ? parseInt(year) : null,
+                            motor_type: motorType,
+                            motor_serial: motorSerial,
+                            power: power,
                             contact_type: (contactType && contactType.trim() !== '') ? JSON.parse(contactType) : [],
                             last_maintenance: lastMaintenance || null,
                             next_maintenance: nextMaintenance || null,
@@ -9150,6 +9233,9 @@
                             machine_series: machineSeries || null,
                             serial: serial,
                             year: year ? parseInt(year) : null,
+                            motor_type: motorType,
+                            motor_serial: motorSerial,
+                            power: power,
                             contact_type: (contactType && contactType.trim() !== '') ? JSON.parse(contactType) : [],
                             last_maintenance: lastMaintenance || null,
                             next_maintenance: nextMaintenance || null,
@@ -9205,6 +9291,9 @@
                             machine_series: machineSeries || null,
                             serial: serial,
                             year: year ? parseInt(year) : null,
+                            motor_type: motorType,
+                            motor_serial: motorSerial,
+                            power: power,
                             contact_type: (contactType && contactType.trim() !== '') ? JSON.parse(contactType) : [],
                             last_maintenance: lastMaintenance || null,
                             next_maintenance: nextMaintenance || null,
@@ -9587,7 +9676,7 @@
 
             const ids = window.machineRelatedIds || [];
             if (!ids.length) {
-                container.innerHTML = '<div class="machine-related-empty">Noch keine weiteren Maschinen verknüpft.</div>';
+                container.innerHTML = '';
                 return;
             }
 
@@ -9701,7 +9790,7 @@
 
             const rows = window.machineAdditionalEquipment || [];
             if (!rows.length) {
-                container.innerHTML = '<div class="machine-equipment-empty">Noch keine Zusatzausrüstung erfasst.</div>';
+                container.innerHTML = '';
                 return;
             }
 
@@ -11515,32 +11604,115 @@
         // Nachrichten und stellt sie als Liste dar (Datum/Uhrzeit links, Text daneben) statt
         // als einen durchgehenden Fließtext. Mehrzeilige Nachrichten ohne neuen Zeitstempel
         // werden der vorherigen Nachricht angehängt.
+        function escHistoryText(s) {
+            if (s === null || s === undefined) return '';
+            return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        // Entfernt die spitze-Klammern-E-Mail-Adresse aus "Name <email>" (mehrere, durch ";"
+        // getrennte Empfänger werden einzeln behandelt) — übrig bleibt nur der Anzeigename.
+        // Steht kein Name davor (nur eine nackte E-Mail-Adresse), bleibt die Adresse als
+        // einzige verfügbare Information stehen.
+        function stripEmailAngleBrackets(str) {
+            if (!str) return '';
+            return str.split(';').map(part => {
+                const trimmed = part.trim();
+                const match = trimmed.match(/^(.*?)\s*<[^>]+>$/);
+                return (match && match[1].trim()) ? match[1].trim() : trimmed;
+            }).filter(Boolean).join('; ');
+        }
+
+        // Strukturierte, lesbare Darstellung eines manuellen E-Mail-Historieneintrags
+        // (Von/An je eigene Zeile, hervorgehobene Bemerkung, eigentlicher E-Mail-Text) — analog
+        // zur Vorgänge-Tabelle (internal_processes), nur als Zeitleisten-Karte statt Tabellenzeile.
+        function buildEmailHistoryHtml(m) {
+            const parts = [];
+            const metaLines = [];
+            if (m.sender) metaLines.push(`Von: ${stripEmailAngleBrackets(m.sender)}`);
+            if (m.recipient) metaLines.push(`An: ${stripEmailAngleBrackets(m.recipient)}`);
+            if (metaLines.length > 0) {
+                parts.push(`<div style="font-size:0.8rem; color:rgba(255,255,255,0.45); font-weight:700; margin-bottom:8px; white-space:pre-wrap;">${escHistoryText(metaLines.join('\n'))}</div>`);
+            }
+            if (m.remark) {
+                parts.push(`<div style="font-size:0.88rem; color:#fbbf24; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:8px; padding:8px 12px; margin-bottom:8px; white-space:pre-wrap;"><strong style="color:#f59e0b;">Bemerkung:</strong> ${escHistoryText(m.remark)}</div>`);
+            }
+            if (m.content) {
+                parts.push(`<div style="color: rgba(255,255,255,0.75); font-size:0.92rem; line-height:1.6; white-space:pre-wrap;">${escHistoryText(m.content)}</div>`);
+            }
+            return parts.join('') || null;
+        }
+
         function renderWhatsAppMessages(text) {
             if (!text) return '';
             const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            const headerRegex = /^\[(\d{1,2}:\d{2}),\s*(\d{1,2}\.\d{1,2}\.\d{4})\]\s*([^:]+):\s*(.*)$/;
-            const lines = text.split('\n');
-            const messages = [];
 
-            lines.forEach(line => {
-                const match = line.match(headerRegex);
-                if (match) {
-                    messages.push({ time: match[1], date: match[2], sender: match[3].trim(), text: match[4] });
-                } else if (messages.length > 0) {
-                    messages[messages.length - 1].text += '\n' + line;
-                } else if (line.trim()) {
-                    messages.push({ time: '', date: '', sender: '', text: line });
+            // Beim Kopieren direkt aus WhatsApp Web/Desktop (statt über "Chat exportieren")
+            // landen zwischen den Nachrichten oft GAR KEINE echten Zeilenumbrüche, nur
+            // Leerzeichen — dann ist der ganze Text nur eine einzige "Zeile". Deshalb wird hier
+            // nicht zeilenweise gesucht, sondern der gesamte Text nach allen Zeitstempel-Mustern
+            // durchsucht (egal ob mitten im Fließtext oder am Zeilenanfang), und an jeder
+            // Fundstelle eine neue Nachricht begonnen. Erkennt sowohl "[Uhrzeit, Datum]" als
+            // auch "[Datum, Uhrzeit]" (je nach Gerät/Sprache unterschiedliche Reihenfolge) sowie
+            // das klammerlose Android-Format "Datum, Uhrzeit - Name: Text".
+            const headerRegex = /\[([^,\]\n]+),\s*([^\]\n]+)\]\s*([^:\n]+):\s*|(?:^|\n)(\d{1,2}\.\d{1,2}\.\d{2,4}),?\s*(\d{1,2}:\d{2}(?::\d{2})?)\s*-\s*([^:\n]+):\s*/g;
+
+            const messages = [];
+            let lastIndex = 0;
+            let match;
+            let pending = null;
+
+            while ((match = headerRegex.exec(text)) !== null) {
+                const between = text.slice(lastIndex, match.index).trim();
+                if (pending) {
+                    pending.text = between;
+                    messages.push(pending);
+                } else if (between) {
+                    messages.push({ time: '', date: '', sender: '', text: between });
                 }
-            });
+
+                let time, date, sender;
+                if (match[1] !== undefined) {
+                    const p1 = match[1].trim();
+                    const p2 = match[2].trim();
+                    if (p1.includes(':')) { time = p1; date = p2; } else { time = p2; date = p1; }
+                    sender = match[3].trim();
+                } else {
+                    date = match[4].trim();
+                    time = match[5].trim();
+                    sender = match[6].trim();
+                }
+                time = time.replace(/^(\d{1,2}:\d{2}):\d{2}$/, '$1'); // Sekunden für die Anzeige weglassen
+                pending = { time, date, sender };
+                lastIndex = headerRegex.lastIndex;
+            }
+
+            if (pending) {
+                pending.text = text.slice(lastIndex).trim();
+                messages.push(pending);
+            } else {
+                const rest = text.slice(lastIndex).trim();
+                if (rest) messages.push({ time: '', date: '', sender: '', text: rest });
+            }
 
             if (messages.length === 0) return '';
 
-            return messages.map(m => `
-                <div style="display:flex; gap:10px; margin-bottom:10px; align-items:flex-start;">
-                    ${m.date ? `<div style="flex-shrink:0; min-width:88px; font-size:0.72rem; color:rgba(255,255,255,0.45); font-weight:700; line-height:1.4; white-space:nowrap;">${esc(m.date)}<br>${esc(m.time)}</div>` : ''}
-                    <div style="flex:1; font-size:0.9rem; color:rgba(255,255,255,0.85); line-height:1.5; white-space:pre-wrap;">${m.sender ? `<strong style="color:#22c55e;">${esc(m.sender)}:</strong> ` : ''}${esc(m.text)}</div>
-                </div>
-            `).join('');
+            // Pro Tag eine eigene, etwas größere Überschrift statt das Datum bei jeder
+            // einzelnen Nachricht zu wiederholen. Der Kontaktname steht (grün) bereits einmal
+            // im Titel über dem Trenner — pro Nachricht reicht daher die schlichte Form
+            // "[Uhrzeit] Name: Text", direkt untereinander wie im echten Chatverlauf (kein
+            // Absatzabstand dazwischen, sonst wirkt es wieder wie Fließtext).
+            let html = '';
+            let lastDate = null;
+            messages.forEach(m => {
+                if (m.date && m.date !== lastDate) {
+                    html += `<div style="font-size:0.95rem; font-weight:800; color:#fff; margin: ${lastDate ? '18px' : '0'} 0 10px 0; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.08);">${esc(m.date)}</div>`;
+                    lastDate = m.date;
+                }
+                const prefix = m.time ? `<span style="color:#22c55e;">[${esc(m.time)}]</span> ` : '';
+                const senderPart = m.sender ? `${esc(m.sender)}: ` : '';
+                html += `<div style="font-size:0.9rem; color:rgba(255,255,255,0.85); line-height:1.6; white-space:pre-wrap;">${prefix}${senderPart}${esc(m.text)}</div>`;
+            });
+            return html;
         }
 
         window.openHistoryModal = async function (machineId) {
@@ -11717,8 +11889,11 @@
                             const user = window.userList?.find(u => u.id == m.created_by);
 
                             let mDescription = m.content;
+                            let mEmailHtml = null;
                             if (m.type === 'hours' && m.content) {
                                 mDescription = `${m.content} Std.`;
+                            } else if (m.type === 'email') {
+                                mEmailHtml = buildEmailHistoryHtml(m);
                             }
 
                             historyItems.push({
@@ -11727,6 +11902,7 @@
                                 type: config.label,
                                 title: m.title,
                                 description: mDescription,
+                                emailHtml: mEmailHtml,
                                 rawType: m.type,
                                 angebotId: m.angebot_id || null,
                                 endDate: m.end_date || null,
@@ -11750,6 +11926,7 @@
 
                 let html = '';
                 let lastYear = null;
+                let clampCounter = 0;
 
                 historyItems.forEach(item => {
                     const currentYear = item.date.getFullYear();
@@ -11942,13 +12119,38 @@
                                             })()}
                                         </div>
                                     </div>
-                                    <h4 style="margin: 0 0 0.5rem 0; color: #fff; font-size: 1rem; font-weight: 700; letter-spacing: -0.01em;">${item.title}</h4>
-                                    ${item.rawType === 'whatsapp' && item.description ? `
-                                        <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 0.6rem; margin-top: 0.25rem;">
-                                            ${item.endDate ? `<div style="font-size:0.75rem; color:rgba(255,255,255,0.4); font-weight:700; margin-bottom:10px;">Zeitraum bis ${new Date(item.endDate).toLocaleDateString('de-DE')}</div>` : ''}
-                                            ${renderWhatsAppMessages(item.description)}
-                                        </div>
-                                    ` : (item.description ? `<p style="margin: 0; color: ${item.itemType === 'workshop' ? '#fff' : 'rgba(255,255,255,0.7)'}; font-size: 0.95rem; line-height: 1.6; font-weight: ${item.itemType === 'workshop' ? '700' : '400'};">${item.description}</p>` : '')}
+                                    <h4 style="margin: 0 0 0.5rem 0; color: #fff; font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; white-space: pre-wrap;">${escHistoryText(item.title)}</h4>
+                                    ${(() => {
+                                        let inner = '';
+                                        if (item.rawType === 'whatsapp' && item.description) {
+                                            inner = `
+                                                <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 0.6rem; margin-top: 0.25rem;">
+                                                    ${item.endDate ? `<div style="font-size:0.75rem; color:rgba(255,255,255,0.4); font-weight:700; margin-bottom:10px;">Zeitraum bis ${new Date(item.endDate).toLocaleDateString('de-DE')}</div>` : ''}
+                                                    ${renderWhatsAppMessages(item.description)}
+                                                </div>
+                                            `;
+                                        } else if (item.rawType === 'email' && item.emailHtml) {
+                                            inner = `
+                                                <div style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 0.6rem; margin-top: 0.25rem;">
+                                                    ${item.emailHtml}
+                                                </div>
+                                            `;
+                                        } else if (item.description) {
+                                            inner = `<p style="margin: 0; color: ${item.itemType === 'workshop' ? '#fff' : 'rgba(255,255,255,0.7)'}; font-size: 0.95rem; line-height: 1.6; font-weight: ${item.itemType === 'workshop' ? '700' : '400'}; white-space: pre-wrap;">${escHistoryText(item.description)}</p>`;
+                                        }
+                                        if (!inner) return '';
+                                        const uid = 'hc' + (clampCounter++);
+                                        return `
+                                            <div class="history-clamp-wrap" id="hc-wrap-${uid}">
+                                                ${inner}
+                                                <div class="history-clamp-fade" id="hc-fade-${uid}"></div>
+                                            </div>
+                                            <button type="button" class="history-readmore-btn" id="hc-btn-${uid}" onclick="window.toggleHistoryClamp('${uid}')">
+                                                <span id="hc-btn-label-${uid}">Mehr lesen</span>
+                                                <svg id="hc-btn-icon-${uid}" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                            </button>
+                                        `;
+                                    })()}
                                     ${photoGallery}
                                     <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; align-items: center; width: 100%;">
                                         <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -11965,9 +12167,42 @@
 
                 container.innerHTML = `<div class="history-icon-connector"></div>` + html;
 
+                // Nur bei Einträgen, die wirklich über die maximale Höhe hinausragen, die Fade
+                // + den "Mehr lesen"-Button einblenden — bei kurzen Einträgen bleibt beides weg.
+                container.querySelectorAll('.history-clamp-wrap').forEach(wrap => {
+                    if (wrap.scrollHeight > wrap.clientHeight + 2) {
+                        const uid = wrap.id.replace('hc-wrap-', '');
+                        const btn = document.getElementById('hc-btn-' + uid);
+                        if (btn) btn.style.display = 'inline-flex';
+                    } else {
+                        const fade = wrap.querySelector('.history-clamp-fade');
+                        if (fade) fade.remove();
+                    }
+                });
+
             } catch (error) {
                 console.error("Error loading machine history", error);
                 container.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 2rem;">Fehler beim Laden der Historie.</div>';
+            }
+        };
+
+        // Klappt einen langen Historie-Eintrag (Bemerkung, WhatsApp, E-Mail, ...) auf/zu.
+        window.toggleHistoryClamp = function (uid) {
+            const wrap = document.getElementById('hc-wrap-' + uid);
+            const fade = document.getElementById('hc-fade-' + uid);
+            const label = document.getElementById('hc-btn-label-' + uid);
+            const icon = document.getElementById('hc-btn-icon-' + uid);
+            if (!wrap) return;
+            const isExpanded = wrap.classList.toggle('expanded');
+            if (isExpanded) {
+                if (fade) fade.style.display = 'none';
+                if (label) label.textContent = 'Weniger anzeigen';
+                if (icon) icon.style.transform = 'rotate(180deg)';
+            } else {
+                if (fade) fade.style.display = '';
+                if (label) label.textContent = 'Mehr lesen';
+                if (icon) icon.style.transform = '';
+                wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         };
 
@@ -12112,10 +12347,17 @@
                             ondrop="window.handleManualHistoryMsgDrop(event)"
                             style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; padding: 14px; text-align: center; cursor: pointer; color: rgba(255,255,255,0.45); font-size: 0.8rem; font-weight: 600; margin-bottom: 0.75rem; transition: border-color 0.2s, background 0.2s;">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: 0 auto 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                            .msg-Datei hierher ziehen oder klicken
+                            .msg-Datei hierher ziehen oder klicken (sucht Betreff, Absender, Empfänger, Datum/Uhrzeit und Text automatisch heraus)
                         </div>
                         <input type="file" id="manual-email-msg-file-input" accept=".msg" style="display:none;" onchange="window.handleManualHistoryMsgSelect(event)">
-                        <textarea id="manual-content" placeholder="Von / An / Inhalt der E-Mail..." class="glass-input" style="min-height: 80px;"></textarea>
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.75rem;">
+                            <label style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; white-space: nowrap;">Uhrzeit (optional)</label>
+                            <input type="time" id="manual-entry-time" class="glass-input" style="flex: 1; padding: 6px 12px; font-size: 0.85rem; color-scheme: dark;">
+                        </div>
+                        <input type="text" id="manual-sender" placeholder="Absender (Von)" class="glass-input" style="margin-bottom: 0.75rem;">
+                        <input type="text" id="manual-recipient" placeholder="Empfänger (An)" class="glass-input" style="margin-bottom: 0.75rem;">
+                        <textarea id="manual-content" placeholder="E-Mail-Text..." class="glass-input" style="min-height: 100px; margin-bottom: 0.75rem;"></textarea>
+                        <textarea id="manual-remark" placeholder="Bemerkung (optional, interne Notiz)..." class="glass-input" style="min-height: 60px;"></textarea>
                     `;
             } else if (type === 'hours') {
                 html = `
@@ -12208,22 +12450,19 @@
                     } else {
                         sender = fileData.senderEmail || fileData.senderName || '';
                     }
+                    const senderEl = document.getElementById('manual-sender');
+                    if (senderEl && sender) senderEl.value = sender;
 
                     const toRecipients = (fileData.recipients || [])
                         .filter(r => !r.recipType || r.recipType.toLowerCase() === 'to')
                         .map(r => (r.name && r.email) ? `${r.name} <${r.email}>` : (r.email || r.name))
                         .filter(Boolean);
+                    const recipientEl = document.getElementById('manual-recipient');
+                    if (recipientEl && toRecipients.length > 0) recipientEl.value = toRecipients.join('; ');
 
                     const body = (fileData.body || '').trim();
-
-                    const contentParts = [];
-                    if (sender) contentParts.push(`Von: ${sender}`);
-                    if (toRecipients.length > 0) contentParts.push(`An: ${toRecipients.join('; ')}`);
-                    if (contentParts.length > 0 && body) contentParts.push('');
-                    if (body) contentParts.push(body);
-
                     const contentEl = document.getElementById('manual-content');
-                    if (contentEl) contentEl.value = contentParts.join('\n');
+                    if (contentEl) contentEl.value = body;
 
                     const dateRaw = fileData.messageDeliveryTime || fileData.creationTime || fileData.lastModificationTime;
                     if (dateRaw) {
@@ -12231,6 +12470,8 @@
                         if (!isNaN(d.getTime())) {
                             const dateInput = document.getElementById('manual-entry-date');
                             if (dateInput) dateInput.value = d.toISOString().split('T')[0];
+                            const timeInput = document.getElementById('manual-entry-time');
+                            if (timeInput) timeInput.value = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
                         }
                     }
                 } catch (err) {
@@ -12310,11 +12551,22 @@
                 if (document.getElementById('manual-content')) {
                     document.getElementById('manual-content').value = entry.content;
                 }
-                // Prefill the date from the entry's created_at
+                // Prefill the date (and, for E-Mail, the time) from the entry's created_at
                 const dateInput = document.getElementById('manual-entry-date');
                 if (dateInput && entry.created_at) {
                     dateInput.value = new Date(entry.created_at).toISOString().split('T')[0];
                 }
+                const timeInput = document.getElementById('manual-entry-time');
+                if (timeInput && entry.created_at) {
+                    const d = new Date(entry.created_at);
+                    timeInput.value = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                }
+                const senderInput = document.getElementById('manual-sender');
+                if (senderInput) senderInput.value = entry.sender || '';
+                const recipientInput = document.getElementById('manual-recipient');
+                if (recipientInput) recipientInput.value = entry.recipient || '';
+                const remarkInput = document.getElementById('manual-remark');
+                if (remarkInput) remarkInput.value = entry.remark || '';
 
                 // WhatsApp: optionales Bis-Datum vorausfüllen
                 const endDateInput = document.getElementById('manual-end-date');
@@ -12400,8 +12652,16 @@
             const machineId = window.currentHistoryMachineId;
             const entryDateInput = document.getElementById('manual-entry-date');
             const entryDate = entryDateInput ? entryDateInput.value : null;
+            const entryTimeInput = document.getElementById('manual-entry-time');
+            const entryTime = entryTimeInput ? entryTimeInput.value : null;
             const endDateInput = document.getElementById('manual-end-date');
             const endDate = endDateInput ? (endDateInput.value || null) : null;
+            const senderInput = document.getElementById('manual-sender');
+            const sender = senderInput ? (senderInput.value || null) : null;
+            const recipientInput = document.getElementById('manual-recipient');
+            const recipient = recipientInput ? (recipientInput.value || null) : null;
+            const remarkInput = document.getElementById('manual-remark');
+            const remark = remarkInput ? (remarkInput.value || null) : null;
 
             if (type === 'wartung') {
                 const checkedTypes = Array.from(document.querySelectorAll('.manual-wartung-type:checked')).map(cb => cb.value);
@@ -12448,6 +12708,8 @@
                     uploadResults.forEach(res => filesArray.push(res.url));
                 }
 
+                const entryTimePart = entryTime ? `${entryTime}:00` : '12:00:00';
+
                 if (id) {
                     // UPDATE existing entry
                     const updatePayload = {
@@ -12455,9 +12717,12 @@
                         content: content,
                         files: filesArray,
                         end_date: endDate,
+                        sender: sender,
+                        recipient: recipient,
+                        remark: remark,
                         updated_at: new Date()
                     };
-                    if (entryDate) updatePayload.created_at = new Date(entryDate + 'T12:00:00').toISOString();
+                    if (entryDate) updatePayload.created_at = new Date(entryDate + 'T' + entryTimePart).toISOString();
                     const { error } = await window.supabaseClient
                         .from('manual_history_entries')
                         .update(updatePayload)
@@ -12471,9 +12736,12 @@
                         content: content,
                         files: filesArray,
                         end_date: endDate,
+                        sender: sender,
+                        recipient: recipient,
+                        remark: remark,
                         created_by: window.activeUser?.id
                     };
-                    if (entryDate) insertPayload.created_at = new Date(entryDate + 'T12:00:00').toISOString();
+                    if (entryDate) insertPayload.created_at = new Date(entryDate + 'T' + entryTimePart).toISOString();
                     const { error } = await window.supabaseClient
                         .from('manual_history_entries')
                         .insert([insertPayload]);
@@ -15358,7 +15626,7 @@
                                         <!-- Row 4: Short Description (falls vorhanden) -->
                                         ${cleanDesc ? `
                                         <div style="margin-top: 4px; text-align: left; width: 100%;">
-                                            <div style="font-size: 0.75rem; color: rgba(255,255,255,0.4); font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 0.5rem;">Fehlerbeschreibung des Kunden / Kurzbeschreibung Einsatz</div>
+                                            <div style="font-size: 0.75rem; color: rgba(255,255,255,0.4); font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 0.5rem;">Fehlerbeschreibung / Kurzbeschreibung Einsatz</div>
                                             <p style="margin: 0; font-size: 0.95rem; color: rgba(255,255,255,0.7); line-height: 1.6; font-weight: 500; white-space: pre-wrap;">${cleanDesc}</p>
                                         </div>` : ''}
 
@@ -17212,7 +17480,7 @@
                     doc.setFont('helvetica', 'bold');
                     doc.setFontSize(12);
                     doc.setTextColor(30, 41, 59);
-                    doc.text('Fehlerbeschreibung des Kunden / Kurzbeschreibung Einsatz', 20, currentY);
+                    doc.text('Fehlerbeschreibung / Kurzbeschreibung Einsatz', 20, currentY);
                     currentY += 8;
                     
                     doc.setFont('helvetica', 'normal');
@@ -17238,15 +17506,22 @@
                     const dateGroups = {};
                     workLogData.forEach(row => {
                         const key = row.datum || '';
-                        if (!dateGroups[key]) dateGroups[key] = { count: 0, dayTotal: 0 };
-                        const { net } = window.computeWorkLogDuration(row);
+                        if (!dateGroups[key]) dateGroups[key] = { count: 0, dayTotal: 0, pauseTotal: 0 };
+                        const { net, pause } = window.computeWorkLogDuration(row);
                         dateGroups[key].count += 1;
                         dateGroups[key].dayTotal += net;
+                        dateGroups[key].pauseTotal += pause;
                     });
-                    const getLegalPauseText = (dayTotal) => {
-                        if (dayTotal > 9) return '45 min';
-                        if (dayTotal > 6) return '30 min';
-                        return '/';
+                    // Gedruckte Pause darf nie unter der gesetzlich vorgeschriebenen Mindestpause liegen,
+                    // aber wenn der Mitarbeiter mehr Pause eingetragen hat als gesetzlich nötig, gilt der
+                    // höhere eingetragene Wert (nur nach oben korrigieren, nie nach unten).
+                    const getLegalPauseText = (dayTotal, actualPauseHours) => {
+                        let requiredPauseHours = 0;
+                        if (dayTotal > 9) requiredPauseHours = 0.75;
+                        else if (dayTotal > 6) requiredPauseHours = 0.5;
+                        const pauseHours = Math.max(actualPauseHours, requiredPauseHours);
+                        if (pauseHours <= 0) return '/';
+                        return `${Math.round(pauseHours * 60)} min`;
                     };
 
                     let lastDatum = null;
@@ -17281,7 +17556,7 @@
                         const rowArr = [formattedDate || '', typText];
                         if (datum !== lastDatum) {
                             const group = dateGroups[datum];
-                            rowArr.push({ content: getLegalPauseText(group.dayTotal), rowSpan: group.count, styles: { halign: 'center', valign: 'middle' } });
+                            rowArr.push({ content: getLegalPauseText(group.dayTotal, group.pauseTotal), rowSpan: group.count, styles: { halign: 'center', valign: 'middle' } });
                         }
                         lastDatum = datum;
                         rowArr.push(zeitText, kmVal);
@@ -18674,7 +18949,7 @@
                         </div>
                         <div class="section-content" style="display: none; transition: all 0.3s ease;">
                             <div class="form-group" style="margin-top: 1rem; margin-bottom: 1.5rem;">
-                                <label for="service-description">Fehlerbeschreibung des Kunden / Kurzbeschreibung Einsatz</label>
+                                <label for="service-description">Fehlerbeschreibung / Kurzbeschreibung Einsatz</label>
                                 <textarea id="service-description" rows="4" class="glass-form-input"
                                     placeholder="z.B. Fehlerbeschreibung oder Tätigkeitsbericht eintragen..." required></textarea>
                             </div>
@@ -19374,6 +19649,21 @@
                     </div>
 
                     <div class="form-group">
+                        <label>Motortyp</label>
+                        <input type="text" id="machine-motor-type" class="glass-input" placeholder="z.B. Deutz TCD 3.6">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Motorseriennummer</label>
+                        <input type="text" id="machine-motor-serial" class="glass-input" placeholder="z.B. 12345678">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Leistung</label>
+                        <input type="text" id="machine-power" class="glass-input" placeholder="z.B. 240 PS / 280 kW oder 50 Hz">
+                    </div>
+
+                    <div class="form-group">
                         <label>Art des Kontaktes</label>
                         <div id="contact-wrapper" style="position: relative;">
                             <div id="contact-trigger" class="glass-select"
@@ -19616,7 +19906,13 @@
                         <div class="form-group" style="margin-bottom: 0;">
                             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.5rem;">
                                 <label style="font-size:0.92rem; font-weight:700; color:rgba(255,255,255,0.8); margin:0;">Zusatzausrüstung</label>
-                                <button type="button" id="btn-add-equipment" class="btn-secondary" onclick="window.showEquipmentAddForm()" style="padding:3px 10px; font-size:0.78rem; border-radius:8px;">+ Hinzufügen</button>
+                                <button type="button" id="btn-add-equipment" onclick="window.showEquipmentAddForm()"
+                                    style="display:flex; align-items:center; gap:5px; padding:5px 12px; font-size:0.78rem; font-weight:700; border-radius:20px; background:rgba(52,211,153,0.12); border:1px solid rgba(52,211,153,0.4); color:var(--color-primary-green); cursor:pointer; transition:all 0.2s;"
+                                    onmouseover="this.style.background='rgba(52,211,153,0.22)'; this.style.borderColor='rgba(52,211,153,0.6)';"
+                                    onmouseout="this.style.background='rgba(52,211,153,0.12)'; this.style.borderColor='rgba(52,211,153,0.4)';">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    Hinzufügen
+                                </button>
                             </div>
                             <div id="machine-equipment-list" class="machine-equipment-list"></div>
                             <div id="machine-equipment-add-form" style="display:none; margin-top:8px; padding:10px 12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); border-radius:10px;">
@@ -19729,6 +20025,15 @@
             <!-- Dynamic Category Border Accent -->
             <div id="machine-details-accent" style="position: absolute; top: 0; left: 0; right: 0; height: 6px; background: var(--color-primary-green); border-radius: 24px 24px 0 0;"></div>
 
+            <!-- Edit Button -->
+            <button id="machine-details-edit-btn" type="button" style="position: absolute; top: 20px; right: 66px; display: flex; align-items: center; gap: 6px; padding: 0 16px; height: 36px; border-radius: 18px; background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.4); color: var(--color-primary-green); font-weight: 700; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; transition: all 0.2s; z-index: 10;" onmouseover="this.style.background='rgba(52,211,153,0.22)'; this.style.borderColor='rgba(52,211,153,0.6)'; this.style.transform='scale(1.05)';" onmouseout="this.style.background='rgba(52,211,153,0.12)'; this.style.borderColor='rgba(52,211,153,0.4)'; this.style.transform='scale(1)';">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Bearbeiten
+            </button>
+
             <!-- Close Button -->
             <button class="procurement-close-btn" onclick="closeMachineDetailsModal()" style="position: absolute; top: 20px; right: 20px; border: none; background: rgba(255,255,255,0.05); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1); transition: all 0.2s; z-index: 10;" onmouseover="this.style.background='rgba(255,255,255,0.15)'; this.style.transform='scale(1.05)';" onmouseout="this.style.background='rgba(255,255,255,0.05)'; this.style.transform='scale(1)';">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -19738,27 +20043,28 @@
             </button>
 
             <!-- Modal Header -->
-            <div style="margin-bottom: 2rem; padding-right: 50px;">
+            <div style="margin-bottom: 2rem; padding-right: 170px;">
                 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 6px;">
                     <span id="machine-details-category-badge" style="font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; padding: 4px 12px; border-radius: 20px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;">Kategorie</span>
                 </div>
                 <h2 id="machine-details-title" style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 900; color: white; line-height: 1.2;">Hersteller Modell</h2>
-                <div id="machine-details-subtitle" style="font-size: 1.1rem; color: rgba(255, 255, 255, 0.6); font-weight: 500; margin-top: 4px;">Seriennummer: #123456 | Baujahr: 2018</div>
+                <div id="machine-details-subtitle" style="font-size: 1.1rem; color: #fff; font-weight: 500; margin-top: 4px;">Seriennummer: #123456 | Baujahr: 2018</div>
+                <div id="machine-details-motor-line" style="display: none; font-size: 0.95rem; color: #fff; font-weight: 500; margin-top: 2px;"></div>
             </div>
 
             <!-- Scrollable Modal Body -->
             <div class="modal-body custom-scrollbar" style="overflow-y: auto; flex: 1; padding-right: 10px;">
-                <div class="machine-details-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; align-items: start;">
-                    
+                <div class="machine-details-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; align-items: start;">
+
                     <!-- Left Column: Image, Maintenance, and Last Service -->
-                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
                         <!-- Machine Image Container -->
                         <div id="machine-details-image-container" style="width: 100%; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.2); overflow: hidden; display: flex; align-items: center; justify-content: center; min-height: 250px;">
                             <!-- Dynamically populated image or SVG placeholder -->
                         </div>
 
                         <!-- Maintenance Info Card -->
-                        <div class="modal-form-area" style="margin-bottom: 0; padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem;">
+                        <div id="machine-details-maintenance-card" class="modal-form-area" style="margin-bottom: 0; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.85rem;">
                             <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.1rem; color: var(--color-primary-green); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Wartungsübersicht</h3>
                             
                             <div style="display: flex; align-items: center; gap: 12px;">
@@ -19783,9 +20089,9 @@
                         </div>
 
                         <!-- Last Service Card -->
-                        <div class="modal-form-area" style="margin-bottom: 0; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+                        <div class="modal-form-area" style="margin-bottom: 0; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
                             <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
-                                <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.1rem; color: var(--color-primary-green); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Letzter Service</h3>
+                                <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.1rem; color: var(--color-primary-green); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Serviceberichte</h3>
                                 <div id="machine-details-last-service-date" style="font-size: 0.85rem; color: rgba(255,255,255,0.5); font-weight: 700;">/</div>
                             </div>
                             <div id="machine-details-last-service-content" style="display: flex; flex-direction: column; gap: 8px;">
@@ -19794,13 +20100,19 @@
                                 <div id="machine-details-last-service-desc" class="custom-scrollbar" style="font-size: 0.9rem; color: rgba(255,255,255,0.7); line-height: 1.5; max-height: 150px; overflow-y: auto; white-space: pre-wrap; padding-right: 6px;">Wird geladen...</div>
                             </div>
                         </div>
+
+                        <!-- Zusatzausrüstung Card -->
+                        <div id="machine-details-equipment-card" class="modal-form-area" style="margin-bottom: 0; padding: 1.25rem; display: none; flex-direction: column; gap: 0.75rem;">
+                            <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.1rem; color: var(--color-primary-green); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Zusatzausrüstung</h3>
+                            <div id="machine-details-equipment-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                        </div>
                     </div>
 
                     <!-- Right Column: Betreiberstandort, Maschinenstandort, Betriebsstunden -->
-                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
                         
                         <!-- Betreiberstandort Card -->
-                        <div class="modal-form-area" style="margin-bottom: 0; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+                        <div class="modal-form-area" style="margin-bottom: 0; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
                             <div style="display:flex; align-items:center; justify-content:space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
                                 <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.1rem; color: var(--color-primary-green); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Betreiberstandort</h3>
                                 <a id="machine-details-cust-maps-link" href="#" target="_blank" style="display:none; align-items:center; gap:4px; text-decoration:none; flex-shrink:0;" title="Route in Google Maps öffnen">
@@ -19825,7 +20137,7 @@
                         </div>
 
                         <!-- Maschinenstandort Card -->
-                        <div class="modal-form-area" style="margin-bottom: 0; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+                        <div class="modal-form-area" style="margin-bottom: 0; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
                             <div style="display:flex; align-items:center; justify-content:space-between; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px;">
                                 <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.1rem; color: var(--color-primary-green); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Maschinenstandort</h3>
                                 <a id="machine-details-loc-maps-link" href="#" target="_blank" style="display:none; align-items:center; gap:4px; text-decoration:none; flex-shrink:0;" title="Route in Google Maps öffnen">
@@ -19845,7 +20157,7 @@
                         </div>
 
                         <!-- Operating Hours Card -->
-                        <div class="modal-form-area" style="margin-bottom: 0; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+                        <div class="modal-form-area" style="margin-bottom: 0; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
                             <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.1rem; color: var(--color-primary-green); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Betriebsstunden</h3>
                             <div style="display: flex; align-items: center; gap: 16px;">
                                 <div style="width: 44px; height: 44px; border-radius: 50%; background: rgba(59, 130, 246, 0.1); display: flex; align-items: center; justify-content: center; color: #3b82f6;">
@@ -19858,17 +20170,8 @@
                             </div>
                         </div>
 
-                    </div>
-
-                    <!-- Full-width row: Zusatzausrüstung (links) & Verknüpfte Maschinen (rechts) -->
-                    <div id="machine-details-extras-wrapper" style="grid-column: 1 / -1; display: none; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                        <!-- Zusatzausrüstung Card - LEFT -->
-                        <div id="machine-details-equipment-card" class="modal-form-area" style="margin-bottom: 0; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
-                            <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.1rem; color: var(--color-primary-green); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Zusatzausrüstung</h3>
-                            <div id="machine-details-equipment-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
-                        </div>
-                        <!-- Verknüpfte Maschinen Card - RIGHT -->
-                        <div id="machine-details-related-card" class="modal-form-area" style="margin-bottom: 0; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+                        <!-- Verknüpfte Maschinen Card -->
+                        <div id="machine-details-related-card" class="modal-form-area" style="margin-bottom: 0; padding: 1.25rem; display: none; flex-direction: column; gap: 0.75rem;">
                             <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.1rem; color: var(--color-primary-green); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Verknüpfte Maschinen</h3>
                             <div id="machine-details-related-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
                         </div>
@@ -19876,17 +20179,6 @@
                 </div>
             </div>
 
-            <!-- Modal Actions Footer -->
-            <div class="modal-actions" style="margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem;">
-                <button type="button" class="btn-secondary" onclick="closeMachineDetailsModal()" style="border-radius: 14px; padding: 10px 24px; font-weight: 700; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px;">Schließen</button>
-                <button id="machine-details-edit-btn" type="button" class="btn-primary" style="border-radius: 14px; padding: 10px 24px; font-weight: 700; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px; display: inline-flex; align-items: center; gap: 8px;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                        <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                    </svg>
-                    Stammdaten Bearbeiten
-                </button>
-            </div>
         </div>
     </div>
 

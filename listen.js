@@ -77,6 +77,21 @@
     // Füllt die Status- und Maschinen-Filter-Dropdowns (links vom Suchfeld) mit den aktuell
     // vorkommenden Werten. Vorherige Auswahl wird beibehalten, falls sie noch existiert.
     function populateAngeboteFilterOptions() {
+        const jahrSelect = document.getElementById('angebote-filter-jahr');
+        if (jahrSelect) {
+            const prevValue = jahrSelect.value;
+            const years = new Set();
+            angeboteList.forEach(a => {
+                if (a.belegdatum) years.add(new Date(a.belegdatum).getFullYear());
+            });
+            const sortedYears = [...years].sort((a, b) => b - a); // neuestes Jahr zuerst
+            jahrSelect.innerHTML = '<option value="">Alle Jahre</option>' +
+                sortedYears.map(y => `<option value="${y}">${y}</option>`).join('');
+            if (sortedYears.some(y => String(y) === prevValue)) jahrSelect.value = prevValue;
+            if (typeof window.initGlassSelect === 'function') window.initGlassSelect(jahrSelect);
+            jahrSelect.dispatchEvent(new Event('change'));
+        }
+
         const statusSelect = document.getElementById('angebote-filter-status');
         if (statusSelect) {
             const prevValue = statusSelect.value;
@@ -112,11 +127,15 @@
 
         const searchInput = document.getElementById('angebote-search-input');
         const term = searchInput ? searchInput.value.trim().toLowerCase() : '';
+        const jahrFilter = document.getElementById('angebote-filter-jahr')?.value || '';
         const statusFilter = document.getElementById('angebote-filter-status')?.value || '';
         const machineFilter = document.getElementById('angebote-filter-maschine')?.value || '';
 
         let entries = angeboteList;
 
+        if (jahrFilter) {
+            entries = entries.filter(a => a.belegdatum && String(new Date(a.belegdatum).getFullYear()) === jahrFilter);
+        }
         if (statusFilter) {
             entries = entries.filter(a => a.status === statusFilter);
         }
@@ -127,10 +146,12 @@
         if (term) {
             entries = entries.filter(a => {
                 const firma = a.customers?.name || a.kundenmatchcode || '';
+                const notizTreffer = (a.angebot_notizen || []).some(n => (n.content || '').toLowerCase().includes(term));
                 return (a.belegnummer || '').toLowerCase().includes(term) ||
                     firma.toLowerCase().includes(term) ||
                     (a.bemerkung || '').toLowerCase().includes(term) ||
-                    (a.status || '').toLowerCase().includes(term);
+                    (a.status || '').toLowerCase().includes(term) ||
+                    notizTreffer;
             });
         }
 
@@ -271,7 +292,7 @@
         if (!panel) {
             panel = document.createElement('div');
             panel.id = 'angebot-notiz-panel';
-            panel.style.cssText = 'position:fixed; z-index:999999; background:rgba(15,23,42,0.98); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.15); border-radius:14px; box-shadow:0 16px 48px rgba(0,0,0,0.6); max-height:600px; overflow-y:auto; padding:1.25rem; display:none;';
+            panel.style.cssText = 'position:fixed; z-index:999999; background:rgba(15,23,42,0.98); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,0.15); border-radius:14px; box-shadow:0 16px 48px rgba(0,0,0,0.6); overflow-y:auto; overflow-x:hidden; padding:1.25rem; display:none;';
             document.body.appendChild(panel);
         }
         panel.dataset.angebotId = angebotId;
@@ -283,7 +304,26 @@
 
         if (anchorEl) {
             const rect = anchorEl.getBoundingClientRect();
-            panel.style.top = (rect.bottom + 8) + 'px';
+            const margin = 16;
+            const spaceBelow = window.innerHeight - rect.bottom - margin;
+            const spaceAbove = rect.top - margin;
+            const desiredHeight = 600;
+
+            if (spaceBelow >= 320 || spaceBelow >= spaceAbove) {
+                // Unterhalb des Buttons öffnen, Höhe an den verfügbaren Platz anpassen statt
+                // über den unteren Bildschirmrand hinauszuragen — der Rest scrollt innerhalb
+                // des Panels selbst (overflow-y:auto), keine horizontale Verschiebung nötig.
+                panel.style.top = (rect.bottom + 8) + 'px';
+                panel.style.bottom = 'auto';
+                panel.style.maxHeight = Math.max(200, Math.min(desiredHeight, spaceBelow)) + 'px';
+            } else {
+                // Zu wenig Platz unterhalb (Button nah am unteren Bildschirmrand) — Panel
+                // stattdessen nach oben aufklappen, damit nichts abgeschnitten wird.
+                panel.style.top = 'auto';
+                panel.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+                panel.style.maxHeight = Math.max(200, Math.min(desiredHeight, spaceAbove)) + 'px';
+            }
+
             const left = Math.min(rect.left, window.innerWidth - panelWidth - 16);
             panel.style.left = Math.max(8, left) + 'px';
         }
@@ -329,7 +369,7 @@
 
         panel.innerHTML = `
             <div style="font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:rgba(255,255,255,0.4); margin-bottom:0.6rem;">Notizen</div>
-            <div style="margin-bottom:0.6rem; max-height:260px; overflow-y:auto;">${notesHtml}</div>
+            <div style="margin-bottom:0.6rem; max-height:260px; overflow-y:auto; overflow-x:hidden;">${notesHtml}</div>
             <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:0.85rem;">
                 <div style="color:rgba(255,255,255,0.4); font-size:0.75rem; margin-bottom:5px;">Neue Notiz · ${fmtTimestamp(new Date().toISOString())}</div>
                 <textarea id="angebot-notiz-input" class="glass-form-input" rows="5" placeholder="Notiz eingeben..." style="width:100%; font-size:0.9rem; resize:vertical;"></textarea>
