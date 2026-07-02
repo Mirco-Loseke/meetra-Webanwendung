@@ -1561,3 +1561,14 @@ ADD COLUMN IF NOT EXISTS remark TEXT;
 -- oder "50 Hz"), da je nach Maschinentyp unterschiedliche Einheiten/Formate gebraucht werden.
 ALTER TABLE public.machines
 ADD COLUMN IF NOT EXISTS power TEXT;
+
+
+/* ========================================================= */
+/* DATEI: add_remarks_to_service_entries.sql */
+/* ========================================================= */
+
+-- Freitextfeld "Bemerkungen" im Servicebericht (Abschnitt "Dokumente, Bemerkungen & Unterschriften"),
+-- getrennt von der Fehlerbeschreibung. Wird im PDF als Text + 5 Leerlinien zum handschriftlichen
+-- Ausfuellen gedruckt.
+ALTER TABLE public.service_entries
+ADD COLUMN IF NOT EXISTS remarks TEXT;

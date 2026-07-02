@@ -1209,6 +1209,7 @@ let _previewType = null; // 'pdf' | 'image' | 'other'
 let _pdfDocRef = null;
 let _pdfCacheBustedUrl = null;
 let _pinchRenderTimer = null;
+let _pdfRenderGen = 0; // guards against overlapping renders (e.g. rapid zoom) drawing over each other
 
 function _updateZoomLabel() {
     const label = document.getElementById('doc-preview-zoom-label');
@@ -1217,34 +1218,55 @@ function _updateZoomLabel() {
 
 async function _renderPdfPages() {
     if (!_pdfDocRef) return;
+    // If another render starts before this one finishes (e.g. two zoom steps in quick
+    // succession), an older call's pages could still be appended after the newer call
+    // already cleared/rebuilt the container — producing overlapping/duplicated pages.
+    // Every await below re-checks this token and bails out the moment it goes stale.
+    const myGen = ++_pdfRenderGen;
     const container = document.getElementById('doc-preview-container');
     const target = document.getElementById('doc-preview-inner') || container;
     if (!target) return;
-    target.innerHTML = '';
-    // Base scale: fit page to container width at zoom 1.0
-    // We determine this from the first page's natural width vs container width
+
     const firstPage = await _pdfDocRef.getPage(1);
+    if (myGen !== _pdfRenderGen) return;
+
+    // Fit the whole page (width AND height) inside the viewport at 100%, not just its width.
+    // Fitting width alone stretches a narrow A4-portrait page across a much wider desktop
+    // window, making "100%" look huge and forcing the user to zoom out to see it fully.
     const naturalVp = firstPage.getViewport({ scale: 1, rotation: _previewRotation });
     const containerWidth = Math.max(300, (container ? container.clientWidth : 0) || (window.innerWidth - 40));
-    const fitScale = containerWidth / naturalVp.width;
+    const containerHeight = Math.max(300, (container ? container.clientHeight : 0) || (window.innerHeight - 160));
+    const fitScale = Math.min(containerWidth / naturalVp.width, containerHeight / naturalVp.height);
     const renderScale = fitScale * _previewZoom;
 
+    target.innerHTML = '';
     for (let pageNum = 1; pageNum <= _pdfDocRef.numPages; pageNum++) {
-        const page = await _pdfDocRef.getPage(pageNum);
+        const page = pageNum === 1 ? firstPage : await _pdfDocRef.getPage(pageNum);
+        if (myGen !== _pdfRenderGen) return;
         const viewport = page.getViewport({ scale: renderScale, rotation: _previewRotation });
         const pageWrapper = document.createElement('div');
-        // Display width in px so zoom actually changes visible size
-        pageWrapper.style.cssText = `margin: 20px auto; padding: 15px; background: white; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 8px; width: ${Math.round(viewport.width)}px; box-sizing: border-box;`;
+        // Display width in px so zoom actually changes visible size. The wrapper is
+        // box-sizing:border-box with 15px padding on each side, so it needs to be 30px
+        // WIDER than the canvas — otherwise the (square-cornered) canvas is exactly as
+        // wide as the wrapper's own outer edge and pokes out past its rounded corners,
+        // looking like a second overlapping frame/sheet behind the card.
+        pageWrapper.style.cssText = `margin: 20px auto; padding: 15px; background: white; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 8px; width: ${Math.round(viewport.width) + 30}px; box-sizing: border-box; overflow: hidden;`;
         const canvas = document.createElement('canvas');
         canvas.style.display = 'block';
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        canvas.style.width = viewport.width + 'px';
-        canvas.style.height = viewport.height + 'px';
+        // Render at the screen's actual pixel density so thin lines/edges stay crisp —
+        // otherwise a blurry/soft-scaled canvas can look like a faint double edge next
+        // to the wrapper's own (pixel-perfect) rounded border.
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.round(viewport.width * dpr);
+        canvas.height = Math.round(viewport.height * dpr);
+        canvas.style.width = Math.round(viewport.width) + 'px';
+        canvas.style.height = Math.round(viewport.height) + 'px';
         pageWrapper.appendChild(canvas);
         target.appendChild(pageWrapper);
         const context = canvas.getContext('2d');
+        if (dpr !== 1) context.scale(dpr, dpr);
         await page.render({ canvasContext: context, viewport }).promise;
+        if (myGen !== _pdfRenderGen) return;
     }
 }
 
@@ -1259,7 +1281,16 @@ function _applyImageTransform() {
     img.style.transformOrigin = 'center center';
 }
 
+function _clearPendingWheelPreview() {
+    // Cancel any in-flight debounced wheel-zoom render and its temporary CSS preview
+    // transform, so button/rotate actions don't render on top of a stale CSS scale.
+    clearTimeout(_pinchRenderTimer);
+    const target = document.getElementById('doc-preview-inner');
+    if (target) { target.style.transform = ''; target.style.transformOrigin = ''; }
+}
+
 window.docPreviewZoom = async function(delta) {
+    _clearPendingWheelPreview();
     _previewZoom = Math.min(5, Math.max(0.25, parseFloat((_previewZoom + delta).toFixed(2))));
     _updateZoomLabel();
     if (_previewType === 'pdf') await _renderPdfPages();
@@ -1267,6 +1298,7 @@ window.docPreviewZoom = async function(delta) {
 };
 
 window.docPreviewRotate = async function() {
+    _clearPendingWheelPreview();
     _previewRotation = (_previewRotation + 90) % 360;
     if (_previewType === 'pdf') await _renderPdfPages();
     else _applyImageTransform();
@@ -1280,18 +1312,41 @@ function _attachPreviewEvents() {
     const container = document.getElementById('doc-preview-container');
     if (!container) return;
 
-    // Ctrl+wheel (desktop zoom, also used by Chrome/Android for pinch)
+    // Ctrl+wheel (desktop zoom, also used by Chrome/Android for pinch).
+    // Zooms toward the cursor position (like Adobe/Chrome PDF viewer) instead of the
+    // page center, by keeping the same content point under the mouse before/after.
+    //
+    // Note: we deliberately do NOT apply a temporary CSS transform: scale() to the
+    // scrollable content here for "instant" feedback. Chrome recomputes the container's
+    // scrollable area from the transformed (post-scale) geometry, so it auto-clamps
+    // scrollLeft/scrollTop the moment the transform changes — that's what caused the
+    // left/right jump while zooming out. Going straight to a (short) debounced real
+    // re-render avoids that entirely.
     container.addEventListener('wheel', function(e) {
         if (e.ctrlKey) {
             e.preventDefault();
             const delta = e.deltaY < 0 ? 0.15 : -0.15;
-            _previewZoom = Math.min(5, Math.max(0.25, parseFloat((_previewZoom + delta).toFixed(2))));
+            const newZoom = Math.min(5, Math.max(0.25, parseFloat((_previewZoom + delta).toFixed(2))));
+            if (newZoom === _previewZoom) return;
+
+            const target = document.getElementById('doc-preview-inner') || container;
+            const contRect = container.getBoundingClientRect();
+            const cursorX = e.clientX - contRect.left;
+            const cursorY = e.clientY - contRect.top;
+            // Cursor position within the scrollable content, as a ratio (0..1), captured
+            // BEFORE the zoom changes so it can be restored once the content has resized.
+            const ratioX = target.scrollWidth > 0 ? (container.scrollLeft + cursorX) / target.scrollWidth : 0.5;
+            const ratioY = target.scrollHeight > 0 ? (container.scrollTop + cursorY) / target.scrollHeight : 0.5;
+
+            _previewZoom = newZoom;
             _updateZoomLabel();
             clearTimeout(_pinchRenderTimer);
             _pinchRenderTimer = setTimeout(async () => {
                 if (_previewType === 'pdf') await _renderPdfPages();
                 else _applyImageTransform();
-            }, 250);
+                container.scrollLeft = ratioX * target.scrollWidth - cursorX;
+                container.scrollTop = ratioY * target.scrollHeight - cursorY;
+            }, 90);
         }
     }, { passive: false });
 
@@ -1360,7 +1415,16 @@ window.previewDocument = async function(url, title, mimeType) {
     const titleEl = document.getElementById('doc-preview-title');
     if (!modal) return;
 
-    _previewZoom = 1.0;
+    // Invalidate any render still in flight from a previous previewDocument()/zoom call
+    // (e.g. a second click while a heavy Servicebericht-PDF was still being generated)
+    // BEFORE touching _pdfDocRef/target — otherwise that stale render can still append
+    // its own pages in between this function's own await points, producing the
+    // overlapping "double frame" look.
+    _pdfRenderGen++;
+
+    // Etwas näher als exaktes "ganze Seite passt rein" starten, damit die Vorschau nicht
+    // zu klein/kariert wirkt (eine Zoomstufe naeher als 100%-Fit).
+    _previewZoom = 1.15;
     _previewRotation = 0;
     _pdfDocRef = null;
     _previewType = null;

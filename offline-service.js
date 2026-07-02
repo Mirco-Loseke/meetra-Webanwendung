@@ -19,7 +19,7 @@
     // Felder enthält, die es in dieser Tabelle nicht gibt (z.B. location_* gehört zu "machines").
     const VALID_FIELDS = new Set([
         'id', 'machine_id', 'category_id', 'category_ids', 'title', 'date', 'datum_von', 'datum_bis',
-        'hours', 'technicians', 'files', 'description', 'travel_distance_km', 'travel_time_minutes',
+        'hours', 'technicians', 'files', 'description', 'remarks', 'travel_distance_km', 'travel_time_minutes',
         'customer_signature', 'customer_name', 'tech_signature', 'operating_hours', 'workshop_order_number',
         'work_log', 'tasks', 'materials', 'checklist_payload', 'status_repaired', 'status_repaired_en',
         'tech_sig_date', 'customer_sig_date', 'contact_persons', 'hotel_company', 'hotel_street',

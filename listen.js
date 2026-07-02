@@ -672,53 +672,14 @@
     // ANGEBOTE: MASCHINEN-ZUORDNUNG (automatisch + manuell)
     // ==========================================
     function renderAngebotMachineCell(a) {
-        if (editingAngebotMachineId === a.id) {
-            if (editingAngebotMachineMode === 'freitext') {
-                const value = pendingFreitextValue || a.machine_label || '';
-                return `
-                    <input type="text" class="glass-form-input angebot-machine-search" data-angebot-id="${a.id}"
-                        placeholder="Bezeichnung eingeben..." autocomplete="off"
-                        value="${escapeHtml(value)}"
-                        onblur="window.commitAngebotMachineFreitext('${a.id}', this.value)"
-                        onkeydown="if(event.key==='Enter'){ event.preventDefault(); this.blur(); }"
-                        style="height:36px; font-size:0.85rem; min-width:220px;">
-                `;
-            }
-            const prefill = a.machine_id
-                ? ((typeof window.getMachineName === 'function') ? window.getMachineName(a.machine_id) : '')
-                : (a.machine_label || '');
-            return `
-                <input type="text" class="glass-form-input angebot-machine-search" data-angebot-id="${a.id}"
-                    placeholder="Maschine suchen oder Bezeichnung eintippen + Enter..." autocomplete="off"
-                    value="${escapeHtml(prefill)}"
-                    oninput="window.filterAngebotMachineDropdown(this.value, '${a.id}')"
-                    onfocus="window.filterAngebotMachineDropdown(this.value, '${a.id}')"
-                    onkeydown="if(event.key==='Enter'){ event.preventDefault(); window.commitAngebotMachineFreitext('${a.id}', this.value); }"
-                    style="height:36px; font-size:0.85rem; min-width:220px;">
-            `;
-        }
-
         if (a.machine_id) {
             const name = (typeof window.getMachineName === 'function') ? window.getMachineName(a.machine_id) : a.machine_id;
-            return `
-                <span style="color:var(--color-primary-green); font-weight:600;">${escapeHtml(name)}</span>
-                <button type="button" class="angebot-machine-edit-btn" onclick="event.stopPropagation(); window.startEditAngebotMachine('${a.id}')" title="Maschine ändern"
-                    style="margin-left:8px; background:none; border:none; color:rgba(255,255,255,0.4); cursor:pointer; font-size:0.85rem; padding:4px;">✎</button>
-            `;
+            return `<span style="color:var(--color-primary-green); font-weight:600;">${escapeHtml(name)}</span>`;
         }
-
         if (a.machine_label) {
-            return `
-                <span style="color:#f59e0b;" title="Freitext, keine echte Maschine im System">${escapeHtml(a.machine_label)}</span>
-                <button type="button" class="angebot-machine-edit-btn" onclick="event.stopPropagation(); window.startEditAngebotMachine('${a.id}')" title="Ändern"
-                    style="margin-left:8px; background:none; border:none; color:rgba(255,255,255,0.4); cursor:pointer; font-size:0.85rem; padding:4px;">✎</button>
-            `;
+            return `<span style="color:#f59e0b;" title="Freitext, keine echte Maschine im System">${escapeHtml(a.machine_label)}</span>`;
         }
-
-        return `
-            <button type="button" class="angebot-machine-edit-btn btn-secondary" onclick="event.stopPropagation(); window.startEditAngebotMachine('${a.id}')" title="Maschine zuordnen"
-                style="width:28px; height:28px; padding:0; font-size:0.95rem; line-height:1;">+</button>
-        `;
+        return '';
     }
 
     window.startEditAngebotMachine = function (angebotId) {
@@ -1428,7 +1389,6 @@
                 resultMessage.textContent = `Erfolgreich ${total} Angebote aus Sage 100 importiert und aktualisiert.`;
             }
 
-            await window.autoAssignAngeboteMachines();
             window.fetchAngebote();
         } catch (err) {
             alert('Fehler beim Datenbankimport: ' + err.message);

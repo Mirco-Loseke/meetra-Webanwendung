@@ -10369,6 +10369,23 @@ body.focus-mode-active .view-header-row-top {
     filter: brightness(0.9) !important;
 }
 
+/* Machine Details Modal: on mobile show only the edit icon, not the "Bearbeiten" label —
+   the full pill button needs more horizontal room than small screens have next to the
+   machine title/serial number, causing them to overlap. */
+@media (max-width: 768px) {
+    #machine-details-edit-btn {
+        padding: 0 !important;
+        width: 36px !important;
+        justify-content: center !important;
+        right: 62px !important;
+    }
+    #machine-details-edit-btn .machine-details-edit-label {
+        display: none;
+    }
+    .machine-details-header {
+        padding-right: 100px !important;
+    }
+}
 
 
 
