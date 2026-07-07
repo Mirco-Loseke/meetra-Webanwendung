@@ -2,6 +2,7 @@
 
 let allAccountingEntries = [];
 let currentAccountingType = 'incoming'; // Default view
+let currentAccountingKpiFilter = null; // KPI click-to-filter state
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Accounting Module: DOMContentLoaded');
@@ -251,8 +252,90 @@ window.renderAccounting = function () {
     const container = document.getElementById('accounting-table-container');
     if (!container) return;
 
+    // Calculate KPIs
+    const todayStr = new Date().toISOString().split('T')[0];
+    const openOutgoing = allAccountingEntries.filter(e => e.type === 'outgoing' && !e.is_paid);
+    const openIncoming = allAccountingEntries.filter(e => e.type === 'incoming' && !e.is_paid);
+    
+    const sumGross = arr => arr.reduce((s, e) => s + (parseFloat(e.amount_gross) || 0), 0);
+    const openOutgoingSum = sumGross(openOutgoing);
+    const openIncomingSum = sumGross(openIncoming);
+    
+    // Skonto potential
+    const skontoPotential = openIncoming.reduce((s, e) => {
+        if (e.discount_amount && e.discount_date && e.discount_date >= todayStr) {
+            return s + (parseFloat(e.discount_amount) || 0);
+        }
+        return s;
+    }, 0);
+    
+    // Overdue count
+    const overdueCount = allAccountingEntries.filter(e => {
+        if (e.is_paid) return false;
+        if (!e.due_date || e.due_date === 'sofort') return false;
+        return e.due_date < todayStr;
+    }).length;
+
+    const kpiContainer = document.getElementById('accounting-kpi-container');
+    if (kpiContainer) {
+        const getKpiTileStyle = (filterName, activeColor) => {
+            const isActive = currentAccountingKpiFilter === filterName;
+            return `cursor: pointer; transition: all 0.2s ease; ${isActive ? `border: 1.5px solid ${activeColor}; box-shadow: 0 0 12px ${activeColor}2a; transform: translateY(-2px); background: rgba(255,255,255,0.06);` : 'border: 1.5px solid rgba(255,255,255,0.05);'}`;
+        };
+
+        kpiContainer.innerHTML = `
+            <div class="maint-kpi-grid" style="margin-bottom: 1.5rem;">
+                <div class="maint-kpi-tile" style="${getKpiTileStyle('open_outgoing', 'var(--color-primary-green)')}" onclick="window.setAccountingKpiFilter('open_outgoing')" title="Ausgangsrechnungen, die noch nicht als bezahlt markiert wurden (Klicken zum Filtern)">
+                    <div class="maint-kpi-value" style="color: var(--color-primary-green);">${window.formatCurrency(openOutgoingSum)}</div>
+                    <div class="maint-kpi-label">Offene Einnahmen (${openOutgoing.length})</div>
+                </div>
+                <div class="maint-kpi-tile" style="${getKpiTileStyle('open_incoming', '#f87171')}" onclick="window.setAccountingKpiFilter('open_incoming')" title="Eingangsrechnungen, die noch nicht als bezahlt markiert wurden (Klicken zum Filtern)">
+                    <div class="maint-kpi-value" style="color: #f87171;">${window.formatCurrency(openIncomingSum)}</div>
+                    <div class="maint-kpi-label">Offene Ausgaben (${openIncoming.length})</div>
+                </div>
+                <div class="maint-kpi-tile" style="${getKpiTileStyle('skonto', '#fbbf24')}" onclick="window.setAccountingKpiFilter('skonto')" title="Mögliche Ersparnis durch fristgerechtes Zahlen bei Eingangsrechnungen mit Skonto (Klicken zum Filtern)">
+                    <div class="maint-kpi-value" style="color: #fbbf24;">${window.formatCurrency(skontoPotential)}</div>
+                    <div class="maint-kpi-label">Skonto-Potenzial</div>
+                </div>
+                <div class="maint-kpi-tile" style="${getKpiTileStyle('overdue', '#ef4444')}" onclick="window.setAccountingKpiFilter('overdue')" title="Rechnungen, deren Fälligkeitsdatum überschritten ist (Klicken zum Filtern)">
+                    <div class="maint-kpi-value" style="color: #ef4444;">${overdueCount} Rechnungen</div>
+                    <div class="maint-kpi-label">Überfällig</div>
+                </div>
+            </div>
+            ${currentAccountingKpiFilter ? `
+                <div style="margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 0.85rem; color: rgba(255,255,255,0.5);">Aktiver Filter:</span>
+                    <span style="font-size: 0.8rem; font-weight: 700; color: #fff; background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 99px; display: flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,0.12);">
+                        ${currentAccountingKpiFilter === 'open_outgoing' ? 'Offene Einnahmen' : 
+                          currentAccountingKpiFilter === 'open_incoming' ? 'Offene Ausgaben' : 
+                          currentAccountingKpiFilter === 'skonto' ? 'Skonto-Potenzial' : 'Überfällig'}
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="cursor: pointer; opacity: 0.7; display: inline-block; vertical-align: middle;" onclick="window.setAccountingKpiFilter('${currentAccountingKpiFilter}')"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </span>
+                </div>
+            ` : ''}
+        `;
+    }
+
     const filtered = allAccountingEntries.filter(e => {
-        if (e.type !== currentAccountingType) return false;
+        // Apply KPI filter
+        if (currentAccountingKpiFilter === 'open_outgoing') {
+            if (e.type !== 'outgoing' || e.is_paid) return false;
+        } else if (currentAccountingKpiFilter === 'open_incoming') {
+            if (e.type !== 'incoming' || e.is_paid) return false;
+        } else if (currentAccountingKpiFilter === 'skonto') {
+            if (e.type !== 'incoming' || e.is_paid) return false;
+            if (!e.discount_amount || parseFloat(e.discount_amount) <= 0) return false;
+            if (!e.discount_date || e.discount_date < todayStr) return false;
+        } else if (currentAccountingKpiFilter === 'overdue') {
+            if (e.is_paid) return false;
+            if (!e.due_date || e.due_date === 'sofort') return false;
+            if (e.due_date >= todayStr) return false;
+        } else {
+            // Normal tab filter
+            if (e.type !== currentAccountingType) return false;
+        }
+
+        // Year filter
         if (selectedAccountingYear !== 'alle' && selectedAccountingYear !== null) {
             const year = new Date(e.date).getFullYear();
             if (year !== selectedAccountingYear) return false;
@@ -323,6 +406,25 @@ window.renderAccounting = function () {
             const hasDiscount = e.discount_amount && parseFloat(e.discount_amount) > 0;
             const discountDate = e.discount_date ? new Date(e.discount_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
             const finalAmount = e.amount_gross - (parseFloat(e.discount_amount) || 0);
+
+            let skontoAlarmHtml = '';
+            if (hasDiscount && !e.is_paid && e.discount_date) {
+                const discMs = new Date(e.discount_date + 'T00:00:00').getTime();
+                const nowMs = new Date().setHours(0, 0, 0, 0);
+                const diffDays = Math.round((discMs - nowMs) / 86400000);
+                if (diffDays >= 0) {
+                    const label = diffDays === 0 ? 'Heute!' : `noch ${diffDays} Tage`;
+                    const color = diffDays <= 2 ? '#f87171' : 'var(--color-primary-green)';
+                    const bg = diffDays <= 2 ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)';
+                    const border = diffDays <= 2 ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)';
+                    skontoAlarmHtml = `
+                        <div style="font-size: 0.7rem; font-weight: 800; color: ${color}; background: ${bg}; border: 1px solid ${border}; padding: 2px 6px; border-radius: 5px; width: fit-content; display: inline-flex; align-items: center; gap: 4px; margin-top: 3px; border-radius: 4px;">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            Skonto: ${label}
+                        </div>
+                    `;
+                }
+            }
             
             return `
             <tr style="border-top: 1px solid rgba(255,255,255,0.03); transition: background 0.2s;" class="accounting-main-row ${e.is_paid ? 'status-paid' : 'status-unpaid'}" id="row-${e.id}">
@@ -369,6 +471,7 @@ window.renderAccounting = function () {
                             <div style="font-weight: 700; color: #fff; background: rgba(16, 185, 129, 0.2); padding: 1px 4px; border-radius: 3px; width: fit-content; font-size: 0.7rem;">
                                 Zahlbetrag: ${window.formatCurrency(e.amount_gross - e.discount_amount)}
                             </div>
+                            ${skontoAlarmHtml}
                         </div>` : ''}
                 </td>
                 <td data-label="Aktionen" style="padding: 10px 12px; text-align: center;">
@@ -411,6 +514,8 @@ window.renderAccounting = function () {
 
     container.innerHTML = html;
     window.renderQuarters();
+    window.renderAccountingCharts();
+    window.renderYoYComparison();
 };
 
 window.formatCurrency = function (val) {
@@ -482,7 +587,7 @@ window.renderQuarters = function () {
         html += `
         <div style="margin-bottom: 2rem;">
             <div style="font-size: 1.1rem; font-weight: 900; color: rgba(255,255,255,0.5); margin-bottom: 1rem; display: flex; align-items: center; gap: 10px;">
-                <span style="color: #fff;">${yr}</span>
+                <span style="color: #fff;">Quartale ${yr}</span>
                 <span style="display: inline-block; height: 1px; flex: 1; background: rgba(255,255,255,0.08);"></span>
             </div>
             <div class="quarters-stats-grid">
@@ -499,23 +604,50 @@ window.renderQuarters = function () {
             const balance = outgoingNum - incomingNum;
             const hasData = quarterData.length > 0;
 
+            let barHtml = '';
+            if (hasData) {
+                const total = incomingNum + outgoingNum;
+                const outPct = total > 0 ? Math.round(outgoingNum / total * 100) : 50;
+                const incPct = total > 0 ? Math.round(incomingNum / total * 100) : 50;
+                barHtml = `
+                    <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.06); border-radius: 99px; overflow: hidden; display: flex; margin: 12px 0;">
+                        <div style="width: ${outPct}%; height: 100%; background: var(--color-primary-green);" title="Ausgang: ${outPct}%"></div>
+                        <div style="width: ${incPct}%; height: 100%; background: #ef4444;" title="Eingang: ${incPct}%"></div>
+                    </div>
+                `;
+            } else {
+                barHtml = `
+                    <div style="width: 100%; height: 5px; background: rgba(255,255,255,0.03); border-radius: 99px; margin: 12px 0;"></div>
+                `;
+            }
+
             html += `
-                <div class="glass-card" style="padding: 1.25rem; text-align: center; border: 2px solid ${hasData ? (balance >= 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)') : 'rgba(255,255,255,0.04)'}; opacity: ${hasData ? '1' : '0.4'};">
-                    <div style="font-size: 1.2rem; font-weight: 900; color: #fff; margin-bottom: 2px;">${q.name}</div>
-                    <div style="font-size: 0.75rem; color: rgba(255,255,255,0.4); margin-bottom: 1rem; font-weight: 600;">${q.label}</div>
-                    <div style="display: flex; flex-direction: column; gap: 6px;">
-                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
-                            <span style="color: rgba(255,255,255,0.5);">Ausgang:</span>
-                            <span style="color: var(--color-primary-green); font-weight: 800;">${window.formatCurrency(outgoingNum)}</span>
+                <div class="glass-card" style="padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid ${hasData ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)'}; opacity: ${hasData ? '1' : '0.45'}; transition: transform 0.2s ease, box-shadow 0.2s ease;"
+                     onmouseover="if(${hasData}){ this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 16px rgba(0,0,0,0.3)'; }" 
+                     onmouseout="this.style.transform='none'; this.style.boxShadow='none';">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                            <span style="font-size: 1.25rem; font-weight: 800; color: #fff; font-family: 'Outfit', sans-serif;">${q.name}</span>
+                            <span style="font-size: 0.72rem; color: rgba(255,255,255,0.4); font-weight: 700; text-transform: uppercase;">${q.label}</span>
                         </div>
-                        <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
-                            <span style="color: rgba(255,255,255,0.5);">Eingang:</span>
-                            <span style="color: #f87171; font-weight: 800;">${window.formatCurrency(incomingNum)}</span>
+                        
+                        ${barHtml}
+                        
+                        <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 600;">
+                                <span style="color: rgba(255,255,255,0.45);">Ausgang:</span>
+                                <span style="color: var(--color-primary-green);">${window.formatCurrency(outgoingNum)}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 600;">
+                                <span style="color: rgba(255,255,255,0.45);">Eingang:</span>
+                                <span style="color: #f87171;">${window.formatCurrency(incomingNum)}</span>
+                            </div>
                         </div>
-                        <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; font-weight: 900; font-size: 1rem;">
-                            <span style="color: rgba(255,255,255,0.6);">Bilanz:</span>
-                            <span style="color: ${balance >= 0 ? 'var(--color-primary-green)' : '#f87171'};">${window.formatCurrency(balance)}</span>
-                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 14px; padding: 8px 10px; background: ${hasData ? (balance >= 0 ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)') : 'rgba(255,255,255,0.02)'}; border: 1px solid ${hasData ? (balance >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)') : 'rgba(255,255,255,0.05)'}; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.88rem;">
+                        <span style="color: rgba(255,255,255,0.5); font-size: 0.72rem; text-transform: uppercase; font-weight: 700;">Bilanz:</span>
+                        <span style="color: ${balance >= 0 ? 'var(--color-primary-green)' : '#f87171'}; font-weight: 800; font-size: 0.95rem;">${window.formatCurrency(balance)}</span>
                     </div>
                 </div>
             `;
@@ -2530,4 +2662,313 @@ window.submitSplit = async function() {
         btn.innerHTML = 'Aufteilen bestätigen';
         btn.disabled = false;
     }
+};
+
+window.setAccountingKpiFilter = function (filterName) {
+    if (currentAccountingKpiFilter === filterName) {
+        currentAccountingKpiFilter = null; // Clear filter
+    } else {
+        currentAccountingKpiFilter = filterName;
+        // Auto-switch tabs based on filter
+        if (filterName === 'open_outgoing') {
+            currentAccountingType = 'outgoing';
+        } else if (filterName === 'open_incoming' || filterName === 'skonto') {
+            currentAccountingType = 'incoming';
+        }
+    }
+    
+    // Update tab UI
+    document.querySelectorAll('.calendar-tab-btn').forEach(btn => {
+        const isActive = (btn.id === `tab-${currentAccountingType}` || btn.id === `tab-${currentAccountingType}-desktop`);
+        if (isActive) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    renderAccounting();
+};
+
+window.renderAccountingCharts = function () {
+    const row = document.getElementById('accounting-charts-row');
+    if (!row) return;
+
+    // --- Chart 1: Cashflow (incoming vs. outgoing for last 12 months) ---
+    const now = new Date();
+    const months = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
+    const buckets = [];
+
+    for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        buckets.push({
+            label: months[d.getMonth()] + ' ' + String(d.getFullYear()).slice(2),
+            year: d.getFullYear(),
+            month: d.getMonth(),
+            incoming: 0,
+            outgoing: 0
+        });
+    }
+
+    allAccountingEntries.forEach(e => {
+        if (!e.date) return;
+        const d = new Date(e.date);
+        const bucket = buckets.find(b => b.year === d.getFullYear() && b.month === d.getMonth());
+        if (bucket) {
+            const val = parseFloat(e.amount_gross) || 0;
+            if (e.type === 'incoming') {
+                bucket.incoming += val;
+            } else if (e.type === 'outgoing') {
+                bucket.outgoing += val;
+            }
+        }
+    });
+
+    const maxVal = Math.max(...buckets.map(b => Math.max(b.incoming, b.outgoing)), 100);
+    const fmtEur = (v) => Math.round(v).toLocaleString('de-DE') + ' €';
+
+    const cashflowColsHtml = buckets.map(b => {
+        const incPct = Math.round((b.incoming / maxVal) * 100);
+        const outPct = Math.round((b.outgoing / maxVal) * 100);
+        const balance = b.outgoing - b.incoming;
+        const balanceColor = balance >= 0 ? 'var(--color-primary-green)' : '#f87171';
+        const balanceText = balance !== 0 ? (balance >= 0 ? '+' : '') + Math.round(balance / 1000) + 'k' : '';
+
+        return `
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 32px;">
+                <div style="font-size: 0.62rem; font-weight: 800; color: ${balanceColor}; margin-bottom: 2px; height: 12px; white-space: nowrap;">
+                    ${balanceText}
+                </div>
+                <div style="display: flex; align-items: flex-end; gap: 2px; height: 90px; width: 100%; justify-content: center;">
+                    <div title="Ausgang: ${fmtEur(b.outgoing)}" 
+                         style="width: 10px; height: ${outPct}%; background: linear-gradient(0deg, #10b981 0%, #34d399 100%); border-radius: 2px 2px 0 0; min-height: 1px;">
+                    </div>
+                    <div title="Eingang: ${fmtEur(b.incoming)}" 
+                         style="width: 10px; height: ${incPct}%; background: linear-gradient(0deg, #ef4444 0%, #f87171 100%); border-radius: 2px 2px 0 0; min-height: 1px;">
+                    </div>
+                </div>
+                <div style="font-size: 0.6rem; font-weight: 700; color: rgba(255,255,255,0.35); margin-top: 6px; white-space: nowrap;">
+                    ${b.label.split(' ')[0]}
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Summary calculations
+    const totalIncoming = buckets.reduce((s, b) => s + b.incoming, 0);
+    const totalOutgoing = buckets.reduce((s, b) => s + b.outgoing, 0);
+    const totalBalance = totalOutgoing - totalIncoming;
+
+    // --- Chart 2: Top 5 entities (Suppliers / Customers) ---
+    const activeEntries = allAccountingEntries.filter(e => e.type === currentAccountingType);
+    const entityVolumeMap = {};
+    activeEntries.forEach(e => {
+        if (!e.entity) return;
+        const amt = parseFloat(e.amount_gross) || 0;
+        entityVolumeMap[e.entity] = (entityVolumeMap[e.entity] || 0) + amt;
+    });
+
+    const sortedEntities = Object.keys(entityVolumeMap)
+        .map(key => ({ name: key, volume: entityVolumeMap[key] }))
+        .sort((a, b) => b.volume - a.volume)
+        .slice(0, 5);
+
+    const maxEntityVol = sortedEntities.length > 0 ? sortedEntities[0].volume : 100;
+
+    const topEntitiesHtml = sortedEntities.length > 0 ? sortedEntities.map((ent, idx) => {
+        const pct = Math.round((ent.volume / maxEntityVol) * 100);
+        const rankColor = idx === 0 ? 'var(--color-primary-green)' : (idx === 1 ? '#60a5fa' : 'rgba(255,255,255,0.5)');
+        const shortName = ent.name.split(',')[0].trim().substring(0, 20);
+        return `
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,0.85);">
+                    <span style="display: flex; gap: 6px; align-items: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <span style="color: ${rankColor}; font-weight: 900;">#${idx + 1}</span>
+                        ${escapeHtml(shortName)}
+                    </span>
+                    <span style="font-weight: 800; color: #fff;">${fmtEur(ent.volume)}</span>
+                </div>
+                <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
+                    <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, ${idx % 2 === 0 ? '#10b981' : '#3b82f6'}, ${idx % 2 === 0 ? '#34d399' : '#60a5fa'}); border-radius: 4px;"></div>
+                </div>
+            </div>
+        `;
+    }).join('') : `<div style="padding: 2rem 0; text-align: center; color: rgba(255,255,255,0.25); font-style: italic; font-size: 0.85rem;">Keine Rechnungsdaten vorhanden.</div>`;
+
+    // --- Chart 3: Paid vs Unpaid Distribution ---
+    const paidSum = activeEntries.filter(e => e.is_paid).reduce((s, e) => s + (parseFloat(e.amount_gross) || 0), 0);
+    const unpaidSum = activeEntries.filter(e => !e.is_paid).reduce((s, e) => s + (parseFloat(e.amount_gross) || 0), 0);
+    const totalSum = paidSum + unpaidSum;
+
+    const paidPct = totalSum > 0 ? Math.round((paidSum / totalSum) * 100) : 0;
+    const unpaidPct = totalSum > 0 ? Math.round((unpaidSum / totalSum) * 100) : 0;
+
+    row.innerHTML = `
+        <!-- Card 1: Cashflow -->
+        <div class="glass-card" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; min-height: 240px;">
+            <div>
+                <h3 style="margin: 0; color: #fff; font-size: 0.95rem; font-weight: 800; font-family: 'Outfit', sans-serif;">Finanz- & Cashflow-Übersicht</h3>
+                <p style="margin: 2px 0 0 0; font-size: 0.72rem; color: rgba(255,255,255,0.45); font-weight: 600;">Letzte 12 Monate · Einnahmen vs. Ausgaben</p>
+            </div>
+            
+            <div class="hide-scrollbar" style="display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; height: 120px; overflow-x: auto; padding-top: 5px;">
+                ${cashflowColsHtml}
+            </div>
+            
+            <div style="height: 1px; background: rgba(255,255,255,0.06); margin: 2px 0;"></div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem;">
+                <span style="color: rgba(255,255,255,0.5); font-weight: 600;">Netto-Bilanz gesamt:</span>
+                <span style="font-weight: 900; color: ${totalBalance >= 0 ? 'var(--color-primary-green)' : '#f87171'};">${fmtEur(totalBalance)}</span>
+            </div>
+        </div>
+
+        <!-- Card 2: Top Entities -->
+        <div class="glass-card" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; min-height: 240px;">
+            <div>
+                <h3 style="margin: 0; color: #fff; font-size: 0.95rem; font-weight: 800; font-family: 'Outfit', sans-serif;">
+                    Top 5 ${currentAccountingType === 'incoming' ? 'Lieferanten (Ausgaben)' : 'Kunden (Einnahmen)'}
+                </h3>
+                <p style="margin: 2px 0 0 0; font-size: 0.72rem; color: rgba(255,255,255,0.45); font-weight: 600;">Gesamtvolumen brutto</p>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 10px; flex: 1; justify-content: center;">
+                ${topEntitiesHtml}
+            </div>
+        </div>
+
+        <!-- Card 3: Paid vs Unpaid Distribution -->
+        <div class="glass-card" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; min-height: 240px;">
+            <div>
+                <h3 style="margin: 0; color: #fff; font-size: 0.95rem; font-weight: 800; font-family: 'Outfit', sans-serif;">Statusverteilung nach Volumen</h3>
+                <p style="margin: 2px 0 0 0; font-size: 0.72rem; color: rgba(255,255,255,0.45); font-weight: 600;">Aufteilung der Belegsummen (${currentAccountingType === 'incoming' ? 'Ausgaben' : 'Einnahmen'})</p>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 14px; flex: 1; justify-content: center;">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 700;">
+                        <span style="color: var(--color-primary-green); display: flex; align-items: center; gap: 4px;">
+                            <span style="width: 8px; height: 8px; background: var(--color-primary-green); border-radius: 2px;"></span>
+                            Bezahlt (${paidPct}%)
+                        </span>
+                        <span style="color: #fff; font-weight: 800;">${fmtEur(paidSum)}</span>
+                    </div>
+                    <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
+                        <div style="width: ${paidPct}%; height: 100%; background: linear-gradient(90deg, #10b981, #34d399); border-radius: 4px;"></div>
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; font-weight: 700;">
+                        <span style="color: #ef4444; display: flex; align-items: center; gap: 4px;">
+                            <span style="width: 8px; height: 8px; background: #ef4444; border-radius: 2px;"></span>
+                            Offen (${unpaidPct}%)
+                        </span>
+                        <span style="color: #fff; font-weight: 800;">${fmtEur(unpaidSum)}</span>
+                    </div>
+                    <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
+                        <div style="width: ${unpaidPct}%; height: 100%; background: linear-gradient(90deg, #ef4444, #f87171); border-radius: 4px;"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="height: 1px; background: rgba(255,255,255,0.06); margin: 2px 0;"></div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem;">
+                <span style="color: rgba(255,255,255,0.5); font-weight: 600;">Volumen gesamt:</span>
+                <span style="font-weight: 900; color: #fff;">${fmtEur(totalSum)}</span>
+            </div>
+        </div>
+    `;
+};
+
+window.renderYoYComparison = function () {
+    const grid = document.getElementById('accounting-yoy-grid');
+    if (!grid) return;
+
+    // Determine target year
+    let targetYear = new Date().getFullYear();
+    if (selectedAccountingYear && selectedAccountingYear !== 'alle') {
+        targetYear = typeof selectedAccountingYear === 'number' ? selectedAccountingYear : parseInt(selectedAccountingYear);
+    }
+    const prevYear = targetYear - 1;
+
+    // Outgoing (Einnahmen)
+    const outCur = allAccountingEntries.filter(e => e.type === 'outgoing' && new Date(e.date).getFullYear() === targetYear).reduce((s, e) => s + (parseFloat(e.amount_gross) || 0), 0);
+    const outPrev = allAccountingEntries.filter(e => e.type === 'outgoing' && new Date(e.date).getFullYear() === prevYear).reduce((s, e) => s + (parseFloat(e.amount_gross) || 0), 0);
+
+    // Incoming (Ausgaben)
+    const incCur = allAccountingEntries.filter(e => e.type === 'incoming' && new Date(e.date).getFullYear() === targetYear).reduce((s, e) => s + (parseFloat(e.amount_gross) || 0), 0);
+    const incPrev = allAccountingEntries.filter(e => e.type === 'incoming' && new Date(e.date).getFullYear() === prevYear).reduce((s, e) => s + (parseFloat(e.amount_gross) || 0), 0);
+
+    // Profit (Bilanz)
+    const profitCur = outCur - incCur;
+    const profitPrev = outPrev - incPrev;
+
+    const fmtEur = (v) => Math.round(v).toLocaleString('de-DE') + ' €';
+
+    const getTrendBadge = (cur, prev, isProfit = false) => {
+        if (prev === 0) return `<span style="font-size:0.72rem; color:rgba(255,255,255,0.4); font-weight:700;">Keine VJ-Daten</span>`;
+        const diffPct = ((cur - prev) / Math.abs(prev)) * 100;
+        const dir = diffPct >= 0 ? '+' : '';
+        let color = '#10b981'; // Green
+        if (diffPct < 0) {
+            color = '#f87171'; // Red
+        }
+        
+        // If it's expenses (Incoming), lower expenses is better!
+        if (!isProfit && cur < prev && cur !== 0 && prev !== 0 && cur === incCur) {
+            color = '#10b981'; // Expenses went down -> Green!
+        } else if (!isProfit && cur > prev && cur === incCur) {
+            color = '#f87171'; // Expenses went up -> Red!
+        }
+
+        return `<span style="font-size: 0.75rem; font-weight: 800; color: ${color}; background: ${color}1a; border: 1px solid ${color}33; padding: 2px 8px; border-radius: 99px;">${dir}${Math.round(diffPct)}% vs. VJ</span>`;
+    };
+
+    grid.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
+            <!-- Einnahmen (YoY) -->
+            <div class="glass-card" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 8px; border: 1px solid rgba(255,255,255,0.06);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.5px;">Einnahmen (YoY)</span>
+                    ${getTrendBadge(outCur, outPrev)}
+                </div>
+                <div style="font-size: 1.5rem; font-weight: 900; color: var(--color-primary-green); font-family: 'Outfit', sans-serif; margin-top: 4px;">
+                    ${fmtEur(outCur)}
+                </div>
+                <div style="font-size: 0.78rem; color: rgba(255,255,255,0.4); font-weight: 600;">
+                    Vorjahr (${prevYear}): <span style="color: rgba(255,255,255,0.7); font-weight: 700;">${fmtEur(outPrev)}</span>
+                </div>
+            </div>
+
+            <!-- Ausgaben (YoY) -->
+            <div class="glass-card" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 8px; border: 1px solid rgba(255,255,255,0.06);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.5px;">Ausgaben (YoY)</span>
+                    ${getTrendBadge(incCur, incPrev)}
+                </div>
+                <div style="font-size: 1.5rem; font-weight: 900; color: #f87171; font-family: 'Outfit', sans-serif; margin-top: 4px;">
+                    ${fmtEur(incCur)}
+                </div>
+                <div style="font-size: 0.78rem; color: rgba(255,255,255,0.4); font-weight: 600;">
+                    Vorjahr (${prevYear}): <span style="color: rgba(255,255,255,0.7); font-weight: 700;">${fmtEur(incPrev)}</span>
+                </div>
+            </div>
+
+            <!-- Netto-Ergebnis (YoY) -->
+            <div class="glass-card" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 8px; border: 1px solid rgba(255,255,255,0.06);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.5px;">Netto-Bilanz (YoY)</span>
+                    ${getTrendBadge(profitCur, profitPrev, true)}
+                </div>
+                <div style="font-size: 1.5rem; font-weight: 900; color: ${profitCur >= 0 ? 'var(--color-primary-green)' : '#f87171'}; font-family: 'Outfit', sans-serif; margin-top: 4px;">
+                    ${fmtEur(profitCur)}
+                </div>
+                <div style="font-size: 0.78rem; color: rgba(255,255,255,0.4); font-weight: 600;">
+                    Vorjahr (${prevYear}): <span style="color: rgba(255,255,255,0.7); font-weight: 700;">${fmtEur(profitPrev)}</span>
+                </div>
+            </div>
+        </div>
+    `;
 };

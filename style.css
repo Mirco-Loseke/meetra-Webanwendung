@@ -1,4 +1,4 @@
-﻿/* Schwächere Geräte: Glas-/Blur-Effekte abschalten (GPU-teuerstes CSS-Feature der App).
+/* Schwächere Geräte: Glas-/Blur-Effekte abschalten (GPU-teuerstes CSS-Feature der App).
    Greift sowohl bei Klassen-basiertem als auch bei Inline-Style-gesetztem backdrop-filter. */
 .reduced-fx,
 .reduced-fx * {
@@ -10387,6 +10387,554 @@ body.focus-mode-active .view-header-row-top {
     }
 }
 
+
+
+
+
+/* --- Wartung-Tab (Ereignisse): KPI-Kacheln, Karten-Layout, Monats-Graf --- */
+.maint-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 1.25rem;
+}
+.maint-kpi-tile {
+    border-radius: 14px;
+    padding: 14px 16px;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+    transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+    text-align: left;
+    font-family: 'Inter', sans-serif;
+}
+.maint-kpi-tile:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.06);
+}
+.maint-kpi-tile.active {
+    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.08);
+}
+.maint-kpi-value {
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.7rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+.maint-kpi-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.45);
+    margin-top: 4px;
+}
+.maint-chart-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 16px 18px 12px 18px;
+    margin-bottom: 1.5rem;
+}
+.maint-chart-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.45);
+    margin: 0 0 10px 0;
+    font-family: 'Inter', sans-serif;
+}
+.maint-chart-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 90px;
+}
+.maint-chart-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    min-width: 0;
+}
+.maint-chart-bar {
+    width: 100%;
+    max-width: 42px;
+    border-radius: 5px 5px 0 0;
+    min-height: 2px;
+}
+.maint-chart-count {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 3px;
+    font-family: 'Inter', sans-serif;
+}
+.maint-chart-month {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.35);
+    margin-top: 6px;
+    font-family: 'Inter', sans-serif;
+    white-space: nowrap;
+}
+.maint-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+.maint-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-left-width: 3px;
+    border-radius: 12px;
+    padding: 14px 16px;
+    transition: background 0.15s ease;
+    font-family: 'Inter', sans-serif;
+}
+.maint-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+.maint-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+.maint-card-machine {
+    color: var(--color-primary-green);
+    font-weight: 800;
+    font-size: 1rem;
+    line-height: 1.3;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.maint-badge {
+    font-size: 0.7rem;
+    padding: 4px 10px;
+    border-radius: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 800;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.maint-card-dates {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.65);
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+.maint-card-dates b {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 700;
+}
+.maint-progress-track {
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.07);
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+.maint-progress-fill {
+    height: 100%;
+    border-radius: 3px;
+}
+.maint-card-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.maint-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.75);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    font-family: 'Inter', sans-serif;
+}
+.maint-action-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+@media (max-width: 900px) {
+    .maint-cards-grid {
+        grid-template-columns: 1fr;
+    }
+    .maint-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    .maint-chart-bars {
+        height: 70px;
+        gap: 5px;
+    }
+    .maint-chart-col:nth-child(n+8) {
+        display: none;
+    }
+}
+
+/* --- Vorgänge-Tab (Ereignisse): Grafen-Reihe und Vorgangs-Karten --- */
+.proc-charts-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 1.5rem;
+}
+.proc-chart-stack {
+    width: 100%;
+    max-width: 42px;
+    display: flex;
+    flex-direction: column;
+    min-height: 2px;
+    overflow: hidden;
+    border-radius: 5px 5px 0 0;
+}
+.proc-type-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+.proc-type-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    width: 110px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: 'Inter', sans-serif;
+}
+.proc-type-track {
+    flex: 1;
+    height: 8px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+}
+.proc-type-fill {
+    height: 100%;
+    border-radius: 4px;
+}
+.proc-type-count {
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.7);
+    width: 26px;
+    text-align: right;
+    flex-shrink: 0;
+    font-family: 'Inter', sans-serif;
+}
+.proc-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    align-items: start;
+}
+.proc-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-left-width: 4px;
+    border-radius: 12px;
+    padding: 14px 16px;
+    transition: background 0.15s ease;
+    font-family: 'Inter', sans-serif;
+}
+.proc-card:hover {
+    background: rgba(255, 255, 255, 0.045);
+}
+.proc-card-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+.proc-card-head > span:first-child {
+    flex-shrink: 0;
+}
+.proc-card-headmain {
+    flex: 1;
+    min-width: 0;
+}
+.proc-card-title {
+    font-weight: 700;
+    color: #fff;
+    font-size: 1rem;
+    line-height: 1.3;
+    word-break: break-word;
+}
+.proc-card-meta {
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.4);
+    font-weight: 600;
+    margin-top: 3px;
+}
+.proc-card-machine {
+    margin-bottom: 8px;
+}
+.proc-card-remark {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    font-size: 0.88rem;
+}
+.proc-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 10px;
+}
+@media (max-width: 900px) {
+    .proc-cards-grid {
+        grid-template-columns: 1fr;
+    }
+}
+@media (max-width: 760px) {
+    .proc-charts-row {
+        grid-template-columns: 1fr;
+    }
+    .proc-type-label {
+        width: 90px;
+    }
+}
+
+/* --- Angebote (Listen): Dashboard, Nachfassen, Mobile-Karten --- */
+.ang-charts-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+    margin-bottom: 1.25rem;
+}
+.ang-nachfass-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-family: 'Inter', sans-serif;
+    transition: filter 0.15s ease;
+}
+.ang-nachfass-row:hover {
+    filter: brightness(1.25);
+}
+.angebote-cards {
+    display: none;
+}
+.ang-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-left-width: 4px;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+    font-family: 'Inter', sans-serif;
+}
+.ang-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.ang-card-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.ang-card-fields label {
+    display: block;
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 4px;
+}
+@media (max-width: 900px) {
+    .angebote-table-wrap {
+        display: none;
+    }
+    .angebote-cards {
+        display: block;
+    }
+    .maint-chart-bars .maint-chart-col:nth-child(n+8) {
+        display: none;
+    }
+}
+
+/* --- Startseite (Dashboard): Kopfzeile, KPI-Zeile, Hauptraster, Chips --- */
+.dash-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+.dash-quick-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.dash-quick-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    font-family: 'Inter', sans-serif;
+    white-space: nowrap;
+}
+.dash-quick-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+.dash-kpi-grid {
+    grid-template-columns: repeat(5, 1fr);
+}
+.dash-main-grid {
+    display: grid;
+    grid-template-columns: 1.25fr 1fr;
+    gap: 12px;
+    align-items: start;
+}
+.dash-todo-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 0 8px 8px 0;
+    cursor: pointer;
+    font-size: 0.86rem;
+    font-weight: 600;
+    font-family: 'Inter', sans-serif;
+    transition: filter 0.15s ease;
+}
+.dash-todo-row:hover {
+    filter: brightness(1.3);
+}
+.dash-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    font-family: 'Inter', sans-serif;
+}
+.dash-chip:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+@media (max-width: 1100px) {
+    .dash-kpi-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+@media (max-width: 900px) {
+    .dash-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .dash-main-grid {
+        grid-template-columns: 1fr;
+    }
+    .dash-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+/* Double KPI Tile */
+.double-kpi-tile {
+    display: flex !important;
+    padding: 0 !important;
+    overflow: hidden;
+    align-items: stretch;
+}
+.double-kpi-subtile {
+    flex: 1;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.double-kpi-subtile:first-child {
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+.double-kpi-subtile:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+/* =========================================
+   Reminder Bell Glow & Pulse Animations
+   ========================================= */
+
+@keyframes bell-pulse-urgent {
+    0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.8); transform: scale(1); }
+    40%  { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); transform: scale(1.08); }
+    60%  { transform: scale(0.97); }
+    80%  { transform: scale(1.04); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); transform: scale(1); }
+}
+
+@keyframes bell-pulse-soon {
+    0%   { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7); }
+    60%  { box-shadow: 0 0 0 7px rgba(251, 191, 36, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+}
+
+.reminder-bell-urgent {
+    background: rgba(239, 68, 68, 0.18) !important;
+    border: 1.5px solid rgba(239, 68, 68, 0.6) !important;
+    color: #ef4444 !important;
+    animation: bell-pulse-urgent 1.8s ease-in-out infinite;
+}
+
+.reminder-bell-soon {
+    background: rgba(251, 191, 36, 0.12) !important;
+    border: 1.5px solid rgba(251, 191, 36, 0.5) !important;
+    color: #fbbf24 !important;
+    animation: bell-pulse-soon 2.5s ease-in-out infinite;
+}
 
 
 

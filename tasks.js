@@ -20,7 +20,8 @@
     function onTaskFieldChange() { taskIsDirty = true; }
     let filters = {
         machine: 'all',
-        search: ''
+        search: '',
+        user: 'all'
     };
     window.showCompletedTasks = false;
 
@@ -179,7 +180,12 @@
                 isServiceMatch = task.subtasks && task.subtasks.some(s => s.action_type && s.action_type.startsWith('servicebericht:'));
             }
 
-            return matchesSearch && matchesMachine && isServiceMatch;
+            let matchesUser = true;
+            if (filters.user === 'me' && window.activeUser) {
+                matchesUser = Array.isArray(task.assigned_to) && task.assigned_to.some(u => String(u) === String(window.activeUser.id));
+            }
+
+            return matchesSearch && matchesMachine && isServiceMatch && matchesUser;
         });
 
         if (viewMode === 'board') {
@@ -191,6 +197,54 @@
         }
     }
     window.renderTasks = renderTasks;
+
+    window.filterTasksByUser = function (userFilter) {
+        filters.user = userFilter;
+        
+        // Update tab active classes
+        const btnMe = document.getElementById('btn-task-user-me');
+        if (btnMe) {
+            if (userFilter === 'me') {
+                btnMe.classList.add('active');
+            } else {
+                btnMe.classList.remove('active');
+            }
+        }
+        
+        renderTasks();
+    };
+
+    window.toggleMyTasksFilter = function () {
+        if (filters.user === 'me') {
+            window.filterTasksByUser('all');
+        } else {
+            window.filterTasksByUser('me');
+        }
+    };
+
+    window.showMyTasksAndSwitch = function () {
+        window.switchView('tasks');
+        setTimeout(() => {
+            if (typeof window.filterTasksByUser === 'function') {
+                window.filterTasksByUser('me');
+            }
+            if (typeof window.fetchTasks === 'function') {
+                window.fetchTasks();
+            }
+        }, 50);
+    };
+
+    window.showAllTasksAndSwitch = function () {
+        window.switchView('tasks');
+        setTimeout(() => {
+            if (typeof window.filterTasksByUser === 'function') {
+                window.filterTasksByUser('all');
+            }
+            if (typeof window.fetchTasks === 'function') {
+                window.fetchTasks();
+            }
+        }, 50);
+    };
 
     function renderBoard(tasks) {
         document.getElementById('tasks-list').classList.add('hidden');
