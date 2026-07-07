@@ -764,6 +764,49 @@
         `;
     }
 
+    // "Austausch Filtermedien"-Etikett (siehe Vorlagen-Tab weiter unten): kein Barcode/
+    // Bezeichnung, sondern ein Formular mit Art.-Nr.- und Datum-Feld, beide vorausgefüllt.
+    // Prozentwerte sind 1:1 dieselben wie in drawFiltermedienLabelPdf (mm-Werte / 36mm
+    // Etikettenhöhe bzw. 89mm Etikettenbreite), damit die Vorschau exakt dem PDF entspricht.
+    function buildFiltermedienLabelHtml(w, h, vorlage, dateText, logo) {
+        const dateHtml = escapeHtml(dateText || '');
+        const logoWidthPct = logo ? Math.min(((7 * logo.ratio) / 89) * 100, 40) : 0;
+        const hasArticleNumber = !!vorlage.articleNumber;
+
+        const titleTop = vorlage.subtitle ? 5 : 8;
+        const subtitleHtml = vorlage.subtitle
+            ? `<div style="position:absolute; left:4%; right:4%; top:17%; text-align:center; font-weight:400; font-size:${h * 0.08}px; color:#505050;">${escapeHtml(vorlage.subtitle)}</div>`
+            : '';
+
+        const rowsHtml = hasArticleNumber
+            ? `
+                <div style="position:absolute; left:7%; top:26%; font-weight:700; font-size:${h * 0.085}px; color:#141414;">Art.-Nr.:</div>
+                <div style="position:absolute; left:31%; right:4.5%; top:24%; height:15%; border:1px solid #464646; display:flex; align-items:center; justify-content:center; font-size:${h * 0.085}px; color:#141414;">${escapeHtml(vorlage.articleNumber)}</div>
+                <div style="position:absolute; left:7%; top:45%; font-weight:700; font-size:${h * 0.085}px; color:#141414;">Datum:</div>
+                <div style="position:absolute; left:31%; right:4.5%; top:43%; height:15%; border:1px solid #464646; display:flex; align-items:center; justify-content:center; font-size:${h * 0.085}px; color:#141414;">${dateHtml}</div>
+            `
+            : `
+                <div style="position:absolute; left:7%; top:35%; font-weight:700; font-size:${h * 0.09}px; color:#141414;">Datum:</div>
+                <div style="position:absolute; left:31%; right:4.5%; top:32%; height:17%; border:1px solid #464646; display:flex; align-items:center; justify-content:center; font-size:${h * 0.09}px; color:#141414;">${dateHtml}</div>
+            `;
+
+        const logoTop = hasArticleNumber ? 63 : 57;
+        const footerTop = hasArticleNumber ? 85 : 82;
+
+        return `
+            <div style="position:absolute; inset:0; box-sizing:border-box; background:#fff; overflow:hidden; font-family:Helvetica,Arial,sans-serif; border-radius:6px;">
+                <div style="position:absolute; left:1.5%; top:3%; right:1.5%; bottom:3%; border:1.5px solid #141414; border-radius:6px;"></div>
+                <div style="position:absolute; left:4%; right:4%; top:${titleTop}%; text-align:center; font-weight:700; font-size:${h * 0.11}px; color:#141414;">${escapeHtml(vorlage.title)}</div>
+                ${subtitleHtml}
+                ${rowsHtml}
+                ${logo ? `<img src="${logo.url}" style="position:absolute; left:50%; top:${logoTop}%; height:19%; width:${logoWidthPct}%; transform:translateX(-50%); object-fit:contain;">` : ''}
+                <div style="position:absolute; left:5%; right:5%; top:${footerTop}%; text-align:center; font-size:${h * 0.05}px; line-height:1.35; color:#5a5a5a;">
+                    26203 Wardenburg / Rheinstr. 14<br>04407 / 92 22 69 / info@meetra-recycling.de
+                </div>
+            </div>
+        `;
+    }
+
     // ── Echtes PDF erzeugen (ohne Rahmen — die abgerundeten Linien in der Vorschau
     // sind nur eine Bildschirm-Hilfe und werden NICHT mitgedruckt) ───
     window.downloadLabelPreviewPDF = async function () {
@@ -904,6 +947,157 @@
         }
     }
 
+    // "Austausch Filtermedien"-Etikett (siehe Vorlagen-Tab): eigenes Formular-Layout statt
+    // Bezeichnung/Barcode — Art.-Nr. und Datum werden beide vorausgefüllt gedruckt. Mit Rahmen
+    // (im Gegensatz zu den vorgestanzten Barcode-Etiketten), da dieses Etikett als ausgefülltes
+    // Formular erkennbar sein soll. Feste Größe 89 x 36mm (immer Einzel-Etikett, keine Bögen).
+    function drawFiltermedienLabelPdf(doc, vorlage, dateText, logo) {
+        const w = 89, h = 36, margin = 1;
+        const centerX = w / 2;
+        const hasArticleNumber = !!vorlage.articleNumber;
+
+        doc.setDrawColor(20, 20, 20);
+        doc.setLineWidth(0.35);
+        doc.roundedRect(margin, margin, w - margin * 2, h - margin * 2, 2, 2, 'S');
+
+        doc.setTextColor(20, 20, 20);
+        const titleY = vorlage.subtitle ? 5.3 : 6.5;
+        fitCenteredText(doc, vorlage.title, centerX, titleY, w - margin * 2 - 3, 12, 9, 'bold');
+
+        if (vorlage.subtitle) {
+            doc.setTextColor(80, 80, 80);
+            fitCenteredText(doc, vorlage.subtitle, centerX, 9, w - margin * 2 - 3, 7.5, 6, 'normal');
+        }
+
+        const labelX = 6;
+        const boxX = 28;
+        const boxW = w - margin - 3 - boxX;
+
+        const drawRow = (label, value, boxTop, boxH, fontSize) => {
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(fontSize);
+            doc.setTextColor(20, 20, 20);
+            doc.text(label, labelX, boxTop + boxH / 2 + fontSize * 0.13);
+            doc.setDrawColor(70, 70, 70);
+            doc.setLineWidth(0.3);
+            doc.rect(boxX, boxTop, boxW, boxH, 'S');
+            if (value) {
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(fontSize);
+                doc.text(value, boxX + boxW / 2, boxTop + boxH / 2 + fontSize * 0.13, { align: 'center' });
+            }
+        };
+
+        let logoTop, footer1Y, footer2Y;
+        if (hasArticleNumber) {
+            drawRow('Art.-Nr.:', vorlage.articleNumber, 9.5, 5.5, 9);
+            drawRow('Datum:', dateText || '', 16.5, 5.5, 9);
+            logoTop = 22.8;
+            footer1Y = 31.5;
+            footer2Y = 33.8;
+        } else {
+            drawRow('Datum:', dateText || '', 12.8, 6.2, 9.5);
+            logoTop = 20.8;
+            footer1Y = 30.5;
+            footer2Y = 32.8;
+        }
+
+        if (logo) {
+            try {
+                const logoH = 7;
+                const logoW = logoH * logo.ratio;
+                doc.addImage(logo.url, 'PNG', centerX - logoW / 2, logoTop, logoW, logoH);
+            } catch (e) {}
+        }
+
+        doc.setTextColor(90, 90, 90);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(6);
+        doc.text('26203 Wardenburg / Rheinstr. 14', centerX, footer1Y, { align: 'center' });
+        doc.text('04407 / 92 22 69 / info@meetra-recycling.de', centerX, footer2Y, { align: 'center' });
+    }
+
+    // ── Vorlagen: feste Schnelldruck-Etiketten, unabhängig von der Artikel-Auswahl oben —
+    // für wiederkehrende Etiketten (z.B. immer dieselbe Art.-Nr.), die man ohne Suchen/
+    // Auswählen sofort mit aktuellem (oder frei wählbarem) Datum drucken will.
+    const LABEL_VORLAGEN = [
+        { id: 'austausch_filtermedien', title: 'Austausch der Filtermedien', subtitle: null, articleNumber: '00000649' },
+        { id: 'schutzbelueftungsanlage', title: 'Austausch der Filtermedien', subtitle: 'Schutzbelüftungsanlage', articleNumber: null }
+    ];
+
+    let vorlagenLogoColor = null;
+
+    function todayIso() { return new Date().toISOString().slice(0, 10); }
+
+    function fmtDateDe(iso) {
+        if (!iso) return '';
+        const p = iso.split('-');
+        return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : iso;
+    }
+
+    window.renderVorlagen = async function () {
+        const container = document.getElementById('vorlagen-list-container');
+        if (!container) return;
+
+        if (!vorlagenLogoColor) {
+            try { vorlagenLogoColor = await loadEmbeddedLogoColor(); } catch (e) { console.warn(e); }
+        }
+
+        container.innerHTML = LABEL_VORLAGEN.map(v => {
+            const dateVal = todayIso();
+            return `
+                <div class="label-article-row" style="display:flex; align-items:center; gap:20px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px 18px; flex-wrap:wrap;">
+                    <div id="vorlage-preview-${v.id}" style="width:178px; height:72px; flex-shrink:0; position:relative;">
+                        ${buildFiltermedienLabelHtml(178, 72, v, fmtDateDe(dateVal), vorlagenLogoColor)}
+                    </div>
+                    <div style="flex:1; min-width:180px;">
+                        <div style="color:#fff; font-weight:700; font-size:1rem;">${escapeHtml(v.subtitle || v.title)}</div>
+                        <div style="color:rgba(255,255,255,0.4); font-size:0.8rem; margin-top:2px;">${v.articleNumber ? 'Art.-Nr. ' + escapeHtml(v.articleNumber) : escapeHtml(v.title)}</div>
+                    </div>
+                    <div style="color:rgba(255,255,255,0.4); font-size:0.8rem; white-space:nowrap;">DYMO 89 x 36mm</div>
+                    <div style="display:flex; flex-direction:column; gap:3px;">
+                        <label style="font-size:0.62rem; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.4px;">Datum</label>
+                        <input type="date" id="vorlage-date-${v.id}" value="${dateVal}" class="glass-form-input" style="height:36px;" onchange="window.updateVorlagenPreview('${v.id}')">
+                    </div>
+                    <button class="btn-primary" style="padding: 10px 20px; font-weight:700; white-space:nowrap;" onclick="window.printVorlageLabel('${v.id}')">
+                        Drucken
+                    </button>
+                </div>
+            `;
+        }).join('');
+    };
+
+    window.updateVorlagenPreview = function (vorlageId) {
+        const vorlage = LABEL_VORLAGEN.find(v => v.id === vorlageId);
+        const previewEl = document.getElementById(`vorlage-preview-${vorlageId}`);
+        const dateInput = document.getElementById(`vorlage-date-${vorlageId}`);
+        if (!vorlage || !previewEl) return;
+        const dateVal = dateInput && dateInput.value ? dateInput.value : todayIso();
+        previewEl.innerHTML = buildFiltermedienLabelHtml(178, 72, vorlage, fmtDateDe(dateVal), vorlagenLogoColor);
+    };
+
+    window.printVorlageLabel = async function (vorlageId) {
+        const vorlage = LABEL_VORLAGEN.find(v => v.id === vorlageId);
+        if (!vorlage) return;
+        const dateInput = document.getElementById(`vorlage-date-${vorlageId}`);
+        const dateVal = dateInput && dateInput.value ? dateInput.value : todayIso();
+
+        try {
+            if (typeof window.loadPDFGenerators === 'function') await window.loadPDFGenerators();
+            if (!vorlagenLogoColor) {
+                try { vorlagenLogoColor = await loadEmbeddedLogoColor(); } catch (e) { console.warn(e); }
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ unit: 'mm', format: [89, 36], orientation: 'l' });
+            drawFiltermedienLabelPdf(doc, vorlage, fmtDateDe(dateVal), vorlagenLogoColor);
+            doc.save(`${(vorlage.subtitle || vorlage.title).replace(/\s+/g, '_')}_${dateVal}.pdf`);
+        } catch (err) {
+            console.error('Error printing Vorlage label:', err);
+            alert('Fehler beim Drucken: ' + err.message);
+        }
+    };
+
     // Zentrierten Text in maxWidthMm einpassen: Schriftgröße verkleinern, zuletzt kürzen mit "…"
     function fitCenteredText(doc, text, centerX, baselineY, maxWidthMm, startSize, minSize, style) {
         if (!text) return;
@@ -925,16 +1119,22 @@
     // ── Ansicht umschalten: Etiketten <-> Beschriftung (beide auf derselben Seite) ──
     window.switchLabelTab = function (tab) {
         const isEtiketten = tab === 'etiketten';
+        const isBeschriftung = tab === 'beschriftung';
+        const isVorlagen = tab === 'vorlagen';
         document.getElementById('label-tab-content-etiketten').classList.toggle('hidden', !isEtiketten);
-        document.getElementById('label-tab-content-beschriftung').classList.toggle('hidden', isEtiketten);
+        document.getElementById('label-tab-content-beschriftung').classList.toggle('hidden', !isBeschriftung);
+        document.getElementById('label-tab-content-vorlagen').classList.toggle('hidden', !isVorlagen);
         document.getElementById('label-tab-btn-etiketten').classList.toggle('active', isEtiketten);
-        document.getElementById('label-tab-btn-beschriftung').classList.toggle('active', !isEtiketten);
+        document.getElementById('label-tab-btn-beschriftung').classList.toggle('active', isBeschriftung);
+        document.getElementById('label-tab-btn-vorlagen').classList.toggle('active', isVorlagen);
         const actions = document.getElementById('label-etiketten-actions');
         if (actions) actions.classList.toggle('hidden', !isEtiketten);
 
-        if (!isEtiketten) {
+        if (isBeschriftung) {
             renderBeschriftungPageTabs();
             loadBeschriftungPageIntoForm();
+        } else if (isVorlagen) {
+            window.renderVorlagen();
         }
     };
 

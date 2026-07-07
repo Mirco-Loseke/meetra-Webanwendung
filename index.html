@@ -2109,6 +2109,7 @@
                 <div class="calendar-view-tabs" style="margin:0;">
                     <button class="calendar-tab-btn active" id="label-tab-btn-etiketten" onclick="window.switchLabelTab('etiketten')">Etiketten</button>
                     <button class="calendar-tab-btn" id="label-tab-btn-beschriftung" onclick="window.switchLabelTab('beschriftung')">Beschriftung</button>
+                    <button class="calendar-tab-btn" id="label-tab-btn-vorlagen" onclick="window.switchLabelTab('vorlagen')">Vorlagen</button>
                 </div>
                 <div id="label-etiketten-actions" style="display:flex; gap:10px; flex-wrap:wrap;">
                     <button class="btn-add-bg" style="background: rgba(255,255,255,0.06); color: #fff;" onclick="window.openLabelImportModal()">
@@ -2227,6 +2228,11 @@
                         <div id="beschriftung-preview-page" style="position:relative; width:100%; max-width:600px; aspect-ratio: 210/297; background:#fff; border-radius:6px; box-shadow:0 4px 24px rgba(0,0,0,0.35);"></div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Tab: Vorlagen (feste Schnelldruck-Etiketten, unabhängig von der Artikel-Auswahl oben) -->
+            <div id="label-tab-content-vorlagen" class="hidden">
+                <div id="vorlagen-list-container" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
             </div>
         </section>
 
@@ -6826,6 +6832,13 @@
                     if (typeof renderServiceEntries === 'function') renderServiceEntries();
                 }
                 if (typeof window.renderEvents === 'function') window.renderEvents();
+                // Angebote-Liste zeigt Maschinennamen per window.getMachineName an — falls sie schon
+                // gerendert war, bevor die Maschinen fertig geladen waren (z.B. direkt nach Login),
+                // sonst bleiben die Namen leer, bis man zufällig irgendwo neu rendert.
+                const listenView = document.getElementById('listen');
+                if (listenView && !listenView.classList.contains('hidden') && typeof window.renderAngeboteList === 'function') {
+                    window.renderAngeboteList();
+                }
             }
 
             async function fetchMachines() {
@@ -11934,6 +11947,7 @@
                                 title: m.title,
                                 description: mDescription,
                                 emailHtml: mEmailHtml,
+                                remark: m.remark || null,
                                 rawType: m.type,
                                 angebotId: m.angebot_id || null,
                                 endDate: m.end_date || null,
@@ -12182,6 +12196,7 @@
                                             </button>
                                         `;
                                     })()}
+                                    ${item.remark && item.rawType !== 'email' ? `<div style="font-size:0.88rem; color:#fbbf24; background:rgba(245,158,11,0.08); border:1px solid rgba(245,158,11,0.25); border-radius:8px; padding:8px 12px; margin-top:0.6rem; white-space:pre-wrap;"><strong style="color:#f59e0b;">Notiz:</strong> ${escHistoryText(item.remark)}</div>` : ''}
                                     ${photoGallery}
                                     <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; align-items: center; width: 100%;">
                                         <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -12407,7 +12422,8 @@
                     `;
             } else if (type === 'wartung') {
                 html = `
-                        <input type="hidden" id="manual-title" value="Wartung">
+                        <label style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.4rem; display: block;">Titel</label>
+                        <input type="text" id="manual-title" value="Wartung" class="glass-input" style="margin-bottom: 0.75rem;">
                         <label style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; display: block;">Art der Wartung</label>
                         <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 0.75rem;">
                             ${['Motorwartung', 'SBA-Wartung', 'Hydraulikwartung', 'UVV-Wartung'].map(label => `
@@ -12418,6 +12434,7 @@
                             `).join('')}
                         </div>
                         <input type="hidden" id="manual-content">
+                        <textarea id="manual-remark" placeholder="Notiz (optional)..." class="glass-input" style="min-height: 60px;"></textarea>
                     `;
             } else if (type === 'auslieferung') {
                 html = `

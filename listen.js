@@ -26,6 +26,8 @@
             !e.target.closest('#angebot-machine-dropdown-portal') &&
             !e.target.closest('.angebot-machine-edit-btn')) {
             editingAngebotMachineId = null;
+            const dropdown = document.getElementById('angebot-machine-dropdown-portal');
+            if (dropdown) dropdown.style.display = 'none';
             window.renderAngeboteList();
         }
     });
@@ -672,14 +674,44 @@
     // ANGEBOTE: MASCHINEN-ZUORDNUNG (automatisch + manuell)
     // ==========================================
     function renderAngebotMachineCell(a) {
-        if (a.machine_id) {
-            const name = (typeof window.getMachineName === 'function') ? window.getMachineName(a.machine_id) : a.machine_id;
-            return `<span style="color:var(--color-primary-green); font-weight:600;">${escapeHtml(name)}</span>`;
+        if (editingAngebotMachineId === a.id) {
+            if (editingAngebotMachineMode === 'freitext') {
+                return `
+                    <input type="text" class="glass-form-input angebot-machine-search" data-angebot-id="${a.id}"
+                        value="${escapeHtml(pendingFreitextValue)}" placeholder="Eigene Bezeichnung..."
+                        style="height:34px; font-size:0.85rem; width:100%;"
+                        onblur="window.commitAngebotMachineFreitext('${a.id}', this.value)"
+                        onkeydown="if(event.key==='Enter'){ this.blur(); }">
+                `;
+            }
+            return `
+                <input type="text" class="glass-form-input angebot-machine-search" data-angebot-id="${a.id}"
+                    placeholder="Maschine suchen..."
+                    style="height:34px; font-size:0.85rem; width:100%;"
+                    oninput="window.filterAngebotMachineDropdown(this.value, '${a.id}')"
+                    onfocus="window.filterAngebotMachineDropdown(this.value, '${a.id}')"
+                    onkeydown="if(event.key==='Enter'){ window.commitAngebotMachineFreitext('${a.id}', this.value); }">
+            `;
         }
-        if (a.machine_label) {
-            return `<span style="color:#f59e0b;" title="Freitext, keine echte Maschine im System">${escapeHtml(a.machine_label)}</span>`;
-        }
-        return '';
+
+        const hasMachine = !!(a.machine_id || a.machine_label);
+        const nameHtml = a.machine_id
+            ? `<span style="color:var(--color-primary-green); font-weight:600;">${escapeHtml((typeof window.getMachineName === 'function') ? window.getMachineName(a.machine_id) : a.machine_id)}</span>`
+            : a.machine_label
+                ? `<span style="color:#f59e0b;" title="Freitext, keine echte Maschine im System">${escapeHtml(a.machine_label)}</span>`
+                : '';
+
+        return `
+            <div style="display:flex; align-items:flex-start; gap:8px;">
+                <button type="button" class="angebot-machine-edit-btn" onclick="event.stopPropagation(); window.startEditAngebotMachine('${a.id}')"
+                    title="${hasMachine ? 'Maschine bearbeiten' : 'Maschine hinzufügen'}"
+                    style="flex-shrink:0; width:26px; height:26px; padding:0; border-radius:999px; font-size:0.78rem; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center;
+                        background:${hasMachine ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.06)'};
+                        border:1px solid ${hasMachine ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.15)'};
+                        color:${hasMachine ? 'var(--color-primary-green)' : 'rgba(255,255,255,0.6)'};">${hasMachine ? '✎' : '+'}</button>
+                ${nameHtml ? `<span style="white-space:normal; word-break:break-word; line-height:1.3; padding-top:3px;">${nameHtml}</span>` : ''}
+            </div>
+        `;
     }
 
     window.startEditAngebotMachine = function (angebotId) {
@@ -741,9 +773,17 @@
         const searchInput = document.querySelector(`.angebot-machine-search[data-angebot-id="${angebotId}"]`);
         if (searchInput) {
             const rect = searchInput.getBoundingClientRect();
+            const margin = 8;
+            const width = Math.max(rect.width, 220);
+            // Immer unter dem Feld aufklappen, aber Breite/Höhe an den Viewport anpassen, damit
+            // das Dropdown nicht rechts oder unten abgeschnitten aus dem sichtbaren Bereich ragt.
+            const spaceBelow = window.innerHeight - rect.bottom - margin;
             dropdown.style.top = (rect.bottom + 4) + 'px';
-            dropdown.style.left = rect.left + 'px';
-            dropdown.style.width = Math.max(rect.width, 220) + 'px';
+            dropdown.style.bottom = 'auto';
+            dropdown.style.maxHeight = Math.max(120, Math.min(320, spaceBelow)) + 'px';
+            dropdown.style.width = width + 'px';
+            const left = Math.min(rect.left, window.innerWidth - width - margin);
+            dropdown.style.left = Math.max(margin, left) + 'px';
         }
 
         dropdown.innerHTML = '';
