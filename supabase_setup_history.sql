@@ -1572,3 +1572,18 @@ ADD COLUMN IF NOT EXISTS power TEXT;
 -- Ausfuellen gedruckt.
 ALTER TABLE public.service_entries
 ADD COLUMN IF NOT EXISTS remarks TEXT;
+
+
+/* ========================================================= */
+/* DATEI: add_previous_report_link_to_service_entries.sql */
+/* ========================================================= */
+
+-- Verkettung von Serviceberichten: previous_report_id zeigt auf den vorhergehenden Bericht,
+-- entweder automatisch gesetzt beim Anlegen eines Folgeberichts oder nachtraeglich manuell
+-- verknuepft. Es gibt bewusst keine next_report_id-Spalte, da "hat einen Folgebericht"
+-- clientseitig aus dem bereits geladenen allServiceEntries-Array ermittelt wird
+-- (window.jumpToServicebericht / renderServiceEntries in index.html).
+ALTER TABLE public.service_entries
+ADD COLUMN IF NOT EXISTS previous_report_id BIGINT REFERENCES public.service_entries(id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_service_entries_previous_report ON public.service_entries(previous_report_id);

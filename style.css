@@ -10786,6 +10786,75 @@ body.focus-mode-active .view-header-row-top {
     }
 }
 
+/* --- Angebote (Listen): Handy-Optimierung Toolbar, Karte, KPIs --- */
+@media (max-width: 768px) {
+    /* "Listen"-Überschrift bleibt mit der Glocke in einer Zeile (rechts außen),
+       statt darunter zu wandern — die generische Header-Regel bricht sonst um. */
+    #listen .view-header-row-top {
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+    }
+    #listen .view-header-left {
+        width: auto !important;
+        flex-wrap: nowrap !important;
+    }
+    #listen .view-header-right {
+        width: auto !important;
+        flex: 1 !important;
+        flex-wrap: nowrap !important;
+        justify-content: flex-end !important;
+    }
+    .listen-toolbar {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        flex-wrap: wrap !important;
+        overflow-x: visible !important;
+        gap: 0.6rem !important;
+    }
+    /* 2 Zeilen volle Breite: oben Jahr + Status + Maschine, unten Suche + Excel.
+       Wichtig: Die Dropdowns werden von initGlassSelect durch div-Wrapper mit der
+       Klasse .glass-form-input ersetzt (das echte <select> ist display:none) —
+       daher hier über die sichtbaren Kind-Elemente statt über die IDs stylen. */
+    .listen-filters {
+        display: grid !important;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 8px !important;
+    }
+    .listen-filters > * {
+        width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box;
+    }
+    .listen-filters > select,
+    .listen-filters > div.glass-form-input {
+        grid-column: span 2;
+    }
+    .listen-filters > input {
+        grid-column: 1 / 5;
+    }
+    .listen-filters > button {
+        grid-column: 5 / 7;
+        justify-content: center;
+        padding: 0 6px !important;
+    }
+    .angebote-glass-card {
+        padding: 0.75rem 0.9rem 1rem !important;
+    }
+    .ang-nachfass-row {
+        gap: 8px;
+        padding: 8px 10px;
+    }
+}
+@media (max-width: 480px) {
+    #listen-tab-content-angebote .maint-kpi-value {
+        font-size: 1.25rem;
+    }
+    #listen-tab-content-angebote .maint-kpi-tile {
+        padding: 12px;
+    }
+}
+
 /* --- Startseite (Dashboard): Kopfzeile, KPI-Zeile, Hauptraster, Chips --- */
 .dash-header {
     display: flex;
@@ -10902,6 +10971,81 @@ body.focus-mode-active .view-header-row-top {
 }
 .double-kpi-subtile:hover {
     background: rgba(255, 255, 255, 0.04);
+}
+
+/* --- Startseite (Dashboard): Handy-Optimierung --- */
+@media (max-width: 600px) {
+    .dash-header h1 {
+        font-size: 1.4rem !important;
+    }
+    .dash-quick-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        width: 100%;
+    }
+    .dash-quick-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 0 8px;
+    }
+    .dash-kpi-grid .double-kpi-tile {
+        grid-column: 1 / -1;
+    }
+    .dash-main-grid {
+        gap: 10px;
+    }
+    .maint-chart-card {
+        padding: 14px 14px 10px 14px;
+    }
+    .dash-todo-row {
+        font-size: 0.8rem;
+        padding: 8px 10px;
+    }
+}
+@media (max-width: 480px) {
+    #home .maint-kpi-value {
+        font-size: 1.3rem;
+    }
+    #home .maint-kpi-tile {
+        padding: 12px;
+    }
+    #home .maint-kpi-label {
+        font-size: 0.66rem;
+    }
+}
+
+/* Dashboard-Karten (Servicetermine / Zuletzt angesehen) auf dem Handy:
+   Firmenname und Maschinen-Tag statt Ellipsis auf max. 2 Zeilen umbrechen,
+   Schrift leicht verkleinern, Auftrags-Pill unter den Titel rutschen lassen. */
+@media (max-width: 600px) {
+    #home .dash-card-truncate {
+        white-space: normal !important;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        word-break: break-word;
+        font-size: 0.95em;
+        line-height: 1.25;
+    }
+    #home h3.dash-card-truncate {
+        font-size: 0.98rem !important;
+    }
+    #home .dash-machine-pill {
+        font-size: 0.72rem !important;
+        padding: 4px 8px !important;
+        align-items: flex-start !important;
+    }
+    #home .dash-machine-pill svg {
+        margin-top: 2px;
+    }
+    #home .dash-order-pill {
+        font-size: 0.68rem !important;
+        padding: 2px 7px !important;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
 }
 
 /* =========================================

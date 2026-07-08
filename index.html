@@ -2992,12 +2992,12 @@
             </div>
 
             <!-- Ansicht umschalten -->
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:1rem; margin: 0.5rem 0; flex-wrap:nowrap; overflow-x:auto;">
+            <div class="listen-toolbar" style="display:flex; align-items:center; justify-content:space-between; gap:1rem; margin: 0.5rem 0; flex-wrap:nowrap; overflow-x:auto;">
                 <div class="calendar-view-tabs" style="margin: 0; flex-shrink:0;">
                     <button class="calendar-tab-btn active" id="listen-tab-btn-angebote" onclick="window.switchListenTab('angebote')">Angebote</button>
                     <button class="calendar-tab-btn" id="listen-tab-btn-maschinen" onclick="window.switchListenTab('maschinen')">Maschinen</button>
                 </div>
-                <div style="display:flex; align-items:center; gap:0.6rem; flex-wrap:nowrap; flex-shrink:0;">
+                <div class="listen-filters" style="display:flex; align-items:center; gap:0.6rem; flex-wrap:nowrap; flex-shrink:0;">
                     <select id="angebote-filter-jahr" class="glass-form-input" onchange="window.renderAngeboteList()"
                         style="width:115px; height:38px; font-size:0.85rem; flex-shrink:0;">
                         <option value="">Alle Jahre</option>
@@ -3023,7 +3023,7 @@
             <!-- Tab: Angebote -->
             <div id="listen-tab-content-angebote">
                 <!-- Angebote Liste -->
-                <div class="glass-card" style="padding: 0.75rem 2rem 1.5rem;">
+                <div class="glass-card angebote-glass-card" style="padding: 0.75rem 2rem 1.5rem;">
                     <div id="angebote-list-container"></div>
                 </div>
             </div>
@@ -5038,15 +5038,15 @@
                                     <span style="font-size:0.6rem; font-weight:800; color:${catColor}; text-transform:uppercase; letter-spacing:0.8px; width:fit-content;">${catLabel}</span>
                                     
                                     <!-- Title -->
-                                    <h3 style="margin:0; color:#fff; font-size:1.05rem; font-weight:800; line-height:1.2; font-family:'Outfit',sans-serif; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${esc(machineTitle)}">${esc(machineTitle)}</h3>
+                                    <h3 class="dash-card-truncate" style="margin:0; color:#fff; font-size:1.05rem; font-weight:800; line-height:1.2; font-family:'Outfit',sans-serif; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${esc(machineTitle)}">${esc(machineTitle)}</h3>
                                     
                                     <!-- Serial / Year -->
                                     ${serialAndYear ? `<div style="font-size:0.75rem; color:rgba(255,255,255,0.4); font-weight:600;">${esc(serialAndYear)}</div>` : ''}
                                     
                                     <!-- Company / Location -->
-                                    <div style="font-size: 0.82rem; color:rgba(255,255,255,0.7); font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:flex; align-items:center; gap:4px; margin-top:2px;">
-                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:0.6; flex-shrink: 0;"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path></svg>
-                                        <span>${esc(companyName)}${locationCity ? ` (${esc(locationCity)})` : ''}</span>
+                                    <div style="font-size: 0.82rem; color:rgba(255,255,255,0.7); font-weight:600; display:flex; align-items:flex-start; gap:4px; margin-top:2px; min-width:0;">
+                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:0.6; flex-shrink: 0; margin-top:3px;"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path></svg>
+                                        <span class="dash-card-truncate" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0;">${esc(companyName)}${locationCity ? ` (${esc(locationCity)})` : ''}</span>
                                     </div>
                                     
                                     <!-- Maintenance Status -->
@@ -5092,7 +5092,7 @@
                     const locationCity = machine ? (machine.location_city || machine.operator_city || '') : '';
                     const companyName = machine ? (machine.company || 'Unbekannter Betreiber') : '';
                     const orderNumVal = entry.workshop_order_number || entry.auftragsnummer || '';
-                    const orderNum = orderNumVal ? `<span style="font-size: 0.75rem; color: ${borderColor}; background: ${borderColor}1a; border: 1px solid ${borderColor}33; padding: 2px 8px; border-radius: 99px; font-weight: 700; margin-left: auto; letter-spacing: 0.5px;">Auftrag ${orderNumVal}</span>` : '';
+                    const orderNum = orderNumVal ? `<span class="dash-order-pill" style="font-size: 0.75rem; color: ${borderColor}; background: ${borderColor}1a; border: 1px solid ${borderColor}33; padding: 2px 8px; border-radius: 99px; font-weight: 700; margin-left: auto; letter-spacing: 0.5px;">Auftrag ${orderNumVal}</span>` : '';
 
                     const typeLabel = entry.title || 'Servicebericht';
                     const catLabel = serviceCat ? serviceCat.name : (machineCat ? machineCat.name : 'Service');
@@ -5136,7 +5136,7 @@
                                     <div style="display:flex; flex-direction:column; gap:2px; text-align:left;">
                                         <div style="font-size: 0.92rem; color:rgba(255,255,255,0.9); font-weight:700; display:flex; align-items:center; gap:6px;">
                                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:0.6; flex-shrink: 0;"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path></svg>
-                                            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${esc(companyName)}">${esc(companyName)}</span>
+                                            <span class="dash-card-truncate" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${esc(companyName)}">${esc(companyName)}</span>
                                         </div>
                                         ${locationCity ? `
                                         <div style="font-size:0.78rem; color:rgba(255,255,255,0.45); font-weight:600; display:flex; align-items:center; gap:4px; padding-left:19px;">
@@ -5147,9 +5147,9 @@
 
                                     <!-- Machine Details Pill -->
                                     <div style="display:flex; align-items:center; width:100%; margin-top:2px;">
-                                        <div style="font-size: 0.8rem; color: var(--color-primary-green); font-weight: 700; background: rgba(52, 211, 153, 0.08); border: 1px solid rgba(52, 211, 153, 0.2); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; max-width:100%;">
+                                        <div class="dash-machine-pill" style="font-size: 0.8rem; color: var(--color-primary-green); font-weight: 700; background: rgba(52, 211, 153, 0.08); border: 1px solid rgba(52, 211, 153, 0.2); padding: 4px 10px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; max-width:100%;">
                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-                                            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${esc(machineTitle)}">${esc(machineTitle)}</span>
+                                            <span class="dash-card-truncate" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${esc(machineTitle)}">${esc(machineTitle)}</span>
                                         </div>
                                     </div>
                                     
@@ -6964,6 +6964,12 @@
                 // Angebote-Liste zeigt Maschinennamen per window.getMachineName an — falls sie schon
                 // gerendert war, bevor die Maschinen fertig geladen waren (z.B. direkt nach Login),
                 // sonst bleiben die Namen leer, bis man zufällig irgendwo neu rendert.
+                // Maschinen-Filter-Dropdown neu befüllen: waren die Angebote schneller geladen
+                // als die Maschinen, fehlen dort sonst alle per machine_id verknüpften Maschinen
+                // und es bleiben nur die Freitext-Bezeichnungen übrig.
+                if (typeof window.populateAngeboteFilterOptions === 'function') {
+                    window.populateAngeboteFilterOptions();
+                }
                 const listenView = document.getElementById('listen');
                 if (listenView && !listenView.classList.contains('hidden') && typeof window.renderAngeboteList === 'function') {
                     window.renderAngeboteList();
@@ -7047,7 +7053,8 @@
                         id: r.id, machine_id: r.machine_id, category_id: r.category_id, category_ids: r.category_ids,
                         title: r.title, date: r.date, datum_von: r.datum_von, datum_bis: r.datum_bis,
                         hours: r.hours, technicians: r.technicians, pdf_url: r.pdf_url, pdf_path: r.pdf_path,
-                        files: r.files, is_finalized: r.is_finalized, finalized_at: r.finalized_at
+                        files: r.files, is_finalized: r.is_finalized, finalized_at: r.finalized_at,
+                        workshop_order_number: r.workshop_order_number, previous_report_id: r.previous_report_id
                     };
                     const idx = allServiceEntries.findIndex(e => e.id === slim.id);
                     if (idx !== -1) allServiceEntries[idx] = slim; else allServiceEntries.push(slim);
@@ -11086,6 +11093,7 @@
                 datum_von:              dateStart,
                 datum_bis:              dateEnd || null,
                 hours:                  0,
+                previous_report_id:     window._servicePreviousReportId || null,
                 technicians:            (typeof selectedTechs !== 'undefined') ? selectedTechs : [],
                 files:                  [...existingServiceFiles],
                 description:            document.getElementById('service-description')?.value,
@@ -11216,6 +11224,7 @@
                 datum_von: dateStart,
                 datum_bis: dateEnd || null,
                 hours: 0,
+                previous_report_id: window._servicePreviousReportId || null,
                 technicians: (typeof selectedTechs !== 'undefined') ? selectedTechs : [],
                 files: finalFiles,
                 description: description,
@@ -11914,7 +11923,7 @@
                     // Schlanke Spaltenauswahl für die Zeitleisten-Anzeige — die schweren JSONB-Felder
                     // (work_log, materials, checklist_payload) werden hier nicht gebraucht, da das
                     // Öffnen zum Bearbeiten (openEditServicebericht) ohnehin nochmal alles frisch lädt.
-                    window.supabaseClient.from('service_entries').select('id, machine_id, category_id, title, date, created_at, description, pdf_url, files').eq('machine_id', machineId),
+                    window.supabaseClient.from('service_entries').select('id, machine_id, category_id, title, date, created_at, description, pdf_url, files, previous_report_id').eq('machine_id', machineId),
                     window.supabaseClient.from('tasks').select('*').eq('machine_id', machineId),
                     window.supabaseClient.from('calendar_events').select('*').eq('machine_id', machineId),
                     window.supabaseClient.from('intake_protocols').select('*').eq('machine_id', machineId),
@@ -11933,6 +11942,16 @@
                 let historyItems = [];
 
                 if (serviceRes.data) {
+                    // Verknuepfungs-Lookup (Folgebericht = umgekehrte Richtung von previous_report_id),
+                    // lokal aus derselben Abfrage gebaut statt aus dem globalen allServiceEntries, damit
+                    // sie unabhaengig vom Ladezustand der Serviceberichte-Liste zuverlaessig stimmt.
+                    const followUpByPreviousId = {};
+                    const serviceEntryById = {};
+                    serviceRes.data.forEach(s => {
+                        serviceEntryById[s.id] = s;
+                        if (s.previous_report_id) followUpByPreviousId[s.previous_report_id] = s.id;
+                    });
+
                     serviceRes.data.forEach(s => {
                         const isWorkshopStatus = s.title === 'Werkstattaufenthalt Beginn' || s.title === 'Werkstattaufenthalt Ende';
 
@@ -11951,7 +11970,14 @@
                             icon: isWorkshopStatus ? '🔧' : '📄',
                             itemType: isWorkshopStatus ? 'workshop' : 'service',
                             pdf_url: s.pdf_url,
-                            files: s.files || []
+                            files: s.files || [],
+                            linkedReportId: s.previous_report_id || followUpByPreviousId[s.id] || null,
+                            isFollowUpReport: !!s.previous_report_id,
+                            linkedReportDate: (() => {
+                                const linkedId = s.previous_report_id || followUpByPreviousId[s.id];
+                                const linkedEntry = linkedId ? serviceEntryById[linkedId] : null;
+                                return linkedEntry ? new Date(linkedEntry.date || linkedEntry.created_at).toLocaleDateString('de-DE') : '';
+                            })()
                         });
                     });
                 }
@@ -12148,10 +12174,17 @@
                                 </button>
                             ` : '';
 
+                        const linkIcon = item.linkedReportId ? `
+                                <button onclick="window.jumpToServicebericht(${item.linkedReportId})" class="btn-icon-circular" style="background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.4); color: var(--color-primary-green);" title="${item.isFollowUpReport ? 'Verknüpft — zum vorherigen Bericht springen' : 'Verknüpft — zum Folgebericht springen'}">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                                </button>
+                            ` : '';
+
                         actionButtons += `
                                 <button onclick="window.openEditServicebericht(${item.id})" class="btn-icon-circular edit" title="Öffnen">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                 </button>
+                                ${linkIcon}
                                 ${attachmentIcon}
                                 ${pdfIcon}
                             `;
@@ -12294,6 +12327,12 @@
                                         </div>
                                     </div>
                                     <h4 style="margin: 0 0 0.5rem 0; color: #fff; font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; white-space: pre-wrap;">${escHistoryText(item.title)}</h4>
+                                    ${item.linkedReportId ? `
+                                    <div onclick="window.jumpToServicebericht(${item.linkedReportId})" title="Zum ${item.isFollowUpReport ? 'vorherigen Bericht' : 'Folgebericht'} springen"
+                                        style="cursor:pointer; display:inline-flex; align-items:center; gap:5px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); color:var(--color-primary-green); border-radius:14px; padding:3px 10px; font-size:0.75rem; font-weight:700; margin-bottom:0.5rem;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                                        ${item.isFollowUpReport ? 'Folgebericht' : 'Hat Folgebericht'}${item.linkedReportDate ? ` vom ${item.linkedReportDate}` : ''}
+                                    </div>` : ''}
                                     ${(() => {
                                         let inner = '';
                                         if (item.rawType === 'whatsapp' && item.description) {
@@ -15203,7 +15242,7 @@
                 const result = await window.withTimeout(
                     supabaseClient
                         .from('service_entries')
-                        .select('id, machine_id, category_id, category_ids, title, date, datum_von, datum_bis, hours, technicians, pdf_url, pdf_path, files, is_finalized, finalized_at, workshop_order_number')
+                        .select('id, machine_id, category_id, category_ids, title, date, datum_von, datum_bis, hours, technicians, pdf_url, pdf_path, files, is_finalized, finalized_at, workshop_order_number, previous_report_id')
                         .order('date', { ascending: false }),
                     6000 // 6 Sekunden Timeout
                 );
@@ -15312,6 +15351,249 @@
                 console.warn('Konnte Bearbeitungssperre nicht freigeben:', e);
             }
         };
+
+        // Erzeugt aus dem aktuell geoeffneten (bereits gespeicherten) Bericht einen neuen,
+        // verknuepften Folgebericht: Maschine/Kategorien/Techniker werden uebernommen,
+        // previous_report_id wird beim Speichern des neuen Berichts gesetzt.
+        window.createFolgebericht = function () {
+            if (!currentEditingServiceId) return;
+            if (typeof serviceberichtIsDirty !== 'undefined' && serviceberichtIsDirty) {
+                alert('Bitte zuerst die aktuellen Änderungen speichern, bevor ein Folgebericht erstellt wird.');
+                return;
+            }
+            const machineId = parseInt(document.getElementById('selected-machine-id')?.value) || null;
+            window._pendingFolgeberichtSource = {
+                previousId: currentEditingServiceId,
+                machineId: machineId,
+                categoryIds: (typeof selectedServiceCategories !== 'undefined' && Array.isArray(selectedServiceCategories)) ? [...selectedServiceCategories] : [],
+                technicians: Array.isArray(selectedTechs) ? [...selectedTechs] : [],
+                // Auftragsnummer bleibt bei Folgeeinsaetzen an derselben Maschine i.d.R. gleich.
+                workshopYearDigit: document.getElementById('service-workshop-year-digit')?.value.trim() || '',
+                workshopOrderSuffix: document.getElementById('service-workshop-order-suffix')?.value.trim() || ''
+            };
+            window.closeServiceberichtModal(true);
+            setTimeout(() => {
+                window.openServiceberichtModal(null);
+            }, 320);
+        };
+
+        // Springt zu einem verknuepften Servicebericht: abgeschlossene (is_finalized) Berichte
+        // koennen nicht mehr im Bearbeiten-Modal geoeffnet werden (siehe openEditServicebericht
+        // unten), daher wird dort stattdessen das PDF geoeffnet bzw. die Stundenuebersicht gezeigt.
+        window.jumpToServicebericht = function (id) {
+            const entry = (allServiceEntries || []).find(e => e.id === id);
+            if (!entry) {
+                alert('Verknüpfter Bericht wurde nicht gefunden (evtl. gelöscht).');
+                return;
+            }
+            const modal = document.getElementById('servicebericht-modal');
+            const modalIsOpen = modal && modal.classList.contains('show');
+
+            const openTarget = () => {
+                if (entry.is_finalized) {
+                    if (entry.pdf_url) {
+                        window.open(entry.pdf_url, '_blank');
+                    } else if (typeof window.showServiceQuickInfo === 'function') {
+                        window.showServiceQuickInfo(id);
+                    }
+                } else if (typeof window.openEditServicebericht === 'function') {
+                    window.openEditServicebericht(id);
+                }
+            };
+
+            if (modalIsOpen) {
+                window.closeServiceberichtModal(true);
+                setTimeout(openTarget, 320);
+            } else {
+                openTarget();
+            }
+        };
+
+        // ── Manuelle Verknuepfung zweier Serviceberichte (nachtraeglich, unabhaengig von
+        // "Folgebericht erstellen") — Muster analog zur Angebote-Maschinen-Verknuepfung in listen.js.
+        let editingServiceLink = false;
+
+        window.renderServiceLinkSection = function () {
+            const display = document.getElementById('service-link-display');
+            if (!display) return;
+            const searchWrapper = document.getElementById('service-link-search-wrapper');
+
+            if (editingServiceLink) {
+                display.innerHTML = '';
+                if (searchWrapper) {
+                    searchWrapper.classList.remove('hidden');
+                    const input = document.getElementById('service-link-search-input');
+                    if (input) input.value = '';
+                }
+                return;
+            }
+            if (searchWrapper) searchWrapper.classList.add('hidden');
+
+            const machines = window.machineList || [];
+            const chipHtml = (entry, label) => {
+                const machine = machines.find(m => m.id === entry.machine_id);
+                const machineName = formatServiceLinkMachineLabel(machine);
+                const dateStr = entry.datum_von ? new Date(entry.datum_von).toLocaleDateString('de-DE') : (entry.date ? new Date(entry.date).toLocaleDateString('de-DE') : '');
+                return `
+                    <div onclick="window.jumpToServicebericht(${entry.id})" title="Zum ${label} springen"
+                        style="cursor:pointer; display:inline-flex; align-items:center; gap:6px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.4); color:var(--color-primary-green); border-radius:20px; padding:6px 12px; font-size:0.85rem; font-weight:700;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                        ${dateStr ? `${dateStr} — ` : ''}${machineName}
+                    </div>`;
+            };
+
+            // Vorwaerts-Richtung: dieser Bericht selbst verweist auf einen Vorbericht — hier
+            // aenderbar/trennbar, da previous_report_id auf DIESEM Datensatz liegt.
+            const linkedId = window._servicePreviousReportId;
+            const linked = linkedId ? (allServiceEntries || []).find(e => e.id === linkedId) : null;
+
+            // Rueckwaerts-Richtung: ein ANDERER Bericht verweist mit previous_report_id auf diesen
+            // hier — nur lesend/anspringbar, da die Verknuepfung dort gespeichert ist, nicht hier.
+            // Wird direkt aus dem bereits geladenen allServiceEntries ermittelt, keine Extra-Abfrage.
+            const followUp = currentEditingServiceId
+                ? (allServiceEntries || []).find(e => e.previous_report_id === currentEditingServiceId)
+                : null;
+
+            let html = '';
+
+            if (linked) {
+                html += `
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        ${chipHtml(linked, 'vorherigen Bericht')}
+                        <button type="button" onclick="event.stopPropagation(); window.startEditServiceLink()" title="Verknüpfung ändern"
+                            style="width:26px; height:26px; padding:0; border-radius:999px; font-size:0.78rem; font-weight:700; cursor:pointer; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.6);">✎</button>
+                        <button type="button" onclick="event.stopPropagation(); window.removeServiceLink()" title="Verknüpfung trennen"
+                            style="width:26px; height:26px; padding:0; border-radius:999px; font-size:0.78rem; font-weight:700; cursor:pointer; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#f87171;">✕</button>
+                    </div>`;
+            } else {
+                html += `
+                    <button type="button" class="btn-secondary" onclick="window.startEditServiceLink()" style="padding:6px 14px; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                        Bericht verknüpfen
+                    </button>`;
+            }
+
+            if (followUp) {
+                html += `
+                    <div style="display:flex; align-items:center; gap:6px; margin-top:8px;">
+                        <span style="font-size:0.7rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:0.5px;">Folgebericht:</span>
+                        ${chipHtml(followUp, 'Folgebericht')}
+                    </div>`;
+            }
+
+            display.innerHTML = html;
+        };
+
+        window.startEditServiceLink = function () {
+            editingServiceLink = true;
+            window.renderServiceLinkSection();
+            requestAnimationFrame(() => {
+                const input = document.getElementById('service-link-search-input');
+                if (input) { input.focus(); window.filterServiceLinkDropdown(''); }
+            });
+        };
+
+        window.removeServiceLink = function () {
+            window._servicePreviousReportId = null;
+            editingServiceLink = false;
+            window.renderServiceLinkSection();
+            if (typeof markServiceberichtDirty === 'function') markServiceberichtDirty();
+        };
+
+        window.selectServiceLink = function (id) {
+            window._servicePreviousReportId = id;
+            editingServiceLink = false;
+            const dropdown = document.getElementById('service-link-dropdown-portal');
+            if (dropdown) dropdown.style.display = 'none';
+            window.renderServiceLinkSection();
+            if (typeof markServiceberichtDirty === 'function') markServiceberichtDirty();
+        };
+
+        // Voller Maschinen-Anzeigetext inkl. kompletter Maschinennummer (Seriennummer) und Baujahr,
+        // damit man Berichte an baugleichen Maschinen unterschiedlicher Kunden eindeutig unterscheiden kann.
+        function formatServiceLinkMachineLabel(machine) {
+            if (!machine) return 'Unbekannte Maschine';
+            const serial = machine.serial_number || machine.serial;
+            return [
+                machine.manufacturer,
+                machine.name,
+                serial ? `#${serial}` : null,
+                machine.year ? `(${machine.year})` : null
+            ].filter(Boolean).join(' ');
+        }
+
+        window.filterServiceLinkDropdown = function (query) {
+            const tokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+            const machines = window.machineList || [];
+            const excludeId = currentEditingServiceId || null;
+
+            const results = (allServiceEntries || []).filter(e => {
+                if (excludeId && e.id === excludeId) return false;
+                if (e.title === 'Werkstattaufenthalt Beginn' || e.title === 'Werkstattaufenthalt Ende') return false;
+                if (tokens.length === 0) return true;
+                const machine = machines.find(m => m.id === e.machine_id);
+                const machineName = formatServiceLinkMachineLabel(machine);
+                const dateStr = e.datum_von || e.date || '';
+                const searchable = `${machineName} ${dateStr} ${e.title || ''}`.toLowerCase();
+                return tokens.every(t => searchable.includes(t));
+            }).slice(0, 30);
+
+            // Dropdown haengt direkt (position:absolute) am Such-Wrapper statt an fixen,
+            // per JS berechneten Bildschirmkoordinaten — erscheint dadurch immer zuverlaessig
+            // direkt unter dem Eingabefeld, unabhaengig von Modal-Scroll-Position.
+            const wrapper = document.getElementById('service-link-search-wrapper');
+            if (!wrapper) return;
+
+            let dropdown = document.getElementById('service-link-dropdown-portal');
+            if (!dropdown) {
+                dropdown = document.createElement('div');
+                dropdown.id = 'service-link-dropdown-portal';
+                dropdown.style.cssText = 'position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:50; background:rgba(15,23,42,0.98); border:1px solid rgba(255,255,255,0.15); border-radius:12px; max-height:280px; overflow-y:auto; box-shadow:0 16px 48px rgba(0,0,0,0.7); display:none;';
+                wrapper.appendChild(dropdown);
+            }
+
+            dropdown.innerHTML = '';
+
+            if (results.length === 0) {
+                const empty = document.createElement('div');
+                empty.textContent = 'Kein Bericht gefunden';
+                empty.style.cssText = 'padding:10px 14px;color:rgba(255,255,255,0.3);font-size:0.85rem;font-style:italic;';
+                dropdown.appendChild(empty);
+            }
+
+            results.forEach(e => {
+                const machine = machines.find(m => m.id === e.machine_id);
+                const machineName = formatServiceLinkMachineLabel(machine);
+                const dateStr = e.datum_von ? new Date(e.datum_von).toLocaleDateString('de-DE') : (e.date ? new Date(e.date).toLocaleDateString('de-DE') : '');
+                const item = document.createElement('div');
+                item.style.cssText = 'padding:10px 14px;cursor:pointer;font-size:0.9rem;border-top:1px solid rgba(255,255,255,0.05);';
+                item.innerHTML = `<span style="color:var(--color-primary-green);font-weight:600;">${dateStr}</span> <span style="color:rgba(255,255,255,0.7);">${machineName}</span>`;
+                item.onmousedown = (ev) => { ev.preventDefault(); window.selectServiceLink(e.id); };
+                item.onmouseover = () => { item.style.background = 'rgba(255,255,255,0.06)'; };
+                item.onmouseout = () => { item.style.background = ''; };
+                dropdown.appendChild(item);
+            });
+
+            dropdown.style.display = 'block';
+        };
+
+        document.addEventListener('click', (e) => {
+            // Der "Bericht verknüpfen"/"✎"-Button wird von seinem eigenen onclick-Handler
+            // (startEditServiceLink -> renderServiceLinkSection) synchron aus dem DOM entfernt,
+            // BEVOR dieses document-Click-Event zu Ende bubbelt. e.target waere dann bereits
+            // losgeloest und e.target.closest(...) faende keinen Elternknoten mehr — daher hier
+            // composedPath() verwenden, die den urspruenglichen Pfad zum Zeitpunkt des Klicks liefert.
+            if (editingServiceLink) {
+                const path = typeof e.composedPath === 'function' ? e.composedPath() : [e.target];
+                const insideSection = path.some(el => el && el.id === 'service-link-section');
+                if (!insideSection) {
+                    editingServiceLink = false;
+                    const dropdown = document.getElementById('service-link-dropdown-portal');
+                    if (dropdown) dropdown.style.display = 'none';
+                    window.renderServiceLinkSection();
+                }
+            }
+        });
 
         window.openEditServicebericht = async function (id) {
             const entryHeader = allServiceEntries.find(e => e.id === id);
@@ -15555,9 +15837,12 @@
                     if (editData) {
                         currentEditingServiceId = editData.id;
                         window._techSigIsAutofilled = false;
+                        window._servicePreviousReportId = editData.previous_report_id || null;
                         // Baseline snapshot for 3-way offline merge
                         window._serviceReportBaseline = Object.assign({}, editData);
                         if (titleEl) titleEl.textContent = 'Servicebericht bearbeiten';
+                        const followUpBtn = document.getElementById('btn-servicebericht-follow-up');
+                        if (followUpBtn) followUpBtn.classList.remove('hidden');
 
                         // Populate fields
                         const reportTitle = document.getElementById('service-report-title');
@@ -15770,7 +16055,10 @@
                         window._serviceReportBaseline = null;
                         window._offlineDraftKey = null;
                         window._techSigIsAutofilled = false;
+                        window._servicePreviousReportId = null;
                         if (titleEl) titleEl.textContent = 'Neuer Servicebericht';
+                        const followUpBtn = document.getElementById('btn-servicebericht-follow-up');
+                        if (followUpBtn) followUpBtn.classList.add('hidden');
 
                         // Pre-select machine if opened from Machine Details context
                         if (typeof currentSelectedMachineForService !== 'undefined' && currentSelectedMachineForService) {
@@ -15786,12 +16074,60 @@
                                 }, 100);
                             }
                         }
+
+                        // Vorbelegung aus "Folgebericht erstellen" (window.createFolgebericht):
+                        // Maschine, Kategorien und Techniker des Vorberichts uebernehmen und die
+                        // Verknuepfung setzen.
+                        if (window._pendingFolgeberichtSource) {
+                            const src = window._pendingFolgeberichtSource;
+                            window._servicePreviousReportId = src.previousId || null;
+
+                            if (src.machineId) {
+                                const machines = window.machineList || [];
+                                const m = machines.find(x => x.id === src.machineId);
+                                if (m) {
+                                    const cat = (window.categoryList || []).find(c => c.id === m.category_id);
+                                    const catName = cat ? cat.name : 'Unkategorisiert';
+                                    setTimeout(() => {
+                                        if (typeof selectServiceMachine === 'function') {
+                                            selectServiceMachine(m.id, m.manufacturer, m.name, m.serial, m.image_url, catName, m.year);
+                                        }
+                                        // Folgebericht betrifft immer dieselbe Maschine wie der Vorbericht —
+                                        // Auswahl fixieren, keine Maschinensuche fuer eine andere Maschine anzeigen.
+                                        if (machineSelector) machineSelector.style.display = 'none';
+                                        if (machineList) machineList.style.display = 'none';
+                                        if (lockHint) lockHint.classList.remove('hidden');
+                                    }, 100);
+                                }
+                            }
+
+                            if (Array.isArray(src.categoryIds) && src.categoryIds.length > 0) {
+                                selectedServiceCategories = src.categoryIds.map(id => parseInt(id));
+                                if (typeof updateServiceCategoryUI === 'function') updateServiceCategoryUI();
+                            }
+
+                            if (Array.isArray(src.technicians) && src.technicians.length > 0) {
+                                selectedTechs = [...src.technicians];
+                                if (selectedTechIds) selectedTechIds.value = JSON.stringify(selectedTechs);
+                            }
+
+                            if (src.workshopOrderSuffix) {
+                                const yearDigitEl = document.getElementById('service-workshop-year-digit');
+                                const suffixEl = document.getElementById('service-workshop-order-suffix');
+                                if (yearDigitEl && src.workshopYearDigit) yearDigitEl.value = src.workshopYearDigit;
+                                if (suffixEl) suffixEl.value = src.workshopOrderSuffix;
+                            }
+
+                            window._pendingFolgeberichtSource = null;
+                        }
                     }
 
                     // Populate initial lists
                     if (typeof window.machineList !== 'undefined') renderServiceMachineList();
                     if (typeof userList !== 'undefined') renderTechDropdown();
                     renderServiceCategoryList();
+                    if (typeof editingServiceLink !== 'undefined') editingServiceLink = false;
+                    if (typeof window.renderServiceLinkSection === 'function') window.renderServiceLinkSection();
 
                     // Dirty tracking: reset flag
                     serviceberichtIsDirty = false;
@@ -15876,6 +16212,24 @@
                 const totalEntriesCount = entries.length;
                 const hasMore = totalEntriesCount > window.serviceEntriesLimit;
                 const slicedEntries = entries.slice(0, window.serviceEntriesLimit);
+
+                // Verknuepfungs-Lookup: welcher Bericht hat einen Folgebericht (Kehrrichtung von
+                // previous_report_id), einmal pro Render aus dem bereits geladenen Array ermittelt.
+                const followUpByPreviousId = {};
+                (allServiceEntries || []).forEach(e => {
+                    if (e.previous_report_id) followUpByPreviousId[e.previous_report_id] = e.id;
+                });
+                const renderServiceLinkBadge = (entry, position) => {
+                    const linkedId = entry.previous_report_id || followUpByPreviousId[entry.id];
+                    if (!linkedId) return '';
+                    const title = entry.previous_report_id ? 'Folgebericht — zum vorherigen Bericht springen' : 'Hat einen Folgebericht — springen';
+                    return `
+                        <button class="service-link-badge" onclick="event.stopPropagation(); window.jumpToServicebericht(${linkedId})" title="${title}"
+                            style="position: absolute; ${position} z-index: 12; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid rgba(16,185,129,0.5); background: rgba(15,23,42,0.75); backdrop-filter: blur(6px); color: var(--color-primary-green); display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;"
+                            onmouseover="this.style.background='rgba(16,185,129,0.85)'; this.style.color='#fff'" onmouseout="this.style.background='rgba(15,23,42,0.75)'; this.style.color='var(--color-primary-green)'">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                        </button>`;
+                };
 
                 if (serviceViewMode === 'board') {
                     const cardsHtml = slicedEntries.map(e => {
@@ -15971,6 +16325,13 @@
 
                         window[`_sf${e.id}`] = e.files || [];
 
+                        // Verknuepfte Berichte (Folgebericht oder hat einen Folgebericht) bekommen
+                        // einen orangenen statt blauen Auftrag-Tag als optischen Hinweis auf die Kette.
+                        const isLinkedReport = !!(e.previous_report_id || followUpByPreviousId[e.id]);
+                        const orderTagColor = isLinkedReport
+                            ? { bg: 'rgba(245, 158, 11, 0.2)', border: 'rgba(252, 211, 77, 0.5)', text: '#fbbf24' }
+                            : { bg: 'rgba(59, 130, 246, 0.2)', border: 'rgba(147, 197, 253, 0.5)', text: '#93c5fd' };
+
                         return `
                                 <div class="card" style="font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); border: 3px solid ${primaryCatColor}66; border-top: 7px solid ${primaryCatColor}; border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); position: relative; padding-top: 35px; padding-bottom: 14px; width: 100%; box-sizing: border-box; min-width: 0;">
 
@@ -15985,6 +16346,11 @@
                                             `;
                         }).join('')}
                                     </div>
+
+                                    <button class="service-quickinfo-btn" onclick="event.stopPropagation(); window.showServiceQuickInfo(${e.id})" title="Stundenübersicht anzeigen"
+                                        style="position: absolute; top: 8px; right: 8px; z-index: 12; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.35); background: rgba(15,23,42,0.75); backdrop-filter: blur(6px); color: rgba(255,255,255,0.85); font-size: 0.78rem; font-weight: 700; font-style: italic; font-family: Georgia, serif; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;"
+                                        onmouseover="this.style.background='rgba(59,130,246,0.85)'; this.style.borderColor='rgba(147,197,253,0.9)'" onmouseout="this.style.background='rgba(15,23,42,0.75)'; this.style.borderColor='rgba(255,255,255,0.35)'">i</button>
+                                    ${renderServiceLinkBadge(e, 'top: 8px; left: 8px;')}
 
                                     <!-- Full-Width Machine Image -->
                                     <div style="position: relative; width: 100%; height: var(--machine-image-height, 300px); overflow: hidden; background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));">
@@ -16002,7 +16368,7 @@
                                         <!-- Row 1: Centered Order Tag (Blau-Stil wie Abnahmeprotokoll, falls vorhanden) -->
                                         ${hasOrderTag ? `
                                         <div style="display: flex; justify-content: center; margin-bottom: 0.25rem; width: 100%;">
-                                            <div style="height: 32px; padding: 0 16px; background: rgba(59, 130, 246, 0.2); border: 1.5px solid rgba(147, 197, 253, 0.5); border-radius: 16px; color: #93c5fd; font-size: 0.85rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 4px; letter-spacing: 0.5px; backdrop-filter: blur(12px); text-transform: uppercase;">
+                                            <div title="${isLinkedReport ? 'Teil einer verknüpften Berichtskette' : ''}" style="height: 32px; padding: 0 16px; background: ${orderTagColor.bg}; border: 1.5px solid ${orderTagColor.border}; border-radius: 16px; color: ${orderTagColor.text}; font-size: 0.85rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 4px; letter-spacing: 0.5px; backdrop-filter: blur(12px); text-transform: uppercase;">
                                                 Auftrag ${displayOrderNum}
                                             </div>
                                         </div>` : ''}
@@ -16182,7 +16548,18 @@
                                             </div>` : '-'}
                                     </td>
                                     <td data-label="Datum" style="color: #ffffff; font-weight: 700; line-height: 1.3;">
-                                        <div>${displayedDateStr}</div>
+                                        <div style="display:flex; align-items:center; gap:6px;">
+                                            ${displayedDateStr}
+                                            ${(() => {
+                                                const linkedId = e.previous_report_id || followUpByPreviousId[e.id];
+                                                if (!linkedId) return '';
+                                                const title = e.previous_report_id ? 'Folgebericht — zum vorherigen Bericht springen' : 'Hat einen Folgebericht — springen';
+                                                return `<button onclick="event.stopPropagation(); window.jumpToServicebericht(${linkedId})" title="${title}"
+                                                    style="width:20px; height:20px; border-radius:50%; border:1.5px solid rgba(16,185,129,0.5); background:transparent; color:var(--color-primary-green); display:inline-flex; align-items:center; justify-content:center; cursor:pointer; padding:0; flex-shrink:0;">
+                                                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                                                </button>`;
+                                            })()}
+                                        </div>
                                         ${durationStr ? `<div style="font-size: 0.8rem; color: rgba(255,255,255,0.6); margin-top: 2px;">${durationStr}</div>` : ''}
                                     </td>
                                     <td data-label="Kategorie">
@@ -16222,6 +16599,9 @@
                                                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                                              </span>
                                              `}
+                                             <button class="service-quickinfo-btn" onclick="event.stopPropagation(); window.showServiceQuickInfo(${e.id})" title="Stundenübersicht anzeigen"
+                                                 style="width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.3); background: transparent; color: rgba(255,255,255,0.7); font-size: 0.75rem; font-weight: 700; font-style: italic; font-family: Georgia, serif; line-height: 1; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; flex-shrink: 0;"
+                                                 onmouseover="this.style.borderColor='rgba(96,165,250,0.8)'; this.style.color='#60a5fa'" onmouseout="this.style.borderColor='rgba(255,255,255,0.3)'; this.style.color='rgba(255,255,255,0.7)'">i</button>
                                              <button class="delete-permission-required" onclick="event.stopPropagation(); deleteServiceEntry(${e.id})" title="Löschen"
                                                  style="width:36px; height:36px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
                                                  onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
@@ -16970,8 +17350,10 @@
             return data;
         };
 
-        window.showWorkLogSummary = function() {
-            const data = typeof window.getWorkLogTableData === 'function' ? window.getWorkLogTableData() : [];
+        // Baut den Inhalt der Stundenübersicht aus einem Zeilen-Array (Datum/Typ/Zeit/Pause/km) —
+        // ausgelagert aus showWorkLogSummary(), damit dieselbe Auswertung auch für abgeschlossene
+        // Serviceberichte (Daten aus der DB statt aus dem gerade offenen Formular) genutzt werden kann.
+        window.buildWorkLogSummaryHtml = function(data) {
             const fmt = window.formatHoursDecimal;
             const days = {};
             data.forEach(row => {
@@ -17068,6 +17450,57 @@
                 `;
             }
 
+            return html;
+        };
+
+        // Öffnet die Stundenübersicht mit den Daten aus dem gerade geöffneten Formular
+        // (Servicebericht wird aktuell bearbeitet).
+        window.showWorkLogSummary = function() {
+            const data = typeof window.getWorkLogTableData === 'function' ? window.getWorkLogTableData() : [];
+            window.openWorkLogSummaryModal(window.buildWorkLogSummaryHtml(data));
+        };
+
+        // Öffnet die Stundenübersicht für einen abgeschlossenen Servicebericht (kein offenes
+        // Formular mehr vorhanden) — lädt die Rohdaten einmalig aus dem Offline-Cache oder per
+        // Supabase nach, wertet sie mit derselben Logik aus wie bei einem aktiven Bericht.
+        window.showServiceQuickInfo = async function (id) {
+            window.openWorkLogSummaryModal('<div style="color: rgba(255,255,255,0.5); text-align: center; padding: 1rem;">Lade Stundenübersicht...</div>');
+
+            let full = null;
+            try {
+                if (window.offlineService) full = await window.offlineService.getCachedFullEntry(id);
+            } catch (e) { /* Cache optional */ }
+            if (!full && navigator.onLine && window.supabaseClient) {
+                try {
+                    const { data, error } = await window.supabaseClient
+                        .from('service_entries')
+                        .select('work_log, travel_distance_km, travel_time_minutes')
+                        .eq('id', id)
+                        .single();
+                    if (!error) full = data;
+                } catch (e) { console.error('Schnellauskunft: Laden fehlgeschlagen', e); }
+            }
+
+            const content = document.getElementById('work-log-summary-content');
+            if (!content) return;
+
+            if (!full) {
+                content.innerHTML = '<div style="color: rgba(255,200,200,0.8); text-align: center; padding: 1rem;">Konnte nicht geladen werden (offline & nicht zwischengespeichert).</div>';
+                return;
+            }
+
+            let workLog = Array.isArray(full.work_log) ? full.work_log : [];
+            // Fallback auf die einfachen Formularfelder, falls kein detailliertes Protokoll geführt wurde
+            if (workLog.length === 0 && (full.travel_time_minutes || full.travel_distance_km)) {
+                const mins = full.travel_time_minutes || 0;
+                const h = Math.floor(mins / 60), m = mins % 60;
+                const zeit = `00:00 - ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+                workLog = [{ datum: '', typ: 'Anfahrt', zeit, pause: '', kilometer: full.travel_distance_km || '' }];
+            }
+            content.innerHTML = window.buildWorkLogSummaryHtml(workLog);
+        };
+
+        window.openWorkLogSummaryModal = function(html) {
             const content = document.getElementById('work-log-summary-content');
             if (content) content.innerHTML = html;
 
@@ -17585,7 +18018,10 @@
                 if (typeof window.loadPDFGenerators === 'function') {
                     await window.loadPDFGenerators();
                 }
-                
+                if (typeof window.loadUnicodePdfFont === 'function') {
+                    try { await window.loadUnicodePdfFont(); } catch (e) { console.warn('Unicode-Schriftart fuer PDF konnte nicht geladen werden, Sonderzeichen koennten falsch dargestellt werden:', e); }
+                }
+
                 // Load background template
                 let bgImage = null;
                 if (window.VORLAGE_BASE64) {
@@ -17607,7 +18043,10 @@
 
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
-                
+                if (typeof window.registerUnicodeFont === 'function' && window.registerUnicodeFont(doc)) {
+                    doc.setFont('NotoSans', 'normal');
+                }
+
                 // Helper to add background
                 const addBackground = () => {
                     if (bgImage) {
@@ -17746,27 +18185,27 @@
                 }
                 
                 // Title
-                doc.setFont('helvetica', 'bold');
+                doc.setFont('NotoSans', 'bold');
                 const titleFontSize = titleText.length > 25 ? 18 : 22;
                 doc.setFontSize(titleFontSize);
                 doc.setTextColor(30, 41, 59); // slate color
                 doc.text(titleText, 20, 36);
                 
                 // Header date
-                doc.setFont('helvetica', 'bold');
+                doc.setFont('NotoSans', 'bold');
                 doc.setFontSize(10);
                 doc.setTextColor(0, 0, 0);
                 const dateW = doc.getTextWidth('Datum: ');
                 doc.text('Datum: ', 160, 36);
-                doc.setFont('helvetica', 'normal');
+                doc.setFont('NotoSans', 'normal');
                 const formattedDateStart = dateStart ? new Date(dateStart).toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'}) : new Date().toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'});
                 const formattedDateEnd = dateEnd ? new Date(dateEnd).toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'}) : '';
                 doc.text(formattedDateStart, 160 + dateW, 36);
 
                 if (formattedDateEnd && formattedDateEnd !== formattedDateStart) {
-                    doc.setFont('helvetica', 'bold');
+                    doc.setFont('NotoSans', 'bold');
                     doc.text('Bis: ', 160, 43);
-                    doc.setFont('helvetica', 'normal');
+                    doc.setFont('NotoSans', 'normal');
                     doc.text(formattedDateEnd, 160 + dateW, 43);
                 }
                 
@@ -17778,9 +18217,9 @@
                 
                 // Draw Betreiber/Rechnungsadresse
                 doc.setFontSize(10);
-                doc.setFont('helvetica', 'bold');
+                doc.setFont('NotoSans', 'bold');
                 doc.text('Betreiber / Rechnungsadresse:', 20, currentY);
-                doc.setFont('helvetica', 'normal');
+                doc.setFont('NotoSans', 'normal');
                 
                 let leftY = currentY + 6;
                 operatorLines.forEach(line => {
@@ -17790,10 +18229,10 @@
 
                 if (contactPersonsArr.length > 0) {
                     leftY += 2;
-                    doc.setFont('helvetica', 'bold');
+                    doc.setFont('NotoSans', 'bold');
                     doc.text('Ansprechpartner:', 20, leftY);
                     leftY += 5;
-                    doc.setFont('helvetica', 'normal');
+                    doc.setFont('NotoSans', 'normal');
                     contactPersonsArr.forEach(cp => {
                         const namePart = cp.name || '';
                         const phonePart = cp.phone || '';
@@ -17810,9 +18249,9 @@
                 if (hasDifferentLocation) {
                     leftY += 2;
                     maschinenstandortY = leftY;
-                    doc.setFont('helvetica', 'bold');
+                    doc.setFont('NotoSans', 'bold');
                     doc.text('Maschinenstandort:', 20, leftY);
-                    doc.setFont('helvetica', 'normal');
+                    doc.setFont('NotoSans', 'normal');
                     leftY += 6;
                     locationLines.forEach(line => {
                         doc.text(line, 20, leftY);
@@ -17822,9 +18261,9 @@
 
                 if (hasHotel && !hotelOnRight) {
                     leftY += 2;
-                    doc.setFont('helvetica', 'bold');
+                    doc.setFont('NotoSans', 'bold');
                     doc.text('Hotel / Unterkunft:', 20, leftY);
-                    doc.setFont('helvetica', 'normal');
+                    doc.setFont('NotoSans', 'normal');
                     leftY += 6;
                     hotelLines.forEach(line => {
                         doc.text(line, 20, leftY);
@@ -17834,31 +18273,31 @@
 
                 // Draw Machine Details on the right
                 let rightY = currentY;
-                doc.setFont('helvetica', 'bold');
+                doc.setFont('NotoSans', 'bold');
                 doc.text('Maschine: ', 120, rightY);
                 const maschineW = doc.getTextWidth('Maschine: ');
-                doc.setFont('helvetica', 'normal');
+                doc.setFont('NotoSans', 'normal');
                 doc.text(String(machineTitle), 120 + maschineW, rightY);
                 
                 rightY += 6;
-                doc.setFont('helvetica', 'bold');
+                doc.setFont('NotoSans', 'bold');
                 doc.text('Seriennummer: ', 120, rightY);
                 const snW = doc.getTextWidth('Seriennummer: ');
-                doc.setFont('helvetica', 'normal');
+                doc.setFont('NotoSans', 'normal');
                 doc.text(String(serialNumber), 120 + snW, rightY);
                 
                 rightY += 6;
-                doc.setFont('helvetica', 'bold');
+                doc.setFont('NotoSans', 'bold');
                 doc.text('Baujahr: ', 120, rightY);
                 const bjW = doc.getTextWidth('Baujahr: ');
-                doc.setFont('helvetica', 'normal');
+                doc.setFont('NotoSans', 'normal');
                 doc.text(String(machineYear), 120 + bjW, rightY);
                 
                 rightY += 6;
-                doc.setFont('helvetica', 'bold');
+                doc.setFont('NotoSans', 'bold');
                 doc.text('Betriebsstunden: ', 120, rightY);
                 const bhW = doc.getTextWidth('Betriebsstunden: ');
-                doc.setFont('helvetica', 'normal');
+                doc.setFont('NotoSans', 'normal');
                 let operatingHoursVal = document.getElementById('service-operating-hours')?.value.trim() || '-';
                 if (operatingHoursVal !== '-') {
                     operatingHoursVal = `${operatingHoursVal} (h)`;
@@ -17869,9 +18308,9 @@
 
                 if (hotelOnRight) {
                     let hotelY = maschinenstandortY;
-                    doc.setFont('helvetica', 'bold');
+                    doc.setFont('NotoSans', 'bold');
                     doc.text('Hotel / Unterkunft:', 120, hotelY);
-                    doc.setFont('helvetica', 'normal');
+                    doc.setFont('NotoSans', 'normal');
                     hotelY += 6;
                     hotelLines.forEach(line => {
                         doc.text(line, 120, hotelY);
@@ -17888,13 +18327,13 @@
                         doc.addPage();
                         currentY = PAGE_CONTENT_TOP;
                     }
-                    doc.setFont('helvetica', 'bold');
+                    doc.setFont('NotoSans', 'bold');
                     doc.setFontSize(12);
                     doc.setTextColor(30, 41, 59);
                     doc.text('Fehlerbeschreibung / Kurzbeschreibung Einsatz', 20, currentY);
                     currentY += 8;
                     
-                    doc.setFont('helvetica', 'normal');
+                    doc.setFont('NotoSans', 'normal');
                     doc.setFontSize(10);
                     doc.setTextColor(0, 0, 0);
                     const descLines = doc.splitTextToSize(description, 170);
@@ -17993,7 +18432,7 @@
                         margin: { top: PAGE_CONTENT_TOP, bottom: 297 - PAGE_CONTENT_BOTTOM, left: 20, right: 20 },
                         theme: 'grid',
                         styles: {
-                            font: 'helvetica',
+                            font: 'NotoSans',
                             fontSize: 9,
                             cellPadding: 4,
                             halign: 'center',
@@ -18030,7 +18469,7 @@
                         doc.addPage();
                         currentY = PAGE_CONTENT_TOP;
                     }
-                    doc.setFont('helvetica', 'bold');
+                    doc.setFont('NotoSans', 'bold');
                     doc.setFontSize(12);
                     doc.setTextColor(8, 47, 73);
                     doc.text('Ausgeführte Arbeiten', 20, currentY);
@@ -18050,7 +18489,7 @@
                         margin: { top: PAGE_CONTENT_TOP, bottom: 297 - PAGE_CONTENT_BOTTOM, left: 20, right: 20 },
                         theme: 'grid',
                         styles: {
-                            font: 'helvetica',
+                            font: 'NotoSans',
                             fontSize: 9,
                             cellPadding: 4
                         },
@@ -18099,7 +18538,7 @@
                         doc.addPage();
                         currentY = PAGE_CONTENT_TOP;
                     }
-                    doc.setFont('helvetica', 'bold');
+                    doc.setFont('NotoSans', 'bold');
                     doc.setFontSize(12);
                     doc.setTextColor(8, 47, 73);
                     doc.text('Eingesetztes Material', 20, currentY);
@@ -18120,7 +18559,7 @@
                         margin: { top: PAGE_CONTENT_TOP, bottom: 297 - PAGE_CONTENT_BOTTOM, left: 20, right: 20 },
                         theme: 'grid',
                         styles: {
-                            font: 'helvetica',
+                            font: 'NotoSans',
                             fontSize: 9,
                             cellPadding: 4
                         },
@@ -18151,7 +18590,7 @@
                 const remarksLineHeight = 7;
                 let remarksTextLines = [];
                 if (remarksHasText) {
-                    doc.setFont('helvetica', 'normal');
+                    doc.setFont('NotoSans', 'normal');
                     doc.setFontSize(10);
                     remarksTextLines = doc.splitTextToSize(remarks, 170);
                 }
@@ -18163,14 +18602,14 @@
                     currentY = PAGE_CONTENT_TOP;
                 }
 
-                doc.setFont('helvetica', 'bold');
+                doc.setFont('NotoSans', 'bold');
                 doc.setFontSize(12);
                 doc.setTextColor(8, 47, 73);
                 doc.text('Bemerkungen', 20, currentY);
                 currentY += 8;
 
                 if (remarksHasText) {
-                    doc.setFont('helvetica', 'normal');
+                    doc.setFont('NotoSans', 'normal');
                     doc.setFontSize(10);
                     doc.setTextColor(0, 0, 0);
                     doc.text(remarksTextLines, 20, currentY);
@@ -18207,7 +18646,7 @@
                     doc.line(21.5, currentY + 3.5, 23.5, currentY + 0.5);
                     doc.setLineCap('butt');
                 }
-                doc.setFont('helvetica', 'normal');
+                doc.setFont('NotoSans', 'normal');
                 doc.setFontSize(9);
                 doc.setTextColor(30, 41, 59);
                 doc.text('O. g. gemeldete Störung ist behoben und die Reparatur in vollem Umfang ausgeführt.', 28, currentY + 3.2);
@@ -18240,7 +18679,7 @@
                 }).join(', ') || '-';
                 
                 // Techniker-Name oben
-                doc.setFont('helvetica', 'bold');
+                doc.setFont('NotoSans', 'bold');
                 doc.setFontSize(10);
                 doc.setTextColor(30, 41, 59);
                 doc.text(`Techniker: ${techNames}`, 20, currentY);
@@ -18262,7 +18701,7 @@
                 doc.setLineWidth(0.5);
                 doc.line(20, currentY + 22, 90, currentY + 22);   // Links: Techniker
                 doc.line(110, currentY + 22, 190, currentY + 22); // Rechts: Kunde
-                doc.setFont('helvetica', 'normal');
+                doc.setFont('NotoSans', 'normal');
                 doc.setFontSize(8);
                 doc.setTextColor(100, 100, 100);
                 const _techSigDateRaw = document.getElementById('service-tech-sig-date')?.value || dateStart;
@@ -18307,13 +18746,13 @@
                             : [15, 23, 42];                                                            // Wartung: fast schwarzes Blau
 
                         // Draw Checklist Title
-                        doc.setFont('helvetica', 'bold');
+                        doc.setFont('NotoSans', 'bold');
                         doc.setFontSize(16);
                         doc.setTextColor(checklistThemeColor[0], checklistThemeColor[1], checklistThemeColor[2]);
                         doc.text(cleanTitle, 20, 30);
                         
                         // Meta Info
-                        doc.setFont('helvetica', 'normal');
+                        doc.setFont('NotoSans', 'normal');
                         doc.setFontSize(10);
                         doc.setTextColor(100, 100, 100);
                         doc.text(`Maschine: ${machineTitle} | Seriennummer: ${serialNumber} | Betriebsstunden: ${operatingHoursVal}`, 20, 37);
@@ -18333,12 +18772,12 @@
                                 doc.setLineWidth(0.25);
                                 doc.rect(legendX, legendY, boxSize, boxSize);
                                 if (symbol) {
-                                    doc.setFont('helvetica', 'bold');
+                                    doc.setFont('NotoSans', 'bold');
                                     doc.setFontSize(11);
                                     doc.setTextColor(symbolColor[0], symbolColor[1], symbolColor[2]);
                                     doc.text(symbol, legendX + boxSize / 2, legendY + boxSize - 1.4, { align: 'center' });
                                 }
-                                doc.setFont('helvetica', 'normal');
+                                doc.setFont('NotoSans', 'normal');
                                 doc.setFontSize(7.5);
                                 doc.setTextColor(80, 80, 80);
                                 doc.text(label, legendX + boxSize + 2, legendY + boxSize - 1.6);
@@ -18398,7 +18837,7 @@
                                     margin: { top: 44, bottom: 297 - PAGE_CONTENT_BOTTOM, left: 20, right: 20 },
                                     theme: 'grid',
                                     styles: {
-                                        font: 'helvetica',
+                                        font: 'NotoSans',
                                         fontSize: 7.5,
                                         cellPadding: 2,
                                         valign: 'middle'
@@ -18456,7 +18895,7 @@
                                             doc.setLineWidth(0.3);
                                             doc.rect(bx, by, boxSize, boxSize);
                                             if (status === 'x' || status === 'dash') {
-                                                doc.setFont('helvetica', 'bold');
+                                                doc.setFont('NotoSans', 'bold');
                                                 doc.setFontSize(9);
                                                 doc.setTextColor(...(status === 'x' ? [5, 150, 105] : [217, 119, 6]));
                                                 doc.text(status === 'x' ? 'x' : '-', bx + boxSize / 2, by + boxSize - 1.2, { align: 'center' });
@@ -18473,7 +18912,7 @@
                                             doc.setLineWidth(0.3);
                                             doc.rect(bx, by, boxSize, boxSize);
                                             if (raw === 'x' || raw === '-') {
-                                                doc.setFont('helvetica', 'bold');
+                                                doc.setFont('NotoSans', 'bold');
                                                 doc.setFontSize(9);
                                                 doc.setTextColor(...(raw === 'x' ? [5, 150, 105] : [217, 119, 6]));
                                                 doc.text(raw, bx + boxSize / 2, by + boxSize - 1.3, { align: 'center' });
@@ -18482,11 +18921,11 @@
                                     },
                                     didDrawPage: function(data) {
                                         if (data.pageNumber > 1) {
-                                            doc.setFont('helvetica', 'bold');
+                                            doc.setFont('NotoSans', 'bold');
                                             doc.setFontSize(16);
                                             doc.setTextColor(checklistThemeColor[0], checklistThemeColor[1], checklistThemeColor[2]);
                                             doc.text(cleanTitle, 20, 30);
-                                            doc.setFont('helvetica', 'normal');
+                                            doc.setFont('NotoSans', 'normal');
                                             doc.setFontSize(10);
                                             doc.setTextColor(100, 100, 100);
                                             doc.text(`Maschine: ${machineTitle} | Seriennummer: ${serialNumber} | Betriebsstunden: ${operatingHoursVal}`, 20, 37);
@@ -18518,7 +18957,7 @@
                                 margin: { top: 44, bottom: 297 - PAGE_CONTENT_BOTTOM, left: 20, right: 20 },
                                 theme: 'grid',
                                 styles: {
-                                    font: 'helvetica',
+                                    font: 'NotoSans',
                                     fontSize: 7.5,
                                     cellPadding: 2,
                                     valign: 'middle'
@@ -18563,11 +19002,11 @@
                                 },
                                 didDrawPage: function(data) {
                                     if (data.pageNumber > 1) {
-                                        doc.setFont('helvetica', 'bold');
+                                        doc.setFont('NotoSans', 'bold');
                                         doc.setFontSize(16);
                                         doc.setTextColor(checklistThemeColor[0], checklistThemeColor[1], checklistThemeColor[2]);
                                         doc.text(cleanTitle, 20, 30);
-                                        doc.setFont('helvetica', 'normal');
+                                        doc.setFont('NotoSans', 'normal');
                                         doc.setFontSize(10);
                                         doc.setTextColor(100, 100, 100);
                                         doc.text(`Maschine: ${machineTitle} | Seriennummer: ${serialNumber} | Betriebsstunden: ${operatingHoursVal}`, 20, 37);
@@ -18581,7 +19020,7 @@
                             // Make sure there's enough space; add page if needed
                             if (uvvY + 27 > PAGE_CONTENT_BOTTOM) { doc.addPage(); uvvY = PAGE_CONTENT_TOP; }
                             
-                            doc.setFont('helvetica', 'bold');
+                            doc.setFont('NotoSans', 'bold');
                             doc.setFontSize(10);
                             doc.setTextColor(30, 41, 59);
                             doc.text('Bemerkungen:', 20, uvvY);
@@ -18590,7 +19029,7 @@
                             doc.setLineWidth(0.3);
                             doc.rect(20, uvvY, 170, 22);
                             if (checklist.generalRemark && checklist.generalRemark.trim()) {
-                                doc.setFont('helvetica', 'normal');
+                                doc.setFont('NotoSans', 'normal');
                                 doc.setFontSize(9);
                                 doc.setTextColor(50, 50, 50);
                                 const remarkLines = doc.splitTextToSize(checklist.generalRemark, 165);
@@ -18605,7 +19044,7 @@
                             // Techniker/Kunde weiter unten.
                             if (isEinweisungPdf && Array.isArray(checklist.driverSignatures) && checklist.driverSignatures.length > 0) {
                                 if (uvvY + 41 > PAGE_CONTENT_BOTTOM) { doc.addPage(); uvvY = PAGE_CONTENT_TOP; }
-                                doc.setFont('helvetica', 'bold');
+                                doc.setFont('NotoSans', 'bold');
                                 doc.setFontSize(10);
                                 doc.setTextColor(checklistThemeColor[0], checklistThemeColor[1], checklistThemeColor[2]);
                                 doc.text('Unterschriften eingewiesende Personen', 20, uvvY);
@@ -18622,7 +19061,7 @@
                                         doc.setDrawColor(100, 100, 100);
                                         doc.setLineWidth(0.5);
                                         doc.line(xPos, uvvY + 22, lineEnd, uvvY + 22);
-                                        doc.setFont('helvetica', 'normal');
+                                        doc.setFont('NotoSans', 'normal');
                                         doc.setFontSize(8);
                                         doc.setTextColor(100, 100, 100);
                                         doc.text(`Unterschrift Fahrer/Mechaniker, ${_uvvFmt(sig.date)}`, xPos, uvvY + 27);
@@ -18639,7 +19078,7 @@
                                 const u = (window.userList || []).find(user => user.id == id);
                                 return u ? u.name : '';
                             }).filter(Boolean).join(', ') || '';
-                            doc.setFont('helvetica', 'bold');
+                            doc.setFont('NotoSans', 'bold');
                             doc.setFontSize(9);
                             doc.setTextColor(30, 41, 59);
                             doc.text(`Techniker: ${uvvTechName}`, 20, uvvY);
@@ -18663,7 +19102,7 @@
                             doc.setLineWidth(0.5);
                             doc.line(20, uvvY + 22, 95, uvvY + 22);   // Left: Technician
                             doc.line(110, uvvY + 22, 190, uvvY + 22); // Right: Customer
-                            doc.setFont('helvetica', 'normal');
+                            doc.setFont('NotoSans', 'normal');
                             doc.setFontSize(8);
                             doc.setTextColor(100, 100, 100);
                             const _uvvTechDate = document.getElementById('service-tech-sig-date')?.value || dateStart;
@@ -18696,7 +19135,7 @@
                                 margin: { top: 44, bottom: 297 - PAGE_CONTENT_BOTTOM, left: 20, right: 20 },
                                 theme: 'grid',
                                 styles: {
-                                    font: 'helvetica',
+                                    font: 'NotoSans',
                                     fontSize: 7.5,
                                     cellPadding: 2,
                                     valign: 'middle'
@@ -18735,11 +19174,11 @@
                                 },
                                 didDrawPage: function(data) {
                                     if (data.pageNumber > 1) {
-                                        doc.setFont('helvetica', 'bold');
+                                        doc.setFont('NotoSans', 'bold');
                                         doc.setFontSize(16);
                                         doc.setTextColor(checklistThemeColor[0], checklistThemeColor[1], checklistThemeColor[2]);
                                         doc.text(cleanTitle, 20, 30);
-                                        doc.setFont('helvetica', 'normal');
+                                        doc.setFont('NotoSans', 'normal');
                                         doc.setFontSize(10);
                                         doc.setTextColor(100, 100, 100);
                                         doc.text(`Maschine: ${machineTitle} | Seriennummer: ${serialNumber} | Betriebsstunden: ${operatingHoursVal}`, 20, 37);
@@ -18783,7 +19222,7 @@
                 const totalPages = doc.internal.getNumberOfPages();
                 for (let i = 1; i <= totalPages; i++) {
                     doc.setPage(i);
-                    doc.setFont('helvetica', 'normal');
+                    doc.setFont('NotoSans', 'normal');
                     doc.setFontSize(8);
                     doc.setTextColor(100, 100, 100);
                     const pageStr = `Seite ${i} von ${totalPages}`;
@@ -19190,6 +19629,7 @@
             <div class="modal-scroll-area">
                 <form id="servicebericht-form">
                     <input type="hidden" id="service-report-title" value="Servicebericht">
+
                     <!-- Step 1: Machine Selection -->
                     <div class="form-section">
                         <label>Maschine auswählen</label>
@@ -19336,6 +19776,18 @@
                                     <input type="text" id="service-hotel-country" class="glass-form-input" placeholder="Deutschland">
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Verknuepfter Bericht (Folgebericht-Kette) -->
+                    <div class="form-section" id="service-link-section" style="margin-top: 1.5rem;">
+                        <span style="font-size:0.72rem; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:0.5rem;">Verknüpfter Bericht</span>
+                        <div id="service-link-display" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;"></div>
+                        <div id="service-link-search-wrapper" class="hidden" style="margin-top:0.5rem; position:relative;">
+                            <input type="text" id="service-link-search-input" class="glass-form-input"
+                                placeholder="Bericht suchen (Maschine, Maschinennummer, Datum, Titel)..."
+                                oninput="window.filterServiceLinkDropdown(this.value)"
+                                onfocus="window.filterServiceLinkDropdown(this.value)">
                         </div>
                     </div>
 
@@ -19733,6 +20185,11 @@
                         <button type="button" class="btn-modal-base btn-modal-cancel" onclick="closeServiceberichtModal()" style="flex: 1;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                             Abbrechen
+                        </button>
+
+                        <button type="button" class="btn-modal-base hidden" id="btn-servicebericht-follow-up" onclick="window.createFolgebericht()" title="Neuen Servicebericht anlegen, der mit diesem verknüpft ist" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); color: var(--color-primary-green); gap: 8px; flex: 1;" onmouseover="this.style.background='rgba(16,185,129,0.28)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                            Folgebericht
                         </button>
 
                         <button type="button" class="btn-modal-base" id="btn-servicebericht-preview" onclick="window.previewServiceberichtPDF()" style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.35); color: #a78bfa; gap: 8px; flex: 1;" onmouseover="this.style.background='rgba(139,92,246,0.28)'" onmouseout="this.style.background='rgba(139,92,246,0.15)'">

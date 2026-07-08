@@ -421,6 +421,10 @@
 
     // Füllt die Status- und Maschinen-Filter-Dropdowns (links vom Suchfeld) mit den aktuell
     // vorkommenden Werten. Vorherige Auswahl wird beibehalten, falls sie noch existiert.
+    // Auch global verfügbar: muss erneut laufen, sobald die Maschinenliste fertig geladen ist,
+    // sonst fehlen im Maschinen-Filter alle echten (per machine_id verknüpften) Maschinen,
+    // wenn die Angebote schneller da waren als die Maschinen (Race beim App-Start).
+    window.populateAngeboteFilterOptions = populateAngeboteFilterOptions;
     function populateAngeboteFilterOptions() {
         const jahrSelect = document.getElementById('angebote-filter-jahr');
         if (jahrSelect) {
@@ -452,15 +456,24 @@
         const machineSelect = document.getElementById('angebote-filter-maschine');
         if (machineSelect) {
             const prevValue = machineSelect.value;
-            const labels = new Set();
+            // Zwei Gruppen: echte Maschinen (per machine_id verknüpft) grün, selbsterstellte
+            // Freitext-Bezeichnungen orange — Farbe kommt per data-color im gestylten Dropdown an.
+            const realLabels = new Set();
+            const freitextLabels = new Set();
             angeboteList.forEach(a => {
-                const label = getAngebotMachineLabel(a);
-                if (label) labels.add(label);
+                if (a.machine_id) {
+                    const label = getAngebotMachineLabel(a);
+                    if (label) realLabels.add(label);
+                } else if (a.machine_label) {
+                    freitextLabels.add(a.machine_label);
+                }
             });
-            const sorted = [...labels].sort((a, b) => a.localeCompare(b, 'de'));
+            const sortedReal = [...realLabels].sort((a, b) => a.localeCompare(b, 'de'));
+            const sortedFrei = [...freitextLabels].filter(l => !realLabels.has(l)).sort((a, b) => a.localeCompare(b, 'de'));
             machineSelect.innerHTML = '<option value="">Alle Maschinen</option>' +
-                sorted.map(label => `<option value="${escapeHtml(label)}">${escapeHtml(label)}</option>`).join('');
-            if (sorted.includes(prevValue)) machineSelect.value = prevValue;
+                sortedReal.map(label => `<option value="${escapeHtml(label)}" data-color="#34d399">${escapeHtml(label)}</option>`).join('') +
+                sortedFrei.map(label => `<option value="${escapeHtml(label)}" data-color="#f59e0b">${escapeHtml(label)}</option>`).join('');
+            if (sortedReal.includes(prevValue) || sortedFrei.includes(prevValue)) machineSelect.value = prevValue;
             if (typeof window.initGlassSelect === 'function') window.initGlassSelect(machineSelect);
             machineSelect.dispatchEvent(new Event('change'));
         }
@@ -546,21 +559,37 @@
         const prevOpenVol = sumVK(lastMonthEntries.filter(a => classifyAngebotStatus(a) === 'open'));
         let openVolTrendHtml = '';
         if (prevOpenVol > 0) {
-            const diffPct = ((curOpenVol - prevOpenVol) / prevOpenVol) * 100;
+            const diffVal = curOpenVol - prevOpenVol;
+            const diffPct = (diffVal / prevOpenVol) * 100;
             const dir = diffPct >= 0 ? '+' : '';
+            const valSign = diffVal >= 0 ? '+' : '-';
             const color = diffPct >= 0 ? '#10b981' : '#f87171';
-            openVolTrendHtml = `<span style="font-size:0.75rem; color:${color}; font-weight:700; margin-left:6px; white-space:nowrap;">${dir}${Math.round(diffPct)}% vs. Vm.</span>`;
+            const fmtVal = fmtEur(Math.abs(diffVal));
+            openVolTrendHtml = `
+                <div style="display:flex; flex-direction:column; align-items:flex-end; line-height:1.2; text-align:right;">
+                    <span style="font-size:0.75rem; color:${color}; font-weight:700; white-space:nowrap;">${dir}${Math.round(diffPct)}% vs. Vm.</span>
+                    <span style="font-size:0.68rem; color:${color}; font-weight:600; white-space:nowrap; margin-top:2px;">${valSign} ${fmtVal}</span>
+                </div>
+            `;
         }
 
-        // 2. Weighted forecast trend
+        // 2. Expected revenue trend
         const curWeighted = currentMonthEntries.filter(a => classifyAngebotStatus(a) === 'open').reduce((s, a) => s + ((parseNum(a.nettobetrag) || 0) * (parseNum(a.realisierbar) || 0) / 100), 0);
         const prevWeighted = lastMonthEntries.filter(a => classifyAngebotStatus(a) === 'open').reduce((s, a) => s + ((parseNum(a.nettobetrag) || 0) * (parseNum(a.realisierbar) || 0) / 100), 0);
         let weightedTrendHtml = '';
         if (prevWeighted > 0) {
-            const diffPct = ((curWeighted - prevWeighted) / prevWeighted) * 100;
+            const diffVal = curWeighted - prevWeighted;
+            const diffPct = (diffVal / prevWeighted) * 100;
             const dir = diffPct >= 0 ? '+' : '';
+            const valSign = diffVal >= 0 ? '+' : '-';
             const color = diffPct >= 0 ? '#10b981' : '#f87171';
-            weightedTrendHtml = `<span style="font-size:0.75rem; color:${color}; font-weight:700; margin-left:6px; white-space:nowrap;">${dir}${Math.round(diffPct)}% vs. Vm.</span>`;
+            const fmtVal = fmtEur(Math.abs(diffVal));
+            weightedTrendHtml = `
+                <div style="display:flex; flex-direction:column; align-items:flex-end; line-height:1.2; text-align:right;">
+                    <span style="font-size:0.75rem; color:${color}; font-weight:700; white-space:nowrap;">${dir}${Math.round(diffPct)}% vs. Vm.</span>
+                    <span style="font-size:0.68rem; color:${color}; font-weight:600; white-space:nowrap; margin-top:2px;">${valSign} ${fmtVal}</span>
+                </div>
+            `;
         }
 
         // 3. Hit rate trend
@@ -577,7 +606,11 @@
             const diffPct = (curQuote - prevQuote) * 100;
             const dir = diffPct >= 0 ? '+' : '';
             const color = diffPct >= 0 ? '#10b981' : '#f87171';
-            quoteTrendHtml = `<span style="font-size:0.75rem; color:${color}; font-weight:700; margin-left:6px; white-space:nowrap;">${dir}${Math.round(diffPct)}% vs. Vm.</span>`;
+            quoteTrendHtml = `
+                <div style="display:flex; flex-direction:column; align-items:flex-end; line-height:1.2; text-align:right;">
+                    <span style="font-size:0.75rem; color:${color}; font-weight:700; white-space:nowrap;">${dir}${Math.round(diffPct)}% vs. Vm.</span>
+                </div>
+            `;
         }
 
         // 4. Margin trend
@@ -596,34 +629,38 @@
             const diffPct = curMargin - prevMargin;
             const dir = diffPct >= 0 ? '+' : '';
             const color = diffPct >= 0 ? '#10b981' : '#f87171';
-            marginTrendHtml = `<span style="font-size:0.75rem; color:${color}; font-weight:700; margin-left:6px; white-space:nowrap;">${dir}${diffPct.toFixed(1)}% vs. Vm.</span>`;
+            marginTrendHtml = `
+                <div style="display:flex; flex-direction:column; align-items:flex-end; line-height:1.2; text-align:right;">
+                    <span style="font-size:0.75rem; color:${color}; font-weight:700; white-space:nowrap;">${dir}${diffPct.toFixed(1)}% vs. Vm.</span>
+                </div>
+            `;
         }
 
         let html = `
             <div class="maint-kpi-grid" style="margin-top: 0.75rem;">
                 <div class="maint-kpi-tile" style="cursor: default;" title="Summe VK aller offenen (nicht gewonnenen/verlorenen) Angebote">
-                    <div style="display:flex; align-items:baseline;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                         <div class="maint-kpi-value" style="color: #60a5fa;">${fmtEur(openVolume)}</div>
                         ${openVolTrendHtml}
                     </div>
                     <div class="maint-kpi-label">Offenes Volumen (${openEntries.length})</div>
                 </div>
                 <div class="maint-kpi-tile" style="cursor: default;" title="Summe VK × Realisierbar-% der offenen Angebote">
-                    <div style="display:flex; align-items:baseline;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                         <div class="maint-kpi-value" style="color: #a78bfa;">${fmtEur(weighted)}</div>
                         ${weightedTrendHtml}
                     </div>
                     <div class="maint-kpi-label">Erwarteter Umsatz</div>
                 </div>
                 <div class="maint-kpi-tile" style="cursor: default;" title="Gewonnen / entschieden — erkannt am Status-Namen (gewonnen/Auftrag/verkauft bzw. verloren/abgelehnt/storniert)">
-                    <div style="display:flex; align-items:baseline;">
-                        <div class="maint-kpi-value" style="color: #22c55e;">${quoteStr}</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                        <div class="maint-kpi-value" style="color: #34d399;">${quoteStr}</div>
                         ${quoteTrendHtml}
                     </div>
                     <div class="maint-kpi-label">Trefferquote (${wonEntries.length} von ${decided})</div>
                 </div>
                 <div class="maint-kpi-tile" style="cursor: default;" title="Durchschnittliche Spanne in % über alle Angebote mit gepflegtem EK">
-                    <div style="display:flex; align-items:baseline;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                         <div class="maint-kpi-value" style="color: #fff;">${avgMarginStr}</div>
                         ${marginTrendHtml}
                     </div>
@@ -654,7 +691,7 @@
                      ${clickable ? `onclick="window.setAngeboteStatusFilter(window.__angebotePipelineNames[${i}])" title="Klick: nach diesem Status filtern"` : ''}>
                     <div style="display:flex; justify-content:space-between; align-items:baseline;">
                         <span style="font-size:0.78rem; font-weight:700; color:${color}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:70%;">${escapeHtml(g.name)}</span>
-                        <span style="font-size:0.72rem; font-weight:700; color:rgba(255,255,255,0.5); white-space:nowrap;">${g.count} Stk. &middot; ${sumLabel}</span>
+                        <span style="font-size:0.72rem; font-weight:700; color:rgba(255,255,255,0.5); white-space:nowrap;"><strong style="color:#fff; font-weight:800;">${g.count} Stk.</strong> &middot; ${sumLabel}</span>
                     </div>
                     <div style="width:100%; height:10px; background:rgba(255,255,255,0.06); border-radius:4px; overflow:hidden;">
                         <div style="width:${pct}%; height:100%; background:${color}; border-radius:4px; transition: width 0.4s ease;"></div>
@@ -710,7 +747,7 @@
                 <div style="display:flex; flex-direction:column; gap:3px;">
                     <div style="display:flex; justify-content:space-between; align-items:baseline;">
                         <span style="font-size:0.78rem; font-weight:700; color:rgba(255,255,255,0.8); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:65%;" title="${escapeHtml(c.firma)}">${escapeHtml(c.firma)}</span>
-                        <span style="font-size:0.72rem; font-weight:700; color:rgba(255,255,255,0.5); white-space:nowrap;">${c.count} Stk. &middot; ${fmtEurFull(c.sum)}</span>
+                        <span style="font-size:0.72rem; font-weight:700; color:rgba(255,255,255,0.5); white-space:nowrap;"><strong style="color:#fff; font-weight:800;">${c.count} Stk.</strong> &middot; ${fmtEurFull(c.sum)}</span>
                     </div>
                     <div style="width:100%; height:10px; background:rgba(255,255,255,0.06); border-radius:4px; overflow:hidden;">
                         <div style="width:${pct}%; height:100%; background:linear-gradient(90deg, #22c55e, #4ade80); border-radius:4px; transition: width 0.4s ease;"></div>
@@ -810,26 +847,62 @@
         `;
 
         // --- Nachfassen: offene Angebote ohne Aktivität (Notiz/Beleg) seit 14+ Tagen ---
-        const nachfassen = openEntries
+        const allStille = openEntries
             .map(a => ({ a, stille: getAngebotStilleDays(a) }))
-            .filter(x => x.stille !== null && x.stille >= 14)
+            .filter(x => x.stille !== null && x.stille >= 14);
+
+        const rote = allStille
+            .filter(x => x.stille >= 21)
             .sort((x, y) => (parseNum(y.a.nettobetrag) || 0) - (parseNum(x.a.nettobetrag) || 0))
             .slice(0, 5);
-        if (nachfassen.length > 0) {
+
+        const orangene = allStille
+            .filter(x => x.stille >= 14 && x.stille < 21)
+            .sort((x, y) => (parseNum(y.a.nettobetrag) || 0) - (parseNum(x.a.nettobetrag) || 0))
+            .slice(0, 5);
+
+        if (rote.length > 0 || orangene.length > 0) {
             html += `
-                <div class="maint-chart-card">
-                    <p class="maint-chart-title" style="color: #F87171;">Nachfassen — keine Aktivität seit 14+ Tagen (Top nach VK)</p>
-                    ${nachfassen.map(x => {
-                        const firma = (x.a.customers?.name || x.a.kundenmatchcode || '').split(',')[0].trim();
-                        const vk = parseNum(x.a.nettobetrag);
-                        const hot = x.stille >= 21;
-                        return `
-                            <div onclick="window.jumpToAngebotFromReminder('${x.a.id}')" class="ang-nachfass-row" style="background: ${hot ? 'rgba(248,113,113,0.1)' : 'rgba(255,160,0,0.08)'};">
-                                <span style="color: ${hot ? '#F87171' : '#FFA000'}; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(x.a.belegnummer)}${firma ? ' · ' + escapeHtml(firma) : ''}${vk ? ' · ' + fmtEur(vk) : ''}</span>
-                                <span style="color: ${hot ? '#F87171' : '#FFA000'}; font-weight: 800; white-space: nowrap; font-size: 0.78rem;">${x.stille} Tage still</span>
-                            </div>
-                        `;
-                    }).join('')}
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-bottom: 1.5rem;">
+                    <!-- Rote (21+ Tage) -->
+                    <div class="maint-chart-card" style="margin-bottom: 0;">
+                        <p class="maint-chart-title" style="color: #F87171; display:flex; align-items:center; gap:6px;">
+                            <span style="width:8px; height:8px; background:#F87171; border-radius:50%; display:inline-block;"></span>
+                            Nachfassen rot (stille &ge; 21 Tage)
+                        </p>
+                        <div style="display:flex; flex-direction:column; gap:8px; padding-top:4px;">
+                            ${rote.length > 0 ? rote.map(x => {
+                                const firma = (x.a.customers?.name || x.a.kundenmatchcode || '').split(',')[0].trim();
+                                const vk = parseNum(x.a.nettobetrag);
+                                return `
+                                    <div onclick="window.jumpToAngebotFromReminder('${x.a.id}')" class="ang-nachfass-row" style="background: rgba(248,113,113,0.1); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+                                        <span style="color: #F87171; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(x.a.belegnummer)}${firma ? ' · ' + escapeHtml(firma) : ''}${vk ? ' · ' + fmtEur(vk) : ''}</span>
+                                        <span style="color: #F87171; font-weight: 800; white-space: nowrap; font-size: 0.78rem;">${x.stille} Tage still</span>
+                                    </div>
+                                `;
+                            }).join('') : '<div style="color: rgba(255,255,255,0.3); font-size: 0.85rem; padding: 0.5rem 0;">Keine roten Angebote</div>'}
+                        </div>
+                    </div>
+
+                    <!-- Orangene (14-20 Tage) -->
+                    <div class="maint-chart-card" style="margin-bottom: 0;">
+                        <p class="maint-chart-title" style="color: #FFA000; display:flex; align-items:center; gap:6px;">
+                            <span style="width:8px; height:8px; background:#FFA000; border-radius:50%; display:inline-block;"></span>
+                            Nachfassen orange (stille 14-20 Tage)
+                        </p>
+                        <div style="display:flex; flex-direction:column; gap:8px; padding-top:4px;">
+                            ${orangene.length > 0 ? orangene.map(x => {
+                                const firma = (x.a.customers?.name || x.a.kundenmatchcode || '').split(',')[0].trim();
+                                const vk = parseNum(x.a.nettobetrag);
+                                return `
+                                    <div onclick="window.jumpToAngebotFromReminder('${x.a.id}')" class="ang-nachfass-row" style="background: rgba(255,160,0,0.08); display:flex; justify-content:space-between; align-items:center; cursor:pointer;">
+                                        <span style="color: #FFA000; font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(x.a.belegnummer)}${firma ? ' · ' + escapeHtml(firma) : ''}${vk ? ' · ' + fmtEur(vk) : ''}</span>
+                                        <span style="color: #FFA000; font-weight: 800; white-space: nowrap; font-size: 0.78rem;">${x.stille} Tage still</span>
+                                    </div>
+                                `;
+                            }).join('') : '<div style="color: rgba(255,255,255,0.3); font-size: 0.85rem; padding: 0.5rem 0;">Keine orangenen Angebote</div>'}
+                        </div>
+                    </div>
                 </div>
             `;
         }
@@ -948,9 +1021,9 @@
                     return `
                     <div class="ang-card" style="border-left-color: ${accentColor};">
                         <div class="ang-card-top">
-                            <div style="min-width:0;">
+                            <div style="min-width:0; flex:1 1 auto;">
                                 <div style="color:#fff; font-weight:800; font-size:0.95rem;">${escapeHtml(a.belegnummer)}</div>
-                                <div style="color:rgba(255,255,255,0.45); font-size:0.78rem; font-weight:600;">${fmtDate(a.belegdatum)}${firma ? ' · ' + escapeHtml(firma) : ''}</div>
+                                <div style="color:rgba(255,255,255,0.45); font-size:0.78rem; font-weight:600; white-space:normal; word-break:break-word;">${fmtDate(a.belegdatum)}${firma ? ' · ' + escapeHtml(firma) : ''}</div>
                             </div>
                             <div style="text-align:right; flex-shrink:0;">
                                 <div style="color:#fff; font-weight:800; font-size:0.95rem;">${vk !== null ? fmtNumberInput(vk) + ' €' : '–'}</div>

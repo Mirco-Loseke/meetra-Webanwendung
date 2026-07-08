@@ -1202,6 +1202,33 @@
         });
     };
 
+    // Laedt die lokal eingebettete Noto-Sans-Schriftart (lib/notosans-font.js) nach, damit jsPDF
+    // Sonderzeichen ausserhalb von WinAnsi (z.B. rumaenische Diakritika a-breve, s-comma, t-comma)
+    // korrekt als echte Glyphen einbettet statt sie beim Rendern in externen PDF-Readern durch "?"
+    // zu ersetzen — jsPDFs eingebaute Standardschriften (helvetica/times/courier) koennen diese
+    // Zeichen nicht darstellen.
+    window.loadUnicodePdfFont = async function () {
+        if (window.NOTOSANS_FONT_BASE64) return;
+        await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'lib/notosans-font.js';
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Schriftart fuer Sonderzeichen konnte nicht geladen werden.'));
+            document.head.appendChild(script);
+        });
+    };
+
+    // Registriert die Noto-Sans-Schriftart auf einer konkreten jsPDF-Instanz (muss pro
+    // "new jsPDF()"-Aufruf einmal ausgefuehrt werden, da jsPDF Schriften pro Dokument verwaltet).
+    window.registerUnicodeFont = function (doc) {
+        if (!window.NOTOSANS_FONT_BASE64 || !doc) return false;
+        doc.addFileToVFS('NotoSans-Regular.ttf', window.NOTOSANS_FONT_BASE64.normal);
+        doc.addFont('NotoSans-Regular.ttf', 'NotoSans', 'normal');
+        doc.addFileToVFS('NotoSans-Bold.ttf', window.NOTOSANS_FONT_BASE64.bold);
+        doc.addFont('NotoSans-Bold.ttf', 'NotoSans', 'bold');
+        return true;
+    };
+
     // Dynamically load PDF.js (for invoice reading / rendering thumbnails)
     window.loadPDFReader = async function () {
         if (window.pdfjsLib) return;

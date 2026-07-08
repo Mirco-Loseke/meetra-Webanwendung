@@ -91,7 +91,7 @@ window.openGlassDropdown = function(anchorEl, options, onSelectCallback) {
     portal.style.display = 'block';
 
     portal.innerHTML = options.map((opt, i) => `
-        <div style="padding: 10px 12px; cursor: pointer; border-radius: 8px; font-size: 0.85rem; color: ${opt.selected ? 'var(--color-primary-green)' : '#fff'}; display: flex; align-items: center; justify-content: space-between; transition: background 0.2s; font-weight: ${opt.selected ? '700' : '500'}; background: ${opt.selected ? 'rgba(16,185,129,0.1)' : 'transparent'};" 
+        <div style="padding: 10px 12px; cursor: pointer; border-radius: 8px; font-size: 0.85rem; color: ${opt.selected ? 'var(--color-primary-green)' : (opt.color || '#fff')}; display: flex; align-items: center; justify-content: space-between; transition: background 0.2s; font-weight: ${opt.selected ? '700' : '500'}; background: ${opt.selected ? 'rgba(16,185,129,0.1)' : 'transparent'};"
              onmouseover="if(!this.dataset.selected) this.style.background='rgba(255,255,255,0.05)'" 
              onmouseout="if(!this.dataset.selected) this.style.background='transparent'"
              data-selected="${opt.selected ? 'true' : ''}"
@@ -194,7 +194,10 @@ window.initGlassSelect = function(selectEl) {
         const mappedOptions = validOptions.map(opt => ({
              value: opt.value,
              label: opt.text,
-             selected: opt.value === selectEl.value
+             selected: opt.value === selectEl.value,
+             // Optionale Textfarbe pro Eintrag via <option data-color="..."> (z.B. Angebote-
+             // Maschinenfilter: grün = echte Maschine, orange = Freitext-Bezeichnung)
+             color: (opt.dataset && opt.dataset.color) || null
         }));
 
         window.openGlassDropdown(wrapper, mappedOptions, (val, label) => {
