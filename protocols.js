@@ -761,25 +761,18 @@
                                         <tr>
                                             ${rowLayout.map((cellLayout, cIdx) => {
                                                 const hasValues = !!data.values;
-                                                const cellValue = hasValues ? (data.values[rIdx][cIdx] || '') : (cellLayout !== ' ' ? cellLayout : '');
-                                                
-                                                if (!hasValues) {
-                                                    // Legacy rendering
-                                                    return `
-                                                        <td style="padding: 0; border: 1px solid rgba(255,255,255,0.08);">
-                                                            <input type="text" value="${cellValue}" 
-                                                                   style="width: 100%; background: transparent; border: none; color: #fff; padding: 10px; outline: none; font-size: 0.9rem;"
-                                                                   onblur="window.updateProtocolTableCell(${gIdx}, ${iIdx}, ${rIdx}, ${cIdx}, this.value)">
-                                                        </td>
-                                                    `;
-                                                }
+                                                const savedValue = hasValues ? (data.values[rIdx] && data.values[rIdx][cIdx]) : undefined;
+                                                const layoutText = typeof cellLayout === 'string' ? cellLayout : '';
+                                                const matchPlaceholder = layoutText.match(/^\s*\[(.*?)\]\s*$/);
+                                                const isBlankLayout = layoutText.trim() === '';
 
-                                                const matchPlaceholder = cellLayout.match(/^\s*\[(.*?)\]\s*$/);
-                                                if (matchPlaceholder) {
-                                                    const placeholderText = matchPlaceholder[1];
+                                                if (matchPlaceholder || isBlankLayout || !hasValues) {
+                                                    // Fillable cell: blank layout, [Platzhalter] marker, or legacy protocol without stored values
+                                                    const placeholderText = matchPlaceholder ? matchPlaceholder[1] : '';
+                                                    const cellValue = hasValues ? (savedValue || '') : (layoutText !== ' ' ? layoutText : '');
                                                     return `
                                                         <td style="padding: 0; border: 1px solid rgba(255,255,255,0.08);">
-                                                            <input type="text" value="${cellValue}" placeholder="${placeholderText}"
+                                                            <input type="text" value="${escapeHtml(cellValue)}" placeholder="${escapeHtml(placeholderText)}"
                                                                    style="width: 100%; background: transparent; border: none; color: #fff; padding: 10px; outline: none; font-size: 0.9rem;"
                                                                    onblur="window.updateProtocolTableCell(${gIdx}, ${iIdx}, ${rIdx}, ${cIdx}, this.value)">
                                                         </td>
@@ -787,7 +780,7 @@
                                                 } else {
                                                     return `
                                                         <td style="padding: 10px; border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.02); color: rgba(255,255,255,0.8); font-size: 0.9rem;">
-                                                            ${cellLayout}
+                                                            ${escapeHtml(layoutText)}
                                                         </td>
                                                     `;
                                                 }
@@ -914,6 +907,7 @@
             currentProtocol.predefined_checkpoints[gIdx].items[iIdx].table_data) {
             const data = currentProtocol.predefined_checkpoints[gIdx].items[iIdx].table_data;
             if (data.values) {
+                if (!data.values[rIdx]) data.values[rIdx] = [];
                 data.values[rIdx][cIdx] = val;
             } else {
                 data.rows[rIdx][cIdx] = val;
@@ -1769,7 +1763,24 @@
         doc.setTextColor(51, 65, 85);
         const operatingHoursVal = currentProtocol.operating_hours !== null && currentProtocol.operating_hours !== undefined && currentProtocol.operating_hours !== '' ? `${currentProtocol.operating_hours} h` : '-';
         doc.text(String(operatingHoursVal), 120 + bhW, rightY);
-        
+
+        if (machine && (machine.motor_type || machine.motor_serial || machine.power)) {
+            rightY += 6;
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(30, 41, 59);
+            doc.text('Motor: ', 120, rightY);
+            const motorW = doc.getTextWidth('Motor: ');
+            doc.setFont(undefined, 'normal');
+            doc.setTextColor(51, 65, 85);
+            doc.text(String(machine.motor_type || '-'), 120 + motorW, rightY);
+
+            const motorDetailParts = [machine.motor_serial ? `#${machine.motor_serial}` : null, machine.power].filter(Boolean);
+            if (motorDetailParts.length > 0) {
+                rightY += 6;
+                doc.text(motorDetailParts.join(' - '), 120, rightY);
+            }
+        }
+
         let startY = Math.max(leftY, rightY + 5) + 8;
 
         doc.setFontSize(16);
@@ -1981,17 +1992,24 @@
                 // grau abzusetzen, damit sie nicht wie ein echter, bereits eingetragener Wert wirken.
                 const placeholderCells = {};
                 const bodyRows = rowsLayout.map((rowLayout, rIdx) => rowLayout.map((cellLayout, cIdx) => {
-                    const placeholderMatch = typeof cellLayout === 'string' && cellLayout.match(/^\s*\[(.*?)\]\s*$/);
-                    if (placeholderMatch) {
+                    const layoutText = typeof cellLayout === 'string' ? cellLayout : '';
+                    const placeholderMatch = layoutText.match(/^\s*\[(.*?)\]\s*$/);
+                    const isBlankLayout = layoutText.trim() === '';
+
+                    if (placeholderMatch || isBlankLayout) {
+                        // Ausfüllbare Zelle (siehe renderPredefinedCheckpoints): eingetragener Wert
+                        // hat immer Vorrang und muss gedruckt werden, sonst Platzhaltertext als Hinweis.
                         const enteredValue = hasValues ? ((data.values[rIdx] && data.values[rIdx][cIdx]) || '') : '';
                         if (enteredValue) return enteredValue;
-                        placeholderCells[`${rIdx}_${cIdx}`] = true;
-                        return placeholderMatch[1];
+                        if (placeholderMatch) {
+                            placeholderCells[`${rIdx}_${cIdx}`] = true;
+                            return placeholderMatch[1];
+                        }
+                        return '';
                     }
-                    // Fest hinterlegter Vorlagentext (keine "[...]"-Zelle) — wird genau wie im
-                    // Formular (siehe renderPredefinedCheckpoints, statische <td> ohne Input) immer
-                    // unverändert gedruckt, unabhängig davon, ob table_data.values existiert.
-                    return cellLayout !== ' ' ? cellLayout : '';
+                    // Fest hinterlegter Vorlagentext (keine "[...]"-Zelle, keine leere Zelle) — wird
+                    // genau wie im Formular (statische <td> ohne Input) immer unverändert gedruckt.
+                    return layoutText;
                 }));
 
                 doc.autoTable({
@@ -2040,23 +2058,6 @@
             addTextField('Getauschte Teile', currentProtocol.parts_replaced);
             addTextField('Einstellungen / Kalibrierungen', currentProtocol.settings_calibrations);
             addTextField('Restmängel', currentProtocol.remaining_defects);
-        }
-
-        if (currentProtocol.completed_at) {
-            if (startY > 255) { doc.addPage(); startY = 36; }
-            doc.setFontSize(12);
-            doc.setFont(undefined, 'bold');
-            doc.setTextColor(220, 38, 38); // Rot
-            doc.text('Abschlussinformationen', 105, startY, { align: 'center' });
-            startY += 8;
-            doc.setFontSize(10);
-            doc.setFont(undefined, 'normal');
-            doc.setTextColor(220, 38, 38); // Rot für alle Textzeilen
-            const completedDate = new Date(currentProtocol.completed_at).toLocaleString('de-DE');
-            const completedUser = window.userList?.find(u => u.id === currentProtocol.completed_by);
-            doc.text(`Abgeschlossen am: ${completedDate}`, 105, startY, { align: 'center' });
-            startY += 6;
-            doc.text(`Abgeschlossen von: ${completedUser?.name || 'Unbekannt'}`, 105, startY, { align: 'center' });
         }
 
         // Photos
@@ -2118,6 +2119,25 @@
                     rowMaxHeight = 0;
                 }
             }
+        }
+
+        // Abschlussinformationen: werden zuletzt auf einer eigenen Seite hinzugefügt, damit sie
+        // garantiert auf der letzten Seite des Ausdrucks stehen (auch nach Fotoseiten).
+        if (currentProtocol.completed_at) {
+            doc.addPage();
+            let footerY = 36;
+
+            doc.setDrawColor(203, 213, 225);
+            doc.setLineWidth(0.2);
+            doc.line(20, footerY, 190, footerY);
+            footerY += 8;
+
+            const completedDate = new Date(currentProtocol.completed_at).toLocaleString('de-DE');
+            const completedUser = window.userList?.find(u => u.id === currentProtocol.completed_by);
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'bold');
+            doc.setTextColor(220, 38, 38);
+            doc.text(`Abgeschlossen von: ${completedUser?.name || 'Unbekannt'} am ${completedDate}`, 105, footerY, { align: 'center' });
         }
 
         return doc;

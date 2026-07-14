@@ -758,6 +758,33 @@ window.setDriverSignatureImage = function(templateId, index, dataUrl) {
     window.renderActiveChecklists();
 };
 
+// Fasst zusammen, was bei einem Servicebericht mit Wartungsprotokoll(en) tatsächlich gedruckt/
+// gewartet wurde — für die Historie-Anzeige. Nutzt dieselbe categoryIncluded-Markierung wie der
+// PDF-Export (siehe toggleChecklistCategoryIncluded): wurden alle Übergruppen (z.B. Maschine, SBA,
+// Motor) mitgedruckt, gilt die Wartung als komplett; wurden nur einzelne abgehakt, werden genau
+// diese als Text zurückgegeben (z.B. "SBA" oder "SBA, Motor"). Gibt null zurück, wenn der Bericht
+// gar kein Wartungsprotokoll enthält.
+window.getMaintenanceScopeLabel = function(checklistPayload) {
+    if (!checklistPayload || !Array.isArray(checklistPayload.checklists)) return null;
+    const wartungChecklists = checklistPayload.checklists.filter(cl => cl.type === 'wartung');
+    if (wartungChecklists.length === 0) return null;
+
+    const allCats = [];
+    const includedCats = [];
+    wartungChecklists.forEach(cl => {
+        (cl.answers || []).forEach(ans => {
+            if (!ans.category || allCats.includes(ans.category)) return;
+            allCats.push(ans.category);
+            const isIncluded = !cl.categoryIncluded || cl.categoryIncluded[ans.category] !== false;
+            if (isIncluded) includedCats.push(ans.category);
+        });
+    });
+
+    if (allCats.length === 0 || includedCats.length === 0) return null;
+    if (includedCats.length === allCats.length) return 'Komplett';
+    return includedCats.join(', ');
+};
+
 window.getChecklistPayload = function() {
     const activeList = Object.values(activeChecklists);
     if (activeList.length === 0) return null;

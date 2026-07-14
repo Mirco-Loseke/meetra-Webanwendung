@@ -7168,6 +7168,17 @@
 
 
             function applyMachineList(data) {
+                // Wartungstermin bei jedem Laden live neu berechnen (nicht nur beim Speichern),
+                // damit ein längst überfälliger Termin sich automatisch auf den nächsten
+                // sinnvollen Zyklus weiterschiebt, auch ohne dass zwischenzeitlich eine neue
+                // Wartung erfasst wurde. "last_maintenance" bleibt dabei unangetastet.
+                (data || []).forEach(m => {
+                    if (!m.last_maintenance) return;
+                    const cat = (window.categoryList || []).find(c => c.id === m.category_id);
+                    const interval = m.maintenance_interval_months || (cat ? cat.default_maintenance_interval_months : 12) || 12;
+                    m.next_maintenance = window.computeRolledNextMaintenance(m.last_maintenance, interval);
+                });
+
                 machineList = (data || []).sort((a, b) => {
                     const mA = (a.manufacturer || '').trim().toLowerCase();
                     const mB = (b.manufacturer || '').trim().toLowerCase();
@@ -9339,15 +9350,29 @@
             // das aktuelle Jahr angehoben (Monat/Tag bleiben gleich) — kein Vorrollen über mehrere
             // Jahre/Intervalle, nur eine Mindestgrenze: "nächste Wartung" zeigt nie ein Jahr, das
             // schon komplett vorbei ist.
-            window.computeRolledNextMaintenance = function (lastDateStr, intervalMonths) {
+            // Rechnet den Wartungstermin von "Letzte Wartung" + Intervall aus und schreibt ihn,
+            // falls er bereits weiter in der Vergangenheit liegt, automatisch um ganze Intervalle
+            // weiter — nicht nur einmal, sondern so oft, bis er höchstens noch GRACE_MONTHS (3)
+            // in der Vergangenheit liegt. So zeigt ein seit Jahren nicht gewartetes Gerät nicht
+            // ewig denselben (dann sinnlos weit zurückliegenden) Termin, sondern automatisch den
+            // nächsten sinnvollen Zieltermin. Innerhalb der 3-Monats-Kulanzfrist nach Fälligkeit
+            // bleibt der Termin bewusst stehen (und wird als "überfällig" angezeigt); erst danach
+            // springt er auf den nächsten Zyklus (z.B. letzte Wartung Januar 2025, Termin Januar
+            // 2026: bis April 2026 "überfällig", danach automatisch "nächste Wartung Januar 2027").
+            window.computeRolledNextMaintenance = function (lastDateStr, intervalMonths, referenceDate) {
                 const parts = String(lastDateStr).split('-');
                 const next = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
                 const months = parseInt(intervalMonths, 10) || 12;
                 next.setMonth(next.getMonth() + months);
 
-                const currentYear = new Date().getFullYear();
-                if (next.getFullYear() < currentYear) {
-                    next.setFullYear(currentYear);
+                const GRACE_MONTHS = 3;
+                const now = referenceDate || new Date();
+                let graceLimit = new Date(next);
+                graceLimit.setMonth(graceLimit.getMonth() + GRACE_MONTHS);
+                while (graceLimit < now) {
+                    next.setMonth(next.getMonth() + months);
+                    graceLimit = new Date(next);
+                    graceLimit.setMonth(graceLimit.getMonth() + GRACE_MONTHS);
                 }
 
                 const yyyy = next.getFullYear();
@@ -12156,9 +12181,11 @@
                     acceptanceRes
                 ] = await Promise.all([
                     // Schlanke Spaltenauswahl für die Zeitleisten-Anzeige — die schweren JSONB-Felder
-                    // (work_log, materials, checklist_payload) werden hier nicht gebraucht, da das
-                    // Öffnen zum Bearbeiten (openEditServicebericht) ohnehin nochmal alles frisch lädt.
-                    window.supabaseClient.from('service_entries').select('id, machine_id, category_id, title, date, created_at, description, pdf_url, files, previous_report_id').eq('machine_id', machineId),
+                    // (work_log, materials) werden hier nicht gebraucht, da das Öffnen zum Bearbeiten
+                    // (openEditServicebericht) ohnehin nochmal alles frisch lädt. checklist_payload
+                    // wird trotzdem mitgeladen, um bei Wartungsberichten anzuzeigen, was davon
+                    // tatsächlich gedruckt/gewartet wurde (siehe window.getMaintenanceScopeLabel).
+                    window.supabaseClient.from('service_entries').select('id, machine_id, category_id, title, date, created_at, description, pdf_url, files, previous_report_id, checklist_payload').eq('machine_id', machineId),
                     window.supabaseClient.from('tasks').select('*').eq('machine_id', machineId),
                     window.supabaseClient.from('calendar_events').select('*').eq('machine_id', machineId),
                     window.supabaseClient.from('intake_protocols').select('*').eq('machine_id', machineId),
@@ -12206,6 +12233,7 @@
                             itemType: isWorkshopStatus ? 'workshop' : 'service',
                             pdf_url: s.pdf_url,
                             files: s.files || [],
+                            maintenanceScope: typeof window.getMaintenanceScopeLabel === 'function' ? window.getMaintenanceScopeLabel(s.checklist_payload) : null,
                             linkedReportId: s.previous_report_id || followUpByPreviousId[s.id] || null,
                             isFollowUpReport: !!s.previous_report_id,
                             linkedReportDate: (() => {
@@ -12562,6 +12590,10 @@
                                         </div>
                                     </div>
                                     <h4 style="margin: 0 0 0.5rem 0; color: #fff; font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; white-space: pre-wrap;">${escHistoryText(item.title)}</h4>
+                                    ${item.maintenanceScope ? `
+                                    <div style="display:inline-flex; align-items:center; gap:5px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); color:var(--color-primary-green); border-radius:14px; padding:3px 10px; font-size:0.75rem; font-weight:700; margin-bottom:0.5rem;">
+                                        🔧 Gewartet: ${escHistoryText(item.maintenanceScope)}
+                                    </div>` : ''}
                                     ${item.linkedReportId ? `
                                     <div onclick="window.jumpToServicebericht(${item.linkedReportId})" title="Zum ${item.isFollowUpReport ? 'vorherigen Bericht' : 'Folgebericht'} springen"
                                         style="cursor:pointer; display:inline-flex; align-items:center; gap:5px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); color:var(--color-primary-green); border-radius:14px; padding:3px 10px; font-size:0.75rem; font-weight:700; margin-bottom:0.5rem;">
@@ -13499,10 +13531,11 @@
                 .from('maintenance_events')
                 .select('*, machines(name, manufacturer, serial, year)');
 
-            // Fetch ALL machines to find those without maintenance
-            const { data: machines, error: e2 } = await supabaseClient
-                .from('machines')
-                .select('id, name, manufacturer, next_maintenance, serial, year');
+            // Alle Maschinen kommen aus window.machineList statt aus einer eigenen DB-Abfrage,
+            // damit hier immer der live neu berechnete Wartungstermin (siehe applyMachineList /
+            // computeRolledNextMaintenance) verwendet wird und nicht der ggf. veraltete next_maintenance-
+            // Wert direkt aus der Datenbank.
+            const machines = window.machineList || [];
 
             let allEvents = [];
 
@@ -18564,6 +18597,21 @@
                 }
                 doc.text(String(operatingHoursVal), 120 + bhW, rightY);
 
+                if (machine && (machine.motor_type || machine.motor_serial || machine.power)) {
+                    rightY += 6;
+                    doc.setFont('NotoSans', 'bold');
+                    doc.text('Motor: ', 120, rightY);
+                    const motorW = doc.getTextWidth('Motor: ');
+                    doc.setFont('NotoSans', 'normal');
+                    doc.text(String(machine.motor_type || '-'), 120 + motorW, rightY);
+
+                    const motorDetailParts = [machine.motor_serial ? `#${machine.motor_serial}` : null, machine.power].filter(Boolean);
+                    if (motorDetailParts.length > 0) {
+                        rightY += 6;
+                        doc.text(motorDetailParts.join(' - '), 120, rightY);
+                    }
+                }
+
                 let rightBottomY = rightY + 5;
 
                 if (hotelOnRight) {
@@ -19024,7 +19072,7 @@
                         doc.setFont('NotoSans', 'normal');
                         doc.setFontSize(10);
                         doc.setTextColor(100, 100, 100);
-                        doc.text(`Maschine: ${machineTitle} | Seriennummer: ${serialNumber} | Betriebsstunden: ${operatingHoursVal}`, 20, 37);
+                        doc.text(`Maschine: ${machineTitle} | Seriennummer: ${serialNumber} | Betriebsstunden: ${operatingHoursVal}${machine && (machine.motor_type || machine.motor_serial || machine.power) ? ` | Motor: ${[machine.motor_type, machine.motor_serial ? `#${machine.motor_serial}` : null, machine.power].filter(Boolean).join(' - ')}` : ''}`, 20, 37);
 
                         // Ausfüllhinweise nur bei der Einweisungserklärung, nur auf dem Ausdruck (nicht
                         // im Formular) und nur auf dieser ersten Seite (steht NICHT im didDrawPage-Callback,
@@ -19197,7 +19245,7 @@
                                             doc.setFont('NotoSans', 'normal');
                                             doc.setFontSize(10);
                                             doc.setTextColor(100, 100, 100);
-                                            doc.text(`Maschine: ${machineTitle} | Seriennummer: ${serialNumber} | Betriebsstunden: ${operatingHoursVal}`, 20, 37);
+                                            doc.text(`Maschine: ${machineTitle} | Seriennummer: ${serialNumber} | Betriebsstunden: ${operatingHoursVal}${machine && (machine.motor_type || machine.motor_serial || machine.power) ? ` | Motor: ${[machine.motor_type, machine.motor_serial ? `#${machine.motor_serial}` : null, machine.power].filter(Boolean).join(' - ')}` : ''}`, 20, 37);
                                         }
                                     }
                                 });
@@ -19278,7 +19326,7 @@
                                         doc.setFont('NotoSans', 'normal');
                                         doc.setFontSize(10);
                                         doc.setTextColor(100, 100, 100);
-                                        doc.text(`Maschine: ${machineTitle} | Seriennummer: ${serialNumber} | Betriebsstunden: ${operatingHoursVal}`, 20, 37);
+                                        doc.text(`Maschine: ${machineTitle} | Seriennummer: ${serialNumber} | Betriebsstunden: ${operatingHoursVal}${machine && (machine.motor_type || machine.motor_serial || machine.power) ? ` | Motor: ${[machine.motor_type, machine.motor_serial ? `#${machine.motor_serial}` : null, machine.power].filter(Boolean).join(' - ')}` : ''}`, 20, 37);
                                     }
                                 }
                             });
@@ -19456,7 +19504,7 @@
                                         doc.setFont('NotoSans', 'normal');
                                         doc.setFontSize(10);
                                         doc.setTextColor(100, 100, 100);
-                                        doc.text(`Maschine: ${machineTitle} | Seriennummer: ${serialNumber} | Betriebsstunden: ${operatingHoursVal}`, 20, 37);
+                                        doc.text(`Maschine: ${machineTitle} | Seriennummer: ${serialNumber} | Betriebsstunden: ${operatingHoursVal}${machine && (machine.motor_type || machine.motor_serial || machine.power) ? ` | Motor: ${[machine.motor_type, machine.motor_serial ? `#${machine.motor_serial}` : null, machine.power].filter(Boolean).join(' - ')}` : ''}`, 20, 37);
                                     }
                                 },
                                 didDrawCell: function(data) {
