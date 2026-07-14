@@ -25,6 +25,14 @@
         protocolIsDirty = true;
     }
 
+    // Steuert, ob unbeantwortete Prüfpunkte im Ausdruck/in der Vorschau mit "k. A." beschriftet
+    // werden (Standard: ja) oder leer bleiben, damit sie per Hand ausgefüllt werden können.
+    window.setProtocolPrintKAPlaceholder = function (checked) {
+        if (!currentProtocol) return;
+        currentProtocol.print_ka_placeholder = !!checked;
+        markProtocolDirty();
+    };
+
     // Expose functions early and robustly
     window.openIntakeProtocol = async function (machineId, protocolId = null) {
         console.log('--- Opening Intake Protocol ---');
@@ -136,7 +144,13 @@
 
                     <!-- Predefined Checkpoints -->
                     <div id="predefined-checkpoints-section" style="margin-bottom: 0.75rem;">
-                        <h3 class="protocol-section-title">🔍 Vordefinierte Prüfpunkte</h3>
+                        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                            <h3 class="protocol-section-title" style="margin-bottom: 0;">🔍 Vordefinierte Prüfpunkte</h3>
+                            <label title="Nicht beantwortete Prüfpunkte im Ausdruck/Vorschau mit 'k. A.' kennzeichnen. Haken raus = Feld bleibt leer, um es per Hand auszufüllen." style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: rgba(255,255,255,0.6); font-size: 0.8rem; font-weight: 600;">
+                                <input type="checkbox" id="protocol-print-ka-checkbox" checked onchange="window.setProtocolPrintKAPlaceholder(this.checked)" style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--color-primary-green);">
+                                "k. A." drucken
+                            </label>
+                        </div>
                         <div id="predefined-checkpoints-list"></div>
                     </div>
 
@@ -342,6 +356,7 @@
                 title: machineTitle,
                 status: 'draft',
                 operating_hours: null,
+                print_ka_placeholder: true,
                 predefined_checkpoints: type === 'intake' ? getIntakeCheckpoints() : getAcceptanceCheckpoints()
             };
             customCheckpoints = [];
@@ -356,6 +371,13 @@
         if (opHoursInput) {
             opHoursInput.value = currentProtocol.operating_hours !== null && currentProtocol.operating_hours !== undefined ? currentProtocol.operating_hours : '';
             opHoursInput.addEventListener('input', markProtocolDirty);
+        }
+
+        // Populate "k. A." print checkbox — defaults to checked (true) for older
+        // protocols that don't have this field saved yet.
+        const printKACheckbox = document.getElementById('protocol-print-ka-checkbox');
+        if (printKACheckbox) {
+            printKACheckbox.checked = currentProtocol.print_ka_placeholder !== false;
         }
 
         // Conditionally hide sections for Rotorschaufel Acceptance
@@ -1609,10 +1631,13 @@
         doc.text(title, 20, 36);
 
         doc.setFontSize(12);
-        doc.setFont(undefined, 'normal');
         doc.setTextColor(71, 85, 105);
         const dateStr = new Date(currentProtocol.created_at || Date.now()).toLocaleDateString('de-DE');
-        doc.text(`Datum: ${dateStr}`, 145, 36);
+        doc.setFont(undefined, 'bold');
+        doc.text('Datum: ', 145, 36);
+        const datumW = doc.getTextWidth('Datum: ');
+        doc.setFont(undefined, 'normal');
+        doc.text(dateStr, 145 + datumW, 36);
 
         // Let's get the machine details
         const machine = (window.machineList || []).find(m => m.id === currentProtocol.machine_id);
@@ -1621,9 +1646,11 @@
         let locationLines = [];
         let hasDifferentLocation = false;
 
+        let addressLabel = 'Betreiber / Rechnungsadresse:';
+
         if (machine) {
             if (machine.in_workshop) {
-                operatorLines.push('Intern (Eigene Werkstatt)');
+                addressLabel = 'Werkstatt meetra:';
                 const cached = localStorage.getItem('meetra_company_hq');
                 if (cached) {
                     try {
@@ -1672,7 +1699,7 @@
         doc.setFontSize(10);
         doc.setFont(undefined, 'bold');
         doc.setTextColor(30, 41, 59);
-        doc.text('Betreiber / Rechnungsadresse:', 20, currentY);
+        doc.text(addressLabel, 20, currentY);
         doc.setFont(undefined, 'normal');
         doc.setTextColor(51, 65, 85);
         
@@ -1700,12 +1727,21 @@
         let rightY = currentY;
         doc.setFont(undefined, 'bold');
         doc.setTextColor(30, 41, 59);
-        doc.text('Maschine: ', 120, rightY);
-        const maschineW = doc.getTextWidth('Maschine: ');
+        doc.text('Hersteller: ', 120, rightY);
+        const herstellerW = doc.getTextWidth('Hersteller: ');
         doc.setFont(undefined, 'normal');
         doc.setTextColor(51, 65, 85);
-        doc.text(String(machine ? [machine.manufacturer, machine.name].filter(Boolean).join(' ') : (currentProtocol.title || '-')), 120 + maschineW, rightY);
-        
+        doc.text(String(machine ? (machine.manufacturer || '-') : '-'), 120 + herstellerW, rightY);
+
+        rightY += 6;
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(30, 41, 59);
+        doc.text('Typ: ', 120, rightY);
+        const typW = doc.getTextWidth('Typ: ');
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(51, 65, 85);
+        doc.text(String(machine ? (machine.name || '-') : (currentProtocol.title || '-')), 120 + typW, rightY);
+
         rightY += 6;
         doc.setFont(undefined, 'bold');
         doc.setTextColor(30, 41, 59);
@@ -1801,106 +1837,182 @@
         doc.text('= keine Angabe', legendX + 47, legendY + 11.3);
 
         startY = legendY + 15 + 4; // Safety space below the legend before the table starts
+        const printKAPlaceholder = currentProtocol.print_ka_placeholder !== false;
         const formatPdfResult = (res) => {
             if (res === true) return 'true';
             if (res === 'warning') return 'warning';
             if (res === false) return 'false';
-            return 'k. A.';
+            return printKAPlaceholder ? 'k. A.' : '';
         };
 
-        const tableData = [];
+        // Checkpoint-Items vom Typ "table" (in der Vorlage hinterlegte Mess-/Datentabellen, siehe
+        // renderPredefinedCheckpoints/item.table_data) wurden hier bisher komplett ignoriert und
+        // nie gedruckt — nur Label/Ergebnis/Bemerkung landeten in der Haupttabelle. Sie werden jetzt
+        // als eigene kleine Tabelle direkt unter ihrem Label ausgegeben, mit denselben Werten wie im
+        // Formular (item.table_data.values, Platzhalter-Zellen "[...]" bleiben leer).
+        const blocks = [];
 
         if (Array.isArray(currentProtocol.predefined_checkpoints)) {
             currentProtocol.predefined_checkpoints.forEach((group, gIdx) => {
                 const cleanGroupTitle = group.group_title ? group.group_title.replace(/^\d+\.\s*/, '') : 'Kategorie';
-                tableData.push([{ content: `${gIdx + 1}. ${cleanGroupTitle}`, colSpan: 3, styles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' } }]);
+                blocks.push({ kind: 'header', title: `${gIdx + 1}. ${cleanGroupTitle}` });
                 group.items.forEach(item => {
-                    const resultText = formatPdfResult(item.result);
-                    tableData.push([item.label || '', resultText, item.comment || '']);
+                    if (item.type === 'table') {
+                        blocks.push({ kind: 'table', item });
+                    } else {
+                        blocks.push({ kind: 'row', label: item.label || '', result: formatPdfResult(item.result), comment: item.comment || '' });
+                    }
                 });
             });
         } else if (currentProtocol.predefined_checkpoints) {
             Object.keys(currentProtocol.predefined_checkpoints).forEach(key => {
                 const label = getCheckpointLabel(key, currentProtocolType);
                 const value = currentProtocol.predefined_checkpoints[key];
-                const resultText = formatPdfResult(value);
-                tableData.push([label, resultText, '']);
+                blocks.push({ kind: 'row', label, result: formatPdfResult(value), comment: '' });
             });
         }
 
         if (customCheckpoints && customCheckpoints.length > 0) {
-            tableData.push([{ content: 'Zusätzliche Prüfpunkte', colSpan: 3, styles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' } }]);
+            blocks.push({ kind: 'header', title: 'Zusätzliche Prüfpunkte' });
             customCheckpoints.forEach(cp => {
-                const resultText = formatPdfResult(cp.result);
-                tableData.push([cp.description, resultText, '']);
+                blocks.push({ kind: 'row', label: cp.description, result: formatPdfResult(cp.result), comment: '' });
             });
         }
 
-        doc.autoTable({
-            startY: startY,
-            head: [[
-                { content: 'Prüfpunkt', styles: { halign: 'left' } },
-                { content: 'Ergebnis', styles: { halign: 'center' } },
-                { content: 'Bemerkung', styles: { halign: 'center' } }
-            ]],
-            body: tableData,
-            theme: 'grid',
-            headStyles: { fillColor: [203, 213, 225], textColor: [15, 23, 42], lineWidth: 0.1, lineColor: [148, 163, 184] },
-            styles: { fontSize: 10, cellPadding: 4, lineWidth: 0.1, lineColor: [148, 163, 184] },
-            columnStyles: {
-                0: { cellWidth: 70 },
-                1: { cellWidth: 32, halign: 'center' },
-                2: { cellWidth: 'auto', halign: 'left' }
-            },
-            margin: { top: 36, bottom: 20, left: 20, right: 20 },
-            willDrawCell: (data) => {
-                if (data.section === 'body' && data.column.index === 1) {
-                    const rawVal = data.cell.raw;
-                    if (rawVal === 'true' || rawVal === 'false' || rawVal === 'warning') {
-                        data.cell.text = ''; // Clear text before it is drawn
-                    }
-                }
-            },
-            didDrawCell: (data) => {
-                if (data.section === 'body' && data.column.index === 1) {
-                    const rawVal = data.cell.raw;
-                    if (rawVal === 'true' || rawVal === 'false' || rawVal === 'warning') {
-                        // Draw box (5mm x 5mm) centered in cell
-                        const boxSize = 5; 
-                        const boxX = data.cell.x + (data.cell.width - boxSize) / 2;
-                        const boxY = data.cell.y + (data.cell.height - boxSize) / 2;
-                        
-                        // Draw outer rectangle
-                        doc.setDrawColor(100, 116, 139); // slate-500 border color
-                        doc.setLineWidth(0.3);
-                        doc.rect(boxX, boxY, boxSize, boxSize);
-                        
-                        if (rawVal === 'true') {
-                            // Green checkmark
-                            doc.setDrawColor(34, 197, 94); // green-500
-                            doc.setLineWidth(0.6);
-                            doc.line(boxX + 1.2, boxY + 2.5, boxX + 2.2, boxY + 3.7);
-                            doc.line(boxX + 2.2, boxY + 3.7, boxX + 4.0, boxY + 1.3);
-                        } else if (rawVal === 'warning') {
-                            // Orange dash
-                            doc.setDrawColor(245, 158, 11); // orange-500
-                            doc.setLineWidth(0.6);
-                            doc.line(boxX + 1.2, boxY + 2.5, boxX + 3.8, boxY + 2.5);
-                        } else if (rawVal === 'false') {
-                            // Red cross
-                            doc.setDrawColor(239, 68, 68); // red-500
-                            doc.setLineWidth(0.6);
-                            doc.line(boxX + 1.4, boxY + 1.4, boxX + 3.6, boxY + 3.6);
-                            doc.line(boxX + 3.6, boxY + 1.4, boxX + 1.4, boxY + 3.6);
+        const drawMainCheckpointTable = (body, tableStartY) => {
+            doc.autoTable({
+                startY: tableStartY,
+                head: [[
+                    { content: 'Prüfpunkt', styles: { halign: 'left' } },
+                    { content: 'Ergebnis', styles: { halign: 'center' } },
+                    { content: 'Bemerkung', styles: { halign: 'center' } }
+                ]],
+                body,
+                theme: 'grid',
+                headStyles: { fillColor: [203, 213, 225], textColor: [15, 23, 42], lineWidth: 0.1, lineColor: [148, 163, 184] },
+                styles: { fontSize: 10, cellPadding: 4, lineWidth: 0.1, lineColor: [148, 163, 184] },
+                columnStyles: {
+                    0: { cellWidth: 70 },
+                    1: { cellWidth: 32, halign: 'center' },
+                    2: { cellWidth: 'auto', halign: 'left' }
+                },
+                margin: { top: 36, bottom: 20, left: 20, right: 20 },
+                willDrawCell: (data) => {
+                    if (data.section === 'body' && data.column.index === 1) {
+                        const rawVal = data.cell.raw;
+                        if (rawVal === 'true' || rawVal === 'false' || rawVal === 'warning') {
+                            data.cell.text = ''; // Clear text before it is drawn
                         }
-                        
-                        // Reset draw styles to standard table colors
-                        doc.setDrawColor(148, 163, 184); // line color
-                        doc.setLineWidth(0.1);
+                    }
+                },
+                didDrawCell: (data) => {
+                    if (data.section === 'body' && data.column.index === 1) {
+                        const rawVal = data.cell.raw;
+                        if (rawVal === 'true' || rawVal === 'false' || rawVal === 'warning') {
+                            // Draw box (5mm x 5mm) centered in cell
+                            const boxSize = 5;
+                            const boxX = data.cell.x + (data.cell.width - boxSize) / 2;
+                            const boxY = data.cell.y + (data.cell.height - boxSize) / 2;
+
+                            // Draw outer rectangle
+                            doc.setDrawColor(100, 116, 139); // slate-500 border color
+                            doc.setLineWidth(0.3);
+                            doc.rect(boxX, boxY, boxSize, boxSize);
+
+                            if (rawVal === 'true') {
+                                // Green checkmark
+                                doc.setDrawColor(34, 197, 94); // green-500
+                                doc.setLineWidth(0.6);
+                                doc.line(boxX + 1.2, boxY + 2.5, boxX + 2.2, boxY + 3.7);
+                                doc.line(boxX + 2.2, boxY + 3.7, boxX + 4.0, boxY + 1.3);
+                            } else if (rawVal === 'warning') {
+                                // Orange dash
+                                doc.setDrawColor(245, 158, 11); // orange-500
+                                doc.setLineWidth(0.6);
+                                doc.line(boxX + 1.2, boxY + 2.5, boxX + 3.8, boxY + 2.5);
+                            } else if (rawVal === 'false') {
+                                // Red cross
+                                doc.setDrawColor(239, 68, 68); // red-500
+                                doc.setLineWidth(0.6);
+                                doc.line(boxX + 1.4, boxY + 1.4, boxX + 3.6, boxY + 3.6);
+                                doc.line(boxX + 3.6, boxY + 1.4, boxX + 1.4, boxY + 3.6);
+                            }
+
+                            // Reset draw styles to standard table colors
+                            doc.setDrawColor(148, 163, 184); // line color
+                            doc.setLineWidth(0.1);
+                        }
                     }
                 }
+            });
+            return doc.lastAutoTable.finalY;
+        };
+
+        let pendingBody = [];
+        const flushPendingBody = () => {
+            if (pendingBody.length === 0) return;
+            startY = drawMainCheckpointTable(pendingBody, startY) + 4;
+            pendingBody = [];
+        };
+
+        blocks.forEach(block => {
+            if (block.kind === 'header') {
+                pendingBody.push([{ content: block.title, colSpan: 3, styles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold' } }]);
+            } else if (block.kind === 'row') {
+                pendingBody.push([block.label, block.result, block.comment]);
+            } else if (block.kind === 'table') {
+                flushPendingBody();
+
+                if (startY > 255) { doc.addPage(); startY = 36; }
+                doc.setFontSize(10);
+                doc.setFont(undefined, 'bold');
+                doc.setTextColor(15, 23, 42);
+                doc.text(block.item.label || '', 20, startY);
+                startY += 5;
+
+                const data = block.item.table_data || { columns: [], rows: [] };
+                const cols = data.columns || [];
+                const rowsLayout = data.rows || [];
+                const hasValues = !!data.values;
+                // Zellen ohne eingetragenen Wert sollen den in der Vorlage hinterlegten
+                // Platzhaltertext ("[Wert]" -> "Wert") ausdrucken statt leer zu bleiben, damit
+                // beim handschriftlichen Ausfüllen klar ist, was in die Zelle gehört. Diese
+                // Platzhalter-Zellen merken wir uns pro Zeile/Spalte, um sie beim Zeichnen kursiv/
+                // grau abzusetzen, damit sie nicht wie ein echter, bereits eingetragener Wert wirken.
+                const placeholderCells = {};
+                const bodyRows = rowsLayout.map((rowLayout, rIdx) => rowLayout.map((cellLayout, cIdx) => {
+                    const placeholderMatch = typeof cellLayout === 'string' && cellLayout.match(/^\s*\[(.*?)\]\s*$/);
+                    if (placeholderMatch) {
+                        const enteredValue = hasValues ? ((data.values[rIdx] && data.values[rIdx][cIdx]) || '') : '';
+                        if (enteredValue) return enteredValue;
+                        placeholderCells[`${rIdx}_${cIdx}`] = true;
+                        return placeholderMatch[1];
+                    }
+                    // Fest hinterlegter Vorlagentext (keine "[...]"-Zelle) — wird genau wie im
+                    // Formular (siehe renderPredefinedCheckpoints, statische <td> ohne Input) immer
+                    // unverändert gedruckt, unabhängig davon, ob table_data.values existiert.
+                    return cellLayout !== ' ' ? cellLayout : '';
+                }));
+
+                doc.autoTable({
+                    startY,
+                    head: cols.length ? [cols] : undefined,
+                    body: bodyRows,
+                    theme: 'grid',
+                    styles: { fontSize: 9, cellPadding: 3, lineWidth: 0.1, lineColor: [148, 163, 184] },
+                    headStyles: { fillColor: [226, 232, 240], textColor: [15, 23, 42], fontStyle: 'bold', halign: 'left' },
+                    margin: { top: 36, bottom: 20, left: 20, right: 20 },
+                    didParseCell: (cellData) => {
+                        if (cellData.section === 'body' && placeholderCells[`${cellData.row.index}_${cellData.column.index}`]) {
+                            cellData.cell.styles.fontStyle = 'italic';
+                            cellData.cell.styles.textColor = [148, 163, 184];
+                        }
+                    }
+                });
+                startY = doc.lastAutoTable.finalY + 8;
             }
         });
+        flushPendingBody();
 
         startY = doc.lastAutoTable.finalY + 15;
 

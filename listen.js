@@ -231,6 +231,33 @@
         return c.toDataURL('image/png');
     }
 
+    // Gleiches Balken-Layout wie drawPipelineChartPng, nur für die Top-Kunden nach Angebotsvolumen.
+    function drawTopCustomersChartPng(customers) {
+        const rowH = 44, padL = 260, padR = 110, padT = 60;
+        const W = 900, H = padT + customers.length * rowH + 20;
+        const c = document.createElement('canvas'); c.width = W; c.height = H;
+        const ctx = c.getContext('2d');
+        ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#111827'; ctx.font = 'bold 20px Arial';
+        ctx.fillText('Top-Kunden nach Angebotsvolumen (Summe VK)', 20, 32);
+        const max = Math.max(...customers.map(c2 => c2.sum), 1);
+        const innerW = W - padL - padR;
+        customers.forEach((cust, i) => {
+            const y = padT + i * rowH;
+            ctx.fillStyle = '#374151'; ctx.font = '14px Arial'; ctx.textAlign = 'left';
+            let label = `${cust.firma} (${cust.count})`;
+            if (label.length > 30) label = label.slice(0, 29) + '…';
+            ctx.fillText(label, 20, y + rowH / 2 + 5);
+            ctx.fillStyle = '#e5e7eb';
+            ctx.fillRect(padL, y + 10, innerW, rowH - 20);
+            ctx.fillStyle = '#10b981';
+            ctx.fillRect(padL, y + 10, Math.max(3, Math.round(cust.sum / max * innerW)), rowH - 20);
+            ctx.fillStyle = '#111827'; ctx.font = 'bold 13px Arial';
+            ctx.fillText(cust.sum >= 1000 ? Math.round(cust.sum / 1000).toLocaleString('de-DE') + ' T€' : Math.round(cust.sum) + ' €', padL + innerW + 10, y + rowH / 2 + 5);
+        });
+        return c.toDataURL('image/png');
+    }
+
     window.exportAngeboteXlsx = async function () {
         try {
             await loadExcelJs();
@@ -334,10 +361,12 @@
 
         ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 12 } };
 
-        // ---- Blatt 2: Dashboard (KPIs + Diagramme als Bilder) ----
+        // ---- Blatt 2: Dashboard (KPIs, Tabellen + Diagramme als Bilder) ----
         const wsDash = wb.addWorksheet('Dashboard');
         wsDash.getColumn(1).width = 30;
         wsDash.getColumn(2).width = 20;
+        wsDash.getColumn(3).width = 14;
+        wsDash.getColumn(4).width = 14;
 
         const titleCell = wsDash.getCell('A1');
         titleCell.value = 'Angebote – Übersicht (' + new Date().toLocaleDateString('de-DE') + ')';
@@ -347,6 +376,35 @@
         const wonEntries = entries.filter(a => classifyAngebotStatus(a) === 'won');
         const lostEntries = entries.filter(a => classifyAngebotStatus(a) === 'lost');
         const decided = wonEntries.length + lostEntries.length;
+
+        // Durchschnittliche Marge über alle Angebote mit VK & EK (gleiche Logik wie in der Web-Ansicht)
+        const marginPcts = entries
+            .map(a => {
+                const vk = parseNumDe(a.nettobetrag), ek = parseNumDe(a.ek_betrag);
+                return (vk && vk > 0 && ek !== null) ? (vk - ek) / vk : null;
+            })
+            .filter(v => v !== null);
+        const avgMargin = marginPcts.length > 0 ? marginPcts.reduce((s, v) => s + v, 0) / marginPcts.length : null;
+
+        // Offene Angebote ohne Aktivität seit 14+ Tagen (gleiche Definition wie "Nachfassen" auf der Seite)
+        const todayForStale = new Date();
+        const staleCount = openEntries.filter(a => {
+            const last = getAngebotLastActivityDate(a);
+            if (!last) return false;
+            const days = Math.floor((todayForStale - last) / 86400000);
+            return days >= 14;
+        }).length;
+
+        // Vormonatsvergleich (gleiche Logik wie die Trend-Pfeile in der Web-Ansicht)
+        const mCurrentStart = new Date(todayForStale.getFullYear(), todayForStale.getMonth(), 1);
+        const mLastStart = new Date(todayForStale.getFullYear(), todayForStale.getMonth() - 1, 1);
+        const mLastEnd = new Date(todayForStale.getFullYear(), todayForStale.getMonth(), 0);
+        const curMonthEntries = entries.filter(a => a.belegdatum && new Date(a.belegdatum) >= mCurrentStart);
+        const lastMonthEntries = entries.filter(a => a.belegdatum && new Date(a.belegdatum) >= mLastStart && new Date(a.belegdatum) <= mLastEnd);
+        const sumVkOf = arr => arr.reduce((s, a) => s + (parseNumDe(a.nettobetrag) || 0), 0);
+        const curOpenVol = sumVkOf(curMonthEntries.filter(a => classifyAngebotStatus(a) === 'open'));
+        const prevOpenVol = sumVkOf(lastMonthEntries.filter(a => classifyAngebotStatus(a) === 'open'));
+
         const kpis = [
             ['Anzahl Angebote (gefiltert)', entries.length, '#,##0'],
             ['Offenes Volumen (€)', openEntries.reduce((s, a) => s + (parseNumDe(a.nettobetrag) || 0), 0), '#,##0.00 "€"'],
@@ -356,7 +414,10 @@
                 return s + (real !== null ? vk * real / 100 : 0);
             }, 0), '#,##0.00 "€"'],
             ['Trefferquote', decided > 0 ? wonEntries.length / decided : null, '0 %'],
-            ['Gewonnen / Verloren', `${wonEntries.length} / ${lostEntries.length}`, null]
+            ['Gewonnen / Verloren', `${wonEntries.length} / ${lostEntries.length}`, null],
+            ['Durchschnittliche Marge', avgMargin, '0.0 %'],
+            ['Offene Angebote ohne Aktivität (14+ Tage)', staleCount, '#,##0'],
+            ['Offenes Volumen vs. Vormonat (€)', curOpenVol - prevOpenVol, '+#,##0.00 "€";-#,##0.00 "€";0']
         ];
         kpis.forEach((kpi, i) => {
             const labelCell = wsDash.getCell(3 + i, 1);
@@ -381,6 +442,7 @@
             statusGroups[name].count++;
         });
         const pipeline = Object.values(statusGroups).sort((a, b) => b.sum - a.sum).slice(0, 8);
+        const pipelineTotal = pipeline.reduce((s, g) => s + g.sum, 0) || 1;
 
         const now = new Date();
         const monthBuckets = [];
@@ -398,13 +460,76 @@
             if (bucket) bucket.sum += parseNumDe(a.nettobetrag) || 0;
         });
 
+        // Top-Kunden nach Angebotsvolumen (mehr Kunden als in der kompakten Web-Ansicht, da hier mehr Platz ist)
+        const customerGroups = {};
+        entries.forEach(a => {
+            const firma = (a.customers?.name || a.kundenmatchcode || 'Unbekannt').split(',')[0].trim();
+            if (!customerGroups[firma]) customerGroups[firma] = { firma, sum: 0, count: 0 };
+            customerGroups[firma].sum += parseNumDe(a.nettobetrag) || 0;
+            customerGroups[firma].count++;
+        });
+        const topCustomers = Object.values(customerGroups).sort((a, b) => b.sum - a.sum).slice(0, 8);
+
+        let nextRow = 3 + kpis.length + 2;
+
+        // Tabelle: Pipeline nach Status
+        const pipelineHeaderRow = wsDash.getRow(nextRow);
+        ['Status', 'Anzahl', 'Summe VK (€)', 'Anteil'].forEach((h, i) => {
+            const cell = pipelineHeaderRow.getCell(1 + i);
+            cell.value = h;
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GREEN } };
+            cell.border = thinBorder;
+        });
+        nextRow++;
+        pipeline.forEach(g => {
+            const row = wsDash.getRow(nextRow);
+            row.getCell(1).value = g.name;
+            row.getCell(2).value = g.count;
+            row.getCell(3).value = g.sum;
+            row.getCell(3).numFmt = '#,##0.00 "€"';
+            row.getCell(4).value = g.sum / pipelineTotal;
+            row.getCell(4).numFmt = '0.0 %';
+            row.eachCell({ includeEmpty: true }, cell => cell.border = thinBorder);
+            nextRow++;
+        });
+        nextRow += 1;
+
         if (pipeline.length > 0) {
             const pipelineImg = wb.addImage({ base64: drawPipelineChartPng(pipeline), extension: 'png' });
-            wsDash.addImage(pipelineImg, { tl: { col: 0, row: 9 }, ext: { width: 675, height: Math.round((60 + pipeline.length * 44 + 20) * 0.75) } });
+            wsDash.addImage(pipelineImg, { tl: { col: 0, row: nextRow }, ext: { width: 675, height: Math.round((60 + pipeline.length * 44 + 20) * 0.75) } });
+            nextRow += Math.ceil((60 + pipeline.length * 44 + 20) * 0.75 / 20) + 2;
         }
+
         const monthImg = wb.addImage({ base64: drawMonthlyChartPng(monthBuckets), extension: 'png' });
-        const monthRowOffset = 9 + Math.ceil((60 + pipeline.length * 44 + 20) * 0.75 / 20) + 2;
-        wsDash.addImage(monthImg, { tl: { col: 0, row: monthRowOffset }, ext: { width: 675, height: 315 } });
+        wsDash.addImage(monthImg, { tl: { col: 0, row: nextRow }, ext: { width: 675, height: 315 } });
+        nextRow += Math.ceil(315 / 20) + 2;
+
+        // Tabelle: Top-Kunden
+        const custHeaderRow = wsDash.getRow(nextRow);
+        ['Kunde', 'Anzahl Angebote', 'Summe VK (€)'].forEach((h, i) => {
+            const cell = custHeaderRow.getCell(1 + i);
+            cell.value = h;
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GREEN } };
+            cell.border = thinBorder;
+        });
+        nextRow++;
+        topCustomers.forEach(cust => {
+            const row = wsDash.getRow(nextRow);
+            row.getCell(1).value = cust.firma;
+            row.getCell(2).value = cust.count;
+            row.getCell(3).value = cust.sum;
+            row.getCell(3).numFmt = '#,##0.00 "€"';
+            row.eachCell({ includeEmpty: true }, cell => cell.border = thinBorder);
+            nextRow++;
+        });
+        nextRow += 1;
+
+        if (topCustomers.length > 0) {
+            const custImg = wb.addImage({ base64: drawTopCustomersChartPng(topCustomers), extension: 'png' });
+            wsDash.addImage(custImg, { tl: { col: 0, row: nextRow }, ext: { width: 675, height: Math.round((60 + topCustomers.length * 44 + 20) * 0.75) } });
+        }
 
         // ---- Datei erzeugen und herunterladen ----
         const buf = await wb.xlsx.writeBuffer();
@@ -535,8 +660,24 @@
         const avgMarginStr = marginPcts.length > 0
             ? (marginPcts.reduce((s, v) => s + v, 0) / marginPcts.length).toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' %'
             : '–';
+        // Absolute Spanne (€) zu den Angeboten, die in avgMarginStr einfliessen (gleicher Filter:
+        // VK > 0 und EK gepflegt) — wird zusaetzlich klein unter dem %-Wert angezeigt.
+        const totalSpanneForAvg = entries.reduce((s, a) => {
+            const vk = parseNum(a.nettobetrag), ek = parseNum(a.ek_betrag);
+            return s + ((vk && vk > 0 && ek !== null) ? (vk - ek) : 0);
+        }, 0);
 
         // --- MoM Trend Calculations ---
+        // Einheitliches 3-Zeilen-Layout fuer alle Vormonat-Vergleiche: "Akt. M." (aktueller Wert),
+        // "Vm." (Vormonatswert), darunter die prozentuale Veraenderung.
+        const renderTrendBox = (curVal, prevVal, diffPct, fmtFn) => `
+            <div style="display:flex; flex-direction:column; align-items:flex-end; line-height:1.3; text-align:right;">
+                <span style="font-size:0.68rem; color:rgba(255,255,255,0.5); font-weight:700; white-space:nowrap;">Akt. M. ${fmtFn(curVal)}</span>
+                <span style="font-size:0.68rem; color:rgba(255,255,255,0.5); font-weight:700; white-space:nowrap; margin-top:1px;">Vm. ${fmtFn(prevVal)}</span>
+                <span style="font-size:0.72rem; color:${diffPct >= 0 ? '#10b981' : '#f87171'}; font-weight:800; white-space:nowrap; margin-top:2px;">${diffPct >= 0 ? '+' : ''}${Math.round(diffPct)}%</span>
+            </div>
+        `;
+
         const today = new Date();
         const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
         const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
@@ -559,18 +700,8 @@
         const prevOpenVol = sumVK(lastMonthEntries.filter(a => classifyAngebotStatus(a) === 'open'));
         let openVolTrendHtml = '';
         if (prevOpenVol > 0) {
-            const diffVal = curOpenVol - prevOpenVol;
-            const diffPct = (diffVal / prevOpenVol) * 100;
-            const dir = diffPct >= 0 ? '+' : '';
-            const valSign = diffVal >= 0 ? '+' : '-';
-            const color = diffPct >= 0 ? '#10b981' : '#f87171';
-            const fmtVal = fmtEur(Math.abs(diffVal));
-            openVolTrendHtml = `
-                <div style="display:flex; flex-direction:column; align-items:flex-end; line-height:1.2; text-align:right;">
-                    <span style="font-size:0.75rem; color:${color}; font-weight:700; white-space:nowrap;">${dir}${Math.round(diffPct)}% vs. Vm.</span>
-                    <span style="font-size:0.68rem; color:${color}; font-weight:600; white-space:nowrap; margin-top:2px;">${valSign} ${fmtVal}</span>
-                </div>
-            `;
+            const diffPct = ((curOpenVol - prevOpenVol) / prevOpenVol) * 100;
+            openVolTrendHtml = renderTrendBox(curOpenVol, prevOpenVol, diffPct, fmtEur);
         }
 
         // 2. Expected revenue trend
@@ -578,18 +709,8 @@
         const prevWeighted = lastMonthEntries.filter(a => classifyAngebotStatus(a) === 'open').reduce((s, a) => s + ((parseNum(a.nettobetrag) || 0) * (parseNum(a.realisierbar) || 0) / 100), 0);
         let weightedTrendHtml = '';
         if (prevWeighted > 0) {
-            const diffVal = curWeighted - prevWeighted;
-            const diffPct = (diffVal / prevWeighted) * 100;
-            const dir = diffPct >= 0 ? '+' : '';
-            const valSign = diffVal >= 0 ? '+' : '-';
-            const color = diffPct >= 0 ? '#10b981' : '#f87171';
-            const fmtVal = fmtEur(Math.abs(diffVal));
-            weightedTrendHtml = `
-                <div style="display:flex; flex-direction:column; align-items:flex-end; line-height:1.2; text-align:right;">
-                    <span style="font-size:0.75rem; color:${color}; font-weight:700; white-space:nowrap;">${dir}${Math.round(diffPct)}% vs. Vm.</span>
-                    <span style="font-size:0.68rem; color:${color}; font-weight:600; white-space:nowrap; margin-top:2px;">${valSign} ${fmtVal}</span>
-                </div>
-            `;
+            const diffPct = ((curWeighted - prevWeighted) / prevWeighted) * 100;
+            weightedTrendHtml = renderTrendBox(curWeighted, prevWeighted, diffPct, fmtEur);
         }
 
         // 3. Hit rate trend
@@ -604,13 +725,7 @@
         let quoteTrendHtml = '';
         if (curQuote !== null && prevQuote !== null && prevQuote > 0) {
             const diffPct = (curQuote - prevQuote) * 100;
-            const dir = diffPct >= 0 ? '+' : '';
-            const color = diffPct >= 0 ? '#10b981' : '#f87171';
-            quoteTrendHtml = `
-                <div style="display:flex; flex-direction:column; align-items:flex-end; line-height:1.2; text-align:right;">
-                    <span style="font-size:0.75rem; color:${color}; font-weight:700; white-space:nowrap;">${dir}${Math.round(diffPct)}% vs. Vm.</span>
-                </div>
-            `;
+            quoteTrendHtml = renderTrendBox(curQuote, prevQuote, diffPct, v => Math.round(v * 100) + ' %');
         }
 
         // 4. Margin trend
@@ -627,13 +742,7 @@
         let marginTrendHtml = '';
         if (curMargin !== null && prevMargin !== null && prevMargin > 0) {
             const diffPct = curMargin - prevMargin;
-            const dir = diffPct >= 0 ? '+' : '';
-            const color = diffPct >= 0 ? '#10b981' : '#f87171';
-            marginTrendHtml = `
-                <div style="display:flex; flex-direction:column; align-items:flex-end; line-height:1.2; text-align:right;">
-                    <span style="font-size:0.75rem; color:${color}; font-weight:700; white-space:nowrap;">${dir}${diffPct.toFixed(1)}% vs. Vm.</span>
-                </div>
-            `;
+            marginTrendHtml = renderTrendBox(curMargin, prevMargin, diffPct, v => v.toFixed(1) + ' %');
         }
 
         let html = `
@@ -661,7 +770,10 @@
                 </div>
                 <div class="maint-kpi-tile" style="cursor: default;" title="Durchschnittliche Spanne in % über alle Angebote mit gepflegtem EK">
                     <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-                        <div class="maint-kpi-value" style="color: #fff;">${avgMarginStr}</div>
+                        <div>
+                            <div class="maint-kpi-value" style="color: #fff;">${avgMarginStr}</div>
+                            ${marginPcts.length > 0 ? `<div style="font-size:0.7rem; font-weight:700; color:#fff;">${fmtEur(totalSpanneForAvg)}</div>` : ''}
+                        </div>
                         ${marginTrendHtml}
                     </div>
                     <div class="maint-kpi-label">Ø Spanne (${marginPcts.length} mit EK)</div>
@@ -854,12 +966,12 @@
         const rote = allStille
             .filter(x => x.stille >= 21)
             .sort((x, y) => (parseNum(y.a.nettobetrag) || 0) - (parseNum(x.a.nettobetrag) || 0))
-            .slice(0, 5);
+            .slice(0, 3);
 
         const orangene = allStille
             .filter(x => x.stille >= 14 && x.stille < 21)
             .sort((x, y) => (parseNum(y.a.nettobetrag) || 0) - (parseNum(x.a.nettobetrag) || 0))
-            .slice(0, 5);
+            .slice(0, 3);
 
         if (rote.length > 0 || orangene.length > 0) {
             html += `
@@ -938,6 +1050,7 @@
                             <th style="padding:10px; text-align:left; font-size:0.8rem; color:rgba(255,255,255,0.5); font-weight:700;">Bemerkung</th>
                             <th style="padding:10px; text-align:left; font-size:0.8rem; color:rgba(255,255,255,0.5); font-weight:700;">Maschine</th>
                             <th style="padding:10px; text-align:left; font-size:0.8rem; color:rgba(255,255,255,0.5); font-weight:700;">Erinnerung</th>
+                            <th class="delete-permission-required" style="padding:10px; text-align:center; font-size:0.8rem; color:rgba(255,255,255,0.5); font-weight:700; width:36px;"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -977,7 +1090,7 @@
                                 <td style="padding:10px; text-align:right; color:white; font-weight:600; font-size:0.88rem;">${spanne !== null ? fmtNumberInput(spanne) : ''}${spannePctHtml}</td>
                                 <td style="padding:10px; font-size:0.88rem; min-width:110px;">
                                     <div style="display:flex; align-items:center; gap:4px;">
-                                        <input type="text" class="glass-form-input" value="${escapeHtml(fmtPercentInput(a.realisierbar))}"
+                                        <input type="text" class="glass-form-input angebot-realisierbar-input" value="${escapeHtml(fmtPercentInput(a.realisierbar))}"
                                             placeholder="..." style="height:34px; font-size:0.85rem; width:70px;"
                                             onblur="window.updateAngebotRealisierbar('${a.id}', this.value)"
                                             onkeydown="if(event.key==='Enter'){ this.blur(); }">
@@ -988,6 +1101,12 @@
                                 <td style="padding:10px; font-size:0.88rem; min-width:160px;">${renderAngebotBemerkungCell(a)}</td>
                                 <td style="padding:10px; font-size:0.88rem; min-width:200px;">${renderAngebotMachineCell(a)}</td>
                                 <td style="padding:10px; font-size:0.88rem; min-width:150px;">${renderAngebotErinnerungCell(a)}</td>
+                                <td class="delete-permission-required" style="padding:10px; text-align:center;">
+                                    <button onclick="window.deleteAngebot('${a.id}')" title="Angebot endgültig löschen"
+                                        style="width:22px; height:22px; padding:0; border-radius:999px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#f87171; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                                    </button>
+                                </td>
                             </tr>
                         `;
                         }).join('')}
@@ -998,7 +1117,7 @@
                             <td style="padding:12px 10px; text-align:right; color:white; font-weight:800; font-size:0.9rem;">${fmtNumberInput(totalVK)}</td>
                             <td style="padding:12px 10px; text-align:right; color:white; font-weight:800; font-size:0.9rem;">${fmtNumberInput(totalEK)}</td>
                             <td style="padding:12px 10px; text-align:right; color:#22c55e; font-weight:800; font-size:0.9rem;">${fmtNumberInput(totalSpanne)}${totalSpannePct ? `<div style="font-size:0.75rem;">${totalSpannePct}</div>` : ''}</td>
-                            <td colspan="5"></td>
+                            <td colspan="6"></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -1037,7 +1156,7 @@
                                     onblur="window.updateAngebotEk('${a.id}', this.value)" onkeydown="if(event.key==='Enter'){ this.blur(); }">
                             </div>
                             <div><label>Realisierbar %</label>
-                                <input type="text" class="glass-form-input" value="${escapeHtml(fmtPercentInput(a.realisierbar))}" placeholder="..."
+                                <input type="text" class="glass-form-input angebot-realisierbar-input" value="${escapeHtml(fmtPercentInput(a.realisierbar))}" placeholder="..."
                                     style="height:36px; font-size:0.85rem; width:100%;"
                                     onblur="window.updateAngebotRealisierbar('${a.id}', this.value)" onkeydown="if(event.key==='Enter'){ this.blur(); }">
                             </div>
@@ -1080,7 +1199,7 @@
         return `
             <div style="display:flex; align-items:center; gap:6px;">
                 <select class="glass-form-input angebot-status-select" style="height:34px; font-size:0.85rem; flex:1;"
-                    onchange="window.updateAngebotStatus('${a.id}', this.value)">
+                    onchange="window.updateAngebotStatus('${a.id}', this.value, this)">
                     <option value="">-- kein Status --</option>
                     ${options.map(cat => `<option value="${escapeHtml(cat.name)}" ${a.status === cat.name ? 'selected' : ''}>${escapeHtml(cat.name)}</option>`).join('')}
                 </select>
@@ -1175,6 +1294,7 @@
                         <div style="color:rgba(255,255,255,0.4); font-size:0.72rem; margin-bottom:3px;">${fmtTimestamp(n.created_at)}</div>
                         <textarea id="angebot-notiz-edit-${n.id}" class="glass-form-input" rows="5" style="width:100%; font-size:0.9rem; resize:vertical;">${escapeHtml(n.content)}</textarea>
                         <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:6px;">
+                            <button type="button" onclick="event.stopPropagation(); window.deleteAngebotNotiz('${angebotId}', '${n.id}')" class="delete-permission-required" style="padding:4px 10px; font-size:0.75rem; border-radius:8px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#f87171; cursor:pointer; margin-right:auto;">Löschen</button>
                             <button type="button" onclick="event.stopPropagation(); window.cancelEditAngebotNotiz('${angebotId}')" class="btn-secondary" style="padding:4px 10px; font-size:0.75rem;">Abbrechen</button>
                             <button type="button" onclick="event.stopPropagation(); window.saveEditAngebotNotiz('${angebotId}', '${n.id}')" class="btn-primary" style="padding:4px 10px; font-size:0.75rem;">Speichern</button>
                         </div>
@@ -1274,6 +1394,31 @@
         }
     };
 
+    window.deleteAngebotNotiz = async function (angebotId, notizId) {
+        if (!window.supabaseClient) return;
+        if (!confirm('Notiz wirklich löschen?')) return;
+
+        try {
+            const { error } = await window.supabaseClient
+                .from('angebot_notizen')
+                .delete()
+                .eq('id', notizId);
+            if (error) throw error;
+
+            const idx = angeboteList.findIndex(x => x.id === angebotId);
+            if (idx !== -1 && angeboteList[idx].angebot_notizen) {
+                angeboteList[idx].angebot_notizen = angeboteList[idx].angebot_notizen.filter(n => n.id !== notizId);
+            }
+
+            editingNotizId = null;
+            renderAngebotNotizPanelContent(angebotId);
+            window.renderAngeboteList(); // Notiz-Zaehler-Button (+ / Anzahl) in der Zeile aktualisieren
+        } catch (err) {
+            console.error('Error deleting Notiz:', err);
+            alert('Fehler beim Löschen der Notiz: ' + err.message);
+        }
+    };
+
     document.addEventListener('click', (e) => {
         const panel = document.getElementById('angebot-notiz-panel');
         if (panel && panel.style.display === 'block' &&
@@ -1305,6 +1450,28 @@
         }
     };
 
+    // Loescht ein Angebot endgueltig aus der Datenbank. Der Loesch-Button ist ueber die Klasse
+    // "delete-permission-required" an dasselbe Berechtigungssystem gekoppelt wie ueberall sonst
+    // in der App (body.disable-delete blendet ihn aus, siehe applyUserPermissions in index.html).
+    window.deleteAngebot = async function (angebotId) {
+        if (!window.supabaseClient) return;
+        const entry = angeboteList.find(x => x.id === angebotId);
+        const label = entry ? entry.belegnummer : angebotId;
+        if (!confirm(`Angebot "${label}" wirklich endgültig löschen? Das kann nicht rückgängig gemacht werden.`)) return;
+        try {
+            const { error } = await window.supabaseClient
+                .from('angebote')
+                .delete()
+                .eq('id', angebotId);
+            if (error) throw error;
+            angeboteList = angeboteList.filter(x => x.id !== angebotId);
+            window.renderAngeboteList();
+        } catch (err) {
+            console.error('Error deleting Angebot:', err);
+            alert('Fehler beim Löschen: ' + err.message);
+        }
+    };
+
     window.updateAngebotRealisierbar = async function (angebotId, value) {
         if (!window.supabaseClient) return;
         const val = parseGermanNumber(value);
@@ -1325,13 +1492,37 @@
         }
     };
 
-    window.updateAngebotStatus = async function (angebotId, value) {
+    window.updateAngebotStatus = async function (angebotId, value, selectEl) {
         if (!window.supabaseClient) return;
         const text = (value || '').trim() || null;
         try {
+            const updatePayload = { status: text };
+            // Bei eindeutigem Ausgang automatisch die Realisierbar-Quote nachziehen, damit die
+            // gewichteten Auswertungen (erwarteter Umsatz etc.) sofort stimmen, ohne dass man es
+            // manuell nachtragen muss. Bei allen anderen Status bleibt Realisierbar unangetastet.
+            // Case-insensitiv/getrimmt vergleichen statt exaktem "===", da Statusnamen frei unter
+            // Einstellungen -> Kategorien gepflegt werden und z.B. Gross-/Kleinschreibung abweichen kann.
+            const normalizedText = (text || '').trim().toLowerCase();
+            let autoRealisierbar = null;
+            if (normalizedText === 'auftrag erhalten') {
+                autoRealisierbar = 100;
+            } else if (normalizedText === 'auftrag verloren') {
+                autoRealisierbar = 0;
+            } else if (normalizedText === 'warten auf reaktion') {
+                autoRealisierbar = 5;
+            }
+            if (autoRealisierbar !== null) {
+                updatePayload.realisierbar = autoRealisierbar;
+                // Sofort im DOM anzeigen statt auf die Server-Antwort/renderAngeboteList zu warten —
+                // gleiche Zeile (Desktop-Tabelle: <tr>, Mobile-Karte: .ang-card).
+                const row = selectEl && (selectEl.closest('tr') || selectEl.closest('.ang-card'));
+                const realisierbarInput = row && row.querySelector('.angebot-realisierbar-input');
+                if (realisierbarInput) realisierbarInput.value = String(autoRealisierbar);
+            }
+
             const { data, error } = await window.supabaseClient
                 .from('angebote')
-                .update({ status: text })
+                .update(updatePayload)
                 .eq('id', angebotId)
                 .select('*, customers(name), angebot_notizen(id, content, created_at)')
                 .single();
@@ -2254,14 +2445,43 @@
             const chunkSize = 100;
             const total = angeboteToUpsert.length;
 
+            // Vorab ermitteln, welche Belegnummern bereits existieren — nur fuer WIRKLICH NEUE
+            // Angebote sollen Realisierbar (5%) und Status ("Warten auf Reaktion") vorbelegt werden.
+            // Bestehende Angebote werden dadurch nicht angefasst (siehe Kommentar unten beim Upsert).
+            const allBelegnummern = angeboteToUpsert.map(a => a.belegnummer);
+            const existingBelegnummern = new Set();
+            for (let i = 0; i < allBelegnummern.length; i += 500) {
+                const slice = allBelegnummern.slice(i, i + 500);
+                const { data: existingRows, error: existingErr } = await window.supabaseClient
+                    .from('angebote')
+                    .select('belegnummer')
+                    .in('belegnummer', slice);
+                if (existingErr) throw existingErr;
+                (existingRows || []).forEach(r => existingBelegnummern.add(r.belegnummer));
+            }
+
             for (let i = 0; i < total; i += chunkSize) {
                 const chunk = angeboteToUpsert.slice(i, i + chunkSize);
 
+                // EK/Realisierbar/Status/Bemerkung/Maschine sind reine manuelle Felder und duerfen
+                // beim Re-Import bestehender Angebote nie ueberschrieben werden — daher stehen sie
+                // bewusst nicht im Upsert-Payload (siehe angeboteToUpsert oben).
                 const { error } = await window.supabaseClient
                     .from('angebote')
                     .upsert(chunk, { onConflict: 'belegnummer' });
 
                 if (error) throw error;
+
+                // Fuer neu angelegte Angebote in diesem Chunk direkt im Anschluss die Standardwerte
+                // setzen (separater Update-Call, damit bestehende Angebote garantiert unangetastet bleiben).
+                const newBelegnummernInChunk = chunk.map(c => c.belegnummer).filter(bn => !existingBelegnummern.has(bn));
+                if (newBelegnummernInChunk.length > 0) {
+                    const { error: defaultsErr } = await window.supabaseClient
+                        .from('angebote')
+                        .update({ realisierbar: 5, status: 'Warten auf Reaktion' })
+                        .in('belegnummer', newBelegnummernInChunk);
+                    if (defaultsErr) throw defaultsErr;
+                }
 
                 const progress = Math.min(100, Math.round(((i + chunk.length) / total) * 100));
                 if (progressBar) progressBar.style.width = `${progress}%`;

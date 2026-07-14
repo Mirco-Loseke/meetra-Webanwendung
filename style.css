@@ -11082,3 +11082,152 @@ body.focus-mode-active .view-header-row-top {
 
 
 
+
+/* --- Buchhaltung: Kostenauswertung & Finanzübersicht (KPIs, Charts, Responsive) --- */
+.acc-eval-kpi-grid,
+.fin-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.acc-eval-kpi {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 12px 14px;
+    min-width: 0;
+}
+.acc-eval-kpi-value {
+    font-size: 1.05rem;
+    font-weight: 900;
+    font-family: 'Outfit', sans-serif;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.acc-eval-kpi-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.45);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.acc-eval-charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+/* Auswertungs-Modal: vertikal scrollbar, Tabellen bleiben sicher in der Box.
+   (Kein position:sticky auf Zellen — das erzeugte Compositing-Layer, die am
+   geblurten Modal-Rand vorbei nach außen gezeichnet wurden.) */
+#machine-evaluation-modal .modal-content {
+    overflow-y: auto !important;
+    max-height: 90vh !important;
+}
+/* Dünne, transparente Scrollleiste statt der wuchtigen Browser-Standardleiste,
+   die am abgerundeten Glass-Rand des Modals hässlich abschnitt */
+#machine-evaluation-modal .modal-content::-webkit-scrollbar {
+    width: 6px;
+}
+#machine-evaluation-modal .modal-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+#machine-evaluation-modal .modal-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+}
+#machine-evaluation-modal .modal-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.22);
+}
+#machine-evaluation-modal table.eval-table td:first-child,
+#machine-evaluation-modal table.eval-table th:first-child {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 900px) {
+    .acc-eval-kpi-grid,
+    .fin-summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .acc-eval-charts-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    #machine-evaluation-modal .modal-header > div {
+        width: 100%;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    #machine-evaluation-modal .modal-header > div > select,
+    #machine-evaluation-modal .modal-header .real-select-hidden + div {
+        flex: 1;
+    }
+    #financial-dashboard-modal .modal-header > div {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 420px) {
+    .acc-eval-kpi-grid,
+    .fin-summary-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    .acc-eval-kpi {
+        padding: 10px 12px;
+    }
+    .acc-eval-kpi-value {
+        font-size: 0.92rem;
+    }
+}
+
+/* Finanzübersicht: Eingang/Ausgang-Reiter */
+.fin-type-tab {
+    padding: 7px 18px;
+    border-radius: 9px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Inter', sans-serif;
+}
+.fin-type-tab:hover {
+    background: rgba(255, 255, 255, 0.09);
+    color: #fff;
+}
+.fin-type-tab.active {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
+.fin-type-tab.active[data-type="incoming"] {
+    background: rgba(239, 68, 68, 0.18);
+    border-color: rgba(239, 68, 68, 0.45);
+    color: #f87171;
+}
+.fin-type-tab.active[data-type="outgoing"] {
+    background: rgba(16, 185, 129, 0.18);
+    border-color: rgba(16, 185, 129, 0.45);
+    color: var(--color-primary-green);
+}
+@media (max-width: 480px) {
+    #fin-type-tabs .fin-type-tab {
+        flex: 1;
+        padding: 8px 4px;
+        text-align: center;
+    }
+}

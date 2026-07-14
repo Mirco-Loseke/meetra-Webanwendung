@@ -439,11 +439,21 @@ window.renderActiveChecklists = function() {
                         </tr>
                     `;
                 } else {
+                    // Wartung: Übergruppe kann per Haken vom Ausdruck (Vorschau/Speichern) ausgeschlossen
+                    // werden, ohne die Punkte hier im Formular zu löschen — geprüft wird nur beim Drucken.
                     const colspan = isYesNoStyle ? 4 : 5;
+                    const catNameSafe = currentCategory.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                    const catIncluded = !checklist.categoryIncluded || checklist.categoryIncluded[currentCategory] !== false;
                     html += `
                         <tr style="background: rgba(255,255,255,0.03);">
-                            <td colspan="${colspan}" style="padding: 8px 10px; font-size: 0.85rem; font-weight: 800; color: var(--accent-color); text-transform: uppercase; letter-spacing: 0.5px;">
+                            <td colspan="${colspan - 1}" style="padding: 8px 10px; font-size: 0.85rem; font-weight: 800; color: var(--accent-color); text-transform: uppercase; letter-spacing: 0.5px; ${catIncluded ? '' : 'opacity: 0.4; text-decoration: line-through;'}">
                                 ${currentCategory}
+                            </td>
+                            <td style="padding: 5px 10px; text-align: center;">
+                                <label title="Diese Übergruppe im Ausdruck/Vorschau drucken" style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: rgba(255,255,255,0.6); font-size: 0.75rem; font-weight: 700;">
+                                    <input type="checkbox" ${catIncluded ? 'checked' : ''} onchange="window.toggleChecklistCategoryIncluded('${checklist.template_id}', '${catNameSafe}')" style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--color-primary-green);">
+                                    Drucken
+                                </label>
                             </td>
                         </tr>
                     `;
@@ -679,6 +689,19 @@ window.cycleChecklistCategoryIO = function(templateId, categoryName) {
     checklist.categoryStatus[categoryName] = next;
     // Voller Re-Render, da derselbe Kategoriename theoretisch mehrfach vorkommen könnte
     // (anders als bei Einzelpunkten gibt es hier keine eindeutige Index-ID pro Box).
+    window.renderActiveChecklists();
+};
+
+// Steuert, ob eine Übergruppe (Kategorie) eines Wartungsprotokolls beim Ausdruck/in der Vorschau
+// bzw. beim späteren Speichern als PDF mitgedruckt wird. Standard: gedruckt (true), bis der Haken
+// entfernt wird. Landet in checklist.categoryIncluded[kategorieName] und damit automatisch im
+// checklist_payload (siehe getChecklistPayload), da keine Feld-Allowlist existiert.
+window.toggleChecklistCategoryIncluded = function(templateId, categoryName) {
+    const checklist = activeChecklists[templateId];
+    if (!checklist) return;
+    if (!checklist.categoryIncluded) checklist.categoryIncluded = {};
+    const currentlyIncluded = checklist.categoryIncluded[categoryName] !== false;
+    checklist.categoryIncluded[categoryName] = !currentlyIncluded;
     window.renderActiveChecklists();
 };
 

@@ -1141,8 +1141,15 @@
     // ── Beschriftung: A4/A3-Aushang mit Titel, Bild, Logo und optionaler Stückliste —
     // mehrere Seiten möglich, jede mit eigener Ausrichtung, werden zu einem PDF zusammengefasst.
     function createEmptyBeschriftungPage() {
-        return { title: '', titleFontSize: 18, bez2: '', bez2FontSize: 11, imageDataUrl: null, imageRatio: 1, imageWidthMm: null, stuecklisteEnabled: false, rows: [], orientation: 'p' };
+        return { title: '', titleFontSize: 18, bez2: '', bez2FontSize: 11, imageDataUrl: null, imageRatio: 1, imageWidthMm: null, imageHeightMm: null, imageXMm: null, imageYMm: null, imageRotation: 0, stuecklisteEnabled: false, rows: [], orientation: 'p' };
     }
+
+    // Feste Zeilenhöhen (mm), unabhängig von Hoch-/Querformat — Reihe 1 = Titel + Logo,
+    // Reihe 2 = Kurzbeschreibung, dann erst das Bild. Als Modul-Konstanten, damit Vorschau,
+    // PDF-Zeichnung und Bild-Box-Berechnung garantiert dieselben Werte verwenden.
+    const BESCHRIFTUNG_ROW1_TOP = 6, BESCHRIFTUNG_ROW1_H = 13;
+    const BESCHRIFTUNG_ROW2_TOP = BESCHRIFTUNG_ROW1_TOP + BESCHRIFTUNG_ROW1_H + 1, BESCHRIFTUNG_ROW2_H = 8;
+    const BESCHRIFTUNG_IMAGE_TOP = BESCHRIFTUNG_ROW2_TOP + BESCHRIFTUNG_ROW2_H + 3;
 
     // jsPDF interpretiert setFontSize() immer in Punkt (pt), unabhängig von der Dokument-Einheit
     // (hier 'mm') — für die HTML-Live-Vorschau wird daher in mm umgerechnet (1pt = 0.3528mm).
@@ -1186,6 +1193,10 @@
         if (bez2FontSizeInput) bez2FontSizeInput.value = page.bez2FontSize || 11;
         const bez2FontSizeValue = document.getElementById('beschriftung-bez2-fontsize-value');
         if (bez2FontSizeValue) bez2FontSizeValue.textContent = page.bez2FontSize || 11;
+        const rotationInput = document.getElementById('beschriftung-image-rotation');
+        if (rotationInput) rotationInput.value = page.imageRotation || 0;
+        const rotationValue = document.getElementById('beschriftung-image-rotation-value');
+        if (rotationValue) rotationValue.textContent = (page.imageRotation || 0) + '°';
         const stuecklisteToggle = document.getElementById('beschriftung-stueckliste-toggle');
         if (stuecklisteToggle) stuecklisteToggle.checked = page.stuecklisteEnabled;
         const editor = document.getElementById('beschriftung-stueckliste-editor');
@@ -1277,6 +1288,14 @@
                 page.imageDataUrl = e.target.result;
                 page.imageRatio = img.naturalWidth / img.naturalHeight;
                 page.imageWidthMm = null;
+                page.imageHeightMm = null;
+                page.imageXMm = null;
+                page.imageYMm = null;
+                page.imageRotation = 0;
+                const rotationInput = document.getElementById('beschriftung-image-rotation');
+                if (rotationInput) rotationInput.value = 0;
+                const rotationValue = document.getElementById('beschriftung-image-rotation-value');
+                if (rotationValue) rotationValue.textContent = '0°';
                 window.renderBeschriftungPreview();
             };
             img.src = e.target.result;
@@ -1289,8 +1308,36 @@
         page.imageDataUrl = null;
         page.imageRatio = 1;
         page.imageWidthMm = null;
+        page.imageHeightMm = null;
+        page.imageXMm = null;
+        page.imageYMm = null;
+        page.imageRotation = 0;
         const input = document.getElementById('beschriftung-image-input');
         if (input) input.value = '';
+        const rotationInput = document.getElementById('beschriftung-image-rotation');
+        if (rotationInput) rotationInput.value = 0;
+        const rotationValue = document.getElementById('beschriftung-image-rotation-value');
+        if (rotationValue) rotationValue.textContent = '0°';
+        window.renderBeschriftungPreview();
+    };
+
+    window.updateBeschriftungImageRotation = function (value) {
+        let n = parseInt(value, 10);
+        if (isNaN(n)) n = 0;
+        if (n < -180) n = -180;
+        if (n > 180) n = 180;
+        getCurrentBeschriftungPage().imageRotation = n;
+        const valueLabel = document.getElementById('beschriftung-image-rotation-value');
+        if (valueLabel) valueLabel.textContent = n + '°';
+        window.renderBeschriftungPreview();
+    };
+
+    window.resetBeschriftungImageRotation = function () {
+        getCurrentBeschriftungPage().imageRotation = 0;
+        const rotationInput = document.getElementById('beschriftung-image-rotation');
+        if (rotationInput) rotationInput.value = 0;
+        const rotationValue = document.getElementById('beschriftung-image-rotation-value');
+        if (rotationValue) rotationValue.textContent = '0°';
         window.renderBeschriftungPreview();
     };
 
@@ -1352,29 +1399,53 @@
         return { w, h };
     }
 
-    // Liefert die aktuelle Bild-Box (mm): per Ziehpunkt manuell gesetzte Breite (imageWidthMm)
-    // hat Vorrang, sonst die automatische Anpassung wie bisher.
+    // Liefert die aktuelle Bild-Box (mm): per Eckpunkt manuell gesetzte Position/Größe hat
+    // Vorrang, sonst die automatische Anpassung (zentriert, unterhalb Titel/Kurzbeschreibung).
     function getBeschriftungImageBox(page, pageW, pageH) {
-        if (page.imageWidthMm) {
-            const w = page.imageWidthMm;
-            return { w, h: w / page.imageRatio };
+        if (page.imageWidthMm != null && page.imageHeightMm != null) {
+            const x = page.imageXMm != null ? page.imageXMm : (pageW - page.imageWidthMm) / 2;
+            const y = page.imageYMm != null ? page.imageYMm : BESCHRIFTUNG_IMAGE_TOP;
+            return { x, y, w: page.imageWidthMm, h: page.imageHeightMm };
         }
         const maxW = pageW - 40;
         const maxH = pageH * 0.45;
-        return fitBox(page.imageRatio, maxW, maxH);
+        const { w, h } = fitBox(page.imageRatio, maxW, maxH);
+        return { x: (pageW - w) / 2, y: BESCHRIFTUNG_IMAGE_TOP, w, h };
     }
 
-    // ── Bild per Ziehpunkt größer/kleiner ziehen (Live-Vorschau) ────
+    // ── Bild per Eckpunkt ziehen: frei in Breite/Höhe skalieren (alle 4 Ecken), drehen und
+    // per Ziehen auf dem Bild selbst frei verschieben ─────────────────────────────────────
     // Während des Ziehens wird NICHT die ganze Vorschau neu gerendert (innerHTML würde den
     // Ziehpunkt mitten in der Geste aus dem DOM entfernen und die Pointer-Capture abbrechen) —
-    // stattdessen nur die Wrapper-Größe direkt per Style aktualisiert, am Ende einmal final neu gerendert.
-    let imageResizeDrag = null;
+    // stattdessen nur die Wrapper-Position/-Größe direkt per Style aktualisiert, am Ende
+    // einmal final neu gerendert.
+    // Da das Bild per CSS-transform gedreht wird, muss die Zeigerbewegung beim Skalieren erst
+    // zurück in das ungedrehte lokale Koordinatensystem der Box rotiert werden, sonst würde bei
+    // gedrehtem Bild in die falsche Richtung skaliert. Beim reinen Verschieben ist das nicht
+    // nötig — die Boxmitte verschiebt sich unabhängig von ihrer eigenen Drehung 1:1 mit der Maus.
+    let imageDrag = null;
+    const MIN_IMAGE_SIZE_MM = 10;
+
+    // Eigener Rotations-Cursor (zwei gebogene Pfeile) statt eines generischen Browser-Cursors —
+    // wird als CSS "cursor" auf den Dreh-Ziehpunkt UND (während aktiv gezogen wird) auf
+    // document.body gesetzt, damit er auch dann sichtbar bleibt, wenn die Maus beim schnellen
+    // Drehen kurz den kleinen Ziehpunkt verlässt. SVG wird komplett über encodeURIComponent
+    // kodiert (auch die doppelten Anführungszeichen darin), damit beim Einbetten in ein
+    // HTML-style-Attribut (ebenfalls doppelte Anführungszeichen) nichts kollidiert.
+    const ROTATE_CURSOR_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24">'
+        + '<path fill="#111827" stroke="#ffffff" stroke-width="1" d="M17.65 6.35A7.95 7.95 0 0 0 12 4V1L8 5l4 4V6c1.66 0 3.14.67 4.22 1.78A5.98 5.98 0 0 1 18 12c0 3.31-2.69 6-6 6a5.98 5.98 0 0 1-5.65-4H4.26A8 8 0 1 0 17.65 6.35z"/>'
+        + '</svg>';
+    const ROTATE_CURSOR = `url('data:image/svg+xml,${encodeURIComponent(ROTATE_CURSOR_SVG)}') 11 11, grab`;
 
     document.addEventListener('pointerdown', (e) => {
-        const handle = e.target.closest('.beschriftung-image-resize-handle');
-        if (!handle) return;
-        const wrapper = handle.closest('.beschriftung-image-wrapper');
-        const pageEl = document.getElementById('beschriftung-preview-page');
+        const rotateHandle = e.target.closest('.beschriftung-image-rotate-handle');
+        const resizeHandle = !rotateHandle ? e.target.closest('.beschriftung-image-resize-handle') : null;
+        const handle = rotateHandle || resizeHandle;
+        const wrapper = handle ? handle.closest('.beschriftung-image-wrapper') : e.target.closest('.beschriftung-image-wrapper');
+        // Das Bild sitzt immer auf der ersten physischen Vorschau-Seite — deren Element wird
+        // über die Ancestor-Kette gesucht statt über eine feste ID, da die Vorschau je nach
+        // Stückliste mehrere Seiten-Divs enthalten kann (siehe renderBeschriftungPreview).
+        const pageEl = wrapper ? wrapper.closest('.beschriftung-preview-physical-page') : null;
         if (!wrapper || !pageEl) return;
 
         const page = getCurrentBeschriftungPage();
@@ -1382,127 +1453,304 @@
         const scale = pageEl.clientWidth / pageWmm;
         const currentBox = getBeschriftungImageBox(page, pageWmm, pageHmm);
 
-        imageResizeDrag = {
-            page, wrapper, scale, pageWmm,
-            startX: e.clientX,
-            startWidthMm: currentBox.w
-        };
-        handle.setPointerCapture(e.pointerId);
+        if (rotateHandle) {
+            const pageRect = pageEl.getBoundingClientRect();
+            const centerX = pageRect.left + (currentBox.x + currentBox.w / 2) * scale;
+            const centerY = pageRect.top + (currentBox.y + currentBox.h / 2) * scale;
+            imageDrag = {
+                page, wrapper, mode: 'rotate',
+                centerX, centerY,
+                startAngle: Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI,
+                startRotation: page.imageRotation || 0
+            };
+            document.body.style.cursor = ROTATE_CURSOR;
+        } else {
+            imageDrag = {
+                page, wrapper, scale, pageWmm, pageHmm,
+                mode: resizeHandle ? 'resize' : 'move',
+                corner: resizeHandle ? resizeHandle.dataset.corner : null,
+                rotation: page.imageRotation || 0,
+                startX: e.clientX,
+                startY: e.clientY,
+                startBox: currentBox
+            };
+        }
+        (handle || wrapper).setPointerCapture(e.pointerId);
         e.preventDefault();
     });
 
     document.addEventListener('pointermove', (e) => {
-        if (!imageResizeDrag) return;
-        const { page, wrapper, scale, pageWmm, startX, startWidthMm } = imageResizeDrag;
-        const deltaMm = ((e.clientX - startX) / scale) * 2; // *2: Bild bleibt zentriert, beide Kanten wandern
-        let widthMm = startWidthMm + deltaMm;
-        widthMm = Math.max(15, Math.min(pageWmm - 20, widthMm));
-        const heightMm = widthMm / page.imageRatio;
+        if (!imageDrag) return;
+        const { wrapper, mode } = imageDrag;
 
-        page.imageWidthMm = widthMm;
-        const imgXmm = (pageWmm - widthMm) / 2;
-        wrapper.style.left = (imgXmm * scale) + 'px';
-        wrapper.style.width = (widthMm * scale) + 'px';
-        wrapper.style.height = (heightMm * scale) + 'px';
+        if (mode === 'rotate') {
+            const { centerX, centerY, startAngle, startRotation } = imageDrag;
+            const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
+            let newRotation = startRotation + (angle - startAngle);
+            newRotation = ((newRotation + 180) % 360 + 360) % 360 - 180; // auf -180..180 normalisieren
+            imageDrag.pendingRotation = newRotation;
+            wrapper.style.transform = `rotate(${newRotation}deg)`;
+            const rotationInput = document.getElementById('beschriftung-image-rotation');
+            if (rotationInput) rotationInput.value = Math.round(newRotation);
+            const rotationValue = document.getElementById('beschriftung-image-rotation-value');
+            if (rotationValue) rotationValue.textContent = Math.round(newRotation) + '°';
+            return;
+        }
+
+        const { scale, corner, rotation, startX, startY, startBox, pageWmm, pageHmm } = imageDrag;
+        const dxMm = (e.clientX - startX) / scale;
+        const dyMm = (e.clientY - startY) / scale;
+
+        if (mode === 'move') {
+            const x = startBox.x + dxMm;
+            const y = startBox.y + dyMm;
+            imageDrag.pendingBox = { x, y, w: startBox.w, h: startBox.h };
+            wrapper.style.left = (x * scale) + 'px';
+            wrapper.style.top = (y * scale) + 'px';
+            return;
+        }
+
+        // Zeigerbewegung um -rotation zurückdrehen, um sie im ungedrehten Koordinatensystem
+        // der Box zu erhalten (die Box selbst ist ja per CSS-transform gedreht dargestellt).
+        const rad = -rotation * Math.PI / 180;
+        const localDx = dxMm * Math.cos(rad) - dyMm * Math.sin(rad);
+        const localDy = dxMm * Math.sin(rad) + dyMm * Math.cos(rad);
+
+        let { x, y, w, h } = startBox;
+        if (corner === 'br') { w = startBox.w + localDx; h = startBox.h + localDy; }
+        else if (corner === 'bl') { w = startBox.w - localDx; h = startBox.h + localDy; }
+        else if (corner === 'tr') { w = startBox.w + localDx; h = startBox.h - localDy; }
+        else if (corner === 'tl') { w = startBox.w - localDx; h = startBox.h - localDy; }
+
+        // Größe begrenzen (Minimum UND Maximum — das Bild darf nicht größer als die verfügbare
+        // Seitenfläche werden, sonst kollidiert es mit Titel/Stückliste oder ragt über die Seite
+        // hinaus). Die dem gezogenen Eck gegenüberliegende Kante bleibt dabei jeweils fix stehen.
+        const maxW = pageWmm - 20;
+        const maxH = pageHmm - BESCHRIFTUNG_IMAGE_TOP - 10;
+        w = Math.min(Math.max(w, MIN_IMAGE_SIZE_MM), maxW);
+        h = Math.min(Math.max(h, MIN_IMAGE_SIZE_MM), maxH);
+        if (corner === 'tl' || corner === 'bl') x = (startBox.x + startBox.w) - w; // rechte Kante bleibt fix
+        if (corner === 'tl' || corner === 'tr') y = (startBox.y + startBox.h) - h; // untere Kante bleibt fix
+
+        imageDrag.pendingBox = { x, y, w, h };
+        wrapper.style.left = (x * scale) + 'px';
+        wrapper.style.top = (y * scale) + 'px';
+        wrapper.style.width = (w * scale) + 'px';
+        wrapper.style.height = (h * scale) + 'px';
     });
 
     document.addEventListener('pointerup', () => {
-        if (!imageResizeDrag) return;
-        imageResizeDrag = null;
+        if (!imageDrag) return;
+        const { page, mode, pendingBox, pendingRotation } = imageDrag;
+        if (mode === 'rotate' && pendingRotation != null) {
+            page.imageRotation = pendingRotation;
+        } else if (pendingBox) {
+            page.imageXMm = pendingBox.x;
+            page.imageYMm = pendingBox.y;
+            page.imageWidthMm = pendingBox.w;
+            page.imageHeightMm = pendingBox.h;
+        }
+        imageDrag = null;
+        document.body.style.cursor = '';
         window.renderBeschriftungPreview();
     });
 
+    // Baut die HTML-Tabelle für einen Stückliste-Abschnitt (mit Kopfzeile) an einer bestimmten
+    // Position — wird sowohl für die erste Seite als auch für Fortsetzungsseiten verwendet.
+    function buildStuecklisteTableHtml(rows, scale, pageW, topMm) {
+        const tableW = pageW - 40;
+        const rowsHtml = rows.map(r => `
+            <tr>
+                <td style="border:1px solid #ccc; padding:4px 6px; font-weight:700;">${escapeHtml(r.nummer)}</td>
+                <td style="border:1px solid #ccc; padding:4px 6px; font-weight:700;">${escapeHtml(r.bez1)}</td>
+                <td style="border:1px solid #ccc; padding:4px 6px; font-weight:700;">${escapeHtml(r.bez2)}</td>
+                <td style="border:1px solid #ccc; padding:4px 6px; text-align:center; font-weight:700;">${escapeHtml(r.menge)}</td>
+                <td style="border:1px solid #ccc; padding:4px 6px; text-align:center; font-weight:700;">${escapeHtml(r.einheit || 'stk')}</td>
+            </tr>
+        `).join('');
+        return `
+            <table style="position:absolute; left:${20 * scale}px; top:${topMm * scale}px; width:${tableW * scale}px; border-collapse:collapse; font-size:${3.2 * scale}px; font-family:Helvetica,Arial,sans-serif; color:#141414;">
+                <thead>
+                    <tr style="background:#1e293b; color:#fff;">
+                        <th style="border:1px solid #ccc; padding:4px 6px; text-align:left; font-weight:700;">Art.-Nr.</th>
+                        <th style="border:1px solid #ccc; padding:4px 6px; text-align:left; font-weight:700;">Bezeichnung 1</th>
+                        <th style="border:1px solid #ccc; padding:4px 6px; text-align:left; font-weight:700;">Bezeichnung 2</th>
+                        <th style="border:1px solid #ccc; padding:4px 6px; font-weight:700;">Menge</th>
+                        <th style="border:1px solid #ccc; padding:4px 6px; font-weight:700;">Einheit</th>
+                    </tr>
+                </thead>
+                <tbody>${rowsHtml}</tbody>
+            </table>
+        `;
+    }
+
+    // Feste Maße (mm) für eine Stückliste-Zeile/Kopfzeile — abgestimmt auf die fette 10pt-Schrift
+    // (siehe styles/headStyles in drawBeschriftungPage). Als gemeinsame Konstanten von Vorschau
+    // UND PDF-Export genutzt (siehe computeStuecklistePageBreaks), damit beide garantiert densel-
+    // ben Umbruch berechnen — kein Rätselraten/Trockenlauf über eine externe PDF-Bibliothek nötig,
+    // das war fehleranfällig (z.B. ohne Internetverbindung für die CDN-Bibliothek) und konnte dazu
+    // führen, dass die Vorschau bei einem Fehler stumm ALLES auf eine Seite zwängte, obwohl es
+    // nicht passte — sichtbar als über den Seitenrand hinausragende Tabelle.
+    const STUECKLISTE_ROW_H_MM = 7.5;
+    const STUECKLISTE_HEADER_H_MM = 7.5;
+    const STUECKLISTE_BOTTOM_MARGIN_MM = 15; // Sicherheitsabstand zum unteren Seitenrand
+    const STUECKLISTE_CONT_TOP_MM = 20; // oberer Rand auf Fortsetzungsseiten (kein Titel/Bild dort)
+
+    // Teilt die Stückliste-Zeilen deterministisch auf so viele Seiten auf, wie tatsächlich
+    // gebraucht werden — rein synchrone mm-Rechnung (keine PDF-Bibliothek nötig), damit Vorschau
+    // und PDF-Export garantiert exakt denselben Umbruch verwenden (siehe drawBeschriftungPage,
+    // das dieselbe Funktion für den echten Druck aufruft).
+    function computeStuecklistePageBreaks(rows, imageBottomMm, pageH) {
+        const firstAvail = pageH - STUECKLISTE_BOTTOM_MARGIN_MM - (imageBottomMm + 10) - STUECKLISTE_HEADER_H_MM;
+        const firstRows = Math.max(0, Math.floor(firstAvail / STUECKLISTE_ROW_H_MM));
+
+        if (rows.length <= firstRows) return [rows];
+
+        const contAvail = pageH - STUECKLISTE_BOTTOM_MARGIN_MM - STUECKLISTE_CONT_TOP_MM - STUECKLISTE_HEADER_H_MM;
+        const contRows = Math.max(1, Math.floor(contAvail / STUECKLISTE_ROW_H_MM));
+
+        const chunks = [rows.slice(0, firstRows)];
+        let idx = firstRows;
+        while (idx < rows.length) {
+            chunks.push(rows.slice(idx, idx + contRows));
+            idx += contRows;
+        }
+        return chunks;
+    }
+
     window.renderBeschriftungPreview = function () {
         const page = getCurrentBeschriftungPage();
-        const pageEl = document.getElementById('beschriftung-preview-page');
-        if (!pageEl) return;
+        const container = document.getElementById('beschriftung-preview-pages');
+        if (!container) return;
 
         const { w: pageW, h: pageH } = getPageDimensions(page.orientation);
-        pageEl.style.aspectRatio = `${pageW} / ${pageH}`;
-        const scale = pageEl.clientWidth / pageW; // px pro mm
+        const scale = Math.min((container.clientWidth || 600) / pageW, 3.2); // px pro mm
 
-        let html = '';
-
-        // Feste Zeilenhöhen (mm), unabhängig von Hoch-/Querformat:
-        // Reihe 1 = Titel + Logo, Reihe 2 = Kurzbeschreibung, dann erst das Bild.
-        const ROW1_TOP = 10, ROW1_H = 16;
-        const ROW2_TOP = ROW1_TOP + ROW1_H + 2, ROW2_H = 8;
-        const IMAGE_TOP = ROW2_TOP + ROW2_H + 4;
-
+        const ROW1_TOP = BESCHRIFTUNG_ROW1_TOP, ROW1_H = BESCHRIFTUNG_ROW1_H;
+        const ROW2_TOP = BESCHRIFTUNG_ROW2_TOP;
+        const IMAGE_TOP = BESCHRIFTUNG_IMAGE_TOP;
         const logoW = 36;
+
+        let firstPageHtml = '';
 
         // Logo oben rechts (in Farbe — auf den kleinen Etiketten bleibt es schwarz/weiß)
         if (window.MEETRA_LOGO_BASE64) {
-            html += `<img src="${window.MEETRA_LOGO_BASE64}" style="position:absolute; top:${ROW1_TOP * scale}px; right:${10 * scale}px; width:${logoW * scale}px;">`;
+            firstPageHtml += `<img src="${window.MEETRA_LOGO_BASE64}" style="position:absolute; top:${ROW1_TOP * scale}px; right:${10 * scale}px; width:${logoW * scale}px;">`;
         }
 
         // Titel — eigene Reihe wie das Logo, aber unabhängig vom Logo mittig auf der gesamten
         // Seite zentriert (nicht im verbleibenden Platz neben dem Logo)
         if (page.title) {
             const titleFontSizeMm = ptToMm(page.titleFontSize || 18);
-            html += `<div style="position:absolute; top:${ROW1_TOP * scale}px; left:${10 * scale}px; right:${10 * scale}px; height:${ROW1_H * scale}px; display:flex; align-items:center; justify-content:center; text-align:center; font-weight:800; font-size:${titleFontSizeMm * scale}px; line-height:1.1; color:#141414; font-family:Helvetica,Arial,sans-serif; overflow:hidden;">${escapeHtml(page.title)}</div>`;
+            firstPageHtml += `<div style="position:absolute; top:${ROW1_TOP * scale}px; left:${10 * scale}px; right:${10 * scale}px; height:${ROW1_H * scale}px; display:flex; align-items:center; justify-content:center; text-align:center; font-weight:800; font-size:${titleFontSizeMm * scale}px; line-height:1.1; color:#141414; font-family:Helvetica,Arial,sans-serif; overflow:hidden;">${escapeHtml(page.title)}</div>`;
         }
 
         // Kurzbeschreibung / Bezeichnung 2 — eigene Reihe darunter, zentriert über volle Breite
         if (page.bez2) {
             const bez2FontSizeMm = ptToMm(page.bez2FontSize || 11);
-            html += `<div style="position:absolute; top:${ROW2_TOP * scale}px; left:${10 * scale}px; right:${10 * scale}px; text-align:center; font-weight:500; font-size:${bez2FontSizeMm * scale}px; color:#444; font-family:Helvetica,Arial,sans-serif;">${escapeHtml(page.bez2)}</div>`;
+            firstPageHtml += `<div style="position:absolute; top:${ROW2_TOP * scale}px; left:${10 * scale}px; right:${10 * scale}px; text-align:center; font-weight:500; font-size:${bez2FontSizeMm * scale}px; color:#444; font-family:Helvetica,Arial,sans-serif;">${escapeHtml(page.bez2)}</div>`;
         }
 
         // Bild mittig, großzügige Box — erst eine Reihe unter Titel/Logo und Kurzbeschreibung,
-        // wird bei großen Bildern automatisch passend verkleinert. Ist imageWidthMm gesetzt
-        // (Nutzer hat per Ziehpunkt skaliert), wird diese Größe statt der Auto-Anpassung verwendet.
+        // wird bei großen Bildern automatisch passend verkleinert. Sind imageWidthMm/imageXMm etc.
+        // gesetzt (Nutzer hat per Eckpunkt skaliert/verschoben), wird diese Box statt der
+        // Auto-Anpassung verwendet. Die Drehung wird rein visuell per CSS-transform auf den
+        // Wrapper angewendet (rotiert um die Boxmitte) — die Box selbst bleibt unrotiert, die
+        // 4 Ziehpunkte sitzen an ihren Ecken und drehen sich mit.
         let imageBottomMm = IMAGE_TOP;
         if (page.imageDataUrl) {
             const box = getBeschriftungImageBox(page, pageW, pageH);
-            const imgX = (pageW - box.w) / 2;
-            const imgY = IMAGE_TOP;
-            html += `
-                <div class="beschriftung-image-wrapper" style="position:absolute; left:${imgX * scale}px; top:${imgY * scale}px; width:${box.w * scale}px; height:${box.h * scale}px;">
-                    <img src="${page.imageDataUrl}" style="width:100%; height:100%; object-fit:contain; pointer-events:none; user-select:none;">
-                    <div class="beschriftung-image-resize-handle" style="position:absolute; right:-7px; bottom:-7px; width:18px; height:18px; border-radius:50%; background:#ef4444; border:2px solid #fff; cursor:nwse-resize; box-shadow:0 2px 6px rgba(0,0,0,0.4); touch-action:none;"></div>
+            const rotation = page.imageRotation || 0;
+            firstPageHtml += `
+                <div class="beschriftung-image-wrapper" style="position:absolute; left:${box.x * scale}px; top:${box.y * scale}px; width:${box.w * scale}px; height:${box.h * scale}px; transform:rotate(${rotation}deg); transform-origin:center center; cursor:move; touch-action:none;">
+                    <img src="${page.imageDataUrl}" style="width:100%; height:100%; object-fit:fill; pointer-events:none; user-select:none; display:block;">
+                    <div class="beschriftung-image-resize-handle" data-corner="tl" style="position:absolute; left:-7px; top:-7px; width:16px; height:16px; border-radius:50%; background:#ef4444; border:2px solid #fff; cursor:nwse-resize; box-shadow:0 2px 6px rgba(0,0,0,0.4); touch-action:none;"></div>
+                    <div class="beschriftung-image-resize-handle" data-corner="tr" style="position:absolute; right:-7px; top:-7px; width:16px; height:16px; border-radius:50%; background:#ef4444; border:2px solid #fff; cursor:nesw-resize; box-shadow:0 2px 6px rgba(0,0,0,0.4); touch-action:none;"></div>
+                    <div class="beschriftung-image-resize-handle" data-corner="bl" style="position:absolute; left:-7px; bottom:-7px; width:16px; height:16px; border-radius:50%; background:#ef4444; border:2px solid #fff; cursor:nesw-resize; box-shadow:0 2px 6px rgba(0,0,0,0.4); touch-action:none;"></div>
+                    <div class="beschriftung-image-resize-handle" data-corner="br" style="position:absolute; right:-7px; bottom:-7px; width:16px; height:16px; border-radius:50%; background:#ef4444; border:2px solid #fff; cursor:nwse-resize; box-shadow:0 2px 6px rgba(0,0,0,0.4); touch-action:none;"></div>
+                    <div style="position:absolute; left:50%; top:-24px; width:1.5px; height:15px; background:#3b82f6; transform:translateX(-50%); pointer-events:none;"></div>
+                    <div class="beschriftung-image-rotate-handle" style="position:absolute; left:50%; top:-32px; width:15px; height:15px; margin-left:-7.5px; border-radius:50%; background:#3b82f6; border:2px solid #fff; cursor:${ROTATE_CURSOR}; box-shadow:0 2px 6px rgba(0,0,0,0.4); touch-action:none;"></div>
                 </div>`;
-            imageBottomMm = imgY + box.h;
+            imageBottomMm = box.y + box.h;
         }
 
-        // Stückliste als einfache Tabelle in der Vorschau
+        // Stückliste ggf. auf mehrere Seiten aufteilen (siehe computeStuecklistePageBreaks) —
+        // exakt dieselbe Berechnung, die später auch das echte PDF erzeugt (drawBeschriftungPage),
+        // damit die Vorschau hier garantiert genauso umbricht.
+        let pageChunks = [[]];
         if (page.stuecklisteEnabled && page.rows.length > 0) {
-            const tableY = imageBottomMm + 10;
-            const tableW = pageW - 40;
-            const rowsHtml = page.rows.map(r => `
-                <tr>
-                    <td style="border:1px solid #ccc; padding:4px 6px;">${escapeHtml(r.nummer)}</td>
-                    <td style="border:1px solid #ccc; padding:4px 6px;">${escapeHtml(r.bez1)}</td>
-                    <td style="border:1px solid #ccc; padding:4px 6px;">${escapeHtml(r.bez2)}</td>
-                    <td style="border:1px solid #ccc; padding:4px 6px; text-align:center;">${escapeHtml(r.menge)}</td>
-                    <td style="border:1px solid #ccc; padding:4px 6px; text-align:center;">${escapeHtml(r.einheit || 'stk')}</td>
-                </tr>
-            `).join('');
-            html += `
-                <table style="position:absolute; left:${20 * scale}px; top:${tableY * scale}px; width:${tableW * scale}px; border-collapse:collapse; font-size:${3.2 * scale}px; font-family:Helvetica,Arial,sans-serif; color:#141414;">
-                    <thead>
-                        <tr style="background:#1e293b; color:#fff;">
-                            <th style="border:1px solid #ccc; padding:4px 6px; text-align:left;">Art.-Nr.</th>
-                            <th style="border:1px solid #ccc; padding:4px 6px; text-align:left;">Bezeichnung 1</th>
-                            <th style="border:1px solid #ccc; padding:4px 6px; text-align:left;">Bezeichnung 2</th>
-                            <th style="border:1px solid #ccc; padding:4px 6px;">Menge</th>
-                            <th style="border:1px solid #ccc; padding:4px 6px;">Einheit</th>
-                        </tr>
-                    </thead>
-                    <tbody>${rowsHtml}</tbody>
-                </table>
-            `;
+            pageChunks = computeStuecklistePageBreaks(page.rows, imageBottomMm, pageH);
         }
 
-        pageEl.innerHTML = html;
+        if (pageChunks[0] && pageChunks[0].length) {
+            firstPageHtml += buildStuecklisteTableHtml(pageChunks[0], scale, pageW, imageBottomMm + 10);
+        }
+
+        const totalPages = pageChunks.length;
+        const pageWpx = pageW * scale;
+        const pageHpx = pageH * scale;
+
+        let pagesHtml = `
+            <div class="beschriftung-preview-physical-page" style="position:relative; width:${pageWpx}px; height:${pageHpx}px; background:#fff; border-radius:6px; box-shadow:0 4px 24px rgba(0,0,0,0.35); flex-shrink:0;">
+                ${totalPages > 1 ? `<div style="position:absolute; top:6px; left:10px; font-size:10px; color:rgba(0,0,0,0.25); font-family:Arial,sans-serif;">Seite 1 / ${totalPages}</div>` : ''}
+                ${firstPageHtml}
+            </div>`;
+
+        // Fortsetzungsseiten: nur noch die weiterlaufende Stückliste-Tabelle (mit wiederholter
+        // Kopfzeile), kein Titel/Bild — genau wie autoTable es im echten PDF handhabt.
+        for (let i = 1; i < totalPages; i++) {
+            const contRows = pageChunks[i] || [];
+            const contTableHtml = buildStuecklisteTableHtml(contRows, scale, pageW, 20);
+            pagesHtml += `
+                <div class="beschriftung-preview-physical-page" style="position:relative; width:${pageWpx}px; height:${pageHpx}px; background:#fff; border-radius:6px; box-shadow:0 4px 24px rgba(0,0,0,0.35); flex-shrink:0;">
+                    <div style="position:absolute; top:6px; left:10px; font-size:10px; color:rgba(0,0,0,0.25); font-family:Arial,sans-serif;">Seite ${i + 1} / ${totalPages} — Fortsetzung Stückliste</div>
+                    ${contTableHtml}
+                </div>`;
+        }
+
+        container.innerHTML = pagesHtml;
     };
 
-    function drawBeschriftungPage(doc, page, pageW, pageH, logo) {
-        // Feste Zeilenhöhen (mm), unabhängig von Hoch-/Querformat:
-        // Reihe 1 = Titel + Logo, Reihe 2 = Kurzbeschreibung, dann erst das Bild.
-        const ROW1_TOP = 10, ROW1_H = 16;
-        const ROW2_TOP = ROW1_TOP + ROW1_H + 2, ROW2_H = 8;
-        const IMAGE_TOP = ROW2_TOP + ROW2_H + 4;
+    // Lädt eine Bild-Data-URL als Image-Objekt (asynchron, auch wenn Data-URLs meist synchron
+    // laden — auf Nummer sicher, da wir hier vor dem PDF-Export korrekt warten müssen).
+    function loadImageAsync(src) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = () => reject(new Error('Bild konnte nicht geladen werden.'));
+            img.src = src;
+        });
+    }
+
+    // Rendert das gedrehte Bild in ein neues, vergrößertes Canvas (Bounding-Box der gedrehten
+    // Rechteckfläche), damit beim Drehen nichts abgeschnitten wird — exakt dasselbe Prinzip wie
+    // die CSS-Rotation in der Live-Vorschau (Drehung um die Boxmitte). Liefert die neue Bild-
+    // Data-URL zusammen mit ihrer Größe in mm, damit sie zentriert auf der ursprünglichen Box
+    // ins PDF eingefügt werden kann.
+    async function getRotatedImageDataUrl(dataUrl, boxWmm, boxHmm, rotationDeg) {
+        const img = await loadImageAsync(dataUrl);
+        const PX_PER_MM = 6;
+        const scaledW = boxWmm * PX_PER_MM;
+        const scaledH = boxHmm * PX_PER_MM;
+        const rad = rotationDeg * Math.PI / 180;
+        const boundW = Math.abs(scaledW * Math.cos(rad)) + Math.abs(scaledH * Math.sin(rad));
+        const boundH = Math.abs(scaledW * Math.sin(rad)) + Math.abs(scaledH * Math.cos(rad));
+
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.ceil(boundW);
+        canvas.height = Math.ceil(boundH);
+        const ctx = canvas.getContext('2d');
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(rad);
+        ctx.drawImage(img, -scaledW / 2, -scaledH / 2, scaledW, scaledH);
+
+        return { url: canvas.toDataURL('image/png'), w: boundW / PX_PER_MM, h: boundH / PX_PER_MM };
+    }
+
+    async function drawBeschriftungPage(doc, page, pageW, pageH, logo) {
+        const ROW1_TOP = BESCHRIFTUNG_ROW1_TOP, ROW1_H = BESCHRIFTUNG_ROW1_H;
+        const ROW2_TOP = BESCHRIFTUNG_ROW2_TOP, ROW2_H = BESCHRIFTUNG_ROW2_H;
+        const IMAGE_TOP = BESCHRIFTUNG_IMAGE_TOP;
 
         const logoW = 36;
         const logoRightEdge = pageW - 10 - logoW;
@@ -1528,25 +1776,44 @@
         }
 
         // Bild mittig, großzügige Box — erst eine Reihe unter Titel/Logo und Kurzbeschreibung,
-        // wird bei großen Bildern automatisch passend verkleinert (oder per Ziehpunkt in der
-        // Vorschau manuell skaliert, siehe getBeschriftungImageBox)
+        // wird bei großen Bildern automatisch passend verkleinert (oder per Eckpunkt in der
+        // Vorschau manuell skaliert/verschoben, siehe getBeschriftungImageBox). Bei gesetzter
+        // Drehung wird das Bild vorher auf ein vergrößertes Canvas gedreht (siehe
+        // getRotatedImageDataUrl), damit das PDF exakt der Live-Vorschau entspricht.
         let imageBottomMm = IMAGE_TOP;
         if (page.imageDataUrl) {
             const box = getBeschriftungImageBox(page, pageW, pageH);
-            const imgX = (pageW - box.w) / 2;
-            const imgY = IMAGE_TOP;
-            doc.addImage(page.imageDataUrl, imgX, imgY, box.w, box.h);
-            imageBottomMm = imgY + box.h;
+            const rotation = page.imageRotation || 0;
+            if (rotation) {
+                const rotated = await getRotatedImageDataUrl(page.imageDataUrl, box.w, box.h, rotation);
+                const rx = box.x + box.w / 2 - rotated.w / 2;
+                const ry = box.y + box.h / 2 - rotated.h / 2;
+                doc.addImage(rotated.url, rx, ry, rotated.w, rotated.h);
+                imageBottomMm = ry + rotated.h;
+            } else {
+                doc.addImage(page.imageDataUrl, box.x, box.y, box.w, box.h);
+                imageBottomMm = box.y + box.h;
+            }
         }
 
+        // Stückliste ggf. auf mehrere Seiten aufteilen — dieselbe Berechnung wie in der Live-
+        // Vorschau (computeStuecklistePageBreaks), damit die Seitenzahl und die Zeilen je Seite
+        // hier garantiert exakt übereinstimmen, statt autoTable selbst (abweichend von der
+        // Vorschau) intern umbrechen zu lassen.
         if (page.stuecklisteEnabled && page.rows.length > 0) {
-            doc.autoTable({
-                startY: imageBottomMm + 10,
-                margin: { left: 20, right: 20 },
-                head: [['Art.-Nr.', 'Bezeichnung 1', 'Bezeichnung 2', 'Menge', 'Einheit']],
-                body: page.rows.map(r => [r.nummer, r.bez1, r.bez2, r.menge, r.einheit || 'stk']),
-                styles: { fontSize: 10, font: 'helvetica' },
-                headStyles: { fillColor: [30, 41, 59] }
+            const orientation = pageW >= pageH ? 'l' : 'p';
+            const chunks = computeStuecklistePageBreaks(page.rows, imageBottomMm, pageH);
+            chunks.forEach((chunkRows, i) => {
+                if (chunkRows.length === 0) return;
+                if (i > 0) doc.addPage([pageW, pageH], orientation);
+                doc.autoTable({
+                    startY: i === 0 ? imageBottomMm + 10 : STUECKLISTE_CONT_TOP_MM,
+                    margin: { left: 20, right: 20 },
+                    head: [['Art.-Nr.', 'Bezeichnung 1', 'Bezeichnung 2', 'Menge', 'Einheit']],
+                    body: chunkRows.map(r => [r.nummer, r.bez1, r.bez2, r.menge, r.einheit || 'stk']),
+                    styles: { fontSize: 10, font: 'helvetica', fontStyle: 'bold' },
+                    headStyles: { fillColor: [30, 41, 59], fontStyle: 'bold' }
+                });
             });
         }
     }
@@ -1569,15 +1836,16 @@
             const { jsPDF } = window.jspdf;
             let doc = null;
 
-            beschriftungPages.forEach((page, idx) => {
+            for (let idx = 0; idx < beschriftungPages.length; idx++) {
+                const page = beschriftungPages[idx];
                 const { w: pageW, h: pageH } = getPageDimensions(page.orientation);
                 if (idx === 0) {
                     doc = new jsPDF({ unit: 'mm', format: [pageW, pageH], orientation: page.orientation });
                 } else {
                     doc.addPage([pageW, pageH], page.orientation);
                 }
-                drawBeschriftungPage(doc, page, pageW, pageH, logo);
-            });
+                await drawBeschriftungPage(doc, page, pageW, pageH, logo);
+            }
 
             doc.save(`Beschriftung_${new Date().toISOString().slice(0, 10)}.pdf`);
         } catch (err) {

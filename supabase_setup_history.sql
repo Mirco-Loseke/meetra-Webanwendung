@@ -1587,3 +1587,16 @@ ALTER TABLE public.service_entries
 ADD COLUMN IF NOT EXISTS previous_report_id BIGINT REFERENCES public.service_entries(id) ON DELETE SET NULL;
 
 CREATE INDEX IF NOT EXISTS idx_service_entries_previous_report ON public.service_entries(previous_report_id);
+
+
+/* ========================================================= */
+/* DATEI: add_print_ka_placeholder_to_protocols.sql */
+/* ========================================================= */
+
+-- Haken "k. A." drucken bei unbeantworteten Pruefpunkten: true (Standard) = "k. A." wird gedruckt,
+-- false = Feld bleibt im Ausdruck/in der Vorschau leer, um es per Hand auszufuellen.
+ALTER TABLE public.intake_protocols
+ADD COLUMN IF NOT EXISTS print_ka_placeholder BOOLEAN DEFAULT true;
+
+ALTER TABLE public.acceptance_protocols
+ADD COLUMN IF NOT EXISTS print_ka_placeholder BOOLEAN DEFAULT true;

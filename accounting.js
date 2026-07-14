@@ -1,6 +1,16 @@
 // accounting.js - Logic for the Accounting Module
 
 let allAccountingEntries = [];
+
+// Lokales HTML-Escaping — die gleichnamigen Helfer in anderen Modulen stecken in
+// IIFEs und sind hier nicht sichtbar (renderAccountingCharts warf sonst einen
+// ReferenceError, sobald Belege mit Lieferant/Kunde existieren).
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = String(str);
+    return div.innerHTML;
+}
 let currentAccountingType = 'incoming'; // Default view
 let currentAccountingKpiFilter = null; // KPI click-to-filter state
 
@@ -80,15 +90,35 @@ window.openGlassDropdown = function(anchorEl, options, onSelectCallback) {
         portal = document.createElement('div');
         portal.id = 'glass-dropdown-portal';
         portal.className = 'hide-scrollbar';
-        portal.style.cssText = 'position: fixed; max-height: 250px; overflow-y: auto; background: rgba(15,23,42,0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; z-index: 999999; box-shadow: 0 10px 40px rgba(0,0,0,0.5); padding: 5px;';
+        portal.style.cssText = 'position: fixed; max-height: 250px; overflow-y: auto; background: #0f172a; border: 1px solid rgba(255,255,255,0.15); border-radius: 12px; z-index: 999999; box-shadow: 0 10px 40px rgba(0,0,0,0.5); padding: 5px;';
         document.body.appendChild(portal);
+    } else {
+        portal.style.background = '#0f172a';
     }
     
+    portal.innerHTML = options.map((opt, i) => `
+        <div style="padding: 10px 12px; cursor: pointer; border-radius: 8px; font-size: 0.85rem; color: ${opt.selected ? 'var(--color-primary-green)' : (opt.color || '#fff')}; display: flex; align-items: center; justify-content: space-between; transition: background 0.2s; font-weight: ${opt.selected ? '700' : '500'}; background: ${opt.selected ? 'rgba(16,185,129,0.1)' : 'transparent'};"
+             onmouseover="if(!this.dataset.selected) this.style.background='rgba(255,255,255,0.05)'" 
+             onmouseout="if(!this.dataset.selected) this.style.background='transparent'"
+             data-selected="${opt.selected ? 'true' : ''}"
+             data-index="${i}">
+            ${opt.label}
+            ${opt.selected ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+        </div>
+    `).join('');
+
     const rect = anchorEl.getBoundingClientRect();
-    portal.style.top = (rect.bottom + 4) + 'px';
+    portal.style.display = 'block';
+    const portalHeight = portal.offsetHeight;
+    const viewportHeight = window.innerHeight;
+
+    if (rect.bottom + portalHeight > viewportHeight && rect.top - portalHeight > 0) {
+        portal.style.top = (rect.top - portalHeight - 4) + 'px';
+    } else {
+        portal.style.top = (rect.bottom + 4) + 'px';
+    }
     portal.style.left = rect.left + 'px';
     portal.style.width = Math.max(rect.width, 150) + 'px';
-    portal.style.display = 'block';
 
     portal.innerHTML = options.map((opt, i) => `
         <div style="padding: 10px 12px; cursor: pointer; border-radius: 8px; font-size: 0.85rem; color: ${opt.selected ? 'var(--color-primary-green)' : (opt.color || '#fff')}; display: flex; align-items: center; justify-content: space-between; transition: background 0.2s; font-weight: ${opt.selected ? '700' : '500'}; background: ${opt.selected ? 'rgba(16,185,129,0.1)' : 'transparent'};"
@@ -707,12 +737,15 @@ window.openAccountingModal = function () {
 
     // Reset Global Assignment
     if (window.resetGlobalAssignment) window.resetGlobalAssignment();
+    if (window.hideAccAiBanner) window.hideAccAiBanner();
 
     setTimeout(() => {
         const typeSelect = document.getElementById('acc-type');
         if (typeSelect) window.initGlassSelect(typeSelect);
         const vatSelect = document.getElementById('acc-vat-rate');
         if (vatSelect) window.initGlassSelect(vatSelect);
+        const globalAreaSelect = document.getElementById('acc-global-assignment-area');
+        if (globalAreaSelect) window.initGlassSelect(globalAreaSelect);
     }, 0);
 
     console.log('Accounting Module: Modal shown');
@@ -728,7 +761,7 @@ function buildAccMachineDropdown(machines, rowId) {
         dropdown.style.cssText = [
             'position: fixed',
             'z-index: 999999',
-            'background: rgba(15,23,42,0.98)',
+            'background: #0f172a',
             'border: 1px solid rgba(255,255,255,0.15)',
             'border-radius: 12px',
             'max-height: 260px',
@@ -737,15 +770,8 @@ function buildAccMachineDropdown(machines, rowId) {
             'display: none'
         ].join(';');
         document.body.appendChild(dropdown);
-    }
-
-    const row = document.getElementById(rowId);
-    const searchInput = row ? row.querySelector('.item-machine-search') : null;
-    if (searchInput) {
-        const rect = searchInput.getBoundingClientRect();
-        dropdown.style.top = (rect.bottom + 4) + 'px';
-        dropdown.style.left = rect.left + 'px';
-        dropdown.style.width = rect.width + 'px';
+    } else {
+        dropdown.style.background = '#0f172a';
     }
 
     dropdown.innerHTML = '';
@@ -770,6 +796,21 @@ function buildAccMachineDropdown(machines, rowId) {
     });
 
     dropdown.style.display = 'block';
+
+    const row = document.getElementById(rowId);
+    const searchInput = row ? row.querySelector('.item-machine-search') : null;
+    if (searchInput) {
+        const rect = searchInput.getBoundingClientRect();
+        const dropdownHeight = dropdown.offsetHeight;
+        const viewportHeight = window.innerHeight;
+        if (rect.bottom + dropdownHeight > viewportHeight && rect.top - dropdownHeight > 0) {
+            dropdown.style.top = (rect.top - dropdownHeight - 4) + 'px';
+        } else {
+            dropdown.style.top = (rect.bottom + 4) + 'px';
+        }
+        dropdown.style.left = rect.left + 'px';
+        dropdown.style.width = rect.width + 'px';
+    }
 }
 
 window.filterAccMachineDropdown = function (query, rowId) {
@@ -800,6 +841,17 @@ window.selectAccMachine = function (id, label, rowId) {
     const dropdown = document.getElementById('acc-machine-dropdown-portal');
     if (dropdown) dropdown.style.display = 'none';
 };
+
+// Fest definierte Bereiche für die Zuordnung "Andere" — gepflegt unter Einstellungen >
+// Kategorien > Buchhaltungs-Bereiche (categories-Tabelle, type 'area'). Solange dort noch
+// nichts angelegt ist, gilt die bisherige Standard-Liste, damit nichts kaputt geht.
+function getAssignmentAreas() {
+    const defined = (window.categoryList || [])
+        .filter(c => c.type === 'area')
+        .map(c => c.name)
+        .filter(Boolean);
+    return defined.length > 0 ? defined : ['Lager', 'Werkstatt', 'Büro', 'Verkauf', 'Sonstiges'];
+}
 
 // Toggle Assignment Type (Maschine vs Andere)
 window.toggleAccAssignmentType = function (rowId, type) {
@@ -1016,8 +1068,11 @@ window.addAccountingItemRow = function (data = {}) {
     areaSelect.className = 'item-area-select glass-form-input';
     areaSelect.style.cssText = 'flex: 1; font-size: 0.85rem; height: 36px; padding: 0 12px; border-color: rgba(255,255,255,0.1); color: #fff;';
     areaSelect.onchange = (e) => { row.dataset.assignmentArea = e.target.value; };
-    const areas = ['Lager', 'Werkstatt', 'Büro', 'Verkauf', 'Sonstiges'];
-    areaSelect.innerHTML = '<option value="">Bereich wählen...</option>' + 
+    // Fest definierte Bereiche (Einstellungen > Kategorien > Buchhaltungs-Bereiche);
+    // ein abweichender, bereits gespeicherter Wert bleibt als eigene Option wählbar
+    const areas = getAssignmentAreas();
+    if (data.assignment_area && !areas.includes(data.assignment_area)) areas.push(data.assignment_area);
+    areaSelect.innerHTML = '<option value="">Bereich wählen...</option>' +
         areas.map(a => `<option value="${a}" ${a === data.assignment_area ? 'selected' : ''}>${a}</option>`).join('');
     otherUI.appendChild(areaSelect);
     setTimeout(() => window.initGlassSelect(areaSelect), 0);
@@ -1027,6 +1082,15 @@ window.addAccountingItemRow = function (data = {}) {
     row.appendChild(assignmentBox);
 
     container.appendChild(row);
+
+    // NEUE Zeilen ohne eigene Zuordnung erben sichtbar die globale Zuordnung (falls
+    // "Auf alle Positionen übertragen" aktiv ist und dort etwas gewählt wurde).
+    // Aus der Datenbank geladene Zeilen (_fromDb, siehe editAccountingEntry) sind
+    // ausgenommen — gespeicherte Zuordnungen bleiben beim Bearbeiten exakt erhalten.
+    if (!data._fromDb && !data.machine_id && !data.assignment_area) {
+        const g = getGlobalAssignmentValues();
+        if (g.apply && globalAssignmentHasValue(g)) applyGlobalAssignmentToRow(row, g);
+    }
 };
 
 
@@ -1127,16 +1191,12 @@ window.filterGlobalMachineDropdown = function (query) {
     if (!dropdown) {
         dropdown = document.createElement('div');
         dropdown.id = 'acc-global-machine-dropdown-portal';
-        dropdown.style.cssText = 'position:fixed;z-index:999999;background:rgba(15,23,42,0.98);border:1px solid rgba(255,255,255,0.15);border-radius:12px;max-height:260px;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,0.7);display:none;min-width:200px;';
+        dropdown.style.cssText = 'position:fixed;z-index:999999;background:#0f172a;border:1px solid rgba(255,255,255,0.15);border-radius:12px;max-height:260px;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,0.7);display:none;min-width:200px;';
         document.body.appendChild(dropdown);
+    } else {
+        dropdown.style.background = '#0f172a';
     }
     const searchInput = document.getElementById('acc-global-machine-search');
-    if (searchInput) {
-        const rect = searchInput.getBoundingClientRect();
-        dropdown.style.top = (rect.bottom + 4) + 'px';
-        dropdown.style.left = rect.left + 'px';
-        dropdown.style.width = rect.width + 'px';
-    }
     dropdown.innerHTML = '';
     const noneItem = document.createElement('div');
     noneItem.textContent = 'Keine Maschine';
@@ -1156,6 +1216,19 @@ window.filterGlobalMachineDropdown = function (query) {
         dropdown.appendChild(item);
     });
     dropdown.style.display = 'block';
+
+    if (searchInput) {
+        const rect = searchInput.getBoundingClientRect();
+        const dropdownHeight = dropdown.offsetHeight;
+        const viewportHeight = window.innerHeight;
+        if (rect.bottom + dropdownHeight > viewportHeight && rect.top - dropdownHeight > 0) {
+            dropdown.style.top = (rect.top - dropdownHeight - 4) + 'px';
+        } else {
+            dropdown.style.top = (rect.bottom + 4) + 'px';
+        }
+        dropdown.style.left = rect.left + 'px';
+        dropdown.style.width = rect.width + 'px';
+    }
     document.addEventListener('click', function closeGlobal(e) {
         if (!dropdown.contains(e.target) && e.target.id !== 'acc-global-machine-search') {
             dropdown.style.display = 'none';
@@ -1171,6 +1244,7 @@ window.selectGlobalMachine = function (id, label) {
     if (hiddenInput) hiddenInput.value = id;
     const dropdown = document.getElementById('acc-global-machine-dropdown-portal');
     if (dropdown) dropdown.style.display = 'none';
+    window.applyGlobalAssignmentToItemRows();
 };
 
 window.selectGlobalWorkshopMachine = function (id) {
@@ -1181,19 +1255,96 @@ window.selectGlobalWorkshopMachine = function (id) {
     // Update search box for consistency
     const searchInput = document.getElementById('acc-global-machine-search');
     if (searchInput) { searchInput.value = label; searchInput.style.color = id ? 'var(--color-primary-green)' : ''; }
+    window.applyGlobalAssignmentToItemRows();
 };
+
+// --- Globale Zuordnung sichtbar auf die Positionszeilen übertragen ---
+// Früher wurde die globale Zuordnung erst UNSICHTBAR beim Speichern über alle Positionen
+// gestülpt (submitAccountingEntry) — mit fatalem Nebeneffekt: War das standardmäßig
+// angehakte "Auf alle Positionen anwenden" aktiv, aber KEINE globale Maschine gewählt,
+// wurden alle mühsam einzeln gesetzten Positions-Zuordnungen beim Speichern auf leer
+// überschrieben. Jetzt gilt: Die Übertragung passiert sofort und sichtbar in den Zeilen,
+// sobald eine globale Maschine/ein Bereich gewählt wird — gespeichert wird immer genau
+// das, was in den Zeilen steht (WYSIWYG), ohne versteckte Überschreibung.
+function getGlobalAssignmentValues() {
+    return {
+        type: window._globalAssignmentType || 'machine',
+        machineId: document.getElementById('acc-global-machine-id')?.value || '',
+        area: document.getElementById('acc-global-assignment-area')?.value.trim() || '',
+        filter: window._globalMachineFilter || 'all',
+        apply: document.getElementById('acc-global-apply-to-items')?.checked ?? false
+    };
+}
+
+function globalAssignmentHasValue(g) {
+    return g.type === 'machine' ? !!g.machineId : !!g.area;
+}
+
+function applyGlobalAssignmentToRow(row, g) {
+    window.toggleAccAssignmentType(row.id, g.type);
+    if (g.type === 'machine') {
+        window.toggleAccMachineFilter(row.id, g.filter);
+        const label = window.getMachineName(parseInt(g.machineId)) || '';
+        window.selectAccMachine(g.machineId, label, row.id);
+        if (g.filter === 'workshop') {
+            const ws = row.querySelector('.item-machine-workshop');
+            if (ws) {
+                ws.value = String(g.machineId);
+                ws.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        }
+    } else {
+        row.dataset.assignmentArea = g.area;
+        const sel = row.querySelector('.item-area-select');
+        if (sel) {
+            if (![...sel.options].some(o => o.value === g.area)) {
+                const opt = document.createElement('option');
+                opt.value = g.area;
+                opt.textContent = g.area;
+                sel.appendChild(opt);
+            }
+            sel.value = g.area;
+            sel.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }
+}
+
+window.applyGlobalAssignmentToItemRows = function () {
+    const g = getGlobalAssignmentValues();
+    if (!g.apply || !globalAssignmentHasValue(g)) return;
+    document.querySelectorAll('#accounting-items-container .item-row').forEach(row => {
+        applyGlobalAssignmentToRow(row, g);
+    });
+};
+
+// Befüllt das globale Bereichs-Auswahlfeld mit den fest definierten Bereichen
+// (Einstellungen > Kategorien > Buchhaltungs-Bereiche). Ein bereits gespeicherter,
+// abweichender Wert (Altdaten aus der früheren Freitext-Eingabe) bleibt wählbar.
+function populateGlobalAreaSelect(selected) {
+    const sel = document.getElementById('acc-global-assignment-area');
+    if (!sel) return;
+    const areas = getAssignmentAreas();
+    if (selected && !areas.includes(selected)) areas.push(selected);
+    sel.innerHTML = '<option value="">Bereich wählen...</option>' +
+        areas.map(a => `<option value="${a}" ${a === selected ? 'selected' : ''}>${a}</option>`).join('');
+    sel.dispatchEvent(new Event('change', { bubbles: true }));
+}
 
 window.resetGlobalAssignment = function () {
     window._globalAssignmentType = 'machine';
     window._globalMachineFilter = 'all';
     window.toggleGlobalAssignmentType('machine');
     window.toggleGlobalMachineFilter('all');
+    populateGlobalAreaSelect('');
     const searchInput = document.getElementById('acc-global-machine-search');
     if (searchInput) { searchInput.value = ''; searchInput.style.color = ''; }
     const hiddenInput = document.getElementById('acc-global-machine-id');
     if (hiddenInput) hiddenInput.value = '';
     const areaInput = document.getElementById('acc-global-assignment-area');
-    if (areaInput) areaInput.value = '';
+    if (areaInput) {
+        areaInput.value = '';
+        areaInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
     const applyCheck = document.getElementById('acc-global-apply-to-items');
     if (applyCheck) applyCheck.checked = true;
 };
@@ -1256,7 +1407,6 @@ window.submitAccountingEntry = async function (event) {
         const globalMachineId = parseInt(document.getElementById('acc-global-machine-id')?.value) || null;
         const globalArea = document.getElementById('acc-global-assignment-area')?.value || null;
         const globalMachineFilter = window._globalMachineFilter || 'all';
-        const applyToItems = document.getElementById('acc-global-apply-to-items')?.checked ?? true;
 
         const entryData = {
             type: document.getElementById('acc-type').value,
@@ -1284,34 +1434,21 @@ window.submitAccountingEntry = async function (event) {
             entryData.created_by = window.activeUser.id;
         }
 
-        let result;
-        if (id && id.length > 30) { // Check valid UUID for update
-            result = await window.supabaseClient.from('accounting').update(entryData).eq('id', id);
-        } else {
-            result = await window.supabaseClient.from('accounting').insert([entryData]).select();
-        }
-
-        if (result.error) throw result.error;
-        const accountingId = id || result.data[0].id;
-
-        // Save Items
+        // Positionen als JSONB-Array direkt am Beleg speichern (Spalte accounting.items,
+        // siehe supabase_migration_accounting_items_jsonb.sql) statt als einzelne Zeilen
+        // in einer eigenen Tabelle — 1 DB-Zeile pro Beleg statt 1+N, und das Speichern
+        // ist atomar (ein einziger Request statt Update + Delete + Insert).
+        // Die Zeilen sind die alleinige Quelle der Wahrheit — die globale Zuordnung wurde
+        // (falls gewünscht) bereits sichtbar per applyGlobalAssignmentToItemRows in die
+        // Zeilen übertragen. Keine versteckte Überschreibung beim Speichern mehr.
         const itemRows = document.querySelectorAll('#accounting-items-container .item-row');
-        const items = Array.from(itemRows).map(row => {
-            // Optional: override per-item assignment with global values
-            let machineId = row.dataset.machineId ? parseInt(row.dataset.machineId) : null;
-            let assignmentType = row.dataset.assignmentType || 'machine';
-            let assignmentArea = row.dataset.assignmentArea || null;
-            let machineFilter = row.dataset.machineFilter || 'all';
-
-            if (applyToItems) {
-                assignmentType = globalType;
-                machineId = globalType === 'machine' ? globalMachineId : null;
-                assignmentArea = globalType === 'other' ? globalArea : null;
-                machineFilter = globalMachineFilter;
-            }
+        entryData.items = Array.from(itemRows).map(row => {
+            const machineId = row.dataset.machineId ? parseInt(row.dataset.machineId) : null;
+            const assignmentType = row.dataset.assignmentType || 'machine';
+            const assignmentArea = row.dataset.assignmentArea || null;
+            const machineFilter = row.dataset.machineFilter || 'all';
 
             return {
-                accounting_id: accountingId,
                 description: row.querySelector('.item-desc').value,
                 quantity: parseFloat(row.querySelector('.item-qty').value) || 0,
                 unit: row.querySelector('.item-unit').value,
@@ -1323,15 +1460,14 @@ window.submitAccountingEntry = async function (event) {
             };
         });
 
-        // Delete old items first if updating
-        if (id) {
-            await window.supabaseClient.from('accounting_items').delete().eq('accounting_id', id);
+        let result;
+        if (id && id.length > 30) { // Check valid UUID for update
+            result = await window.supabaseClient.from('accounting').update(entryData).eq('id', id);
+        } else {
+            result = await window.supabaseClient.from('accounting').insert([entryData]).select();
         }
 
-        if (items.length > 0) {
-            const { error: itemsError } = await window.supabaseClient.from('accounting_items').insert(items);
-            if (itemsError) throw itemsError;
-        }
+        if (result.error) throw result.error;
 
         window.closeAccountingModal();
         window.fetchAccountingEntries();
@@ -1389,30 +1525,18 @@ window.editAccountingEntry = async function (id) {
             if (searchInput) { searchInput.value = machineName; searchInput.style.color = 'var(--color-primary-green)'; }
             if (hiddenInput) hiddenInput.value = entry.global_assignment_machine_id;
         } else if (globalType === 'other') {
-            const areaInput = document.getElementById('acc-global-assignment-area');
-            if (areaInput) areaInput.value = entry.global_assignment_area || '';
+            populateGlobalAreaSelect(entry.global_assignment_area || '');
         }
         
         window.updateAccountingEntityLabel();
     }, 10);
 
-    // Fetch and render items
-    try {
-        const { data: items, error: itemsError } = await window.supabaseClient
-            .from('accounting_items')
-            .select('*')
-            .eq('accounting_id', id);
-        
-        if (itemsError) throw itemsError;
-        
-        const itemsContainer = document.getElementById('accounting-items-container');
-        if (itemsContainer) itemsContainer.innerHTML = '';
-        if (items && items.length > 0) {
-            items.forEach(item => window.addAccountingItemRow(item));
-        }
-    } catch (err) {
-        console.error('Error fetching accounting items:', err);
-    }
+    // Positionen kommen direkt aus dem Beleg (JSONB-Spalte items) — kein extra Fetch nötig.
+    // _fromDb markiert die Zeilen als "aus der Datenbank geladen", damit sie NICHT die
+    // globale Zuordnung erben (gespeicherte Zuordnungen bleiben beim Bearbeiten unangetastet).
+    const itemsContainer = document.getElementById('accounting-items-container');
+    if (itemsContainer) itemsContainer.innerHTML = '';
+    (entry.items || []).forEach(item => window.addAccountingItemRow({ ...item, _fromDb: true }));
 };
 
 window.deleteAccountingEntry = async function (id) {
@@ -1428,6 +1552,107 @@ window.deleteAccountingEntry = async function (id) {
     }
 };
 
+// --- Hilfsfunktionen für die KI-Beleganalyse ---
+
+// Ergebnis-/Warnbanner im Modal (ersetzt die störenden alert()-Popups nach der Analyse)
+window.showAccAiBanner = function (kind, html) {
+    const b = document.getElementById('acc-ai-result-banner');
+    if (!b) return;
+    const styles = {
+        success: 'background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.35); color: #6ee7b7;',
+        warning: 'background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.4); color: #fcd34d;',
+        error: 'background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5;'
+    };
+    b.style.cssText = 'margin: -0.75rem 0 1.5rem 0; padding: 12px 16px; border-radius: 12px; font-size: 0.85rem; line-height: 1.5; display: block;' + (styles[kind] || styles.success);
+    b.innerHTML = html;
+    b.classList.remove('hidden');
+};
+
+window.hideAccAiBanner = function () {
+    const b = document.getElementById('acc-ai-result-banner');
+    if (b) { b.style.display = 'none'; b.classList.add('hidden'); }
+};
+
+// Datei nativ per FileReader in eine Data-URL wandeln — ersetzt die alte
+// Byte-für-Byte-Schleife (String-Konkatenation in einer Schleife über Millionen
+// Bytes), die bei Handyfotos den Browser für mehrere Sekunden einfrieren konnte.
+function fileToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Datei konnte nicht gelesen werden.'));
+        reader.readAsDataURL(file);
+    });
+}
+
+// Bild auf max. Kantenlänge herunterskalieren und als JPEG neu kodieren.
+// Grund: Die Groq-API lehnt zu große Anfragen ab (Base64-Bilder max. ~4 MB) —
+// unverkleinerte Handyfotos (4000px+, mehrere MB) ließen die Analyse deshalb
+// regelmäßig fehlschlagen. 2000px reichen für die Texterkennung locker aus.
+function downscaleImageForAI(dataUrl, maxDim = 2000, quality = 0.85) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            const longest = Math.max(img.naturalWidth, img.naturalHeight);
+            if (longest <= maxDim) { resolve(dataUrl); return; }
+            const scale = maxDim / longest;
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(img.naturalWidth * scale);
+            canvas.height = Math.round(img.naturalHeight * scale);
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        // Falls das Format nicht dekodierbar ist, Original unverändert weiterreichen
+        img.onerror = () => resolve(dataUrl);
+        img.src = dataUrl;
+    });
+}
+
+// Plausibilitätsprüfung + Auto-Korrektur der KI-Positionen gegen den Netto-Betrag.
+// Die zwei häufigsten KI-Fehler werden automatisch erkannt und repariert:
+// 1. price_net enthält die ZEILENSUMME statt des Einzelpreises (Summe der Preise = Netto)
+// 2. price_net ist BRUTTO statt Netto (Summe / (1+MwSt) = Netto)
+// Bleibt danach eine Abweichung, wird sie als Warnung gemeldet statt stillschweigend
+// falsche Positionen zu übernehmen.
+function validateAndFixAiPositions(parsedData) {
+    const notes = [];
+    const positions = Array.isArray(parsedData.positions)
+        ? parsedData.positions.filter(p => p && p.description)
+        : [];
+    const net = parseFloat(parsedData.net_amount);
+    if (!positions.length || isNaN(net) || net <= 0) return { positions, notes, mismatch: false };
+
+    const qtyOf = p => { const q = parseFloat(p.quantity); return (isNaN(q) || q <= 0) ? 1 : q; };
+    const priceOf = p => parseFloat(p.price_net) || 0;
+    const close = (a, b) => Math.abs(a - b) <= Math.max(0.05, Math.abs(b) * 0.005);
+
+    let total = positions.reduce((s, p) => s + qtyOf(p) * priceOf(p), 0);
+    if (close(total, net)) return { positions, notes, mismatch: false };
+
+    const lineTotalSum = positions.reduce((s, p) => s + priceOf(p), 0);
+    if (close(lineTotalSum, net)) {
+        positions.forEach(p => {
+            const q = qtyOf(p);
+            if (q !== 1) p.price_net = Math.round((priceOf(p) / q) * 100) / 100;
+        });
+        notes.push('Einzelpreise wurden automatisch aus den erkannten Zeilensummen berechnet.');
+        return { positions, notes, mismatch: false };
+    }
+
+    const vat = parseFloat(parsedData.vat_rate);
+    if (!isNaN(vat) && vat > 0) {
+        const factor = 1 + vat / 100;
+        if (close(total / factor, net)) {
+            positions.forEach(p => { p.price_net = Math.round((priceOf(p) / factor) * 100) / 100; });
+            notes.push('Positionspreise waren Brutto und wurden automatisch in Netto umgerechnet.');
+            return { positions, notes, mismatch: false };
+        }
+    }
+
+    notes.push(`Die Positionssumme (${total.toFixed(2)} €) weicht vom Netto-Betrag der Rechnung (${net.toFixed(2)} €) ab — bitte Positionen und Beträge prüfen.`);
+    return { positions, notes, mismatch: true };
+}
+
 window.handleAccountingPDFUpload = async function (event) {
     const file = event.target.files[0];
     if (!file) return;
@@ -1438,9 +1663,11 @@ window.handleAccountingPDFUpload = async function (event) {
         return;
     }
 
+    window.hideAccAiBanner();
+
     const uploadBox = document.getElementById('acc-pdf-dropzone');
     const originalContent = uploadBox ? uploadBox.innerHTML : '';
-    
+
     // UI Feedback Start
     if (uploadBox) {
         uploadBox.innerHTML = `
@@ -1479,7 +1706,7 @@ window.handleAccountingPDFUpload = async function (event) {
 
         const isImage = file.type.startsWith('image/');
         const systemPrompt = `Du bist ein präziser Buchhaltungs-Assistent für das Unternehmen 'Meetra'. Analysiere das Dokument (Deutsch oder Englisch) und gib NUR valides JSON zurück. 
-Schlüssel: invoice_number, date (YYYY-MM-DD), net_amount (Zahl), vat_rate (Zahl), type (incoming/outgoing), entity (Geschäftspartner), due_date (YYYY-MM-DD oder "sofort"), paid_at (YYYY-MM-DD), discount_amount (Zahl), is_paid (boolean), is_debited (boolean), positions (Array aus {description, quantity, unit, price_net}). 
+Schlüssel: invoice_number, date (YYYY-MM-DD), net_amount (Zahl), vat_rate (Zahl), type (incoming/outgoing), entity (Geschäftspartner), due_date (YYYY-MM-DD oder "sofort"), paid_at (YYYY-MM-DD), discount_date (YYYY-MM-DD), discount_amount (Zahl), is_paid (boolean), is_debited (boolean), positions (Array aus {description, quantity, unit, price_net}).
 
 ERKENNUNG DES DATUMS (date):
 - PRIORITÄT: Das Rechnungsdatum ("Invoice Date") steht meist OBEN RECHTS.
@@ -1503,24 +1730,29 @@ STATUS (is_paid & paid_at):
 FÄLLIGKEIT (due_date):
 - "Due immediately", "payable now", "sofort fällig" -> "sofort". Ansonsten YYYY-MM-DD.
 
+SKONTO (discount_date & discount_amount):
+- Suche nach "Skonto", z.B. "2% Skonto bei Zahlung bis 15.01.2025" oder "innerhalb 14 Tagen 2% Skonto".
+- 'discount_date' = das späteste Datum, bis zu dem Skonto gewährt wird (ggf. aus Rechnungsdatum + Fristtagen berechnen).
+- 'discount_amount' = der Skonto-BETRAG in Euro (Prozentsatz mal Bruttobetrag), NICHT der Prozentsatz.
+
 KONTO ABBUCHUNG (is_debited):
 - Setze 'is_debited' = true, wenn auf der Rechnung steht, dass der Betrag automatisch vom Konto abgebucht wird: z.B. "wird von folgendem Konto abgebucht", "Einzugsermächtigung", "SEPA-Lastschrift", "Lastschrift", "wird automatisch abgebucht", "direct debit", "charged to your account", "wird abgebucht", "Abbuchung", "Bankeinzug".
 - Falls 'is_debited' = true: Setze 'due_date' = "sofort" (außer es ist explizit ein anderes Datum angegeben).
 
 WICHTIG ZU PREISEN:
-- 'price_net' ist der EINZELPREIS. Menge * Einzelpreis = Zeilengesamtpreis.
+- 'price_net' ist der NETTO-EINZELPREIS (Stückpreis ohne MwSt), NICHT die Zeilensumme und NICHT brutto.
+- KONTROLLE: Die Summe aller (quantity × price_net) MUSS dem 'net_amount' entsprechen. Prüfe das, bevor du antwortest, und korrigiere die Positionen falls nötig.
 Setze Unbekanntes auf null.`;
 
         let requestBody = {};
 
         if (isImage) {
             updateStatus('Lese Bilddaten...');
-            // Use arrayBuffer() for reliable, synchronous-style access without FileReader timing issues
-            const arrayBuf = await file.arrayBuffer();
-            const bytes = new Uint8Array(arrayBuf);
-            let binary = '';
-            for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-            const base64Image = `data:${file.type};base64,${btoa(binary)}`;
+            // Nativ einlesen und auf API-taugliche Größe herunterskalieren (siehe
+            // fileToDataUrl/downscaleImageForAI) — große Handyfotos ließen die Analyse
+            // vorher am Request-Limit der Groq-API scheitern.
+            const rawDataUrl = await fileToDataUrl(file);
+            const base64Image = await downscaleImageForAI(rawDataUrl);
 
             requestBody = {
                 model: "meta-llama/llama-4-scout-17b-16e-instruct",
@@ -1550,13 +1782,19 @@ Setze Unbekanntes auf null.`;
 
                 for (let i = 1; i <= numPages; i++) {
                     const page = await pdfDocument.getPage(i);
-                    const viewport = page.getViewport({ scale: 3.0 });
+                    // Auflösung dynamisch begrenzen (längste Kante ~2000px) statt fest
+                    // Scale 3.0 / Qualität 0.95: Das erzeugte pro A4-Seite mehrere MB
+                    // Base64 und ließ die Groq-API bei mehrseitigen PDFs am
+                    // Request-Größenlimit abbrechen. 2000px reichen für Texterkennung.
+                    const baseViewport = page.getViewport({ scale: 1.0 });
+                    const scale = Math.min(3.0, 2000 / Math.max(baseViewport.width, baseViewport.height));
+                    const viewport = page.getViewport({ scale });
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d');
                     canvas.height = viewport.height;
                     canvas.width = viewport.width;
                     await page.render({ canvasContext: context, viewport: viewport }).promise;
-                    base64Images.push(canvas.toDataURL('image/jpeg', 0.95));
+                    base64Images.push(canvas.toDataURL('image/jpeg', 0.85));
                 }
             } catch (pdfErr) {
                 throw new Error('Fehler beim Rendern der PDF: ' + pdfErr.message);
@@ -1639,27 +1877,32 @@ Setze Unbekanntes auf null.`;
 
         window.calculateGross();
 
-        // Positions
+        // Positionen: erst gegen den Netto-Betrag validieren (und typische KI-Fehler wie
+        // Zeilensumme-statt-Einzelpreis oder Brutto-statt-Netto automatisch korrigieren),
+        // dann einfügen. Neue Zeilen erben dabei automatisch die globale Zuordnung,
+        // falls dort bereits eine Maschine/ein Bereich gewählt wurde.
+        const { positions, notes, mismatch } = validateAndFixAiPositions(parsedData);
         const cont = document.getElementById('accounting-items-container');
         if (cont) {
             cont.innerHTML = '';
-            if (parsedData.positions && Array.isArray(parsedData.positions)) {
-                parsedData.positions.forEach(pos => window.addAccountingItemRow(pos));
-            }
+            positions.forEach(pos => window.addAccountingItemRow(pos));
         }
 
-        alert('Analyse abgeschlossen!');
+        const summaryParts = [`<strong>Analyse abgeschlossen:</strong> ${positions.length} Position${positions.length !== 1 ? 'en' : ''} erkannt.`];
+        notes.forEach(n => summaryParts.push(n));
+        summaryParts.push('Bitte alle Werte kurz gegen den Beleg prüfen, bevor gespeichert wird.');
+        window.showAccAiBanner(mismatch ? 'warning' : 'success', summaryParts.join('<br>'));
 
     } catch (err) {
         console.error("AI Analysis Error:", err);
         const errMsg = err.message || JSON.stringify(err) || "Unbekannter Fehler beim API-Aufruf.";
-        
-        if (errMsg.includes('insufficient_quota') || errMsg.includes('exceeded your current quota')) {
-            alert('Fehler: Das Rate-Limit der kostenlosen Groq API wurde erreicht. Bitte kurz warten.');
+
+        if (errMsg.includes('insufficient_quota') || errMsg.includes('exceeded your current quota') || errMsg.includes('rate_limit')) {
+            window.showAccAiBanner('error', '<strong>Rate-Limit erreicht:</strong> Die kostenlose Groq API ist gerade ausgelastet. Bitte kurz warten und erneut versuchen.');
         } else if (errMsg.includes('invalid_api_key') || errMsg.includes('Incorrect API key')) {
-            alert('Fehler: Der eingegebene API-Key ist ungültig. Bitte prüfe die Einstellungen.');
+            window.showAccAiBanner('error', '<strong>API-Key ungültig:</strong> Bitte den Groq API-Key in den Einstellungen prüfen.');
         } else {
-            alert(`Fehler bei der Analyse: ${errMsg}`);
+            window.showAccAiBanner('error', `<strong>Fehler bei der Analyse:</strong> ${errMsg}`);
         }
     } finally {
         if (uploadBox) uploadBox.innerHTML = originalContent;
@@ -1677,6 +1920,17 @@ window.handleAccountingPDFDrop = async function (event) {
             alert('Bitte nur PDF-Dateien oder Bilder hochladen.');
         }
     }
+};
+
+// Ansichts-Filter der Finanzübersicht: 'all' | 'incoming' | 'outgoing'
+let finTypeFilter = 'all';
+
+window.switchFinType = function (type) {
+    finTypeFilter = type;
+    document.querySelectorAll('#fin-type-tabs .fin-type-tab').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.type === type);
+    });
+    window.updateFinancialDashboard();
 };
 
 window.openFinancialDashboard = function () {
@@ -1699,7 +1953,8 @@ window.openFinancialDashboard = function () {
         const dirSelect = document.getElementById('fin-direction');
         if (dirSelect) window.initGlassSelect(dirSelect);
 
-        window.updateFinancialDashboard();
+        // Reiter-Zustand syncen + rendern
+        window.switchFinType(finTypeFilter);
     }
 };
 
@@ -1739,7 +1994,8 @@ window.updateFinancialDashboard = function () {
         limitDate.setDate(today.getDate() - days);
     }
 
-    const unpaid = allAccountingEntries.filter(e => !e.is_paid);
+    const unpaid = allAccountingEntries.filter(e =>
+        !e.is_paid && (finTypeFilter === 'all' || e.type === finTypeFilter));
 
     let incomingItems = [];
     let outgoingItems = [];
@@ -1781,28 +2037,78 @@ window.updateFinancialDashboard = function () {
         }
     });
 
+    // --- Liquiditäts-Zusammenfassung über den Listen (abhängig vom Eingang/Ausgang-Reiter) ---
+    const sumGrossOf = arr => arr.reduce((s, e) => s + (parseFloat(e.amount_gross) || 0), 0);
+    const skontoSaving = skontoDeals.reduce((s, e) => s + (parseFloat(e.discount_amount) || 0), 0);
+    const kpiTile = (value, label, color, borderColor) => `
+        <div class="acc-eval-kpi"${borderColor ? ` style="border-color: ${borderColor};"` : ''}>
+            <div class="acc-eval-kpi-value" style="color: ${color};">${value}</div>
+            <div class="acc-eval-kpi-label">${label}</div>
+        </div>`;
+
     let html = '';
 
+    if (finTypeFilter === 'incoming') {
+        const futureSum = sumGrossOf(incomingItems);
+        const overdueSum = sumGrossOf(overdueIncoming);
+        const openTotal = futureSum + overdueSum;
+        if (openTotal > 0 || skontoSaving > 0) {
+            html += `<div class="fin-summary-grid">
+                ${kpiTile(window.formatCurrency(openTotal), `Offene Zahlungen (${incomingItems.length + overdueIncoming.length})`, '#f87171')}
+                ${kpiTile(window.formatCurrency(overdueSum), `Davon überfällig (${overdueIncoming.length})`, '#ea580c', overdueIncoming.length > 0 ? 'rgba(234,88,12,0.3)' : null)}
+                ${kpiTile(window.formatCurrency(futureSum), `Zukünftig fällig (${incomingItems.length})`, '#fff')}
+                ${kpiTile(window.formatCurrency(skontoSaving), `Mögl. Skonto-Ersparnis (${skontoDeals.length})`, '#fbbf24')}
+            </div>`;
+        }
+    } else if (finTypeFilter === 'outgoing') {
+        const futureSum = sumGrossOf(outgoingItems);
+        const overdueSum = sumGrossOf(overdueOutgoing);
+        const openTotal = futureSum + overdueSum;
+        const biggest = [...outgoingItems, ...overdueOutgoing].sort((a, b) => (parseFloat(b.amount_gross) || 0) - (parseFloat(a.amount_gross) || 0))[0];
+        if (openTotal > 0) {
+            html += `<div class="fin-summary-grid">
+                ${kpiTile(window.formatCurrency(openTotal), `Erwartete Eingänge (${outgoingItems.length + overdueOutgoing.length})`, 'var(--color-primary-green)')}
+                ${kpiTile(window.formatCurrency(overdueSum), `Überfällige Kundenzahlungen (${overdueOutgoing.length})`, '#ea580c', overdueOutgoing.length > 0 ? 'rgba(234,88,12,0.3)' : null)}
+                ${kpiTile(window.formatCurrency(futureSum), `Zukünftig erwartet (${outgoingItems.length})`, '#fff')}
+                ${kpiTile(biggest ? window.formatCurrency(biggest.amount_gross) : '-', `Größter offener Posten${biggest ? ' · ' + escapeHtml(String(biggest.entity).split(',')[0].substring(0, 18)) : ''}`, '#60a5fa')}
+            </div>`;
+        }
+    } else {
+        const expectedIn = sumGrossOf(outgoingItems) + sumGrossOf(overdueOutgoing);   // Kunden zahlen an uns
+        const dueOut = sumGrossOf(incomingItems) + sumGrossOf(overdueIncoming);       // Wir zahlen an Lieferanten
+        const netForecast = expectedIn - dueOut;
+        const overdueTotal = overdueIncoming.length + overdueOutgoing.length;
+        if (expectedIn > 0 || dueOut > 0 || skontoSaving > 0 || overdueTotal > 0) {
+            html += `<div class="fin-summary-grid">
+                ${kpiTile(window.formatCurrency(expectedIn), `Erwartete Eingänge (${outgoingItems.length + overdueOutgoing.length})`, 'var(--color-primary-green)')}
+                ${kpiTile(window.formatCurrency(dueOut), `Fällige Zahlungen (${incomingItems.length + overdueIncoming.length})`, '#f87171')}
+                ${kpiTile((netForecast >= 0 ? '+' : '') + window.formatCurrency(netForecast), `Netto-Prognose${overdueTotal > 0 ? ' · ' + overdueTotal + ' überfällig' : ''}`, netForecast >= 0 ? 'var(--color-primary-green)' : '#f87171', netForecast >= 0 ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)')}
+                ${kpiTile(window.formatCurrency(skontoSaving), `Mögl. Skonto-Ersparnis (${skontoDeals.length})`, '#fbbf24')}
+            </div>`;
+        }
+    }
+
+    let listHtml = '';
     if (direction === 'all') {
-        if (overdueOutgoing.length > 0) html += renderDashboardSection('⚠️ Überfällig: Ausgang (Kunden)', overdueOutgoing, '10b981', 'due_date', false, '#10b981', null, today);
-        if (overdueIncoming.length > 0) html += renderDashboardSection('⚠️ Überfällig: Eingang (Lieferanten)', overdueIncoming, 'ea580c', 'due_date', false, '#ea580c', null, today);
-        if (skontoDeals.length > 0) html += renderDashboardSection('🏷️ Eingang: Skonto-Fristen', skontoDeals, 'facc15', 'discount_date', true, '#facc15', null, today);
-        if (incomingItems.length > 0) html += renderDashboardSection('📥 Eingang: Zukünftig fällig', incomingItems, 'f87171', 'due_date', false, '#f87171', null, today);
-        if (outgoingItems.length > 0) html += renderDashboardSection('📤 Ausgang: Erwartete Zahlungen', outgoingItems, '10b981', 'due_date', false, '#10b981', null, today);
+        if (overdueOutgoing.length > 0) listHtml += renderDashboardSection('⚠️ Überfällig: Ausgang (Kunden)', overdueOutgoing, '10b981', 'due_date', false, '#10b981', null, today);
+        if (overdueIncoming.length > 0) listHtml += renderDashboardSection('⚠️ Überfällig: Eingang (Lieferanten)', overdueIncoming, 'ea580c', 'due_date', false, '#ea580c', null, today);
+        if (skontoDeals.length > 0) listHtml += renderDashboardSection('🏷️ Eingang: Skonto-Fristen', skontoDeals, 'facc15', 'discount_date', true, '#facc15', null, today);
+        if (incomingItems.length > 0) listHtml += renderDashboardSection('📥 Eingang: Zukünftig fällig', incomingItems, 'f87171', 'due_date', false, '#f87171', null, today);
+        if (outgoingItems.length > 0) listHtml += renderDashboardSection('📤 Ausgang: Erwartete Zahlungen', outgoingItems, '10b981', 'due_date', false, '#10b981', null, today);
     } else if (direction === 'future') {
-        html += renderDashboardSection('📥 Eingang: Demnächst fällig', incomingItems, 'f87171', 'due_date', false, '#f87171', null, today);
-        html += renderDashboardSection('🏷️ Eingang: Skonto-Fristen', skontoDeals, 'facc15', 'discount_date', true, '#facc15', null, today);
-        html += renderDashboardSection('📤 Ausgang: Erwartete Zahlungen', outgoingItems, '10b981', 'due_date', false, '#10b981', null, today);
+        listHtml += renderDashboardSection('📥 Eingang: Demnächst fällig', incomingItems, 'f87171', 'due_date', false, '#f87171', null, today);
+        listHtml += renderDashboardSection('🏷️ Eingang: Skonto-Fristen', skontoDeals, 'facc15', 'discount_date', true, '#facc15', null, today);
+        listHtml += renderDashboardSection('📤 Ausgang: Erwartete Zahlungen', outgoingItems, '10b981', 'due_date', false, '#10b981', null, today);
     } else if (direction === 'past') {
-        html += renderDashboardSection('Vergangene Ausgangsrechnungen (Kunden)', overdueOutgoing, '10b981', 'due_date', false, null, null, today);
-        html += renderDashboardSection('Vergangene Eingangsrechnungen (Lieferanten)', overdueIncoming, 'ea580c', 'due_date', false, null, null, today);
+        listHtml += renderDashboardSection('Vergangene Ausgangsrechnungen (Kunden)', overdueOutgoing, '10b981', 'due_date', false, null, null, today);
+        listHtml += renderDashboardSection('Vergangene Eingangsrechnungen (Lieferanten)', overdueIncoming, 'ea580c', 'due_date', false, null, null, today);
     }
 
-    if (!html) {
-        html = `<div style="padding: 4rem 2rem; text-align: center; color: rgba(255,255,255,0.2);">Keine passenden Einträge gefunden.</div>`;
+    if (!listHtml) {
+        listHtml = `<div style="padding: 4rem 2rem; text-align: center; color: rgba(255,255,255,0.2);">Keine passenden Einträge gefunden.</div>`;
     }
 
-    content.innerHTML = html;
+    content.innerHTML = html + listHtml;
 };
 
 function renderDashboardSection(title, items, color, dateField, showSkonto = false, borderColor = null, timeLabel = null, today = new Date()) {
@@ -1929,24 +2235,8 @@ window.updateMachineEvaluation = async function () {
     try {
         if (!window.supabaseClient) throw new Error('Supabase client not initialized');
 
-        // 1. Fetch Items with joined accounting data
-        console.log('Fetching accounting items...');
-        const { data: items, error: itemsError } = await window.supabaseClient
-            .from('accounting_items')
-            .select(`
-                accounting_id, 
-                machine_id, 
-                assignment_type,
-                assignment_area,
-                price_net, 
-                quantity,
-                accounting ( id, date, type )
-            `);
-
-        if (itemsError) throw itemsError;
-        console.log(`Found ${items?.length || 0} items with machine assignment.`);
-
-        // 2. Refresh main entries if needed (for direct assignments and UI sync)
+        // 1. Belege laden (die Positionen hängen als JSONB-Array direkt an jedem Beleg —
+        // keine separate Abfrage mit Join mehr nötig)
         if (!allAccountingEntries || allAccountingEntries.length === 0) {
             console.log('Main entries empty, fetching...');
             await window.fetchAccountingEntries();
@@ -1955,45 +2245,37 @@ window.updateMachineEvaluation = async function () {
         const groupedMachines = {};
         const groupedAreas = {};
         const months = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
-        const itemAccountingIds = new Set();
 
-        // 3. Process items O(N)
-        (items || []).forEach(item => {
-            const entry = item.accounting;
-            if (!entry || entry.type !== 'incoming') return;
-            
+        // 2. Positionen aller Eingangsbelege auswerten
+        allAccountingEntries.forEach(entry => {
+            if (entry.type !== 'incoming') return;
+
             const date = new Date(entry.date);
             if (startDate && date < startDate) return;
             if (endDate && date > endDate) return;
 
-            itemAccountingIds.add(item.accounting_id);
-
             const monthYear = `${months[date.getMonth()]} ${date.getFullYear()}`;
-            const cost = (parseFloat(item.price_net) || 0) * (parseFloat(item.quantity) || 1);
+            const items = Array.isArray(entry.items) ? entry.items : [];
 
-            if (item.assignment_type === 'machine' && item.machine_id) {
-                if (!groupedMachines[item.machine_id]) groupedMachines[item.machine_id] = {};
-                if (!groupedMachines[item.machine_id][monthYear]) groupedMachines[item.machine_id][monthYear] = 0;
-                groupedMachines[item.machine_id][monthYear] += cost;
-            } else if (item.assignment_type === 'other' && item.assignment_area) {
-                // Normalize area name
-                const area = item.assignment_area.charAt(0).toUpperCase() + item.assignment_area.slice(1);
-                if (!groupedAreas[area]) groupedAreas[area] = {};
-                if (!groupedAreas[area][monthYear]) groupedAreas[area][monthYear] = 0;
-                groupedAreas[area][monthYear] += cost;
-            }
-        });
+            items.forEach(item => {
+                const cost = (parseFloat(item.price_net) || 0) * (parseFloat(item.quantity) || 1);
 
-        // 4. Process direct assignments O(M) (Legacy support for entries with direct machine_id)
-        allAccountingEntries.forEach(entry => {
-            if (entry.machine_id && entry.type === 'incoming' && !itemAccountingIds.has(entry.id)) {
-                const date = new Date(entry.date);
-                if (startDate && date < startDate) return;
-                if (endDate && date > endDate) return;
+                if (item.assignment_type === 'machine' && item.machine_id) {
+                    if (!groupedMachines[item.machine_id]) groupedMachines[item.machine_id] = {};
+                    if (!groupedMachines[item.machine_id][monthYear]) groupedMachines[item.machine_id][monthYear] = 0;
+                    groupedMachines[item.machine_id][monthYear] += cost;
+                } else if ((item.assignment_type === 'other' || item.assignment_type === 'filter') && item.assignment_area) {
+                    // 'filter' = Altlast der früheren Split-Funktion, zählt ebenfalls als Bereich
+                    const area = item.assignment_area.charAt(0).toUpperCase() + item.assignment_area.slice(1);
+                    if (!groupedAreas[area]) groupedAreas[area] = {};
+                    if (!groupedAreas[area][monthYear]) groupedAreas[area][monthYear] = 0;
+                    groupedAreas[area][monthYear] += cost;
+                }
+            });
 
-                const monthYear = `${months[date.getMonth()]} ${date.getFullYear()}`;
+            // Legacy: Belege mit direkter Maschinen-Zuordnung, aber ohne Positionen
+            if (items.length === 0 && entry.machine_id) {
                 const cost = parseFloat(entry.amount_net) || 0;
-                
                 if (!groupedMachines[entry.machine_id]) groupedMachines[entry.machine_id] = {};
                 if (!groupedMachines[entry.machine_id][monthYear]) groupedMachines[entry.machine_id][monthYear] = 0;
                 groupedMachines[entry.machine_id][monthYear] += cost;
@@ -2017,7 +2299,93 @@ window.updateMachineEvaluation = async function () {
             return;
         }
 
-        let html = '';
+        // --- Aggregationen für KPIs, Ranking und Trend ---
+        const sumVals = obj => Object.values(obj).reduce((s, v) => s + v, 0);
+        const machineTotal = Object.values(groupedMachines).reduce((s, o) => s + sumVals(o), 0);
+        const areaTotal = Object.values(groupedAreas).reduce((s, o) => s + sumVals(o), 0);
+        const grandTotal = machineTotal + areaTotal;
+
+        // Kostenstellen (Maschinen + Bereiche) kombiniert für das Ranking
+        const costCenters = [
+            ...Object.keys(groupedMachines).map(id => ({ label: window.getMachineName(id), total: sumVals(groupedMachines[id]), color: 'var(--color-primary-green)' })),
+            ...Object.keys(groupedAreas).map(a => ({ label: a, total: sumVals(groupedAreas[a]), color: '#6366f1' }))
+        ].sort((a, b) => b.total - a.total);
+        const topCenter = costCenters[0];
+
+        // Monats-Trend (chronologisch)
+        const trendMonths = [...allMonths].reverse();
+        const monthTotals = trendMonths.map(m => ({
+            month: m,
+            total: Object.values(groupedMachines).reduce((s, o) => s + (o[m] || 0), 0)
+                 + Object.values(groupedAreas).reduce((s, o) => s + (o[m] || 0), 0)
+        }));
+        const maxMonthTotal = Math.max(...monthTotals.map(t => t.total), 1);
+        const shortMonth = m => {
+            const [name, yr] = m.split(' ');
+            return name.substring(0, 3) + ' ' + yr.slice(2);
+        };
+
+        let html = `
+            <div class="acc-eval-kpi-grid">
+                <div class="acc-eval-kpi">
+                    <div class="acc-eval-kpi-value" style="color: #fff;">${window.formatCurrency(grandTotal)}</div>
+                    <div class="acc-eval-kpi-label">Gesamtkosten (netto)</div>
+                </div>
+                <div class="acc-eval-kpi">
+                    <div class="acc-eval-kpi-value" style="color: var(--color-primary-green);">${window.formatCurrency(machineTotal)}</div>
+                    <div class="acc-eval-kpi-label">Maschinen (${Object.keys(groupedMachines).length})${grandTotal > 0 ? ' · ' + Math.round(machineTotal / grandTotal * 100) + '%' : ''}</div>
+                </div>
+                <div class="acc-eval-kpi">
+                    <div class="acc-eval-kpi-value" style="color: #818cf8;">${window.formatCurrency(areaTotal)}</div>
+                    <div class="acc-eval-kpi-label">Bereiche (${Object.keys(groupedAreas).length})${grandTotal > 0 ? ' · ' + Math.round(areaTotal / grandTotal * 100) + '%' : ''}</div>
+                </div>
+                <div class="acc-eval-kpi">
+                    <div class="acc-eval-kpi-value" style="color: #fbbf24; font-size: 0.95rem; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(topCenter ? topCenter.label : '-')}">${escapeHtml(topCenter ? topCenter.label : '-')}</div>
+                    <div class="acc-eval-kpi-label">Top-Kostenstelle${topCenter ? ' · ' + window.formatCurrency(topCenter.total) : ''}</div>
+                </div>
+            </div>
+
+            <div class="acc-eval-charts-grid">
+                <!-- Kostenstellen-Ranking -->
+                <div class="glass-card" style="padding: 1rem 1.25rem;">
+                    <h4 style="margin: 0 0 12px 0; color: #fff; font-size: 0.85rem; font-weight: 800; font-family: 'Outfit', sans-serif;">Top Kostenstellen</h4>
+                    <div style="display: flex; flex-direction: column; gap: 9px;">
+                        ${costCenters.slice(0, 8).map(c => {
+                            const pct = Math.round((c.total / costCenters[0].total) * 100);
+                            const share = grandTotal > 0 ? Math.round(c.total / grandTotal * 100) : 0;
+                            return `
+                            <div style="display: flex; flex-direction: column; gap: 3px;">
+                                <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 0.72rem; font-weight: 700;">
+                                    <span style="color: rgba(255,255,255,0.85); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(c.label)}</span>
+                                    <span style="color: #fff; white-space: nowrap;">${window.formatCurrency(c.total)} <span style="color: rgba(255,255,255,0.35); font-weight: 600;">(${share}%)</span></span>
+                                </div>
+                                <div style="width: 100%; height: 7px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
+                                    <div style="width: ${pct}%; height: 100%; background: ${c.color}; border-radius: 4px; min-width: 2px;"></div>
+                                </div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <!-- Monats-Trend -->
+                <div class="glass-card" style="padding: 1rem 1.25rem; display: flex; flex-direction: column;">
+                    <h4 style="margin: 0 0 12px 0; color: #fff; font-size: 0.85rem; font-weight: 800; font-family: 'Outfit', sans-serif;">Kosten pro Monat</h4>
+                    <div class="hide-scrollbar" style="display: flex; align-items: flex-end; gap: 10px; height: 130px; overflow-x: auto; flex: 1; padding-top: 4px;">
+                        ${monthTotals.map(t => {
+                            // Feste Pixelhöhe: Prozent-Höhen kollabieren hier, weil die
+                            // Spalten-Container im Flex-Layout keine definierte Höhe erben
+                            const barPx = Math.max(Math.round((t.total / maxMonthTotal) * 85), 3);
+                            return `
+                            <div style="flex: 1; min-width: 44px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;">
+                                <div style="font-size: 0.62rem; font-weight: 800; color: rgba(255,255,255,0.7); margin-bottom: 3px; white-space: nowrap;">${Math.round(t.total).toLocaleString('de-DE')} €</div>
+                                <div title="${t.month}: ${window.formatCurrency(t.total)}" style="width: 70%; max-width: 34px; height: ${barPx}px; background: linear-gradient(0deg, #f59e0b 0%, #fbbf24 100%); border-radius: 4px 4px 0 0;"></div>
+                                <div style="font-size: 0.6rem; font-weight: 700; color: rgba(255,255,255,0.35); margin-top: 5px; white-space: nowrap;">${shortMonth(t.month)}</div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+            </div>
+        `;
 
         // Render Machine Evaluation
         if (Object.keys(groupedMachines).length > 0) {
@@ -2026,33 +2394,45 @@ window.updateMachineEvaluation = async function () {
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
                     Auswertung (Maschinen)
                 </h3>
-                <table class="data-table" style="width: 100%; border-collapse: collapse; margin-bottom: 32px;">
-                    <thead>
-                        <tr style="text-align: left; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase;">
-                            <th style="padding: 12px;">Maschine</th>
-                            ${allMonths.map(m => `<th style="padding: 12px; text-align: right;">${m}</th>`).join('')}
-                            <th style="padding: 12px; text-align: right;">Gesamt</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 24px;">
+                    <table class="eval-table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="text-align: left; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase;">
+                                <th style="padding: 12px;">Maschine</th>
+                                ${allMonths.map(m => `<th style="padding: 12px; text-align: right;">${m}</th>`).join('')}
+                                <th style="padding: 12px; text-align: right;">Gesamt</th>
+                            </tr>
+                        </thead>
+                        <tbody>
             `;
 
-            Object.keys(groupedMachines).forEach(mId => {
+            Object.keys(groupedMachines)
+                .sort((a, b) => sumVals(groupedMachines[b]) - sumVals(groupedMachines[a]))
+                .forEach(mId => {
                 const machineName = window.getMachineName(mId);
-                let machineTotal = 0;
+                let rowTotal = 0;
                 html += `
                     <tr style="border-top: 1px solid rgba(255,255,255,0.05);">
                         <td style="padding: 12px; font-weight: 700; color: var(--color-primary-green);">${machineName}</td>
                         ${allMonths.map(m => {
                             const val = groupedMachines[mId][m] || 0;
-                            machineTotal += val;
+                            rowTotal += val;
                             return `<td style="padding: 12px; text-align: right; color: ${val > 0 ? '#fff' : 'rgba(255,255,255,0.1)'};">${val > 0 ? window.formatCurrency(val) : '-'}</td>`;
                         }).join('')}
-                        <td style="padding: 12px; text-align: right; font-weight: 800; background: rgba(255,255,255,0.02);">${window.formatCurrency(machineTotal)}</td>
+                        <td style="padding: 12px; text-align: right; font-weight: 800; background: rgba(255,255,255,0.02);">${window.formatCurrency(rowTotal)}</td>
                     </tr>
                 `;
             });
-            html += '</tbody></table>';
+            html += `
+                    <tr style="border-top: 2px solid rgba(255,255,255,0.12);">
+                        <td style="padding: 12px; font-weight: 800; color: #fff; text-transform: uppercase; font-size: 0.72rem;">Summe</td>
+                        ${allMonths.map(m => {
+                            const val = Object.values(groupedMachines).reduce((s, o) => s + (o[m] || 0), 0);
+                            return `<td style="padding: 12px; text-align: right; font-weight: 800; color: ${val > 0 ? '#fff' : 'rgba(255,255,255,0.15)'};">${val > 0 ? window.formatCurrency(val) : '-'}</td>`;
+                        }).join('')}
+                        <td style="padding: 12px; text-align: right; font-weight: 900; color: var(--color-primary-green); background: rgba(16,185,129,0.06);">${window.formatCurrency(machineTotal)}</td>
+                    </tr>
+                </tbody></table></div>`;
         }
 
         // Render Area Evaluation
@@ -2062,32 +2442,44 @@ window.updateMachineEvaluation = async function () {
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                     Auswertung (Bereich)
                 </h3>
-                <table class="data-table" style="width: 100%; border-collapse: collapse;">
-                    <thead>
-                        <tr style="text-align: left; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase;">
-                            <th style="padding: 12px;">Bereich</th>
-                            ${allMonths.map(m => `<th style="padding: 12px; text-align: right;">${m}</th>`).join('')}
-                            <th style="padding: 12px; text-align: right;">Gesamt</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                    <table class="eval-table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="text-align: left; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase;">
+                                <th style="padding: 12px;">Bereich</th>
+                                ${allMonths.map(m => `<th style="padding: 12px; text-align: right;">${m}</th>`).join('')}
+                                <th style="padding: 12px; text-align: right;">Gesamt</th>
+                            </tr>
+                        </thead>
+                        <tbody>
             `;
 
-            Object.keys(groupedAreas).forEach(area => {
-                let areaTotal = 0;
+            Object.keys(groupedAreas)
+                .sort((a, b) => sumVals(groupedAreas[b]) - sumVals(groupedAreas[a]))
+                .forEach(area => {
+                let rowTotal = 0;
                 html += `
                     <tr style="border-top: 1px solid rgba(255,255,255,0.05);">
                         <td style="padding: 12px; font-weight: 700; color: #fff;">${area}</td>
                         ${allMonths.map(m => {
                             const val = groupedAreas[area][m] || 0;
-                            areaTotal += val;
+                            rowTotal += val;
                             return `<td style="padding: 12px; text-align: right; color: ${val > 0 ? '#fff' : 'rgba(255,255,255,0.1)'};">${val > 0 ? window.formatCurrency(val) : '-'}</td>`;
                         }).join('')}
-                        <td style="padding: 12px; text-align: right; font-weight: 800; background: rgba(255,255,255,0.02);">${window.formatCurrency(areaTotal)}</td>
+                        <td style="padding: 12px; text-align: right; font-weight: 800; background: rgba(255,255,255,0.02);">${window.formatCurrency(rowTotal)}</td>
                     </tr>
                 `;
             });
-            html += '</tbody></table>';
+            html += `
+                    <tr style="border-top: 2px solid rgba(255,255,255,0.12);">
+                        <td style="padding: 12px; font-weight: 800; color: #fff; text-transform: uppercase; font-size: 0.72rem;">Summe</td>
+                        ${allMonths.map(m => {
+                            const val = Object.values(groupedAreas).reduce((s, o) => s + (o[m] || 0), 0);
+                            return `<td style="padding: 12px; text-align: right; font-weight: 800; color: ${val > 0 ? '#fff' : 'rgba(255,255,255,0.15)'};">${val > 0 ? window.formatCurrency(val) : '-'}</td>`;
+                        }).join('')}
+                        <td style="padding: 12px; text-align: right; font-weight: 900; color: #818cf8; background: rgba(99,102,241,0.08);">${window.formatCurrency(areaTotal)}</td>
+                    </tr>
+                </tbody></table></div>`;
         }
 
         content.innerHTML = html;
@@ -2132,156 +2524,150 @@ window.toggleAccountingDetails = async function (id, btn, event) {
     if (chevron) chevron.style.transform = 'rotate(90deg)';
     if (mainRow) mainRow.style.background = 'rgba(255,255,255,0.02)';
 
-    // If already has content, don't reload unless empty
-    if (content.children.length > 0 && !content.innerHTML.includes('Lade Details')) return;
-
-    // Lazy Load
-    try {
-        content.innerHTML = '<div style="color: rgba(255,255,255,0.3); font-size: 0.85rem; display: flex; align-items: center; gap: 10px;"><div class="spinner-small"></div>Lade Details...</div>';
-        
-        const { data: items, error } = await window.supabaseClient
-            .from('accounting_items')
-            .select('*')
-            .eq('accounting_id', id);
-
-        if (error) throw error;
-
-        if (!items || items.length === 0) {
-            content.innerHTML = '<div style="color: rgba(255,255,255,0.3); font-size: 0.85rem;">Keine Einzelpositionen für diesen Beleg gefunden.</div>';
-            return;
-        }
-
-        let itemsHtml = `
-            <div class="acc-details-grid">
-                <div>Bezeichnung</div>
-                <div>Menge</div>
-                <div>Einh.</div>
-                <div style="text-align: right;">Preis (€)</div>
-                <div style="text-align: right;">Gesamt (€)</div>
-                <div style="padding-left: 1rem;">Zuordnung</div>
-                <div style="text-align: center;">Split</div>
-            </div>
-        `;
-
-        // Find items that represent a "split" (multiple items with same description and price in the same receipt)
-        const counts = {};
-        items.forEach(i => {
-            const key = i.description + '|' + i.price_net;
-            counts[key] = (counts[key] || 0) + 1;
-        });
-
-        // Sort so split items are grouped together
-        items.sort((a,b) => a.description.localeCompare(b.description));
-
-        // Keep track of which split group we are in and our index
-        let currentSplitKey = null;
-        let splitGroupIndex = 0;
-
-        items.forEach((item, i) => {
-            const qty = parseFloat(item.quantity) || 1;
-            const canSplit = qty > 1; // Nur Positionen mit Menge > 1 aufteilen
-            
-            const key = item.description + '|' + item.price_net;
-            const isSplitPart = counts[key] > 1;
-            const splitGroupTotal = isSplitPart ? counts[key] : 1;
-            
-            if (isSplitPart) {
-                if (key !== currentSplitKey) {
-                    currentSplitKey = key;
-                    splitGroupIndex = 0;
-                }
-                splitGroupIndex++;
-            } else {
-                currentSplitKey = null;
-                splitGroupIndex = 0;
-            }
-
-            const isFirstInGroup = isSplitPart && splitGroupIndex === 1;
-            const isLastInGroup = isSplitPart && splitGroupIndex === splitGroupTotal;
-            
-            let assignmentText = '-';
-            if (item.assignment_type === 'machine' && item.machine_id) {
-                assignmentText = window.getMachineName(item.machine_id);
-            } else if (item.assignment_type === 'filter' && item.assignment_area) {
-                assignmentText = item.assignment_area; // Simplied from "Bereich: Lager ..." to just "Lager"
-            } else if (item.machine_id) {
-                 assignmentText = window.getMachineName(item.machine_id); // legacy fallback
-            }
-
-            const splitBadge = isFirstInGroup ? `<span style="margin-left:8px; font-size:0.65rem; color:var(--color-primary-green); background:rgba(16,185,129,0.1); padding:2px 6px; border-radius:4px; border:1px solid rgba(16,185,129,0.2);">Aufgeteilt</span>` : '';
-
-            itemsHtml += `
-                <div class="acc-details-row">
-                    <div data-label="Bezeichnung" style="font-weight: 600; color: #fff; display: flex; align-items: center;">
-                        ${isFirstInGroup ? `<svg style="margin-right:6px; color:rgba(255,255,255,0.4);" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>` : (isSplitPart ? `<div style="width: 18px;"></div>` : '')}
-                        ${item.description} ${splitBadge}
-                    </div>
-                    <div data-label="Menge" style="color: rgba(255,255,255,0.6); font-weight: 700;">${qty}</div>
-                    <div data-label="Einheit" style="color: rgba(255,255,255,0.4);">${item.unit || '-'}</div>
-                    <div data-label="Preis" style="text-align: right; font-weight: 700;">${window.formatCurrency(item.price_net)}</div>
-                    <div data-label="Gesamt" style="text-align: right; font-weight: 800; color: #fff;">${window.formatCurrency((parseFloat(item.price_net) || 0) * qty)}</div>
-                    <div data-label="Zuordnung" style="padding-left: 1rem; color: var(--color-primary-green); font-weight: 600; font-size: 0.8rem; line-height: 1.2;">${assignmentText}</div>
-                    <div data-label="Split" style="text-align: center;">
-                        ${isFirstInGroup ? `
-                        <button onclick='window.revertSplit(${JSON.stringify(item).replace(/'/g, "&#39;")})' title="Aufteilung rückgängig machen"
-                            style="width:28px; height:28px; border-radius:8px; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s; margin: auto;"
-                            onmouseover="this.style.background='rgba(239,68,68,0.3)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3l-3 2.7"/></svg>
-                        </button>
-                        ` : (isSplitPart ? '' : (canSplit ? `
-                        <button onclick='window.openSplitDialog(${JSON.stringify(item).replace(/'/g, "&#39;")})' title="Position aufteilen"
-                            style="width:28px; height:28px; border-radius:8px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: var(--color-primary-green); display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s; margin: auto;"
-                            onmouseover="this.style.background='rgba(16,185,129,0.3)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="8"/><path d="M12 8 L5 21"/><path d="M12 8 L19 21"/><circle cx="12" cy="3" r="2" fill="currentColor"/></svg>
-                        </button>` : ''))}
-                    </div>
-                </div>
-            `;
-        });
-
-        content.innerHTML = itemsHtml;
-
-    } catch (err) {
-        console.error('Error loading details:', err);
-        content.innerHTML = '<div style="color: #ef4444; font-size: 0.85rem;">Fehler beim Laden der Details.</div>';
-    }
+    renderAccountingDetailsContent(id);
 };
 
-// --- Split Position Logic ---
-let currentSplitItem = null;
+// Rendert die Positionsliste eines Belegs in die (bereits geöffnete) Detail-Zeile —
+// direkt aus den lokal geladenen Belegdaten (JSONB-Spalte items), ganz ohne DB-Abfrage.
+// Als eigene Funktion, damit Split/Revert die Ansicht danach zuverlässig neu aufbauen
+// können (der frühere Schließen/Öffnen-Trick scheiterte am Content-Cache in
+// toggleAccountingDetails und zeigte veraltete Positionen an).
+function renderAccountingDetailsContent(id) {
+    const content = document.getElementById(`details-content-${id}`);
+    if (!content) return;
 
-window.revertSplit = async function(item) {
+    const entry = allAccountingEntries.find(e => e.id === id);
+    const rawItems = (entry && Array.isArray(entry.items)) ? entry.items : [];
+
+    if (rawItems.length === 0) {
+        content.innerHTML = '<div style="color: rgba(255,255,255,0.3); font-size: 0.85rem;">Keine Einzelpositionen für diesen Beleg gefunden.</div>';
+        return;
+    }
+
+    let itemsHtml = `
+        <div class="acc-details-grid">
+            <div>Bezeichnung</div>
+            <div>Menge</div>
+            <div>Einh.</div>
+            <div style="text-align: right;">Preis (€)</div>
+            <div style="text-align: right;">Gesamt (€)</div>
+            <div style="padding-left: 1rem;">Zuordnung</div>
+            <div style="text-align: center;">Split</div>
+        </div>
+    `;
+
+    // Original-Index merken (für Split/Revert), dann für die Anzeige sortieren,
+    // damit zusammengehörige Split-Teile untereinander stehen
+    const items = rawItems.map((it, idx) => ({ ...it, _idx: idx }));
+
+    // Split-Gruppen: mehrere Positionen mit gleicher Bezeichnung + gleichem Preis im selben Beleg
+    const counts = {};
+    items.forEach(i => {
+        const key = i.description + '|' + i.price_net;
+        counts[key] = (counts[key] || 0) + 1;
+    });
+
+    items.sort((a, b) => String(a.description).localeCompare(String(b.description)));
+
+    let currentSplitKey = null;
+    let splitGroupIndex = 0;
+
+    items.forEach(item => {
+        const qty = parseFloat(item.quantity) || 1;
+        const canSplit = qty > 1; // Nur Positionen mit Menge > 1 aufteilen
+
+        const key = item.description + '|' + item.price_net;
+        const isSplitPart = counts[key] > 1;
+
+        if (isSplitPart) {
+            if (key !== currentSplitKey) {
+                currentSplitKey = key;
+                splitGroupIndex = 0;
+            }
+            splitGroupIndex++;
+        } else {
+            currentSplitKey = null;
+            splitGroupIndex = 0;
+        }
+
+        const isFirstInGroup = isSplitPart && splitGroupIndex === 1;
+
+        let assignmentText = '-';
+        if (item.assignment_type === 'machine' && item.machine_id) {
+            assignmentText = window.getMachineName(item.machine_id);
+        } else if (item.assignment_area) {
+            assignmentText = item.assignment_area;
+        } else if (item.machine_id) {
+            assignmentText = window.getMachineName(item.machine_id); // legacy fallback
+        }
+
+        const splitBadge = isFirstInGroup ? `<span style="margin-left:8px; font-size:0.65rem; color:var(--color-primary-green); background:rgba(16,185,129,0.1); padding:2px 6px; border-radius:4px; border:1px solid rgba(16,185,129,0.2);">Aufgeteilt</span>` : '';
+
+        itemsHtml += `
+            <div class="acc-details-row">
+                <div data-label="Bezeichnung" style="font-weight: 600; color: #fff; display: flex; align-items: center;">
+                    ${isFirstInGroup ? `<svg style="margin-right:6px; color:rgba(255,255,255,0.4);" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>` : (isSplitPart ? `<div style="width: 18px;"></div>` : '')}
+                    ${item.description} ${splitBadge}
+                </div>
+                <div data-label="Menge" style="color: rgba(255,255,255,0.6); font-weight: 700;">${qty}</div>
+                <div data-label="Einheit" style="color: rgba(255,255,255,0.4);">${item.unit || '-'}</div>
+                <div data-label="Preis" style="text-align: right; font-weight: 700;">${window.formatCurrency(item.price_net)}</div>
+                <div data-label="Gesamt" style="text-align: right; font-weight: 800; color: #fff;">${window.formatCurrency((parseFloat(item.price_net) || 0) * qty)}</div>
+                <div data-label="Zuordnung" style="padding-left: 1rem; color: var(--color-primary-green); font-weight: 600; font-size: 0.8rem; line-height: 1.2;">${assignmentText}</div>
+                <div data-label="Split" style="text-align: center;">
+                    ${isFirstInGroup ? `
+                    <button onclick='window.revertSplit("${id}", ${item._idx})' title="Aufteilung rückgängig machen"
+                        style="width:28px; height:28px; border-radius:8px; background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s; margin: auto;"
+                        onmouseover="this.style.background='rgba(239,68,68,0.3)'" onmouseout="this.style.background='rgba(239,68,68,0.15)'">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3l-3 2.7"/></svg>
+                    </button>
+                    ` : (isSplitPart ? '' : (canSplit ? `
+                    <button onclick='window.openSplitDialog("${id}", ${item._idx})' title="Position aufteilen"
+                        style="width:28px; height:28px; border-radius:8px; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: var(--color-primary-green); display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s; margin: auto;"
+                        onmouseover="this.style.background='rgba(16,185,129,0.3)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="8"/><path d="M12 8 L5 21"/><path d="M12 8 L19 21"/><circle cx="12" cy="3" r="2" fill="currentColor"/></svg>
+                    </button>` : ''))}
+                </div>
+            </div>
+        `;
+    });
+
+    content.innerHTML = itemsHtml;
+}
+
+// --- Split Position Logic ---
+// Arbeitet direkt auf dem JSONB-Positions-Array des Belegs (accounting.items):
+// ein einziges Update des Beleg-Datensatzes statt Delete+Insert einzelner Zeilen.
+let currentSplitItem = null; // { accountingId, itemIdx, item }
+
+// Schreibt das neue Positions-Array in die DB und hält die lokale Liste synchron,
+// damit die Detail-Ansicht ohne Neuladen sofort den aktuellen Stand zeigt.
+async function updateAccountingItemsArray(accountingId, newItems) {
+    const { error } = await window.supabaseClient
+        .from('accounting')
+        .update({ items: newItems })
+        .eq('id', accountingId);
+    if (error) throw error;
+    const entry = allAccountingEntries.find(e => e.id === accountingId);
+    if (entry) entry.items = newItems;
+}
+
+window.revertSplit = async function(accountingId, itemIdx) {
+    const entry = allAccountingEntries.find(e => e.id === accountingId);
+    const items = (entry && Array.isArray(entry.items)) ? entry.items : [];
+    const item = items[itemIdx];
+    if (!item) return;
+
     if (!confirm('Möchten Sie die Aufteilung dieser Position wirklich rückgängig machen?\nAlle zusammengehörigen Positionen ("' + item.description + '") werden wieder zu einer einzigen Zeile zusammengefasst.')) return;
 
     try {
-        // Find all split parts for this item
-        const { data: parts, error: fetchErr } = await window.supabaseClient
-            .from('accounting_items')
-            .select('*')
-            .eq('accounting_id', item.accounting_id)
-            .eq('description', item.description)
-            .eq('price_net', item.price_net);
+        // Alle Split-Teile = gleiche Bezeichnung + gleicher Preis im selben Beleg
+        const isPart = p => p.description === item.description && p.price_net === item.price_net;
+        const parts = items.filter(isPart);
+        if (parts.length === 0) return;
 
-        if (fetchErr) throw fetchErr;
-        if (!parts || parts.length === 0) return;
-
-        let totalQty = 0;
-        const idsToDelete = [];
-        parts.forEach(p => {
-            totalQty += parseFloat(p.quantity) || 0;
-            idsToDelete.push(p.id);
-        });
-
-        // Delete all parts
-        const { error: delErr } = await window.supabaseClient
-            .from('accounting_items')
-            .delete()
-            .in('id', idsToDelete);
-        if (delErr) throw delErr;
-
-        // Insert single combined item
-        const newItem = {
-            accounting_id: item.accounting_id,
+        const totalQty = parts.reduce((s, p) => s + (parseFloat(p.quantity) || 0), 0);
+        const merged = {
             description: item.description,
             quantity: totalQty,
             unit: item.unit,
@@ -2292,28 +2678,23 @@ window.revertSplit = async function(item) {
             machine_filter: 'all'
         };
 
-        const { error: insErr } = await window.supabaseClient
-            .from('accounting_items')
-            .insert([newItem]);
-        if (insErr) throw insErr;
+        const newItems = items.filter(p => !isPart(p));
+        newItems.push(merged);
 
-        // Trigger detail reload
-        const detailsBtn = document.querySelector(`#row-${item.accounting_id} td[onclick]`);
-        if (detailsBtn) {
-            // Close details
-            await window.toggleAccountingDetails(item.accounting_id, detailsBtn);
-            // Open details again to fetch new rows
-            await window.toggleAccountingDetails(item.accounting_id, detailsBtn);
-        }
-
+        await updateAccountingItemsArray(accountingId, newItems);
+        renderAccountingDetailsContent(accountingId);
     } catch (err) {
         console.error('Error reverting split:', err);
         alert('Fehler beim Rückgängigmachen der Aufteilung: ' + err.message);
     }
 };
 
-window.openSplitDialog = function(item) {
-    currentSplitItem = item;
+window.openSplitDialog = function(accountingId, itemIdx) {
+    const entry = allAccountingEntries.find(e => e.id === accountingId);
+    const item = (entry && Array.isArray(entry.items)) ? entry.items[itemIdx] : null;
+    if (!item) return;
+
+    currentSplitItem = { accountingId, itemIdx, item };
     const modal = document.getElementById('split-item-modal');
     const displayTotal = document.getElementById('split-total-display');
     const infoDisplay = document.getElementById('split-item-info');
@@ -2323,10 +2704,10 @@ window.openSplitDialog = function(item) {
 
     displayTotal.textContent = `${item.quantity} ${item.unit || 'Stk'}`;
     infoDisplay.textContent = `${item.description} | ${window.formatCurrency(item.price_net)} / ${item.unit || 'Stk'}`;
-    
+
     // Clear old rows
     rowsContainer.innerHTML = '';
-    
+
     // Default: split in 2 parts initially
     window.addSplitRow({ qty: Math.floor((item.quantity / 2) * 100) / 100 });
     window.addSplitRow({ qty: item.quantity - (Math.floor((item.quantity / 2) * 100) / 100) });
@@ -2369,8 +2750,9 @@ window.addSplitRow = function(defaults = {}) {
     let workshopOptions = '<option value="">Maschine wählen...</option>' + 
         workshopMachines.map(m => `<option value="${m.id}">${window.getMachineName(m.id)}</option>`).join('');
     
-    const areas = ['Lager', 'Werkstatt', 'Büro', 'Verkauf', 'Sonstiges'];
-    let areaOptions = '<option value="">Bereich wählen...</option>' + 
+    // Fest definierte Bereiche (Einstellungen > Kategorien > Buchhaltungs-Bereiche)
+    const areas = getAssignmentAreas();
+    let areaOptions = '<option value="">Bereich wählen...</option>' +
         areas.map(a => `<option value="${a}">${a}</option>`).join('');
 
     const assignHTML = `
@@ -2563,7 +2945,7 @@ window.updateSplitTotal = function() {
         totalDistributed += parseFloat(input.value) || 0;
     });
     
-    const remaining = (currentSplitItem.quantity - totalDistributed).toFixed(2);
+    const remaining = (currentSplitItem.item.quantity - totalDistributed).toFixed(2);
     
     const distElement = document.getElementById('split-distributed-display');
     const remElement = document.getElementById('split-remaining-display');
@@ -2597,67 +2979,49 @@ window.submitSplit = async function() {
     btn.disabled = true;
 
     try {
+        const { accountingId, itemIdx, item } = currentSplitItem;
         const rows = document.querySelectorAll('.split-row');
-        const newItems = [];
+        const parts = [];
 
         rows.forEach(row => {
             const qty = parseFloat(row.querySelector('.split-qty').value) || 0;
             if (qty <= 0) return;
 
-            const assignType = row.dataset.assignmentType || 'machine';
+            const assignType = (row.dataset.assignmentType === 'other' || row.dataset.assignmentType === 'filter') ? 'other' : 'machine';
             let assignArea = null;
             let mId = null;
 
-            if (assignType === 'filter' || assignType === 'other') { // 'other' is used in UI
+            if (assignType === 'other') {
                 assignArea = row.dataset.assignmentArea || null;
-            } else if (assignType === 'machine') {
+            } else {
                 mId = (!row.dataset.machineId || row.dataset.machineId === 'undefined') ? null : parseInt(row.dataset.machineId);
             }
 
-            // Omit brand and item_number because they do not exist in the schema 'accounting_items'
-            newItems.push({
-                accounting_id: currentSplitItem.accounting_id,
-                description: currentSplitItem.description,
+            parts.push({
+                description: item.description,
                 quantity: qty,
-                unit: currentSplitItem.unit,
-                price_net: currentSplitItem.price_net,
+                unit: item.unit,
+                price_net: item.price_net,
                 machine_id: mId,
-                assignment_type: assignType === 'other' ? 'filter' : assignType, // DB expects 'filter' or 'machine', UI uses 'other'
+                assignment_type: assignType,
                 assignment_area: assignArea,
-                machine_filter: (assignType === 'other' || assignType === 'filter') ? 'all' : (row.dataset.machineFilter || 'all')
+                machine_filter: assignType === 'other' ? 'all' : (row.dataset.machineFilter || 'all')
             });
         });
 
-        if (newItems.length === 0) throw new Error("Keine validen Positionen.");
+        if (parts.length === 0) throw new Error("Keine validen Positionen.");
 
-        // 1. Original Item löschen
-        const { error: delErr } = await window.supabaseClient
-            .from('accounting_items')
-            .delete()
-            .eq('id', currentSplitItem.id);
-        if (delErr) throw delErr;
+        // Original-Position im Array durch die Teile ersetzen — ein einziges Update
+        const entry = allAccountingEntries.find(e => e.id === accountingId);
+        const items = (entry && Array.isArray(entry.items)) ? [...entry.items] : [];
+        items.splice(itemIdx, 1, ...parts);
+        await updateAccountingItemsArray(accountingId, items);
 
-        // 2. Neue Items einfügen
-        const { error: insErr } = await window.supabaseClient
-            .from('accounting_items')
-            .insert(newItems);
-        if (insErr) throw insErr;
-
-        const savedAccId = currentSplitItem.accounting_id;
         window.closeSplitDialog();
-        
-        // Modal-Button zurücksetzen und das Haupt-Accounting-Listing neu laden um die Details zu refreshen
         btn.innerHTML = 'Aufteilen bestätigen';
         btn.disabled = false;
-        
-        // Trigger detail reload
-        const detailsBtn = document.querySelector(`#row-${savedAccId} td[onclick]`);
-        if (detailsBtn) {
-            // Close details
-            await window.toggleAccountingDetails(savedAccId, detailsBtn);
-            // Open details again to fetch new rows
-            await window.toggleAccountingDetails(savedAccId, detailsBtn);
-        }
+
+        renderAccountingDetailsContent(accountingId);
 
     } catch (err) {
         console.error('Error splitting item:', err);

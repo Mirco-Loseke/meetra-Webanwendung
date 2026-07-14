@@ -2089,6 +2089,13 @@
                             <button onclick="window.removeBeschriftungImage()" style="margin-top: 8px; padding: 8px 16px; border-radius: 8px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; font-weight:700; font-size:0.8rem; cursor:pointer;">
                                 Bild entfernen
                             </button>
+                            <div style="display:flex; align-items:center; gap:10px; margin-top:10px;">
+                                <label style="font-size:0.78rem; color:rgba(255,255,255,0.5); white-space:nowrap;">Drehung</label>
+                                <input type="range" id="beschriftung-image-rotation" min="-180" max="180" step="1" value="0" oninput="window.updateBeschriftungImageRotation(this.value)" style="flex:1;">
+                                <span id="beschriftung-image-rotation-value" style="font-size:0.78rem; color:rgba(255,255,255,0.6); width:36px; text-align:right;">0°</span>
+                                <button onclick="window.resetBeschriftungImageRotation()" style="padding:5px 10px; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.6); font-size:0.72rem; cursor:pointer; white-space:nowrap;">0°</button>
+                            </div>
+                            <p style="font-size:0.72rem; color:rgba(255,255,255,0.35); margin: 6px 0 0 0;">Tipp: Bild in der Vorschau an einer der 4 Ecken ziehen, um es zu skalieren — mitten im Bild ziehen, um es zu verschieben — oder am blauen Punkt oben ziehen, um es frei zu drehen.</p>
                         </div>
 
                         <label style="display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.8); font-size: 0.9rem; cursor: pointer;">
@@ -2111,10 +2118,12 @@
                         </button>
                     </div>
 
-                    <!-- Live-Vorschau -->
+                    <!-- Live-Vorschau — mehrseitig: falls die Stückliste nicht mehr auf die erste
+                         Seite passt, werden hier (wie später im PDF) automatisch weitere Seiten
+                         mit der Fortsetzung der Stückliste angezeigt. -->
                     <div>
-                        <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Vorschau (A4)</label>
-                        <div id="beschriftung-preview-page" style="position:relative; width:100%; max-width:600px; aspect-ratio: 210/297; background:#fff; border-radius:6px; box-shadow:0 4px 24px rgba(0,0,0,0.35);"></div>
+                        <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Vorschau</label>
+                        <div id="beschriftung-preview-pages" style="max-width:600px; display:flex; flex-direction:column; align-items:center; gap:20px;"></div>
                     </div>
                 </div>
             </div>
@@ -2889,6 +2898,25 @@
                             <!-- Angebots-Status Categories rendered here -->
                         </ul>
                     </div>
+
+                    <div class="category-group">
+                        <h3 class="category-group-title">
+                            <div class="group-icon-wrapper" id="icon-group-area"
+                                onclick="document.getElementById('color-area').click()" title="Farbe ändern">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                                </svg>
+                            </div>
+                            <input type="color" id="color-area" class="hidden-color-input"
+                                onchange="updateGroupColor('area', this.value)">
+                            <span>Buchhaltungs-Bereiche</span>
+                        </h3>
+                        <ul id="category-list-area" class="user-list">
+                            <!-- Buchhaltungs-Bereiche (Zuordnung "Andere") rendered here -->
+                        </ul>
+                    </div>
                 </div>
             </div>
         </section>
@@ -3313,6 +3341,183 @@
 
         <!-- Accounting Modal -->
         <div id="accounting-modal" class="modal-backdrop hidden">
+            <style>
+                /* Kompaktes Layout für das Buchhaltungs- und das Auswertungs-Modal */
+                #accounting-modal .modal-content,
+                #machine-evaluation-modal .modal-content {
+                    padding: 16px 20px !important;
+                    border-radius: 16px !important;
+                    max-width: 900px !important;
+                }
+                #accounting-modal .modal-header,
+                #machine-evaluation-modal .modal-header {
+                    padding-bottom: 8px !important;
+                    margin-bottom: 12px !important;
+                }
+                #accounting-modal #accounting-modal-title,
+                #machine-evaluation-modal h2 {
+                    font-size: 1.15rem !important;
+                }
+                #machine-evaluation-modal h3 {
+                    font-size: 0.95rem !important;
+                    margin: 14px 0 8px 0 !important;
+                }
+                #machine-evaluation-modal select {
+                    height: 30px !important;
+                    font-size: 0.8rem !important;
+                }
+                #machine-evaluation-modal table.eval-table {
+                    width: 100% !important;
+                    border-collapse: collapse !important;
+                    display: table !important;
+                    background: transparent !important;
+                    border: none !important;
+                }
+                #machine-evaluation-modal table.eval-table thead {
+                    display: table-header-group !important;
+                }
+                #machine-evaluation-modal table.eval-table tbody {
+                    display: table-row-group !important;
+                }
+                #machine-evaluation-modal table.eval-table tr {
+                    display: table-row !important;
+                    background: transparent !important;
+                    border: none !important;
+                    padding: 0 !important;
+                    margin: 0 !important;
+                }
+                #machine-evaluation-modal table.eval-table th,
+                #machine-evaluation-modal table.eval-table td {
+                    display: table-cell !important;
+                    padding: 6px 10px !important;
+                    font-size: 0.78rem !important;
+                    white-space: nowrap !important;
+                    border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+                    border-top: none !important;
+                    width: auto !important;
+                }
+                #accounting-modal #acc-pdf-dropzone {
+                    margin-bottom: 0.75rem !important;
+                    padding: 10px !important;
+                    border-radius: 10px !important;
+                }
+                #accounting-modal #acc-pdf-dropzone svg {
+                    margin-bottom: 4px !important;
+                    width: 20px !important;
+                    height: 20px !important;
+                }
+                #accounting-modal #acc-pdf-dropzone div {
+                    font-size: 0.85rem !important;
+                }
+                #accounting-modal #acc-pdf-dropzone div + div {
+                    font-size: 0.7rem !important;
+                }
+                #accounting-modal form > div[style*="display: grid"] {
+                    gap: 0.75rem !important;
+                    margin-top: 0.5rem !important;
+                }
+                #accounting-modal form > div[style*="background: rgba(255,255,255,0.03)"] {
+                    margin-top: 0.5rem !important;
+                    padding: 0.75rem 1rem !important;
+                    border-radius: 12px !important;
+                    gap: 0.75rem !important;
+                }
+                #acc-global-assignment-box {
+                    margin-top: 0.5rem !important;
+                    padding: 0.75rem 1rem !important;
+                    border-radius: 12px !important;
+                }
+                #acc-global-assignment-box > div:first-child {
+                    margin-bottom: 6px !important;
+                    font-size: 0.7rem !important;
+                }
+                #acc-global-assignment-box > div[style*="display: flex"] {
+                    gap: 8px !important;
+                }
+                #acc-global-type-machine, #acc-global-type-other {
+                    padding: 4px 10px !important;
+                    font-size: 0.75rem !important;
+                }
+                #acc-global-filter-all, #acc-global-filter-workshop {
+                    padding: 3px 8px !important;
+                    font-size: 0.7rem !important;
+                }
+                #acc-global-machine-search, #acc-global-workshop-machine, #acc-global-assignment-area {
+                    height: 30px !important;
+                    font-size: 0.8rem !important;
+                }
+                #accounting-modal .form-group {
+                    margin-bottom: 0px !important;
+                }
+                #accounting-modal .form-group label {
+                    font-size: 0.75rem !important;
+                    margin-bottom: 3px !important;
+                }
+                #accounting-modal .glass-form-input {
+                    height: 30px !important;
+                    font-size: 0.8rem !important;
+                    padding: 0 10px !important;
+                    border-radius: 8px !important;
+                }
+                #accounting-modal .real-select-hidden + div {
+                    height: 30px !important;
+                    font-size: 0.8rem !important;
+                    padding: 0 10px !important;
+                    border-radius: 8px !important;
+                }
+                #accounting-items-container .item-row {
+                    padding: 10px 12px !important;
+                    border-radius: 12px !important;
+                    gap: 8px !important;
+                    margin-bottom: 6px !important;
+                }
+                #accounting-items-container .item-row-header {
+                    grid-template-columns: 1fr 70px 70px 85px auto !important;
+                    gap: 8px !important;
+                }
+                #accounting-items-container .item-row-header button {
+                    width: 30px !important;
+                    height: 30px !important;
+                }
+                #accounting-items-container .acc-assignment-box {
+                    padding-top: 8px !important;
+                    gap: 8px !important;
+                }
+                #accounting-items-container .type-btn {
+                    padding: 4px 10px !important;
+                    font-size: 0.75rem !important;
+                }
+                #accounting-items-container .filter-btn {
+                    padding: 3px 8px !important;
+                    font-size: 0.7rem !important;
+                }
+                #accounting-items-container .item-machine-search,
+                #accounting-items-container .item-machine-workshop,
+                #accounting-items-container .item-area-select {
+                    height: 30px !important;
+                    font-size: 0.8rem !important;
+                }
+                #accounting-modal form > div[style*="margin-top: 3rem"] {
+                    margin-top: 1rem !important;
+                    padding-bottom: 0px !important;
+                }
+                #accounting-modal form button[type="submit"],
+                #accounting-modal form button[onclick*="closeAccountingModal"] {
+                    padding: 8px 16px !important;
+                    font-size: 0.85rem !important;
+                }
+                /* Portale und Dropdowns deckend (nicht transparent) darstellen */
+                #glass-dropdown-portal,
+                #acc-machine-dropdown-portal,
+                #acc-global-machine-dropdown-portal,
+                .acc-year-list-shared {
+                    background: #0f172a !important;
+                    opacity: 1 !important;
+                    backdrop-filter: none !important;
+                    -webkit-backdrop-filter: none !important;
+                    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+                }
+            </style>
             <div class="modal-content"
                 style="max-width: 850px; position: relative; padding: 30px; border-radius: 20px; height: auto; margin: auto;">
                 <div class="modal-header"
@@ -3351,6 +3556,11 @@
                         anklicken</div>
                     <div style="font-size: 0.75rem; color: rgba(255,255,255,0.5); margin-top: 2px;">Automatischer
                         Import durch Texterkennung</div>
+                </div>
+
+                <!-- Ergebnis-/Warnbanner der KI-Analyse (wird per JS befüllt, ersetzt die alert()-Popups) -->
+                <div id="acc-ai-result-banner" class="hidden"
+                    style="margin: -0.75rem 0 1.5rem 0; padding: 12px 16px; border-radius: 12px; font-size: 0.85rem; line-height: 1.5; display: none;">
                 </div>
 
                 <form id="accounting-form" onsubmit="submitAccountingEntry(event)">
@@ -3520,19 +3730,22 @@
                                     </select>
                                 </div>
                             </div>
-                            <!-- Other Area Input -->
+                            <!-- Other Area Select (feste Bereiche aus Einstellungen > Kategorien > Buchhaltungs-Bereiche) -->
                             <div id="acc-global-other-ui" style="display: none; flex: 1; min-width: 0;">
-                                <input type="text" id="acc-global-assignment-area" class="glass-form-input"
-                                    placeholder="z.B. Büro, Werkstatt allgemein..."
-                                    style="height: 38px; font-size: 0.85rem;">
+                                <select id="acc-global-assignment-area" class="glass-form-input"
+                                    style="height: 38px; font-size: 0.85rem;"
+                                    onchange="window.applyGlobalAssignmentToItemRows()">
+                                    <option value="">Bereich wählen...</option>
+                                </select>
                             </div>
                             <!-- Apply to all checkbox -->
                             <div style="display: flex; align-items: center; gap: 8px; white-space: nowrap;">
                                 <input type="checkbox" id="acc-global-apply-to-items" checked
-                                    style="width: 16px; height: 16px; accent-color: var(--color-primary-green); cursor: pointer;">
+                                    style="width: 16px; height: 16px; accent-color: var(--color-primary-green); cursor: pointer;"
+                                    onchange="if (this.checked) window.applyGlobalAssignmentToItemRows();">
                                 <label for="acc-global-apply-to-items"
                                     style="font-size: 0.8rem; color: rgba(255,255,255,0.5); font-weight: 600; cursor: pointer;">Auf
-                                    alle Positionen anwenden</label>
+                                    alle Positionen übertragen</label>
                             </div>
                         </div>
                     </div>
@@ -3627,6 +3840,15 @@
                             </svg>
                         </button>
                     </div>
+                </div>
+
+                <div id="fin-type-tabs" style="display: flex; gap: 6px; margin-bottom: 14px; flex-shrink: 0;">
+                    <button class="fin-type-tab active" data-type="all"
+                        onclick="window.switchFinType('all')">Gesamt</button>
+                    <button class="fin-type-tab" data-type="incoming"
+                        onclick="window.switchFinType('incoming')">Eingang</button>
+                    <button class="fin-type-tab" data-type="outgoing"
+                        onclick="window.switchFinType('outgoing')">Ausgang</button>
                 </div>
 
                 <div id="financial-dashboard-content" style="overflow-y: auto; flex-grow: 1; padding-right: 5px;">
@@ -6186,6 +6408,7 @@
                 const listSeries = document.getElementById('category-list-series');
                 const listEquipment = document.getElementById('category-list-equipment');
                 const listStatus = document.getElementById('category-list-status');
+                const listArea = document.getElementById('category-list-area');
 
                 // Safety check
                 if (!listMachine || !listService) return;
@@ -6197,6 +6420,7 @@
                 if (listSeries) listSeries.innerHTML = '';
                 if (listEquipment) listEquipment.innerHTML = '';
                 if (listStatus) listStatus.innerHTML = '';
+                if (listArea) listArea.innerHTML = '';
 
                 // Populate custom machine category filter dropdown
                 const filterOptionsList = document.getElementById('machine-category-filter-options');
@@ -6288,7 +6512,8 @@
                         document: '#f97316',
                         series: '#06b6d4',
                         equipment: '#a855f7',
-                        status: '#3b82f6'
+                        status: '#3b82f6',
+                        area: '#6366f1'
                     };
 
                     const type = cat.type || 'machine';
@@ -6340,6 +6565,8 @@
                         listEquipment.appendChild(li);
                     } else if (type === 'status' && listStatus) {
                         listStatus.appendChild(li);
+                    } else if (type === 'area' && listArea) {
+                        listArea.appendChild(li);
                     }
                 });
 
@@ -11708,37 +11935,45 @@
             content.innerHTML = '<div style="text-align: center; color: rgba(255,255,255,0.4); padding: 2rem;">Lade Auswertung...</div>';
 
             try {
-                // Fetch all items for this machine
-                // Use machineId directly in eq filter
+                // Belege mit Positionen für diese Maschine laden — die Positionen liegen als
+                // JSONB-Array am Beleg (accounting.items); der contains-Filter (@>) findet
+                // serverseitig alle Belege, deren Array ein Objekt mit dieser machine_id enthält.
                 const { data, error } = await window.supabaseClient
-                    .from('accounting_items')
-                    .select('*, accounting!inner(created_at, date, type)')
-                    .eq('machine_id', machineId);
+                    .from('accounting')
+                    .select('id, date, created_at, type, items')
+                    .contains('items', JSON.stringify([{ machine_id: Number(machineId) }]));
 
                 if (error) throw error;
-
-                if (!data || data.length === 0) {
-                    content.innerHTML = '<div style="padding: 2rem; text-align: center; color: rgba(255,255,255,0.4);">Keine Buchungen für diese Maschine gefunden.</div>';
-                    return;
-                }
 
                 // Calculate total costs
                 let totalCosts = 0;
                 const monthlyBreakdown = {};
+                let matchCount = 0;
 
-                data.forEach(item => {
-                    const price = parseFloat(item.price_net) || 0;
-                    const qty = parseFloat(item.quantity) || 1;
-                    const sum = price * qty;
-                    totalCosts += sum;
+                (data || []).forEach(entry => {
+                    const items = Array.isArray(entry.items) ? entry.items : [];
+                    items.forEach(item => {
+                        if (String(item.machine_id) !== String(machineId)) return;
+                        matchCount++;
 
-                    // Use date if available, otherwise created_at
-                    const date = new Date(item.accounting.date || item.accounting.created_at);
-                    const monthKey = date.toLocaleString('de-DE', { month: 'long', year: 'numeric' });
+                        const price = parseFloat(item.price_net) || 0;
+                        const qty = parseFloat(item.quantity) || 1;
+                        const sum = price * qty;
+                        totalCosts += sum;
 
-                    if (!monthlyBreakdown[monthKey]) monthlyBreakdown[monthKey] = 0;
-                    monthlyBreakdown[monthKey] += sum;
+                        // Use date if available, otherwise created_at
+                        const date = new Date(entry.date || entry.created_at);
+                        const monthKey = date.toLocaleString('de-DE', { month: 'long', year: 'numeric' });
+
+                        if (!monthlyBreakdown[monthKey]) monthlyBreakdown[monthKey] = 0;
+                        monthlyBreakdown[monthKey] += sum;
+                    });
                 });
+
+                if (matchCount === 0) {
+                    content.innerHTML = '<div style="padding: 2rem; text-align: center; color: rgba(255,255,255,0.4);">Keine Buchungen für diese Maschine gefunden.</div>';
+                    return;
+                }
 
                 // Sort months (simplified)
                 const sortedMonths = Object.keys(monthlyBreakdown).sort((a, b) => {
@@ -15801,6 +16036,7 @@
                     if (techSigDate) techSigDate.value = todayISO;
                     const custSigDate = document.getElementById('service-customer-sig-date');
                     if (custSigDate) custSigDate.value = todayISO;
+                    window._serviceDateStartAutoVal = todayISO;
                     const techSigPreviewImg = document.getElementById('tech-signature-preview-img');
                     if (techSigPreviewImg) {
                         techSigPreviewImg.src = '';
@@ -15855,6 +16091,7 @@
                         if (techSigDateEl) techSigDateEl.value = editData.tech_sig_date || dateStartVal || '';
                         const custSigDateEl = document.getElementById('service-customer-sig-date');
                         if (custSigDateEl) custSigDateEl.value = editData.customer_sig_date || dateStartVal || '';
+                        window._serviceDateStartAutoVal = dateStartVal;
 
                         const dateEnd = document.getElementById('service-date-end');
                         if (dateEnd) dateEnd.value = editData.datum_bis || '';
@@ -16686,6 +16923,27 @@
                 searchInput.addEventListener('input', () => renderServiceEntries());
             }
             // NOTE: fetchServiceEntries on nav click is handled by switchView (see above)
+
+            // Datum Techniker / Datum Kunde sollen dem oberen "Datum (von)" folgen, solange sie
+            // noch auf dem zuletzt automatisch übernommenen Wert stehen (also nicht manuell auf ein
+            // abweichendes Datum gesetzt wurden) — sonst blieb dort nach einer Änderung von oben
+            // weiterhin das alte Datum stehen.
+            const serviceDateStartEl = document.getElementById('service-date-start');
+            const techSigDateEl = document.getElementById('service-tech-sig-date');
+            const custSigDateEl = document.getElementById('service-customer-sig-date');
+            if (serviceDateStartEl && techSigDateEl && custSigDateEl) {
+                serviceDateStartEl.addEventListener('change', () => {
+                    const newVal = serviceDateStartEl.value;
+                    if (!newVal) return;
+                    if (!techSigDateEl.value || techSigDateEl.value === window._serviceDateStartAutoVal) {
+                        techSigDateEl.value = newVal;
+                    }
+                    if (!custSigDateEl.value || custSigDateEl.value === window._serviceDateStartAutoVal) {
+                        custSigDateEl.value = newVal;
+                    }
+                    window._serviceDateStartAutoVal = newVal;
+                });
+            }
         });
 
         // Override submit to refresh list and perform subtask linkage
@@ -18298,9 +18556,11 @@
                 doc.text('Betriebsstunden: ', 120, rightY);
                 const bhW = doc.getTextWidth('Betriebsstunden: ');
                 doc.setFont('NotoSans', 'normal');
-                let operatingHoursVal = document.getElementById('service-operating-hours')?.value.trim() || '-';
-                if (operatingHoursVal !== '-') {
+                let operatingHoursVal = document.getElementById('service-operating-hours')?.value.trim() || '';
+                if (operatingHoursVal) {
                     operatingHoursVal = `${operatingHoursVal} (h)`;
+                } else {
+                    operatingHoursVal = '________________';
                 }
                 doc.text(String(operatingHoursVal), 120 + bhW, rightY);
 
@@ -18503,8 +18763,8 @@
                             fillColor: [248, 250, 252]
                         },
                         columnStyles: {
-                            0: { cellWidth: 150, halign: 'left' },
-                            1: { cellWidth: 20, halign: 'center' }
+                            0: { cellWidth: 144, halign: 'left' },
+                            1: { cellWidth: 26, halign: 'center' }
                         },
                         didDrawCell: function(data) {
                             if (data.column.index === 1 && data.cell.section === 'body') {
@@ -18573,8 +18833,8 @@
                             fillColor: [248, 250, 252]
                         },
                         columnStyles: {
-                            0: { cellWidth: 22 },
-                            1: { cellWidth: 128 },
+                            0: { cellWidth: 28 },
+                            1: { cellWidth: 122 },
                             2: { cellWidth: 20, halign: 'center' }
                         }
                     });
@@ -18730,9 +18990,18 @@
                     
                     checklistsToPrint.forEach(checklist => {
                         if (!checklist.answers || checklist.answers.length === 0) return;
-                        
+
                         const isUvv = checklist.type === 'uvv' || checklist.type === 'einweisung' || (checklist.template_id && checklist.template_id.includes('uvv'));
-                        
+
+                        // Bei Wartungsprotokollen: wenn per "Drucken"-Haken alle Übergruppen
+                        // abgewählt wurden, bleibt nichts zu drucken übrig — dann ganze Seite auslassen.
+                        if (!isUvv) {
+                            const hasPrintableAnswer = checklist.answers.some(ans =>
+                                !checklist.categoryIncluded || checklist.categoryIncluded[ans.category] !== false
+                            );
+                            if (!hasPrintableAnswer) return;
+                        }
+
                         doc.addPage();
                         
                         // Clean title from emojis
@@ -19112,7 +19381,13 @@
 
                         } else {
                             // Wartung Layout: Pos | Wartungsarbeit | Intervall | Erledigt | Bemerkung
-                            checklist.answers.forEach((ans) => {
+                            // Übergruppen, deren "Drucken"-Haken im Formular entfernt wurde
+                            // (checklist.categoryIncluded[kategorie] === false), werden komplett
+                            // ausgelassen — weder Kategorie-Kopfzeile noch ihre Punkte erscheinen.
+                            const printableAnswers = checklist.answers.filter(ans =>
+                                !checklist.categoryIncluded || checklist.categoryIncluded[ans.category] !== false
+                            );
+                            printableAnswers.forEach((ans) => {
                                 if (ans.category !== currentCatCL) {
                                     currentCatCL = ans.category;
                                     checklistBody.push([currentCatCL.toUpperCase(), '', '', '', '']);
@@ -20363,6 +20638,10 @@
                         <label class="segmented-option">
                             <input type="radio" name="cat-type" value="status">
                             <span class="option-text">Angebots-Status</span>
+                        </label>
+                        <label class="segmented-option">
+                            <input type="radio" name="cat-type" value="area">
+                            <span class="option-text">Buchhaltungs-Bereich</span>
                         </label>
                     </div>
                 </div>
