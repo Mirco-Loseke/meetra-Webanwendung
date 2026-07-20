@@ -181,7 +181,7 @@ window.initGlassSelect = function(selectEl) {
     icon.style.pointerEvents = 'none';
     icon.style.display = 'flex';
     icon.style.marginLeft = '8px';
-    icon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: rgba(255,255,255,0.4);"><polyline points="6 9 12 15 18 9"></polyline></svg>';
+    icon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:#fff;"><polyline points="6 9 12 15 18 9"></polyline></svg>';
     
     wrapper.appendChild(textSpan);
     wrapper.appendChild(icon);
@@ -337,7 +337,7 @@ window.renderAccounting = function () {
             </div>
             ${currentAccountingKpiFilter ? `
                 <div style="margin-bottom: 1.25rem; display: flex; align-items: center; gap: 8px;">
-                    <span style="font-size: 0.85rem; color: rgba(255,255,255,0.5);">Aktiver Filter:</span>
+                    <span style="font-size: 0.85rem; color:#fff;">Aktiver Filter:</span>
                     <span style="font-size: 0.8rem; font-weight: 700; color: #fff; background: rgba(255,255,255,0.08); padding: 4px 10px; border-radius: 99px; display: flex; align-items: center; gap: 6px; border: 1px solid rgba(255,255,255,0.12);">
                         ${currentAccountingKpiFilter === 'open_outgoing' ? 'Offene Einnahmen' : 
                           currentAccountingKpiFilter === 'open_incoming' ? 'Offene Ausgaben' : 
@@ -392,7 +392,7 @@ window.renderAccounting = function () {
         <div class="table-responsive-wrapper">
             <table class="data-table" style="width: 100%; border-collapse: collapse; table-layout: auto;">
                 <thead>
-                    <tr style="text-align: left; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">
+                    <tr style="text-align: left; color:#fff; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">
                         <th style="padding: 12px; width: 40px;"></th>
                         <th style="padding: 12px; width: 6%;">Blt.</th>
                         <th style="padding: 12px; width: 13%;">Nr.</th>
@@ -435,7 +435,7 @@ window.renderAccounting = function () {
         `;
 
         // Entry Rows
-        html += grouped[monthName].map(e => {
+        html += grouped[monthName].map((e, rowIdx) => {
             const hasDiscount = e.discount_amount && parseFloat(e.discount_amount) > 0;
             const discountDate = e.discount_date ? new Date(e.discount_date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
             const finalAmount = e.amount_gross - (parseFloat(e.discount_amount) || 0);
@@ -460,7 +460,7 @@ window.renderAccounting = function () {
             }
             
             return `
-            <tr style="border-top: 1px solid rgba(255,255,255,0.03); transition: background 0.2s;" class="accounting-main-row ${e.is_paid ? 'status-paid' : 'status-unpaid'}" id="row-${e.id}">
+            <tr style="border-top: 1px solid rgba(255,255,255,0.03); transition: background 0.2s;" class="accounting-main-row ${rowIdx % 2 === 1 ? 'acc-row-striped' : ''} ${e.is_paid ? 'status-paid' : 'status-unpaid'}" id="row-${e.id}">
                 <td data-label="Details" style="padding: 12px; text-align: center; cursor: pointer; color: var(--color-primary-green);" onclick="window.toggleAccountingDetails('${e.id}', this, event)">
                     <svg class="chevron-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.3s;"><path d="M9 18l6-6-6-6"></path></svg>
                 </td>
@@ -492,7 +492,7 @@ window.renderAccounting = function () {
                 </td>
                 <td data-label="${currentAccountingType === 'incoming' ? 'Lieferant' : 'Kunde'}" style="padding: 10px 12px; font-weight: 700; color: #fff; font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${e.entity}</td>
                 <td data-label="Netto" style="padding: 10px 12px; font-size: 0.85rem;">${window.formatCurrency(e.amount_net)}</td>
-                <td data-label="MwSt" style="padding: 10px 12px; font-size: 0.75rem; color: rgba(255,255,255,0.5);">${e.vat_rate}%</td>
+                <td data-label="MwSt" style="padding: 10px 12px; font-size: 0.75rem; color:#fff;">${e.vat_rate}%</td>
                 <td data-label="Brutto" style="padding: 10px 12px; font-size: 0.85rem;">
                     <div style="font-weight: 800; color: #fff;">${window.formatCurrency(e.amount_gross)}</div>
                     ${hasDiscount ? `
@@ -619,7 +619,7 @@ window.renderQuarters = function () {
     yearsToShow.forEach(yr => {
         html += `
         <div style="margin-bottom: 2rem;">
-            <div style="font-size: 1.1rem; font-weight: 900; color: rgba(255,255,255,0.5); margin-bottom: 1rem; display: flex; align-items: center; gap: 10px;">
+            <div style="font-size: 1.1rem; font-weight: 900; color:#fff; margin-bottom: 1rem; display: flex; align-items: center; gap: 10px;">
                 <span style="color: #fff;">Quartale ${yr}</span>
                 <span style="display: inline-block; height: 1px; flex: 1; background: rgba(255,255,255,0.08);"></span>
             </div>
@@ -661,25 +661,25 @@ window.renderQuarters = function () {
                     <div>
                         <div style="display: flex; justify-content: space-between; align-items: baseline;">
                             <span style="font-size: 1.25rem; font-weight: 800; color: #fff; font-family: 'Outfit', sans-serif;">${q.name}</span>
-                            <span style="font-size: 0.72rem; color: rgba(255,255,255,0.4); font-weight: 700; text-transform: uppercase;">${q.label}</span>
+                            <span style="font-size: 0.72rem; color:#fff; font-weight: 700; text-transform: uppercase;">${q.label}</span>
                         </div>
                         
                         ${barHtml}
                         
                         <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
                             <div style="display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 600;">
-                                <span style="color: rgba(255,255,255,0.45);">Ausgang:</span>
+                                <span style="color:#fff;">Ausgang:</span>
                                 <span style="color: var(--color-primary-green);">${window.formatCurrency(outgoingNum)}</span>
                             </div>
                             <div style="display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 600;">
-                                <span style="color: rgba(255,255,255,0.45);">Eingang:</span>
+                                <span style="color:#fff;">Eingang:</span>
                                 <span style="color: #f87171;">${window.formatCurrency(incomingNum)}</span>
                             </div>
                         </div>
                     </div>
                     
                     <div style="margin-top: 14px; padding: 8px 10px; background: ${hasData ? (balance >= 0 ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)') : 'rgba(255,255,255,0.02)'}; border: 1px solid ${hasData ? (balance >= 0 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)') : 'rgba(255,255,255,0.05)'}; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 0.88rem;">
-                        <span style="color: rgba(255,255,255,0.5); font-size: 0.72rem; text-transform: uppercase; font-weight: 700;">Bilanz:</span>
+                        <span style="color:#fff; font-size: 0.72rem; text-transform: uppercase; font-weight: 700;">Bilanz:</span>
                         <span style="color: ${balance >= 0 ? 'var(--color-primary-green)' : '#f87171'}; font-weight: 800; font-size: 0.95rem;">${window.formatCurrency(balance)}</span>
                     </div>
                 </div>
@@ -778,7 +778,7 @@ function buildAccMachineDropdown(machines, rowId) {
 
     const noneItem = document.createElement('div');
     noneItem.textContent = 'Keine Maschine';
-    noneItem.style.cssText = 'padding: 10px 14px; cursor: pointer; color: rgba(255,255,255,0.6); font-size: 0.9rem;';
+    noneItem.style.cssText = 'padding: 10px 14px; cursor: pointer; color:#fff; font-size: 0.9rem;';
     noneItem.onmousedown = (e) => { e.preventDefault(); selectAccMachine('', '', rowId); };
     noneItem.onmouseover = () => { noneItem.style.background = 'rgba(255,255,255,0.08)'; };
     noneItem.onmouseout = () => { noneItem.style.background = ''; };
@@ -982,7 +982,7 @@ window.addAccountingItemRow = function (data = {}) {
 
     // Assignment Type Toggle (Segmented Control style)
     const typeLabel = document.createElement('div');
-    typeLabel.style.cssText = 'font-size: 0.75rem; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: 700; min-width: 80px;';
+    typeLabel.style.cssText = 'font-size: 0.75rem; color:#fff; text-transform: uppercase; font-weight: 700; min-width: 80px;';
     typeLabel.textContent = 'Zuordnung:';
     assignmentBox.appendChild(typeLabel);
 
@@ -1000,12 +1000,12 @@ window.addAccountingItemRow = function (data = {}) {
     typeToggleContainer.innerHTML = `
         <button type="button" class="type-btn mac ${isMachine ? 'active' : ''}" onclick="window.toggleAccAssignmentType('${rowId}', 'machine')" 
             style="padding: 6px 14px; border-radius: 8px; border: none; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: 0.2s; 
-            ${isMachine ? 'background: var(--color-primary-green); color: white;' : 'background: transparent; color: rgba(255,255,255,0.4);'}">
+            ${isMachine ? 'background: var(--color-primary-green); color: white;' : 'background: transparent; color:#fff;'}">
             Maschine
         </button>
         <button type="button" class="type-btn and ${!isMachine ? 'active' : ''}" onclick="window.toggleAccAssignmentType('${rowId}', 'other')" 
             style="padding: 6px 14px; border-radius: 8px; border: none; font-size: 0.8rem; font-weight: 700; cursor: pointer; transition: 0.2s; 
-            ${!isMachine ? 'background: #6366f1; color: white;' : 'background: transparent; color: rgba(255,255,255,0.4);'}">
+            ${!isMachine ? 'background: #6366f1; color: white;' : 'background: transparent; color:#fff;'}">
             Andere
         </button>
     `;
@@ -1026,9 +1026,9 @@ window.addAccountingItemRow = function (data = {}) {
     const isAll = (data.machine_filter || 'all') === 'all';
     filterToggle.innerHTML = `
         <button type="button" class="filter-btn all ${isAll ? 'active' : ''}" onclick="window.toggleAccMachineFilter('${rowId}', 'all')" 
-            style="padding: 4px 10px; border-radius: 6px; border: none; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: 0.2s; ${isAll ? 'background: rgba(255,255,255,0.1); color: white;' : 'background: transparent; color: rgba(255,255,255,0.4);'}">Alle</button>
+            style="padding: 4px 10px; border-radius: 6px; border: none; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: 0.2s; ${isAll ? 'background: rgba(255,255,255,0.1); color: white;' : 'background: transparent; color:#fff;'}">Alle</button>
         <button type="button" class="filter-btn wrk ${!isAll ? 'active' : ''}" onclick="window.toggleAccMachineFilter('${rowId}', 'workshop')" 
-            style="padding: 4px 10px; border-radius: 6px; border: none; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: 0.2s; ${!isAll ? 'background: rgba(255,255,255,0.1); color: white;' : 'background: transparent; color: rgba(255,255,255,0.4);'}">Werkstatt</button>
+            style="padding: 4px 10px; border-radius: 6px; border: none; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: 0.2s; ${!isAll ? 'background: rgba(255,255,255,0.1); color: white;' : 'background: transparent; color:#fff;'}">Werkstatt</button>
     `;
     machineUI.appendChild(filterToggle);
 
@@ -1038,7 +1038,7 @@ window.addAccountingItemRow = function (data = {}) {
     const initName = data.machine_id ? window.getMachineName(data.machine_id) : '';
     machineSearchBox.innerHTML = `
         <div style="position: relative;">
-            <svg style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.3);" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <svg style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color:#fff;" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             <input type="text" class="item-machine-search glass-form-input" placeholder="Maschine suchen..." 
                 value="${initName}" oninput="window.filterAccMachineDropdown(this.value, '${rowId}')" 
                 onfocus="window.filterAccMachineDropdown(this.value, '${rowId}')"
@@ -1200,7 +1200,7 @@ window.filterGlobalMachineDropdown = function (query) {
     dropdown.innerHTML = '';
     const noneItem = document.createElement('div');
     noneItem.textContent = 'Keine Maschine';
-    noneItem.style.cssText = 'padding:10px 14px;cursor:pointer;color:rgba(255,255,255,0.6);font-size:0.9rem;';
+    noneItem.style.cssText = 'padding:10px 14px;cursor:pointer;color:#fff;font-size:0.9rem;';
     noneItem.onmousedown = (e) => { e.preventDefault(); window.selectGlobalMachine('', ''); };
     noneItem.onmouseover = () => { noneItem.style.background = 'rgba(255,255,255,0.08)'; };
     noneItem.onmouseout = () => { noneItem.style.background = ''; };
@@ -2124,7 +2124,7 @@ function renderDashboardSection(title, items, color, dateField, showSkonto = fal
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
                     ${title}
                 </div>
-                ${timeLabel ? `<span style="color: rgba(255,255,255,0.4); font-size: 0.8rem; font-weight: 400; text-transform: none; letter-spacing: 0;">${timeLabel}</span>` : ''}
+                ${timeLabel ? `<span style="color:#fff; font-size: 0.8rem; font-weight: 400; text-transform: none; letter-spacing: 0;">${timeLabel}</span>` : ''}
             </div>
             ${items.map(e => {
         const isOutgoing = e.type === 'outgoing';
@@ -2162,8 +2162,8 @@ function renderDashboardSection(title, items, color, dateField, showSkonto = fal
                     <div style="font-weight: 800; color: #fff; overflow: visible;">
                         <span style="color: ${isOutgoing ? '#10b981' : '#f87171'}; font-size: 0.7rem; text-transform: uppercase; margin-right: 5px;">${isOutgoing ? 'Ausgang' : 'Eingang'}</span>
                         ${e.entity} 
-                        <span style="font-weight: 400; color: rgba(255,255,255,0.3); font-size: 0.75rem; margin-left: 8px;">${e.invoice_number || ''}</span>
-                        <div style="font-size: 0.75rem; font-weight: 500; color: rgba(255,255,255,0.4); margin-top: 2px;">${relativeText}</div>
+                        <span style="font-weight: 400; color:#fff; font-size: 0.75rem; margin-left: 8px;">${e.invoice_number || ''}</span>
+                        <div style="font-size: 0.75rem; font-weight: 500; color:#fff; margin-top: 2px;">${relativeText}</div>
                     </div>
                     <div style="text-align: right; color: #${itemColor.startsWith('#') ? itemColor.slice(1) : itemColor}; font-weight: 800;">
                         ${showSkonto ? '-' + window.formatCurrency(e.discount_amount) : window.formatCurrency(e.amount_gross)}
@@ -2230,7 +2230,7 @@ window.updateMachineEvaluation = async function () {
     }
 
     console.time('MachineEvaluation');
-    content.innerHTML = '<div style="padding: 2rem; text-align: center; color: rgba(255,255,255,0.4);">Optimiere Datenzugriff...</div>';
+    content.innerHTML = '<div style="padding: 2rem; text-align: center; color:#fff;">Optimiere Datenzugriff...</div>';
 
     try {
         if (!window.supabaseClient) throw new Error('Supabase client not initialized');
@@ -2356,8 +2356,8 @@ window.updateMachineEvaluation = async function () {
                             return `
                             <div style="display: flex; flex-direction: column; gap: 3px;">
                                 <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 0.72rem; font-weight: 700;">
-                                    <span style="color: rgba(255,255,255,0.85); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(c.label)}</span>
-                                    <span style="color: #fff; white-space: nowrap;">${window.formatCurrency(c.total)} <span style="color: rgba(255,255,255,0.35); font-weight: 600;">(${share}%)</span></span>
+                                    <span style="color:#fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(c.label)}</span>
+                                    <span style="color: #fff; white-space: nowrap;">${window.formatCurrency(c.total)} <span style="color:#fff; font-weight: 600;">(${share}%)</span></span>
                                 </div>
                                 <div style="width: 100%; height: 7px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden;">
                                     <div style="width: ${pct}%; height: 100%; background: ${c.color}; border-radius: 4px; min-width: 2px;"></div>
@@ -2377,9 +2377,9 @@ window.updateMachineEvaluation = async function () {
                             const barPx = Math.max(Math.round((t.total / maxMonthTotal) * 85), 3);
                             return `
                             <div style="flex: 1; min-width: 44px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;">
-                                <div style="font-size: 0.62rem; font-weight: 800; color: rgba(255,255,255,0.7); margin-bottom: 3px; white-space: nowrap;">${Math.round(t.total).toLocaleString('de-DE')} €</div>
+                                <div style="font-size: 0.62rem; font-weight: 800; color:#fff; margin-bottom: 3px; white-space: nowrap;">${Math.round(t.total).toLocaleString('de-DE')} €</div>
                                 <div title="${t.month}: ${window.formatCurrency(t.total)}" style="width: 70%; max-width: 34px; height: ${barPx}px; background: linear-gradient(0deg, #f59e0b 0%, #fbbf24 100%); border-radius: 4px 4px 0 0;"></div>
-                                <div style="font-size: 0.6rem; font-weight: 700; color: rgba(255,255,255,0.35); margin-top: 5px; white-space: nowrap;">${shortMonth(t.month)}</div>
+                                <div style="font-size: 0.6rem; font-weight: 700; color:#fff; margin-top: 5px; white-space: nowrap;">${shortMonth(t.month)}</div>
                             </div>`;
                         }).join('')}
                     </div>
@@ -2397,7 +2397,7 @@ window.updateMachineEvaluation = async function () {
                 <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 24px;">
                     <table class="eval-table" style="width: 100%; border-collapse: collapse;">
                         <thead>
-                            <tr style="text-align: left; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase;">
+                            <tr style="text-align: left; color:#fff; font-size: 0.75rem; text-transform: uppercase;">
                                 <th style="padding: 12px;">Maschine</th>
                                 ${allMonths.map(m => `<th style="padding: 12px; text-align: right;">${m}</th>`).join('')}
                                 <th style="padding: 12px; text-align: right;">Gesamt</th>
@@ -2445,7 +2445,7 @@ window.updateMachineEvaluation = async function () {
                 <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
                     <table class="eval-table" style="width: 100%; border-collapse: collapse;">
                         <thead>
-                            <tr style="text-align: left; color: rgba(255,255,255,0.4); font-size: 0.75rem; text-transform: uppercase;">
+                            <tr style="text-align: left; color:#fff; font-size: 0.75rem; text-transform: uppercase;">
                                 <th style="padding: 12px;">Bereich</th>
                                 ${allMonths.map(m => `<th style="padding: 12px; text-align: right;">${m}</th>`).join('')}
                                 <th style="padding: 12px; text-align: right;">Gesamt</th>
@@ -2540,7 +2540,7 @@ function renderAccountingDetailsContent(id) {
     const rawItems = (entry && Array.isArray(entry.items)) ? entry.items : [];
 
     if (rawItems.length === 0) {
-        content.innerHTML = '<div style="color: rgba(255,255,255,0.3); font-size: 0.85rem;">Keine Einzelpositionen für diesen Beleg gefunden.</div>';
+        content.innerHTML = '<div style="color:#fff; font-size: 0.85rem;">Keine Einzelpositionen für diesen Beleg gefunden.</div>';
         return;
     }
 
@@ -2606,11 +2606,11 @@ function renderAccountingDetailsContent(id) {
         itemsHtml += `
             <div class="acc-details-row">
                 <div data-label="Bezeichnung" style="font-weight: 600; color: #fff; display: flex; align-items: center;">
-                    ${isFirstInGroup ? `<svg style="margin-right:6px; color:rgba(255,255,255,0.4);" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>` : (isSplitPart ? `<div style="width: 18px;"></div>` : '')}
+                    ${isFirstInGroup ? `<svg style="margin-right:6px; color:#fff;" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>` : (isSplitPart ? `<div style="width: 18px;"></div>` : '')}
                     ${item.description} ${splitBadge}
                 </div>
-                <div data-label="Menge" style="color: rgba(255,255,255,0.6); font-weight: 700;">${qty}</div>
-                <div data-label="Einheit" style="color: rgba(255,255,255,0.4);">${item.unit || '-'}</div>
+                <div data-label="Menge" style="color:#fff; font-weight: 700;">${qty}</div>
+                <div data-label="Einheit" style="color:#fff;">${item.unit || '-'}</div>
                 <div data-label="Preis" style="text-align: right; font-weight: 700;">${window.formatCurrency(item.price_net)}</div>
                 <div data-label="Gesamt" style="text-align: right; font-weight: 800; color: #fff;">${window.formatCurrency((parseFloat(item.price_net) || 0) * qty)}</div>
                 <div data-label="Zuordnung" style="padding-left: 1rem; color: var(--color-primary-green); font-weight: 600; font-size: 0.8rem; line-height: 1.2;">${assignmentText}</div>
@@ -2740,7 +2740,7 @@ window.addSplitRow = function(defaults = {}) {
     // Menge Input
     const qtyHTML = `
         <div>
-            <div style="font-size: 0.75rem; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Menge</div>
+            <div style="font-size: 0.75rem; color:#fff; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Menge</div>
             <input type="number" step="0.01" class="split-qty glass-form-input" value="${defaults.qty || 0}" style="text-align: center; font-weight: 700; height: 38px; width: 100%;" oninput="window.updateSplitTotal()">
         </div>
     `;
@@ -2757,7 +2757,7 @@ window.addSplitRow = function(defaults = {}) {
 
     const assignHTML = `
         <div>
-            <div style="font-size: 0.75rem; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Zuordnung</div>
+            <div style="font-size: 0.75rem; color:#fff; text-transform: uppercase; font-weight: 700; margin-bottom: 4px;">Zuordnung</div>
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div style="display: flex; background: rgba(0,0,0,0.3); padding: 3px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
                     <button type="button" class="type-btn mac active" onclick="window.toggleSplitAssignmentType('${rowId}', 'machine')" 
@@ -2765,7 +2765,7 @@ window.addSplitRow = function(defaults = {}) {
                         Maschine
                     </button>
                     <button type="button" class="type-btn and" onclick="window.toggleSplitAssignmentType('${rowId}', 'other')" 
-                        style="padding: 5px 12px; border-radius: 6px; border: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: 0.2s; background: transparent; color: rgba(255,255,255,0.4);">
+                        style="padding: 5px 12px; border-radius: 6px; border: none; font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: 0.2s; background: transparent; color:#fff;">
                         Andere
                     </button>
                 </div>
@@ -2776,10 +2776,10 @@ window.addSplitRow = function(defaults = {}) {
                             <button type="button" class="filter-btn all active" onclick="window.toggleSplitMachineFilter('${rowId}', 'all')" 
                                 style="padding: 4px 8px; border-radius: 4px; border: none; font-size: 0.7rem; font-weight: 600; cursor: pointer; transition: 0.2s; background: rgba(255,255,255,0.1); color: white;">Alle</button>
                             <button type="button" class="filter-btn wrk" onclick="window.toggleSplitMachineFilter('${rowId}', 'workshop')" 
-                                style="padding: 4px 8px; border-radius: 4px; border: none; font-size: 0.7rem; font-weight: 600; cursor: pointer; transition: 0.2s; background: transparent; color: rgba(255,255,255,0.4);">Werkstatt</button>
+                                style="padding: 4px 8px; border-radius: 4px; border: none; font-size: 0.7rem; font-weight: 600; cursor: pointer; transition: 0.2s; background: transparent; color:#fff;">Werkstatt</button>
                         </div>
                         <div class="search-input-wrapper" style="position: relative; flex: 1;">
-                            <svg style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.3);" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                            <svg style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color:#fff;" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                             <input type="text" class="split-machine-search glass-form-input" placeholder="Suchen..." oninput="window.filterSplitMachineDropdown(this.value, '${rowId}')" onfocus="window.filterSplitMachineDropdown(this.value, '${rowId}')" style="padding: 0 10px 0 28px; font-size: 0.8rem; height: 32px; border-color: rgba(255,255,255,0.1);">
                         </div>
                         <select class="split-machine-workshop glass-form-input hidden" onchange="document.getElementById('${rowId}').dataset.machineId = this.value" style="flex: 1; font-size: 0.8rem; height: 32px; padding: 0 10px; border-color: rgba(255,255,255,0.1); color: var(--color-primary-green); font-weight: 600;">
@@ -2927,11 +2927,11 @@ window.filterSplitMachineDropdown = function(term, rowId) {
                           document.getElementById('${rowId}').querySelector('.split-machine-search').value='${window.getMachineName(m.id).replace(/'/g, "\\'")}';
                           document.getElementById('split-machine-dropdown-portal').style.display='none';">
                 <div style="font-weight: 600;">${m.manufacturer} ${m.name}</div>
-                ${m.inventory_number ? `<div style="font-size: 0.7rem; color: rgba(255,255,255,0.4);">${m.inventory_number}</div>` : ''}
+                ${m.inventory_number ? `<div style="font-size: 0.7rem; color:#fff;">${m.inventory_number}</div>` : ''}
             </div>
         `).join('');
     } else {
-        list.innerHTML = '<div style="padding: 10px; color: rgba(255,255,255,0.4); font-size: 0.8rem; text-align: center;">Keine Maschinen gefunden</div>';
+        list.innerHTML = '<div style="padding: 10px; color:#fff; font-size: 0.8rem; text-align: center;">Keine Maschinen gefunden</div>';
     }
 };
 
@@ -3114,7 +3114,7 @@ window.renderAccountingCharts = function () {
                          style="width: 10px; height: ${incPct}%; background: linear-gradient(0deg, #ef4444 0%, #f87171 100%); border-radius: 2px 2px 0 0; min-height: 1px;">
                     </div>
                 </div>
-                <div style="font-size: 0.6rem; font-weight: 700; color: rgba(255,255,255,0.35); margin-top: 6px; white-space: nowrap;">
+                <div style="font-size: 0.6rem; font-weight: 700; color:#fff; margin-top: 6px; white-space: nowrap;">
                     ${b.label.split(' ')[0]}
                 </div>
             </div>
@@ -3148,7 +3148,7 @@ window.renderAccountingCharts = function () {
         const shortName = ent.name.split(',')[0].trim().substring(0, 20);
         return `
             <div style="display: flex; flex-direction: column; gap: 4px;">
-                <div style="display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,0.85);">
+                <div style="display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 700; color:#fff;">
                     <span style="display: flex; gap: 6px; align-items: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                         <span style="color: ${rankColor}; font-weight: 900;">#${idx + 1}</span>
                         ${escapeHtml(shortName)}
@@ -3175,7 +3175,7 @@ window.renderAccountingCharts = function () {
         <div class="glass-card" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; min-height: 240px;">
             <div>
                 <h3 style="margin: 0; color: #fff; font-size: 0.95rem; font-weight: 800; font-family: 'Outfit', sans-serif;">Finanz- & Cashflow-Übersicht</h3>
-                <p style="margin: 2px 0 0 0; font-size: 0.72rem; color: rgba(255,255,255,0.45); font-weight: 600;">Letzte 12 Monate · Einnahmen vs. Ausgaben</p>
+                <p style="margin: 2px 0 0 0; font-size: 0.72rem; color:#fff; font-weight: 600;">Letzte 12 Monate · Einnahmen vs. Ausgaben</p>
             </div>
             
             <div class="hide-scrollbar" style="display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; height: 120px; overflow-x: auto; padding-top: 5px;">
@@ -3185,7 +3185,7 @@ window.renderAccountingCharts = function () {
             <div style="height: 1px; background: rgba(255,255,255,0.06); margin: 2px 0;"></div>
             
             <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem;">
-                <span style="color: rgba(255,255,255,0.5); font-weight: 600;">Netto-Bilanz gesamt:</span>
+                <span style="color:#fff; font-weight: 600;">Netto-Bilanz gesamt:</span>
                 <span style="font-weight: 900; color: ${totalBalance >= 0 ? 'var(--color-primary-green)' : '#f87171'};">${fmtEur(totalBalance)}</span>
             </div>
         </div>
@@ -3196,7 +3196,7 @@ window.renderAccountingCharts = function () {
                 <h3 style="margin: 0; color: #fff; font-size: 0.95rem; font-weight: 800; font-family: 'Outfit', sans-serif;">
                     Top 5 ${currentAccountingType === 'incoming' ? 'Lieferanten (Ausgaben)' : 'Kunden (Einnahmen)'}
                 </h3>
-                <p style="margin: 2px 0 0 0; font-size: 0.72rem; color: rgba(255,255,255,0.45); font-weight: 600;">Gesamtvolumen brutto</p>
+                <p style="margin: 2px 0 0 0; font-size: 0.72rem; color:#fff; font-weight: 600;">Gesamtvolumen brutto</p>
             </div>
             
             <div style="display: flex; flex-direction: column; gap: 10px; flex: 1; justify-content: center;">
@@ -3208,7 +3208,7 @@ window.renderAccountingCharts = function () {
         <div class="glass-card" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; min-height: 240px;">
             <div>
                 <h3 style="margin: 0; color: #fff; font-size: 0.95rem; font-weight: 800; font-family: 'Outfit', sans-serif;">Statusverteilung nach Volumen</h3>
-                <p style="margin: 2px 0 0 0; font-size: 0.72rem; color: rgba(255,255,255,0.45); font-weight: 600;">Aufteilung der Belegsummen (${currentAccountingType === 'incoming' ? 'Ausgaben' : 'Einnahmen'})</p>
+                <p style="margin: 2px 0 0 0; font-size: 0.72rem; color:#fff; font-weight: 600;">Aufteilung der Belegsummen (${currentAccountingType === 'incoming' ? 'Ausgaben' : 'Einnahmen'})</p>
             </div>
             
             <div style="display: flex; flex-direction: column; gap: 14px; flex: 1; justify-content: center;">
@@ -3242,7 +3242,7 @@ window.renderAccountingCharts = function () {
             <div style="height: 1px; background: rgba(255,255,255,0.06); margin: 2px 0;"></div>
             
             <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.78rem;">
-                <span style="color: rgba(255,255,255,0.5); font-weight: 600;">Volumen gesamt:</span>
+                <span style="color:#fff; font-weight: 600;">Volumen gesamt:</span>
                 <span style="font-weight: 900; color: #fff;">${fmtEur(totalSum)}</span>
             </div>
         </div>
@@ -3275,7 +3275,7 @@ window.renderYoYComparison = function () {
     const fmtEur = (v) => Math.round(v).toLocaleString('de-DE') + ' €';
 
     const getTrendBadge = (cur, prev, isProfit = false) => {
-        if (prev === 0) return `<span style="font-size:0.72rem; color:rgba(255,255,255,0.4); font-weight:700;">Keine VJ-Daten</span>`;
+        if (prev === 0) return `<span style="font-size:0.72rem; color:#fff; font-weight:700;">Keine VJ-Daten</span>`;
         const diffPct = ((cur - prev) / Math.abs(prev)) * 100;
         const dir = diffPct >= 0 ? '+' : '';
         let color = '#10b981'; // Green
@@ -3298,42 +3298,42 @@ window.renderYoYComparison = function () {
             <!-- Einnahmen (YoY) -->
             <div class="glass-card" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 8px; border: 1px solid rgba(255,255,255,0.06);">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.5px;">Einnahmen (YoY)</span>
+                    <span style="font-size: 0.75rem; font-weight: 700; color:#fff; text-transform: uppercase; letter-spacing: 0.5px;">Einnahmen (YoY)</span>
                     ${getTrendBadge(outCur, outPrev)}
                 </div>
                 <div style="font-size: 1.5rem; font-weight: 900; color: var(--color-primary-green); font-family: 'Outfit', sans-serif; margin-top: 4px;">
                     ${fmtEur(outCur)}
                 </div>
-                <div style="font-size: 0.78rem; color: rgba(255,255,255,0.4); font-weight: 600;">
-                    Vorjahr (${prevYear}): <span style="color: rgba(255,255,255,0.7); font-weight: 700;">${fmtEur(outPrev)}</span>
+                <div style="font-size: 0.78rem; color:#fff; font-weight: 600;">
+                    Vorjahr (${prevYear}): <span style="color:#fff; font-weight: 700;">${fmtEur(outPrev)}</span>
                 </div>
             </div>
 
             <!-- Ausgaben (YoY) -->
             <div class="glass-card" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 8px; border: 1px solid rgba(255,255,255,0.06);">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.5px;">Ausgaben (YoY)</span>
+                    <span style="font-size: 0.75rem; font-weight: 700; color:#fff; text-transform: uppercase; letter-spacing: 0.5px;">Ausgaben (YoY)</span>
                     ${getTrendBadge(incCur, incPrev)}
                 </div>
                 <div style="font-size: 1.5rem; font-weight: 900; color: #f87171; font-family: 'Outfit', sans-serif; margin-top: 4px;">
                     ${fmtEur(incCur)}
                 </div>
-                <div style="font-size: 0.78rem; color: rgba(255,255,255,0.4); font-weight: 600;">
-                    Vorjahr (${prevYear}): <span style="color: rgba(255,255,255,0.7); font-weight: 700;">${fmtEur(incPrev)}</span>
+                <div style="font-size: 0.78rem; color:#fff; font-weight: 600;">
+                    Vorjahr (${prevYear}): <span style="color:#fff; font-weight: 700;">${fmtEur(incPrev)}</span>
                 </div>
             </div>
 
             <!-- Netto-Ergebnis (YoY) -->
             <div class="glass-card" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 8px; border: 1px solid rgba(255,255,255,0.06);">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <span style="font-size: 0.75rem; font-weight: 700; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.5px;">Netto-Bilanz (YoY)</span>
+                    <span style="font-size: 0.75rem; font-weight: 700; color:#fff; text-transform: uppercase; letter-spacing: 0.5px;">Netto-Bilanz (YoY)</span>
                     ${getTrendBadge(profitCur, profitPrev, true)}
                 </div>
                 <div style="font-size: 1.5rem; font-weight: 900; color: ${profitCur >= 0 ? 'var(--color-primary-green)' : '#f87171'}; font-family: 'Outfit', sans-serif; margin-top: 4px;">
                     ${fmtEur(profitCur)}
                 </div>
-                <div style="font-size: 0.78rem; color: rgba(255,255,255,0.4); font-weight: 600;">
-                    Vorjahr (${prevYear}): <span style="color: rgba(255,255,255,0.7); font-weight: 700;">${fmtEur(profitPrev)}</span>
+                <div style="font-size: 0.78rem; color:#fff; font-weight: 600;">
+                    Vorjahr (${prevYear}): <span style="color:#fff; font-weight: 700;">${fmtEur(profitPrev)}</span>
                 </div>
             </div>
         </div>

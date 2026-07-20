@@ -1210,6 +1210,14 @@ let _pdfDocRef = null;
 let _pdfCacheBustedUrl = null;
 let _pinchRenderTimer = null;
 let _pdfRenderGen = 0; // guards against overlapping renders (e.g. rapid zoom) drawing over each other
+let _pdfPageEls = []; // { wrapper, canvas } per page, kept across zoom steps (only rebuilt on open/rotate)
+
+// How much sharper than "100% = fits the page" each canvas is actually drawn at. Zooming
+// within this range is a pure CSS resize of the already-rendered canvas (instant, like every
+// other PDF reader) instead of asking pdf.js to redraw — that redraw-on-every-step was the
+// visible "flash"/relayout the zoom used to have. Only rotating re-renders for real, since
+// that changes the actual page content orientation.
+const PDF_OVERSAMPLE = 3;
 
 function _updateZoomLabel() {
     const label = document.getElementById('doc-preview-zoom-label');
@@ -1237,37 +1245,56 @@ async function _renderPdfPages() {
     const containerWidth = Math.max(300, (container ? container.clientWidth : 0) || (window.innerWidth - 40));
     const containerHeight = Math.max(300, (container ? container.clientHeight : 0) || (window.innerHeight - 160));
     const fitScale = Math.min(containerWidth / naturalVp.width, containerHeight / naturalVp.height);
-    const renderScale = fitScale * _previewZoom;
+    const dpr = window.devicePixelRatio || 1;
+    // Canvas pixel buffer is rendered once at a fixed, oversampled resolution (independent
+    // of the current zoom level) — only its CSS display size changes when zooming.
+    const bufferScale = fitScale * dpr * PDF_OVERSAMPLE;
 
     target.innerHTML = '';
+    _pdfPageEls = [];
     for (let pageNum = 1; pageNum <= _pdfDocRef.numPages; pageNum++) {
         const page = pageNum === 1 ? firstPage : await _pdfDocRef.getPage(pageNum);
         if (myGen !== _pdfRenderGen) return;
-        const viewport = page.getViewport({ scale: renderScale, rotation: _previewRotation });
+        const displayVp = page.getViewport({ scale: fitScale, rotation: _previewRotation });
+        const bufferVp = page.getViewport({ scale: bufferScale, rotation: _previewRotation });
+
         const pageWrapper = document.createElement('div');
-        // Display width in px so zoom actually changes visible size. The wrapper is
-        // box-sizing:border-box with 15px padding on each side, so it needs to be 30px
-        // WIDER than the canvas — otherwise the (square-cornered) canvas is exactly as
-        // wide as the wrapper's own outer edge and pokes out past its rounded corners,
-        // looking like a second overlapping frame/sheet behind the card.
-        pageWrapper.style.cssText = `margin: 20px auto; padding: 15px; background: white; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 8px; width: ${Math.round(viewport.width) + 30}px; box-sizing: border-box; overflow: hidden;`;
+        // Box-sizing:border-box with 15px padding on each side, so it needs to be 30px WIDER
+        // than the canvas — otherwise the (square-cornered) canvas is exactly as wide as the
+        // wrapper's own outer edge and pokes out past its rounded corners, looking like a
+        // second overlapping frame/sheet behind the card. Width itself is set by
+        // _applyPdfZoomCss() below, alongside every other zoom change.
+        pageWrapper.style.cssText = `margin: 20px auto; padding: 15px; background: white; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 8px; box-sizing: border-box; overflow: hidden;`;
         const canvas = document.createElement('canvas');
         canvas.style.display = 'block';
-        // Render at the screen's actual pixel density so thin lines/edges stay crisp —
-        // otherwise a blurry/soft-scaled canvas can look like a faint double edge next
-        // to the wrapper's own (pixel-perfect) rounded border.
-        const dpr = window.devicePixelRatio || 1;
-        canvas.width = Math.round(viewport.width * dpr);
-        canvas.height = Math.round(viewport.height * dpr);
-        canvas.style.width = Math.round(viewport.width) + 'px';
-        canvas.style.height = Math.round(viewport.height) + 'px';
+        canvas.width = Math.round(bufferVp.width);
+        canvas.height = Math.round(bufferVp.height);
+        // "100%"/fit-to-page display size in CSS px — the baseline that _previewZoom scales.
+        canvas.dataset.baseWidth = displayVp.width;
+        canvas.dataset.baseHeight = displayVp.height;
         pageWrapper.appendChild(canvas);
         target.appendChild(pageWrapper);
+        _pdfPageEls.push({ wrapper: pageWrapper, canvas });
         const context = canvas.getContext('2d');
-        if (dpr !== 1) context.scale(dpr, dpr);
-        await page.render({ canvasContext: context, viewport }).promise;
+        await page.render({ canvasContext: context, viewport: bufferVp }).promise;
         if (myGen !== _pdfRenderGen) return;
     }
+    _applyPdfZoomCss();
+}
+
+// Instant zoom: just resizes the already-rendered canvases via CSS (no pdf.js re-render).
+// Stays crisp up to PDF_OVERSAMPLE× the fit-to-page size; beyond that it softens slightly,
+// same trade-off every lightweight PDF viewer makes instead of redrawing on every step.
+function _applyPdfZoomCss() {
+    _pdfPageEls.forEach(({ wrapper, canvas }) => {
+        const baseWidth = parseFloat(canvas.dataset.baseWidth);
+        const baseHeight = parseFloat(canvas.dataset.baseHeight);
+        const w = Math.round(baseWidth * _previewZoom);
+        const h = Math.round(baseHeight * _previewZoom);
+        canvas.style.width = w + 'px';
+        canvas.style.height = h + 'px';
+        wrapper.style.width = (w + 30) + 'px';
+    });
 }
 
 function _applyImageTransform() {
@@ -1289,11 +1316,11 @@ function _clearPendingWheelPreview() {
     if (target) { target.style.transform = ''; target.style.transformOrigin = ''; }
 }
 
-window.docPreviewZoom = async function(delta) {
+window.docPreviewZoom = function(delta) {
     _clearPendingWheelPreview();
     _previewZoom = Math.min(5, Math.max(0.25, parseFloat((_previewZoom + delta).toFixed(2))));
     _updateZoomLabel();
-    if (_previewType === 'pdf') await _renderPdfPages();
+    if (_previewType === 'pdf') _applyPdfZoomCss();
     else _applyImageTransform();
 };
 
@@ -1312,16 +1339,20 @@ function _attachPreviewEvents() {
     const container = document.getElementById('doc-preview-container');
     if (!container) return;
 
-    // Ctrl+wheel (desktop zoom, also used by Chrome/Android for pinch).
+    // Ctrl+wheel (desktop zoom, also used by Chrome/Android for pinch, and by trackpad
+    // pinch which Chrome/Firefox both report as a rapid burst of ctrl+wheel events).
     // Zooms toward the cursor position (like Adobe/Chrome PDF viewer) instead of the
     // page center, by keeping the same content point under the mouse before/after.
     //
-    // Note: we deliberately do NOT apply a temporary CSS transform: scale() to the
-    // scrollable content here for "instant" feedback. Chrome recomputes the container's
-    // scrollable area from the transformed (post-scale) geometry, so it auto-clamps
-    // scrollLeft/scrollTop the moment the transform changes — that's what caused the
-    // left/right jump while zooming out. Going straight to a (short) debounced real
-    // re-render avoids that entirely.
+    // A resize of the (oversampled, potentially large) canvases on every single tick of
+    // such a burst is layout+paint work — smooth for an occasional discrete click, but a
+    // trackpad pinch or a fast scroll-wheel fires dozens of these per second, so the
+    // browser visibly falls behind the input. Each tick therefore only updates a
+    // GPU-compositor-only CSS transform (no layout/reflow at all) relative to the zoom
+    // level at burst-start; the real canvas resize — which is what actually needs to be
+    // correct for further scrolling — is deferred until the burst goes quiet.
+    let _wheelZoomBase = null;
+    let _wheelAnchor = null;
     container.addEventListener('wheel', function(e) {
         if (e.ctrlKey) {
             e.preventDefault();
@@ -1333,20 +1364,47 @@ function _attachPreviewEvents() {
             const contRect = container.getBoundingClientRect();
             const cursorX = e.clientX - contRect.left;
             const cursorY = e.clientY - contRect.top;
-            // Cursor position within the scrollable content, as a ratio (0..1), captured
-            // BEFORE the zoom changes so it can be restored once the content has resized.
-            const ratioX = target.scrollWidth > 0 ? (container.scrollLeft + cursorX) / target.scrollWidth : 0.5;
-            const ratioY = target.scrollHeight > 0 ? (container.scrollTop + cursorY) / target.scrollHeight : 0.5;
 
-            _previewZoom = newZoom;
-            _updateZoomLabel();
-            clearTimeout(_pinchRenderTimer);
-            _pinchRenderTimer = setTimeout(async () => {
-                if (_previewType === 'pdf') await _renderPdfPages();
-                else _applyImageTransform();
-                container.scrollLeft = ratioX * target.scrollWidth - cursorX;
-                container.scrollTop = ratioY * target.scrollHeight - cursorY;
-            }, 90);
+            if (_previewType === 'pdf') {
+                if (_wheelZoomBase === null) {
+                    _wheelZoomBase = _previewZoom;
+                    _wheelAnchor = {
+                        x: target.scrollWidth > 0 ? (container.scrollLeft + cursorX) / target.scrollWidth : 0.5,
+                        y: target.scrollHeight > 0 ? (container.scrollTop + cursorY) / target.scrollHeight : 0.5
+                    };
+                    target.style.transformOrigin = `${cursorX + container.scrollLeft}px ${cursorY + container.scrollTop}px`;
+                }
+                _previewZoom = newZoom;
+                _updateZoomLabel();
+                target.style.transform = `scale(${_previewZoom / _wheelZoomBase})`;
+
+                clearTimeout(_pinchRenderTimer);
+                _pinchRenderTimer = setTimeout(() => {
+                    const anchor = _wheelAnchor;
+                    _wheelZoomBase = null;
+                    _wheelAnchor = null;
+                    target.style.transform = '';
+                    target.style.transformOrigin = '';
+                    _applyPdfZoomCss();
+                    if (anchor) {
+                        container.scrollLeft = anchor.x * target.scrollWidth - cursorX;
+                        container.scrollTop = anchor.y * target.scrollHeight - cursorY;
+                    }
+                }, 150);
+            } else {
+                // Cursor position within the scrollable content, as a ratio (0..1), captured
+                // BEFORE the zoom changes so it can be restored once the content has resized.
+                const ratioX = target.scrollWidth > 0 ? (container.scrollLeft + cursorX) / target.scrollWidth : 0.5;
+                const ratioY = target.scrollHeight > 0 ? (container.scrollTop + cursorY) / target.scrollHeight : 0.5;
+                _previewZoom = newZoom;
+                _updateZoomLabel();
+                clearTimeout(_pinchRenderTimer);
+                _pinchRenderTimer = setTimeout(() => {
+                    _applyImageTransform();
+                    container.scrollLeft = ratioX * target.scrollWidth - cursorX;
+                    container.scrollTop = ratioY * target.scrollHeight - cursorY;
+                }, 90);
+            }
         }
     }, { passive: false });
 
@@ -1398,12 +1456,10 @@ function _attachPreviewEvents() {
             _pinchActive = false;
             _pinchDist = null;
             clearTimeout(_pinchRenderTimer);
-            _pinchRenderTimer = setTimeout(async () => {
-                const inner = document.getElementById('doc-preview-inner');
-                if (inner) { inner.style.transform = ''; inner.style.transformOrigin = ''; }
-                if (_previewType === 'pdf') await _renderPdfPages();
-                else _applyImageTransform();
-            }, 120);
+            const inner = document.getElementById('doc-preview-inner');
+            if (inner) { inner.style.transform = ''; inner.style.transformOrigin = ''; }
+            if (_previewType === 'pdf') _applyPdfZoomCss();
+            else _pinchRenderTimer = setTimeout(() => _applyImageTransform(), 120);
         }
     }, { passive: true });
 }

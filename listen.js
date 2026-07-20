@@ -613,7 +613,7 @@
         if (entries.length === 0) {
             container.innerHTML = `
                 <div class="empty-state" style="text-align:center; padding:3rem 2rem; background: rgba(255,255,255,0.02); border-radius: 16px; border: 1px dashed rgba(255,255,255,0.1);">
-                    <p style="color: rgba(255,255,255,0.4); font-size: 1rem;">Keine Angebote vorhanden. Oben importieren.</p>
+                    <p style="color:#fff; font-size: 1rem;">Keine Angebote vorhanden. Oben importieren.</p>
                 </div>`;
             return;
         }
@@ -672,8 +672,8 @@
         // "Vm." (Vormonatswert), darunter die prozentuale Veraenderung.
         const renderTrendBox = (curVal, prevVal, diffPct, fmtFn) => `
             <div style="display:flex; flex-direction:column; align-items:flex-end; line-height:1.3; text-align:right;">
-                <span style="font-size:0.68rem; color:rgba(255,255,255,0.5); font-weight:700; white-space:nowrap;">Akt. M. ${fmtFn(curVal)}</span>
-                <span style="font-size:0.68rem; color:rgba(255,255,255,0.5); font-weight:700; white-space:nowrap; margin-top:1px;">Vm. ${fmtFn(prevVal)}</span>
+                <span style="font-size:0.68rem; color:#fff; font-weight:700; white-space:nowrap;">Akt. M. ${fmtFn(curVal)}</span>
+                <span style="font-size:0.68rem; color:#fff; font-weight:700; white-space:nowrap; margin-top:1px;">Vm. ${fmtFn(prevVal)}</span>
                 <span style="font-size:0.72rem; color:${diffPct >= 0 ? '#10b981' : '#f87171'}; font-weight:800; white-space:nowrap; margin-top:2px;">${diffPct >= 0 ? '+' : ''}${Math.round(diffPct)}%</span>
             </div>
         `;
@@ -803,14 +803,14 @@
                      ${clickable ? `onclick="window.setAngeboteStatusFilter(window.__angebotePipelineNames[${i}])" title="Klick: nach diesem Status filtern"` : ''}>
                     <div style="display:flex; justify-content:space-between; align-items:baseline;">
                         <span style="font-size:0.78rem; font-weight:700; color:${color}; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:70%;">${escapeHtml(g.name)}</span>
-                        <span style="font-size:0.72rem; font-weight:700; color:rgba(255,255,255,0.5); white-space:nowrap;"><strong style="color:#fff; font-weight:800;">${g.count} Stk.</strong> &middot; ${sumLabel}</span>
+                        <span style="font-size:0.72rem; font-weight:700; color:#fff; white-space:nowrap;"><strong style="color:#fff; font-weight:800;">${g.count} Stk.</strong> &middot; ${sumLabel}</span>
                     </div>
                     <div style="width:100%; height:10px; background:rgba(255,255,255,0.06); border-radius:4px; overflow:hidden;">
                         <div style="width:${pct}%; height:100%; background:${color}; border-radius:4px; transition: width 0.4s ease;"></div>
                     </div>
                 </div>
             `;
-        }).join('') || '<div style="color: rgba(255,255,255,0.3); font-size: 0.85rem; padding: 1rem 0;">Keine Daten</div>';
+        }).join('') || '<div style="color:#fff; font-size: 0.85rem; padding: 1rem 0;">Keine Daten</div>';
 
         // --- Angebotsvolumen pro Monat (letzte 6 Monate, Summe VK) ---
         const now = new Date();
@@ -838,7 +838,7 @@
                 <div style="flex: 1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:0; height:100%;">
                     ${hasVal ? `<div style="font-size:0.58rem; font-weight:800; color:#60a5fa; margin-bottom:3px; white-space:nowrap; writing-mode:horizontal-tb; text-align:center; max-width:100%; overflow:hidden; text-overflow:ellipsis; letter-spacing:-0.3px;">${fmtEurFull(b.sum)}</div>` : ''}
                     <div style="width:80%; background:${hasVal ? 'linear-gradient(0deg,#3b82f6,#60a5fa)' : 'rgba(255,255,255,0.04)'}; border-radius:4px 4px 0 0; height:${pct}%; min-height:${hasVal ? '3px' : '0'}; transition:height 0.4s ease;"></div>
-                    <div style="font-size:0.7rem; font-weight:700; color:rgba(255,255,255,0.45); margin-top:5px; white-space:nowrap;">${b.label}</div>
+                    <div style="font-size:0.7rem; font-weight:700; color:#fff; margin-top:5px; white-space:nowrap;">${b.label}</div>
                 </div>
             `;
         }).join('');
@@ -858,15 +858,15 @@
             return `
                 <div style="display:flex; flex-direction:column; gap:3px;">
                     <div style="display:flex; justify-content:space-between; align-items:baseline;">
-                        <span style="font-size:0.78rem; font-weight:700; color:rgba(255,255,255,0.8); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:65%;" title="${escapeHtml(c.firma)}">${escapeHtml(c.firma)}</span>
-                        <span style="font-size:0.72rem; font-weight:700; color:rgba(255,255,255,0.5); white-space:nowrap;"><strong style="color:#fff; font-weight:800;">${c.count} Stk.</strong> &middot; ${fmtEurFull(c.sum)}</span>
+                        <span style="font-size:0.78rem; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:65%;" title="${escapeHtml(c.firma)}">${escapeHtml(c.firma)}</span>
+                        <span style="font-size:0.72rem; font-weight:700; color:#fff; white-space:nowrap;"><strong style="color:#fff; font-weight:800;">${c.count} Stk.</strong> &middot; ${fmtEurFull(c.sum)}</span>
                     </div>
                     <div style="width:100%; height:10px; background:rgba(255,255,255,0.06); border-radius:4px; overflow:hidden;">
                         <div style="width:${pct}%; height:100%; background:linear-gradient(90deg, #22c55e, #4ade80); border-radius:4px; transition: width 0.4s ease;"></div>
                     </div>
                 </div>
             `;
-        }).join('') || '<div style="color: rgba(255,255,255,0.3); font-size: 0.85rem; padding: 1rem 0;">Keine Daten</div>';
+        }).join('') || '<div style="color:#fff; font-size: 0.85rem; padding: 1rem 0;">Keine Daten</div>';
 
         const wonPct  = entries.length > 0 ? Math.round(wonEntries.length  / entries.length * 100) : 0;
         const lostPct = entries.length > 0 ? Math.round(lostEntries.length / entries.length * 100) : 0;
@@ -879,7 +879,7 @@
 
                         <!-- Step 1: Gesamt -->
                         <div style="display:flex; flex-direction:column; gap:2px;">
-                            <div style="display:flex; justify-content:space-between; font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.7);">
+                            <div style="display:flex; justify-content:space-between; font-size:0.75rem; font-weight:700; color:#fff;">
                                 <span>1. Angebote gesamt</span>
                                 <span>${entries.length}</span>
                             </div>
@@ -891,7 +891,7 @@
 
                         <!-- Step 2: Offen -->
                         <div style="display:flex; flex-direction:column; gap:2px;">
-                            <div style="display:flex; justify-content:space-between; font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.7);">
+                            <div style="display:flex; justify-content:space-between; font-size:0.75rem; font-weight:700; color:#fff;">
                                 <span>2. Offen / In Verhandlung</span>
                                 <span>${openEntries.length}</span>
                             </div>
@@ -903,7 +903,7 @@
 
                         <!-- Step 3: Gewonnen -->
                         <div style="display:flex; flex-direction:column; gap:2px;">
-                            <div style="display:flex; justify-content:space-between; font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.7);">
+                            <div style="display:flex; justify-content:space-between; font-size:0.75rem; font-weight:700; color:#fff;">
                                 <span style="display:flex; align-items:center; gap:5px;">
                                     <span style="width:7px; height:7px; background:#10b981; border-radius:50%; display:inline-block;"></span>
                                     3. Aufträge / Gewonnen
@@ -918,7 +918,7 @@
 
                         <!-- Step 4: Verloren -->
                         <div style="display:flex; flex-direction:column; gap:2px;">
-                            <div style="display:flex; justify-content:space-between; font-size:0.75rem; font-weight:700; color:rgba(255,255,255,0.7);">
+                            <div style="display:flex; justify-content:space-between; font-size:0.75rem; font-weight:700; color:#fff;">
                                 <span style="display:flex; align-items:center; gap:5px;">
                                     <span style="width:7px; height:7px; background:#ef4444; border-radius:50%; display:inline-block;"></span>
                                     4. Aufträge Verloren
@@ -992,7 +992,7 @@
                                         <span style="color: #F87171; font-weight: 800; white-space: nowrap; font-size: 0.78rem;">${x.stille} Tage still</span>
                                     </div>
                                 `;
-                            }).join('') : '<div style="color: rgba(255,255,255,0.3); font-size: 0.85rem; padding: 0.5rem 0;">Keine roten Angebote</div>'}
+                            }).join('') : '<div style="color:#fff; font-size: 0.85rem; padding: 0.5rem 0;">Keine roten Angebote</div>'}
                         </div>
                     </div>
 
@@ -1012,7 +1012,7 @@
                                         <span style="color: #FFA000; font-weight: 800; white-space: nowrap; font-size: 0.78rem;">${x.stille} Tage still</span>
                                     </div>
                                 `;
-                            }).join('') : '<div style="color: rgba(255,255,255,0.3); font-size: 0.85rem; padding: 0.5rem 0;">Keine orangenen Angebote</div>'}
+                            }).join('') : '<div style="color:#fff; font-size: 0.85rem; padding: 0.5rem 0;">Keine orangenen Angebote</div>'}
                         </div>
                     </div>
                 </div>
@@ -1039,18 +1039,18 @@
                 <table style="width:100%; border-collapse:collapse;">
                     <thead>
                         <tr style="border-bottom:2px solid rgba(255,255,255,0.15);">
-                            <th style="padding:10px; text-align:left; font-size:0.8rem; color:rgba(255,255,255,0.5); font-weight:700;">Belegdatum</th>
-                            <th style="padding:10px; text-align:left; font-size:0.8rem; color:rgba(255,255,255,0.5); font-weight:700;">Belegnummer</th>
-                            <th style="padding:10px; text-align:left; font-size:0.8rem; color:rgba(255,255,255,0.5); font-weight:700;">Firma</th>
-                            <th style="padding:10px; text-align:right; font-size:0.8rem; color:rgba(255,255,255,0.5); font-weight:700;">VK</th>
-                            <th style="padding:10px; text-align:right; font-size:0.8rem; color:rgba(255,255,255,0.5); font-weight:700;">EK</th>
-                            <th style="padding:10px; text-align:right; font-size:0.8rem; color:rgba(255,255,255,0.5); font-weight:700;">Spanne</th>
-                            <th style="padding:10px; text-align:left; font-size:0.8rem; color:rgba(255,255,255,0.5); font-weight:700;">Realisierbar</th>
-                            <th style="padding:10px; text-align:left; font-size:0.8rem; color:rgba(255,255,255,0.5); font-weight:700;">Status</th>
-                            <th style="padding:10px; text-align:left; font-size:0.8rem; color:rgba(255,255,255,0.5); font-weight:700;">Bemerkung</th>
-                            <th style="padding:10px; text-align:left; font-size:0.8rem; color:rgba(255,255,255,0.5); font-weight:700;">Maschine</th>
-                            <th style="padding:10px; text-align:left; font-size:0.8rem; color:rgba(255,255,255,0.5); font-weight:700;">Erinnerung</th>
-                            <th class="delete-permission-required" style="padding:10px; text-align:center; font-size:0.8rem; color:rgba(255,255,255,0.5); font-weight:700; width:36px;"></th>
+                            <th style="padding:10px; text-align:left; font-size:0.8rem; color:#fff; font-weight:700;">Belegdatum</th>
+                            <th style="padding:10px; text-align:left; font-size:0.8rem; color:#fff; font-weight:700;">Belegnummer</th>
+                            <th style="padding:10px; text-align:left; font-size:0.8rem; color:#fff; font-weight:700;">Firma</th>
+                            <th style="padding:10px; text-align:right; font-size:0.8rem; color:#fff; font-weight:700;">VK</th>
+                            <th style="padding:10px; text-align:right; font-size:0.8rem; color:#fff; font-weight:700;">EK</th>
+                            <th style="padding:10px; text-align:right; font-size:0.8rem; color:#fff; font-weight:700;">Spanne</th>
+                            <th style="padding:10px; text-align:left; font-size:0.8rem; color:#fff; font-weight:700;">Realisierbar</th>
+                            <th style="padding:10px; text-align:left; font-size:0.8rem; color:#fff; font-weight:700;">Status</th>
+                            <th style="padding:10px; text-align:left; font-size:0.8rem; color:#fff; font-weight:700;">Bemerkung</th>
+                            <th style="padding:10px; text-align:left; font-size:0.8rem; color:#fff; font-weight:700;">Maschine</th>
+                            <th style="padding:10px; text-align:left; font-size:0.8rem; color:#fff; font-weight:700;">Erinnerung</th>
+                            <th class="delete-permission-required" style="padding:10px; text-align:center; font-size:0.8rem; color:#fff; font-weight:700; width:36px;"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1077,10 +1077,10 @@
                             const accentStyle = statusCat?.color ? `box-shadow: inset 4px 0 0 0 ${statusCat.color};` : '';
                             return `
                             <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-                                <td style="padding:10px; color:rgba(255,255,255,0.8); font-size:0.88rem; ${accentStyle}">${fmtDate(a.belegdatum)}${ageHtml}</td>
+                                <td style="padding:10px; color:#fff; font-size:0.88rem; ${accentStyle}">${fmtDate(a.belegdatum)}${ageHtml}</td>
                                 <td style="padding:10px; color:white; font-weight:700; font-size:0.88rem;">${escapeHtml(a.belegnummer)}</td>
                                 <td style="padding:10px; color:white; font-size:0.88rem;">${escapeHtml(firmaDisplay)}</td>
-                                <td style="padding:10px; text-align:right; color:rgba(255,255,255,0.8); font-size:0.88rem;">${fmtNumberInput(a.nettobetrag)}</td>
+                                <td style="padding:10px; text-align:right; color:#fff; font-size:0.88rem;">${fmtNumberInput(a.nettobetrag)}</td>
                                 <td style="padding:10px; font-size:0.88rem; min-width:130px;">
                                     <input type="text" class="glass-form-input" value="${escapeHtml(fmtNumberInput(a.ek_betrag))}"
                                         placeholder="EK..." style="height:34px; font-size:0.85rem; text-align:right;"
@@ -1094,7 +1094,7 @@
                                             placeholder="..." style="height:34px; font-size:0.85rem; width:70px;"
                                             onblur="window.updateAngebotRealisierbar('${a.id}', this.value)"
                                             onkeydown="if(event.key==='Enter'){ this.blur(); }">
-                                        <span style="color:rgba(255,255,255,0.4); font-size:0.85rem;">%</span>
+                                        <span style="color:#fff; font-size:0.85rem;">%</span>
                                     </div>
                                 </td>
                                 <td style="padding:10px; font-size:0.88rem; min-width:180px;">${renderAngebotStatusCell(a)}</td>
@@ -1113,7 +1113,7 @@
                     </tbody>
                     <tfoot>
                         <tr style="border-top:2px solid rgba(255,255,255,0.15);">
-                            <td colspan="3" style="padding:12px 10px; color:rgba(255,255,255,0.5); font-size:0.8rem; font-weight:700; text-transform:uppercase;">Summe (${entries.length} Angebote)</td>
+                            <td colspan="3" style="padding:12px 10px; color:#fff; font-size:0.8rem; font-weight:700; text-transform:uppercase;">Summe (${entries.length} Angebote)</td>
                             <td style="padding:12px 10px; text-align:right; color:white; font-weight:800; font-size:0.9rem;">${fmtNumberInput(totalVK)}</td>
                             <td style="padding:12px 10px; text-align:right; color:white; font-weight:800; font-size:0.9rem;">${fmtNumberInput(totalEK)}</td>
                             <td style="padding:12px 10px; text-align:right; color:#22c55e; font-weight:800; font-size:0.9rem;">${fmtNumberInput(totalSpanne)}${totalSpannePct ? `<div style="font-size:0.75rem;">${totalSpannePct}</div>` : ''}</td>
@@ -1142,7 +1142,7 @@
                         <div class="ang-card-top">
                             <div style="min-width:0; flex:1 1 auto;">
                                 <div style="color:#fff; font-weight:800; font-size:0.95rem;">${escapeHtml(a.belegnummer)}</div>
-                                <div style="color:rgba(255,255,255,0.45); font-size:0.78rem; font-weight:600; white-space:normal; word-break:break-word;">${fmtDate(a.belegdatum)}${firma ? ' · ' + escapeHtml(firma) : ''}</div>
+                                <div style="color:#fff; font-size:0.78rem; font-weight:600; white-space:normal; word-break:break-word;">${fmtDate(a.belegdatum)}${firma ? ' · ' + escapeHtml(firma) : ''}</div>
                             </div>
                             <div style="text-align:right; flex-shrink:0;">
                                 <div style="color:#fff; font-weight:800; font-size:0.95rem;">${vk !== null ? fmtNumberInput(vk) + ' €' : '–'}</div>
@@ -1168,7 +1168,7 @@
                     </div>
                 `;
                 }).join('')}
-                <div style="padding:12px 4px; color:rgba(255,255,255,0.6); font-size:0.82rem; font-weight:700;">
+                <div style="padding:12px 4px; color:#fff; font-size:0.82rem; font-weight:700;">
                     Summe (${entries.length}): VK ${fmtEur(totalVK)} · EK ${fmtEur(totalEK)} · Spanne ${fmtEur(totalSpanne)}${totalSpannePct ? ' (' + totalSpannePct + ')' : ''}
                 </div>
             </div>
@@ -1291,7 +1291,7 @@
             if (editingNotizId === n.id) {
                 return `
                     <div style="padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.06);">
-                        <div style="color:rgba(255,255,255,0.4); font-size:0.72rem; margin-bottom:3px;">${fmtTimestamp(n.created_at)}</div>
+                        <div style="color:#fff; font-size:0.72rem; margin-bottom:3px;">${fmtTimestamp(n.created_at)}</div>
                         <textarea id="angebot-notiz-edit-${n.id}" class="glass-form-input" rows="5" style="width:100%; font-size:0.9rem; resize:vertical;">${escapeHtml(n.content)}</textarea>
                         <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:6px;">
                             <button type="button" onclick="event.stopPropagation(); window.deleteAngebotNotiz('${angebotId}', '${n.id}')" class="delete-permission-required" style="padding:4px 10px; font-size:0.75rem; border-radius:8px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#f87171; cursor:pointer; margin-right:auto;">Löschen</button>
@@ -1303,17 +1303,17 @@
             }
             return `
                 <div onclick="event.stopPropagation(); window.startEditAngebotNotiz('${angebotId}', '${n.id}')" title="Klicken zum Bearbeiten" style="padding:8px; margin:0 -8px; border-radius:8px; border-bottom:1px solid rgba(255,255,255,0.06); cursor:pointer; transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
-                    <div style="color:rgba(255,255,255,0.4); font-size:0.72rem; margin-bottom:3px;">${fmtTimestamp(n.created_at)}</div>
+                    <div style="color:#fff; font-size:0.72rem; margin-bottom:3px;">${fmtTimestamp(n.created_at)}</div>
                     <div style="color:#fff; font-size:0.85rem; white-space:pre-wrap;">${escapeHtml(n.content)}</div>
                 </div>
             `;
-        }).join('') : '<div style="color:rgba(255,255,255,0.4); font-size:0.82rem; padding:6px 0 12px;">Noch keine Notizen.</div>';
+        }).join('') : '<div style="color:#fff; font-size:0.82rem; padding:6px 0 12px;">Noch keine Notizen.</div>';
 
         panel.innerHTML = `
-            <div style="font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:rgba(255,255,255,0.4); margin-bottom:0.6rem;">Notizen</div>
+            <div style="font-size:0.8rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; color:#fff; margin-bottom:0.6rem;">Notizen</div>
             <div style="margin-bottom:0.6rem; max-height:260px; overflow-y:auto; overflow-x:hidden;">${notesHtml}</div>
             <div style="border-top:1px solid rgba(255,255,255,0.1); padding-top:0.85rem;">
-                <div style="color:rgba(255,255,255,0.4); font-size:0.75rem; margin-bottom:5px;">Neue Notiz · ${fmtTimestamp(new Date().toISOString())}</div>
+                <div style="color:#fff; font-size:0.75rem; margin-bottom:5px;">Neue Notiz · ${fmtTimestamp(new Date().toISOString())}</div>
                 <textarea id="angebot-notiz-input" class="glass-form-input" rows="5" placeholder="Notiz eingeben..." style="width:100%; font-size:0.9rem; resize:vertical;"></textarea>
                 <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:8px;">
                     <button type="button" onclick="window.toggleAngebotNotizPanel('${angebotId}')" class="btn-secondary" style="padding:6px 14px; font-size:0.8rem;">Schließen</button>
@@ -1664,7 +1664,7 @@
             return `
                 <div onclick="window.jumpToAngebotFromReminder('${a.id}')" style="padding:8px 10px; border-radius:8px; cursor:pointer; transition:background 0.15s;" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'">
                     <div style="color:#fff; font-weight:600; font-size:0.88rem;">${escapeHtml(label)}</div>
-                    <div style="color:rgba(255,255,255,0.5); font-size:0.78rem;">${escapeHtml(a.belegnummer)} · ${dateStr}</div>
+                    <div style="color:#fff; font-size:0.78rem;">${escapeHtml(a.belegnummer)} · ${dateStr}</div>
                 </div>
             `;
         };
@@ -1680,7 +1680,7 @@
         };
 
         const html = renderGroup('Überfällig', '#ef4444', ueberfaellig) + renderGroup('Zeitnah', '#f59e0b', zeitnah);
-        panel.innerHTML = html || '<div style="padding:1rem; text-align:center; color:rgba(255,255,255,0.4); font-size:0.85rem;">Keine anstehenden Erinnerungen</div>';
+        panel.innerHTML = html || '<div style="padding:1rem; text-align:center; color:#fff; font-size:0.85rem;">Keine anstehenden Erinnerungen</div>';
         panel.style.display = 'block';
     };
 
@@ -1826,7 +1826,7 @@
 
         const noneItem = document.createElement('div');
         noneItem.textContent = 'Keine Maschine';
-        noneItem.style.cssText = 'padding:10px 14px;cursor:pointer;color:rgba(255,255,255,0.6);font-size:0.9rem;';
+        noneItem.style.cssText = 'padding:10px 14px;cursor:pointer;color:#fff;font-size:0.9rem;';
         noneItem.onmousedown = (e) => { e.preventDefault(); window.selectAngebotMachine(angebotId, null); };
         noneItem.onmouseover = () => { noneItem.style.background = 'rgba(255,255,255,0.08)'; };
         noneItem.onmouseout = () => { noneItem.style.background = ''; };
@@ -1837,7 +1837,7 @@
         const trimmedQuery = query.trim();
         const freitextItem = document.createElement('div');
         freitextItem.textContent = trimmedQuery ? `✎ Eigene Bezeichnung „${trimmedQuery}“ übernehmen` : '✎ Eigene Bezeichnung eintippen...';
-        freitextItem.style.cssText = 'padding:10px 14px;cursor:pointer;font-size:0.9rem;color:rgba(255,255,255,0.7);background:rgba(255,255,255,0.05);border-top:1px solid rgba(255,255,255,0.05);';
+        freitextItem.style.cssText = 'padding:10px 14px;cursor:pointer;font-size:0.9rem;color:#fff;background:rgba(255,255,255,0.05);border-top:1px solid rgba(255,255,255,0.05);';
         // onclick + stopPropagation statt onmousedown: dieser Eintrag lässt editingAngebotMachineId
         // bewusst gesetzt (wechselt nur den Modus), darum darf das nachfolgende click-Event nicht
         // erst beim Dokument landen und die Bearbeitung über den Außerhalb-Klick-Listener sofort
@@ -1850,7 +1850,7 @@
         if (filtered.length === 0 && filteredLabels.length === 0) {
             const empty = document.createElement('div');
             empty.textContent = 'Keine Maschine gefunden';
-            empty.style.cssText = 'padding:10px 14px;color:rgba(255,255,255,0.3);font-size:0.85rem;font-style:italic;';
+            empty.style.cssText = 'padding:10px 14px;color:#fff;font-size:0.85rem;font-style:italic;';
             dropdown.appendChild(empty);
         }
 
@@ -2359,7 +2359,7 @@
                 <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
                     <span style="font-size: 3rem;">📥</span>
                     <span style="font-weight: 700; color: #fff; font-size: 1.1rem;">Datei auswählen oder hierher ziehen</span>
-                    <span style="font-size: 0.85rem; color: rgba(255,255,255,0.4);">Unterstützte Formate: Excel (.xlsx, .xls) oder CSV (.csv)</span>
+                    <span style="font-size: 0.85rem; color:#fff;">Unterstützte Formate: Excel (.xlsx, .xls) oder CSV (.csv)</span>
                 </div>
             `;
             setupAngeboteImportListeners();

@@ -769,14 +769,21 @@ window.getMaintenanceScopeLabel = function(checklistPayload) {
     const wartungChecklists = checklistPayload.checklists.filter(cl => cl.type === 'wartung');
     if (wartungChecklists.length === 0) return null;
 
+    // seenKeys verhindert Duplikate auch bei abweichender Groß-/Kleinschreibung oder
+    // Leerzeichen (z.B. "SBA" und "sba " zählen als dieselbe Übergruppe) — sonst könnte
+    // dieselbe Kategorie aus mehreren Wartungsprotokollen/-zeilen doppelt in der Liste landen.
+    const seenKeys = new Set();
     const allCats = [];
     const includedCats = [];
     wartungChecklists.forEach(cl => {
         (cl.answers || []).forEach(ans => {
-            if (!ans.category || allCats.includes(ans.category)) return;
-            allCats.push(ans.category);
+            const category = ans.category ? String(ans.category).trim() : '';
+            const key = category.toLowerCase();
+            if (!category || seenKeys.has(key)) return;
+            seenKeys.add(key);
+            allCats.push(category);
             const isIncluded = !cl.categoryIncluded || cl.categoryIncluded[ans.category] !== false;
-            if (isIncluded) includedCats.push(ans.category);
+            if (isIncluded) includedCats.push(category);
         });
     });
 

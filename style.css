@@ -20,6 +20,11 @@
         radial-gradient(circle at 70% 80%, rgba(30, 58, 138, 0.2) 0%, transparent 50%),
         radial-gradient(circle at 40% 90%, rgba(15, 23, 42, 0.5) 0%, transparent 70%),
         #0f172a;
+    /* TEST: ein einziger, viewport-fixierter Farbverlauf für Startseite/Ereignisse/Maschinen/Einstellungen
+       + Navigation + Kopfleiste, damit an den Rändern keine sichtbaren Kanten/Kästen entstehen. */
+    --app-gradient: radial-gradient(130% 100% at 20% 0%, rgba(125, 211, 252, 0.16) 0%, rgba(125, 211, 252, 0) 60%),
+        radial-gradient(120% 100% at 100% 30%, rgba(96, 165, 250, 0.12) 0%, rgba(96, 165, 250, 0) 60%),
+        linear-gradient(160deg, rgba(255, 255, 255, 0.13) 0%, rgba(255, 255, 255, 0.09) 100%);
 
     /* Legacy Colors mapped to new theme */
     --color-primary-red: var(--primary-red);
@@ -243,6 +248,18 @@
     padding: 0;
 }
 
+/* TEST: EIN einziges Farbverlauf-Layer fix hinter der gesamten App — Sidebar, Kopfleiste und
+   Startseite/Ereignisse/Maschinen/Einstellungen sind jetzt transparent und lassen es durchscheinen.
+   Dadurch kann es an keiner Stelle mehr eine sichtbare Kante zwischen Bereichen geben. */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: var(--app-gradient);
+    pointer-events: none;
+}
+
 body {
     font-family: var(--font-serif);
     /* Modern Deep Blue Mesh Gradient (Lighter Dark Theme) */
@@ -304,7 +321,8 @@ body {
 /* Sidebar Styles */
 #sidebar {
     width: 280px;
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.75) 0%, rgba(30, 27, 75, 0.65) 50%, rgba(2, 6, 23, 0.8) 100%);
+    /* TEST: kein eigener Farbverlauf mehr — body::before scheint durch, nur noch dezenter Dunkel-Schleier für Lesbarkeit */
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.4) 0%, rgba(30, 27, 75, 0.32) 50%, rgba(2, 6, 23, 0.42) 100%);
     backdrop-filter: blur(32px);
     -webkit-backdrop-filter: blur(32px);
     border-right: 1px solid var(--glass-border);
@@ -592,6 +610,23 @@ body {
     }
 }
 
+/* TEST: auf Startseite/Ereignisse/Maschinen/Einstellungen den eigenen (opaken) Hintergrund abschalten,
+   damit body::before durchscheint — auf allen anderen Tabs bleibt der bisherige Hintergrund unverändert. */
+#main-wrapper:has(#home.active),
+#main-wrapper:has(#calendar.active),
+#main-wrapper:has(#machines.active),
+#main-wrapper:has(#settings.active),
+#main-wrapper:has(#service.active),
+#main-wrapper:has(#workshop.active),
+#main-wrapper:has(#protocols.active),
+#main-wrapper:has(#settings-etiketten.active),
+#main-wrapper:has(#documents.active),
+#main-wrapper:has(#listen.active),
+#main-wrapper:has(#tasks.active),
+#main-wrapper:has(#accounting.active) {
+    background: transparent;
+}
+
 /* Main Wrapper (Content + Topbar) */
 #main-wrapper {
     flex: 1;
@@ -627,7 +662,8 @@ body {
     position: absolute;
     inset: 0;
     z-index: -1;
-    background: linear-gradient(to bottom, rgba(15, 23, 42, 0.95) 0%, rgba(15, 23, 42, 0.6) 50%, rgba(15, 23, 42, 0) 100%);
+    /* TEST: kein eigener Farbverlauf mehr — body::before scheint durch, nur noch dezenter Dunkel-Schleier für Lesbarkeit */
+    background: linear-gradient(to bottom, rgba(15, 23, 42, 0.55) 0%, rgba(15, 23, 42, 0.3) 50%, rgba(15, 23, 42, 0) 100%);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     mask-image: linear-gradient(to bottom, black 10%, transparent 100%);
@@ -6111,7 +6147,9 @@ MACHINE HISTORY TIMELINE
 /* Moved .hidden definition to end of file for higher specificity */
 .spinner-small { width: 14px; height: 14px; border: 2px solid rgba(255, 255, 255, 0.1); border-top-color: var(--color-primary-green); border-radius: 50%; animation: spin-sm 0.8s linear infinite; }
 @keyframes spin-sm { to { transform: rotate(360deg); } }
-.accounting-main-row:hover { background: rgba(255, 255, 255, 0.04) !important; }
+/* Zebra-Streifen: jede zweite Zeile innerhalb eines Monats leicht grau hinterlegt */
+.accounting-main-row.acc-row-striped { background: rgba(255, 255, 255, 0.07); }
+.accounting-main-row:hover { background: rgba(255, 255, 255, 0.12) !important; }
 .details-row { animation: slideDown 0.3s ease-out; }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -7642,7 +7680,7 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
 
 /* Unified Month Header Row for Accounting */
 .accounting-month-header {
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.07);
     border-bottom: 1px solid rgba(255,255,255,0.05);
 }
 
@@ -8526,26 +8564,36 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     padding: 1rem 0;
 }
 
-.doc-card {
-    background: linear-gradient(165deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+.doc-card,
+.folder-card {
+    background: rgba(255, 255, 255, 0.055);
+    border: 1px solid rgba(255, 255, 255, 0.16);
     border-radius: 20px;
     padding: 1.25rem;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), background 0.45s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.45s cubic-bezier(0.16, 1, 0.3, 1);
     cursor: pointer;
     position: relative;
     overflow: hidden;
-    backdrop-filter: blur(25px);
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
-.doc-card:hover {
-    transform: translateY(-5px);
-    border-color: rgba(var(--accent-rgb), 0.3);
-    background: linear-gradient(165deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
-    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+.doc-card:hover,
+.folder-card:hover {
+    transform: translateY(-3px) scale(1.015);
+    border-color: rgba(var(--accent-rgb), 0.4);
+    background: rgba(255, 255, 255, 0.09);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.doc-card:active,
+.folder-card:active {
+    transform: translateY(-1px) scale(0.99);
+    transition-duration: 0.15s;
 }
 
 .folder-card .folder-thumb {
@@ -10753,6 +10801,16 @@ body.focus-mode-active .view-header-row-top {
     margin-bottom: 10px;
     font-family: 'Inter', sans-serif;
 }
+/* Zebra-Streifen: jede zweite Zeile leicht grau hinterlegt */
+.angebote-table-wrap tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.07);
+}
+.angebote-table-wrap tbody tr:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+.angebote-cards .ang-card:nth-child(even) {
+    background: rgba(255, 255, 255, 0.09);
+}
 .ang-card-top {
     display: flex;
     justify-content: space-between;
@@ -10771,7 +10829,7 @@ body.focus-mode-active .view-header-row-top {
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    color: rgba(255, 255, 255, 0.4);
+    color: #fff;
     margin-bottom: 4px;
 }
 @media (max-width: 900px) {
@@ -11230,4 +11288,185 @@ body.focus-mode-active .view-header-row-top {
         padding: 8px 4px;
         text-align: center;
     }
+}
+
+/* TEST: kein eigener Farbverlauf mehr — body::before scheint überall gleich durch (transparent) */
+#settings,
+#home {
+    background: transparent;
+    border-radius: 16px;
+    padding: 1.5rem;
+    min-height: 100vh;
+}
+#calendar,
+#machines,
+#service,
+#workshop,
+#protocols,
+#settings-etiketten,
+#documents,
+#listen,
+#tasks,
+#accounting {
+    background: transparent;
+}
+
+/* TEST: Listenseite — hochwertiger Glas-Look für die große Angebote-Karte:
+   Verlaufs-Rahmen, der oben hell aufleuchtet (wie von einer Lichtquelle angestrahlt),
+   mehrschichtiger Glas-Hintergrund mit Blur + Sättigung und weicher, tiefer Schatten. */
+#listen .glass-card {
+    background: rgba(15, 23, 42, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 22px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow:
+        0 12px 32px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+/* Listenseite: KPI-Kacheln und Chart-Karten dezent im Dashboard-Stil samt Spring-Hover */
+#listen .maint-kpi-tile,
+#listen .maint-chart-card {
+    background: rgba(15, 23, 42, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), background 0.45s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#listen .maint-kpi-tile:hover,
+#listen .maint-chart-card:hover {
+    background: rgba(15, 23, 42, 0.42);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+/* Buchhaltungsseite: gleicher dunkler Glas-Stil wie die Listenseite */
+#accounting .glass-card {
+    background: rgba(15, 23, 42, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 22px;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow:
+        0 12px 32px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+#accounting .acc-eval-kpi,
+#accounting .maint-kpi-tile,
+#accounting .maint-chart-card {
+    background: rgba(15, 23, 42, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), background 0.45s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#accounting .acc-eval-kpi:hover,
+#accounting .maint-kpi-tile:hover,
+#accounting .maint-chart-card:hover {
+    background: rgba(15, 23, 42, 0.42);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+/* Buchhaltungsseite: gräuliche Klassen-Schriften weiß */
+#accounting .acc-eval-kpi-label,
+#accounting .maint-kpi-label,
+#accounting .maint-chart-title,
+#accounting .maint-chart-count,
+#accounting .maint-chart-month {
+    color: #fff;
+}
+
+/* Listenseite: alle gräulichen Klassen-Schriften weiß */
+#listen .maint-kpi-label,
+#listen .maint-chart-title,
+#listen .maint-chart-count,
+#listen .maint-chart-month,
+#listen .proc-type-count {
+    color: #fff;
+}
+#listen .ang-nachfass-row {
+    border-radius: 10px;
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), filter 0.3s ease;
+}
+#listen .ang-nachfass-row:hover {
+    transform: translateX(4px);
+    filter: brightness(1.25);
+}
+
+/* TEST: dezenter Glas-Effekt + Apple-artige, weiche Hover-Animation auf den Dashboard-Kacheln —
+   bei Bedarf einfach diesen Block entfernen */
+#home .maint-kpi-tile,
+#home .maint-chart-card {
+    background: rgba(255, 255, 255, 0.055);
+    backdrop-filter: blur(18px) saturate(150%);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), background 0.45s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#home .maint-kpi-tile:hover,
+#home .maint-chart-card:hover {
+    background: rgba(255, 255, 255, 0.09);
+    transform: translateY(-3px) scale(1.015);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+#home .maint-kpi-tile:active {
+    transform: translateY(-1px) scale(0.99);
+    transition-duration: 0.15s;
+}
+
+/* --- Startseite (Dashboard) & Ereignisse: hellere Kasten-Konturen & weniger graue Schrift --- */
+#home .maint-kpi-tile,
+#home .maint-chart-card,
+#calendar .maint-kpi-tile,
+#calendar .maint-chart-card {
+    border-color: rgba(255, 255, 255, 0.22);
+}
+#home .maint-kpi-tile:hover,
+#calendar .maint-kpi-tile:hover {
+    border-color: rgba(255, 255, 255, 0.35);
+}
+#home .maint-kpi-label,
+#calendar .maint-kpi-label {
+    color: #fff;
+}
+#home .maint-chart-title,
+#calendar .maint-chart-title {
+    color: #fff;
+}
+#home .maint-chart-count,
+#calendar .maint-chart-count {
+    color: #fff;
+}
+#home .maint-chart-month,
+#calendar .maint-chart-month {
+    color: #fff;
+}
+#home .dash-quick-btn,
+#calendar .dash-quick-btn {
+    border-color: rgba(255, 255, 255, 0.28);
+    color: #fff;
+}
+#home .dash-quick-btn:hover,
+#calendar .dash-quick-btn:hover {
+    border-color: rgba(255, 255, 255, 0.45);
+}
+#home .dash-chip,
+#calendar .dash-chip {
+    border-color: rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
+#calendar .maint-card {
+    border-color: rgba(255, 255, 255, 0.18);
+}
+#calendar .maint-card-dates {
+    color: #fff;
+}
+#calendar .proc-type-count {
+    color: #fff;
+}
+#home .double-kpi-subtile:first-child {
+    border-right-color: rgba(255, 255, 255, 0.2);
 }
