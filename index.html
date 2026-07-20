@@ -793,24 +793,44 @@
             </div>
 
             <div id="edit-permissions-section" class="form-group" style="margin-top: 1.5rem;">
-                <label style="margin-bottom: 0.5rem; display: block; color: var(--color-primary-green);">Berechtigungen
-                    (Ansichten):</label>
-                <div
-                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: rgba(255,255,255,0.02); padding: 1rem; border-radius: 8px;">
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox"
-                            id="perm-home" style="cursor: pointer;"> Startseite</label>
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox"
-                            id="perm-tasks" style="cursor: pointer;"> Aufgaben</label>
+                <label style="margin-bottom: 0.75rem; display: block; color: var(--color-primary-green); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.85rem;">Berechtigungen</label>
 
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox"
-                            id="perm-machines" style="cursor: pointer;"> Maschinen</label>
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox"
-                            id="perm-history" style="cursor: pointer;"> Historie</label>
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox"
-                            id="perm-accounting" style="cursor: pointer;"> Buchhaltung</label>
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox"
-                            id="perm-settings" style="cursor: pointer;"> Einstellungen</label>
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; grid-column: span 2; color: #ef4444; font-weight: 700; margin-top: 5px;"><input type="checkbox"
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 12px; backdrop-filter: blur(12px);">
+                    <div style="font-size: 0.78rem; font-weight: 800; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.75rem;">Hauptmenü — Ansichten</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-home" style="cursor: pointer;"> Startseite</label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-tasks" style="cursor: pointer;"> Aufgaben</label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-machines" style="cursor: pointer;"> Maschinen</label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-workshop" style="cursor: pointer;"> Werkstatt</label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-service" style="cursor: pointer;"> Service</label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-protocols" style="cursor: pointer;"> Protokolle</label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-settings-etiketten" style="cursor: pointer;"> Etikettendrucker</label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-documents" style="cursor: pointer;"> Dokumente</label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-listen" style="cursor: pointer;"> Listen</label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-history" style="cursor: pointer;"> Historie</label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-accounting" style="cursor: pointer;"> Buchhaltung</label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-calendar" style="cursor: pointer;"> Kalender</label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-settings" style="cursor: pointer;"> Einstellungen</label>
+                    </div>
+                </div>
+
+                <div id="perm-settings-subpages-box" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 12px; backdrop-filter: blur(12px);">
+                    <div style="font-size: 0.78rem; font-weight: 800; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.75rem;">Einstellungen — Unterseiten</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-users" style="cursor: pointer;"> Benutzerverwaltung</label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-categories" style="cursor: pointer;"> Kategorien</label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-protocol-templates" style="cursor: pointer;"> Protokollvorlagen</label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-settings-textbausteine" style="cursor: pointer;"> Textbausteine</label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-settings-firmeneinstellungen" style="cursor: pointer;"> Firmendaten</label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-settings-import" style="cursor: pointer;"> Import</label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-settings-uvv-wartungsplaene" style="cursor: pointer;"> UVV &amp; Wartungspläne</label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;"><input type="checkbox" id="perm-settings-ai" style="cursor: pointer;"> KI-Konfiguration</label>
+                    </div>
+                </div>
+
+                <div style="background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.25); border-radius: 14px; padding: 1rem 1.25rem; backdrop-filter: blur(12px);">
+                    <div style="font-size: 0.78rem; font-weight: 800; color: rgba(248,113,113,0.7); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.75rem;">Aktionen</div>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #f87171; font-weight: 700;"><input type="checkbox"
                             id="perm-delete" style="cursor: pointer;"> Einträge löschen</label>
                 </div>
             </div>
@@ -2226,8 +2246,9 @@
                 </div>
             </div>
 
+            <div class="glass-card" style="padding: 1.5rem 1.75rem; margin-top: 1.5rem;">
             <!-- Filter Tabs -->
-            <div style="display: flex; gap: 10px; margin: 1.25rem 0 1rem 0; flex-wrap: wrap;">
+            <div style="display: flex; gap: 10px; margin: 0 0 1rem 0; flex-wrap: wrap;">
                 <button class="uvv-filter-btn active" data-filter="all" onclick="filterUvvPlanCards('all')"
                     style="padding: 7px 18px; border-radius: 20px; border: 1.5px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: white; font-weight: 700; font-size: 0.83rem; cursor: pointer; transition: all 0.2s;">
                     Alle
@@ -2248,6 +2269,7 @@
 
             <!-- Plan Cards Container -->
             <div id="uvv-plan-cards-container" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+            </div>
         </section>
 
         <!-- Plan Editor Modal -->
@@ -4756,6 +4778,15 @@
                 renderDashboard();
             }
 
+            // Alle steuerbaren Ansichten: Schlüssel = data-target der Sidebar-Links bzw. der
+            // Einstellungs-Karten. Fehlende Schlüssel in user.permissions gelten als erlaubt.
+            window.PERM_VIEW_KEYS = [
+                'home', 'tasks', 'machines', 'workshop', 'service', 'protocols',
+                'settings-etiketten', 'documents', 'listen', 'history', 'accounting', 'calendar', 'settings',
+                'users', 'categories', 'protocol-templates', 'settings-textbausteine',
+                'settings-firmeneinstellungen', 'settings-import', 'settings-uvv-wartungsplaene', 'settings-ai'
+            ];
+
             function applyUserPermissions(user) {
                 if (!user) return;
                 // Default permissions if none set
@@ -4775,24 +4806,43 @@
                     document.body.classList.remove('disable-delete');
                 }
  
+                // Erste erlaubte Sidebar-Ansicht als Ausweichziel, falls "home" verboten ist.
+                // Sind ALLE Ansichten verboten, bleibt home als Notanker sichtbar.
+                const sidebarTargets = Array.from(document.querySelectorAll('.sidebar-nav li a'))
+                    .map(a => a.getAttribute('data-target')).filter(Boolean);
+                let fallbackView = sidebarTargets.find(t => perms[t] !== false) || 'home';
+
                 // Hide/Show sidebar links
                 document.querySelectorAll('.sidebar-nav li a').forEach(link => {
                     const target = link.getAttribute('data-target');
                     if (!target) return;
- 
-                    // home is always visible basically, but let's check anyway
-                    if (target !== 'home' && perms[target] === false) {
+
+                    if (target !== fallbackView && perms[target] === false) {
                         link.parentElement.style.display = 'none';
- 
-                        // If we are currently on this view, redirect to home
+
+                        // If we are currently on this view, redirect to the fallback view
                         const activeView = document.querySelector('.view.active');
                         if (activeView && activeView.id === target) {
-                            switchView('home');
+                            switchView(fallbackView);
                         }
                     } else {
                         link.parentElement.style.display = 'block';
                     }
                 });
+
+                // Einstellungs-Karten (Unterseiten) je nach Berechtigung ein-/ausblenden
+                document.querySelectorAll('#settings .settings-card').forEach(card => {
+                    const target = card.getAttribute('data-target');
+                    if (!target) return;
+                    card.style.display = (perms[target] === false) ? 'none' : '';
+                });
+
+                // Ist der Nutzer gerade auf einer verbotenen Ansicht (inkl. Startseite oder
+                // Einstellungs-Unterseite), zur ersten erlaubten Ansicht wechseln
+                const activeViewEl = document.querySelector('.view.active');
+                if (activeViewEl && activeViewEl.id !== fallbackView && perms[activeViewEl.id] === false) {
+                    switchView(fallbackView);
+                }
             }
 
             async function updateLastViewed(machineId) {
@@ -6059,13 +6109,10 @@
                 const defaultPerms = { home: true, tasks: true, machines: true, history: true, accounting: true, settings: true, can_delete: true };
                 const perms = (typeof user.permissions === 'object' && user.permissions !== null) ? user.permissions : defaultPerms;
 
-                document.getElementById('perm-home').checked = perms.home !== false;
-                document.getElementById('perm-tasks').checked = perms.tasks !== false;
-
-                document.getElementById('perm-machines').checked = perms.machines !== false;
-                document.getElementById('perm-history').checked = perms.history !== false;
-                document.getElementById('perm-accounting').checked = perms.accounting !== false;
-                document.getElementById('perm-settings').checked = perms.settings !== false;
+                window.PERM_VIEW_KEYS.forEach(key => {
+                    const cb = document.getElementById('perm-' + key);
+                    if (cb) cb.checked = perms[key] !== false;
+                });
                 document.getElementById('perm-delete').checked = perms.can_delete !== false;
 
                 document.getElementById('user-edit-modal').style.display = 'flex';
@@ -6093,16 +6140,12 @@
                 // If not admin, we use existing permissions
                 let permsToSave;
                 if (isAdmin) {
-                    permsToSave = {
-                        home: document.getElementById('perm-home').checked,
-                        tasks: document.getElementById('perm-tasks').checked,
-
-                        machines: document.getElementById('perm-machines').checked,
-                        history: document.getElementById('perm-history').checked,
-                        accounting: document.getElementById('perm-accounting').checked,
-                        settings: document.getElementById('perm-settings').checked,
-                        can_delete: document.getElementById('perm-delete').checked
-                    };
+                    permsToSave = {};
+                    window.PERM_VIEW_KEYS.forEach(key => {
+                        const cb = document.getElementById('perm-' + key);
+                        if (cb) permsToSave[key] = cb.checked;
+                    });
+                    permsToSave.can_delete = document.getElementById('perm-delete').checked;
                 } else {
                     permsToSave = userToUpdate.permissions;
                 }

@@ -523,7 +523,7 @@ window.renderAccounting = function () {
                 </td>
             </tr>
             <tr id="details-${e.id}" class="hidden">
-                <td colspan="12" class="acc-details-cell" style="padding: 1rem 0;">
+                <td colspan="12" class="acc-details-cell">
                     <div id="details-content-${e.id}" style="width: 100%;">
                     </div>
                 </td>
