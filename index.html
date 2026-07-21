@@ -14324,32 +14324,53 @@
         // Kontext der aktuell im E-Mail-Dialog bearbeiteten Wartung.
         window._memCtx = null;
 
-        // Baut die Anrede-Zeile aus einem Ansprechpartner (Anrede + Nachname).
-        window._memGreeting = function (contact, firma) {
+        // Baut die Anrede-Zeile aus einem Ansprechpartner (Anrede + Nachname), DE oder EN.
+        window._memGreeting = function (contact, firma, lang) {
+            const en = lang === 'en';
             if (contact && contact.anrede && contact.name) {
                 const lastName = contact.name.trim().split(/\s+/).pop();
-                if (contact.anrede === 'Herr') return `Sehr geehrter Herr ${lastName},`;
-                if (contact.anrede === 'Frau') return `Sehr geehrte Frau ${lastName},`;
+                if (contact.anrede === 'Herr') return en ? `Dear Mr ${lastName},` : `Sehr geehrter Herr ${lastName},`;
+                if (contact.anrede === 'Frau') return en ? `Dear Ms ${lastName},` : `Sehr geehrte Frau ${lastName},`;
             }
-            if (firma) return `Sehr geehrte Damen und Herren der Firma ${firma},`;
-            return 'Sehr geehrte Damen und Herren,';
+            if (firma) return en ? `Dear Sir or Madam of ${firma},` : `Sehr geehrte Damen und Herren der Firma ${firma},`;
+            return en ? 'Dear Sir or Madam,' : 'Sehr geehrte Damen und Herren,';
         };
 
-        // Setzt den Nachrichtentext neu zusammen (Anrede + Wartung + optional Angebot).
+        // Setzt Betreff + Nachricht neu zusammen (Anrede + Wartung + optional Angebot),
+        // je nach Sprach-Häkchen auf Deutsch (Standard) oder Englisch.
         window.rebuildMaintEmailBody = function () {
             const ctx = window._memCtx;
             if (!ctx) return;
+            const en = !!document.getElementById('mem-english')?.checked;
             const withAngebot = document.getElementById('mem-angebot')?.checked;
-            let t = `${ctx.greeting}\n\n`;
-            t += `wir möchten Sie an die anstehende Wartung Ihrer Maschine erinnern:\n\n`;
-            t += `Maschine: ${ctx.machineLabel}\n`;
-            if (ctx.lastStr) t += `Letzte Wartung: ${ctx.lastStr}\n`;
-            if (ctx.nextStr) t += `Nächste Wartung fällig: ${ctx.nextStr}\n`;
-            if (withAngebot) {
-                t += `\nIm Anhang befindet sich unser Angebot bezüglich der angedachten Wartung. Bitte prüfen Sie dieses und melden Sie sich bei Fragen gerne bei uns.\n`;
+            const greeting = window._memGreeting(ctx.contact, ctx.firma, en ? 'en' : 'de');
+
+            // Betreff passend zur Sprache.
+            const subjEl = document.getElementById('mem-subject');
+            if (subjEl) subjEl.value = (en ? 'Maintenance reminder – ' : 'Wartungserinnerung – ') + (ctx.machineLabel || '');
+
+            let t = `${greeting}\n\n`;
+            if (en) {
+                t += `we would like to remind you of the upcoming maintenance of your machine:\n\n`;
+                t += `Machine: ${ctx.machineLabel}\n`;
+                if (ctx.lastStr) t += `Last maintenance: ${ctx.lastStr}\n`;
+                if (ctx.nextStr) t += `Next maintenance due: ${ctx.nextStr}\n`;
+                if (withAngebot) {
+                    t += `\nPlease find our quotation for the planned maintenance attached. Kindly review it and do not hesitate to contact us with any questions.\n`;
+                }
+                t += `\nPlease get in touch with us to arrange an appointment so we can carry out the maintenance in good time.\n\n`;
+                t += `Kind regards\n`;
+            } else {
+                t += `wir möchten Sie an die anstehende Wartung Ihrer Maschine erinnern:\n\n`;
+                t += `Maschine: ${ctx.machineLabel}\n`;
+                if (ctx.lastStr) t += `Letzte Wartung: ${ctx.lastStr}\n`;
+                if (ctx.nextStr) t += `Nächste Wartung fällig: ${ctx.nextStr}\n`;
+                if (withAngebot) {
+                    t += `\nIm Anhang befindet sich unser Angebot bezüglich der angedachten Wartung. Bitte prüfen Sie dieses und melden Sie sich bei Fragen gerne bei uns.\n`;
+                }
+                t += `\nBitte melden Sie sich zur Terminvereinbarung bei uns, damit wir die Wartung rechtzeitig durchführen können.\n\n`;
+                t += `Mit freundlichen Grüßen\n`;
             }
-            t += `\nBitte melden Sie sich zur Terminvereinbarung bei uns, damit wir die Wartung rechtzeitig durchführen können.\n\n`;
-            t += `Mit freundlichen Grüßen\n`;
             document.getElementById('mem-body').value = t;
         };
 
@@ -14361,9 +14382,9 @@
             const contact = (idx >= 0 && ctx.contacts) ? ctx.contacts[idx] : null;
             if (contact) {
                 if (contact.email) document.getElementById('mem-to').value = contact.email;
-                ctx.greeting = window._memGreeting(contact, ctx.firma);
+                ctx.contact = contact;
             } else {
-                ctx.greeting = window._memGreeting(null, ctx.firma);
+                ctx.contact = null;
                 if (ctx.customerEmail) document.getElementById('mem-to').value = ctx.customerEmail;
             }
             window.rebuildMaintEmailBody();
@@ -14381,14 +14402,13 @@
 
             window._memCtx = {
                 machineLabel, nextStr, lastStr, contacts,
-                firma: '', customerEmail: '',
-                greeting: window._memGreeting(null, '')
+                firma: '', customerEmail: '', contact: null
             };
 
             document.getElementById('mem-to').value = '';
             document.getElementById('mem-cc').value = '';
-            document.getElementById('mem-subject').value = `Wartungserinnerung – ${machineLabel}`;
             document.getElementById('mem-angebot').checked = false;
+            document.getElementById('mem-english').checked = false;
 
             // Ansprechpartner-Dropdown befüllen (nur wenn welche hinterlegt sind).
             const contactWrap = document.getElementById('mem-contact-wrap');
@@ -14426,7 +14446,6 @@
                             if (cust.email && !document.getElementById('mem-to').value) {
                                 document.getElementById('mem-to').value = cust.email;
                             }
-                            window._memCtx.greeting = window._memGreeting(null, cust.name || '');
                             window.rebuildMaintEmailBody();
                         }
                     }
@@ -14553,12 +14572,12 @@
             window.ensureMaintEmailModal();
             window._memCtx = {
                 machineLabel: label || '', nextStr: '', lastStr: '', contacts: [],
-                firma: '', customerEmail: '', greeting: window._memGreeting(null, '')
+                firma: '', customerEmail: '', contact: null
             };
             document.getElementById('mem-to').value = '';
             document.getElementById('mem-cc').value = '';
-            document.getElementById('mem-subject').value = `Wartungserinnerung – ${label || ''}`;
             document.getElementById('mem-angebot').checked = false;
+            document.getElementById('mem-english').checked = false;
             document.getElementById('mem-contact-wrap').style.display = 'none';
             window.rebuildMaintEmailBody();
             document.getElementById('maint-email-modal').style.display = 'flex';
