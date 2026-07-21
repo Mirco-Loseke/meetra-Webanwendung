@@ -7637,13 +7637,21 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         padding: 2rem !important;
         border-radius: 24px !important;
     }
-    
+
     .form-grid, .form-row {
         gap: 1.5rem !important;
     }
 
     .glass-input, .glass-form-input, .glass-select {
         font-size: 0.95rem !important;
+    }
+
+    /* Maschine bearbeiten: iPad — mehr Fläche, weniger Rand */
+    #add-machine-modal .modal-content {
+        width: 97% !important;
+        max-width: 97% !important;
+        max-height: 95vh !important;
+        padding: 1.1rem 1.4rem !important;
     }
 }
 
@@ -7715,21 +7723,9 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
 
 /* Responsive Accounting Details Items */
 
-/* Desktop: aufgeklappte Belegdetails als eingelassenes Glas-Panel im Tabellen-Stil */
+/* Desktop: aufgeklappte Belegdetails laufen direkt in der Tabelle weiter (kein eigener Kasten) */
 .acc-details-cell {
-    padding: 0.35rem 0.75rem 1.1rem;
-}
-
-.acc-details-cell > div {
-    background: rgba(15, 23, 42, 0.45);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 16px;
-    padding: 1.15rem 1.4rem;
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        0 8px 22px rgba(0, 0, 0, 0.22);
+    padding: 0.5rem 0.75rem 1.25rem;
 }
 
 .acc-details-grid {
@@ -7811,16 +7807,6 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
 
     .acc-details-cell::before {
         display: none !important; /* Hide the "Details" label on the detail row itself */
-    }
-
-    /* Mobil: kein zusätzliches Desktop-Glas-Panel um den Inhalt (Karten stylen sich selbst) */
-    .acc-details-cell > div {
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        padding: 0 !important;
     }
 
     .acc-details-grid {
