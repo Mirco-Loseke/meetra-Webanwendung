@@ -13935,7 +13935,22 @@
                                 Email versenden
                             </button>
                         </div>
-                    ` : '';
+                    ` : (ev.type === 'manual' ? `
+                        <div class="maint-card-actions">
+                            <button class="maint-action-btn" onclick="window.editManualEvent('${ev.id}')" title="Manuellen Eintrag bearbeiten" style="background: rgba(34,197,94,0.18); border-color: rgba(34,197,94,0.5); color: #22c55e;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                Termin pflegen
+                            </button>
+                            <button class="maint-action-btn" onclick="window.openManualEventEmail(${JSON.stringify(machineLabel).replace(/"/g, '&quot;')})" title="E-Mail zu diesem Eintrag senden" style="background: rgba(249,115,22,0.18); border-color: rgba(249,115,22,0.5); color: #fb923c;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-10 5L2 7"></path></svg>
+                                Email versenden
+                            </button>
+                            <button class="maint-action-btn" onclick="window.deleteEvent('${ev.id}')" title="Eintrag löschen" style="background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.4); color: #f87171;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>
+                                Löschen
+                            </button>
+                        </div>
+                    ` : '');
 
                     // Maschinennummer/-name: grün wenn Maschine im System, orange bei manuellem Eintrag.
                     const machineColor = m ? '#22c55e' : (ev.type === 'manual' ? '#fb923c' : '');
@@ -14264,7 +14279,12 @@
                             <input type="text" id="mem-subject" class="glass-form-input" style="height: 42px; width: 100%;">
                         </div>
                         <div>
-                            <label style="font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px;">Nachricht</label>
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                                <label style="font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px;">Nachricht</label>
+                                <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.8rem; color: #fff; font-weight: 600;">
+                                    <input type="checkbox" id="mem-english" onchange="window.rebuildMaintEmailBody()" style="width: 16px; height: 16px; cursor: pointer;"> English
+                                </label>
+                            </div>
                             <textarea id="mem-body" class="glass-form-input" style="min-height: 240px; width: 100%; resize: vertical; line-height: 1.5; font-family: inherit;"></textarea>
                         </div>
                     </div>
@@ -14419,12 +14439,22 @@
             window.renderEvents();
         };
 
+        window._editingEventId = null;
+
         window.openCreateEventModal = function() {
             const modal = document.getElementById('ereignis-modal');
             if (modal) {
                 modal.classList.remove('hidden');
                 modal.style.display = 'flex';
-                
+
+                window._editingEventId = null;
+                const titleEl = document.getElementById('ereignis-modal-title');
+                if (titleEl) titleEl.textContent = 'Neues Ereignis';
+                // Formularfelder leeren.
+                const t = document.getElementById('event-title'); if (t) t.value = '';
+                const d = document.getElementById('event-date'); if (d) d.value = '';
+                const desc = document.getElementById('event-description'); if (desc) desc.value = '';
+
                 // Neue Zusatzfelder zurücksetzen.
                 const manualInput = document.getElementById('event-machine-manual');
                 if (manualInput) manualInput.value = '';
@@ -14463,18 +14493,24 @@
             const manualMachine = document.getElementById('event-machine-manual')?.value.trim() || '';
             const wartungsarten = Array.from(document.querySelectorAll('#event-wartungsart-group .event-wartungsart:checked')).map(c => c.value).join(', ');
 
-            const { error } = await supabaseClient
-                .from('maintenance_events')
-                .insert([{
-                    title: title,
-                    event_date: date,
-                    machine_id: machineId || null,
-                    manual_machine: (!machineId && manualMachine) ? manualMachine : null,
-                    maintenance_types: wartungsarten || null,
-                    description: description,
-                    status: 'geplant',
-                    user_id: window.currentUser?.id
-                }]);
+            const payload = {
+                title: title,
+                event_date: date,
+                start_date: date,
+                machine_id: machineId || null,
+                manual_machine: (!machineId && manualMachine) ? manualMachine : null,
+                maintenance_types: wartungsarten || null,
+                description: description
+            };
+
+            let error;
+            if (window._editingEventId) {
+                ({ error } = await supabaseClient.from('maintenance_events').update(payload).eq('id', window._editingEventId));
+            } else {
+                payload.status = 'geplant';
+                payload.user_id = window.currentUser?.id;
+                ({ error } = await supabaseClient.from('maintenance_events').insert([payload]));
+            }
 
             if (error) {
                 console.error('Error saving event:', error);
@@ -14482,8 +14518,50 @@
                 return;
             }
 
+            window._editingEventId = null;
             window.closeCreateEventModal();
             window.renderEvents();
+        };
+
+        // Manuellen Wartungs-Eintrag (maintenance_events) im Ereignis-Fenster bearbeiten.
+        window.editManualEvent = async function (eventId) {
+            if (!supabaseClient) return;
+            const { data: ev, error } = await supabaseClient.from('maintenance_events').select('*').eq('id', eventId).single();
+            if (error || !ev) { alert('Eintrag konnte nicht geladen werden.'); return; }
+
+            window.openCreateEventModal();
+            window._editingEventId = eventId;
+            const titleEl = document.getElementById('ereignis-modal-title');
+            if (titleEl) titleEl.textContent = 'Ereignis bearbeiten';
+
+            document.getElementById('event-title').value = ev.title || '';
+            document.getElementById('event-date').value = ev.event_date ? String(ev.event_date).split('T')[0] : (ev.start_date ? String(ev.start_date).split('T')[0] : '');
+            document.getElementById('event-description').value = ev.description || '';
+            const machineSel = document.getElementById('event-machine-select');
+            if (machineSel) machineSel.value = ev.machine_id ? String(ev.machine_id) : '';
+            const manualInput = document.getElementById('event-machine-manual');
+            if (manualInput) manualInput.value = ev.manual_machine || '';
+
+            const arten = (ev.maintenance_types || '').split(',').map(s => s.trim().toLowerCase());
+            document.querySelectorAll('#event-wartungsart-group .event-wartungsart').forEach(c => {
+                c.checked = arten.includes(c.value.toLowerCase());
+            });
+        };
+
+        // E-Mail-Fenster für einen manuellen Eintrag (ohne verknüpfte System-Maschine).
+        window.openManualEventEmail = function (label) {
+            window.ensureMaintEmailModal();
+            window._memCtx = {
+                machineLabel: label || '', nextStr: '', lastStr: '', contacts: [],
+                firma: '', customerEmail: '', greeting: window._memGreeting(null, '')
+            };
+            document.getElementById('mem-to').value = '';
+            document.getElementById('mem-cc').value = '';
+            document.getElementById('mem-subject').value = `Wartungserinnerung – ${label || ''}`;
+            document.getElementById('mem-angebot').checked = false;
+            document.getElementById('mem-contact-wrap').style.display = 'none';
+            window.rebuildMaintEmailBody();
+            document.getElementById('maint-email-modal').style.display = 'flex';
         };
 
         window.deleteEvent = async function(id) {
@@ -23737,7 +23815,7 @@
     <div id="ereignis-modal" class="modal-new hidden" style="z-index: 10000; display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);">
         <div class="modal-content glass-card" style="max-width: 780px; width: 94%; max-height: 92vh; overflow-y: auto; padding: 2.5rem; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
-                <h2 style="margin: 0; color: #fff; font-size: 1.8rem; font-weight: 800;">Neues Ereignis</h2>
+                <h2 id="ereignis-modal-title" style="margin: 0; color: #fff; font-size: 1.8rem; font-weight: 800;">Neues Ereignis</h2>
                 <button class="btn-close" onclick="window.closeCreateEventModal()" style="background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer;">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
