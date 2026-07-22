@@ -44,6 +44,9 @@
             supergroupTemplates = sg || [];
             subtaskTemplates = st || [];
             quickTemplates = qt || [];
+            // Für die KI-Erfassung verfügbar machen (echte Übergruppen-Namen + Unteraufgaben-Bausteine mit Aktion)
+            window.taskSupergroupNames = supergroupTemplates.map(t => t.name).filter(Boolean);
+            window.taskSubtaskTemplates = subtaskTemplates.map(t => ({ title: t.title, action_type: t.action_type || null })).filter(t => t.title);
         } catch (err) {
             console.error('Error fetching templates:', err);
         }

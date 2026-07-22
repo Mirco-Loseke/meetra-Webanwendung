@@ -1371,6 +1371,11 @@
                                         <input type="range" min="0.1" max="10" step="0.1" value="1.0" id="cinema-speed-slider">
                                     </div>
                                 </div>
+                                <button class="btn-add-bg" onclick="window.openAiCaptureModal()" title="Aus Freitext automatisch Aufgaben & Vorgänge erzeugen"
+                                    style="background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.4); color: #a78bfa;">
+                                    <span style="font-size:1.05rem;">✨</span>
+                                    KI-Erfassung
+                                </button>
                                 <button class="btn-add-bg" onclick="openAddTaskModal()">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -1506,6 +1511,10 @@
                                     <span class="btn-label-full">.msg importieren</span>
                                 </div>
                                 <input type="file" id="process-header-msg-file-input" accept=".msg" style="display:none;" onchange="window.handleProcessHeaderMsgSelect(event)">
+                                <button class="btn-add-bg" id="btn-ai-capture-process" style="display: none; background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.4); color: #a78bfa;" onclick="window.openAiCaptureModal()" title="Aus Freitext automatisch Aufgaben & Vorgänge erzeugen">
+                                    <span style="font-size:1.05rem;">✨</span>
+                                    <span>KI-Erfassung</span>
+                                </button>
                                 <button class="btn-add-bg btn-red-animated" id="btn-import-email-action" style="display: none;" onclick="window.openProcessAddModal()">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -14791,6 +14800,8 @@
                 
                 if (btnAddEvent) btnAddEvent.style.display = 'none';
                 if (btnImportEmail) btnImportEmail.style.display = 'inline-flex';
+                const btnAiProc = document.getElementById('btn-ai-capture-process');
+                if (btnAiProc) btnAiProc.style.display = 'inline-flex';
                 if (msgDropzoneHeader) msgDropzoneHeader.style.display = 'flex';
 
                 if (searchInput) {
@@ -14810,6 +14821,8 @@
                 
                 if (btnAddEvent) btnAddEvent.style.display = 'inline-flex';
                 if (btnImportEmail) btnImportEmail.style.display = 'none';
+                const btnAiProcHide = document.getElementById('btn-ai-capture-process');
+                if (btnAiProcHide) btnAiProcHide.style.display = 'none';
                 if (msgDropzoneHeader) msgDropzoneHeader.style.display = 'none';
 
                 if (searchInput) {
@@ -15719,7 +15732,7 @@
             try {
                 const { data, error } = await supabaseClient
                     .from('internal_processes')
-                    .select('*, machines(id, name, manufacturer, serial, year)')
+                    .select('*, machines(id, name, manufacturer, serial, year, company, operator_city)')
                     .order('process_date', { ascending: false });
                     
                 if (error) throw error;
@@ -15764,14 +15777,26 @@
             window.setProcessStatusFilter(next);
         };
 
-        window.renderProcesses = function() {
-            const container = document.getElementById('processes-list-container');
+        window.renderProcesses = function(targetId, opts) {
+            opts = opts || {};
+            // Ohne Ziel: alle vorhandenen Vorgangs-Container rendern (Wartung + Aufgaben) und "Meine Vorgänge"
+            if (!targetId) {
+                ['processes-list-container', 'tasks-processes-container'].forEach(id => {
+                    if (document.getElementById(id)) window.renderProcesses(id);
+                });
+                if (typeof window.renderMyProcessesSection === 'function') window.renderMyProcessesSection();
+                return;
+            }
+            const container = document.getElementById(targetId);
             if (!container) return;
 
             const searchQuery = (document.getElementById('calendar-search-input')?.value || '').toLowerCase();
-            const statusFilter = window.eventsState.processStatusFilter;
+            const statusFilter = opts.compact ? 'all' : window.eventsState.processStatusFilter;
 
             let base = window.eventsState.processes || [];
+            if (opts.onlyAssignedTo) {
+                base = base.filter(p => Array.isArray(p.assigned_users) && p.assigned_users.some(u => String(u) === String(opts.onlyAssignedTo)));
+            }
 
             // Apply Search Query (KPIs und Grafen beziehen sich auf das Suchergebnis)
             if (searchQuery) {
@@ -15916,7 +15941,8 @@
                 return;
             }
 
-            html += '<div class="proc-cards-grid">';
+            const openCards = [];
+            const doneCards = [];
             filtered.forEach(p => {
                 // Type Icon & Text
                 const typeInfo = window.PROCESS_TYPE_INFO[p.process_type] || window.PROCESS_TYPE_INFO.manual;
@@ -15956,9 +15982,11 @@
                 if (p.machines) {
                     const m = p.machines;
                     const serialYear = `${m.serial ? `#${m.serial}` : ''}${m.year ? ` (${m.year})` : ''}`.trim();
+                    const operatorText = [m.company, m.operator_city].filter(Boolean).join(' · ');
                     machineCell = `<div class="machine-link-btn" onclick="window.switchView('machines'); window.openEditStammdaten(${m.id});" style="cursor: pointer;">
                         <div style="color: #34d399; font-weight: 800; font-size: 1.06rem; white-space: normal; word-break: break-word; line-height: 1.2;">${m.manufacturer} ${m.name}</div>
                         ${serialYear ? `<div style="color: #34d399; opacity: 0.8; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; margin-top: 2px;">${serialYear}</div>` : ''}
+                        ${operatorText ? `<div style="color: rgba(255,255,255,0.55); font-weight: 600; font-size: 0.82rem; margin-top: 4px; display: flex; align-items: center; gap: 5px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>${operatorText}</div>` : ''}
                     </div>`;
                 } else if (p.workshop_order_number) {
                     machineCell = `<div style="color: #60a5fa; font-weight: 800; font-size: 1.06rem; white-space: normal; word-break: break-word; line-height: 1.2;">Werkstattauftrag</div>
@@ -16008,7 +16036,7 @@
                     ? `<span style="font-size: 0.68rem; padding: 3px 9px; border-radius: 6px; background: rgba(248,113,113,0.14); color: #F87171; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;">seit ${ageDays} Tagen</span>`
                     : '';
 
-                html += `
+                const cardHtml = `
                     <div class="proc-card" style="border-left-color: ${statusColor};">
                         <div class="proc-card-head">
                             ${typeHtml}
@@ -16027,6 +16055,11 @@
                         <div class="proc-card-footer">
                             <div>${assignedHtml || '<span style="color: rgba(255,255,255,0.25); font-style: italic; font-size: 0.82rem;">Niemand zugewiesen</span>'}</div>
                             <div style="display: flex; gap: 8px;">
+                                ${(() => { const hasStatus = Array.isArray(p.status_log) && p.status_log.length; return `
+                                <button onclick="window.openProcessStatusLog('${p.id}')" class="btn-icon-soft" title="Status-Verlauf" style="position: relative; background: ${hasStatus ? 'rgba(139,92,246,0.12)' : 'rgba(255,255,255,0.05)'}; color: #a78bfa; border: 1px solid ${hasStatus ? 'rgba(139,92,246,0.65)' : 'rgba(255,255,255,0.1)'}; box-shadow: ${hasStatus ? '0 0 10px rgba(139,92,246,0.55)' : 'none'}; width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(139,92,246,0.25)'; this.style.boxShadow='${hasStatus ? '0 0 16px rgba(139,92,246,0.85)' : 'none'}'" onmouseout="this.style.background='${hasStatus ? 'rgba(139,92,246,0.12)' : 'rgba(255,255,255,0.05)'}'; this.style.boxShadow='${hasStatus ? '0 0 10px rgba(139,92,246,0.55)' : 'none'}'">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                                    ${(Array.isArray(p.status_log) && p.status_log.length) ? `<span style="position: absolute; top: -6px; right: -6px; background: #8b5cf6; color: #fff; font-size: 0.62rem; font-weight: 800; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #1e293b; box-shadow: 0 2px 6px rgba(0,0,0,0.4);">${p.status_log.length}</span>` : ''}
+                                </button>`; })()}
                                 <button onclick="window.openEditProcessModal('${p.id}')" class="btn-icon-soft" title="Bearbeiten" style="background: rgba(255,255,255,0.05); color: #60a5fa; border: 1px solid rgba(255,255,255,0.1); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"></path></svg>
                                 </button>
@@ -16037,10 +16070,34 @@
                         </div>
                     </div>
                 `;
+                if (p.status === 'erledigt') doneCards.push(cardHtml); else openCards.push(cardHtml);
             });
 
-            html += '</div>';
+            // Offene / in Arbeit befindliche Vorgänge oben
+            if (openCards.length) {
+                html += `<div class="proc-cards-grid">${openCards.join('')}</div>`;
+            }
+
+            // Erledigte Vorgänge: gruppiert und standardmäßig eingeklappt
+            if (doneCards.length) {
+                const expanded = !!window._procDoneExpanded || statusFilter === 'erledigt';
+                html += `
+                    <div style="margin-top: ${openCards.length ? '1.25rem' : '0'};">
+                        <div onclick="window.toggleProcDoneGroup()" style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:0.7rem 1rem; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:12px; user-select:none;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.25s; transform: rotate(${expanded ? '0' : '-90'}deg);"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            <span style="color:#10b981; font-weight:800; font-size:0.9rem; text-transform:uppercase; letter-spacing:0.5px;">Erledigt</span>
+                            <span style="background:rgba(16,185,129,0.2); color:#10b981; font-size:0.72rem; font-weight:800; min-width:20px; height:20px; padding:0 6px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center;">${doneCards.length}</span>
+                        </div>
+                        <div class="proc-cards-grid" style="margin-top:0.75rem; display:${expanded ? '' : 'none'};">${doneCards.join('')}</div>
+                    </div>`;
+            }
+
             container.innerHTML = html;
+        };
+
+        window.toggleProcDoneGroup = function() {
+            window._procDoneExpanded = !window._procDoneExpanded;
+            window.renderProcesses();
         };
 
         // Inline status change for the Vorgänge table
@@ -16075,6 +16132,187 @@
             } catch (err) {
                 console.error("Error updating process status:", err);
                 alert('Fehler beim Aktualisieren des Status: ' + err.message);
+            }
+        };
+
+        // ===== Status-Verlauf pro Vorgang =====
+        window._statusLogProcessId = null;
+
+        function ensureProcessStatusModal() {
+            let modal = document.getElementById('process-status-log-modal');
+            if (modal) return modal;
+            modal = document.createElement('div');
+            modal.id = 'process-status-log-modal';
+            modal.className = 'modal-backdrop hidden';
+            modal.style.cssText = 'z-index: 1450; align-items: center; justify-content: center;';
+            modal.innerHTML = `
+                <div class="modal-content glass-card" style="max-width: 560px; width: 96%; padding: 1.75rem; display: flex; flex-direction: column; max-height: 90vh; border: 1px solid rgba(255,255,255,0.12);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-shrink:0;">
+                        <h2 style="margin:0; font-size:1.3rem; color:#fff; display:flex; align-items:center; gap:10px;">
+                            <span style="font-size:1.3rem;">🕒</span> Status-Verlauf
+                        </h2>
+                        <button class="btn-close-modal" onclick="window.closeProcessStatusLog()" style="background:none;border:none;color:#fff;font-size:1.6rem;cursor:pointer;line-height:1;">&times;</button>
+                    </div>
+                    <div id="process-status-log-subtitle" style="color:rgba(255,255,255,0.5); font-size:0.85rem; margin:-0.5rem 0 1rem 0;"></div>
+                    <div style="flex-shrink:0;">
+                        <textarea id="process-status-log-text" class="glass-form-input" rows="3" placeholder="Aktuellen Status eingeben..." style="width:100%; box-sizing:border-box; resize:vertical; font-size:0.95rem;"></textarea>
+                        <button onclick="window.addProcessStatusEntry()" id="process-status-log-add-btn" class="btn-modal-base btn-modal-save" style="width:100%; margin-top:0.75rem; gap:8px;">
+                            <span>＋</span> Status hinzufügen
+                        </button>
+                    </div>
+                    <div style="font-size:0.72rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; margin:1.25rem 0 0.5rem 0; flex-shrink:0;">Bisherige Einträge</div>
+                    <div id="process-status-log-list" style="overflow-y:auto; flex:1 1 auto;"></div>
+                </div>`;
+            document.body.appendChild(modal);
+            return modal;
+        }
+
+        window.openProcessStatusLog = function(id) {
+            const proc = (window.eventsState.processes || []).find(p => String(p.id) === String(id));
+            if (!proc) return;
+            window._statusLogProcessId = id;
+            const modal = ensureProcessStatusModal();
+            const sub = document.getElementById('process-status-log-subtitle');
+            if (sub) sub.textContent = proc.title || 'Vorgang';
+            const ta = document.getElementById('process-status-log-text');
+            if (ta) ta.value = '';
+            renderProcessStatusLogList(proc);
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            requestAnimationFrame(() => modal.classList.add('show'));
+        };
+
+        window.closeProcessStatusLog = function() {
+            const modal = document.getElementById('process-status-log-modal');
+            if (!modal) return;
+            modal.classList.remove('show');
+            setTimeout(() => { modal.classList.add('hidden'); modal.style.display = 'none'; }, 250);
+            window._statusLogProcessId = null;
+        };
+
+        function renderProcessStatusLogList(proc) {
+            const list = document.getElementById('process-status-log-list');
+            if (!list) return;
+            const entries = Array.isArray(proc.status_log) ? proc.status_log : [];
+            if (entries.length === 0) {
+                list.innerHTML = '<p style="color:rgba(255,255,255,0.35); font-style:italic; text-align:center; padding:1rem;">Noch keine Status-Einträge.</p>';
+                return;
+            }
+            const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            // neueste zuerst; idx ist der Original-Index im Array (für Bearbeiten)
+            list.innerHTML = entries.map((e, idx) => ({ e, idx })).reverse().map(({ e, idx }) => {
+                let when = '';
+                if (e.at) {
+                    const d = new Date(e.at);
+                    when = d.toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric' }) + ' · ' +
+                           d.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' }) + ' Uhr';
+                }
+                const editedTag = e.edited ? ` · bearbeitet` : '';
+                return `
+                    <div class="proc-status-entry" data-idx="${idx}" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:0.75rem 0.9rem; margin-bottom:0.6rem;">
+                        <div style="display:flex; justify-content:space-between; gap:10px; margin-bottom:5px; font-size:0.72rem; color:rgba(255,255,255,0.5); font-weight:700;">
+                            <span style="color:#a78bfa;">${esc(e.user || 'Unbekannt')}</span>
+                            <span>${when}${editedTag}</span>
+                        </div>
+                        <div class="proc-status-entry-view" onclick="window.editProcessStatusEntry(${idx})" title="Zum Bearbeiten klicken" style="color:#fff; font-size:0.92rem; line-height:1.45; white-space:pre-wrap; word-break:break-word; cursor:text;">${esc(e.text)}</div>
+                    </div>`;
+            }).join('');
+        }
+
+        window.editProcessStatusEntry = function(idx) {
+            const id = window._statusLogProcessId;
+            const proc = (window.eventsState.processes || []).find(p => String(p.id) === String(id));
+            if (!proc || !Array.isArray(proc.status_log) || !proc.status_log[idx]) return;
+            const row = document.querySelector(`.proc-status-entry[data-idx="${idx}"]`);
+            if (!row) return;
+            const view = row.querySelector('.proc-status-entry-view');
+            if (!view || row.querySelector('textarea')) return;
+            const current = proc.status_log[idx].text || '';
+            view.style.display = 'none';
+            const editor = document.createElement('div');
+            editor.innerHTML = `
+                <textarea class="glass-form-input proc-status-edit-ta" rows="3" style="width:100%; box-sizing:border-box; resize:vertical; font-size:0.92rem;"></textarea>
+                <div style="display:flex; gap:8px; margin-top:0.5rem;">
+                    <button onclick="window.cancelProcessStatusEntryEdit(${idx})" class="btn-modal-base btn-modal-cancel" style="flex:0 0 auto; padding:6px 14px; font-size:0.8rem;">Abbrechen</button>
+                    <button onclick="window.saveProcessStatusEntryEdit(${idx})" class="btn-modal-base btn-modal-save" style="flex:1; padding:6px 14px; font-size:0.8rem;">Speichern</button>
+                </div>`;
+            row.appendChild(editor);
+            const ta = editor.querySelector('textarea');
+            ta.value = current;
+            ta.focus();
+            ta.setSelectionRange(ta.value.length, ta.value.length);
+        };
+
+        window.cancelProcessStatusEntryEdit = function(idx) {
+            const id = window._statusLogProcessId;
+            const proc = (window.eventsState.processes || []).find(p => String(p.id) === String(id));
+            if (proc) renderProcessStatusLogList(proc);
+        };
+
+        window.saveProcessStatusEntryEdit = async function(idx) {
+            const id = window._statusLogProcessId;
+            if (!id || !supabaseClient) return;
+            const proc = (window.eventsState.processes || []).find(p => String(p.id) === String(id));
+            if (!proc || !Array.isArray(proc.status_log) || !proc.status_log[idx]) return;
+            const row = document.querySelector(`.proc-status-entry[data-idx="${idx}"]`);
+            const ta = row?.querySelector('.proc-status-edit-ta');
+            const newText = (ta?.value || '').trim();
+            if (!newText) { alert('Text darf nicht leer sein.'); return; }
+
+            const newLog = proc.status_log.map((e, i) => i === idx
+                ? { ...e, text: newText, edited: true, edited_at: new Date().toISOString() }
+                : e);
+            try {
+                const { error } = await supabaseClient
+                    .from('internal_processes')
+                    .update({ status_log: newLog })
+                    .eq('id', id);
+                if (error) throw error;
+                proc.status_log = newLog;
+                renderProcessStatusLogList(proc);
+            } catch (err) {
+                console.error('Error updating status entry:', err);
+                alert('Fehler beim Speichern: ' + err.message);
+            }
+        };
+
+        window.addProcessStatusEntry = async function() {
+            const id = window._statusLogProcessId;
+            if (!id || !supabaseClient) return;
+            const ta = document.getElementById('process-status-log-text');
+            const text = (ta?.value || '').trim();
+            if (!text) { alert('Bitte einen Status eingeben.'); return; }
+
+            const proc = (window.eventsState.processes || []).find(p => String(p.id) === String(id));
+            if (!proc) return;
+
+            const userName = (window.activeUser?.name) || (window.currentUser?.name) || 'Unbekannt';
+            const entry = {
+                text,
+                user: userName,
+                user_id: window.activeUser?.id || window.currentUser?.id || null,
+                at: new Date().toISOString()
+            };
+            const newLog = [...(Array.isArray(proc.status_log) ? proc.status_log : []), entry];
+
+            const addBtn = document.getElementById('process-status-log-add-btn');
+            if (addBtn) { addBtn.disabled = true; addBtn.innerHTML = '<span>⏳</span> Speichere...'; }
+            try {
+                const { error } = await supabaseClient
+                    .from('internal_processes')
+                    .update({ status_log: newLog })
+                    .eq('id', id);
+                if (error) throw error;
+
+                proc.status_log = newLog;
+                if (ta) ta.value = '';
+                renderProcessStatusLogList(proc);
+                window.renderProcesses();
+            } catch (err) {
+                console.error('Error saving status log:', err);
+                alert('Fehler beim Speichern: ' + err.message);
+            } finally {
+                if (addBtn) { addBtn.disabled = false; addBtn.innerHTML = '<span>＋</span> Status hinzufügen'; }
             }
         };
 
@@ -22335,6 +22573,7 @@
 
     <script src="tasks.js?v=3"></script>
     <script src="task_templates.js?v=2"></script>
+    <script src="ai-quick-capture.js?v=9"></script>
     <script>
         window.addEventListener('load', () => {
             if (typeof window.initTaskTemplates === 'function') {
@@ -23547,6 +23786,21 @@
                 });
             });
         });
+
+        /* Mobiler Menü-Button: beim Scrollen ausblenden, nach dem Scrollen wieder einblenden.
+           capture:true fängt auch Scrolls in inneren Containern (z.B. Listen-Ansichten) ab. */
+        (function () {
+            let scrollHideTimer = null;
+            function onAnyScroll() {
+                if (window.innerWidth > 768) return;
+                document.body.classList.add('is-scrolling');
+                if (scrollHideTimer) clearTimeout(scrollHideTimer);
+                scrollHideTimer = setTimeout(function () {
+                    document.body.classList.remove('is-scrolling');
+                }, 250);
+            }
+            window.addEventListener('scroll', onAnyScroll, { passive: true, capture: true });
+        })();
     </script>
 
 

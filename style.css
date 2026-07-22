@@ -6317,13 +6317,64 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
         padding: 0.15rem 10px 2rem 10px !important;
     }
 
+    /* Mobiler Menü-Button: fest oben links, schwebt über dem Inhalt */
     #mobile-sidebar-toggle {
         display: flex !important; /* Show hamburger */
+        position: fixed !important;
+        top: calc(env(safe-area-inset-top, 0px) + 12px);
+        left: 12px;
+        margin-right: 0 !important;
+        z-index: 1200;
+        background: rgba(15, 23, 42, 0.8) !important;
+        border: 1px solid rgba(255, 255, 255, 0.18) !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+        opacity: 1;
+        transition: opacity 0.4s ease;
     }
 
+    /* Beim Scrollen fast unsichtbar, nach dem Scrollen wieder voll da */
+    body.is-scrolling #mobile-sidebar-toggle {
+        opacity: 0.1 !important;
+        pointer-events: none;
+    }
+
+    /* Nicht anzeigen, wenn ein Bearbeiten-/Modal-Fenster offen ist */
+    body:has(.modal-backdrop.show) #mobile-sidebar-toggle,
+    body:has(.modal-backdrop.active) #mobile-sidebar-toggle {
+        display: none !important;
+    }
+
+    /* Da der Button jetzt schwebt: restlichen Topbar-Inhalt rechts halten */
     #topbar {
         padding: 0 10px !important;
         height: 70px;
+        justify-content: flex-end !important;
+    }
+
+    /* Sidebar am Handy weniger transparent (bessere Lesbarkeit) */
+    #sidebar {
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.92) 0%, rgba(30, 27, 75, 0.9) 50%, rgba(2, 6, 23, 0.94) 100%) !important;
+    }
+
+    /* Einstellungs-Unterseiten am Handy als echte Vollbild-Ebene über alles legen */
+    #users.view.active,
+    #categories.view.active,
+    #protocol-templates.view.active,
+    #protocol-template-editor.view.active,
+    #settings-textbausteine.view.active,
+    #settings-firmeneinstellungen.view.active,
+    #settings-import.view.active,
+    #settings-uvv-wartungsplaene.view.active,
+    #settings-ai.view.active {
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 1300 !important;
+        margin: 0 !important;
+        padding: calc(0.75rem + env(safe-area-inset-top, 0px)) 12px calc(1.5rem + env(safe-area-inset-bottom, 0px)) 12px !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        background: var(--bg-gradient) !important;
+        background-color: #0f172a !important;
     }
 
     .header-social-links {
