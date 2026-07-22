@@ -14,6 +14,28 @@
     const GROQ_FALLBACK_MODEL = 'llama-3.3-70b-versatile';
     function groqModel() { return localStorage.getItem('groq_model') || GROQ_FALLBACK_MODEL; }
     let lastResult = null; // zuletzt von der KI erzeugtes Objekt
+    let lastInputText = ''; // Rohtext der Eingabe (für exakten Seriennummer-Abgleich)
+
+    // Exakter, grenzengenauer Seriennummer-Abgleich gegen einen Text.
+    // Findet die Maschine, deren Seriennummer als eigenständige Zahl im Text vorkommt
+    // (Punkte/Leerzeichen/Bindestriche innerhalb erlaubt), NICHT als Teil einer längeren Zahl.
+    // Bei mehreren Treffern gewinnt die längste (spezifischste) Seriennummer.
+    function matchMachineBySerial(text) {
+        const list = window.machineList || [];
+        const s = String(text || '');
+        if (!s.trim()) return null;
+        let best = null, bestLen = 0;
+        for (const m of list) {
+            const digits = String(m.serial || '').replace(/[^a-z0-9]/gi, '');
+            if (digits.length < 3) continue;
+            const pat = digits.split('').map(c => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[.\\s\\-\\/]?');
+            let re;
+            try { re = new RegExp('(?<![a-z0-9])' + pat + '(?![a-z0-9])', 'i'); }
+            catch (e) { re = new RegExp(pat, 'i'); }
+            if (re.test(s) && digits.length > bestLen) { best = m; bestLen = digits.length; }
+        }
+        return best ? best.id : null;
+    }
     let existingTasks = [];      // offene Aufgaben (zum Zuordnen)
     let existingProcesses = [];  // vorhandene Vorgänge (zum Status-Anhängen)
 
@@ -177,15 +199,64 @@
         return '';
     }
 
-    function userOptions(selectedId) {
-        const list = window.userList || [];
-        let html = '<option value="">— niemand —</option>';
-        list.forEach(u => {
-            const sel = (selectedId != null && String(selectedId) === String(u.id)) ? ' selected' : '';
-            html += `<option value="${u.id}"${sel}>${escapeHtml(u.name || ('Benutzer ' + u.id))}</option>`;
-        });
-        return html;
+    // ---- Zuständig: Mehrfachauswahl im Stil des Serviceberichte-Mitarbeiter-Dropdowns ----
+    function assigneePills(ids) {
+        const users = window.userList || [];
+        const sel = users.filter(u => ids.some(id => String(id) === String(u.id)));
+        if (sel.length === 0) return '<span style="color:rgba(255,255,255,0.4); font-size:0.85rem;">Niemand zugewiesen</span>';
+        return sel.map(u => {
+            const initials = u.initials || (u.name || '').substring(0, 2).toUpperCase();
+            const color = u.color || '#666';
+            return `<span style="display:inline-flex; align-items:center; gap:6px; background:${color}22; border:1px solid ${color}55; border-radius:20px; padding:2px 10px 2px 3px; font-size:0.8rem; font-weight:700; color:#fff;"><span style="width:20px;height:20px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:0.6rem;font-weight:800;color:#fff;">${initials}</span>${escapeHtml(u.name)}</span>`;
+        }).join('');
     }
+
+    function assigneeListRows(uid, ids) {
+        const users = window.userList || [];
+        return users.map(u => {
+            const isSel = ids.some(id => String(id) === String(u.id));
+            const initials = u.initials || (u.name || '').substring(0, 2).toUpperCase();
+            const color = u.color || '#666';
+            return `<div onclick="window.aiCapToggleAssignee('${uid}', '${u.id}')" style="display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:8px; cursor:pointer; background:${isSel ? 'rgba(16,185,129,0.12)' : 'transparent'};" onmouseover="this.style.background='${isSel ? 'rgba(16,185,129,0.18)' : 'rgba(255,255,255,0.04)'}'" onmouseout="this.style.background='${isSel ? 'rgba(16,185,129,0.12)' : 'transparent'}'">
+                <span style="width:28px;height:28px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:800;color:#fff;flex-shrink:0;">${initials}</span>
+                <span style="flex:1; color:#fff; font-size:0.9rem;">${escapeHtml(u.name)}</span>
+                ${isSel ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+            </div>`;
+        }).join('');
+    }
+
+    function assigneeControl(uid, preselectedIds) {
+        const ids = (Array.isArray(preselectedIds) ? preselectedIds : []).filter(x => x != null);
+        return `
+        <div class="ai-cap-assignee" id="${uid}" data-selected='${escapeHtml(JSON.stringify(ids))}'>
+            <div onclick="window.aiCapToggleAssigneePanel('${uid}')" class="glass-form-input" style="display:flex; align-items:center; gap:8px; cursor:pointer; min-height:42px; padding:6px 10px; box-sizing:border-box;">
+                <div class="ai-cap-assignee-pills" style="display:flex; gap:6px; flex-wrap:wrap; flex:1; align-items:center;">${assigneePills(ids)}</div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.6; flex-shrink:0;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            <div class="ai-cap-assignee-panel" style="display:none; margin-top:6px; max-height:220px; overflow-y:auto; background:rgba(15,23,42,0.85); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:6px;">${assigneeListRows(uid, ids)}</div>
+        </div>`;
+    }
+
+    window.aiCapToggleAssigneePanel = function (uid) {
+        const wrap = document.getElementById(uid);
+        if (!wrap) return;
+        const panel = wrap.querySelector('.ai-cap-assignee-panel');
+        panel.style.display = (panel.style.display === 'none' || !panel.style.display) ? 'block' : 'none';
+    };
+
+    window.aiCapToggleAssignee = function (uid, userId) {
+        const wrap = document.getElementById(uid);
+        if (!wrap) return;
+        let ids = [];
+        try { ids = JSON.parse(wrap.dataset.selected || '[]'); } catch (e) { ids = []; }
+        const idx = ids.findIndex(x => String(x) === String(userId));
+        if (idx > -1) ids.splice(idx, 1); else ids.push(userId);
+        wrap.dataset.selected = JSON.stringify(ids);
+        const pills = wrap.querySelector('.ai-cap-assignee-pills');
+        const panel = wrap.querySelector('.ai-cap-assignee-panel');
+        if (pills) pills.innerHTML = assigneePills(ids);
+        if (panel) panel.innerHTML = assigneeListRows(uid, ids);
+    };
 
     // Ordnet einen genannten Vor-/Nachnamen einem Benutzer zu.
     function matchUserId(hint) {
@@ -279,6 +350,7 @@
     window.runAiCapture = async function () {
         const text = (document.getElementById('ai-capture-text')?.value || '').trim();
         if (!text) { alert('Bitte zuerst etwas eingeben.'); return; }
+        lastInputText = text;
 
         const apiKey = localStorage.getItem('groq_api_key');
         if (!apiKey) { alert('Bitte zuerst einen Groq API-Key in den Einstellungen hinterlegen (wie bei der Buchhaltung).'); return; }
@@ -308,7 +380,7 @@ Schema:
       "machine_hint": "Maschinenname/Seriennr. falls genannt, sonst leer",
       "workshop_order": "Werkstattauftragsnummer, falls genannt: JEDE 5-stellige Zahl die mit 40 beginnt (z.B. 40123) ODER Form 2026-40123, oder wenn 'Werkstattauftrag'/'Auftrag' gesagt wird. Dann diese Nummer hier, sonst leer",
       "assignee_hint": "Vor- oder Nachname der Person, die es tun soll, falls genannt, sonst leer",
-      "subtasks": [ { "title": "Arbeitsschritt", "supergroup": "eine Übergruppe" } ] }
+      "subtasks": [ { "title": "Arbeitsschritt", "supergroup": "eine Übergruppe", "suggested": false } ] }
   ],
   "vorgaenge": [
     { "title": "kurzer Titel", "process_type": "einer aus [note, call, appointment, repair, maintenance, offer, order, complaint, other]",
@@ -353,8 +425,10 @@ Nur das jeweils passende als Unteraufgabe anlegen.
 
 Regeln:
 - Korrigiere offensichtliche Rechtschreib- und Tippfehler in Titeln, Unteraufgaben und Bemerkungen (Bedeutung/Inhalt unverändert lassen, nur sauber schreiben).
-- Wenn NUR eine Seriennummer genannt wird (ohne Maschinennamen), schreibe genau diese Nummer in machine_hint.
-- Erfinde nichts. Leere Listen sind erlaubt. Wenn keine Maschine genannt ist, lasse machine_hint leer (nicht raten).
+- ZAHLEN und SERIENNUMMERN NIEMALS ändern/„korrigieren" — exakt Ziffer für Ziffer übernehmen.
+- Wenn NUR eine Seriennummer genannt wird (ohne Maschinennamen), schreibe genau diese Nummer unverändert in machine_hint.
+- Denke als erfahrener Servicetechniker mit: Ergänze über die genannten Schritte hinaus sinnvolle, üblicherweise dazugehörige Unteraufgaben (z.B. Sicht-/Funktionsprüfung, Probelauf, Doku/Fotos, Ersatzteil prüfen, Entsorgung, Reinigung). Solche selbst ergänzten Schritte mit "suggested": true markieren; ausdrücklich genannte Schritte mit "suggested": false. Halte Vorschläge realistisch und knapp (max. 3-5 zusätzliche), keine erfundenen Fakten (keine erfundenen Maschinen, Namen, Nummern, Termine).
+- Maschinen/Namen/Nummern/Personen NICHT erfinden. Leere Listen sind erlaubt. Wenn keine Maschine genannt ist, lasse machine_hint leer (nicht raten).
 - Bekannte Maschinen (Auszug): ${machineHintList || 'keine'}.`;
 
         async function callGroq(model) {
@@ -450,16 +524,21 @@ Regeln:
         if (aufgaben.length) {
             html += `<h3 style="color:var(--color-primary-green); font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; margin:0.25rem 0 0.75rem 0;">Aufgaben (${aufgaben.length})</h3>`;
             aufgaben.forEach((a, i) => {
-                // Maschine über Hint, sonst per Seriennummer aus Titel/Beschreibung
-                const mId = matchMachineId(a.machine_hint) || matchMachineId(`${a.title || ''} ${a.description || ''}`);
+                // Maschine: exakte Seriennummer zuerst (Hint, dann Rohtext der Eingabe),
+                // erst danach die unschärfere Namens-/Teilstring-Suche.
+                const mId = matchMachineBySerial(a.machine_hint)
+                    || matchMachineBySerial(`${a.title || ''} ${a.description || ''}`)
+                    || matchMachineBySerial(lastInputText)
+                    || matchMachineId(a.machine_hint)
+                    || matchMachineId(`${a.title || ''} ${a.description || ''}`);
                 // WA-Nummer aus KI-Feld; als Fallback aus Text NUR wenn keine Maschine gefunden wurde
                 let waNum = (a.workshop_order || '').trim();
                 if (!waNum && !mId) waNum = detectWorkshopOrder(`${a.title || ''} ${a.description || ''}`);
                 const mode = waNum ? 'wa' : 'machine'; // WA-Nummer -> direkt Werkstattauftrag
                 const subs = (Array.isArray(a.subtasks) ? a.subtasks : []).map(s => {
-                    const st = (typeof s === 'string') ? { title: s, supergroup: 'Allgemein' } : { title: s.title || '', supergroup: s.supergroup || 'Allgemein' };
+                    const st = (typeof s === 'string') ? { title: s, supergroup: 'Allgemein', suggested: false } : { title: s.title || '', supergroup: s.supergroup || 'Allgemein', suggested: !!s.suggested };
                     const action = detectSubtaskAction(st.title);
-                    return { title: st.title, supergroup: supergroupForSubtask(st.title, action, st.supergroup), action };
+                    return { title: st.title, supergroup: supergroupForSubtask(st.title, action, st.supergroup), action, suggested: st.suggested };
                 });
                 const needMachine = mode === 'machine' && !mId;
                 const needWa = mode === 'wa' && !waNum;
@@ -490,16 +569,17 @@ Regeln:
                             <select class="ai-cap-wa-target glass-form-input" style="width:100%; box-sizing:border-box; font-size:0.85rem;">${taskWaTargetOptions(waNum)}</select>
                         </div>
                     </div>
-                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:0.5rem;">
-                        <span style="font-size:0.75rem; color:rgba(255,255,255,0.5); white-space:nowrap;">👤 Zuständig:</span>
-                        <select class="ai-cap-assignee glass-form-input" style="flex:1; box-sizing:border-box; font-size:0.85rem;">${userOptions(aUserId)}</select>
+                    <div style="margin-bottom:0.5rem;">
+                        <div style="font-size:0.72rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">👤 Zuständig (Mehrfachauswahl)</div>
+                        ${assigneeControl(`aicap-asg-t-${i}`, aUserId ? [aUserId] : [])}
                     </div>
                     ${subs.length ? `<div style="font-size:0.72rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; margin:0.3rem 0;">Unteraufgaben · Übergruppe</div>` : ''}
                     <div class="ai-cap-subs">
                         ${subs.map(s => `
                         <div class="ai-cap-sub-row" data-action="${escapeHtml(s.action || '')}" style="display:flex; gap:6px; margin-bottom:0.35rem; align-items:center; flex-wrap:wrap;">
-                            <input type="text" class="ai-cap-sub glass-form-input" value="${escapeHtml(s.title)}" style="flex:1 1 40%; box-sizing:border-box; font-size:0.88rem;">
+                            <input type="text" class="ai-cap-sub glass-form-input" value="${escapeHtml(s.title)}" style="flex:1 1 40%; box-sizing:border-box; font-size:0.88rem;${s.suggested ? ' border-left:3px solid #fbbf24;' : ''}">
                             <select class="ai-cap-sub-group glass-form-input" style="flex:0 0 30%; box-sizing:border-box; font-size:0.82rem;">${supergroupOptions(s.supergroup)}</select>
+                            ${s.suggested ? `<span title="Von der KI vorgeschlagen – prüfen oder mit × entfernen" style="font-size:0.66rem; font-weight:800; color:#fbbf24; background:rgba(251,191,36,0.15); border-radius:6px; padding:2px 6px; white-space:nowrap;">💡 Vorschlag</span>` : ''}
                             ${s.action ? actionBadge(s.action) : ''}
                             <button type="button" onclick="this.closest('.ai-cap-sub-row').remove()" title="Unteraufgabe entfernen" style="flex:0 0 auto; width:28px; height:28px; border-radius:7px; border:1px solid rgba(248,113,113,0.4); background:rgba(248,113,113,0.12); color:#f87171; cursor:pointer; font-size:1rem; line-height:1; display:inline-flex; align-items:center; justify-content:center;">×</button>
                         </div>`).join('')}
@@ -511,7 +591,10 @@ Regeln:
         if (vorgaenge.length) {
             html += `<h3 style="color:#818cf8; font-size:0.8rem; text-transform:uppercase; letter-spacing:1px; margin:1rem 0 0.75rem 0;">Vorgänge (${vorgaenge.length})</h3>`;
             vorgaenge.forEach((v, i) => {
-                const mId = matchMachineId(v.machine_hint) || matchMachineId(`${v.title || ''} ${v.remark || ''}`);
+                const mId = matchMachineBySerial(v.machine_hint)
+                    || matchMachineBySerial(`${v.title || ''} ${v.remark || ''}`)
+                    || matchMachineId(v.machine_hint)
+                    || matchMachineId(`${v.title || ''} ${v.remark || ''}`);
                 const t = typeLabels[v.process_type] ? v.process_type : 'other';
                 const vUserId = matchUserId(v.assignee_hint);
                 html += `
@@ -527,9 +610,9 @@ Regeln:
                         <div style="font-size:0.72rem; color:#fbbf24; margin-bottom:3px;">Passender Vorgang existiert bereits:</div>
                         <select class="ai-cap-proc-target glass-form-input" style="width:100%; box-sizing:border-box; font-size:0.85rem;">${processTargetOptions(mId, v.title)}</select>
                     </div>
-                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:0.5rem;">
-                        <span style="font-size:0.75rem; color:rgba(255,255,255,0.5); white-space:nowrap;">👤 Zuständig:</span>
-                        <select class="ai-cap-assignee glass-form-input" style="flex:1; box-sizing:border-box; font-size:0.85rem;">${userOptions(vUserId)}</select>
+                    <div style="margin-bottom:0.5rem;">
+                        <div style="font-size:0.72rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">👤 Zuständig (Mehrfachauswahl)</div>
+                        ${assigneeControl(`aicap-asg-v-${i}`, vUserId ? [vUserId] : [])}
                     </div>
                     <input type="text" class="ai-cap-remark glass-form-input" value="${escapeHtml(v.remark || '')}" placeholder="Bemerkung / Status-Text (optional)" style="width:100%; box-sizing:border-box; font-size:0.9rem;">
                 </div>`;
@@ -653,9 +736,9 @@ Regeln:
                 if (!title) continue;
                 const machineVal = card.querySelector('.ai-cap-machine')?.value || '';
                 const machineId = machineVal ? parseInt(machineVal) : null;
-                // Benutzer-IDs sind UUIDs -> NICHT parseInt (das würde "1" o.ä. erzeugen)
-                const assigneeId = card.querySelector('.ai-cap-assignee')?.value || null;
-                const assignedArr = assigneeId ? [assigneeId] : [];
+                // Mehrere Zuständige aus dem Multi-Select (UUIDs, roh übernehmen)
+                let assignedArr = [];
+                try { assignedArr = JSON.parse(card.querySelector('.ai-cap-assignee')?.dataset.selected || '[]'); } catch (e) { assignedArr = []; }
 
                 if (kind === 'task') {
                     const subRows = Array.from(card.querySelectorAll('.ai-cap-sub-row'))
@@ -679,13 +762,14 @@ Regeln:
                             .map(r => ({ task_id: target, title: r.title, status: 'open', supergroup: r.supergroup, action_type: r.action_type || null }));
                         const { error: subErr } = await window.supabaseClient.from('subtasks').insert(rows);
                         if (subErr) throw subErr;
-                        // Zuständige Person zur vorhandenen Aufgabe ergänzen
-                        if (assigneeId) {
+                        // Zuständige Personen zur vorhandenen Aufgabe ergänzen (mergen)
+                        if (assignedArr.length) {
                             const { data: curT } = await window.supabaseClient.from('tasks').select('assigned_to').eq('id', target).single();
-                            const cur = Array.isArray(curT?.assigned_to) ? curT.assigned_to.map(String) : [];
-                            if (!cur.includes(String(assigneeId))) {
-                                await window.supabaseClient.from('tasks').update({ assigned_to: [...(curT?.assigned_to || []), assigneeId] }).eq('id', target);
-                            }
+                            const cur = Array.isArray(curT?.assigned_to) ? curT.assigned_to.slice() : [];
+                            const curStr = cur.map(String);
+                            let changed = false;
+                            assignedArr.forEach(id => { if (!curStr.includes(String(id))) { cur.push(id); changed = true; } });
+                            if (changed) await window.supabaseClient.from('tasks').update({ assigned_to: cur }).eq('id', target);
                         }
                         updatedTasks++;
                     } else {
@@ -724,10 +808,13 @@ Regeln:
                         };
                         const newLog = [...(Array.isArray(cur?.status_log) ? cur.status_log : []), entry];
                         const upd = { status_log: newLog };
-                        // Zuständige Person ergänzen
-                        if (assigneeId) {
-                            const curU = Array.isArray(cur?.assigned_users) ? cur.assigned_users.map(String) : [];
-                            if (!curU.includes(String(assigneeId))) upd.assigned_users = [...(cur?.assigned_users || []), assigneeId];
+                        // Zuständige Personen ergänzen (mergen)
+                        if (assignedArr.length) {
+                            const curU = Array.isArray(cur?.assigned_users) ? cur.assigned_users.slice() : [];
+                            const curUStr = curU.map(String);
+                            let changedU = false;
+                            assignedArr.forEach(id => { if (!curUStr.includes(String(id))) { curU.push(id); changedU = true; } });
+                            if (changedU) upd.assigned_users = curU;
                         }
                         const { error: upErr } = await window.supabaseClient
                             .from('internal_processes').update(upd).eq('id', target);

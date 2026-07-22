@@ -991,7 +991,7 @@
                                 <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                                 <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                             </svg>
-                            <span>Ereignisse</span>
+                            <span>Wartung</span>
                         </a>
                     </li>
                     <li>
@@ -1342,10 +1342,12 @@
                                         onclick="switchTaskView('board')">Board</button>
                                     <button class="calendar-tab-btn" id="btn-view-list"
                                         onclick="switchTaskView('list')">Liste</button>
+                                    <button class="calendar-tab-btn" id="btn-view-vorgaenge"
+                                        onclick="switchTaskView('vorgaenge')">Vorgänge</button>
                                 </div>
                                 <div class="calendar-view-tabs" style="margin-bottom: 0;">
                                     <button class="calendar-tab-btn" id="btn-task-user-me"
-                                        onclick="window.toggleMyTasksFilter()">Meine Aufgaben</button>
+                                        onclick="window.toggleMyTasksFilter()">Meine Aufgaben / Vorgänge</button>
                                 </div>
                             </div>
                             <div class="view-header-right" style="display: flex; align-items: center; gap: 12px;">
@@ -1376,7 +1378,15 @@
                                     <span style="font-size:1.05rem;">✨</span>
                                     KI-Erfassung
                                 </button>
-                                <button class="btn-add-bg" onclick="openAddTaskModal()">
+                                <button class="btn-add-bg btn-red-animated" id="btn-add-process-header" onclick="window.openProcessAddModal()" style="display:none;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                    Vorgang erstellen
+                                </button>
+                                <button class="btn-add-bg" id="btn-add-task-header" onclick="openAddTaskModal()">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                         <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -1417,6 +1427,12 @@
                             </table>
                         </div>
                     </div>
+                    <!-- Vorgänge (in Aufgaben integriert) -->
+                    <div id="tasks-vorgaenge" class="hidden">
+                        <div id="tasks-processes-container"></div>
+                    </div>
+                    <!-- Meine Vorgänge (erscheint unter Meine Aufgaben) -->
+                    <div id="tasks-my-processes" class="hidden" style="margin-top:2rem;"></div>
                 </section>
 
                 <!-- ========================================================= -->
@@ -1432,7 +1448,7 @@
                                         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
                                         <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
                                     </svg>
-                                    Ereignisse
+                                    Wartung
                                 </h1>
                             </div>
                             <div class="view-header-right">
@@ -1452,7 +1468,7 @@
                         <div class="view-header-row-bottom" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; width: 100%; position: relative; z-index: 1000;">
                             <div class="view-header-left" style="display: flex; gap: 16px; align-items: center;">
                                 <div class="calendar-view-tabs" style="margin-bottom: 0;">
-                                    <button class="calendar-tab-btn" id="btn-events-view-processes" onclick="window.switchEventsSubView('processes')">Vorgänge</button>
+                                    <button class="calendar-tab-btn" id="btn-events-view-processes" onclick="window.switchEventsSubView('processes')" style="display:none;">Vorgänge</button>
                                     <button class="calendar-tab-btn active" id="btn-events-view-calendar" onclick="window.switchEventsSubView('calendar')">Wartung</button>
                                 </div>
 
@@ -15833,7 +15849,7 @@
 
             // --- KPI-Kacheln (klickbare Filter) ---
             const kpiActive = s => statusFilter === s ? ' active' : '';
-            html += `
+            if (!opts.compact) html += `
                 <div class="maint-kpi-grid">
                     <div class="maint-kpi-tile${kpiActive('offen')}" onclick="window.toggleProcessKpiFilter('offen')" title="Nur offene Vorgänge anzeigen">
                         <div class="maint-kpi-value" style="color: #ef4444;">${counts.offen}</div>
@@ -15913,7 +15929,7 @@
                     `;
                 }).join('');
 
-            html += `
+            if (!opts.compact) html += `
                 <div class="proc-charts-row">
                     <div class="maint-chart-card" style="margin-bottom: 0;">
                         <p class="maint-chart-title">Vorgänge pro Monat
@@ -22573,7 +22589,7 @@
 
     <script src="tasks.js?v=3"></script>
     <script src="task_templates.js?v=2"></script>
-    <script src="ai-quick-capture.js?v=9"></script>
+    <script src="ai-quick-capture.js?v=11"></script>
     <script>
         window.addEventListener('load', () => {
             if (typeof window.initTaskTemplates === 'function') {

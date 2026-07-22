@@ -200,7 +200,7 @@
 
     window.filterTasksByUser = function (userFilter) {
         filters.user = userFilter;
-        
+
         // Update tab active classes
         const btnMe = document.getElementById('btn-task-user-me');
         if (btnMe) {
@@ -210,8 +210,20 @@
                 btnMe.classList.remove('active');
             }
         }
-        
+
+        // Wenn wir im Vorgänge-Tab sind, zurück auf die Aufgabenansicht wechseln,
+        // damit "Meine Aufgaben" sinnvoll greift.
+        if (viewMode === 'vorgaenge') { window.switchTaskView('board'); }
+
         renderTasks();
+
+        // "Meine Vorgänge" darunter – ggf. Vorgänge erst laden
+        if (userFilter === 'me' && (!window.eventsState || !Array.isArray(window.eventsState.processes) || window.eventsState.processes.length === 0)
+            && typeof window.fetchProcesses === 'function') {
+            window.fetchProcesses(); // rendert am Ende alle Container + renderMyProcessesSection
+        } else if (typeof window.renderMyProcessesSection === 'function') {
+            window.renderMyProcessesSection();
+        }
     };
 
     window.toggleMyTasksFilter = function () {
@@ -1604,10 +1616,55 @@
     // ==========================================
     window.switchTaskView = function (view) {
         viewMode = view;
-        document.querySelectorAll('.calendar-tab-btn').forEach(btn => btn.classList.remove('active'));
-        const activeBtn = document.getElementById(`btn-view-${view}`);
-        if (activeBtn) activeBtn.classList.add('active');
-        renderTasks();
+        // Aktive Markierung nur für die Ansichts-Tabs (Board/Liste/Vorgänge),
+        // damit der "Meine Aufgaben"-Filterbutton seinen eigenen Zustand behält.
+        ['board', 'list', 'vorgaenge'].forEach(v => {
+            const b = document.getElementById('btn-view-' + v);
+            if (b) b.classList.toggle('active', v === view);
+        });
+
+        const vg = document.getElementById('tasks-vorgaenge');
+        const board = document.getElementById('tasks-board');
+        const list = document.getElementById('tasks-list');
+        const mach = document.getElementById('tasks-machines');
+        const myProc = document.getElementById('tasks-my-processes');
+        // Header-Buttons je Tab: Vorgänge -> "Vorgang erstellen", sonst "Aufgabe erstellen"
+        const btnAddTask = document.getElementById('btn-add-task-header');
+        const btnAddProc = document.getElementById('btn-add-process-header');
+        if (btnAddTask) btnAddTask.style.display = (view === 'vorgaenge') ? 'none' : '';
+        if (btnAddProc) btnAddProc.style.display = (view === 'vorgaenge') ? '' : 'none';
+
+        if (view === 'vorgaenge') {
+            if (board) board.classList.add('hidden');
+            if (list) list.classList.add('hidden');
+            if (mach) mach.classList.add('hidden');
+            if (myProc) myProc.classList.add('hidden');
+            if (vg) vg.classList.remove('hidden');
+            if (window.eventsState && Array.isArray(window.eventsState.processes) && window.eventsState.processes.length > 0) {
+                if (typeof window.renderProcesses === 'function') window.renderProcesses('tasks-processes-container');
+            } else if (typeof window.fetchProcesses === 'function') {
+                window.fetchProcesses(); // rendert alle Container inkl. tasks-processes-container
+            }
+        } else {
+            if (vg) vg.classList.add('hidden');
+            renderTasks();
+            if (typeof window.renderMyProcessesSection === 'function') window.renderMyProcessesSection();
+        }
+    };
+
+    // "Meine Vorgänge" unter den Aufgaben anzeigen (nur wenn "Meine Aufgaben" aktiv & nicht im Vorgänge-Tab)
+    window.renderMyProcessesSection = function () {
+        const cont = document.getElementById('tasks-my-processes');
+        if (!cont) return;
+        const show = filters.user === 'me' && viewMode !== 'vorgaenge' && window.activeUser;
+        if (!show) { cont.classList.add('hidden'); cont.innerHTML = ''; return; }
+        const uid = window.activeUser.id;
+        const mine = ((window.eventsState && window.eventsState.processes) || [])
+            .filter(p => Array.isArray(p.assigned_users) && p.assigned_users.some(u => String(u) === String(uid)));
+        if (mine.length === 0) { cont.classList.add('hidden'); cont.innerHTML = ''; return; }
+        cont.classList.remove('hidden');
+        cont.innerHTML = `<h2 style="font-size:1.1rem; color:#a5b4fc; margin:0 0 1rem 0; display:flex; align-items:center; gap:8px; border-top:1px solid rgba(255,255,255,0.08); padding-top:1.5rem;"><span>🗂️</span> Meine Vorgänge <span style="background:rgba(139,92,246,0.2); color:#a5b4fc; font-size:0.8rem; font-weight:800; padding:2px 8px; border-radius:10px;">${mine.length}</span></h2><div id="tasks-my-processes-list"></div>`;
+        if (typeof window.renderProcesses === 'function') window.renderProcesses('tasks-my-processes-list', { onlyAssignedTo: uid, compact: true });
     };
 
     function formatStatus(status) {
