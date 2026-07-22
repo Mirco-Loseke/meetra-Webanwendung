@@ -11173,6 +11173,13 @@
                     document.getElementById('service-location-city').value = machine.location_city || '';
                     document.getElementById('service-location-country').value = machine.location_country || '';
                 }
+            } else {
+                // Beim Entfernen die Felder wirklich leeren, damit der Bericht einen leeren
+                // Standort-Snapshot speichert und der Standort nach dem Neuladen NICHT wieder auftaucht.
+                ['service-location-company','service-location-street','service-location-zip','service-location-city']
+                    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+                const countryEl = document.getElementById('service-location-country');
+                if (countryEl) countryEl.value = 'Deutschland';
             }
             wrapper.classList.toggle('hidden', !show);
             wrapper.style.display = show ? 'block' : 'none';
@@ -11466,7 +11473,24 @@
                 hotel_street:           document.getElementById('service-hotel-street')?.value.trim() || null,
                 hotel_zip:              document.getElementById('service-hotel-zip')?.value.trim() || null,
                 hotel_city:             document.getElementById('service-hotel-city')?.value.trim() || null,
-                hotel_country:          document.getElementById('service-hotel-country')?.value.trim() || null
+                hotel_country:          document.getElementById('service-hotel-country')?.value.trim() || null,
+                location_snapshot:      window._buildServiceLocationSnapshot()
+            };
+        };
+
+        // Standort-Snapshot: nur wenn die Standort-Felder sichtbar sind, wird ein abweichender
+        // Standort gespeichert. Ausgeblendet (= entfernt) => leerer Snapshot, damit der Standort
+        // nach dem Neuladen nicht wieder aus dem Maschinen-Stammsatz erscheint.
+        window._buildServiceLocationSnapshot = function () {
+            const wrapper = document.getElementById('service-location-fields-wrapper');
+            const visible = wrapper && !wrapper.classList.contains('hidden');
+            const val = id => (visible ? (document.getElementById(id)?.value.trim() || null) : null);
+            return {
+                company: val('service-location-company'),
+                street:  val('service-location-street'),
+                zip:     val('service-location-zip'),
+                city:    val('service-location-city'),
+                country: val('service-location-country')
             };
         };
 
@@ -11600,7 +11624,11 @@
                 hotel_street: document.getElementById('service-hotel-street')?.value.trim() || null,
                 hotel_zip: document.getElementById('service-hotel-zip')?.value.trim() || null,
                 hotel_city: document.getElementById('service-hotel-city')?.value.trim() || null,
-                hotel_country: document.getElementById('service-hotel-country')?.value.trim() || null
+                hotel_country: document.getElementById('service-hotel-country')?.value.trim() || null,
+                // Per-Bericht-Snapshot des Maschinenstandorts. Damit bleibt ein abweichender
+                // Standort auf DIESEN Bericht beschränkt und "wandert" nicht auf andere Berichte
+                // derselben Maschine (der Maschinen-Stammstandort wird bewusst NICHT überschrieben).
+                location_snapshot: window._buildServiceLocationSnapshot()
             };
 
             console.log('Sending Servicebericht data to Supabase:', reportData);
@@ -11664,20 +11692,11 @@
                     ? window.extractServiceMaintArt(reportData.checklist_payload) : '';
                 const isMaintenanceReport = !!maintArt;
 
-                const locCompany = document.getElementById('service-location-company')?.value.trim() || null;
-                const locStreet = document.getElementById('service-location-street')?.value.trim() || null;
-                const locZip = document.getElementById('service-location-zip')?.value.trim() || null;
-                const locCity = document.getElementById('service-location-city')?.value.trim() || null;
-                const locCountry = document.getElementById('service-location-country')?.value.trim() || null;
-
-                // Standortdaten werden immer aktualisiert.
-                const machineUpdate = {
-                    location_company: locCompany,
-                    location_street: locStreet,
-                    location_zip: locZip,
-                    location_city: locCity,
-                    location_country: locCountry
-                };
+                // WICHTIG: Der Standort wird NICHT mehr in den Maschinen-Stammsatz zurückgeschrieben.
+                // Ein (evtl. abweichender) Standort gehört zum jeweiligen Bericht (location_snapshot)
+                // und darf nicht auf andere Berichte derselben Maschine durchschlagen. Der
+                // Stamm-Maschinenstandort wird ausschließlich im Maschinen-Formular gepflegt.
+                const machineUpdate = {};
 
                 if (isMaintenanceReport) {
                     let nextMaintDate;
@@ -11699,13 +11718,15 @@
                     machineUpdate.files = updatedFiles;
                 }
 
-                const { error: machineUpdateError } = await supabaseClient
-                    .from('machines')
-                    .update(machineUpdate)
-                    .eq('id', targetMachineId);
+                if (Object.keys(machineUpdate).length > 0) {
+                    const { error: machineUpdateError } = await supabaseClient
+                        .from('machines')
+                        .update(machineUpdate)
+                        .eq('id', targetMachineId);
 
-                if (machineUpdateError) {
-                    console.error('Error updating machine maintenance dates:', machineUpdateError);
+                    if (machineUpdateError) {
+                        console.error('Error updating machine maintenance dates:', machineUpdateError);
+                    }
                 }
             }
 
@@ -12290,7 +12311,7 @@
                     // (openEditServicebericht) ohnehin nochmal alles frisch lädt. checklist_payload
                     // wird trotzdem mitgeladen, um bei Wartungsberichten anzuzeigen, was davon
                     // tatsächlich gedruckt/gewartet wurde (siehe window.getMaintenanceScopeLabel).
-                    window.supabaseClient.from('service_entries').select('id, machine_id, category_id, title, date, created_at, description, pdf_url, files, previous_report_id, checklist_payload').eq('machine_id', machineId),
+                    window.supabaseClient.from('service_entries').select('id, machine_id, category_id, title, date, created_at, description, pdf_url, files, previous_report_id, checklist_payload, operating_hours').eq('machine_id', machineId),
                     window.supabaseClient.from('tasks').select('*').eq('machine_id', machineId),
                     window.supabaseClient.from('calendar_events').select('*').eq('machine_id', machineId),
                     window.supabaseClient.from('intake_protocols').select('*').eq('machine_id', machineId),
@@ -12339,6 +12360,7 @@
                             pdf_url: s.pdf_url,
                             files: s.files || [],
                             maintenanceScope: typeof window.getMaintenanceScopeLabel === 'function' ? window.getMaintenanceScopeLabel(s.checklist_payload) : null,
+                            operatingHours: (s.operating_hours != null && String(s.operating_hours).trim() !== '') ? String(s.operating_hours).trim().replace(/\s*(h|std\.?|stunden)\s*$/i, '').trim() : null,
                             linkedReportId: s.previous_report_id || followUpByPreviousId[s.id] || null,
                             isFollowUpReport: !!s.previous_report_id,
                             linkedReportDate: (() => {
@@ -12457,8 +12479,11 @@
 
                             let mDescription = m.content;
                             let mEmailHtml = null;
+                            let mOperatingHours = null;
                             if (m.type === 'hours' && m.content) {
-                                mDescription = `${m.content} Std.`;
+                                // Stunden nicht mehr als "1450 Std."-Text, sondern als blaues Badge (mit "h").
+                                mOperatingHours = String(m.content).trim().replace(/\s*(h|std\.?|stunden)\s*$/i, '').trim();
+                                mDescription = '';
                             } else if (m.type === 'email') {
                                 mEmailHtml = buildEmailHistoryHtml(m);
                             }
@@ -12469,6 +12494,7 @@
                                 type: config.label,
                                 title: m.title,
                                 description: mDescription,
+                                operatingHours: mOperatingHours,
                                 emailHtml: mEmailHtml,
                                 remark: m.remark || null,
                                 rawType: m.type,
@@ -12694,10 +12720,22 @@
                                             })()}
                                         </div>
                                     </div>
-                                    <h4 style="margin: 0 0 0.5rem 0; color: #fff; font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; white-space: pre-wrap;">${escHistoryText(item.title)}</h4>
+                                    ${(() => {
+                                        // Titel weglassen, wenn er nur die Typ-Bezeichnung wiederholt
+                                        // (z.B. "Servicebericht"/"Betriebsstunden") — die steht oben schon farbig.
+                                        const t = (item.title || '').trim();
+                                        const typeLabel = String(item.type || '').replace(/<[^>]*>/g, '').trim();
+                                        if (!t || t.toLowerCase() === typeLabel.toLowerCase()) return '';
+                                        return `<h4 style="margin: 0 0 0.5rem 0; color: #fff; font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; white-space: pre-wrap;">${escHistoryText(t)}</h4>`;
+                                    })()}
                                     ${item.maintenanceScope ? `
                                     <div style="display:inline-flex; align-items:center; gap:5px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); color:var(--color-primary-green); border-radius:14px; padding:3px 10px; font-size:0.75rem; font-weight:700; margin-bottom:0.5rem;">
                                         Gewartet: ${escHistoryText(item.maintenanceScope)}
+                                    </div>` : ''}
+                                    ${item.operatingHours ? `
+                                    <div style="display:inline-flex; align-items:center; gap:5px; background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.35); color:#60a5fa; border-radius:14px; padding:3px 10px; font-size:0.75rem; font-weight:700; margin-bottom:0.5rem; margin-left:0.4rem;">
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                                        ${escHistoryText(item.operatingHours)} h
                                     </div>` : ''}
                                     ${item.linkedReportId ? `
                                     <div onclick="window.jumpToServicebericht(${item.linkedReportId})" title="Zum ${item.isFollowUpReport ? 'vorherigen Bericht' : 'Folgebericht'} springen"
@@ -13964,7 +14002,7 @@
                             </div>
                             ${ev.type === 'manual' && ev.description ? `<div style="font-size: 0.82rem; color: #fff; margin-bottom: 8px;">${ev.description}</div>` : ''}
                             <div class="maint-card-dates">
-                                <span>Letzte: <b>${lastMaintStr}</b></span>
+                                ${m ? `<span>Letzte: <b>${lastMaintStr}</b></span>` : ''}
                                 <span>Nächste: <b>${nextMaintStr}</b></span>
                                 <span>Intervall: <b>${ev.intervalMonths} Mon.</b></span>
                             </div>
@@ -16857,6 +16895,28 @@
                                 const cat = (window.categoryList || []).find(c => c.id === m.category_id);
                                 selectServiceMachine(m.id, m.manufacturer, m.name, m.serial, m.image_url, cat ? cat.name : '', m.year);
                             }
+                        }
+
+                        // Standort: Der im Bericht gespeicherte Snapshot ist maßgebend. selectServiceMachine()
+                        // hat die Felder gerade aus dem Maschinen-Stammsatz vorbelegt – sobald ein Snapshot
+                        // existiert (auch ein LEERER = bewusst entfernt), überschreibt er das komplett.
+                        // Nur echte Altberichte OHNE Snapshot (null/undefined) behalten den Maschinenstandort.
+                        const locSnap = editData.location_snapshot;
+                        if (locSnap && typeof locSnap === 'object') {
+                            const setLoc = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+                            setLoc('service-location-company', locSnap.company);
+                            setLoc('service-location-street', locSnap.street);
+                            setLoc('service-location-zip', locSnap.zip);
+                            setLoc('service-location-city', locSnap.city);
+                            setLoc('service-location-country', locSnap.country || 'Deutschland');
+                            const hasSnapLoc = !!(locSnap.street || locSnap.city || locSnap.zip || locSnap.company);
+                            const locFieldsWrapper = document.getElementById('service-location-fields-wrapper');
+                            if (locFieldsWrapper) {
+                                locFieldsWrapper.classList.toggle('hidden', !hasSnapLoc);
+                                locFieldsWrapper.style.display = hasSnapLoc ? 'block' : 'none';
+                            }
+                            const locToggleBtn = document.getElementById('btn-toggle-location');
+                            if (locToggleBtn) locToggleBtn.textContent = hasSnapLoc ? '- Abw. Maschinenstandort entfernen' : '+ Abw. Maschinenstandort';
                         }
 
                         // Populate category second

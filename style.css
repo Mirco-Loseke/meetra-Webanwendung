@@ -7373,9 +7373,21 @@ select.glass-form-input, select.glass-form-select, select.glass-form-input optio
     }
 
     /* ---- ADD/EDIT MACHINE MODAL — MOBILE OPTIMIZATIONS ---- */
+    /* Backdrop: kein Padding, Modal beginnt direkt am Rand (Vollbild wie Servicebericht) */
+    #add-machine-modal {
+        padding: 0 !important;
+        align-items: stretch !important;
+        justify-content: stretch !important;
+    }
     #add-machine-modal .modal-content {
-        padding: 1rem !important;
-        max-height: 96vh !important;
+        padding: 0.875rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        min-height: 100dvh !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
     }
     #add-machine-modal .modal-content > h2 {
         margin-bottom: 0.75rem !important;
