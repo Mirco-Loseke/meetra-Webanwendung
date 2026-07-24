@@ -294,13 +294,50 @@
                     <p style="color:rgba(255,255,255,0.55); font-size:0.85rem; margin:0 0 0.75rem 0; line-height:1.5;">
                         Beschreibe frei, was zu tun ist. Die KI schlägt Aufgaben (mit Unteraufgaben) und Vorgänge vor — du prüfst alles, bevor gespeichert wird.
                     </p>
-                    <textarea id="ai-capture-text" class="glass-form-input" rows="6" placeholder="z.B. Beim Trommelsieb 4230 muss das Sieblager getauscht werden, vorher Ersatzteil bestellen und Kunde Meyer anrufen wegen Termin. Außerdem Angebot für neue Förderbänder rausschicken."
-                        style="width:100%; box-sizing:border-box; resize:vertical; font-size:0.95rem;"></textarea>
+                    <div style="display:flex; gap:0.75rem; align-items:flex-start;">
+                        <textarea id="ai-capture-text" class="glass-form-input" rows="6" placeholder="z.B. Beim Trommelsieb 4230 muss das Sieblager getauscht werden, vorher Ersatzteil bestellen und Kunde Meyer anrufen wegen Termin. Außerdem Angebot für neue Förderbänder rausschicken."
+                            style="flex:1; min-width:0; box-sizing:border-box; resize:vertical; font-size:0.95rem;"></textarea>
+                        <div style="flex:0 0 150px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:0.65rem 0.75rem; align-self:stretch;">
+                            <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:rgba(255,255,255,0.4); margin-bottom:6px;">Tipps</div>
+                            <ul style="margin:0; padding-left:1.05rem; font-size:0.78rem; color:rgba(255,255,255,0.6); line-height:1.65;">
+                                <li>Titel</li>
+                                <li>Zuständig</li>
+                                <li>Maschine</li>
+                                <li>Schritte / Unteraufgaben</li>
+                            </ul>
+                        </div>
+                    </div>
                     <div style="display:flex; gap:0.6rem; margin-top:0.9rem;">
                         <button onclick="window.closeAiCaptureModal()" class="btn-modal-base btn-modal-cancel" style="flex:0 0 auto;">Abbrechen</button>
                         <button id="ai-capture-run-btn" onclick="window.runAiCapture()" class="btn-modal-base btn-modal-save" style="flex:1; gap:8px;">
                             <span>✨</span> Analysieren
                         </button>
+                    </div>
+
+                    <div style="display:flex; align-items:center; gap:10px; margin: 1.1rem 0 0.9rem;">
+                        <div style="flex:1; height:1px; background:rgba(255,255,255,0.1);"></div>
+                        <span style="color:rgba(255,255,255,0.35); font-size:0.75rem; font-weight:700; text-transform:uppercase;">oder</span>
+                        <div style="flex:1; height:1px; background:rgba(255,255,255,0.1);"></div>
+                    </div>
+
+                    <div style="border: 1.5px solid rgba(96,165,250,0.3); background: rgba(96,165,250,0.06); border-radius: 14px; padding: 0.9rem;">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:0.6rem;">
+                            <span style="font-size:1.1rem;">📧</span>
+                            <span style="font-weight:800; color:#60a5fa; font-size:0.85rem; text-transform:uppercase; letter-spacing:0.5px;">Mail importieren (.msg)</span>
+                        </div>
+                        <p style="color:rgba(255,255,255,0.45); font-size:0.78rem; margin:0 0 0.6rem 0; line-height:1.4;">
+                            Betreff, Absender, Empfänger und Mail-Text werden direkt übernommen — ohne KI. Schritte kannst du danach optional per Klick von der KI vorschlagen lassen.
+                        </p>
+                        <div id="ai-capture-msg-dropzone"
+                            onclick="document.getElementById('ai-capture-msg-file-input').click()"
+                            ondragover="event.preventDefault(); this.style.borderColor='var(--color-primary-green)'; this.style.background='rgba(52,211,153,0.06)';"
+                            ondragleave="this.style.borderColor='rgba(255,255,255,0.2)'; this.style.background='transparent';"
+                            ondrop="window.handleAiCaptureMsgDrop(event)"
+                            style="border: 2px dashed rgba(255,255,255,0.2); border-radius: 10px; padding: 10px; text-align: center; cursor: pointer; color: rgba(255,255,255,0.55); font-size: 0.8rem; font-weight: 600; transition: border-color 0.2s, background 0.2s;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: 0 auto 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                            .msg-Datei hierher ziehen oder klicken
+                        </div>
+                        <input type="file" id="ai-capture-msg-file-input" accept=".msg" style="display:none;" onchange="window.handleAiCaptureMsgSelect(event)">
                     </div>
                 </div>
 
@@ -386,7 +423,8 @@ Schema:
     { "title": "kurzer Titel", "process_type": "einer aus [note, call, appointment, repair, maintenance, offer, order, complaint, other]",
       "machine_hint": "falls genannt, sonst leer",
       "assignee_hint": "Vor- oder Nachname der zuständigen Person, falls genannt, sonst leer",
-      "remark": "optional" }
+      "remark": "optional",
+      "steps": [ "kurzer Schritt-Text" ] }
   ]
 }
 
@@ -429,6 +467,15 @@ Regeln:
 - Wenn NUR eine Seriennummer genannt wird (ohne Maschinennamen), schreibe genau diese Nummer unverändert in machine_hint.
 - Denke als erfahrener Servicetechniker mit: Ergänze über die genannten Schritte hinaus sinnvolle, üblicherweise dazugehörige Unteraufgaben (z.B. Sicht-/Funktionsprüfung, Probelauf, Doku/Fotos, Ersatzteil prüfen, Entsorgung, Reinigung). Solche selbst ergänzten Schritte mit "suggested": true markieren; ausdrücklich genannte Schritte mit "suggested": false. Halte Vorschläge realistisch und knapp (max. 3-5 zusätzliche), keine erfundenen Fakten (keine erfundenen Maschinen, Namen, Nummern, Termine).
 - Maschinen/Namen/Nummern/Personen NICHT erfinden. Leere Listen sind erlaubt. Wenn keine Maschine genannt ist, lasse machine_hint leer (nicht raten).
+
+Schritte (steps) je Vorgang — nur wirklich passende, logische Arbeitsschritte für GENAU diesen Vorgangstyp vorschlagen, keine generischen Floskeln:
+- offer: z.B. "Angebot erstellen", "Angebot an Kunden versenden", "Rückmeldung des Kunden einholen".
+- order: z.B. "Ersatzteil bestellen", "Lieferung überwachen", "Wareneingang prüfen".
+- complaint: z.B. "Reklamation aufnehmen", "Ursache prüfen", "Rückmeldung an Kunden geben".
+- repair/maintenance (falls als Vorgang statt Aufgabe erfasst): z.B. "Termin mit Kunde abstimmen", "Ersatzteile klären", "Rückmeldung nach Erledigung".
+- call/appointment: z.B. "Rückruf/Termin durchführen", "Ergebnis dokumentieren" — nur falls sinnvoll, oft genügt hier ein leeres steps-Array.
+- note: in der Regel leeres steps-Array, außer der Text beschreibt selbst mehrere klare Schritte.
+Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passen. Keine erfundenen Fakten, keine Wiederholung des Titels als Schritt. Lieber ein leeres Array als unpassende/erzwungene Schritte.
 - Bekannte Maschinen (Auszug): ${machineHintList || 'keine'}.`;
 
         async function callGroq(model) {
@@ -515,7 +562,7 @@ Regeln:
             return;
         }
 
-        const typeLabels = { note: 'Interne Notiz', call: 'Telefonat', appointment: 'Termin / Besuch', repair: 'Reparatur', maintenance: 'Wartung', offer: 'Angebot', order: 'Bestellung', complaint: 'Reklamation', other: 'Sonstiges' };
+        const typeLabels = { email_incoming: 'E-Mail Eingang', email_outgoing: 'E-Mail Ausgang', note: 'Interne Notiz', call: 'Telefonat', appointment: 'Termin / Besuch', repair: 'Reparatur', maintenance: 'Wartung', offer: 'Angebot', order: 'Bestellung', complaint: 'Reklamation', other: 'Sonstiges' };
         const typeOptions = (sel) => Object.entries(typeLabels).map(([v, l]) =>
             `<option value="${v}"${v === sel ? ' selected' : ''}>${l}</option>`).join('');
 
@@ -614,7 +661,23 @@ Regeln:
                         <div style="font-size:0.72rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">👤 Zuständig (Mehrfachauswahl)</div>
                         ${assigneeControl(`aicap-asg-v-${i}`, vUserId ? [vUserId] : [])}
                     </div>
-                    <input type="text" class="ai-cap-remark glass-form-input" value="${escapeHtml(v.remark || '')}" placeholder="Bemerkung / Status-Text (optional)" style="width:100%; box-sizing:border-box; font-size:0.9rem;">
+                    ${(v.sender || v.recipient) ? `
+                    <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
+                        <input type="text" class="ai-cap-sender glass-form-input" value="${escapeHtml(v.sender || '')}" placeholder="Absender (Von)" style="flex:1; box-sizing:border-box; font-size:0.85rem;">
+                        <input type="text" class="ai-cap-recipient glass-form-input" value="${escapeHtml(v.recipient || '')}" placeholder="Empfänger (An)" style="flex:1; box-sizing:border-box; font-size:0.85rem;">
+                    </div>
+                    <textarea class="ai-cap-remark glass-form-input" placeholder="Mail Inhalt" style="width:100%; box-sizing:border-box; font-size:0.88rem; height:90px; resize:vertical; margin-bottom:0.6rem;">${escapeHtml(v.remark || '')}</textarea>` : `
+                    <input type="text" class="ai-cap-remark glass-form-input" value="${escapeHtml(v.remark || '')}" placeholder="Bemerkung (optional)" style="width:100%; box-sizing:border-box; font-size:0.9rem; margin-bottom:0.6rem;">`}
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                        <div style="font-size:0.72rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px;">Schritte${Array.isArray(v.steps) && v.steps.length ? ' <span style="color:#fbbf24; font-weight:800;">💡 von der KI vorgeschlagen – prüfen</span>' : ''}</div>
+                        ${v._fromMsg ? `<button type="button" id="aicap-proc-${i}-suggest-btn" onclick="window.aiCapSuggestStepsForCard(${i})" style="display:inline-flex; align-items:center; gap:5px; background:rgba(139,92,246,0.15); color:#a78bfa; border:1px solid rgba(139,92,246,0.4); border-radius:8px; padding:5px 10px; font-size:0.75rem; font-weight:700; cursor:pointer;">
+                            <span>✨</span> Schritte vorschlagen
+                        </button>` : ''}
+                    </div>
+                    <div id="aicap-proc-${i}-steps-list" class="ai-cap-proc-steps-list" style="display:flex; flex-direction:column; gap:6px;"></div>
+                    <button type="button" onclick="window.addProcessStep('aicap-proc-${i}')" style="margin-top:8px; display:inline-flex; align-items:center; gap:6px; background:rgba(52,211,153,0.12); color:#34d399; border:1px solid rgba(52,211,153,0.35); border-radius:9px; padding:7px 12px; font-size:0.8rem; font-weight:700; cursor:pointer;">
+                        + Schritt hinzufügen
+                    </button>
                 </div>`;
             });
         }
@@ -622,6 +685,19 @@ Regeln:
         prev.style.display = 'block';
         prev.innerHTML = html;
         if (prevAct) prevAct.style.display = 'flex';
+
+        // Schritte-Editor je Vorgangs-Karte initialisieren (nutzt die globalen Schritte-Funktionen aus index.html)
+        if (typeof window.renderProcessSteps === 'function') {
+            window.processSteps = window.processSteps || {};
+            vorgaenge.forEach((v, i) => {
+                const prefix = `aicap-proc-${i}`;
+                window.processSteps[prefix] = (Array.isArray(v.steps) ? v.steps : [])
+                    .map(txt => (typeof txt === 'string' ? txt : (txt && (txt.title || txt.text)) || ''))
+                    .filter(t => t && t.trim())
+                    .map(t => ({ id: 'aicst_' + Math.random().toString(36).slice(2, 9), text: t, done: false, created_at: null, created_by: null, done_at: null, done_by: null }));
+                window.renderProcessSteps(prefix);
+            });
+        }
 
         // Bei Maschinenwechsel: Warnung ausblenden + Ziel-Auswahl (vorhandene Aufgaben/Vorgänge) neu aufbauen
         prev.querySelectorAll('.ai-cap-card').forEach(card => {
@@ -793,12 +869,22 @@ Regeln:
                 } else {
                     const type = card.querySelector('.ai-cap-type')?.value || 'other';
                     const remark = (card.querySelector('.ai-cap-remark')?.value || '').trim() || null;
+                    const sender = (card.querySelector('.ai-cap-sender')?.value || '').trim() || null;
+                    const recipient = (card.querySelector('.ai-cap-recipient')?.value || '').trim() || null;
                     const target = card.querySelector('.ai-cap-proc-target')?.value || 'new';
 
+                    // Vom Schritte-Editor der Karte übernehmen (Nutzer kann Vorschläge geprüft/geändert/entfernt haben)
+                    const stepsPrefix = `aicap-proc-${card.dataset.index}`;
+                    const creatorName = window.activeUser?.name || window.currentUser?.name || null;
+                    const nowIso = new Date().toISOString();
+                    const editedSteps = (window.processSteps?.[stepsPrefix] || [])
+                        .filter(s => (s.text || '').trim())
+                        .map(s => ({ id: s.id, text: s.text.trim(), done: false, created_at: nowIso, created_by: creatorName, done_at: null, done_by: null }));
+
                     if (target !== 'new') {
-                        // Status an vorhandenen Vorgang anhängen (status_log)
+                        // Status an vorhandenen Vorgang anhängen (status_log) + Schritte ergänzen
                         const { data: cur, error: readErr } = await window.supabaseClient
-                            .from('internal_processes').select('status_log, assigned_users').eq('id', target).single();
+                            .from('internal_processes').select('status_log, assigned_users, steps').eq('id', target).single();
                         if (readErr) throw readErr;
                         const entry = {
                             text: remark ? `${title} — ${remark}` : title,
@@ -816,6 +902,12 @@ Regeln:
                             assignedArr.forEach(id => { if (!curUStr.includes(String(id))) { curU.push(id); changedU = true; } });
                             if (changedU) upd.assigned_users = curU;
                         }
+                        if (editedSteps.length) {
+                            const curSteps = Array.isArray(cur?.steps) ? cur.steps : [];
+                            const curTexts = curSteps.map(s => (s.text || '').trim().toLowerCase());
+                            const toAppend = editedSteps.filter(s => !curTexts.includes(s.text.toLowerCase()));
+                            if (toAppend.length) upd.steps = [...curSteps, ...toAppend];
+                        }
                         const { error: upErr } = await window.supabaseClient
                             .from('internal_processes').update(upd).eq('id', target);
                         if (upErr) throw upErr;
@@ -824,8 +916,8 @@ Regeln:
                         const { error } = await window.supabaseClient.from('internal_processes').insert([{
                             title, process_type: type, process_date: new Date().toISOString(),
                             machine_id: machineId, workshop_order_number: null, status: 'offen',
-                            remark, assigned_users: assignedArr,
-                            user_id: window.currentUser?.id || window.activeUser?.id || null
+                            remark, sender, recipient, assigned_users: assignedArr, steps: editedSteps,
+                            user_id: window.currentUser?.id || null
                         }]);
                         if (error) throw error;
                         createdProcesses++;
@@ -849,6 +941,528 @@ Regeln:
         } finally {
             if (saveBtn) { saveBtn.disabled = false; saveBtn.innerHTML = '<span>💾</span> Ausgewählte anlegen'; }
         }
+    };
+
+    // ==========================================
+    // KI-ERFASSUNG FÜR SERVICEBERICHTE
+    // ==========================================
+    // Freitext -> KI -> Maschine, Datum (von/bis), Arbeiten, Materialien.
+    // Vorschau prüfbar/editierbar, dann Übernahme in den bestehenden
+    // Servicebericht-Modal inkl. automatischer Anfahrt/Arbeitszeit/Abfahrt-Zeilen
+    // je Tag im Datumsbereich.
+    let lastSrResult = null;
+
+    function ensureSrModal() {
+        let modal = document.getElementById('ai-sr-modal');
+        if (modal) return modal;
+
+        modal = document.createElement('div');
+        modal.id = 'ai-sr-modal';
+        modal.className = 'modal-backdrop hidden';
+        modal.style.cssText = 'z-index: 1400; align-items: center; justify-content: center;';
+        modal.innerHTML = `
+            <div class="modal-content glass-card" style="max-width: 760px; width: 96%; padding: 1.75rem; display: flex; flex-direction: column; max-height: 92vh; border: 1px solid rgba(255,255,255,0.12);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-shrink:0;">
+                    <h2 style="margin:0; font-size:1.35rem; color:#fff; display:flex; align-items:center; gap:10px;">
+                        <span style="font-size:1.4rem;">✨</span> Servicebericht per KI
+                    </h2>
+                    <button class="btn-close-modal" onclick="window.closeAiServiceReportModal()" style="background:none;border:none;color:#fff;font-size:1.6rem;cursor:pointer;line-height:1;">&times;</button>
+                </div>
+
+                <div id="ai-sr-input-area" style="flex-shrink:0;">
+                    <p style="color:rgba(255,255,255,0.55); font-size:0.85rem; margin:0 0 0.75rem 0; line-height:1.5;">
+                        Beschreibe frei den Einsatz: Maschine, Datum (bzw. Zeitraum), durchgeführte Arbeiten und verwendete Materialien. Die KI trägt das strukturiert vor — du prüfst alles, bevor der Bericht angelegt wird.
+                    </p>
+                    <div style="display:flex; gap:0.75rem; align-items:flex-start;">
+                        <textarea id="ai-sr-text" class="glass-form-input" rows="7" placeholder="z.B. Am 14.03. bis 15.03. bei der JT 580 #4230 Wartung durchgeführt: Ölwechsel, Luftfilter getauscht, Riemen kontrolliert. Verwendet: 2x Ölfilter, 10L Öl."
+                            style="flex:1; min-width:0; box-sizing:border-box; resize:vertical; font-size:0.95rem;"></textarea>
+                        <div style="flex:0 0 170px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:0.65rem 0.75rem; align-self:stretch;">
+                            <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:rgba(255,255,255,0.4); margin-bottom:6px;">Tipps</div>
+                            <ul style="margin:0; padding-left:1.05rem; font-size:0.78rem; color:rgba(255,255,255,0.6); line-height:1.65;">
+                                <li>Maschine</li>
+                                <li>Mitarbeiter</li>
+                                <li>Datum</li>
+                                <li>Arbeiten</li>
+                                <li>Material</li>
+                                <li>Beschreibung Einsatz / Beschreibung Fehler</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div style="display:flex; gap:0.6rem; margin-top:0.9rem;">
+                        <button onclick="window.closeAiServiceReportModal()" class="btn-modal-base btn-modal-cancel" style="flex:0 0 auto;">Abbrechen</button>
+                        <button id="ai-sr-run-btn" onclick="window.runAiServiceReportAnalysis()" class="btn-modal-base btn-modal-save" style="flex:1; gap:8px;">
+                            <span>✨</span> Analysieren
+                        </button>
+                    </div>
+                </div>
+
+                <div id="ai-sr-status" style="display:none; text-align:center; color:#60a5fa; padding:1.5rem 0; font-weight:600;"></div>
+
+                <div id="ai-sr-preview" style="display:none; overflow-y:auto; margin-top:0.5rem; flex:1 1 auto;"></div>
+
+                <div id="ai-sr-preview-actions" style="display:none; gap:0.6rem; margin-top:1rem; flex-shrink:0;">
+                    <button onclick="window.resetAiServiceReportPreview()" class="btn-modal-base btn-modal-cancel" style="flex:0 0 auto;">Zurück</button>
+                    <button onclick="window.applyAiServiceReport()" class="btn-modal-base btn-modal-save" style="flex:1; gap:8px;">
+                        <span>📄</span> Bericht übernehmen &amp; öffnen
+                    </button>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+        return modal;
+    }
+
+    window.openAiServiceReportModal = function () {
+        const apiKey = localStorage.getItem('groq_api_key');
+        if (!apiKey) { alert('Bitte zuerst einen Groq API-Key in den Einstellungen hinterlegen (wie bei der Buchhaltung).'); return; }
+        const modal = ensureSrModal();
+        window.resetAiServiceReportPreview();
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        requestAnimationFrame(() => modal.classList.add('show'));
+    };
+
+    window.closeAiServiceReportModal = function () {
+        const modal = document.getElementById('ai-sr-modal');
+        if (!modal) return;
+        modal.classList.remove('show');
+        setTimeout(() => { modal.classList.add('hidden'); modal.style.display = 'none'; }, 250);
+    };
+
+    window.resetAiServiceReportPreview = function () {
+        lastSrResult = null;
+        const inp = document.getElementById('ai-sr-input-area');
+        const status = document.getElementById('ai-sr-status');
+        const prev = document.getElementById('ai-sr-preview');
+        const prevAct = document.getElementById('ai-sr-preview-actions');
+        if (inp) inp.style.display = 'block';
+        if (status) status.style.display = 'none';
+        if (prev) { prev.style.display = 'none'; prev.innerHTML = ''; }
+        if (prevAct) prevAct.style.display = 'none';
+    };
+
+    window.runAiServiceReportAnalysis = async function () {
+        const text = (document.getElementById('ai-sr-text')?.value || '').trim();
+        if (!text) { alert('Bitte zuerst etwas eingeben.'); return; }
+
+        const apiKey = localStorage.getItem('groq_api_key');
+        if (!apiKey) { alert('Bitte zuerst einen Groq API-Key in den Einstellungen hinterlegen.'); return; }
+
+        const inp = document.getElementById('ai-sr-input-area');
+        const status = document.getElementById('ai-sr-status');
+        const runBtn = document.getElementById('ai-sr-run-btn');
+        if (runBtn) { runBtn.disabled = true; }
+        if (inp) inp.style.display = 'none';
+        if (status) { status.style.display = 'block'; status.textContent = 'KI analysiert deine Eingabe...'; }
+
+        const machineHintList = (window.machineList || [])
+            .map(m => [m.manufacturer, m.name, m.serial].filter(Boolean).join(' '))
+            .filter(Boolean).slice(0, 60).join('; ');
+
+        const userNames = (window.userList || []).map(u => u.name).filter(Boolean).slice(0, 40).join('; ');
+
+        const todayIso = new Date().toISOString().split('T')[0];
+
+        const systemPrompt = `Du bist ein Assistent für eine Maschinen-Service-Firma. Wandle die folgende freie Beschreibung eines Service-Einsatzes in strukturierte Daten um und antworte AUSSCHLIESSLICH mit einem JSON-Objekt (Deutsch), ohne Erklärtext.
+
+Heutiges Datum (falls relative Angaben wie "heute"/"gestern" vorkommen): ${todayIso}.
+
+Schema:
+{
+  "machine_hint": "Maschinenname/Seriennummer falls genannt, sonst leer",
+  "date_start": "Datum im Format YYYY-MM-DD, falls genannt, sonst leer",
+  "date_end": "Datum im Format YYYY-MM-DD, NUR falls ein Zeitraum über mehrere Tage genannt wird, sonst leer",
+  "assignee_hint": "Vor- oder Nachname des zuständigen Technikers/Mitarbeiters, falls genannt, sonst leer",
+  "beschreibung": "ausformulierte Fehlerbeschreibung / Kurzbeschreibung des Einsatzes, in ganzen Sätzen",
+  "arbeiten": [ "kurze Beschreibung einer durchgeführten Arbeit" ],
+  "materialien": [ { "bezeichnung": "Material/Ersatzteil", "menge": "z.B. 2 Stk oder 10L, sonst leer" } ]
+}
+
+Regeln:
+- arbeiten: JEDE einzeln genannte durchgeführte Tätigkeit als eigener kurzer Eintrag (z.B. "Ölwechsel durchgeführt", "Luftfilter getauscht"). Nichts erfinden, nur was im Text steht. Korrigiere Rechtschreibfehler, Bedeutung unverändert.
+- materialien: nur tatsächlich genannte Materialien/Ersatzteile mit Menge falls angegeben, sonst leeres Feld "menge". Keine Materialien erfinden.
+- assignee_hint: nur setzen, wenn im Text ein Name als ausführender/zuständiger Techniker erkennbar ist (z.B. "Ich war bei...", "Max hat ... erledigt", "durchgeführt von ..."). Namen NICHT erfinden.
+- beschreibung: Formuliere aus dem gesamten Eingabetext einen zusammenhängenden, sachlichen Fließtext für die "Fehlerbeschreibung / Kurzbeschreibung Einsatz" eines Servicebericht-Formulars — deutlich ausführlicher als die reine Stichpunktliste der "arbeiten", aber NUR basierend auf tatsächlich genannten Informationen (Symptom/Grund des Einsatzes, was festgestellt wurde, was unternommen wurde). Keine Fakten, Zahlen oder Ursachen erfinden, die nicht im Text stehen. Rechtschreibung korrigieren, professioneller Tonfall.
+- ZAHLEN und SERIENNUMMERN NIEMALS ändern — exakt übernehmen.
+- Wenn kein Datum genannt ist, date_start und date_end leer lassen (nicht raten, nicht heutiges Datum einsetzen).
+- Wenn nur EIN Tag genannt ist, date_end leer lassen.
+- machine_hint nicht erfinden, wenn keine Maschine genannt ist.
+- Bekannte Maschinen (Auszug): ${machineHintList || 'keine'}.
+- Bekannte Mitarbeiter (für assignee_hint, exakt so schreiben): ${userNames || 'keine'}.`;
+
+        try {
+            const chosenModel = groqModel();
+            async function callGroq(model) {
+                return fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                    body: JSON.stringify({
+                        model,
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: text }
+                        ],
+                        temperature: 0.2,
+                        response_format: { type: 'json_object' }
+                    })
+                });
+            }
+
+            let response = await callGroq(chosenModel);
+            if (!response.ok && chosenModel !== GROQ_FALLBACK_MODEL) {
+                let emsg = '';
+                try { const e = await response.clone().json(); emsg = (e.error?.message || '') + (e.error?.code || ''); } catch (_) {}
+                if (/model|decommission|not found|does not exist|invalid/i.test(emsg) || response.status === 404 || response.status === 400) {
+                    response = await callGroq(GROQ_FALLBACK_MODEL);
+                }
+            }
+            if (!response.ok) {
+                const errBody = await response.text();
+                throw new Error(`Groq-API Fehler (${response.status}): ${errBody.slice(0, 200)}`);
+            }
+            const data = await response.json();
+            const content = data.choices?.[0]?.message?.content || '{}';
+            const parsed = JSON.parse(content);
+
+            lastSrResult = {
+                machine_hint: parsed.machine_hint || '',
+                date_start: /^\d{4}-\d{2}-\d{2}$/.test(parsed.date_start || '') ? parsed.date_start : '',
+                date_end: /^\d{4}-\d{2}-\d{2}$/.test(parsed.date_end || '') ? parsed.date_end : '',
+                assignee_hint: parsed.assignee_hint || '',
+                beschreibung: (parsed.beschreibung || '').trim(),
+                arbeiten: Array.isArray(parsed.arbeiten) ? parsed.arbeiten.filter(a => typeof a === 'string' && a.trim()) : [],
+                materialien: Array.isArray(parsed.materialien)
+                    ? parsed.materialien.filter(m => m && (m.bezeichnung || '').trim()).map(m => ({ bezeichnung: m.bezeichnung.trim(), menge: (m.menge || '').trim() }))
+                    : []
+            };
+            renderSrPreview();
+        } catch (err) {
+            console.error('KI-Servicebericht-Analyse fehlgeschlagen:', err);
+            alert('Fehler bei der KI-Analyse: ' + (err.message || err));
+            window.resetAiServiceReportPreview();
+        } finally {
+            if (runBtn) runBtn.disabled = false;
+            if (status) status.style.display = 'none';
+        }
+    };
+
+    function renderSrPreview() {
+        const prev = document.getElementById('ai-sr-preview');
+        const prevAct = document.getElementById('ai-sr-preview-actions');
+        if (!prev || !lastSrResult) return;
+        const r = lastSrResult;
+
+        const mId = matchMachineBySerial(r.machine_hint) || matchMachineId(r.machine_hint);
+        const aUserId = matchUserId(r.assignee_hint);
+
+        let html = `
+            <div style="margin-bottom:0.75rem;">
+                <div style="font-size:0.72rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Maschine</div>
+                <select id="ai-sr-machine" class="glass-form-input" style="width:100%; box-sizing:border-box;">${machineOptions(mId)}</select>
+            </div>
+            <div style="margin-bottom:0.75rem;">
+                <div style="font-size:0.72rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">👤 Zuständig (Mehrfachauswahl)</div>
+                ${assigneeControl('ai-sr-assignee', aUserId ? [aUserId] : [])}
+            </div>
+            <div style="display:flex; gap:0.6rem; margin-bottom:0.75rem;">
+                <div style="flex:1;">
+                    <div style="font-size:0.72rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Datum (von)</div>
+                    <input type="date" id="ai-sr-date-start" class="glass-form-input" value="${escapeHtml(r.date_start)}" style="width:100%; box-sizing:border-box;">
+                </div>
+                <div style="flex:1;">
+                    <div style="font-size:0.72rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Datum (bis, optional)</div>
+                    <input type="date" id="ai-sr-date-end" class="glass-form-input" value="${escapeHtml(r.date_end)}" style="width:100%; box-sizing:border-box;">
+                </div>
+            </div>
+            <div style="font-size:0.72rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Fehlerbeschreibung / Kurzbeschreibung Einsatz</div>
+            <textarea id="ai-sr-beschreibung" class="glass-form-input" placeholder="Wird von der KI aus deiner Eingabe formuliert..." style="width:100%; box-sizing:border-box; font-size:0.9rem; height:100px; resize:vertical; margin-bottom:0.75rem;">${escapeHtml(r.beschreibung || '')}</textarea>
+            <div style="font-size:0.72rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Durchgeführte Arbeiten</div>
+            <div id="ai-sr-arbeiten-list" style="display:flex; flex-direction:column; gap:6px; margin-bottom:6px;">
+                ${r.arbeiten.map(a => srArbeitRow(a)).join('')}
+            </div>
+            <button type="button" onclick="window.aiSrAddArbeit()" style="margin-bottom:1rem; display:inline-flex; align-items:center; gap:6px; background:rgba(52,211,153,0.12); color:#34d399; border:1px solid rgba(52,211,153,0.35); border-radius:9px; padding:7px 12px; font-size:0.8rem; font-weight:700; cursor:pointer;">
+                + Arbeit hinzufügen
+            </button>
+            <div style="font-size:0.72rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">Materialien</div>
+            <div id="ai-sr-materialien-list" style="display:flex; flex-direction:column; gap:6px; margin-bottom:6px;">
+                ${r.materialien.map(m => srMaterialRow(m)).join('')}
+            </div>
+            <button type="button" onclick="window.aiSrAddMaterial()" style="display:inline-flex; align-items:center; gap:6px; background:rgba(52,211,153,0.12); color:#34d399; border:1px solid rgba(52,211,153,0.35); border-radius:9px; padding:7px 12px; font-size:0.8rem; font-weight:700; cursor:pointer;">
+                + Material hinzufügen
+            </button>`;
+
+        prev.innerHTML = html;
+        prev.style.display = 'block';
+        if (prevAct) prevAct.style.display = 'flex';
+        const inp = document.getElementById('ai-sr-input-area');
+        if (inp) inp.style.display = 'none';
+    }
+
+    function srArbeitRow(text) {
+        return `<div class="ai-sr-arbeit-row" style="display:flex; gap:6px; align-items:center;">
+            <input type="text" class="ai-sr-arbeit glass-form-input" value="${escapeHtml(text)}" placeholder="z.B. Ölwechsel durchgeführt" style="flex:1; box-sizing:border-box; font-size:0.88rem;">
+            <button type="button" onclick="this.closest('.ai-sr-arbeit-row').remove()" title="Entfernen" style="flex:0 0 auto; width:28px; height:28px; border-radius:7px; border:1px solid rgba(248,113,113,0.4); background:rgba(248,113,113,0.12); color:#f87171; cursor:pointer; font-size:1rem; line-height:1;">×</button>
+        </div>`;
+    }
+
+    function srMaterialRow(m) {
+        const bez = m ? m.bezeichnung : '';
+        const menge = m ? m.menge : '';
+        return `<div class="ai-sr-material-row" style="display:flex; gap:6px; align-items:center;">
+            <input type="text" class="ai-sr-material-desc glass-form-input" value="${escapeHtml(bez || '')}" placeholder="z.B. Ölfilter" style="flex:2; box-sizing:border-box; font-size:0.88rem;">
+            <input type="text" class="ai-sr-material-qty glass-form-input" value="${escapeHtml(menge || '')}" placeholder="Menge" style="flex:1; box-sizing:border-box; font-size:0.88rem;">
+            <button type="button" onclick="this.closest('.ai-sr-material-row').remove()" title="Entfernen" style="flex:0 0 auto; width:28px; height:28px; border-radius:7px; border:1px solid rgba(248,113,113,0.4); background:rgba(248,113,113,0.12); color:#f87171; cursor:pointer; font-size:1rem; line-height:1;">×</button>
+        </div>`;
+    }
+
+    window.aiSrAddArbeit = function () {
+        const list = document.getElementById('ai-sr-arbeiten-list');
+        if (!list) return;
+        list.insertAdjacentHTML('beforeend', srArbeitRow(''));
+        const inputs = list.querySelectorAll('.ai-sr-arbeit');
+        if (inputs.length) inputs[inputs.length - 1].focus();
+    };
+
+    window.aiSrAddMaterial = function () {
+        const list = document.getElementById('ai-sr-materialien-list');
+        if (!list) return;
+        list.insertAdjacentHTML('beforeend', srMaterialRow(null));
+        const inputs = list.querySelectorAll('.ai-sr-material-desc');
+        if (inputs.length) inputs[inputs.length - 1].focus();
+    };
+
+    // Erzeugt je Tag im Datumsbereich automatisch 1x Anfahrt, 1x Arbeitszeit, 1x Abfahrt.
+    function generateWorkLogForDateRange(dateStart, dateEnd) {
+        if (!dateStart || typeof window.addWorkLogTableRow !== 'function') return;
+        const days = [];
+        const start = new Date(dateStart + 'T00:00:00');
+        const end = dateEnd ? new Date(dateEnd + 'T00:00:00') : start;
+        if (isNaN(start.getTime())) return;
+        const cursor = new Date(start);
+        let guard = 0;
+        while (cursor <= end && guard < 60) {
+            days.push(cursor.toISOString().split('T')[0]);
+            cursor.setDate(cursor.getDate() + 1);
+            guard++;
+        }
+        if (days.length === 0) days.push(dateStart);
+        days.forEach(day => {
+            window.addWorkLogTableRow({ datum: day, typ: 'Anfahrt' });
+            window.addWorkLogTableRow({ datum: day, typ: 'Arbeitszeit' });
+            window.addWorkLogTableRow({ datum: day, typ: 'Abfahrt' });
+        });
+        if (typeof window.sortWorkLogTable === 'function') window.sortWorkLogTable();
+    }
+
+    window.applyAiServiceReport = function () {
+        const machineSel = document.getElementById('ai-sr-machine');
+        const dateStart = document.getElementById('ai-sr-date-start')?.value || '';
+        const dateEnd = document.getElementById('ai-sr-date-end')?.value || '';
+        const beschreibung = (document.getElementById('ai-sr-beschreibung')?.value || '').trim();
+        const arbeitenTexts = Array.from(document.querySelectorAll('.ai-sr-arbeit'))
+            .map(el => el.value.trim()).filter(Boolean);
+        const materialRows = Array.from(document.querySelectorAll('.ai-sr-material-row'))
+            .map(row => ({
+                desc: row.querySelector('.ai-sr-material-desc')?.value.trim() || '',
+                qty: row.querySelector('.ai-sr-material-qty')?.value.trim() || ''
+            }))
+            .filter(m => m.desc);
+
+        const machineId = machineSel && machineSel.value ? parseInt(machineSel.value) : null;
+
+        let assigneeIds = [];
+        const assigneeWrap = document.getElementById('ai-sr-assignee');
+        if (assigneeWrap) {
+            try { assigneeIds = JSON.parse(assigneeWrap.dataset.selected || '[]'); } catch (e) { assigneeIds = []; }
+        }
+
+        window.closeAiServiceReportModal();
+
+        if (typeof window.openServiceberichtModal !== 'function') {
+            alert('Servicebericht-Modal ist nicht verfügbar.');
+            return;
+        }
+        window.openServiceberichtModal(null);
+
+        setTimeout(() => {
+            if (machineId) {
+                const m = (window.machineList || []).find(x => x.id === machineId);
+                if (m && typeof window.selectServiceMachine === 'function') {
+                    const cat = (window.categoryList || []).find(c => c.id === m.category_id);
+                    window.selectServiceMachine(m.id, m.manufacturer, m.name, m.serial, m.image_url, cat ? cat.name : '', m.year);
+                }
+            }
+
+            const dsEl = document.getElementById('service-date-start');
+            const deEl = document.getElementById('service-date-end');
+            if (dsEl) dsEl.value = dateStart;
+            if (deEl) deEl.value = dateEnd;
+
+            const descEl = document.getElementById('service-description');
+            if (descEl && beschreibung) descEl.value = beschreibung;
+
+            if (assigneeIds.length && typeof window.toggleTechnician === 'function') {
+                assigneeIds.forEach(id => window.toggleTechnician(id));
+            }
+
+            arbeitenTexts.forEach(t => {
+                if (typeof window.addTasksTableRow === 'function') window.addTasksTableRow({ task: t, completed: false });
+            });
+            materialRows.forEach(m => {
+                if (typeof window.addMaterialsTableRow === 'function') window.addMaterialsTableRow({ description: m.desc, quantity: m.qty });
+            });
+
+            if (dateStart) generateWorkLogForDateRange(dateStart, dateEnd);
+        }, 80);
+    };
+
+    // ==========================================
+    // .MSG IMPORT DIREKT IN DER KI-ERFASSUNG
+    // ==========================================
+    // Eine .msg-Datei wird NICHT von der KI klassifiziert (keine Aufgabe/Vorgang-
+    // Entscheidung nötig) — es ist immer klar ein Vorgang, mit allen Feldern direkt
+    // aus der Mail. Optional (best effort) schlägt die KI dazu passende Schritte vor.
+    window.handleAiCaptureMsgDrop = function (event) {
+        event.preventDefault();
+        event.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+        event.currentTarget.style.background = 'transparent';
+        const file = event.dataTransfer.files && event.dataTransfer.files[0];
+        if (file) window.processAiCaptureMsgFile(file);
+    };
+
+    window.handleAiCaptureMsgSelect = function (event) {
+        const file = event.target.files && event.target.files[0];
+        if (file) window.processAiCaptureMsgFile(file);
+        event.target.value = '';
+    };
+
+    // Schritte-Vorschlag NACH dem Import einer Mail-Vorlage — erst wenn der Nutzer
+    // explizit klickt, nutzt aktuellen (ggf. bearbeiteten) Titel/Text der Karte.
+    window.aiCapSuggestStepsForCard = async function (i) {
+        const card = document.querySelector(`.ai-cap-card[data-kind="process"][data-index="${i}"]`);
+        if (!card) return;
+        const apiKey = localStorage.getItem('groq_api_key');
+        if (!apiKey) { alert('Bitte zuerst einen Groq API-Key in den Einstellungen hinterlegen.'); return; }
+
+        const title = card.querySelector('.ai-cap-title')?.value || '';
+        const body = card.querySelector('.ai-cap-remark')?.value || '';
+        if (!body.trim() && !title.trim()) { alert('Kein Text vorhanden, aus dem Schritte abgeleitet werden könnten.'); return; }
+
+        const btn = document.getElementById(`aicap-proc-${i}-suggest-btn`);
+        if (btn) { btn.disabled = true; btn.innerHTML = '<span>⏳</span> Ermittle...'; }
+
+        try {
+            const stepsPrompt = `Du bekommst Betreff und Inhalt einer Geschäfts-E-Mail. Schlage NUR wirklich passende, logische Arbeitsschritte vor, die sich aus dieser Mail ergeben (max. 4). Wenn keine sinnvolle Zerlegung möglich ist, gib ein leeres Array zurück. Erfinde keine Fakten. Antworte AUSSCHLIESSLICH mit JSON: { "steps": ["kurzer Schritt-Text"] }`;
+            const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+                body: JSON.stringify({
+                    model: groqModel(),
+                    messages: [
+                        { role: 'system', content: stepsPrompt },
+                        { role: 'user', content: `Betreff: ${title}\n\n${body}`.slice(0, 6000) }
+                    ],
+                    temperature: 0.2,
+                    response_format: { type: 'json_object' }
+                })
+            });
+            if (!resp.ok) throw new Error(`Groq-API Fehler (${resp.status})`);
+            const data = await resp.json();
+            const parsed = JSON.parse(data.choices?.[0]?.message?.content || '{}');
+            const newSteps = Array.isArray(parsed.steps) ? parsed.steps.filter(s => typeof s === 'string' && s.trim()).slice(0, 4) : [];
+
+            if (newSteps.length === 0) {
+                alert('Die KI hat keine sinnvollen Schritte für diesen Text gefunden.');
+                return;
+            }
+
+            const prefix = `aicap-proc-${i}`;
+            if (!window.processSteps[prefix]) window.processSteps[prefix] = [];
+            const existingTexts = window.processSteps[prefix].map(s => (s.text || '').trim().toLowerCase());
+            newSteps.forEach(t => {
+                if (!existingTexts.includes(t.trim().toLowerCase())) {
+                    window.processSteps[prefix].push({ id: 'aicst_' + Math.random().toString(36).slice(2, 9), text: t.trim(), done: false, created_at: null, created_by: null, done_at: null, done_by: null });
+                }
+            });
+            window.renderProcessSteps(prefix);
+
+            // "von der KI vorgeschlagen"-Hinweis über der Liste nachträglich einblenden
+            const headingWrap = btn.closest('div');
+            const headingEl = headingWrap ? headingWrap.querySelector('div') : null;
+            if (headingEl && !headingEl.querySelector('.ai-cap-suggested-tag')) {
+                headingEl.insertAdjacentHTML('beforeend', ' <span class="ai-cap-suggested-tag" style="color:#fbbf24; font-weight:800;">💡 von der KI vorgeschlagen – prüfen</span>');
+            }
+        } catch (err) {
+            console.error('Schritt-Vorschlag fehlgeschlagen:', err);
+            alert('Fehler bei der KI-Analyse: ' + (err.message || err));
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = '<span>✨</span> Schritte vorschlagen'; }
+        }
+    };
+
+    window.processAiCaptureMsgFile = function (file) {
+        if (!file.name.toLowerCase().endsWith('.msg')) {
+            alert('Bitte eine .msg-Datei auswählen (Outlook-Nachricht).');
+            return;
+        }
+        const MsgReaderClass = window.MSGReaderClass;
+        if (!MsgReaderClass) {
+            alert('MSG-Reader Bibliothek konnte nicht geladen werden.');
+            return;
+        }
+
+        const status = document.getElementById('ai-capture-status');
+        const inp = document.getElementById('ai-capture-input-area');
+        if (inp) inp.style.display = 'none';
+        if (status) { status.style.display = 'block'; status.textContent = 'Lese Mail...'; }
+
+        const reader = new FileReader();
+        reader.onload = async function (e) {
+            try {
+                const msgReader = new MsgReaderClass(e.target.result);
+                const fileData = msgReader.getFileData();
+
+                const subject = fileData.subject || 'Unbenannte Mail';
+                let sender = '';
+                if (fileData.senderName && fileData.senderEmail) sender = `${fileData.senderName} <${fileData.senderEmail}>`;
+                else sender = fileData.senderEmail || fileData.senderName || '';
+
+                const toRecipients = (fileData.recipients || [])
+                    .filter(r => !r.recipType || r.recipType.toLowerCase() === 'to')
+                    .map(r => (r.name && r.email) ? `${r.name} <${r.email}>` : (r.email || r.name))
+                    .filter(Boolean);
+                const recipient = toRecipients.join('; ');
+
+                const body = (fileData.body || '').trim();
+
+                const senderLower = sender.toLowerCase();
+                const processType = (senderLower.includes('meetra') || senderLower.includes('birco') || senderLower.includes('info@') || senderLower.includes('sales@'))
+                    ? 'email_outgoing' : 'email_incoming';
+
+                const vorgang = {
+                    title: subject,
+                    process_type: processType,
+                    machine_hint: '',
+                    assignee_hint: '',
+                    remark: body,
+                    sender,
+                    recipient,
+                    steps: [],
+                    _fromMsg: true
+                };
+
+                // Reines Parsen — KEIN KI-Aufruf. Die Vorlage steht sofort;
+                // Schritte kann die KI danach optional per Klick in der Vorschau vorschlagen.
+                lastResult = { aufgaben: [], vorgaenge: [vorgang] };
+                renderPreview();
+            } catch (err) {
+                console.error('Error parsing .msg file:', err);
+                alert('Fehler beim Lesen der .msg-Datei: ' + err.message);
+                window.resetAiCapture();
+            } finally {
+                if (status) status.style.display = 'none';
+            }
+        };
+        reader.readAsArrayBuffer(file);
     };
 
     console.log('AI Quick Capture geladen.');

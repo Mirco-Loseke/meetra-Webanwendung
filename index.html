@@ -945,20 +945,6 @@
                         </a>
                     </li>
                     <li>
-                        <a href="#workshop" class="nav-link" data-target="workshop">
-                            <!-- Gear + Wrench / Workshop Icon -->
-                            <svg width="24" height="24" viewBox="-10 -10 120 120" fill="none" stroke="currentColor"
-                                stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round">
-                                <path
-                                    d="M43 8h14l3 11a31 31 0 0 1 9 4l10-5 10 10-5 10a31 31 0 0 1 4 9l11 3v14l-11 3a31 31 0 0 1-4 9l5 10-10 10-10-5a31 31 0 0 1-9 4l-3 11H43l-3-11a31 31 0 0 1-9-4l-10 5-10-10 5-10a31 31 0 0 1-4-9L1 57V43l11-3a31 31 0 0 1 4-9L11 21l10-10 10 5a31 31 0 0 1 9-4Z" />
-                                <circle cx="50" cy="50" r="22" />
-                                <path
-                                    d="M38 34a12 12 0 0 1 12 12 12 12 0 0 1-2.5 7.5L60 66a3 3 0 0 1 0 4.2 3 3 0 0 1-4.2 0L43.5 57.5A12 12 0 0 1 38 58a12 12 0 0 1-12-12 12 12 0 0 1 6-10.4l5.5 5.5 3.4-3.4-5.5-5.5A12 12 0 0 1 38 34z" />
-                            </svg>
-                            <span>Werkstatt</span>
-                        </a>
-                    </li>
-                    <li>
                         <a href="#service" class="nav-link" data-target="service">
                             <!-- Crossed Tools Icon -->
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" stroke="none">
@@ -1339,11 +1325,9 @@
                             <div class="view-header-left" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                                 <div class="calendar-view-tabs" style="margin-bottom: 0;">
                                     <button class="calendar-tab-btn active" id="btn-view-board"
-                                        onclick="switchTaskView('board')">Board</button>
-                                    <button class="calendar-tab-btn" id="btn-view-list"
-                                        onclick="switchTaskView('list')">Liste</button>
+                                        onclick="window.selectTaskViewTab('board')">Board</button>
                                     <button class="calendar-tab-btn" id="btn-view-vorgaenge"
-                                        onclick="switchTaskView('vorgaenge')">Vorgänge</button>
+                                        onclick="window.selectTaskViewTab('vorgaenge')">Vorgänge</button>
                                 </div>
                                 <div class="calendar-view-tabs" style="margin-bottom: 0;">
                                     <button class="calendar-tab-btn" id="btn-task-user-me"
@@ -1406,25 +1390,6 @@
                         <div class="kanban-column" data-status="completed">
                             <h3 class="column-title">Erledigt <span class="task-count">0</span></h3>
                             <div class="task-list" id="list-completed"></div>
-                        </div>
-                    </div>
-                    <div id="tasks-list" class="hidden">
-                        <div class="glass-card"
-                            style="padding: 0.75rem; background: transparent; border: none; box-shadow: none;">
-                            <table class="task-table" style="border-collapse: separate; border-spacing: 0 10px;">
-                                <thead>
-                                    <tr>
-                                        <th>Aufgabe</th>
-                                        <th style="min-width: 180px;">Maschine</th>
-                                        <th>Beteiligte</th>
-                                        <th>Fortschritt</th>
-                                        <th style="text-align: right;">Aktionen</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="task-table-body">
-                                    <!-- Dynamically populated -->
-                                </tbody>
-                            </table>
                         </div>
                     </div>
                     <!-- Vorgänge (in Aufgaben integriert) -->
@@ -1629,6 +1594,14 @@
                                     </div>
                                 </div>
 
+                                <!-- Workshop Gear Filter Button -->
+                                <button id="btn-filter-workshop" class="btn-workshop-filter" onclick="window.toggleWorkshopFilter()" title="In der Werkstatt filtern">
+                                    <svg width="22" height="22" viewBox="-10 -10 120 120" fill="none" stroke="currentColor" stroke-width="8.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M43 8h14l3 11a31 31 0 0 1 9 4l10-5 10 10-5 10a31 31 0 0 1 4 9l11 3v14l-11 3a31 31 0 0 1-4 9l5 10-10 10-10-5a31 31 0 0 1-9 4l-3 11H43l-3-11a31 31 0 0 1-9-4l-10 5-10-10 5-10a31 31 0 0 1-4-9L1 57V43l11-3a31 31 0 0 1 4-9L11 21l10-10 10 5a31 31 0 0 1 9-4Z" />
+                                        <circle cx="50" cy="50" r="22" />
+                                        <path d="M38 34a12 12 0 0 1 12 12 12 12 0 0 1-2.5 7.5L60 66a3 3 0 0 1 0 4.2 3 3 0 0 1-4.2 0L43.5 57.5A12 12 0 0 1 38 58a12 12 0 0 1-12-12 12 12 0 0 1 6-10.4l5.5 5.5 3.4-3.4-5.5-5.5A12 12 0 0 1 38 34z" />
+                                    </svg>
+                                </button>
 
                                 <button id="add-machine-btn" class="btn-add-bg" onclick="openAddMachineModal()">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1700,6 +1673,11 @@
                                     </div>
                                 </div>
 
+                                <button id="ai-analyze-service-entry-btn" class="btn-add-bg" type="button"
+                                    onclick="window.openAiServiceReportModal()">
+                                    <span>✨</span> KI analysieren
+                                </button>
+
                                 <button id="add-service-entry-btn" class="btn-add-bg"
                                     onclick="openServiceberichtModal()">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1748,26 +1726,6 @@
 
 
 
-
-                <!-- ========================================================= -->
-                <!-- ================== WERKSTATT ============================ -->
-                <!-- ========================================================= -->
-                <section id="workshop" class="view hidden">
-                    <div style="margin-bottom: 2rem;">
-                        <h1 style="display:flex; align-items:center; gap:12px;"><svg width="28" height="28"
-                                viewBox="-10 -10 120 120" fill="none" stroke="currentColor" stroke-width="8.5"
-                                stroke-linecap="round" stroke-linejoin="round">
-                                <path
-                                    d="M43 8h14l3 11a31 31 0 0 1 9 4l10-5 10 10-5 10a31 31 0 0 1 4 9l11 3v14l-11 3a31 31 0 0 1-4 9l5 10-10 10-10-5a31 31 0 0 1-9 4l-3 11H43l-3-11a31 31 0 0 1-9-4l-10 5-10-10 5-10a31 31 0 0 1-4-9L1 57V43l11-3a31 31 0 0 1 4-9L11 21l10-10 10 5a31 31 0 0 1 9-4Z" />
-                                <circle cx="50" cy="50" r="22" />
-                                <path
-                                    d="M38 34a12 12 0 0 1 12 12 12 12 0 0 1-2.5 7.5L60 66a3 3 0 0 1 0 4.2 3 3 0 0 1-4.2 0L43.5 57.5A12 12 0 0 1 38 58a12 12 0 0 1-12-12 12 12 0 0 1 6-10.4l5.5 5.5 3.4-3.4-5.5-5.5A12 12 0 0 1 38 34z" />
-                            </svg>Werkstatt</h1>
-                    </div>
-                    <div id="workshop-machines-container" class="card-grid">
-                        <!-- Machine cards filtered by is_in_workshop will be rendered here -->
-                    </div>
-                </section>
 
                 <!-- ========================================================= -->
                 <!-- ================== PROTOKOLLE =========================== -->
@@ -4304,15 +4262,14 @@
                         window.renderMachines('machine-list-container');
                     }
                 } else if (targetId === 'tasks') {
+                    if (typeof window.switchTaskView === 'function') {
+                        window.switchTaskView('board');
+                    }
                     if (typeof window.fetchTasks === 'function') {
                         window.fetchTasks();
                     }
                     if (typeof window.fetchMachinesForTasks === 'function') {
                         window.fetchMachinesForTasks();
-                    }
-                } else if (targetId === 'workshop') {
-                    if (typeof window.renderMachines === 'function') {
-                        window.renderMachines('workshop-machines-container');
                     }
                 } else if (targetId === 'service') {
                     if (typeof fetchServiceEntries === 'function') {
@@ -5170,7 +5127,7 @@
                         ${dashKpi(overdueList.length, 'Wartung überfällig', '#ef4444', "window.eventsState.statusFilter='overdue'; window.switchView('calendar'); window.switchEventsSubView && window.switchEventsSubView('calendar');", dueSoonList.length + ' fällig in 30 Tagen')}
                         ${dashKpi(openProcs.length, 'Offene Vorgänge', '#f59e0b', "window.switchView('calendar'); window.switchEventsSubView && window.switchEventsSubView('processes');", staleProcs.length + ' länger als 7 Tage')}
                         ${dashKpi(fmtTe(openAngeboteVolume), 'Offene Angebote', '#60a5fa', "window.switchView('listen');", openAngebote.length + ' Angebote')}
-                        ${dashKpi(inWorkshop, 'In der Werkstatt', '#22c55e', "navigateTo('workshop')", machines.length + ' Maschinen gesamt')}
+                        ${dashKpi(inWorkshop, 'In der Werkstatt', '#22c55e', "window.showWorkshopMachinesAndSwitch()", machines.length + ' Maschinen gesamt')}
                         <div class="maint-kpi-tile double-kpi-tile" style="border-left: 4px solid #a78bfa;">
                             <div class="double-kpi-subtile" onclick="window.showAllTasksAndSwitch()">
                                 <div class="maint-kpi-value" style="color: #a78bfa;">${openTasks.length}</div>
@@ -6428,13 +6385,11 @@
                             }
                         }
 
-                        // Always re-render both views to keep them in sync
+                        // Re-render machine list
                         if (typeof window.renderMachines === 'function') {
                             window.renderMachines('machine-list-container');
-                            window.renderMachines('workshop-machines-container');
                         } else if (typeof renderMachines === 'function') {
                             renderMachines('machine-list-container');
-                            renderMachines('workshop-machines-container');
                         } else {
                             // Fallback: force page reload if rendering functions disappeared
                             window.location.reload();
@@ -9659,7 +9614,7 @@
 
                     // Basic Validation
                     if (!categoryId) {
-                        throw new Error('Bitte eine Kategorie wÃ¤hlen.');
+                        throw new Error('Bitte eine Kategorie wählen.');
                     }
                     if (!name) {
                         throw new Error('Bitte eine Typbezeichnung angeben.');
@@ -12329,7 +12284,8 @@
                     procRes,
                     calRes,
                     intakeRes,
-                    acceptanceRes
+                    acceptanceRes,
+                    vorgangRes
                 ] = await Promise.all([
                     // Schlanke Spaltenauswahl für die Zeitleisten-Anzeige — die schweren JSONB-Felder
                     // (work_log, materials) werden hier nicht gebraucht, da das Öffnen zum Bearbeiten
@@ -12340,7 +12296,8 @@
                     window.supabaseClient.from('tasks').select('*').eq('machine_id', machineId),
                     window.supabaseClient.from('calendar_events').select('*').eq('machine_id', machineId),
                     window.supabaseClient.from('intake_protocols').select('*').eq('machine_id', machineId),
-                    window.supabaseClient.from('acceptance_protocols').select('*').eq('machine_id', machineId)
+                    window.supabaseClient.from('acceptance_protocols').select('*').eq('machine_id', machineId),
+                    window.supabaseClient.from('internal_processes').select('id, title, process_date, created_at, steps').eq('machine_id', machineId)
                 ]);
 
                 // Volle Datensätze weiterhin für die Offline-Bearbeitung cachen — bewusst NICHT
@@ -12470,6 +12427,24 @@
                             color: '#ec4899',
                             icon: '✅',
                             itemType: 'acceptance'
+                        });
+                    });
+                }
+
+                if (vorgangRes.data) {
+                    vorgangRes.data.forEach(p => {
+                        const steps = Array.isArray(p.steps) ? p.steps : [];
+                        const stepsDone = steps.filter(s => s.done).length;
+                        historyItems.push({
+                            id: p.id,
+                            machineId: machineId,
+                            date: new Date(p.process_date || p.created_at),
+                            type: 'Vorgang',
+                            title: p.title || 'Vorgang',
+                            description: steps.length ? `Schritte: ${stepsDone}/${steps.length} erledigt` : '',
+                            color: '#818cf8',
+                            icon: '🗂️',
+                            itemType: 'process'
                         });
                     });
                 }
@@ -12626,6 +12601,12 @@
                         actionButtons += `
                                 <button onclick="window.navigateToTask('${item.id}')" class="btn-icon-circular edit" title="Aufgabe öffnen">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                                </button>
+                            `;
+                    } else if (item.itemType === 'process') {
+                        actionButtons += `
+                                <button onclick="window.navigateToProcess('${item.id}')" class="btn-icon-circular edit" title="Vorgang öffnen">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                 </button>
                             `;
                     } else if (item.rawType === 'angebot') {
@@ -12885,6 +12866,29 @@
                 }
             } catch (err) {
                 console.error('Error navigating to task:', err);
+            }
+        };
+
+        window.navigateToProcess = async function (processId) {
+            if (!processId) return;
+            try {
+                window.closeHistoryModal();
+                if (typeof window.switchView === 'function') {
+                    window.switchView('tasks');
+                }
+                if (typeof window.selectTaskViewTab === 'function') {
+                    window.selectTaskViewTab('vorgaenge');
+                } else if (typeof window.switchTaskView === 'function') {
+                    window.switchTaskView('vorgaenge');
+                }
+                if (typeof window.fetchProcesses === 'function') {
+                    await window.fetchProcesses();
+                }
+                if (typeof window.openEditProcessModal === 'function') {
+                    window.openEditProcessModal(processId);
+                }
+            } catch (err) {
+                console.error('Error navigating to process:', err);
             }
         };
 
@@ -14949,7 +14953,7 @@
                 const initials = u.initials || u.name.substring(0, 2).toUpperCase();
                 const color = u.color || '#666';
                 return `
-                        <div onclick="window.toggleProcessTech('${prefix}', ${u.id})"
+                        <div onclick="event.stopPropagation(); window.toggleProcessTech('${prefix}', ${u.id})"
                              style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; cursor: pointer; transition: background 0.15s; background: ${isSelected ? 'rgba(16,185,129,0.12)' : 'transparent'};"
                              onmouseover="if(!${isSelected}) this.style.background='rgba(255,255,255,0.04)'"
                              onmouseout="this.style.background='${isSelected ? 'rgba(16,185,129,0.12)' : 'transparent'}'">
@@ -15122,7 +15126,10 @@
             document.getElementById('edit-process-recipient-input').value = proc.recipient || '';
             document.getElementById('edit-process-status-select').value = proc.status || 'offen';
             document.getElementById('edit-process-body-input').value = proc.description || '';
-            document.getElementById('edit-process-remark-input').value = proc.remark || '';
+            window.processSteps['edit-process'] = Array.isArray(proc.steps)
+                ? proc.steps.map(s => ({ id: s.id || genStepId(), text: s.text || '', done: !!s.done, created_at: s.created_at || null, created_by: s.created_by || null, done_at: s.done_at || null, done_by: s.done_by || null }))
+                : [];
+            window.renderProcessSteps('edit-process');
             window.updateEmailBodyVisibility('edit-process');
 
             // Set up assigned employees
@@ -15130,6 +15137,13 @@
             document.getElementById('edit-process-assigned-users').value = JSON.stringify(window.processAssignedUsers['edit-process']);
             document.getElementById('edit-process-tech-dropdown-panel').style.display = 'none';
             renderProcessTechDropdown('edit-process');
+
+            // Verknuepfter Servicebericht
+            window._editProcessServiceLink = proc.service_entries
+                ? { id: proc.service_entries.id, title: proc.service_entries.title, date: proc.service_entries.date }
+                : null;
+            document.getElementById('edit-process-service-report-select').value = proc.linked_service_report_id || '';
+            window.renderProcessServiceLinkSection();
             
             if (proc.process_date) {
                 const date = new Date(proc.process_date);
@@ -15204,6 +15218,57 @@
             }
         };
 
+        // ── Vorgang <-> Servicebericht Verknuepfung (Muster analog zur
+        // Servicebericht-zu-Servicebericht-Verknuepfung, siehe renderServiceLinkSection).
+        window.renderProcessServiceLinkSection = function() {
+            const display = document.getElementById('edit-process-service-link-display');
+            if (!display) return;
+            const link = window._editProcessServiceLink;
+
+            if (!link) {
+                display.innerHTML = `
+                    <button type="button" class="btn-secondary" onclick="window.openProcessServiceberichtPicker('edit-process')" style="padding:6px 14px; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                        Servicebericht verknüpfen
+                    </button>`;
+                return;
+            }
+
+            const dateStr = link.date ? new Date(link.date).toLocaleDateString('de-DE') : '';
+            display.innerHTML = `
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div onclick="window.jumpToServiceberichtFromProcess(${link.id})" title="Zum Servicebericht springen"
+                        style="cursor:pointer; display:inline-flex; align-items:center; gap:6px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.4); color:var(--color-primary-green); border-radius:20px; padding:6px 12px; font-size:0.85rem; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:80%;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${link.title || 'Servicebericht'}${dateStr ? ` — ${dateStr}` : ''}</span>
+                    </div>
+                    <button type="button" onclick="window.removeProcessServiceLink()" title="Verknüpfung trennen"
+                        style="width:26px; height:26px; padding:0; border-radius:999px; font-size:0.78rem; font-weight:700; cursor:pointer; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#f87171;">✕</button>
+                </div>`;
+        };
+
+        window.selectProcessServiceReport = function(id, title, date) {
+            window._editProcessServiceLink = { id: parseInt(id), title: title || 'Servicebericht', date: date || null };
+            const hidden = document.getElementById('edit-process-service-report-select');
+            if (hidden) hidden.value = id;
+            window.renderProcessServiceLinkSection();
+        };
+
+        window.removeProcessServiceLink = function() {
+            window._editProcessServiceLink = null;
+            const hidden = document.getElementById('edit-process-service-report-select');
+            if (hidden) hidden.value = '';
+            window.renderProcessServiceLinkSection();
+        };
+
+        // Schliesst das Vorgang-Bearbeiten-Modal und springt danach zum verknuepften Servicebericht
+        window.jumpToServiceberichtFromProcess = function(id) {
+            window.closeEditProcessModal();
+            setTimeout(() => {
+                if (typeof window.jumpToServicebericht === 'function') window.jumpToServicebericht(id);
+            }, 320);
+        };
+
         // Zeigt das "E-Mail-Text"-Feld und Absender/Empfänger nur, wenn der Vorgangstyp eine E-Mail ist oder bereits Inhalt importiert wurde
         window.updateEmailBodyVisibility = function(prefix) {
             const typeSelect = document.getElementById(`${prefix}-type-select`);
@@ -15218,6 +15283,244 @@
 
             const senderRecipientGroup = document.getElementById(`${prefix}-sender-recipient-group`);
             if (senderRecipientGroup) senderRecipientGroup.style.display = show ? 'grid' : 'none';
+
+            // "Schritte" gibt es jetzt bei allen Vorgangstypen
+            const stepsGroup = document.getElementById(`${prefix}-steps-group`);
+            if (stepsGroup) stepsGroup.style.display = '';
+        };
+
+        // ==========================================
+        // VORGANGS-SCHRITTE (Checkliste, Drag & Drop)
+        // ==========================================
+        window.processSteps = window.processSteps || {};
+        let procStepDraggedId = null;
+
+        function genStepId() { return 'st_' + Math.random().toString(36).slice(2, 9); }
+
+        function escStepAttr(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+                .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        window.renderProcessSteps = function(prefix) {
+            const list = document.getElementById(`${prefix}-steps-list`);
+            if (!list) return;
+            const steps = window.processSteps[prefix] || [];
+            if (steps.length === 0) {
+                list.innerHTML = `<div style="color:rgba(255,255,255,0.3); font-style:italic; font-size:0.85rem; padding:4px 2px;">Noch keine Schritte – füge den ersten hinzu.</div>`;
+                return;
+            }
+            const fmtDT = (d) => { if (!d) return ''; try { return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' · ' + new Date(d).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } };
+            list.innerHTML = steps.map((s, i) => {
+                const createdMeta = (s.created_by || s.created_at) ? `erstellt${s.created_by ? ` von ${escStepAttr(s.created_by)}` : ''}${s.created_at ? ` am ${fmtDT(s.created_at)}` : ''}` : '';
+                const doneMeta = s.done ? `✓ erledigt${s.done_by ? ` von ${escStepAttr(s.done_by)}` : ''}${s.done_at ? ` am ${fmtDT(s.done_at)}` : ''}` : '';
+                return `
+                <div class="proc-step-row" draggable="true" data-step-id="${s.id}"
+                     ondragstart="window.procStepDragStart(event,'${prefix}','${s.id}')"
+                     ondragover="window.procStepDragOver(event)"
+                     ondrop="window.procStepDrop(event,'${prefix}','${s.id}')"
+                     ondragend="window.procStepDragEnd(event)"
+                     style="display:flex; flex-direction:column; gap:2px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:8px 10px;">
+                    <div style="display:flex; align-items:flex-start; gap:8px;">
+                        <span class="proc-step-drag" title="Ziehen zum Sortieren" style="cursor:grab; color:rgba(255,255,255,0.3); flex-shrink:0; display:flex; align-items:center; margin-top:5px;">
+                            <svg width="10" height="16" viewBox="0 0 8 14" fill="currentColor"><circle cx="2" cy="2" r="1.3"/><circle cx="6" cy="2" r="1.3"/><circle cx="2" cy="7" r="1.3"/><circle cx="6" cy="7" r="1.3"/><circle cx="2" cy="12" r="1.3"/><circle cx="6" cy="12" r="1.3"/></svg>
+                        </span>
+                        <span style="flex-shrink:0; width:26px; height:26px; border-radius:7px; background:rgba(52,211,153,0.15); color:#34d399; font-weight:800; font-size:0.8rem; display:flex; align-items:center; justify-content:center; margin-top:1px;">${i + 1}</span>
+                        <span class="proc-step-editor-check" onclick="window.toggleProcessStepDoneEditor('${prefix}','${s.id}')" title="Abhaken" style="flex-shrink:0; width:22px; height:22px; border-radius:6px; border:2px solid ${s.done ? '#10b981' : 'rgba(255,255,255,0.3)'}; background:${s.done ? '#10b981' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; margin-top:2px;">${s.done ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}</span>
+                        <textarea rows="1" placeholder="Schritt beschreiben..."
+                            oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px'; window.updateProcessStepText('${prefix}','${s.id}', this.value)"
+                            style="flex:1; min-width:0; background:transparent; border:none; color:#fff; font-size:0.9rem; outline:none; resize:none; overflow:hidden; word-break:break-word; white-space:pre-wrap; font-family:inherit; line-height:1.4; padding-top:3px; text-decoration:${s.done ? 'line-through' : 'none'}; opacity:${s.done ? '0.55' : '1'};">${escStepAttr(s.text)}</textarea>
+                        <button type="button" onclick="window.deleteProcessStep('${prefix}','${s.id}')" title="Entfernen"
+                            style="flex-shrink:0; background:none; border:none; color:#ef4444; cursor:pointer; padding:4px; display:flex; align-items:center; margin-top:1px;">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+                    ${(createdMeta || doneMeta) ? `<div style="padding-left:80px; display:flex; flex-wrap:wrap; align-items:center; gap:12px;">
+                        ${createdMeta ? `<span style="font-size:0.6rem; color:rgba(255,255,255,0.35);">${createdMeta}</span>` : ''}
+                        ${doneMeta ? `<span style="font-size:0.6rem; color:rgba(16,185,129,0.6);">${doneMeta}</span>` : ''}
+                    </div>` : ''}
+                </div>`;
+            }).join('');
+            requestAnimationFrame(() => {
+                list.querySelectorAll('textarea').forEach(ta => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; });
+            });
+        };
+
+        window.toggleProcessStepDoneEditor = function(prefix, id) {
+            const arr = window.processSteps[prefix] || [];
+            const s = arr.find(x => x.id === id);
+            if (!s) return;
+            s.done = !s.done;
+            if (s.done) {
+                s.done_at = new Date().toISOString();
+                s.done_by = (window.activeUser?.name) || (window.currentUser?.name) || null;
+            } else {
+                s.done_at = null;
+                s.done_by = null;
+            }
+            window.renderProcessSteps(prefix);
+        };
+
+        window.addProcessStep = function(prefix) {
+            if (!window.processSteps[prefix]) window.processSteps[prefix] = [];
+            const creator = (window.activeUser?.name) || (window.currentUser?.name) || null;
+            window.processSteps[prefix].push({ id: genStepId(), text: '', done: false, created_at: new Date().toISOString(), created_by: creator, done_at: null, done_by: null });
+            window.renderProcessSteps(prefix);
+            const list = document.getElementById(`${prefix}-steps-list`);
+            if (list) {
+                const inputs = list.querySelectorAll('textarea');
+                if (inputs.length) inputs[inputs.length - 1].focus();
+            }
+        };
+
+        window.updateProcessStepText = function(prefix, id, val) {
+            const arr = window.processSteps[prefix] || [];
+            const s = arr.find(x => x.id === id);
+            if (s) s.text = val;
+        };
+
+        window.deleteProcessStep = function(prefix, id) {
+            window.processSteps[prefix] = (window.processSteps[prefix] || []).filter(x => x.id !== id);
+            window.renderProcessSteps(prefix);
+        };
+
+        window.procStepDragStart = function(e, prefix, id) {
+            procStepDraggedId = id;
+            e.dataTransfer.effectAllowed = 'move';
+            e.currentTarget.style.opacity = '0.4';
+        };
+        window.procStepDragEnd = function(e) {
+            e.currentTarget.style.opacity = '1';
+            procStepDraggedId = null;
+        };
+        window.procStepDragOver = function(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        };
+        window.procStepDrop = function(e, prefix, targetId) {
+            e.preventDefault();
+            const arr = window.processSteps[prefix] || [];
+            if (!procStepDraggedId || procStepDraggedId === targetId) return;
+            const from = arr.findIndex(x => x.id === procStepDraggedId);
+            const to = arr.findIndex(x => x.id === targetId);
+            if (from < 0 || to < 0) return;
+            const [moved] = arr.splice(from, 1);
+            arr.splice(to, 0, moved);
+            window.renderProcessSteps(prefix);
+        };
+
+        // Schritt auf der Vorgänge-Karte abhaken (Hover-Popover)
+        window.toggleProcessCardStep = async function(processId, index, event) {
+            if (event) event.stopPropagation();
+            const proc = (window.eventsState.processes || []).find(p => String(p.id) === String(processId));
+            if (!proc || !Array.isArray(proc.steps) || !proc.steps[index]) return;
+            const step = proc.steps[index];
+            step.done = !step.done;
+            if (step.done) {
+                step.done_at = new Date().toISOString();
+                step.done_by = (window.activeUser?.name) || (window.currentUser?.name) || null;
+            } else {
+                step.done_at = null;
+                step.done_by = null;
+            }
+            const done = step.done;
+            // event.currentTarget IST die Checkbox selbst (.proc-step-check) - nicht in ihr suchen, sondern sie direkt anfassen
+            const box = event ? event.currentTarget : null;
+            if (box) {
+                box.style.background = done ? '#10b981' : 'transparent';
+                box.style.borderColor = done ? '#10b981' : 'rgba(255,255,255,0.3)';
+                box.innerHTML = done ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : '';
+                const row = box.closest('.proc-step-crow');
+                if (row) {
+                    const lbl = row.querySelector('.proc-step-label');
+                    if (lbl) {
+                        lbl.style.textDecoration = done ? 'line-through' : 'none';
+                        lbl.style.opacity = done ? '0.5' : '1';
+                    }
+                    const escStep = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    const fmtDay = (d) => { try { return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch (e) { return ''; } };
+                    let metaEl = row.querySelector('.proc-step-meta');
+                    if (done && step.done_at) {
+                        const metaHtml = `✓ ${step.done_by ? escStep(step.done_by) : ''}${step.done_by ? ' · ' : ''}${fmtDay(step.done_at)}`;
+                        if (!metaEl) {
+                            const wrapDiv = lbl ? lbl.parentElement : null;
+                            if (wrapDiv) {
+                                metaEl = document.createElement('div');
+                                metaEl.className = 'proc-step-meta';
+                                metaEl.style.cssText = 'font-size:0.6rem; color:rgba(255,255,255,0.35); margin-top:1px; padding:0 4px;';
+                                wrapDiv.appendChild(metaEl);
+                            }
+                        }
+                        if (metaEl) metaEl.innerHTML = metaHtml;
+                    } else if (metaEl) {
+                        metaEl.remove();
+                    }
+                }
+                const wrap = box.closest('.proc-card-steps');
+                if (wrap) {
+                    const cnt = wrap.querySelector('.proc-steps-trigger-count');
+                    if (cnt) cnt.textContent = `${proc.steps.filter(s => s.done).length}/${proc.steps.length}`;
+                }
+            }
+            try {
+                await window.supabaseClient.from('internal_processes').update({ steps: proc.steps }).eq('id', processId);
+            } catch (e) {
+                console.error('Fehler beim Speichern des Schritts:', e);
+            }
+        };
+
+        // Schritt-Text auf der Karte inline bearbeiten
+        window.updateProcessCardStepText = async function(processId, index, text) {
+            const proc = (window.eventsState.processes || []).find(p => String(p.id) === String(processId));
+            if (!proc || !Array.isArray(proc.steps) || !proc.steps[index]) return;
+            const val = (text || '').trim();
+            if (proc.steps[index].text === val) return;
+            proc.steps[index].text = val;
+            try {
+                await window.supabaseClient.from('internal_processes').update({ steps: proc.steps }).eq('id', processId);
+            } catch (e) {
+                console.error('Fehler beim Speichern des Schritt-Textes:', e);
+            }
+        };
+
+        // Eigenes Fenster nur für Schritte (hinzufügen / löschen / sortieren / bearbeiten)
+        window.stepsModalProcessId = null;
+        window.openProcessStepsModal = function(id) {
+            const proc = (window.eventsState.processes || []).find(p => String(p.id) === String(id));
+            if (!proc) return;
+            window.stepsModalProcessId = id;
+            window.processSteps['steps-modal'] = Array.isArray(proc.steps)
+                ? proc.steps.map(s => ({ id: s.id || genStepId(), text: s.text || '', done: !!s.done, created_at: s.created_at || null, created_by: s.created_by || null, done_at: s.done_at || null, done_by: s.done_by || null }))
+                : [];
+            const sub = document.getElementById('steps-modal-subtitle');
+            if (sub) sub.textContent = proc.title || 'Vorgang';
+            window.renderProcessSteps('steps-modal');
+            const modal = document.getElementById('process-steps-modal');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            requestAnimationFrame(() => modal.classList.add('show'));
+        };
+        window.closeProcessStepsModal = function() {
+            const modal = document.getElementById('process-steps-modal');
+            if (!modal) return;
+            modal.classList.remove('show');
+            setTimeout(() => { modal.classList.add('hidden'); modal.style.display = 'none'; }, 300);
+        };
+        window.saveProcessStepsModal = async function() {
+            const id = window.stepsModalProcessId;
+            if (!id) return;
+            const steps = (window.processSteps['steps-modal'] || []).filter(s => (s.text || '').trim());
+            try {
+                const { error } = await window.supabaseClient.from('internal_processes').update({ steps: steps }).eq('id', id);
+                if (error) throw error;
+                window.closeProcessStepsModal();
+                window.fetchProcesses();
+            } catch (e) {
+                console.error('Fehler beim Speichern der Schritte:', e);
+                alert('Fehler beim Speichern: ' + e.message);
+            }
         };
 
         function formatDateToLocalInput(date) {
@@ -15750,10 +16053,32 @@
                     .from('internal_processes')
                     .select('*, machines(id, name, manufacturer, serial, year, company, operator_city)')
                     .order('process_date', { ascending: false });
-                    
+
                 if (error) throw error;
-                
-                window.eventsState.processes = data || [];
+
+                const processes = data || [];
+
+                // Verknuepfte Serviceberichte separat nachladen (nicht als Embed, damit ein noch
+                // fehlendes linked_service_report_id-Feld / eine noch nicht ausgefuehrte Migration
+                // nicht das komplette Laden der Vorgaenge zum Scheitern bringt).
+                const linkedIds = [...new Set(processes.map(p => p.linked_service_report_id).filter(Boolean))];
+                if (linkedIds.length > 0) {
+                    try {
+                        const { data: linkedReports, error: linkErr } = await supabaseClient
+                            .from('service_entries')
+                            .select('id, title, date, is_finalized')
+                            .in('id', linkedIds);
+                        if (!linkErr && linkedReports) {
+                            const byId = {};
+                            linkedReports.forEach(r => { byId[r.id] = r; });
+                            processes.forEach(p => { p.service_entries = p.linked_service_report_id ? (byId[p.linked_service_report_id] || null) : null; });
+                        }
+                    } catch (linkErr) {
+                        console.warn('Verknuepfte Serviceberichte konnten nicht geladen werden:', linkErr);
+                    }
+                }
+
+                window.eventsState.processes = processes;
                 window.renderProcesses();
             } catch (err) {
                 console.error("Error loading internal processes:", err);
@@ -15929,24 +16254,6 @@
                     `;
                 }).join('');
 
-            if (!opts.compact) html += `
-                <div class="proc-charts-row">
-                    <div class="maint-chart-card" style="margin-bottom: 0;">
-                        <p class="maint-chart-title">Vorgänge pro Monat
-                            <span style="float: right; text-transform: none; letter-spacing: 0; font-weight: 600;">
-                                <span style="display:inline-block; width:9px; height:9px; border-radius:2px; background:#f59e0b; margin-right:4px;"></span>Unerledigt
-                                <span style="display:inline-block; width:9px; height:9px; border-radius:2px; background:#10b981; margin: 0 4px 0 12px;"></span>Erledigt
-                            </span>
-                        </p>
-                        <div class="maint-chart-bars">${monthBarsHtml}</div>
-                    </div>
-                    <div class="maint-chart-card" style="margin-bottom: 0;">
-                        <p class="maint-chart-title">Verteilung nach Typ</p>
-                        ${typeBarsHtml}
-                    </div>
-                </div>
-            `;
-
             if (filtered.length === 0) {
                 html += `
                     <div style="padding: 3rem 2rem; text-align: center; border-radius: 12px; background: rgba(255,255,255,0.01); border: 1px dashed rgba(255,255,255,0.08);">
@@ -15998,11 +16305,9 @@
                 if (p.machines) {
                     const m = p.machines;
                     const serialYear = `${m.serial ? `#${m.serial}` : ''}${m.year ? ` (${m.year})` : ''}`.trim();
-                    const operatorText = [m.company, m.operator_city].filter(Boolean).join(' · ');
-                    machineCell = `<div class="machine-link-btn" onclick="window.switchView('machines'); window.openEditStammdaten(${m.id});" style="cursor: pointer;">
-                        <div style="color: #34d399; font-weight: 800; font-size: 1.06rem; white-space: normal; word-break: break-word; line-height: 1.2;">${m.manufacturer} ${m.name}</div>
-                        ${serialYear ? `<div style="color: #34d399; opacity: 0.8; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; margin-top: 2px;">${serialYear}</div>` : ''}
-                        ${operatorText ? `<div style="color: rgba(255,255,255,0.55); font-weight: 600; font-size: 0.82rem; margin-top: 4px; display: flex; align-items: center; gap: 5px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>${operatorText}</div>` : ''}
+                    machineCell = `<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap;">
+                        <div style="color: #34d399; font-weight: 800; font-size: 1.06rem; line-height: 1.2; word-break: break-word;">${m.manufacturer} ${m.name}${serialYear ? ` <span style="opacity: 0.8; font-weight: 700; font-size: 0.9rem; text-transform: uppercase;">${serialYear}</span>` : ''}</div>
+                        ${m.company ? `<div style="color: rgba(255,255,255,0.7); font-weight: 700; font-size: 0.9rem; text-align: right; margin-left: auto; display: flex; align-items: center; gap: 5px; white-space: nowrap;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>${m.company}</div>` : ''}
                     </div>`;
                 } else if (p.workshop_order_number) {
                     machineCell = `<div style="color: #60a5fa; font-weight: 800; font-size: 1.06rem; white-space: normal; word-break: break-word; line-height: 1.2;">Werkstattauftrag</div>
@@ -16041,10 +16346,47 @@
                         `</div>`;
                 }
 
-                // Bemerkung / Beschreibung preview
-                const descriptionCell = p.remark
-                    ? `<div style="color: rgba(255,255,255,0.7); font-size: 1.01rem; white-space: normal; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">${p.remark}</div>`
-                    : '<span style="color: rgba(255,255,255,0.3); font-style: italic;">-</span>';
+                // Schritte (bei ALLEN Vorgängen) – Hover zum Abhaken/Bearbeiten
+                const procSteps = Array.isArray(p.steps) ? p.steps : [];
+                const stepsDone = procSteps.filter(s => s.done).length;
+                const escStep = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                const fmtDay = (d) => { try { return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch (e) { return ''; } };
+                const stepsCardHtml = `
+                    <div class="proc-card-steps" onmouseenter="this.querySelector('.proc-steps-pop') && (this.querySelector('.proc-steps-pop').style.display='block')" onmouseleave="{ const _pop=this.querySelector('.proc-steps-pop'); if(_pop && !_pop.contains(document.activeElement)) _pop.style.display='none'; }" style="position:relative; display:block; margin-bottom:8px;">
+                        <div class="proc-steps-trigger" style="display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:800; color:#34d399; text-transform:uppercase; letter-spacing:0.5px; cursor:default; padding:2px 0;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                            Schritte <span class="proc-steps-trigger-count" style="opacity:0.7;">${stepsDone}/${procSteps.length}</span>
+                        </div>
+                        ${procSteps.length ? `<div class="proc-steps-pop" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:60; margin-top:4px; background:rgba(15,23,42,0.98); border:1px solid rgba(255,255,255,0.12); border-radius:12px; padding:8px; box-shadow:0 12px 40px rgba(0,0,0,0.6);">
+                            ${procSteps.map((s, i) => {
+                                const createdMetaS = (s.created_by || s.created_at) ? `erstellt${s.created_by ? ` von ${escStep(s.created_by)}` : ''}${s.created_at ? ` am ${fmtDay(s.created_at)}` : ''}` : '';
+                                const doneMetaS = (s.done && s.done_at) ? `✓ ${s.done_by ? escStep(s.done_by) : ''}${s.done_by ? ' · ' : ''}${fmtDay(s.done_at)}` : '';
+                                return `
+                            <div class="proc-step-crow" style="display:flex; align-items:flex-start; gap:8px; padding:6px 8px; border-radius:8px;">
+                                <span style="flex-shrink:0; color:rgba(255,255,255,0.4); font-weight:800; font-size:0.75rem; width:16px; padding-top:2px;">${i + 1}</span>
+                                <span class="proc-step-check" onclick="window.toggleProcessCardStep('${p.id}', ${i}, event)" title="Abhaken" style="flex-shrink:0; width:20px; height:20px; border-radius:5px; border:2px solid ${s.done ? '#10b981' : 'rgba(255,255,255,0.3)'}; background:${s.done ? '#10b981' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; margin-top:1px;">${s.done ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}</span>
+                                <div style="flex:1; min-width:0;">
+                                    <span class="proc-step-label" contenteditable="true" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}" onblur="this.style.background='transparent'; window.updateProcessCardStepText('${p.id}', ${i}, this.textContent)" title="Klicken zum Bearbeiten" style="display:block; color:#fff; font-size:0.9rem; text-decoration:${s.done ? 'line-through' : 'none'}; opacity:${s.done ? '0.5' : '1'}; outline:none; border-radius:4px; padding:2px 4px; cursor:text;" onfocus="this.style.background='rgba(255,255,255,0.08)'">${escStep(s.text)}</span>
+                                    ${createdMetaS ? `<div class="proc-step-created-meta" style="font-size:0.6rem; color:rgba(255,255,255,0.3); margin-top:1px; padding:0 4px;">${createdMetaS}</div>` : ''}
+                                    ${doneMetaS ? `<div class="proc-step-meta" style="font-size:0.6rem; color:rgba(16,185,129,0.6); margin-top:1px; padding:0 4px;">${doneMetaS}</div>` : ''}
+                                </div>
+                            </div>`;
+                            }).join('')}
+                        </div>` : ''}
+                    </div>`;
+
+                // Verknuepfter Servicebericht (falls vorhanden) als klickbarer Chip
+                let serviceLinkHtml = '';
+                if (p.service_entries) {
+                    const sr = p.service_entries;
+                    const srDate = sr.date ? new Date(sr.date).toLocaleDateString('de-DE') : '';
+                    serviceLinkHtml = `
+                        <div onclick="event.stopPropagation(); window.jumpToServicebericht(${sr.id})" title="Zum Servicebericht springen"
+                            style="cursor:pointer; display:inline-flex; align-items:center; gap:6px; margin-bottom:8px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.4); color:var(--color-primary-green); border-radius:20px; padding:5px 12px; font-size:0.8rem; font-weight:700; max-width:100%;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${sr.title || 'Servicebericht'}${srDate ? ` — ${srDate}` : ''}</span>
+                        </div>`;
+                }
 
                 // Alters-Badge für unerledigte Vorgänge älter als 7 Tage
                 const ageDays = window.getProcessAgeDays(p);
@@ -16066,15 +16408,16 @@
                             </div>
                         </div>
                         <div class="proc-card-machine">${machineCell}</div>
+                        ${serviceLinkHtml}
                         ${senderRecText ? `<div style="font-size: 0.82rem; color: rgba(255,255,255,0.4); margin-bottom: 8px; word-break: break-word;">${senderRecText}</div>` : ''}
-                        ${p.remark ? `<div class="proc-card-remark">${descriptionCell}</div>` : ''}
+                        ${stepsCardHtml}
                         <div class="proc-card-footer">
                             <div>${assignedHtml || '<span style="color: rgba(255,255,255,0.25); font-style: italic; font-size: 0.82rem;">Niemand zugewiesen</span>'}</div>
                             <div style="display: flex; gap: 8px;">
-                                ${(() => { const hasStatus = Array.isArray(p.status_log) && p.status_log.length; return `
-                                <button onclick="window.openProcessStatusLog('${p.id}')" class="btn-icon-soft" title="Status-Verlauf" style="position: relative; background: ${hasStatus ? 'rgba(139,92,246,0.12)' : 'rgba(255,255,255,0.05)'}; color: #a78bfa; border: 1px solid ${hasStatus ? 'rgba(139,92,246,0.65)' : 'rgba(255,255,255,0.1)'}; box-shadow: ${hasStatus ? '0 0 10px rgba(139,92,246,0.55)' : 'none'}; width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(139,92,246,0.25)'; this.style.boxShadow='${hasStatus ? '0 0 16px rgba(139,92,246,0.85)' : 'none'}'" onmouseout="this.style.background='${hasStatus ? 'rgba(139,92,246,0.12)' : 'rgba(255,255,255,0.05)'}'; this.style.boxShadow='${hasStatus ? '0 0 10px rgba(139,92,246,0.55)' : 'none'}'">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
-                                    ${(Array.isArray(p.status_log) && p.status_log.length) ? `<span style="position: absolute; top: -6px; right: -6px; background: #8b5cf6; color: #fff; font-size: 0.62rem; font-weight: 800; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #1e293b; box-shadow: 0 2px 6px rgba(0,0,0,0.4);">${p.status_log.length}</span>` : ''}
+                                ${(() => { const n = procSteps.length; return `
+                                <button onclick="window.openProcessStepsModal('${p.id}')" class="btn-icon-soft" title="Schritte verwalten" style="position: relative; background: ${n ? 'rgba(52,211,153,0.12)' : 'rgba(255,255,255,0.05)'}; color: #34d399; border: 1px solid ${n ? 'rgba(52,211,153,0.6)' : 'rgba(255,255,255,0.1)'}; box-shadow: ${n ? '0 0 10px rgba(52,211,153,0.45)' : 'none'}; width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(52,211,153,0.25)'" onmouseout="this.style.background='${n ? 'rgba(52,211,153,0.12)' : 'rgba(255,255,255,0.05)'}'">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                                    ${n ? `<span style="position: absolute; top: -6px; right: -6px; background: #10b981; color: #fff; font-size: 0.62rem; font-weight: 800; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #1e293b; box-shadow: 0 2px 6px rgba(0,0,0,0.4);">${n}</span>` : ''}
                                 </button>`; })()}
                                 <button onclick="window.openEditProcessModal('${p.id}')" class="btn-icon-soft" title="Bearbeiten" style="background: rgba(255,255,255,0.05); color: #60a5fa; border: 1px solid rgba(255,255,255,0.1); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"></path></svg>
@@ -16151,186 +16494,6 @@
             }
         };
 
-        // ===== Status-Verlauf pro Vorgang =====
-        window._statusLogProcessId = null;
-
-        function ensureProcessStatusModal() {
-            let modal = document.getElementById('process-status-log-modal');
-            if (modal) return modal;
-            modal = document.createElement('div');
-            modal.id = 'process-status-log-modal';
-            modal.className = 'modal-backdrop hidden';
-            modal.style.cssText = 'z-index: 1450; align-items: center; justify-content: center;';
-            modal.innerHTML = `
-                <div class="modal-content glass-card" style="max-width: 560px; width: 96%; padding: 1.75rem; display: flex; flex-direction: column; max-height: 90vh; border: 1px solid rgba(255,255,255,0.12);">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-shrink:0;">
-                        <h2 style="margin:0; font-size:1.3rem; color:#fff; display:flex; align-items:center; gap:10px;">
-                            <span style="font-size:1.3rem;">🕒</span> Status-Verlauf
-                        </h2>
-                        <button class="btn-close-modal" onclick="window.closeProcessStatusLog()" style="background:none;border:none;color:#fff;font-size:1.6rem;cursor:pointer;line-height:1;">&times;</button>
-                    </div>
-                    <div id="process-status-log-subtitle" style="color:rgba(255,255,255,0.5); font-size:0.85rem; margin:-0.5rem 0 1rem 0;"></div>
-                    <div style="flex-shrink:0;">
-                        <textarea id="process-status-log-text" class="glass-form-input" rows="3" placeholder="Aktuellen Status eingeben..." style="width:100%; box-sizing:border-box; resize:vertical; font-size:0.95rem;"></textarea>
-                        <button onclick="window.addProcessStatusEntry()" id="process-status-log-add-btn" class="btn-modal-base btn-modal-save" style="width:100%; margin-top:0.75rem; gap:8px;">
-                            <span>＋</span> Status hinzufügen
-                        </button>
-                    </div>
-                    <div style="font-size:0.72rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; margin:1.25rem 0 0.5rem 0; flex-shrink:0;">Bisherige Einträge</div>
-                    <div id="process-status-log-list" style="overflow-y:auto; flex:1 1 auto;"></div>
-                </div>`;
-            document.body.appendChild(modal);
-            return modal;
-        }
-
-        window.openProcessStatusLog = function(id) {
-            const proc = (window.eventsState.processes || []).find(p => String(p.id) === String(id));
-            if (!proc) return;
-            window._statusLogProcessId = id;
-            const modal = ensureProcessStatusModal();
-            const sub = document.getElementById('process-status-log-subtitle');
-            if (sub) sub.textContent = proc.title || 'Vorgang';
-            const ta = document.getElementById('process-status-log-text');
-            if (ta) ta.value = '';
-            renderProcessStatusLogList(proc);
-            modal.classList.remove('hidden');
-            modal.style.display = 'flex';
-            requestAnimationFrame(() => modal.classList.add('show'));
-        };
-
-        window.closeProcessStatusLog = function() {
-            const modal = document.getElementById('process-status-log-modal');
-            if (!modal) return;
-            modal.classList.remove('show');
-            setTimeout(() => { modal.classList.add('hidden'); modal.style.display = 'none'; }, 250);
-            window._statusLogProcessId = null;
-        };
-
-        function renderProcessStatusLogList(proc) {
-            const list = document.getElementById('process-status-log-list');
-            if (!list) return;
-            const entries = Array.isArray(proc.status_log) ? proc.status_log : [];
-            if (entries.length === 0) {
-                list.innerHTML = '<p style="color:rgba(255,255,255,0.35); font-style:italic; text-align:center; padding:1rem;">Noch keine Status-Einträge.</p>';
-                return;
-            }
-            const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-            // neueste zuerst; idx ist der Original-Index im Array (für Bearbeiten)
-            list.innerHTML = entries.map((e, idx) => ({ e, idx })).reverse().map(({ e, idx }) => {
-                let when = '';
-                if (e.at) {
-                    const d = new Date(e.at);
-                    when = d.toLocaleDateString('de-DE', { day:'2-digit', month:'2-digit', year:'numeric' }) + ' · ' +
-                           d.toLocaleTimeString('de-DE', { hour:'2-digit', minute:'2-digit' }) + ' Uhr';
-                }
-                const editedTag = e.edited ? ` · bearbeitet` : '';
-                return `
-                    <div class="proc-status-entry" data-idx="${idx}" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:0.75rem 0.9rem; margin-bottom:0.6rem;">
-                        <div style="display:flex; justify-content:space-between; gap:10px; margin-bottom:5px; font-size:0.72rem; color:rgba(255,255,255,0.5); font-weight:700;">
-                            <span style="color:#a78bfa;">${esc(e.user || 'Unbekannt')}</span>
-                            <span>${when}${editedTag}</span>
-                        </div>
-                        <div class="proc-status-entry-view" onclick="window.editProcessStatusEntry(${idx})" title="Zum Bearbeiten klicken" style="color:#fff; font-size:0.92rem; line-height:1.45; white-space:pre-wrap; word-break:break-word; cursor:text;">${esc(e.text)}</div>
-                    </div>`;
-            }).join('');
-        }
-
-        window.editProcessStatusEntry = function(idx) {
-            const id = window._statusLogProcessId;
-            const proc = (window.eventsState.processes || []).find(p => String(p.id) === String(id));
-            if (!proc || !Array.isArray(proc.status_log) || !proc.status_log[idx]) return;
-            const row = document.querySelector(`.proc-status-entry[data-idx="${idx}"]`);
-            if (!row) return;
-            const view = row.querySelector('.proc-status-entry-view');
-            if (!view || row.querySelector('textarea')) return;
-            const current = proc.status_log[idx].text || '';
-            view.style.display = 'none';
-            const editor = document.createElement('div');
-            editor.innerHTML = `
-                <textarea class="glass-form-input proc-status-edit-ta" rows="3" style="width:100%; box-sizing:border-box; resize:vertical; font-size:0.92rem;"></textarea>
-                <div style="display:flex; gap:8px; margin-top:0.5rem;">
-                    <button onclick="window.cancelProcessStatusEntryEdit(${idx})" class="btn-modal-base btn-modal-cancel" style="flex:0 0 auto; padding:6px 14px; font-size:0.8rem;">Abbrechen</button>
-                    <button onclick="window.saveProcessStatusEntryEdit(${idx})" class="btn-modal-base btn-modal-save" style="flex:1; padding:6px 14px; font-size:0.8rem;">Speichern</button>
-                </div>`;
-            row.appendChild(editor);
-            const ta = editor.querySelector('textarea');
-            ta.value = current;
-            ta.focus();
-            ta.setSelectionRange(ta.value.length, ta.value.length);
-        };
-
-        window.cancelProcessStatusEntryEdit = function(idx) {
-            const id = window._statusLogProcessId;
-            const proc = (window.eventsState.processes || []).find(p => String(p.id) === String(id));
-            if (proc) renderProcessStatusLogList(proc);
-        };
-
-        window.saveProcessStatusEntryEdit = async function(idx) {
-            const id = window._statusLogProcessId;
-            if (!id || !supabaseClient) return;
-            const proc = (window.eventsState.processes || []).find(p => String(p.id) === String(id));
-            if (!proc || !Array.isArray(proc.status_log) || !proc.status_log[idx]) return;
-            const row = document.querySelector(`.proc-status-entry[data-idx="${idx}"]`);
-            const ta = row?.querySelector('.proc-status-edit-ta');
-            const newText = (ta?.value || '').trim();
-            if (!newText) { alert('Text darf nicht leer sein.'); return; }
-
-            const newLog = proc.status_log.map((e, i) => i === idx
-                ? { ...e, text: newText, edited: true, edited_at: new Date().toISOString() }
-                : e);
-            try {
-                const { error } = await supabaseClient
-                    .from('internal_processes')
-                    .update({ status_log: newLog })
-                    .eq('id', id);
-                if (error) throw error;
-                proc.status_log = newLog;
-                renderProcessStatusLogList(proc);
-            } catch (err) {
-                console.error('Error updating status entry:', err);
-                alert('Fehler beim Speichern: ' + err.message);
-            }
-        };
-
-        window.addProcessStatusEntry = async function() {
-            const id = window._statusLogProcessId;
-            if (!id || !supabaseClient) return;
-            const ta = document.getElementById('process-status-log-text');
-            const text = (ta?.value || '').trim();
-            if (!text) { alert('Bitte einen Status eingeben.'); return; }
-
-            const proc = (window.eventsState.processes || []).find(p => String(p.id) === String(id));
-            if (!proc) return;
-
-            const userName = (window.activeUser?.name) || (window.currentUser?.name) || 'Unbekannt';
-            const entry = {
-                text,
-                user: userName,
-                user_id: window.activeUser?.id || window.currentUser?.id || null,
-                at: new Date().toISOString()
-            };
-            const newLog = [...(Array.isArray(proc.status_log) ? proc.status_log : []), entry];
-
-            const addBtn = document.getElementById('process-status-log-add-btn');
-            if (addBtn) { addBtn.disabled = true; addBtn.innerHTML = '<span>⏳</span> Speichere...'; }
-            try {
-                const { error } = await supabaseClient
-                    .from('internal_processes')
-                    .update({ status_log: newLog })
-                    .eq('id', id);
-                if (error) throw error;
-
-                proc.status_log = newLog;
-                if (ta) ta.value = '';
-                renderProcessStatusLogList(proc);
-                window.renderProcesses();
-            } catch (err) {
-                console.error('Error saving status log:', err);
-                alert('Fehler beim Speichern: ' + err.message);
-            } finally {
-                if (addBtn) { addBtn.disabled = false; addBtn.innerHTML = '<span>＋</span> Status hinzufügen'; }
-            }
-        };
 
         window.saveImportedEmail = async function(event) {
             if (event) event.preventDefault();
@@ -16392,7 +16555,7 @@
                 const workshopOrderNumber = document.getElementById('edit-process-workshop-order-select').value;
                 const status = document.getElementById('edit-process-status-select').value;
                 const description = document.getElementById('edit-process-body-input').value;
-                const remark = document.getElementById('edit-process-remark-input').value;
+                const serviceReportId = document.getElementById('edit-process-service-report-select').value;
 
                 const processDate = date ? new Date(date).toISOString() : new Date().toISOString();
 
@@ -16408,8 +16571,9 @@
                         workshop_order_number: workshopOrderNumber || null,
                         status: status,
                         description: description || null,
-                        remark: remark || null,
-                        assigned_users: window.processAssignedUsers['edit-process']
+                        assigned_users: window.processAssignedUsers['edit-process'],
+                        steps: (window.processSteps['edit-process'] || []).filter(s => (s.text || '').trim()),
+                        linked_service_report_id: serviceReportId ? parseInt(serviceReportId) : null
                     })
                     .eq('id', id);
                     
@@ -17977,6 +18141,8 @@
         window.activeSubtaskSource = null;
         let serviceberichtPickerSearchTimeout = null;
         let pickerActiveTaskMachineId = null;
+        let serviceberichtPickerMode = 'subtask'; // 'subtask' | 'process'
+        let serviceberichtPickerProcessPrefix = null;
 
         window.openServiceberichtFromTask = async function(machineId, actionType, taskId, subtaskIndex, subtaskId) {
             console.log('openServiceberichtFromTask:', { machineId, actionType, taskId, subtaskIndex, subtaskId });
@@ -18001,6 +18167,8 @@
         };
 
         window.openServiceberichtPicker = async function() {
+            serviceberichtPickerMode = 'subtask';
+            serviceberichtPickerProcessPrefix = null;
             const machineSelect = document.getElementById('task-machine');
             pickerActiveTaskMachineId = machineSelect ? machineSelect.value : null;
 
@@ -18010,6 +18178,33 @@
                 modal.style.display = 'flex';
                 requestAnimationFrame(() => modal.classList.add('show'));
             }
+
+            const newOption = document.getElementById('servicebericht-picker-new-option');
+            if (newOption) newOption.style.display = '';
+
+            const searchInput = document.getElementById('servicebericht-picker-search');
+            if (searchInput) searchInput.value = '';
+
+            await window.filterServiceberichtPickerContent();
+        };
+
+        // Oeffnet denselben Picker im "Vorgang verknuepfen"-Modus (keine Subtask-Aktion, sondern
+        // Setzen von linked_service_report_id auf dem gerade bearbeiteten Vorgang).
+        window.openProcessServiceberichtPicker = async function(prefix) {
+            serviceberichtPickerMode = 'process';
+            serviceberichtPickerProcessPrefix = prefix;
+            const machineHidden = document.getElementById(`${prefix}-machine-select`);
+            pickerActiveTaskMachineId = machineHidden ? machineHidden.value : null;
+
+            const modal = document.getElementById('servicebericht-picker-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.style.display = 'flex';
+                requestAnimationFrame(() => modal.classList.add('show'));
+            }
+
+            const newOption = document.getElementById('servicebericht-picker-new-option');
+            if (newOption) newOption.style.display = 'none';
 
             const searchInput = document.getElementById('servicebericht-picker-search');
             if (searchInput) searchInput.value = '';
@@ -18037,10 +18232,13 @@
             try {
                 const searchVal = (document.getElementById('servicebericht-picker-search')?.value || '').trim().toLowerCase();
 
-                let query = supabaseClient.from('service_entries').select('id, title, date, machines(manufacturer, name, serial)');
+                let query = supabaseClient.from('service_entries').select('id, title, date, is_finalized, machines(manufacturer, name, serial)');
 
                 if (pickerActiveTaskMachineId) {
                     query = query.eq('machine_id', parseInt(pickerActiveTaskMachineId));
+                }
+                if (serviceberichtPickerMode === 'process') {
+                    query = query.eq('is_finalized', false);
                 }
 
                 const { data, error } = await query.order('date', { ascending: false }).limit(50);
@@ -18075,7 +18273,7 @@
                     const mText = e.machines ? `${e.machines.manufacturer} ${e.machines.name} (${e.machines.serial || 'Ohne S/N'})` : 'Keine Maschine';
                     const dateStr = new Date(e.date).toLocaleDateString('de-DE');
                     html += `
-                        <div onclick="window.selectPickerServicebericht('${e.id}', '${e.title.replace(/'/g, "\\'")}')" 
+                        <div onclick="window.selectPickerServicebericht('${e.id}', '${e.title.replace(/'/g, "\\'")}', '${e.date || ''}')"
                              style="display: flex; align-items: center; gap: 15px; padding: 12px 18px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; cursor: pointer; transition: all 0.2s;"
                              onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.borderColor='rgba(255,255,255,0.15)';"
                              onmouseout="this.style.background='rgba(255,255,255,0.03)'; this.style.borderColor='rgba(255,255,255,0.08)';">
@@ -18097,7 +18295,15 @@
             }
         };
 
-        window.selectPickerServicebericht = async function(id, title) {
+        window.selectPickerServicebericht = async function(id, title, date) {
+            if (serviceberichtPickerMode === 'process') {
+                if (id === 'new') { window.closeServiceberichtPicker(); return; }
+                if (typeof window.selectProcessServiceReport === 'function') {
+                    window.selectProcessServiceReport(id, title, date);
+                }
+                window.closeServiceberichtPicker();
+                return;
+            }
             const actionValue = 'servicebericht:' + id + '|||' + title;
             if (typeof window.applySubtaskAction === 'function') {
                 await window.applySubtaskAction(actionValue);
@@ -18660,13 +18866,21 @@
         // Serviceberichte (Daten aus der DB statt aus dem gerade offenen Formular) genutzt werden kann.
         window.buildWorkLogSummaryHtml = function(data) {
             const fmt = window.formatHoursDecimal;
+            const parseKm = (v) => {
+                const n = parseFloat(String(v || '').replace(',', '.').replace(/[^0-9.\-]/g, ''));
+                return isNaN(n) ? 0 : n;
+            };
+            const fmtKm = (n) => {
+                const r = Math.round(n * 100) / 100;
+                return (Number.isInteger(r) ? r : r.toFixed(2).replace(/0+$/, '').replace(/\.$/, ''));
+            };
             const days = {};
             data.forEach(row => {
                 const datum = row.datum || '';
-                if (!days[datum]) days[datum] = { anfahrt: 0, arbeitszeit: 0, abfahrt: 0, pause: 0, pauseAnfahrt: 0, pauseArbeitszeit: 0, pauseAbfahrt: 0 };
+                if (!days[datum]) days[datum] = { anfahrt: 0, arbeitszeit: 0, abfahrt: 0, pause: 0, pauseAnfahrt: 0, pauseArbeitszeit: 0, pauseAbfahrt: 0, kmAnfahrt: 0, kmAbfahrt: 0 };
                 const { net, pause } = window.computeWorkLogDuration(row);
-                if (row.typ === 'Anfahrt') { days[datum].anfahrt += net; days[datum].pauseAnfahrt += pause; }
-                else if (row.typ === 'Abfahrt') { days[datum].abfahrt += net; days[datum].pauseAbfahrt += pause; }
+                if (row.typ === 'Anfahrt') { days[datum].anfahrt += net; days[datum].pauseAnfahrt += pause; days[datum].kmAnfahrt += parseKm(row.kilometer); }
+                else if (row.typ === 'Abfahrt') { days[datum].abfahrt += net; days[datum].pauseAbfahrt += pause; days[datum].kmAbfahrt += parseKm(row.kilometer); }
                 else { days[datum].arbeitszeit += net; days[datum].pauseArbeitszeit += pause; }
                 days[datum].pause += pause;
             });
@@ -18679,12 +18893,14 @@
             let totalFahrzeit = 0;
             let totalLegalPause = 0;
             let totalPause = 0;
+            let totalKm = 0;
 
             sortedDates.forEach(datum => {
                 const d = days[datum];
                 const dayTotal = d.anfahrt + d.arbeitszeit + d.abfahrt;
                 grandTotal += dayTotal;
                 totalFahrzeit += d.anfahrt + d.abfahrt;
+                totalKm += d.kmAnfahrt + d.kmAbfahrt;
 
                 let requiredPause = 0;
                 let legalPauseSuffix = '';
@@ -18713,9 +18929,9 @@
                     <div style="background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 14px;">
                         <div style="font-weight: 700; margin-bottom: 6px;">${dateLabel}</div>
                         <div style="font-size: 0.85rem; color: rgba(255,255,255,0.75); display: flex; flex-direction: column; gap: 2px;">
-                            <span><span style="font-weight: 700;">Anfahrt: ${fmt(d.anfahrt)} Std.</span> (Pause Anfahrt: ${fmt(d.pauseAnfahrt)} Std.)</span>
+                            <span><span style="font-weight: 700;">Anfahrt: ${fmt(d.anfahrt)} Std.</span> (Pause Anfahrt: ${fmt(d.pauseAnfahrt)} Std.)${d.kmAnfahrt ? ` · ${fmtKm(d.kmAnfahrt)} km` : ''}</span>
                             <span><span style="font-weight: 700;">Arbeitszeit: ${fmt(d.arbeitszeit)} Std.</span> (Pause Arbeitszeit: ${fmt(d.pauseArbeitszeit)} Std.)</span>
-                            <span><span style="font-weight: 700;">Abfahrt: ${fmt(d.abfahrt)} Std.</span> (Pause Abfahrt: ${fmt(d.pauseAbfahrt)} Std.)</span>
+                            <span><span style="font-weight: 700;">Abfahrt: ${fmt(d.abfahrt)} Std.</span> (Pause Abfahrt: ${fmt(d.pauseAbfahrt)} Std.)${d.kmAbfahrt ? ` · ${fmtKm(d.kmAbfahrt)} km` : ''}</span>
                             <span style="font-size: 1rem; font-weight: 700;"><span style="color: #fff;">Gesamt: ${fmt(dayTotal + d.pause)} Std.</span> (Pause gesamt: ${fmt(d.pause)} Std.)</span>
                             <span style="font-size: 1rem; font-weight: 700; color: #3b82f6;">Gesetzliche Pause${legalPauseSuffix}: ${fmt(legalPause)} Std.</span>
                             <span style="font-size: 1rem; font-weight: 700; color: #ef4444;">Überstunden, ab 9. Std. abzgl. gesetzlichen Pausen: ${fmt(overtime)} Std.</span>
@@ -18744,6 +18960,10 @@
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <span style="font-weight: 700; color: var(--color-primary-green);">Servicestunden</span>
                             <span style="font-weight: 700; color: var(--color-primary-green);">${fmt((grandTotal + totalPause) - totalOvertime - totalFahrzeit)} Std.</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 800; color: #fff;">Gesamt gefahrene Kilometer</span>
+                            <span style="font-weight: 800; color: #fff;">${fmtKm(totalKm)} km</span>
                         </div>
                         <div style="text-align: center; color: rgba(255,255,255,0.6); font-size: 0.85rem; margin-top: 4px;">
                             (Gesamt gesetzliche Pause: ${fmt(totalLegalPause)} Std.)
@@ -24430,6 +24650,29 @@
     </div>
 
     <!-- PROCESS EDIT MODAL -->
+    <div id="process-steps-modal" class="modal-new hidden" style="z-index: 10001; display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);">
+        <div class="modal-content glass-card" style="max-width: 900px; width: 94%; max-height: 88vh; overflow-y: auto; padding: 2rem; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px;">
+                <div>
+                    <h2 style="margin: 0; color: #fff; font-size: 1.6rem; font-weight: 800;">Schritte</h2>
+                    <div id="steps-modal-subtitle" style="color: rgba(255,255,255,0.45); font-size: 0.9rem; margin-top: 4px; word-break: break-word;"></div>
+                </div>
+                <button class="btn-close" onclick="window.closeProcessStepsModal()" style="background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer; flex-shrink: 0;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div id="steps-modal-steps-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+            <button type="button" onclick="window.addProcessStep('steps-modal')" style="margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; background: rgba(52,211,153,0.12); color: #34d399; border: 1px solid rgba(52,211,153,0.35); border-radius: 10px; padding: 10px 16px; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(52,211,153,0.22)'" onmouseout="this.style.background='rgba(52,211,153,0.12)'">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Schritt hinzufügen
+            </button>
+            <div style="display: flex; gap: 15px; margin-top: 22px;">
+                <button type="button" class="btn-secondary" onclick="window.closeProcessStepsModal()" style="flex: 1; height: 44px; font-size: 0.92rem; font-weight: 700;">Abbrechen</button>
+                <button type="button" class="btn-primary" onclick="window.saveProcessStepsModal()" style="flex: 1; height: 44px; font-size: 0.92rem;">SPEICHERN</button>
+            </div>
+        </div>
+    </div>
+
     <div id="process-edit-modal" class="modal-new hidden" style="z-index: 10000; display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);">
         <div class="modal-content glass-card" style="max-width: 750px; width: 90%; max-height: 90vh; overflow-y: auto !important; padding: 2rem; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
@@ -24485,11 +24728,6 @@
                     <input type="text" id="edit-process-title-input" class="glass-input" required placeholder="Betreff der E-Mail...">
                 </div>
 
-                <div class="form-group" style="margin-bottom: 0.75rem;">
-                    <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Bemerkung / Beschreibung</label>
-                    <textarea id="edit-process-remark-input" class="glass-input" style="height: 80px; resize: vertical; padding-top: 15px;" placeholder="Interne Bemerkung..."></textarea>
-                </div>
-
                 <div class="form-group" id="edit-process-body-group" style="margin-bottom: 0.75rem; display: none;">
                     <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">E-Mail-Text</label>
                     <textarea id="edit-process-body-input" class="glass-input" style="height: 100px; resize: vertical; padding-top: 15px;" placeholder="Textinhalt der E-Mail..."></textarea>
@@ -24528,6 +24766,12 @@
                 </div>
 
                 <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Servicebericht</label>
+                    <input type="hidden" id="edit-process-service-report-select" value="">
+                    <div id="edit-process-service-link-display"></div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.25rem;">
                     <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Mitarbeiter zuweisen</label>
                     <div id="edit-process-tech-dropdown-wrapper" style="position: relative;">
                         <div id="edit-process-tech-dropdown-trigger" onclick="window.toggleProcessTechDropdown('edit-process')"
@@ -24544,6 +24788,15 @@
                         </div>
                     </div>
                     <input type="hidden" id="edit-process-assigned-users">
+                </div>
+
+                <div class="form-group" id="edit-process-steps-group" style="margin-bottom: 1.25rem; display: none;">
+                    <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Schritte</label>
+                    <div id="edit-process-steps-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                    <button type="button" onclick="window.addProcessStep('edit-process')" style="margin-top: 10px; display: inline-flex; align-items: center; gap: 6px; background: rgba(52,211,153,0.12); color: #34d399; border: 1px solid rgba(52,211,153,0.35); border-radius: 10px; padding: 9px 14px; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(52,211,153,0.22)'" onmouseout="this.style.background='rgba(52,211,153,0.12)'">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        Schritt hinzufügen
+                    </button>
                 </div>
 
                 <div style="display: flex; gap: 15px;">
@@ -24673,7 +24926,7 @@
             <!-- Scrollable Body -->
             <div style="flex: 1; overflow-y: auto; padding: 2rem; display: flex; flex-direction: column; gap: 15px; align-content: start;">
                 <!-- Option: New Servicebericht -->
-                <div onclick="window.selectPickerServicebericht('new', 'Neuer Servicebericht')" 
+                <div id="servicebericht-picker-new-option" onclick="window.selectPickerServicebericht('new', 'Neuer Servicebericht')"
                      style="display: flex; align-items: center; gap: 15px; padding: 15px 20px; background: rgba(167, 139, 250, 0.1); border: 2px dashed rgba(167, 139, 250, 0.4); border-radius: 12px; cursor: pointer; transition: all 0.2s;"
                      onmouseover="this.style.background='rgba(167, 139, 250, 0.2)'; this.style.borderColor='rgba(167, 139, 250, 0.6)';"
                      onmouseout="this.style.background='rgba(167, 139, 250, 0.1)'; this.style.borderColor='rgba(167, 139, 250, 0.4)';">

@@ -16,33 +16,12 @@
 
         const allMachines = window.machineList || [];
 
-        if (targetId === 'workshop-machines-container') {
-            // Workshop view: ONLY shows machines with is_in_workshop = true
-            const workshopMachines = allMachines.filter(m => m.is_in_workshop === true);
-
-            if (workshopMachines.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state" style="grid-column: 1 / -1; text-align: center; padding: 5rem 2rem; background: rgba(55, 65, 81, 0.3); border-radius: 24px; border: 1px dashed rgba(255,255,255,0.1);">
-                        <div style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;">🛠️</div>
-                        <h2 style="color: #fff; margin-bottom: 0.5rem; font-weight: 800;">Keine Maschinen in der Werkstatt</h2>
-                        <p style="color: rgba(255,255,255,0.5);">Nutzen Sie das Werkstatt-Symbol auf den Maschinenkarten, um Geräte hierher zu verschieben.</p>
-                    </div>
-                `;
-                return;
-            }
-
-            workshopMachines.forEach(machine => {
-                const card = createMachineCard(machine);
-                container.appendChild(card);
-            });
-            return;
-        }
-
         // Main machines view: Apply all filters
         const catFilters = window.activeMachineCategoryFilters || ['all'];
         const conFilters = window.activeMachineContactFilters || ['all'];
         const seriesFilters = window.activeMachineSeriesFilters || ['all'];
         const searchFilter = window.machineSearchFilter || '';
+        const workshopFilterActive = !!window.workshopOnlyFilter;
 
         let displayMachines = allMachines.filter(m => {
             // Category Filter
@@ -60,6 +39,9 @@
             // Machine Series Filter
             const matchSeries = seriesFilters.includes('all') || (m.machine_series && seriesFilters.includes(m.machine_series));
 
+            // Workshop Filter (only machines in workshop if active)
+            const matchWorkshop = !workshopFilterActive || m.is_in_workshop === true;
+
             // Search Keyword Filter — Name/Hersteller/Seriennummer/Baujahr sowie Firma,
             // Betreiberstandort (operator_*) und Maschinenstandort (location*).
             let matchSearch = true;
@@ -73,7 +55,7 @@
                 ].join(' ').toLowerCase();
                 matchSearch = queryTerms.every(term => searchableText.includes(term));
             }
-            return matchCat && matchCon && matchSeries && matchSearch;
+            return matchCat && matchCon && matchSeries && matchWorkshop && matchSearch;
         });
 
         // Group by category
@@ -419,6 +401,39 @@
 
         return card;
     }
+
+    window.workshopOnlyFilter = false;
+
+    window.toggleWorkshopFilter = function () {
+        window.workshopOnlyFilter = !window.workshopOnlyFilter;
+        const btn = document.getElementById('btn-filter-workshop');
+        if (btn) {
+            btn.classList.toggle('active', window.workshopOnlyFilter);
+        }
+        if (typeof window.renderMachines === 'function') {
+            window.renderMachines();
+        }
+    };
+
+    window.setWorkshopFilter = function (enabled) {
+        window.workshopOnlyFilter = !!enabled;
+        const btn = document.getElementById('btn-filter-workshop');
+        if (btn) {
+            btn.classList.toggle('active', window.workshopOnlyFilter);
+        }
+        if (typeof window.renderMachines === 'function') {
+            window.renderMachines();
+        }
+    };
+
+    window.showWorkshopMachinesAndSwitch = function () {
+        if (typeof window.switchView === 'function') {
+            window.switchView('machines');
+        }
+        setTimeout(() => {
+            window.setWorkshopFilter(true);
+        }, 50);
+    };
 
     // Set globally
     window.renderMachines = renderMachinesGrouped;

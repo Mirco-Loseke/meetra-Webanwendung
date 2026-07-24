@@ -181,8 +181,17 @@
             }
 
             let matchesUser = true;
-            if (filters.user === 'me' && window.activeUser) {
-                matchesUser = Array.isArray(task.assigned_to) && task.assigned_to.some(u => String(u) === String(window.activeUser.id));
+            if (filters.user === 'me') {
+                const activeId = window.activeUser?.id || localStorage.getItem('activeUserId');
+                const activeName = (window.activeUser?.name || '').toLowerCase().trim();
+                if (activeId || activeName) {
+                    const isCreatedBy = task.created_by && String(task.created_by) === String(activeId);
+                    const isAssigned = Array.isArray(task.assigned_to) && task.assigned_to.some(u => {
+                        const str = String(u).toLowerCase().trim();
+                        return (activeId && str === String(activeId).toLowerCase().trim()) || (activeName && str === activeName);
+                    });
+                    matchesUser = isCreatedBy || isAssigned;
+                }
             }
 
             return matchesSearch && matchesMachine && isServiceMatch && matchesUser;
@@ -190,26 +199,29 @@
 
         if (viewMode === 'board') {
             renderBoard(filteredTasks);
-        } else if (viewMode === 'list') {
-            renderList(filteredTasks);
         } else if (viewMode === 'machines') {
             renderMachinesView(filteredTasks);
+        } else {
+            renderBoard(filteredTasks);
         }
     }
     window.renderTasks = renderTasks;
 
+    // Sorgt dafür, dass immer nur genau EIN Tab-Button aktiv (rot) leuchtet:
+    // "Meine Aufgaben / Vorgänge" hat Vorrang vor Board/Vorgänge.
+    function updateTaskTabActiveStates() {
+        const isMe = filters.user === 'me';
+        const boardBtn = document.getElementById('btn-view-board');
+        const vgBtn = document.getElementById('btn-view-vorgaenge');
+        const meBtn = document.getElementById('btn-task-user-me');
+        if (boardBtn) boardBtn.classList.toggle('active', !isMe && viewMode === 'board');
+        if (vgBtn) vgBtn.classList.toggle('active', !isMe && viewMode === 'vorgaenge');
+        if (meBtn) meBtn.classList.toggle('active', isMe);
+    }
+
     window.filterTasksByUser = function (userFilter) {
         filters.user = userFilter;
-
-        // Update tab active classes
-        const btnMe = document.getElementById('btn-task-user-me');
-        if (btnMe) {
-            if (userFilter === 'me') {
-                btnMe.classList.add('active');
-            } else {
-                btnMe.classList.remove('active');
-            }
-        }
+        updateTaskTabActiveStates();
 
         // Wenn wir im Vorgänge-Tab sind, zurück auf die Aufgabenansicht wechseln,
         // damit "Meine Aufgaben" sinnvoll greift.
@@ -259,7 +271,8 @@
     };
 
     function renderBoard(tasks) {
-        document.getElementById('tasks-list').classList.add('hidden');
+        const listEl = document.getElementById('tasks-list');
+        if (listEl) listEl.classList.add('hidden');
         const containerM = document.getElementById('tasks-machines');
         if (containerM) containerM.classList.add('hidden');
         document.getElementById('tasks-board').classList.remove('hidden');
@@ -330,307 +343,6 @@
         });
     }
 
-    function renderList(tasks) {
-        document.getElementById('tasks-board').classList.add('hidden');
-        const containerM = document.getElementById('tasks-machines');
-        if (containerM) containerM.classList.add('hidden');
-        document.getElementById('tasks-list').classList.remove('hidden');
-
-        const tbody = document.getElementById('task-table-body');
-        if (!tbody) return;
-        tbody.innerHTML = '';
-
-        const openTasks = tasks.filter(t => t.status !== 'completed');
-        const completedTasks = tasks.filter(t => t.status === 'completed');
-
-            openTasks.forEach(task => {
-                const tr = document.createElement('tr');
-                const accentColor = '#ef4444'; // Red for open
-                
-                tr.className = 'task-list-row-premium status-open';
-                tr.style.cursor = 'pointer';
-
-                tr.innerHTML = `
-                    <td data-label="Aufgabe" style="font-weight: 600; display:flex; align-items:flex-start; gap:12px;">
-                        <div style="padding-top: 4px;">
-                            <div class="task-quick-complete ${task.status === 'completed' ? 'completed' : ''}" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="${task.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                            </div>
-                        </div>
-                        <div style="display:flex; flex-direction:column; gap:4px;">
-                            <span style="font-size: 1.1rem; font-weight: 700;">${task.title}</span>
-                            ${task.subtasks && task.subtasks.length > 0 ? `
-                            <div class="task-list-subtasks" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
-                                ${task.subtasks.filter(sub => !(window.currentAppMode === 'focus' && sub.status === 'completed')).map((sub, index) => `
-                                    <div class="subtask-item" style="display:flex; align-items:flex-start; gap: 6px; flex-wrap:wrap;">
-                                        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:5px; flex:1; min-width:0;">
-                                        <div class="subtask-text-row" style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 100px;">
-                                            <div class="task-quick-complete ${sub.status === 'completed' ? 'completed' : ''}" 
-                                                 onclick="event.stopPropagation(); window.toggleSubtaskStatus('${task.id}', ${index}, '${sub.status}')" 
-                                                 style="width: 18px; height: 18px; min-width: 18px;"
-                                                 title="${sub.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
-                                                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                            </div>
-                                            <span style="font-size: 0.9rem; color: rgba(255,255,255,0.8);">${sub.title}</span>
-                                        </div>
-                                        ${sub.action_type ? (() => {
-                                             const isDoc = sub.action_type.startsWith('document:');
-                                             const isService = sub.action_type.startsWith('servicebericht:');
-                                             let textLabel = '';
-                                             let btnTitle = '';
-                                             let badgeStyle = '';
-                                             let btnStyle = '';
-                                             let buttonIcon = '';
-                                             let clickHandler = '';
-                                             if (isDoc) {
-                                                 const parts = sub.action_type.substring(9).split('|||');
-                                                 textLabel = parts[1] || 'Dokument';
-                                                 btnTitle = 'Dokument öffnen';
-                                                 badgeStyle = 'background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); color: #10b981;';
-                                                 btnStyle = 'background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981;';
-                                                 buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>';
-                                                 clickHandler = `window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')`;
-                                             } else if (isService) {
-                                                 const parts = sub.action_type.substring(15).split('|||');
-                                                 textLabel = parts[1] ? `Service: ${parts[1]}` : 'Servicebericht';
-                                                 btnTitle = 'Servicebericht öffnen';
-                                                 badgeStyle = 'background: rgba(147, 51, 234, 0.1); border: 1px solid rgba(147, 51, 234, 0.25); color: #c084fc;';
-                                                 btnStyle = 'background: rgba(147, 51, 234, 0.2); border: 1px solid rgba(147, 51, 234, 0.4); color: #c084fc;';
-                                                 buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>';
-                                                 clickHandler = `window.openServiceberichtFromTask('${task.machine_id}', '${sub.action_type}', '${task.id}', ${index}, '${sub.id || ''}')`;
-                                             } else {
-                                                 textLabel = sub.action_type === 'intake' ? 'Eingang' : 'Abnahme';
-                                                 btnTitle = sub.action_type === 'intake' ? 'Eingangsprotokoll öffnen' : 'Abnahmeprotokoll öffnen';
-                                                 const isIntake = sub.action_type === 'intake';
-                                                 badgeStyle = isIntake ? 'background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); color: #f59e0b;';
-                                                 btnStyle = isIntake ? 'background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;';
-                                                 buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>';
-                                                 clickHandler = `window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')`;
-                                             }
-                                             return `
-                                             <button onclick="event.stopPropagation(); ${clickHandler}"
-                                                 title="${btnTitle}"
-                                                 style="${btnStyle} border-radius: 8px; height: 30px; padding: 0 10px; display: flex; align-items: center; gap: 6px; cursor: pointer; flex-shrink: 0; transition: all 0.2s; font-size: 0.75rem; font-weight: 800; white-space: nowrap; max-width: 160px;">
-                                                 ${buttonIcon}
-                                                 <span style="overflow:hidden; text-overflow:ellipsis;">${textLabel}</span>
-                                             </button>
-                                             `;
-                                        })() : ''}
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                            ` : ''}
-                        </div>
-                    </td>
-                    <td data-label="Maschine">
-                        ${task.machines ? `<span style="color: var(--color-primary-green); font-weight: 700; font-size: 0.98rem;">${getMachineLabel(task.machines)}</span>` : '<span style="color: rgba(255,255,255,0.4)">-</span>'}
-                    </td>
-                    <td data-label="Beteiligte">${renderAvatars(task.assigned_to)}</td>
-                    <td data-label="Fortschritt">${renderProgress(task)}</td>
-                    <td data-label="Aktionen" onclick="event.stopPropagation()">
-                        <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
-                            <button id="star-${task.id}" onclick="event.stopPropagation(); window.saveTaskAsQuickTemplate('${task.id}')" title="Als Schnellvorlage speichern"
-                                class="btn-star-premium btn-premium-action" style="width: 36px; height: 36px;">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                                </svg>
-                            </button>
-                            <button onclick="event.stopPropagation(); window.openTaskModal('${task.id}')" title="Bearbeiten"
-                                style="width:36px; height:36px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
-                                onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                    <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                </svg>
-                            </button>
-                            <button class="delete-permission-required" onclick="event.stopPropagation(); window.deleteTask('${task.id}')" title="Löschen"
-                                style="width:36px; height:36px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
-                                onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                    <polyline points="3 6 5 6 21 6"></polyline>
-                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                </svg>
-                            </button>
-                        </div>
-                `;
-            tr.onclick = () => window.openTaskModal(task.id);
-            tbody.appendChild(tr);
-        });
-
-        if (completedTasks.length > 0) {
-            // Add a toggle row for completed tasks
-            const toggleTr = document.createElement('tr');
-            toggleTr.style.cursor = 'pointer';
-            toggleTr.style.background = 'rgba(255,255,255,0.02)';
-            toggleTr.innerHTML = `
-                <td colspan="8" style="padding: 1rem 1.25rem;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; font-weight: 700; color: rgba(255,255,255,0.6);" onclick="event.stopPropagation(); window.showCompletedTasks = !window.showCompletedTasks; window.renderTasks();">
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="font-size: 0.95rem;">Erledigte Aufgaben (${completedTasks.length})</span>
-                        </div>
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.2s; transform: ${window.showCompletedTasks ? 'rotate(180deg)' : 'rotate(0deg)'};">
-                            <polyline points="6 9 12 15 18 9"></polyline>
-                        </svg>
-                    </div>
-                </td>
-            `;
-            tbody.appendChild(toggleTr);
-
-            if (window.showCompletedTasks) {
-                completedTasks.forEach(task => {
-                    const tr = document.createElement('tr');
-                    const accentColor = '#10b981'; // Green for completed
-                    
-                    tr.style.cursor = 'pointer';
-                    tr.style.background = 'rgba(110, 122, 140, 0.45)';
-                    tr.style.backdropFilter = 'blur(24px)';
-                    tr.style.webkitBackdropFilter = 'blur(24px)';
-                    tr.style.boxShadow = `inset 0 1.5px 0 0 ${accentColor}66, inset -1.5px 0 0 0 ${accentColor}66, inset 0 -1.5px 0 0 ${accentColor}66, 0 10px 30px rgba(0,0,0,0.4)`;
-                    tr.style.borderRadius = '16px';
-                    tr.style.opacity = '0.7';
-
-                    tr.innerHTML = `
-                        <td data-label="Aufgabe" style="font-weight: 600; display:flex; align-items:flex-start; gap:12px; box-shadow: inset 5px 0 0 0 ${accentColor}; border-top-left-radius: 16px; border-bottom-left-radius: 16px;">
-                            <div style="padding-top: 4px;">
-                                <div class="task-quick-complete ${task.status === 'completed' ? 'completed' : ''}" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="${task.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                </div>
-                            </div>
-                            <div style="display:flex; flex-direction:column; gap:4px;">
-                                <span style="font-size: 1.1rem; font-weight: 700;">${task.title}</span>
-                                ${task.completed_at ? `
-                                <span style="font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-top: 2px;">
-                                    Erledigt am ${new Date(task.completed_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })} Uhr
-                                    ${task.completed_by ? `von ${(() => {
-                                        const u = (window.userList || []).find(usr => String(usr.id) === String(task.completed_by));
-                                        return u ? u.name : 'Unbekannt';
-                                    })()}` : ''}
-                                </span>
-                                ` : ''}
-                                  ${(function() {
-                                     if (!task.subtasks || task.subtasks.length === 0) return '';
-                                     const grouped = {};
-                                     task.subtasks.forEach((sub, idx) => {
-                                         if (window.currentAppMode === 'focus' && sub.status === 'completed') return;
-                                         const sg = sub.supergroup || 'Allgemein';
-                                         if (!grouped[sg]) grouped[sg] = [];
-                                         grouped[sg].push({ ...sub, idx });
-                                     });
-                                     if (Object.keys(grouped).length === 0) return '';
-
-                                     let html = '<div style="margin-top: 10px; display: flex; flex-direction: column; gap: 10px;">';
-                                     for (const [groupName, subs] of Object.entries(grouped)) {
-                                         if (subs.length === 0) continue;
-                                         html += `<div>
-                                             <div style="font-size: 0.7rem; font-weight: 800; color: var(--color-primary-green); margin-bottom: 4px; text-transform: uppercase; opacity: 0.6;">${groupName}</div>`;
-                                         subs.forEach(sub => {
-                                             html += `
-                                             <div class="subtask-item" style="display:flex; align-items:center; gap: 8px; margin-bottom: 4px; justify-content: space-between;">
-                                                 <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
-                                                     <div class="task-quick-complete ${sub.status === 'completed' ? 'completed' : ''}" 
-                                                          onclick="event.stopPropagation(); window.toggleSubtaskStatus('${task.id}', ${sub.idx}, '${sub.status}')" 
-                                                          style="width: 16px; height: 16px; min-width: 16px;">
-                                                         <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                                     </div>
-                                                     <div class="ghost-input" contenteditable="true"
-                                                        onblur="window.updateSubtaskTitle('${task.id}', ${sub.idx}, this.textContent.trim())"
-                                                        onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }"
-                                                        onclick="event.stopPropagation()"
-                                                        style="color: rgba(255,255,255,${sub.status === 'completed' ? '0.4' : '0.8'}); ${sub.status === 'completed' ? 'text-decoration: line-through;' : ''}">${sub.title}</div>
-                                                 </div>
-                                                 ${sub.action_type ? (() => {
-                                                      const isDoc = sub.action_type.startsWith('document:');
-                                                      const isService = sub.action_type.startsWith('servicebericht:');
-                                                      let textLabel = '';
-                                                      let btnTitle = '';
-                                                      let badgeStyle = '';
-                                                      let btnStyle = '';
-                                                      let buttonIcon = '';
-                                                      let clickHandler = '';
-                                                      if (isDoc) {
-                                                          const parts = sub.action_type.substring(9).split('|||');
-                                                          textLabel = parts[1] || 'Dokument';
-                                                          btnTitle = 'Dokument öffnen';
-                                                          badgeStyle = 'background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); color: #10b981;';
-                                                          btnStyle = 'background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981;';
-                                                          buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>';
-                                                          clickHandler = `window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')`;
-                                                      } else if (isService) {
-                                                          const parts = sub.action_type.substring(15).split('|||');
-                                                          textLabel = parts[1] ? `Service: ${parts[1]}` : 'Servicebericht';
-                                                          btnTitle = 'Servicebericht öffnen';
-                                                          badgeStyle = 'background: rgba(147, 51, 234, 0.1); border: 1px solid rgba(147, 51, 234, 0.25); color: #c084fc;';
-                                                          btnStyle = 'background: rgba(147, 51, 234, 0.2); border: 1px solid rgba(147, 51, 234, 0.4); color: #c084fc;';
-                                                          buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>';
-                                                          clickHandler = `window.openServiceberichtFromTask('${task.machine_id}', '${sub.action_type}', '${task.id}', ${sub.idx}, '${sub.id || ''}')`;
-                                                      } else {
-                                                          textLabel = sub.action_type === 'intake' ? 'Eingang' : 'Abnahme';
-                                                          btnTitle = sub.action_type === 'intake' ? 'Eingangsprotokoll öffnen' : 'Abnahmeprotokoll öffnen';
-                                                          const isIntake = sub.action_type === 'intake';
-                                                          badgeStyle = isIntake ? 'background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); color: #f59e0b;';
-                                                          btnStyle = isIntake ? 'background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;';
-                                                          buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>';
-                                                          clickHandler = `window.openProtocolFromTask('${task.machine_id}', null, '${sub.action_type}')`;
-                                                      }
-                                                      return `
-                                                      <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
-                                                          <span style="${badgeStyle} border-radius: 4px; padding: 2px 6px; font-size: 0.65rem; font-weight: 800; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                                                              ${textLabel}
-                                                          </span>
-                                                          <button onclick="event.stopPropagation(); ${clickHandler}" 
-                                                              title="${btnTitle}"
-                                                              style="${btnStyle} border-radius: 6px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; flex-shrink: 0; transition: all 0.2s;">
-                                                              ${buttonIcon}
-                                                          </button>
-                                                      </div>
-                                                      `;
-                                                  })() : ''}
-                                             </div>`;
-                                         });
-                                         html += '</div>';
-                                     }
-                                     html += '</div>';
-                                     return html;
-                                 })()}
-                            </div>
-                        </td>
-                        <td data-label="Maschine">
-                            ${task.machines ? `<span style="color: var(--color-primary-green); font-weight: 700; font-size: 0.98rem;">${getMachineLabel(task.machines)}</span>` : '<span style="color: rgba(255,255,255,0.4)">-</span>'}
-                        </td>
-                        <td data-label="Beteiligte">${renderAvatars(task.assigned_to)}</td>
-                        <td data-label="Fortschritt">${renderProgress(task)}</td>
-                        <td data-label="Aktionen" onclick="event.stopPropagation()">
-                            <div style="display: flex; gap: 12px; align-items: center; justify-content: flex-end;">
-                                <!-- Protocol Button for List View -->
-                                <div style="min-width: 150px;">
-                                    ${getProtocolButtonForTask(task)}
-                                </div>
-                                <button onclick="event.stopPropagation(); window.openTaskModal('${task.id}')" title="Bearbeiten"
-                                    style="width:36px; height:36px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
-                                    onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                                        <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                                    </svg>
-                                </button>
-                                <button class="delete-permission-required" onclick="event.stopPropagation(); window.deleteTask('${task.id}')" title="Löschen"
-                                    style="width:36px; height:36px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
-                                    onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <polyline points="3 6 5 6 21 6"></polyline>
-                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                        </td>
-                    `;
-                    tr.onclick = () => window.openTaskModal(task.id);
-                    tbody.appendChild(tr);
-                });
-            }
-        }
-    }
 
     function createTaskCard(task) {
         const div = document.createElement('div');
@@ -747,7 +459,7 @@
                                        if (isDoc) {
                                            const parts = sub.action_type.substring(9).split('|||');
                                            textLabel = parts[1] || 'Dokument';
-                                           btnTitle = 'Dokument Ã¶ffnen';
+                                           btnTitle = 'Dokument öffnen';
                                            badgeStyle = 'background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.25); color: #10b981;';
                                            btnStyle = 'background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981;';
                                            buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>';
@@ -755,14 +467,14 @@
                                        } else if (isService) {
                                            const parts = sub.action_type.substring(15).split('|||');
                                            textLabel = parts[1] ? `Service: ${parts[1]}` : 'Servicebericht';
-                                           btnTitle = 'Servicebericht Ã¶ffnen';
+                                           btnTitle = 'Servicebericht öffnen';
                                            badgeStyle = 'background: rgba(147, 51, 234, 0.1); border: 1px solid rgba(147, 51, 234, 0.25); color: #c084fc;';
                                            btnStyle = 'background: rgba(147, 51, 234, 0.2); border: 1px solid rgba(147, 51, 234, 0.4); color: #c084fc;';
                                            buttonIcon = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>';
                                            clickHandler = `window.openServiceberichtFromTask('${task.machine_id}', '${sub.action_type}', '${task.id}', ${sub.idx}, '${sub.id || ''}')`;
                                        } else {
                                            textLabel = sub.action_type === 'intake' ? 'Eingang' : 'Abnahme';
-                                           btnTitle = sub.action_type === 'intake' ? 'Eingangsprotokoll Ã¶ffnen' : 'Abnahmeprotokoll Ã¶ffnen';
+                                           btnTitle = sub.action_type === 'intake' ? 'Eingangsprotokoll öffnen' : 'Abnahmeprotokoll öffnen';
                                            const isIntake = sub.action_type === 'intake';
                                            badgeStyle = isIntake ? 'background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25); color: #f59e0b;';
                                            btnStyle = isIntake ? 'background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;' : 'background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b;';
@@ -826,7 +538,8 @@
 
     function renderMachinesView(tasks) {
         document.getElementById('tasks-board').classList.add('hidden');
-        document.getElementById('tasks-list').classList.add('hidden');
+        const listEl = document.getElementById('tasks-list');
+        if (listEl) listEl.classList.add('hidden');
 
         const container = document.getElementById('tasks-machines');
         if (!container) return;
@@ -1616,12 +1329,7 @@
     // ==========================================
     window.switchTaskView = function (view) {
         viewMode = view;
-        // Aktive Markierung nur für die Ansichts-Tabs (Board/Liste/Vorgänge),
-        // damit der "Meine Aufgaben"-Filterbutton seinen eigenen Zustand behält.
-        ['board', 'list', 'vorgaenge'].forEach(v => {
-            const b = document.getElementById('btn-view-' + v);
-            if (b) b.classList.toggle('active', v === view);
-        });
+        updateTaskTabActiveStates();
 
         const vg = document.getElementById('tasks-vorgaenge');
         const board = document.getElementById('tasks-board');
@@ -1640,25 +1348,34 @@
             if (mach) mach.classList.add('hidden');
             if (myProc) myProc.classList.add('hidden');
             if (vg) vg.classList.remove('hidden');
-            if (window.eventsState && Array.isArray(window.eventsState.processes) && window.eventsState.processes.length > 0) {
-                if (typeof window.renderProcesses === 'function') window.renderProcesses('tasks-processes-container');
-            } else if (typeof window.fetchProcesses === 'function') {
-                window.fetchProcesses(); // rendert alle Container inkl. tasks-processes-container
+            if (typeof window.renderProcesses === 'function') {
+                window.renderProcesses('tasks-processes-container');
+            }
+            if (!window.eventsState || !Array.isArray(window.eventsState.processes) || window.eventsState.processes.length === 0) {
+                if (typeof window.fetchProcesses === 'function') window.fetchProcesses();
             }
         } else {
             if (vg) vg.classList.add('hidden');
+            if (board) board.classList.remove('hidden');
             renderTasks();
             if (typeof window.renderMyProcessesSection === 'function') window.renderMyProcessesSection();
         }
+    };
+
+    // Für die Board/Vorgänge-Tab-Buttons: Klick darauf beendet den "Meine Aufgaben"-Filter,
+    // damit immer nur genau ein Tab-Button aktiv leuchtet.
+    window.selectTaskViewTab = function (view) {
+        filters.user = 'all';
+        window.switchTaskView(view);
     };
 
     // "Meine Vorgänge" unter den Aufgaben anzeigen (nur wenn "Meine Aufgaben" aktiv & nicht im Vorgänge-Tab)
     window.renderMyProcessesSection = function () {
         const cont = document.getElementById('tasks-my-processes');
         if (!cont) return;
-        const show = filters.user === 'me' && viewMode !== 'vorgaenge' && window.activeUser;
+        const uid = window.activeUser?.id || localStorage.getItem('activeUserId');
+        const show = filters.user === 'me' && viewMode !== 'vorgaenge' && Boolean(uid);
         if (!show) { cont.classList.add('hidden'); cont.innerHTML = ''; return; }
-        const uid = window.activeUser.id;
         const mine = ((window.eventsState && window.eventsState.processes) || [])
             .filter(p => Array.isArray(p.assigned_users) && p.assigned_users.some(u => String(u) === String(uid)));
         if (mine.length === 0) { cont.classList.add('hidden'); cont.innerHTML = ''; return; }
