@@ -14983,14 +14983,36 @@
             if (placeholder) placeholder.style.display = selectedUsers.length > 0 ? 'none' : 'flex';
         }
 
+        // Panel wird als Portal an document.body gehaengt (wie das Maschinen-Such-Dropdown),
+        // damit overflow/backdrop-filter des Modals es nicht mehr abschneiden oder
+        // dahinter verstecken koennen — reines z-index-Erhoehen hat das nicht geloest,
+        // weil backdrop-filter im Modal einen eigenen containing block erzeugt.
         window.toggleProcessTechDropdown = function(prefix) {
             const panel = document.getElementById(`${prefix}-tech-dropdown-panel`);
             const trigger = document.getElementById(`${prefix}-tech-dropdown-trigger`);
-            if (!panel) return;
+            const wrapper = document.getElementById(`${prefix}-tech-dropdown-wrapper`);
+            if (!panel || !wrapper) return;
             const isOpen = panel.style.display !== 'none';
-            panel.style.display = isOpen ? 'none' : 'block';
-            if (trigger) trigger.style.borderColor = isOpen ? 'rgba(255,255,255,0.1)' : 'rgba(16,185,129,0.5)';
-            if (!isOpen) renderProcessTechDropdown(prefix);
+            if (isOpen) {
+                panel.style.display = 'none';
+                panel.classList.remove('show');
+                if (trigger) trigger.style.borderColor = 'rgba(255,255,255,0.1)';
+                return;
+            }
+            if (panel.parentElement !== document.body) {
+                document.body.appendChild(panel);
+            }
+            const rect = wrapper.getBoundingClientRect();
+            panel.style.position = 'fixed';
+            panel.style.top = (rect.bottom + 6) + 'px';
+            panel.style.left = rect.left + 'px';
+            panel.style.width = rect.width + 'px';
+            panel.style.right = 'auto';
+            panel.style.zIndex = '999999';
+            panel.style.display = 'block';
+            panel.classList.add('show');
+            if (trigger) trigger.style.borderColor = 'rgba(16,185,129,0.5)';
+            renderProcessTechDropdown(prefix);
         };
 
         window.toggleProcessTech = function(prefix, id) {
@@ -15011,8 +15033,10 @@
                 const wrapper = document.getElementById(`${prefix}-tech-dropdown-wrapper`);
                 const panel = document.getElementById(`${prefix}-tech-dropdown-panel`);
                 const trigger = document.getElementById(`${prefix}-tech-dropdown-trigger`);
-                if (wrapper && !wrapper.contains(e.target) && panel && panel.style.display !== 'none') {
+                if (wrapper && panel && panel.style.display !== 'none' &&
+                    !wrapper.contains(e.target) && !panel.contains(e.target)) {
                     panel.style.display = 'none';
+                    panel.classList.remove('show');
                     if (trigger) trigger.style.borderColor = 'rgba(255,255,255,0.1)';
                 }
             });
@@ -15065,6 +15089,8 @@
         };
 
         window.closeProcessAddModal = function() {
+            const techPanel = document.getElementById('process-add-tech-dropdown-panel');
+            if (techPanel) { techPanel.style.display = 'none'; techPanel.classList.remove('show'); }
             const modal = document.getElementById('process-add-modal');
             if (modal) {
                 modal.classList.remove('show');
@@ -15220,6 +15246,8 @@
         };
 
         window.closeEditProcessModal = function() {
+            const techPanel = document.getElementById('edit-process-tech-dropdown-panel');
+            if (techPanel) { techPanel.style.display = 'none'; techPanel.classList.remove('show'); }
             const modal = document.getElementById('process-edit-modal');
             if (modal) {
                 modal.classList.remove('show');
@@ -24654,7 +24682,7 @@
 
                 <div class="form-group" style="margin-bottom: 1.25rem;">
                     <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Mitarbeiter zuweisen</label>
-                    <div id="email-tech-dropdown-wrapper" style="position: relative;">
+                    <div id="email-tech-dropdown-wrapper" style="position: relative; z-index: 3000;">
                         <div id="email-tech-dropdown-trigger" onclick="window.toggleProcessTechDropdown('email')"
                             style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-height: 48px; padding: 8px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; cursor: pointer; transition: border-color 0.2s; user-select: none;">
                             <div id="email-tech-selected-pills" style="display: flex; flex-wrap: wrap; gap: 6px; flex: 1;"></div>
@@ -24663,7 +24691,7 @@
                                 <polyline points="6 9 12 15 18 9"></polyline>
                             </svg>
                         </div>
-                        <div id="email-tech-dropdown-panel"
+                        <div id="email-tech-dropdown-panel" class="tech-dropdown-panel"
                             style="display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: rgba(15,23,42,0.97); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; z-index: 200; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); max-height: 240px; overflow-y: auto; box-shadow: 0 16px 48px rgba(0,0,0,0.5);">
                             <div id="email-tech-option-list" style="padding: 8px;"></div>
                         </div>
@@ -24756,7 +24784,7 @@
 
                 <div class="form-group" style="margin-bottom: 1.25rem;">
                     <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Mitarbeiter zuweisen</label>
-                    <div id="process-add-tech-dropdown-wrapper" style="position: relative;">
+                    <div id="process-add-tech-dropdown-wrapper" style="position: relative; z-index: 3000;">
                         <div id="process-add-tech-dropdown-trigger" onclick="window.toggleProcessTechDropdown('process-add')"
                             style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-height: 48px; padding: 8px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; cursor: pointer; transition: border-color 0.2s; user-select: none;">
                             <div id="process-add-tech-selected-pills" style="display: flex; flex-wrap: wrap; gap: 6px; flex: 1;"></div>
@@ -24765,8 +24793,8 @@
                                 <polyline points="6 9 12 15 18 9"></polyline>
                             </svg>
                         </div>
-                        <div id="process-add-tech-dropdown-panel"
-                            style="display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: rgba(15,23,42,0.97); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; z-index: 200; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); max-height: 240px; overflow-y: auto; box-shadow: 0 16px 48px rgba(0,0,0,0.5);">
+                        <div id="process-add-tech-dropdown-panel" class="tech-dropdown-panel"
+                            style="display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: rgb(15,23,42); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; z-index: 200; max-height: 240px; overflow-y: auto; box-shadow: 0 16px 48px rgba(0,0,0,0.5);">
                             <div id="process-add-tech-option-list" style="padding: 8px;"></div>
                         </div>
                     </div>
@@ -24933,7 +24961,7 @@
 
                 <div class="form-group" style="margin-bottom: 1.25rem;">
                     <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Mitarbeiter zuweisen</label>
-                    <div id="edit-process-tech-dropdown-wrapper" style="position: relative;">
+                    <div id="edit-process-tech-dropdown-wrapper" style="position: relative; z-index: 3000;">
                         <div id="edit-process-tech-dropdown-trigger" onclick="window.toggleProcessTechDropdown('edit-process')"
                             style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-height: 48px; padding: 8px 14px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; cursor: pointer; transition: border-color 0.2s; user-select: none;">
                             <div id="edit-process-tech-selected-pills" style="display: flex; flex-wrap: wrap; gap: 6px; flex: 1;"></div>
@@ -24942,8 +24970,8 @@
                                 <polyline points="6 9 12 15 18 9"></polyline>
                             </svg>
                         </div>
-                        <div id="edit-process-tech-dropdown-panel"
-                            style="display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: rgba(15,23,42,0.97); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; z-index: 200; backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); max-height: 240px; overflow-y: auto; box-shadow: 0 16px 48px rgba(0,0,0,0.5);">
+                        <div id="edit-process-tech-dropdown-panel" class="tech-dropdown-panel"
+                            style="display: none; position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: rgb(15,23,42); border: 1px solid rgba(255,255,255,0.12); border-radius: 14px; z-index: 200; max-height: 240px; overflow-y: auto; box-shadow: 0 16px 48px rgba(0,0,0,0.5);">
                             <div id="edit-process-tech-option-list" style="padding: 8px;"></div>
                         </div>
                     </div>

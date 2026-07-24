@@ -1127,7 +1127,11 @@ body {
 /* Fix: Open dropdown menus must never be clipped by a scrollable modal/card,
    even on mobile where .modal-content switches to overflow-y: auto */
 .modal-content:has(.custom-filter-dropdown.active),
-.glass-card:has(.custom-filter-dropdown.active) {
+.glass-card:has(.custom-filter-dropdown.active),
+.modal-content:has(.user-dropdown-menu.show),
+.glass-card:has(.user-dropdown-menu.show),
+.modal-content:has(.tech-dropdown-panel.show),
+.glass-card:has(.tech-dropdown-panel.show) {
     overflow: visible !important;
 }
 
