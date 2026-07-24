@@ -14900,6 +14900,8 @@
             document.getElementById('email-remark-input').value = '';
             document.getElementById('email-type-select').value = 'email_incoming';
             document.getElementById('email-status-select').value = 'offen';
+            window.syncProcessSelectDisplay('email', 'type');
+            window.syncProcessSelectDisplay('email', 'status');
             window.updateEmailBodyVisibility('email');
             
             // Set default date to now
@@ -15031,6 +15033,8 @@
             document.getElementById('process-add-remark-input').value = '';
             document.getElementById('process-add-type-select').value = 'note';
             document.getElementById('process-add-status-select').value = 'offen';
+            window.syncProcessSelectDisplay('process-add', 'type');
+            window.syncProcessSelectDisplay('process-add', 'status');
 
             // Set default date to now
             const now = new Date();
@@ -15054,6 +15058,10 @@
             document.getElementById('process-add-assigned-users').value = '';
             document.getElementById('process-add-tech-dropdown-panel').style.display = 'none';
             renderProcessTechDropdown('process-add');
+
+            // Reset Schritte
+            window.processSteps['process-add'] = [];
+            window.renderProcessSteps('process-add');
         };
 
         window.closeProcessAddModal = function() {
@@ -15093,6 +15101,7 @@
                         status: status,
                         remark: remark || null,
                         assigned_users: window.processAssignedUsers['process-add'],
+                        steps: (window.processSteps['process-add'] || []).filter(s => (s.text || '').trim()),
                         user_id: window.currentUser?.id
                     }]);
 
@@ -15125,7 +15134,10 @@
             document.getElementById('edit-process-sender-input').value = proc.sender || '';
             document.getElementById('edit-process-recipient-input').value = proc.recipient || '';
             document.getElementById('edit-process-status-select').value = proc.status || 'offen';
+            document.getElementById('edit-process-remark-input').value = proc.remark || '';
             document.getElementById('edit-process-body-input').value = proc.description || '';
+            window.syncProcessSelectDisplay('edit-process', 'type');
+            window.syncProcessSelectDisplay('edit-process', 'status');
             window.processSteps['edit-process'] = Array.isArray(proc.steps)
                 ? proc.steps.map(s => ({ id: s.id || genStepId(), text: s.text || '', done: !!s.done, created_at: s.created_at || null, created_by: s.created_by || null, done_at: s.done_at || null, done_by: s.done_by || null }))
                 : [];
@@ -15288,6 +15300,82 @@
             const stepsGroup = document.getElementById(`${prefix}-steps-group`);
             if (stepsGroup) stepsGroup.style.display = '';
         };
+
+        // ==========================================
+        // VORGANGS-TYP / -STATUS ALS GLASS-DROPDOWN (statt natives <select>)
+        // Gleiches Muster wie Mitarbeiter-Auswahl/Maschinen-Kategorie: das eigentliche
+        // <select> bleibt unveraendert im DOM (versteckt) und liefert weiterhin .value fuer
+        // saveNewProcess/updateProcess/saveImportedEmail — nur die Optik wird ersetzt.
+        // ==========================================
+        window.PROCESS_STATUS_INFO = {
+            offen: { label: 'Offen', color: '#ef4444' },
+            in_bearbeitung: { label: 'In Bearbeitung', color: '#f59e0b' },
+            erledigt: { label: 'Erledigt', color: '#10b981' }
+        };
+
+        window.toggleProcessSelectDropdown = function(prefix, field) {
+            const menu = document.getElementById(`${prefix}-${field}-menu`);
+            if (!menu) return;
+            const wasOpen = menu.classList.contains('show');
+            document.querySelectorAll('.proc-select-menu.show').forEach(m => m.classList.remove('show'));
+            if (!wasOpen) {
+                window.renderProcessSelectMenu(prefix, field);
+                menu.classList.add('show');
+            }
+        };
+
+        window.renderProcessSelectMenu = function(prefix, field) {
+            const menu = document.getElementById(`${prefix}-${field}-menu`);
+            const select = document.getElementById(`${prefix}-${field}-select`);
+            if (!menu || !select) return;
+            const list = menu.querySelector('ul');
+            if (!list) return;
+            const infoMap = field === 'type' ? (window.PROCESS_TYPE_INFO || {}) : window.PROCESS_STATUS_INFO;
+            const currentVal = select.value;
+            // Optionen kommen aus dem tatsaechlichen <select> (jedes Modal hat eine eigene,
+            // teils kleinere Teilmenge), Farbe/Punkt kommt zusaetzlich aus der globalen Info-Map.
+            list.innerHTML = Array.from(select.options).map(opt => {
+                const info = infoMap[opt.value];
+                const color = info ? info.color : 'rgba(255,255,255,0.4)';
+                const active = opt.value === currentVal;
+                return `<li onclick="window.selectProcessSelectOption('${prefix}','${field}','${opt.value}')" style="display:flex; align-items:center; gap:10px; ${active ? 'background:rgba(255,255,255,0.06); font-weight:700;' : ''}">
+                    <span style="flex-shrink:0; display:inline-block; width:9px; height:9px; border-radius:50%; background:${color};"></span>${opt.text}
+                </li>`;
+            }).join('');
+        };
+
+        window.selectProcessSelectOption = function(prefix, field, value) {
+            const select = document.getElementById(`${prefix}-${field}-select`);
+            if (select) select.value = value;
+            window.syncProcessSelectDisplay(prefix, field);
+            const menu = document.getElementById(`${prefix}-${field}-menu`);
+            if (menu) menu.classList.remove('show');
+            if (field === 'type' && typeof window.updateEmailBodyVisibility === 'function') {
+                window.updateEmailBodyVisibility(prefix);
+            }
+        };
+
+        // Aktualisiert nur die Anzeige (Text/Farbe) des Triggers passend zum aktuellen Wert des
+        // versteckten <select> — wird nach jedem programmatischen .value-Set aufgerufen.
+        window.syncProcessSelectDisplay = function(prefix, field) {
+            const select = document.getElementById(`${prefix}-${field}-select`);
+            const textEl = document.getElementById(`${prefix}-${field}-select-text`);
+            const dotEl = document.getElementById(`${prefix}-${field}-select-dot`);
+            if (!select || !textEl) return;
+            const infoMap = field === 'type' ? (window.PROCESS_TYPE_INFO || {}) : window.PROCESS_STATUS_INFO;
+            const info = infoMap[select.value];
+            textEl.textContent = info ? info.label : (select.options[select.selectedIndex] ? select.options[select.selectedIndex].text : '');
+            if (dotEl) dotEl.style.background = info ? info.color : 'rgba(255,255,255,0.3)';
+        };
+
+        document.addEventListener('click', (e) => {
+            document.querySelectorAll('.proc-select-menu.show').forEach(menu => {
+                const trigger = menu.previousElementSibling;
+                if (!menu.contains(e.target) && !(trigger && trigger.contains(e.target))) {
+                    menu.classList.remove('show');
+                }
+            });
+        });
 
         // ==========================================
         // VORGANGS-SCHRITTE (Checkliste, Drag & Drop)
@@ -15627,6 +15715,7 @@
                     } else {
                         document.getElementById(`${prefix}-type-select`).value = 'email_incoming';
                     }
+                    window.syncProcessSelectDisplay(prefix, 'type');
                     window.updateEmailBodyVisibility(prefix);
 
                     // Smart matching trigger
@@ -16554,6 +16643,7 @@
                 const machineId = document.getElementById('edit-process-machine-select').value;
                 const workshopOrderNumber = document.getElementById('edit-process-workshop-order-select').value;
                 const status = document.getElementById('edit-process-status-select').value;
+                const remark = document.getElementById('edit-process-remark-input').value;
                 const description = document.getElementById('edit-process-body-input').value;
                 const serviceReportId = document.getElementById('edit-process-service-report-select').value;
 
@@ -16570,6 +16660,7 @@
                         machine_id: machineId ? parseInt(machineId) : null,
                         workshop_order_number: workshopOrderNumber || null,
                         status: status,
+                        remark: remark || null,
                         description: description || null,
                         assigned_users: window.processAssignedUsers['edit-process'],
                         steps: (window.processSteps['edit-process'] || []).filter(s => (s.text || '').trim()),
@@ -24466,20 +24557,27 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 0.75rem;">
                     <div class="form-group">
                         <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Vorgangs-Typ</label>
-                        <select id="email-type-select" class="glass-input" style="appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 15px center;">
-                            <option value="email_incoming">E-Mail Eingang</option>
-                            <option value="email_outgoing">E-Mail Ausgang</option>
-                            <option value="note">Interne Notiz</option>
-                            <option value="call">Telefonat</option>
-                            <option value="appointment">Termin / Besuch</option>
-                            <option value="repair">Reparatur</option>
-                            <option value="maintenance">Wartung</option>
-                            <option value="offer">Angebot</option>
-                            <option value="order">Bestellung</option>
-                            <option value="complaint">Reklamation</option>
-                            <option value="other">Sonstiges</option>
-                            <option value="manual">Manuell</option>
-                        </select>
+                        <div style="position:relative;">
+                            <select id="email-type-select" style="display:none;">
+                                <option value="email_incoming">E-Mail Eingang</option>
+                                <option value="email_outgoing">E-Mail Ausgang</option>
+                                <option value="note">Interne Notiz</option>
+                                <option value="call">Telefonat</option>
+                                <option value="appointment">Termin / Besuch</option>
+                                <option value="repair">Reparatur</option>
+                                <option value="maintenance">Wartung</option>
+                                <option value="offer">Angebot</option>
+                                <option value="order">Bestellung</option>
+                                <option value="complaint">Reklamation</option>
+                                <option value="other">Sonstiges</option>
+                                <option value="manual">Manuell</option>
+                            </select>
+                            <div id="email-type-select-trigger" class="glass-select" style="cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="window.toggleProcessSelectDropdown('email','type')">
+                                <span id="email-type-select-dot" style="flex-shrink:0; width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,0.3);"></span>
+                                <span id="email-type-select-text" style="flex:1;">E-Mail Eingang</span>
+                            </div>
+                            <div id="email-type-menu" class="proc-select-menu user-dropdown-menu" style="width:100%; top:105%; right:auto; left:0;"><ul></ul></div>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Datum / Uhrzeit</label>
@@ -24526,11 +24624,18 @@
                     </div>
                     <div class="form-group">
                         <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Vorgangs-Status</label>
-                        <select id="email-status-select" class="glass-input" style="appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 15px center;">
-                            <option value="offen">Offen</option>
-                            <option value="in_bearbeitung">In Bearbeitung</option>
-                            <option value="erledigt">Erledigt</option>
-                        </select>
+                        <div style="position:relative;">
+                            <select id="email-status-select" style="display:none;">
+                                <option value="offen">Offen</option>
+                                <option value="in_bearbeitung">In Bearbeitung</option>
+                                <option value="erledigt">Erledigt</option>
+                            </select>
+                            <div id="email-status-select-trigger" class="glass-select" style="cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="window.toggleProcessSelectDropdown('email','status')">
+                                <span id="email-status-select-dot" style="flex-shrink:0; width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,0.3);"></span>
+                                <span id="email-status-select-text" style="flex:1;">Offen</span>
+                            </div>
+                            <div id="email-status-menu" class="proc-select-menu user-dropdown-menu" style="width:100%; top:105%; right:auto; left:0;"><ul></ul></div>
+                        </div>
                     </div>
                 </div>
 
@@ -24575,17 +24680,24 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 0.75rem;">
                     <div class="form-group">
                         <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Vorgangs-Typ</label>
-                        <select id="process-add-type-select" class="glass-input" style="appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 15px center;">
-                            <option value="note">Interne Notiz</option>
-                            <option value="call">Telefonat</option>
-                            <option value="appointment">Termin / Besuch</option>
-                            <option value="repair">Reparatur</option>
-                            <option value="maintenance">Wartung</option>
-                            <option value="offer">Angebot</option>
-                            <option value="order">Bestellung</option>
-                            <option value="complaint">Reklamation</option>
-                            <option value="other">Sonstiges</option>
-                        </select>
+                        <div style="position:relative;">
+                            <select id="process-add-type-select" style="display:none;">
+                                <option value="note">Interne Notiz</option>
+                                <option value="call">Telefonat</option>
+                                <option value="appointment">Termin / Besuch</option>
+                                <option value="repair">Reparatur</option>
+                                <option value="maintenance">Wartung</option>
+                                <option value="offer">Angebot</option>
+                                <option value="order">Bestellung</option>
+                                <option value="complaint">Reklamation</option>
+                                <option value="other">Sonstiges</option>
+                            </select>
+                            <div id="process-add-type-select-trigger" class="glass-select" style="cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="window.toggleProcessSelectDropdown('process-add','type')">
+                                <span id="process-add-type-select-dot" style="flex-shrink:0; width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,0.3);"></span>
+                                <span id="process-add-type-select-text" style="flex:1;">Interne Notiz</span>
+                            </div>
+                            <div id="process-add-type-menu" class="proc-select-menu user-dropdown-menu" style="width:100%; top:105%; right:auto; left:0;"><ul></ul></div>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Datum / Uhrzeit</label>
@@ -24614,11 +24726,18 @@
                     </div>
                     <div class="form-group">
                         <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Vorgangs-Status</label>
-                        <select id="process-add-status-select" class="glass-input" style="appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 15px center;">
-                            <option value="offen">Offen</option>
-                            <option value="in_bearbeitung">In Bearbeitung</option>
-                            <option value="erledigt">Erledigt</option>
-                        </select>
+                        <div style="position:relative;">
+                            <select id="process-add-status-select" style="display:none;">
+                                <option value="offen">Offen</option>
+                                <option value="in_bearbeitung">In Bearbeitung</option>
+                                <option value="erledigt">Erledigt</option>
+                            </select>
+                            <div id="process-add-status-select-trigger" class="glass-select" style="cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="window.toggleProcessSelectDropdown('process-add','status')">
+                                <span id="process-add-status-select-dot" style="flex-shrink:0; width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,0.3);"></span>
+                                <span id="process-add-status-select-text" style="flex:1;">Offen</span>
+                            </div>
+                            <div id="process-add-status-menu" class="proc-select-menu user-dropdown-menu" style="width:100%; top:105%; right:auto; left:0;"><ul></ul></div>
+                        </div>
                     </div>
                 </div>
 
@@ -24639,6 +24758,15 @@
                         </div>
                     </div>
                     <input type="hidden" id="process-add-assigned-users">
+                </div>
+
+                <div class="form-group" id="process-add-steps-group" style="margin-bottom: 1.25rem;">
+                    <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Schritte</label>
+                    <div id="process-add-steps-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                    <button type="button" onclick="window.addProcessStep('process-add')" style="margin-top: 10px; display: inline-flex; align-items: center; gap: 6px; background: rgba(52,211,153,0.12); color: #34d399; border: 1px solid rgba(52,211,153,0.35); border-radius: 10px; padding: 9px 14px; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(52,211,153,0.22)'" onmouseout="this.style.background='rgba(52,211,153,0.12)'">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        Schritt hinzufügen
+                    </button>
                 </div>
 
                 <div style="display: flex; gap: 15px;">
@@ -24702,20 +24830,27 @@
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 0.75rem;">
                     <div class="form-group">
                         <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Vorgangs-Typ</label>
-                        <select id="edit-process-type-select" class="glass-input" style="appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 15px center;">
-                            <option value="email_incoming">E-Mail Eingang</option>
-                            <option value="email_outgoing">E-Mail Ausgang</option>
-                            <option value="note">Interne Notiz</option>
-                            <option value="call">Telefonat</option>
-                            <option value="appointment">Termin / Besuch</option>
-                            <option value="repair">Reparatur</option>
-                            <option value="maintenance">Wartung</option>
-                            <option value="offer">Angebot</option>
-                            <option value="order">Bestellung</option>
-                            <option value="complaint">Reklamation</option>
-                            <option value="other">Sonstiges</option>
-                            <option value="manual">Manuell</option>
-                        </select>
+                        <div style="position:relative;">
+                            <select id="edit-process-type-select" style="display:none;">
+                                <option value="email_incoming">E-Mail Eingang</option>
+                                <option value="email_outgoing">E-Mail Ausgang</option>
+                                <option value="note">Interne Notiz</option>
+                                <option value="call">Telefonat</option>
+                                <option value="appointment">Termin / Besuch</option>
+                                <option value="repair">Reparatur</option>
+                                <option value="maintenance">Wartung</option>
+                                <option value="offer">Angebot</option>
+                                <option value="order">Bestellung</option>
+                                <option value="complaint">Reklamation</option>
+                                <option value="other">Sonstiges</option>
+                                <option value="manual">Manuell</option>
+                            </select>
+                            <div id="edit-process-type-select-trigger" class="glass-select" style="cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="window.toggleProcessSelectDropdown('edit-process','type')">
+                                <span id="edit-process-type-select-dot" style="flex-shrink:0; width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,0.3);"></span>
+                                <span id="edit-process-type-select-text" style="flex:1;">E-Mail Eingang</span>
+                            </div>
+                            <div id="edit-process-type-menu" class="proc-select-menu user-dropdown-menu" style="width:100%; top:105%; right:auto; left:0;"><ul></ul></div>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Datum / Uhrzeit</label>
@@ -24726,6 +24861,11 @@
                 <div class="form-group" style="margin-bottom: 0.75rem;">
                     <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Betreff / Titel</label>
                     <input type="text" id="edit-process-title-input" class="glass-input" required placeholder="Betreff der E-Mail...">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Bemerkung / Beschreibung</label>
+                    <textarea id="edit-process-remark-input" class="glass-input" style="height: 80px; resize: vertical; padding-top: 15px;" placeholder="Interne Bemerkung..."></textarea>
                 </div>
 
                 <div class="form-group" id="edit-process-body-group" style="margin-bottom: 0.75rem; display: none;">
@@ -24757,11 +24897,18 @@
                     </div>
                     <div class="form-group">
                         <label style="color: rgba(255,255,255,0.5); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; display: block;">Vorgangs-Status</label>
-                        <select id="edit-process-status-select" class="glass-input" style="appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%20fill%3D%22none%22%20stroke%3D%22white%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E'); background-repeat: no-repeat; background-position: right 15px center;">
-                            <option value="offen">Offen</option>
-                            <option value="in_bearbeitung">In Bearbeitung</option>
-                            <option value="erledigt">Erledigt</option>
-                        </select>
+                        <div style="position:relative;">
+                            <select id="edit-process-status-select" style="display:none;">
+                                <option value="offen">Offen</option>
+                                <option value="in_bearbeitung">In Bearbeitung</option>
+                                <option value="erledigt">Erledigt</option>
+                            </select>
+                            <div id="edit-process-status-select-trigger" class="glass-select" style="cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="window.toggleProcessSelectDropdown('edit-process','status')">
+                                <span id="edit-process-status-select-dot" style="flex-shrink:0; width:9px; height:9px; border-radius:50%; background:rgba(255,255,255,0.3);"></span>
+                                <span id="edit-process-status-select-text" style="flex:1;">Offen</span>
+                            </div>
+                            <div id="edit-process-status-menu" class="proc-select-menu user-dropdown-menu" style="width:100%; top:105%; right:auto; left:0;"><ul></ul></div>
+                        </div>
                     </div>
                 </div>
 
