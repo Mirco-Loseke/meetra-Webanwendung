@@ -1,0 +1,122 @@
+                <!-- ========================================================= -->
+                <!-- ================== AUFGABEN ============================= -->
+                <!-- ========================================================= -->
+                <section id="tasks" class="view hidden">
+                    <div class="view-header-layout">
+                        <!-- Top Row: Title (Left) / Search (Right) -->
+                        <div class="view-header-row-top">
+                            <div class="view-header-left" style="display: flex; align-items: center; gap: 10px;">
+                                <h1 style="margin: 0; display:flex; align-items:center; gap:12px;"><svg width="28"
+                                        height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M9 3h6a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" />
+                                        <path d="M15 5h2a2 2 0 0 1 2 2v3.5" />
+                                        <path d="M9 5H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h7" />
+                                        <line x1="7.5" y1="11" x2="13.5" y2="11" />
+                                        <line x1="7.5" y1="15" x2="11.5" y2="15" />
+                                        <circle cx="17.5" cy="17.5" r="4.5" />
+                                        <path d="m15.8 17.6 1.1 1.1 2.2-2.4" />
+                                    </svg>Aufgaben</h1>
+                            </div>
+                            <div class="view-header-right" style="display: flex; align-items: center; gap: 10px;">
+                                <div id="focus-mode-container" style="display: flex; align-items: center; position: relative;">
+                                    <div id="focus-mode-btn" class="focus-mode-btn" onclick="window.toggleFocusMode()" title="Fokusmodus">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <circle cx="12" cy="12" r="3"></circle>
+                                            <line x1="12" y1="2" x2="12" y2="5"></line>
+                                            <line x1="12" y1="19" x2="12" y2="22"></line>
+                                            <line x1="2" y1="12" x2="5" y2="12"></line>
+                                            <line x1="19" y1="12" x2="22" y2="12"></line>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="custom-search-wrapper" style="width: 250px;">
+                                    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <circle cx="11" cy="11" r="8"></circle>
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                    </svg>
+                                    <input type="text" id="task-search-input" placeholder="Aufgaben suchen..."
+                                        autocomplete="off">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Bottom Row: Tabs (Left) / Add Button (Right) -->
+                        <div class="view-header-row-bottom">
+                            <div class="view-header-left" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                                <div class="calendar-view-tabs" style="margin-bottom: 0;">
+                                    <button class="calendar-tab-btn active">Aufgaben</button>
+                                    <button class="calendar-tab-btn" onclick="window.switchView('processes')">Vorgänge</button>
+                                </div>
+                                <div class="calendar-view-tabs" style="margin-bottom: 0;">
+                                    <button class="calendar-tab-btn" id="btn-task-user-me"
+                                        onclick="window.toggleMyTasksFilter()">Meine Aufgaben / Vorgänge</button>
+                                </div>
+                            </div>
+                            <div class="view-header-right" style="display: flex; align-items: center; gap: 12px;">
+                                <!-- Cinema Mode Controls (Moved here next to Add Button) -->
+                                <div class="cinema-mode-controls">
+                                    <button id="btn-cinema-toggle" class="btn-cinema-premium" onclick="window.toggleCinemaMode()" title="Kino-Modus">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+                                            <line x1="7" y1="2" x2="7" y2="22"></line>
+                                            <line x1="17" y1="2" x2="17" y2="22"></line>
+                                            <line x1="2" y1="12" x2="22" y2="12"></line>
+                                            <line x1="2" y1="7" x2="7" y2="7"></line>
+                                            <line x1="2" y1="17" x2="7" y2="17"></line>
+                                            <line x1="17" y1="17" x2="22" y2="17"></line>
+                                            <line x1="17" y1="7" x2="22" y2="7"></line>
+                                        </svg>
+                                    </button>
+                                    <div id="cinema-speed-ui" class="cinema-speed-ui">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="10"></circle>
+                                            <polyline points="12 6 12 12 16 14"></polyline>
+                                        </svg>
+                                        <input type="range" min="0.1" max="10" step="0.1" value="1.0" id="cinema-speed-slider">
+                                    </div>
+                                </div>
+                                <button class="btn-add-bg" onclick="window.openAiCaptureModal('aufgaben')" title="Aus Freitext automatisch Aufgaben erzeugen"
+                                    style="background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.4); color: #a78bfa;">
+                                    <span style="font-size:1.05rem;">✨</span>
+                                    KI-Erfassung
+                                </button>
+                                <button class="btn-add-bg btn-red-animated" id="btn-add-process-header" onclick="window.openProcessAddModal()" style="display:none;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                    Vorgang erstellen
+                                </button>
+                                <button class="btn-add-bg" id="btn-add-task-header" onclick="openAddTaskModal()">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                    Aufgabe erstellen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="tasks-board" class="kanban-board">
+                        <div class="kanban-column" data-status="open">
+                            <h3 class="column-title">Offen <span class="task-count">0</span></h3>
+                            <div class="task-list" id="list-open"></div>
+                        </div>
+                        <div class="kanban-column" data-status="completed">
+                            <h3 class="column-title">Erledigt <span class="task-count">0</span></h3>
+                            <div class="task-list" id="list-completed"></div>
+                        </div>
+                    </div>
+                    <!-- Vorgänge (in Aufgaben integriert) -->
+                    <div id="tasks-vorgaenge" class="hidden">
+                        <div id="tasks-processes-container"></div>
+                    </div>
+                    <!-- Meine Vorgänge (erscheint unter Meine Aufgaben) -->
+                    <div id="tasks-my-processes" class="hidden" style="margin-top:2rem;"></div>
+                </section>

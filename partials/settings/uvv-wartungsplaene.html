@@ -1,0 +1,41 @@
+        <!-- UVV & Wartungspläne Settings View -->
+        <section id="settings-uvv-wartungsplaene" class="view hidden">
+            <div class="users-header-container">
+                <h1>UVV, Wartungspläne &amp; Einweisung</h1>
+                <div class="users-header-actions">
+                    <button class="btn-back-custom" data-target="settings">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg>
+                        ZURÜCK
+                    </button>
+                    <button class="btn-add-bg" onclick="openPlanModal(null)">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        ANLEGEN
+                    </button>
+                </div>
+            </div>
+
+            <div class="glass-card" style="padding: 1.5rem 1.75rem; margin-top: 1.5rem;">
+            <!-- Filter Tabs -->
+            <div style="display: flex; gap: 10px; margin: 0 0 1rem 0; flex-wrap: wrap;">
+                <button class="uvv-filter-btn active" data-filter="all" onclick="filterUvvPlanCards('all')"
+                    style="padding: 7px 18px; border-radius: 20px; border: 1.5px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: white; font-weight: 700; font-size: 0.83rem; cursor: pointer; transition: all 0.2s;">
+                    Alle
+                </button>
+                <button class="uvv-filter-btn" data-filter="uvv" onclick="filterUvvPlanCards('uvv')"
+                    style="padding: 7px 18px; border-radius: 20px; border: 1.5px solid rgba(239,68,68,0.4); background: rgba(239,68,68,0.08); color: #f87171; font-weight: 700; font-size: 0.83rem; cursor: pointer; transition: all 0.2s;">
+                    UVV
+                </button>
+                <button class="uvv-filter-btn" data-filter="wartung" onclick="filterUvvPlanCards('wartung')"
+                    style="padding: 7px 18px; border-radius: 20px; border: 1.5px solid rgba(59,130,246,0.4); background: rgba(59,130,246,0.08); color: #60a5fa; font-weight: 700; font-size: 0.83rem; cursor: pointer; transition: all 0.2s;">
+                    Wartung
+                </button>
+                <button class="uvv-filter-btn" data-filter="einweisung" onclick="filterUvvPlanCards('einweisung')"
+                    style="padding: 7px 18px; border-radius: 20px; border: 1.5px solid rgba(139,92,246,0.4); background: rgba(139,92,246,0.08); color: #a78bfa; font-weight: 700; font-size: 0.83rem; cursor: pointer; transition: all 0.2s;">
+                    Einweisung
+                </button>
+            </div>
+
+            <!-- Plan Cards Container -->
+            <div id="uvv-plan-cards-container" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+            </div>
+        </section>

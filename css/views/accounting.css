@@ -1,0 +1,202 @@
+/* ========================================================= */
+/* ================ ACCOUNTING VIEW STYLES ================= */
+/* ========================================================= */
+
+.acc-eval-kpi-grid,
+.fin-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.acc-eval-kpi {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    min-width: 0;
+}
+
+.acc-eval-kpi-value {
+    font-size: var(--fs-base);
+    font-weight: 900;
+    font-family: var(--font-heading);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.acc-eval-kpi-label {
+    font-size: var(--fs-2xs);
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.45);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* --------------------------------------------------------- */
+/* Sichtbarkeit Desktop / Mobil                               */
+/* --------------------------------------------------------- */
+
+.acc-mobile-only {
+    display: none !important;
+}
+
+@media (max-width: 900px) {
+    .acc-desktop-only {
+        display: none !important;
+    }
+
+    .acc-mobile-only {
+        display: flex !important;
+    }
+}
+
+/* --------------------------------------------------------- */
+/* Monats-Kopfzeile in der Belegtabelle                       */
+/* --------------------------------------------------------- */
+
+.accounting-month-header td {
+    background: rgba(255, 255, 255, 0.06);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0;
+}
+
+.acc-month-header-content {
+    margin: 0;
+    font-family: var(--font-heading);
+    color: #fff;
+}
+
+.acc-month-name {
+    color: #fff;
+}
+
+/* --------------------------------------------------------- */
+/* Aufgeklappte Beleg-Positionen                              */
+/* --------------------------------------------------------- */
+
+.acc-details-cell {
+    padding: 0 !important;
+    background: rgba(0, 0, 0, 0.18);
+}
+
+.acc-details-grid,
+.acc-details-row {
+    display: grid;
+    grid-template-columns: 3fr 0.8fr 0.8fr 1fr 1fr 2fr 0.8fr;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 16px;
+    font-family: var(--font-body);
+    font-size: var(--fs-md);
+}
+
+.acc-details-grid {
+    font-size: var(--fs-2xs);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.acc-details-row {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.acc-details-row:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+@media (max-width: 900px) {
+    .acc-details-grid {
+        display: none;
+    }
+
+    .acc-details-row {
+        grid-template-columns: 1fr 1fr;
+        row-gap: 6px;
+    }
+
+    .acc-details-row > div[data-label]::before {
+        content: attr(data-label) ': ';
+        color: rgba(255, 255, 255, 0.4);
+        font-size: var(--fs-xs);
+        font-weight: 700;
+    }
+}
+
+.quarters-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 12px;
+}
+
+.acc-eval-charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+#machine-evaluation-modal .modal-content {
+    overflow-y: auto !important;
+    max-height: 90vh !important;
+}
+
+#machine-evaluation-modal .modal-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+#machine-evaluation-modal .modal-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#machine-evaluation-modal .modal-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-sm);
+}
+
+.fin-type-tab {
+    padding: 7px 18px;
+    border-radius: 99px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.5);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s ease, opacity 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+    font-family: var(--font-body);
+}
+
+.fin-type-tab:hover {
+    background: rgba(255, 255, 255, 0.09);
+    color: #fff;
+}
+
+.fin-type-tab.active {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
+
+.fin-type-tab.active[data-type="incoming"] {
+    background: rgba(239, 68, 68, 0.18);
+    border-color: rgba(239, 68, 68, 0.45);
+    color: var(--danger-soft);
+}
+
+.fin-type-tab.active[data-type="outgoing"] {
+    background: rgba(16, 185, 129, 0.18);
+    border-color: rgba(16, 185, 129, 0.45);
+    color: var(--color-primary-green);
+}

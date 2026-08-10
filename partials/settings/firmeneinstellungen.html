@@ -1,0 +1,48 @@
+        <!-- Firmendaten Settings View -->
+        <section id="settings-firmeneinstellungen" class="view hidden">
+            <div class="users-header-container">
+                <h1>Firmendaten</h1>
+                <div class="users-header-actions">
+                    <button class="btn-back-custom" data-target="settings">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 12H5"></path>
+                            <path d="M12 19l-7-7 7-7"></path>
+                        </svg>
+                        ZURÜCK
+                    </button>
+                </div>
+            </div>
+
+            <div class="glass-card" style="padding: 2rem; margin-top: 1.5rem;">
+                <h3 style="margin-bottom: 1.5rem; color: #fff;">Eigene Firmendaten</h3>
+                <p style="font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-bottom: 1.5rem;">
+                    Geben Sie hier die Adresse Ihres Hauptquartiers ein. Diese Adresse dient als Ausgangspunkt für die Google Maps Routenplanung zu den Maschinenstandorten.
+                </p>
+                <form id="firmendaten-form" onsubmit="saveFirmendaten(event)">
+                    <div class="form-group" style="margin-bottom: 1.25rem;">
+                        <label for="company-hq-name">Firmenname</label>
+                        <input type="text" id="company-hq-name" class="glass-form-input" placeholder="z.B. Meetra GmbH" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1.25rem;">
+                        <label for="company-hq-street">Straße &amp; Hausnummer</label>
+                        <input type="text" id="company-hq-street" class="glass-form-input" placeholder="Musterstraße 12" required>
+                    </div>
+                    <div class="form-row" style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <div class="form-group">
+                            <label for="company-hq-zip">PLZ</label>
+                            <input type="text" id="company-hq-zip" class="glass-form-input" placeholder="12345" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="company-hq-city">Ort</label>
+                            <input type="text" id="company-hq-city" class="glass-form-input" placeholder="Musterstadt" required>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1.5rem;">
+                        <label for="company-hq-country">Land</label>
+                        <input type="text" id="company-hq-country" class="glass-form-input" value="Deutschland" placeholder="Deutschland" required>
+                    </div>
+                    <button type="submit" class="btn-primary" style="padding: 12px 24px; font-weight: 700;">Einstellungen speichern</button>
+                </form>
+            </div>
+        </section>

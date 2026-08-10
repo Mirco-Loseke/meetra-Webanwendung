@@ -1,0 +1,268 @@
+/* ========================================================= */
+/* ===================== FORM STYLES ======================= */
+/* ========================================================= */
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.section-title {
+    font-family: var(--font-heading);
+    color: #fff;
+    font-size: var(--fs-lg);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.glass-select,
+.glass-input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-lg);
+    font-size: var(--fs-base);
+    font-family: var(--font-body);
+    outline: none;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(var(--blur-raised));
+    -webkit-backdrop-filter: blur(var(--blur-raised));
+    box-shadow:
+        0 4px 6px rgba(0, 0, 0, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    color: white;
+    appearance: none;
+}
+
+.glass-select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'rgba(255,255,255,0.7)\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e');
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1.2em;
+    cursor: pointer;
+}
+
+.glass-select:hover,
+.glass-input:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+}
+
+.glass-select:focus,
+.glass-input:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--color-primary-red);
+    box-shadow:
+        0 0 0 4px rgba(229, 9, 20, 0.15),
+        0 8px 15px rgba(0, 0, 0, 0.2);
+}
+
+.glass-select option,
+.glass-input option {
+    background-color: #1a1a2e;
+    color: white;
+}
+
+.glass-input[type='date'] {
+    position: relative;
+    color-scheme: dark;
+}
+
+.glass-input[type='date']::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.5;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.glass-input[type='date']::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
+.modal-form-area::-webkit-scrollbar {
+    width: 8px;
+}
+
+/* --------------------------------------------------------- */
+/* Formular-Struktur (Abschnitte / Zeilen / Labels)           */
+/* --------------------------------------------------------- */
+
+.form-section {
+    margin-bottom: 1.75rem;
+}
+
+.form-section > label {
+    display: block;
+    margin-bottom: 0.6rem;
+    font-family: var(--font-body);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+
+.radio-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-body);
+    font-size: var(--fs-md);
+    color: #fff;
+    cursor: pointer;
+    user-select: none;
+}
+
+.radio-label input[type='radio'],
+.radio-label input[type='checkbox'] {
+    accent-color: var(--primary-red);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.hidden-color-input {
+    position: absolute;
+    width: 0;
+    height: 0;
+    padding: 0;
+    border: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.glass-input-minimal {
+    width: 100%;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-sm);
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: var(--fs-md);
+    outline: none;
+    transition: transform 0.2s ease, opacity 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+}
+
+.glass-input-minimal:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.centered-select {
+    text-align: center;
+    text-align-last: center;
+}
+
+/* --------------------------------------------------------- */
+/* Such-Felder in Unterseiten & Modals                        */
+/* --------------------------------------------------------- */
+
+.machine-selector-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.search-input-container,
+.search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    height: 46px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    backdrop-filter: blur(var(--blur-surface));
+    -webkit-backdrop-filter: blur(var(--blur-surface));
+    transition: transform 0.25s ease, opacity 0.25s ease, background 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease;
+}
+
+.search-input-container:focus-within,
+.search-input-wrapper:focus-within {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.04);
+}
+
+.search-input-container > svg,
+.search-input-wrapper > svg {
+    color: var(--text-3);
+    flex-shrink: 0;
+}
+
+.search-input-container input,
+.search-input-wrapper input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    background: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: var(--fs-md);
+    outline: none;
+}
+
+.search-input-container input::placeholder,
+.search-input-wrapper input::placeholder {
+    color: #64748b;
+}
+
+/* --------------------------------------------------------- */
+/* Datei-Dropzone                                             */
+/* --------------------------------------------------------- */
+
+.drop-zone-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.6);
+    font-family: var(--font-body);
+    font-size: var(--fs-md);
+}
+
+.drop-zone-content .icon {
+    font-size: var(--fs-2xl);
+    line-height: 1;
+}
+
+.drop-zone-content p {
+    margin: 0;
+}

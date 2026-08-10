@@ -1,0 +1,527 @@
+/* ========================================================= */
+/* ============= DROPDOWNS & SEARCH COMPONENTS ============= */
+/* ========================================================= */
+
+.search-container {
+    position: relative;
+    width: 300px;
+}
+
+.search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px 10px 10px 40px;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    background: rgba(255, 255, 255, 0.03);
+    color: white;
+    font-family: var(--font-body);
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary-red);
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    cursor: pointer;
+    margin-top: 12px;
+    padding: 8px 16px;
+    border-radius: var(--border-radius);
+    transition: transform 0.2s ease;
+    position: relative;
+}
+
+.user-dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    margin-top: 6px;
+    background-color: #0f172a !important;
+    background: #0f172a !important;
+    border-radius: var(--radius-md);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.15) !important;
+    width: 240px;
+    display: none;
+    z-index: 100000 !important;
+    overflow: hidden;
+    animation: fadeIn 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+#category-wrapper:has(#machine-category-dropdown.show),
+#contact-wrapper:has(#contact-dropdown.show),
+.custom-filter-dropdown:has(.custom-filter-menu.show),
+.form-group:has(.user-dropdown-menu.show),
+.form-group:has(.proc-select-menu.show) {
+    z-index: 99999 !important;
+    position: relative;
+}
+
+.modal-content:has(.custom-filter-dropdown.active),
+.glass-card:has(.custom-filter-dropdown.active),
+.modal-content:has(.user-dropdown-menu.show),
+.glass-card:has(.user-dropdown-menu.show),
+.modal-content:has(.proc-select-menu.show),
+.glass-card:has(.proc-select-menu.show),
+.modal-content:has(.tech-dropdown-panel.show),
+.glass-card:has(.tech-dropdown-panel.show) {
+    overflow: visible !important;
+}
+
+.view-header-left:has(.custom-filter-dropdown.active) {
+    z-index: 10001;
+    position: relative;
+}
+
+#category-wrapper,
+#contact-wrapper {
+    position: relative;
+}
+
+.user-dropdown-menu.show {
+    display: block;
+}
+
+.user-dropdown-menu ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.user-dropdown-menu li {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--glass-border);
+    transition: background 0.2s;
+    font-family: var(--font-body);
+    color: white;
+    cursor: pointer;
+    font-size: var(--fs-md);
+}
+
+.user-dropdown-menu li:last-child {
+    border-bottom: none;
+}
+
+.user-dropdown-menu li:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.custom-filter-dropdown {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    padding: 8px 20px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(var(--blur-surface));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-pill);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 220px;
+    font-family: var(--font-body);
+    color: white;
+}
+
+.custom-filter-dropdown:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+.custom-filter-dropdown.has-selection {
+    background: var(--primary-red) !important;
+    border-color: var(--primary-red) !important;
+    color: white !important;
+}
+
+.custom-filter-dropdown.has-selection:hover {
+    background: #a31825 !important;
+    border-color: #a31825 !important;
+    transform: translateY(-1px);
+}
+
+.custom-filter-dropdown.has-selection .filter-icon {
+    color: white !important;
+}
+
+.custom-filter-dropdown.active {
+    z-index: 10000;
+    overflow: visible;
+}
+
+.custom-filter-dropdown .filter-label {
+    font-size: var(--fs-md);
+    font-weight: 700;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.form-group:has(.custom-filter-dropdown.active),
+.form-group.has-active-dropdown {
+    z-index: 10001 !important;
+}
+
+.custom-filter-dropdown .filter-icon {
+    color: rgba(255, 255, 255, 0.5);
+    transition: transform 0.3s ease;
+}
+
+.custom-filter-dropdown.active .filter-icon {
+    transform: rotate(180deg);
+}
+
+.custom-filter-menu {
+    position: absolute;
+    top: calc(100% + 5px);
+    left: 0;
+    margin-top: 10px;
+    background-color: rgba(15, 23, 42, 1);
+    backdrop-filter: blur(var(--blur-overlay));
+    -webkit-backdrop-filter: blur(var(--blur-overlay));
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    width: 100%;
+    min-width: 240px;
+    display: none;
+    z-index: 10002;
+    max-height: 250px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    animation: fadeIn 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Kompakte Variante: gleiches Aussehen, weniger Platz — für Menüs mit
+   vielen kurzen Einträgen (z.B. Länderliste im Adressbuch). */
+.custom-filter-dropdown.filter-compact {
+    min-width: 150px;
+    padding: 8px 14px;
+    gap: 8px;
+}
+
+.custom-filter-dropdown.filter-compact .custom-filter-menu {
+    min-width: 190px;
+    max-height: 300px;
+}
+
+/* Schrift/Innenabstand der Eintraege: siehe dropdown-look.css (4b) —
+   bewusst nur an einer Stelle definiert. */
+
+.custom-filter-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-filter-menu::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-sm);
+}
+
+.custom-filter-menu::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-sm);
+}
+
+.custom-filter-menu::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.custom-filter-dropdown.active .custom-filter-menu,
+.custom-filter-menu.show {
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    z-index: 99999 !important;
+    animation: none !important;
+    background: #0f172a;
+}
+
+.custom-filter-menu ul {
+    list-style: none;
+    padding: 8px;
+    margin: 0;
+}
+
+.custom-filter-menu li {
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    transition: transform 0.2s ease, opacity 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+    font-family: var(--font-body);
+    color: var(--text-3);
+    cursor: pointer;
+    font-size: var(--fs-md);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.custom-filter-menu li:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: white;
+}
+
+.custom-filter-menu li.selected,
+.custom-filter-menu li.active {
+    background-color: var(--primary-red) !important;
+    color: white !important;
+}
+
+.custom-filter-menu li.selected:hover,
+.custom-filter-menu li.active:hover {
+    background-color: #a31825 !important;
+    color: white !important;
+}
+
+.custom-search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
+    padding: 0 12px;
+    height: 44px;
+    transition: transform 0.3s ease, opacity 0.3s ease, background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+    width: 200px;
+    backdrop-filter: blur(var(--blur-surface));
+    -webkit-backdrop-filter: blur(var(--blur-surface));
+}
+
+.custom-search-wrapper:focus-within {
+    background-color: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.2);
+    width: 280px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+}
+
+.custom-search-wrapper .search-icon {
+    color: var(--text-3);
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+.custom-search-wrapper input {
+    background: none;
+    border: none;
+    outline: none;
+    color: white;
+    font-family: var(--font-body);
+    font-size: var(--fs-md);
+    font-weight: 500;
+    width: 100%;
+    padding-left: 35px;
+}
+
+.custom-search-wrapper input::placeholder {
+    color: #64748b;
+}
+
+.user-profile:hover {
+    transform: scale(1.05);
+    background-color: transparent;
+}
+
+.user-profile:hover .user-name {
+    color: white;
+}
+
+.user-name {
+    font-weight: 600;
+    font-size: var(--fs-xl);
+    font-family: var(--font-body);
+    color: white;
+    transition: color 0.2s ease;
+}
+
+/* --------------------------------------------------------- */
+/* Options-Listen in Custom-Dropdowns                         */
+/* --------------------------------------------------------- */
+
+.dropdown-options {
+    list-style: none;
+    padding: 8px;
+    margin: 0;
+}
+
+.dropdown-options li {
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+    font-size: var(--fs-md);
+    font-weight: 600;
+    color: var(--text-3);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    transition: transform 0.2s ease, opacity 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+}
+
+.dropdown-options li:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.dropdown-options li.selected,
+.dropdown-options li.active {
+    background-color: var(--primary-red);
+    color: #fff;
+}
+
+/* Select-Menüs, die auf dem User-Dropdown aufsetzen */
+.proc-select-menu {
+    background: #0f172a !important;
+    background-color: #0f172a !important;
+    /* .user-dropdown-menu setzt overflow:hidden. Zusammen mit der max-height,
+       die js/dropdown-position.js berechnet, waren bei langen Listen
+       (Vorgangs-Typ: 9 Einträge) die unteren Einträge unerreichbar —
+       abgeschnitten und ohne Scrollbalken. Deshalb hier scrollbar. */
+    overflow: hidden auto !important;
+    overscroll-behavior: contain;
+}
+
+/* Scrollende Vorgangs-Modals (Vorgang hinzufügen / bearbeiten, E-Mail-Import).
+   Ohne diese Regel ist der Modal-Inhalt durch sein backdrop-filter selbst der
+   Bezugsrahmen für position:fixed — dann schneidet sein overflow-y:auto die
+   aufgeklappten Menüs ab. Die Glas-Optik liefert weiterhin die Modal-Hülle. */
+.proc-modal-scroll {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+.proc-select-menu ul,
+.process-status-menu ul {
+    list-style: none;
+    margin: 0;
+    padding: 6px;
+    background: #0f172a !important;
+}
+
+.proc-select-menu li,
+.process-status-menu li {
+    padding: 11px 14px;
+    border-radius: var(--radius-sm);
+    border-bottom: none;
+    font-size: var(--fs-md);
+    font-weight: 600;
+    background: #0f172a;
+}
+
+.proc-select-menu li:hover,
+.process-status-menu li:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+}
+
+.process-status-wrapper {
+    position: relative;
+}
+
+/* --------------------------------------------------------- */
+/* Autocomplete / Vorschlagslisten                            */
+/* --------------------------------------------------------- */
+
+.autocomplete-suggestions,
+.suggestions-box,
+.snippet-dropdown {
+    background: rgba(15, 23, 42, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-md);
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(var(--blur-raised));
+    -webkit-backdrop-filter: blur(var(--blur-raised));
+    overflow: hidden auto;
+    max-height: 240px;
+    padding: 6px;
+}
+
+.autocomplete-suggestions::-webkit-scrollbar,
+.suggestions-box::-webkit-scrollbar,
+.snippet-dropdown::-webkit-scrollbar {
+    width: 6px;
+}
+
+.autocomplete-suggestions::-webkit-scrollbar-thumb,
+.suggestions-box::-webkit-scrollbar-thumb,
+.snippet-dropdown::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-sm);
+}
+
+.suggestion-item {
+    list-style: none;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: var(--fs-md);
+    font-weight: 500;
+    color: #e2e8f0;
+    cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+
+.suggestion-item:hover,
+.suggestion-item.active {
+    background: rgba(255, 255, 255, 0.09);
+    color: #fff;
+}
+
+/* Auf-/Zuklapp-Pfeil in Abschnittsköpfen */
+.toggle-chevron {
+    transition: transform 0.3s ease;
+    opacity: 0.6;
+    flex-shrink: 0;
+}
+
+.section-header.open .toggle-chevron,
+.collapsible-section.open .toggle-chevron,
+.toggle-chevron.open {
+    transform: rotate(180deg);
+}
+
+.custom-multiselect-container {
+    position: relative;
+    width: 100%;
+}
+
+.user-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-circle);
+    background-color: #FFA726;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: var(--fs-xl);
+    font-family: var(--font-body);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}

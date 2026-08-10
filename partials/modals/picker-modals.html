@@ -1,0 +1,179 @@
+    <!-- SUBTASK ACTION MODAL -->
+    <div id="subtask-action-modal" class="modal-new hidden" style="z-index: 10000; display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+        <div class="modal-content glass-card" style="max-width: 450px; width: 90%; padding: 2rem; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0; color: #fff; font-size: 1.5rem; font-weight: 800;">Aktion zuweisen</h2>
+                <button class="btn-close" onclick="window.closeSubtaskActionModal()" style="background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            
+            <p style="color: rgba(255,255,255,0.6); margin-bottom: 25px; line-height: 1.5;">Wähle eine Aktion aus, die beim Bearbeiten dieser Unteraufgabe ausgelöst werden soll.</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <button class="action-select-btn" onclick="window.applySubtaskAction('intake')">
+                    <div class="icon-container" style="background: rgba(59,130,246,0.15); color: #60a5fa;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                    </div>
+                    <div style="text-align: left;">
+                        <div style="font-weight: 700; color: #fff;">Eingangsprotokoll</div>
+                        <div style="font-size: 0.8rem; opacity: 0.5;">Maschinen-Zustand erfassen</div>
+                    </div>
+                </button>
+
+                <button class="action-select-btn" onclick="window.applySubtaskAction('acceptance')">
+                    <div class="icon-container" style="background: rgba(245,158,11,0.15); color: #f59e0b;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                    </div>
+                    <div style="text-align: left;">
+                        <div style="font-weight: 700; color: #fff;">Abnahmeprotokoll</div>
+                        <div style="font-size: 0.8rem; opacity: 0.5;">Fertigstellung protokollieren</div>
+                    </div>
+                </button>
+
+                <button class="action-select-btn" onclick="window.applySubtaskAction('document')">
+                    <div class="icon-container" style="background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                    </div>
+                    <div style="text-align: left;">
+                        <div style="font-weight: 700; color: #fff;">Dokument öffnen</div>
+                        <div style="font-size: 0.8rem; opacity: 0.5;">Bedienungsanleitung / Zeichnung anzeigen</div>
+                    </div>
+                </button>
+
+                <button class="action-select-btn" onclick="window.applySubtaskAction('servicebericht')">
+                    <div class="icon-container" style="background: rgba(167, 139, 250, 0.15); color: #a78bfa;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+                    </div>
+                    <div style="text-align: left;">
+                        <div style="font-weight: 700; color: #fff;">Servicebericht verknüpfen</div>
+                        <div style="font-size: 0.8rem; opacity: 0.5;">Neuen oder bestehenden Servicebericht öffnen</div>
+                    </div>
+                </button>
+
+                <div style="height: 1px; background: rgba(255,255,255,0.05); margin: 10px 0;"></div>
+
+                <button class="action-select-btn" onclick="window.applySubtaskAction(null)" style="border-style: dashed; opacity: 0.6;">
+                    <div style="font-weight: 600;">Keine Aktion</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DOCUMENT PICKER MODAL -->
+    <div id="document-picker-modal" class="modal-new hidden" style="z-index: 10005; display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);">
+        <div class="modal-content glass-card" style="max-width: 750px; width: 95%; max-height: 85vh; padding: 0; overflow: hidden; position: relative; display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+            <!-- Modal Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 2rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div>
+                    <h2 style="margin: 0; color: #fff; font-size: 1.5rem; font-weight: 800;">Dokument auswählen</h2>
+                    <p style="color: rgba(255,255,255,0.5); margin: 5px 0 0 0; font-size: 0.85rem;">Wähle ein Dokument aus, das mit dieser Unteraufgabe verknüpft werden soll.</p>
+                </div>
+                <button class="btn-close" onclick="window.closeDocumentPicker()" style="background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+
+            <!-- Search and Breadcrumbs bar -->
+            <div style="padding: 1rem 2rem; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 12px;">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <input type="text" id="picker-search-input" class="glass-input" placeholder="Dokument suchen..." style="flex: 1; height: 45px; font-size: 0.95rem;" oninput="window.filterPickerContent()">
+                </div>
+                <div id="picker-breadcrumbs" style="display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: rgba(255,255,255,0.5); flex-wrap: wrap;">
+                    <!-- Breadcrumbs rendered dynamically -->
+                </div>
+            </div>
+
+            <!-- Scrollable Body (Grid) -->
+            <div id="picker-content-area" style="flex: 1; overflow-y: auto; padding: 2rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 20px; align-content: start;">
+                <!-- Folders and Documents rendered dynamically -->
+            </div>
+
+            <!-- Modal Footer -->
+            <div style="display: flex; justify-content: flex-end; gap: 15px; border-top: 1px solid rgba(255,255,255,0.05); padding: 1.2rem 2rem; background: rgba(255,255,255,0.02);">
+                <button class="btn-secondary" style="height: 40px; padding: 0 20px;" onclick="window.closeDocumentPicker()">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SERVICEBERICHT PICKER MODAL -->
+    <div id="servicebericht-picker-modal" class="modal-new hidden" style="z-index: 10005; display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);">
+        <div class="modal-content glass-card" style="max-width: 750px; width: 95%; max-height: 85vh; padding: 0; overflow: hidden; position: relative; display: flex; flex-direction: column; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+            <!-- Modal Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 2rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div>
+                    <h2 style="margin: 0; color: #fff; font-size: 1.5rem; font-weight: 800;">Servicebericht verknüpfen</h2>
+                    <p style="color: rgba(255,255,255,0.5); margin: 5px 0 0 0; font-size: 0.85rem;">Wähle einen bestehenden Bericht aus oder erstelle einen neuen.</p>
+                </div>
+                <button class="btn-close" onclick="window.closeServiceberichtPicker()" style="background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+
+            <!-- Search bar -->
+            <div style="padding: 1rem 2rem; background: rgba(255,255,255,0.02); border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; gap: 10px; align-items: center;">
+                <input type="text" id="servicebericht-picker-search" class="glass-input" placeholder="Servicebericht suchen..." style="flex: 1; height: 45px; font-size: 0.95rem;" oninput="window.filterServiceberichtPickerContent()">
+            </div>
+
+            <!-- Scrollable Body -->
+            <div style="flex: 1; overflow-y: auto; padding: 2rem; display: flex; flex-direction: column; gap: 15px; align-content: start;">
+                <!-- Option: New Servicebericht -->
+                <div id="servicebericht-picker-new-option" onclick="window.selectPickerServicebericht('new', 'Neuer Servicebericht')"
+                     style="display: flex; align-items: center; gap: 15px; padding: 15px 20px; background: rgba(167, 139, 250, 0.1); border: 2px dashed rgba(167, 139, 250, 0.4); border-radius: 12px; cursor: pointer; transition: all 0.2s;"
+                     onmouseover="this.style.background='rgba(167, 139, 250, 0.2)'; this.style.borderColor='rgba(167, 139, 250, 0.6)';"
+                     onmouseout="this.style.background='rgba(167, 139, 250, 0.1)'; this.style.borderColor='rgba(167, 139, 250, 0.4)';">
+                    <span style="font-size: 1.8rem;">➕</span>
+                    <div style="text-align: left;">
+                        <span style="color: #fff; font-size: 1rem; font-weight: 700; display: block;">Neuen Servicebericht erstellen</span>
+                        <span style="color: rgba(255,255,255,0.5); font-size: 0.8rem;">Erstellt bei Klick einen neuen Bericht für diese Aufgabe.</span>
+                    </div>
+                </div>
+
+                <div style="font-size: 0.8rem; font-weight: 800; color: rgba(255,255,255,0.4); text-transform: uppercase; margin-top: 10px; letter-spacing: 0.05em;">Bestehende Berichte</div>
+                
+                <div id="servicebericht-picker-list" style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Rendered dynamically -->
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div style="display: flex; justify-content: flex-end; gap: 15px; border-top: 1px solid rgba(255,255,255,0.05); padding: 1.2rem 2rem; background: rgba(255,255,255,0.02);">
+                <button class="btn-secondary" style="height: 40px; padding: 0 20px;" onclick="window.closeServiceberichtPicker()">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QUICK TEMPLATE MODAL -->
+    <div id="qt-modal" class="modal-new hidden" style="z-index: 9999; display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);">
+        <div class="modal-content glass-card" style="max-width: 900px; width: 95%; max-height: 90vh; padding: 0; overflow: hidden; position: relative; display: flex; flex-direction: column;">
+            <!-- Fixed Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 2rem 2.5rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <h2 style="margin: 0; color: #fff; font-size: 1.8rem; font-weight: 800;">Schnellvorlage erstellen</h2>
+                <button class="btn-close" onclick="window.closeQTModal()" style="background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+
+            <!-- Scrollable Body -->
+            <div style="flex: 1; overflow-y: auto; padding: 2rem 2.5rem;">
+                <div class="form-group" style="margin-bottom: 2.5rem;">
+                    <label style="font-size: 0.9rem; opacity: 0.6; margin-bottom: 10px; display: block; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;">Name der Vorlage</label>
+                    <input type="text" id="new-qt-name" class="glass-input" placeholder="z.B. Großer Service / Winterservice" style="height: 60px; font-size: 1.2rem; font-weight: 700; border-color: rgba(255,255,255,0.15);">
+                </div>
+                
+                <div id="qt-builder-groups" style="display: flex; flex-direction: column; gap: 24px; margin-bottom: 24px;">
+                    <!-- Groups and subtasks builder -->
+                </div>
+                
+                <button class="btn-secondary compact" style="width: 100%; height: 55px; border-style: dashed; background: rgba(255,255,255,0.03); font-weight: 700; font-size: 1rem;" onclick="window.addQTGroupToBuilder()">
+                    + ÜBERGRUPPE HINZUFÜGEN
+                </button>
+            </div>
+            
+            <!-- Fixed Footer -->
+            <div style="display: flex; justify-content: flex-end; gap: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding: 1.5rem 2.5rem; background: rgba(255,255,255,0.02);">
+                <button class="btn-secondary" style="height: 50px; padding: 0 30px;" onclick="window.closeQTModal()">Abbrechen</button>
+                <button class="btn-primary" style="height: 50px; padding: 0 40px; font-weight: 800;" onclick="window.saveQuickTemplate()">VORLAGE SPEICHERN</button>
+            </div>
+        </div>
+    </div>

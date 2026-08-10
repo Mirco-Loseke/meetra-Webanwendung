@@ -1,0 +1,20 @@
+    <!-- PIN Prompt Modal -->
+    <div id="pin-prompt-modal"
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999999; backdrop-filter: blur(10px); flex-direction: column; align-items: center; justify-content: center;">
+        <div class="glass-card" style="padding: 2.5rem; text-align: center; max-width: 400px; width: 90%;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                stroke-linecap="round" stroke-linejoin="round" style="color: #f59e0b; margin-bottom: 1rem;">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <h2 style="margin-bottom: 0.5rem;">PIN Eingabe</h2>
+            <p id="pin-prompt-user-name" style="color: rgba(255,255,255,0.6); margin-bottom: 2rem;"></p>
+            <input type="password" id="pin-input" class="glass-input" placeholder="****"
+                style="text-align: center; font-size: 2rem; letter-spacing: 0.5em; padding: 1rem;" maxlength="8"
+                onkeyup="if(event.key === 'Enter') submitPinLogin()">
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                <button class="btn-secondary" onclick="cancelPinLogin()" style="flex: 1;">Abbrechen</button>
+                <button class="btn-primary" onclick="submitPinLogin()" style="flex: 1;">Weiter</button>
+            </div>
+        </div>
+    </div>

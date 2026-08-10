@@ -1,0 +1,66 @@
+/* ==========================================================
+   Schaltflaeche fuer Spracheingabe
+   ==========================================================
+   Ausgelagert aus index.html (vormals Zeilen 638-696).
+   Wird per <link> an unveraenderter Stelle geladen — die Reihenfolge
+   gegenueber css/style.css darf nicht vertauscht werden.
+   ========================================================== */
+
+/* Voice Dictation Button */
+.voice-mic-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #38bdf8;
+    border-radius: var(--radius-circle);
+    width: 38px;
+    height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    backdrop-filter: blur(var(--blur-surface));
+    padding: 0;
+    flex-shrink: 0;
+}
+
+.voice-mic-btn:hover {
+    background: rgba(56, 189, 248, 0.2);
+    border-color: rgba(56, 189, 248, 0.5);
+    transform: scale(1.08);
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+}
+
+.voice-mic-btn.recording {
+    background: rgba(239, 68, 68, 0.25) !important;
+    border-color: var(--danger) !important;
+    color: var(--danger) !important;
+    animation: mic-pulse 1.2s infinite ease-in-out;
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+}
+
+@keyframes mic-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.15); opacity: 0.8; }
+}
+
+.stars-container div:nth-child(2n) {
+    animation-delay: 1s;
+}
+
+.stars-container div:nth-child(3n) {
+    animation-delay: 2s;
+}
+
+#profile-selection-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+#profile-selection-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#profile-selection-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-sm);
+}

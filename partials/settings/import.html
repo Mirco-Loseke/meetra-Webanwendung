@@ -1,0 +1,218 @@
+        <!-- Import Settings View -->
+        <section id="settings-import" class="view hidden">
+            <div class="users-header-container">
+                <h1>Import</h1>
+                <div class="users-header-actions">
+                    <button class="btn-back-custom" data-target="settings">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 12H5"></path>
+                            <path d="M12 19l-7-7 7-7"></path>
+                        </svg>
+                        ZURÜCK
+                    </button>
+                </div>
+            </div>
+
+            <div class="settings-tabs-container" style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px;">
+                <div class="settings-tabs" style="display: flex; gap: 20px; overflow-x: auto; padding-bottom: 0; border-bottom: none; margin: 0;">
+                    <button class="settings-tab active" data-tab="adressimport" onclick="switchImportTab('adressimport')">Adressimport</button>
+                    <button class="settings-tab" data-tab="artikelimport" onclick="switchImportTab('artikelimport')">Artikel Import</button>
+                    <button class="settings-tab" data-tab="belegimport" onclick="switchImportTab('belegimport')">Belegimport</button>
+                </div>
+            </div>
+
+            <!-- Tab: Adressimport -->
+            <div id="adressimport-tab-content" class="tab-content active">
+                <div class="glass-card" style="padding: 2rem;">
+                    <h3 style="margin-bottom: 0.5rem; color: #fff;">Sage 100 Kunden- &amp; Adressimport</h3>
+                    <p style="font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-bottom: 1.5rem;">
+                        Importieren Sie Kundenadressen direkt aus Excel (.xlsx, .xls) oder CSV (.csv). Das System aktualisiert bestehende Adressen anhand der Kundennummer und fügt neue hinzu.
+                    </p>
+
+                    <!-- File Dropzone -->
+                    <div class="file-drop-zone" id="customer-import-dropzone" style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 16px; padding: 2.5rem; text-align: center; background: rgba(255,255,255,0.02); cursor: pointer; transition: all 0.3s ease;">
+                        <input type="file" id="customer-import-input" accept=".csv, .xls, .xlsx" class="hidden-file-input" style="display: none;">
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                            <span style="font-size: 3rem;">📥</span>
+                            <span style="font-weight: 700; color: #fff; font-size: 1.1rem;">Datei auswählen oder hierher ziehen</span>
+                            <span style="font-size: 0.85rem; color: rgba(255,255,255,0.4);">Unterstützte Formate: Excel (.xlsx, .xls) oder CSV (.csv)</span>
+                        </div>
+                    </div>
+
+                    <!-- Import Configuration Section (Hidden by default) -->
+                    <div id="import-config-section" class="hidden" style="margin-top: 2rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 1.5rem;">
+                        <h4 style="color: #fff; margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; display: flex; align-items: center; gap: 10px;">
+                            <span>⚙️</span> Spaltenzuordnung (Mapping)
+                        </h4>
+                        <p style="font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-bottom: 1.5rem;">
+                            Bitte weisen Sie den Datenbankfeldern die Spalten aus Ihrer Datei zu:
+                        </p>
+
+                        <div class="mapping-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                            <div class="form-group">
+                                <label class="text-muted-sm" for="map-address-num">Adressnummer *</label>
+                                <select id="map-address-num" class="glass-form-input clickable" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label class="text-muted-sm" for="map-cust-num">Kundennummer</label>
+                                <select id="map-cust-num" class="glass-form-input clickable"></select>
+                            </div>
+                            <div class="form-group">
+                                <label class="text-muted-sm" for="map-matchcode">Matchcode (Suchbegriff)</label>
+                                <select id="map-matchcode" class="glass-form-input clickable"></select>
+                            </div>
+                            <div class="form-group">
+                                <label class="text-muted-sm" for="map-name">Firmenname / Kundenname *</label>
+                                <select id="map-name" class="glass-form-input clickable" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label class="text-muted-sm" for="map-street">Straße &amp; Hausnummer</label>
+                                <select id="map-street" class="glass-form-input clickable"></select>
+                            </div>
+                            <div class="form-group">
+                                <label class="text-muted-sm" for="map-zip">PLZ</label>
+                                <select id="map-zip" class="glass-form-input clickable"></select>
+                            </div>
+                            <div class="form-group">
+                                <label class="text-muted-sm" for="map-city">Ort</label>
+                                <select id="map-city" class="glass-form-input clickable"></select>
+                            </div>
+                            <div class="form-group">
+                                <label class="text-muted-sm" for="map-country">Land</label>
+                                <select id="map-country" class="glass-form-input clickable"></select>
+                            </div>
+                            <div class="form-group">
+                                <label class="text-muted-sm" for="map-phone">Telefon</label>
+                                <select id="map-phone" class="glass-form-input clickable"></select>
+                            </div>
+                            <div class="form-group">
+                                <label class="text-muted-sm" for="map-email">E-Mail</label>
+                                <select id="map-email" class="glass-form-input clickable"></select>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 1.5rem;">
+                            <span id="import-stats" style="font-size: 0.9rem; color: rgba(255,255,255,0.6); font-weight: 600;"></span>
+                            <div style="display: flex; gap: 1rem;">
+                                <button type="button" class="btn-secondary" onclick="cancelImport()">Abbrechen</button>
+                                <button type="button" class="btn-primary" id="btn-execute-import" onclick="executeImport()" style="padding: 12px 24px; font-weight: 700;">Import starten</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Indicator -->
+                    <div id="import-progress-section" class="hidden" style="margin-top: 2rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 1.5rem; text-align: center;">
+                        <h4 id="import-progress-status" style="color: #fff; margin-top: 0; margin-bottom: 1rem;">Import läuft...</h4>
+                        <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-bottom: 1rem;">
+                            <div id="import-progress-bar" style="width: 0%; height: 100%; background: var(--color-primary-green); transition: width 0.1s ease; border-radius: 4px;"></div>
+                        </div>
+                        <span id="import-progress-details" style="font-size: 0.85rem; color: rgba(255,255,255,0.4);">0 von 0 verarbeitet...</span>
+                    </div>
+
+                    <!-- Import Log / Feedback -->
+                    <div id="import-result-section" class="hidden" style="margin-top: 2rem; background: rgba(0, 150, 64, 0.1); border: 1px solid var(--color-primary-green); border-radius: 16px; padding: 1.5rem;">
+                        <div style="display: flex; align-items: flex-start; gap: 1rem;">
+                            <span style="font-size: 2rem;">✅</span>
+                            <div>
+                                <h4 style="color: #fff; margin-top: 0; margin-bottom: 0.5rem; font-size: 1.1rem;">Import erfolgreich abgeschlossen</h4>
+                                <p id="import-result-message" style="margin: 0; font-size: 0.95rem; color: rgba(255,255,255,0.85); line-height: 1.5;"></p>
+                                <button type="button" class="btn-primary" onclick="resetImportUI()" style="margin-top: 1rem; padding: 10px 20px; font-weight: 700;">Weitere Datei importieren</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Artikel Import -->
+            <div id="artikelimport-tab-content" class="tab-content hidden">
+                <div class="glass-card" style="padding: 2rem;">
+                    <h3 style="margin-bottom: 0.5rem; color: #fff;">Artikel-Import</h3>
+                    <p style="font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-bottom: 1.5rem;">
+                        Hier entsteht der Import von Artikeln. Folgt in Kürze.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Tab: Belegimport -->
+            <div id="belegimport-tab-content" class="tab-content hidden">
+                <div class="glass-card" style="padding: 2rem;">
+                    <h3 style="margin-bottom: 0.5rem; color: #fff;">Sage 100 Angebote-Import</h3>
+                    <p style="font-size: 0.9rem; color: rgba(255,255,255,0.5); margin-bottom: 1.5rem;">
+                        Importieren Sie Angebote direkt aus Excel (.xlsx, .xls) oder CSV (.csv). Das System aktualisiert bestehende Angebote anhand der Belegnummer und fügt neue hinzu.
+                    </p>
+
+                    <!-- File Dropzone -->
+                    <div class="file-drop-zone" id="angebote-import-dropzone" style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 16px; padding: 2.5rem; text-align: center; background: rgba(255,255,255,0.02); cursor: pointer; transition: all 0.3s ease;">
+                        <input type="file" id="angebote-import-input" accept=".csv, .xls, .xlsx" class="hidden-file-input" style="display: none;">
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                            <span style="font-size: 3rem;">📥</span>
+                            <span style="font-weight: 700; color: #fff; font-size: 1.1rem;">Datei auswählen oder hierher ziehen</span>
+                            <span style="font-size: 0.85rem; color: rgba(255,255,255,0.4);">Unterstützte Formate: Excel (.xlsx, .xls) oder CSV (.csv)</span>
+                        </div>
+                    </div>
+
+                    <!-- Import Configuration Section (Hidden by default) -->
+                    <div id="angebote-import-config-section" class="hidden" style="margin-top: 2rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 1.5rem;">
+                        <h4 style="color: #fff; margin-top: 0; margin-bottom: 1rem; font-size: 1.1rem; display: flex; align-items: center; gap: 10px;">
+                            <span>⚙️</span> Spaltenzuordnung (Mapping)
+                        </h4>
+                        <p style="font-size: 0.85rem; color: rgba(255,255,255,0.5); margin-bottom: 1.5rem;">
+                            Bitte weisen Sie den Datenbankfeldern die Spalten aus Ihrer Datei zu:
+                        </p>
+
+                        <div class="mapping-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2rem;">
+                            <div class="form-group">
+                                <label class="text-muted-sm" for="map-angebot-belegnummer">Belegnummer *</label>
+                                <select id="map-angebot-belegnummer" class="glass-form-input clickable" required></select>
+                            </div>
+                            <div class="form-group">
+                                <label class="text-muted-sm" for="map-angebot-belegdatum">Belegdatum</label>
+                                <select id="map-angebot-belegdatum" class="glass-form-input clickable"></select>
+                            </div>
+                            <div class="form-group">
+                                <label class="text-muted-sm" for="map-angebot-matchcode">Kundenmatchcode</label>
+                                <select id="map-angebot-matchcode" class="glass-form-input clickable"></select>
+                            </div>
+                            <div class="form-group">
+                                <label class="text-muted-sm" for="map-angebot-netto">Nettobetrag</label>
+                                <select id="map-angebot-netto" class="glass-form-input clickable"></select>
+                            </div>
+                            <div class="form-group">
+                                <label class="text-muted-sm" for="map-angebot-brutto">Bruttobetrag</label>
+                                <select id="map-angebot-brutto" class="glass-form-input clickable"></select>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 1.5rem;">
+                            <span id="angebote-import-stats" style="font-size: 0.9rem; color: rgba(255,255,255,0.6); font-weight: 600;"></span>
+                            <div style="display: flex; gap: 1rem;">
+                                <button type="button" class="btn-secondary" onclick="window.cancelAngeboteImport()">Abbrechen</button>
+                                <button type="button" class="btn-primary" id="btn-execute-angebote-import" onclick="window.executeAngeboteImport()" style="padding: 12px 24px; font-weight: 700;">Import starten</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Progress Indicator -->
+                    <div id="angebote-import-progress-section" class="hidden" style="margin-top: 2rem; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; padding: 1.5rem; text-align: center;">
+                        <h4 id="angebote-import-progress-status" style="color: #fff; margin-top: 0; margin-bottom: 1rem;">Import läuft...</h4>
+                        <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-bottom: 1rem;">
+                            <div id="angebote-import-progress-bar" style="width: 0%; height: 100%; background: var(--color-primary-green); transition: width 0.1s ease; border-radius: 4px;"></div>
+                        </div>
+                        <span id="angebote-import-progress-details" style="font-size: 0.85rem; color: rgba(255,255,255,0.4);">0 von 0 verarbeitet...</span>
+                    </div>
+
+                    <!-- Import Log / Feedback -->
+                    <div id="angebote-import-result-section" class="hidden" style="margin-top: 2rem; background: rgba(0, 150, 64, 0.1); border: 1px solid var(--color-primary-green); border-radius: 16px; padding: 1.5rem;">
+                        <div style="display: flex; align-items: flex-start; gap: 1rem;">
+                            <span style="font-size: 2rem;">✅</span>
+                            <div>
+                                <h4 style="color: #fff; margin-top: 0; margin-bottom: 0.5rem; font-size: 1.1rem;">Import erfolgreich abgeschlossen</h4>
+                                <p id="angebote-import-result-message" style="margin: 0; font-size: 0.95rem; color: rgba(255,255,255,0.85); line-height: 1.5;"></p>
+                                <button type="button" class="btn-primary" onclick="window.resetAngeboteImportUI()" style="margin-top: 1rem; padding: 10px 20px; font-weight: 700;">Weitere Datei importieren</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>

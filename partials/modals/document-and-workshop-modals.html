@@ -1,0 +1,306 @@
+    <!-- Workshop Order Number Modal (Styled) -->
+    <div id="workshop-order-modal" class="modal-backdrop hidden" style="z-index: 1500; background: rgba(0,0,0,0.85);">
+        <div class="modal-content glass-card"
+            style="max-width: 400px; width: 90%; padding: 2.5rem; text-align: center;">
+
+            <div
+                style="width: 60px; height: 60px; border-radius: 50%; background: rgba(var(--color-primary-green-rgb), 0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto;">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary-green)"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+            </div>
+
+            <h2 style="font-size: 1.5rem; margin-bottom: 0.5rem; color: white; font-weight: 700;">Auftragsnummer</h2>
+            <p style="color: rgba(255,255,255,0.7); font-size: 0.95rem; margin-bottom: 2rem; line-height: 1.5;">Bitte
+                geben Sie den 5-stelligen Werkstattauftrag ein.</p>
+
+            <div
+                style="display: flex; align-items: center; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 0.75rem 1rem; margin-bottom: 2rem;">
+                <input type="number" id="workshop-year-input" placeholder="2026" min="1900" max="2100" step="1"
+                    style="background: transparent; border: none; outline: none; color: rgba(255,255,255,0.5); font-size: 1.25rem; font-weight: 600; width: 80px; padding-right: 4px; text-align: right; border-right: 1px solid rgba(255,255,255,0.15); margin-right: 8px;"
+                    onkeypress="if(event.key === 'Enter') window.confirmWorkshopOrder()">
+                <input type="number" id="workshop-order-number-input" placeholder="00000" min="0" max="99999" step="1"
+                    style="background: transparent; border: none; outline: none; color: white; font-size: 1.25rem; font-weight: 600; width: 100%; padding-left: 8px; appearance: textfield;"
+                    oninput="if(this.value.length > 5) this.value = this.value.slice(0,5)"
+                    onkeypress="if(event.key === 'Enter') window.confirmWorkshopOrder()">
+            </div>
+
+            <div style="display: flex; gap: 15px;">
+                <button onclick="window.closeWorkshopOrderModal()" class="btn-secondary"
+                    style="flex: 1; padding: 14px; border-radius: 12px; font-weight: 600;">Abbrechen</button>
+                <button onclick="window.confirmWorkshopOrder()" class="btn-primary"
+                    style="flex: 1; padding: 14px; border-radius: 12px; font-weight: 700;">Best&auml;tigen</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Single Machine Evaluation Modal (Sub-Modal) -->
+    <div id="single-machine-evaluation-modal" class="modal-backdrop hidden"
+        style="z-index: 1200; background: rgba(0,0,0,0.85);">
+        <div class="modal-content glass-card"
+            style="max-width: 500px; width: 90%; padding: 2rem; border: 1px solid rgba(255,255,255,0.1); backdrop-filter: blur(30px);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 style="margin: 0; color: white; display: flex; align-items: center; gap: 10px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary-green)"
+                        stroke-width="2.5">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="3" y1="9" x2="21" y2="9"></line>
+                        <line x1="9" y1="21" x2="9" y2="9"></line>
+                    </svg>
+                    Kosten-Auswertung
+                </h3>
+                <button class="btn-icon-soft btn-close-premium" onclick="window.closeSingleMachineEvaluation()"
+                    style="padding: 5px; border-radius: 8px;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div id="single-machine-evaluation-content">
+                <!-- Data populated via JS -->
+                <div style="padding: 2rem; text-align: center; color: rgba(255,255,255,0.4);">Lade Daten...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Document Upload Modal -->
+    <div id="document-upload-modal" class="modal-backdrop hidden"
+        style="z-index: 1200; align-items: center; justify-content: center;">
+        <div class="modal-content glass-card"
+            style="max-width: 500px; width: 95%; padding: 2.5rem; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 24px 64px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 style="margin: 0; font-size: 1.5rem; color: white;">Dokument hochladen</h2>
+                <button class="btn-close-modal" onclick="window.closeDocumentUploadModal()">&times;</button>
+            </div>
+
+            <form id="document-upload-form" onsubmit="window.saveDocument(event)">
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label
+                        style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Name des Dokuments</label>
+                    <input type="text" id="doc-upload-name" class="glass-input" placeholder="z.B. Datenblatt Motor"
+                        required>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label
+                        style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Dokumententyp (Mehrfachauswahl)</label>
+                    <div class="custom-filter-dropdown" id="doc-upload-type-dropdown"
+                        onclick="window.toggleDocUploadTypeDropdown(event)" style="width: 100%;">
+                        <span class="filter-label" id="doc-upload-type-label">Dokumententyp wählen...</span>
+                        <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                        <div class="custom-filter-menu">
+                            <ul class="dropdown-options" id="doc-upload-type-options">
+                                <!-- dynamically populated -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label
+                        style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Maschinenkategorie (Mehrfachauswahl)</label>
+                    <div class="custom-filter-dropdown" id="doc-upload-machine-cat-dropdown"
+                        onclick="window.toggleDocUploadMachineCatDropdown(event)" style="width: 100%;">
+                        <span class="filter-label" id="doc-upload-machine-cat-label">Maschinenkategorie wählen...</span>
+                        <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                        <div class="custom-filter-menu">
+                            <ul class="dropdown-options" id="doc-upload-machine-cat-options">
+                                <!-- dynamically populated -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" id="doc-upload-series-group" style="display: none; margin-bottom: 1.5rem;">
+                    <label
+                        style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Maschinenserie (Mehrfachauswahl)</label>
+                    <div class="custom-filter-dropdown" id="doc-upload-series-dropdown"
+                        onclick="window.toggleDocUploadSeriesDropdown(event)" style="width: 100%;">
+                        <span class="filter-label" id="doc-upload-series-label">Maschinenserie wählen...</span>
+                        <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                        <div class="custom-filter-menu">
+                            <ul class="dropdown-options" id="doc-upload-series-options">
+                                <!-- dynamically populated -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 2rem;">
+                    <div id="doc-dropzone" class="file-drop-zone"
+                        onclick="document.getElementById('doc-file-input').click()">
+                        <input type="file" id="doc-file-input" accept=".pdf,image/*" multiple class="hidden-file-input"
+                            onchange="window.handleDocFileSelection(event)">
+                        <div class="drop-zone-content">
+                            <span class="icon">📄</span>
+                            <p id="doc-file-name">Klicken oder Datei hierher ziehen</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 15px; justify-content: flex-end;">
+                    <button type="button" class="btn-secondary"
+                        onclick="window.closeDocumentUploadModal()">Abbrechen</button>
+                    <button type="submit" id="btn-save-doc" class="btn-primary btn-red-animated"
+                        style="padding: 12px 24px;">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Document Preview Modal (Full Screen Content) -->
+    <div id="document-preview-modal" class="modal-backdrop hidden"
+        style="z-index: 10100; align-items: center; justify-content: center; background: rgba(0,0,0,0.9); padding: 0;">
+        <div class="modal-content glass-card"
+            style="max-width: 100vw; width: 100vw; height: 100dvh; max-height: 100dvh; padding: 0.5rem 0.75rem; display: flex; flex-direction: column; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); border-radius: 0; margin: 0;">
+            <div id="doc-preview-header"
+                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem; padding: 0.25rem 0.5rem; gap: 8px;">
+                <span id="doc-preview-title" style="font-size: 0.8rem; color: rgba(255,255,255,0.55); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 50%; flex-shrink: 1;">Vorschau</span>
+                <div style="display: flex; align-items: center; gap: 6px; margin-left: auto; flex-shrink: 0;">
+                    <!-- Zoom controls -->
+                    <button id="doc-zoom-out" onclick="window.docPreviewZoom(-0.25)" title="Verkleinern" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: white; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; line-height: 1; padding: 0;">−</button>
+                    <span id="doc-preview-zoom-label" style="font-size: 0.72rem; color: rgba(255,255,255,0.5); min-width: 34px; text-align: center;">100%</span>
+                    <button id="doc-zoom-in" onclick="window.docPreviewZoom(+0.25)" title="Vergrößern" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: white; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 1rem; display: flex; align-items: center; justify-content: center; line-height: 1; padding: 0;">+</button>
+                    <!-- Rotate -->
+                    <button onclick="window.docPreviewRotate()" title="Drehen" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); color: white; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                    </button>
+                    <!-- Extern öffnen -->
+                    <a id="btn-open-preview-newtab" href="#" target="_blank" class="btn-secondary" style="font-size: 0.75rem; padding: 4px 10px; height: auto; text-decoration: none; display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: white; white-space: nowrap;">
+                        <span>↗️ Extern öffnen</span>
+                    </a>
+                </div>
+                <button class="btn-close-modal" onclick="window.closeDocumentPreviewModal()" style="font-size: 1.5rem; padding: 0; line-height: 1; margin-top: -2px; flex-shrink: 0;">&times;</button>
+            </div>
+            <div id="doc-preview-container"
+                style="flex: 1; background: rgba(0,0,0,0.2); border-radius: 12px; position: relative; overflow: auto; touch-action: pan-x pan-y;">
+                <div id="doc-preview-inner" style="min-width: 100%; min-height: 100%; display: flex; flex-direction: column; align-items: center;">
+                    <!-- File content rendered here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Document Folder Modal -->
+    <div id="document-folder-modal" class="modal-backdrop hidden"
+        style="z-index: 1250; align-items: center; justify-content: center;">
+        <div class="modal-content glass-card"
+            style="max-width: 400px; width: 95%; padding: 2.5rem; border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 24px 64px rgba(0,0,0,0.5);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 id="folder-modal-title" style="margin: 0; font-size: 1.5rem; color: white;">Neuer Ordner</h2>
+                <button class="btn-close-modal" onclick="window.closeFolderModal()">&times;</button>
+            </div>
+
+            <form id="folder-form" onsubmit="window.saveFolder(event)">
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label
+                        style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Ordnername</label>
+                    <input type="text" id="folder-name-input" class="glass-input" placeholder="z.B. Wartungsberichte"
+                        required>
+                </div>
+
+
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button type="button" class="btn-secondary" onclick="window.closeFolderModal()">Abbrechen</button>
+                    <button type="submit" class="btn-primary btn-red-animated" id="save-folder-btn">Erstellen</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Renaming Modal -->
+    <div id="document-rename-modal" class="modal-backdrop hidden"
+        style="z-index: 1300; align-items: center; justify-content: center;">
+        <div class="modal-content glass-card"
+            style="max-width: 480px; width: 95%; padding: 2.5rem; border: 1px solid rgba(255,255,255,0.12);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 id="rename-modal-title" style="margin: 0; font-size: 1.5rem; color: white;">Umbenennen</h2>
+                <button class="btn-close-modal" onclick="window.closeRenameModal()">&times;</button>
+            </div>
+            <form id="doc-rename-form" onsubmit="window.saveRename(event)">
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <label
+                        style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Neuer
+                        Name</label>
+                    <input type="text" id="rename-input" class="glass-input" required placeholder="Name eingeben...">
+                </div>
+
+                <div id="doc-edit-category-fields" style="display: none;">
+                    <div class="form-group" style="margin-bottom: 1.5rem;">
+                        <label
+                            style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Dokumententyp (Mehrfachauswahl)</label>
+                        <div class="custom-filter-dropdown" id="doc-edit-type-dropdown"
+                            onclick="window.toggleDocEditTypeDropdown(event)" style="width: 100%;">
+                            <span class="filter-label" id="doc-edit-type-label">Dokumententyp wählen...</span>
+                            <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                            <div class="custom-filter-menu">
+                                <ul class="dropdown-options" id="doc-edit-type-options">
+                                    <!-- dynamically populated -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 1.5rem;">
+                        <label
+                            style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Maschinenkategorie (Mehrfachauswahl)</label>
+                        <div class="custom-filter-dropdown" id="doc-edit-machine-cat-dropdown"
+                            onclick="window.toggleDocEditMachineCatDropdown(event)" style="width: 100%;">
+                            <span class="filter-label" id="doc-edit-machine-cat-label">Maschinenkategorie wählen...</span>
+                            <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                            <div class="custom-filter-menu">
+                                <ul class="dropdown-options" id="doc-edit-machine-cat-options">
+                                    <!-- dynamically populated -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="doc-edit-series-group" style="display: none; margin-bottom: 1.5rem;">
+                        <label
+                            style="color: rgba(255,255,255,0.6); font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Maschinenserie (Mehrfachauswahl)</label>
+                        <div class="custom-filter-dropdown" id="doc-edit-series-dropdown"
+                            onclick="window.toggleDocEditSeriesDropdown(event)" style="width: 100%;">
+                            <span class="filter-label" id="doc-edit-series-label">Maschinenserie wählen...</span>
+                            <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                            <div class="custom-filter-menu">
+                                <ul class="dropdown-options" id="doc-edit-series-options">
+                                    <!-- dynamically populated -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px;">
+                    <button type="button" class="btn-secondary" onclick="window.closeRenameModal()"
+                        style="flex: 1;">Abbrechen</button>
+                    <button type="submit" class="btn-primary" id="btn-save-rename"
+                        style="flex: 1;">Speichern</button>
+                </div>
+            </form>
+        </div>
+    </div>

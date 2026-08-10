@@ -1,0 +1,78 @@
+/* ========================================================= */
+/* ================== LISTEN VIEW STYLES ==================== */
+/* ========================================================= */
+
+.ang-charts-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+    margin-bottom: 1.25rem;
+}
+
+.ang-nachfass-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 6px;
+    cursor: pointer;
+    font-size: var(--fs-md);
+    font-family: var(--font-body);
+    transition: filter 0.15s ease;
+}
+
+.ang-nachfass-row:hover {
+    filter: brightness(1.25);
+}
+
+.angebote-cards {
+    display: none;
+}
+
+.ang-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-left-width: 4px;
+    border-radius: var(--radius-md);
+    padding: 14px;
+    margin-bottom: 10px;
+    font-family: var(--font-body);
+}
+
+.angebote-table-wrap tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.angebote-table-wrap tbody tr:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.angebote-cards .ang-card:nth-child(even) {
+    background: rgba(255, 255, 255, 0.09);
+}
+
+.ang-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.ang-card-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.ang-card-fields label {
+    display: block;
+    font-size: var(--fs-2xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #fff;
+    margin-bottom: 4px;
+}

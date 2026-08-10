@@ -1,0 +1,451 @@
+/* ==========================================================
+   Modal Maschine anlegen/bearbeiten
+   ==========================================================
+   Ausgelagert aus index.html (vormals Zeilen 697-1229).
+   Wird per <link> an unveraenderter Stelle geladen — die Reihenfolge
+   gegenueber css/style.css darf nicht vertauscht werden.
+   ========================================================== */
+
+/* ==========================================================
+   MASCHINE ANLEGEN / BEARBEITEN — Modal
+   Ein zusammenhängendes Design-System für #add-machine-modal.
+   Rückgängig: diesen Block bis zur Marke "Ende Maschinen-Modal"
+   entfernen, dann greift wieder das Basis-Modal-Styling.
+   ========================================================== */
+#add-machine-modal .modal-content {
+    /* 1180px statt 1500px: bei zwei Spalten werden Felder sonst
+       unangenehm breit — das Auge verliert die Zuordnung Label→Feld. */
+    max-width: 1180px !important;
+    width: 94% !important;
+    max-height: 92vh !important;
+    padding: 0 !important;
+    border-radius: var(--radius-lg) !important;
+    background: rgba(15, 23, 42, 0.97) !important;
+    backdrop-filter: blur(var(--blur-overlay));
+    -webkit-backdrop-filter: blur(var(--blur-overlay));
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
+    /* Dauerhaft sichtbar: aufgeklappte Dropdowns werden von
+       js/dropdown-position.js aus dem Scrollbereich gehoben und dürfen
+       nicht abgeschnitten werden. Würde overflow beim Öffnen umgeschaltet,
+       entstünde genau in diesem Moment ein Layout-Sprung. */
+    overflow: visible !important;
+}
+
+/* Grüner Akzentstreifen oben — wie im Maschinen-Detail-Modal */
+#add-machine-modal .modal-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, var(--color-primary-green), var(--success-soft));
+    /* eigene Rundung, da das Modal nicht mehr zuschneidet */
+    border-radius: 22px 22px 0 0;
+    z-index: 5;
+}
+
+/* Titel bleibt beim Scrollen stehen */
+#add-machine-modal h2 {
+    margin: 0 !important;
+    padding: 1.5rem 4.5rem 1.15rem 2rem;
+    font-family: var(--font-heading);
+    font-size: var(--fs-2xl) !important;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    color: #fff;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+}
+
+/* Schließen-Button: runder Stil wie im Detail-Modal statt nacktem × */
+#add-machine-modal .btn-close-modal {
+    top: 18px !important;
+    right: 20px !important;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--fs-xl);
+    line-height: 1;
+    border-radius: var(--radius-circle);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.75);
+    cursor: pointer;
+    transition: transform 0.2s, opacity 0.2s, background 0.2s, border-color 0.2s, box-shadow 0.2s, color 0.2s;
+    z-index: 10;
+}
+#add-machine-modal .btn-close-modal:hover {
+    background: rgba(239, 68, 68, 0.18);
+    border-color: rgba(239, 68, 68, 0.45);
+    color: #fca5a5;
+    transform: scale(1.06);
+}
+
+#add-machine-modal .modal-form-area {
+    padding: 1.5rem 2rem 1.75rem !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+#add-machine-modal .modal-form-area::-webkit-scrollbar {
+    width: 8px;
+}
+#add-machine-modal .modal-form-area::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-sm);
+}
+#add-machine-modal .modal-form-area::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.22);
+}
+
+/* Aktionsleiste bleibt immer sichtbar — kein Scrollen zum Speichern */
+#add-machine-modal .modal-actions {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 1rem 2rem;
+    margin: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(10, 15, 28, 0.6);
+}
+#add-machine-modal .modal-actions .btn-primary {
+    min-width: 190px;
+    justify-content: center;
+}
+
+#add-machine-modal #machine-file-previews {
+    margin-bottom: 0.8rem !important;
+}
+/* Ansprechpartner-/Anrede-Dropdowns dunkel halten (Optionsliste) */
+#mem-contact option,
+#maint-email-modal select option,
+#machine-contact-persons-list .cp-anrede,
+#machine-contact-persons-list .cp-anrede option {
+    background: #1a2032 !important;
+    color: #fff !important;
+}
+#machine-contact-persons-list .cp-anrede {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5'><polyline points='6 9 12 15 18 9'></polyline></svg>");
+    background-repeat: no-repeat;
+    background-position: right 9px center;
+    padding-right: 28px !important;
+}
+/* ---------- Felder ---------- */
+/* auto-fit: bricht auf schmalen Fenstern von selbst auf eine Spalte um,
+   ohne dass es dafür einen eigenen Breakpoint braucht. */
+#add-machine-modal .form-grid,
+#add-machine-modal .form-grid[style],
+#add-machine-modal [style*="gap: 20px"] {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)) !important;
+    gap: 0.85rem 1.1rem !important;
+}
+#add-machine-modal .form-group {
+    margin-bottom: 0.7rem !important;
+}
+#add-machine-modal .form-group label,
+#add-machine-modal label {
+    font-size: var(--fs-sm) !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.02em;
+    color: rgba(255, 255, 255, 0.62) !important;
+    margin-bottom: 0.35rem !important;
+    display: block;
+}
+/* Nur Textfelder. .glass-select ist hier bewusst NICHT dabei —
+   die Auswahlfelder holen ihr Aussehen aus dropdown-look.css und
+   wuerden sonst wieder einen eckigen Rahmen statt der Pille bekommen. */
+#add-machine-modal .glass-input,
+#add-machine-modal input:not([type="hidden"]):not([type="checkbox"]):not([type="file"]) {
+    width: 100%;
+    padding: 11px 14px !important;
+    font-size: var(--fs-md) !important;
+    border-radius: var(--radius-sm) !important;
+    background: rgba(255, 255, 255, 0.035) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+    font-family: var(--font-body);
+    transition: border-color 0.18s, background 0.18s, box-shadow 0.18s;
+}
+#add-machine-modal .glass-select {
+    width: 100%;
+}
+#add-machine-modal input:not([type="hidden"]):not([type="checkbox"]):not([type="file"])::placeholder {
+    color: rgba(255, 255, 255, 0.28);
+}
+#add-machine-modal .glass-input:hover,
+#add-machine-modal input:not([type="hidden"]):not([type="checkbox"]):not([type="file"]):hover {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
+}
+/* Ein einziger, klarer Fokus-Zustand — man sieht immer, wo man tippt */
+#add-machine-modal .glass-input:focus,
+#add-machine-modal input:not([type="hidden"]):not([type="checkbox"]):not([type="file"]):focus {
+    outline: none;
+    border-color: rgba(52, 211, 153, 0.65) !important;
+    background: rgba(52, 211, 153, 0.06) !important;
+    box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.14) !important;
+}
+/* Sage-Suchfelder: vorher greller weißer 2px-Rahmen mit Glow — sticht
+   aus dem Glas-Look heraus. Jetzt dezent grün als "hier startest du". */
+#add-machine-modal #machine-operator-search,
+#add-machine-modal #machine-location-search {
+    border: 1px solid rgba(52, 211, 153, 0.45) !important;
+    background: rgba(52, 211, 153, 0.05) !important;
+    box-shadow: none !important;
+    padding-left: 40px !important;
+}
+#add-machine-modal #machine-operator-search:focus,
+#add-machine-modal #machine-location-search:focus {
+    border-color: rgba(52, 211, 153, 0.8) !important;
+    box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.16) !important;
+}
+/* Lupen-Symbol im Suchfeld */
+#add-machine-modal #machine-operator-search + #machine-operator-suggestions,
+#add-machine-modal #machine-location-search + #machine-location-suggestions {
+    margin-top: 4px;
+}
+#add-machine-modal .form-group:has(> #machine-operator-search),
+#add-machine-modal .form-group:has(> #machine-location-search) {
+    position: relative;
+}
+#add-machine-modal .form-group:has(> #machine-operator-search)::after,
+#add-machine-modal .form-group:has(> #machine-location-search)::after {
+    content: '';
+    position: absolute;
+    left: 14px;
+    bottom: 13px;
+    width: 15px;
+    height: 15px;
+    pointer-events: none;
+    opacity: 0.55;
+    background: no-repeat center/contain
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2334d399' stroke-width='2.5' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>");
+}
+#add-machine-modal input[type="date"],
+#add-machine-modal input[type="number"] {
+    color-scheme: dark;
+}
+
+/* ---------- Dropdowns ----------
+   Aussehen kommt zentral aus css/components/dropdown-look.css
+   (Vorbild: Adresstyp-Filter). Hier steht nur noch, was fuer das
+   Modal geometrisch abweicht — Farben, Radien, Schrift und die
+   Auswahl-Markierung bewusst NICHT, sonst weicht das Modal wieder
+   vom Rest der App ab. Frueher stand hier eine gruene Sonderfarbe
+   und graue Schrift; genau das war der Unterschied. */
+#add-machine-modal .user-dropdown-menu {
+    top: calc(100% + 8px) !important;
+    left: 0;
+    right: auto;
+    width: 100% !important;
+    min-width: 240px;
+    margin-top: 0 !important;
+    max-height: 250px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+}
+#add-machine-modal .user-dropdown-menu::-webkit-scrollbar {
+    width: 6px;
+}
+#add-machine-modal .user-dropdown-menu::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: var(--radius-sm);
+}
+#add-machine-modal .custom-filter-dropdown {
+    width: 100%;
+    min-width: 0;
+}
+
+/* ---------- Abschnitte ---------- */
+#add-machine-modal .modal-form-area {
+    counter-reset: machine-section;
+}
+#add-machine-modal .collapsible-section {
+    margin-top: 1.1rem !important;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.012);
+    transition: border-color 0.2s;
+}
+#add-machine-modal .collapsible-section:hover {
+    border-color: rgba(255, 255, 255, 0.12);
+}
+/* !important schlägt die inline onmouseover-Handler im Markup */
+#add-machine-modal .section-header {
+    padding: 13px 16px !important;
+    margin-bottom: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    background: rgba(255, 255, 255, 0.035) !important;
+    transition: background 0.2s !important;
+}
+#add-machine-modal .section-header:hover {
+    background: rgba(255, 255, 255, 0.075) !important;
+}
+#add-machine-modal .section-header h3,
+#add-machine-modal h3.section-title {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin: 0 !important;
+    font-family: var(--font-heading);
+    font-size: var(--fs-base) !important;
+    font-weight: 800 !important;
+    color: #fff;
+    border-bottom: none !important;
+    padding-bottom: 0 !important;
+}
+/* Nummernkreis wird gezählt statt im Text zu stehen — bleibt beim
+   Umsortieren von Abschnitten automatisch korrekt. */
+#add-machine-modal .section-header h3::before,
+#add-machine-modal h3.section-title::before {
+    counter-increment: machine-section;
+    content: counter(machine-section);
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-circle);
+    background: rgba(52, 211, 153, 0.14);
+    border: 1px solid rgba(52, 211, 153, 0.4);
+    color: var(--color-primary-green);
+    font-size: var(--fs-sm);
+    font-weight: 900;
+}
+#add-machine-modal .section-content {
+    padding: 1.1rem 1rem 1.15rem;
+}
+#add-machine-modal .section-content > * {
+    margin-bottom: 0.4rem;
+}
+#add-machine-modal .section-content > *:last-child {
+    margin-bottom: 0;
+}
+/* Abschnitt 1 (Stammdaten) hat keinen Klapp-Rahmen — gleiche Optik geben */
+#add-machine-modal > .modal-content > .modal-form-area > h3.section-title {
+    padding: 13px 16px;
+    margin: 1.1rem 0 0 !important;
+    background: rgba(255, 255, 255, 0.035);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 14px 14px 0 0;
+}
+#add-machine-modal > .modal-content > .modal-form-area > h3.section-title + .form-grid {
+    padding: 1.1rem 1rem 1.15rem;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-top: none;
+    border-radius: 0 0 14px 14px;
+}
+#add-machine-modal h4 {
+    font-size: var(--fs-sm) !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55) !important;
+    margin-top: 1rem !important;
+    margin-bottom: 0.6rem !important;
+}
+#add-machine-modal .machine-related-search-group,
+#add-machine-modal .machine-equipment-list,
+#add-machine-modal .machine-related-chips {
+    margin-bottom: 0.5rem;
+}
+#add-machine-modal .machine-equipment-add-btn {
+    margin-top: 0.3rem;
+}
+#add-machine-modal [style*="margin-top: 2rem"] {
+    margin-top: 1.1rem !important;
+}
+#add-machine-modal [style*="margin-bottom: 1.5rem"],
+#add-machine-modal [style*="margin-bottom: 1rem"] {
+    margin-bottom: 0.75rem !important;
+}
+
+/* Foto-Feld oben */
+#add-machine-modal .machine-modal-image-slot {
+    border-radius: var(--radius-md);
+    border: 1.5px dashed rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.022);
+    transition: transform 0.2s, opacity 0.2s, background 0.2s, border-color 0.2s, box-shadow 0.2s, color 0.2s;
+    cursor: pointer;
+}
+#add-machine-modal .machine-modal-image-slot:hover {
+    border-color: rgba(52, 211, 153, 0.5);
+    background: rgba(52, 211, 153, 0.05);
+}
+#add-machine-modal .machine-modal-image-slot:hover .placeholder-text {
+    color: var(--color-primary-green) !important;
+}
+
+/* Checkbox "Bei Meetra in der Werkstatt" — 44px Tap-Target */
+#add-machine-modal #machine-in-workshop {
+    width: 20px !important;
+    height: 20px !important;
+    flex-shrink: 0;
+    accent-color: var(--color-primary-green);
+    cursor: pointer;
+}
+#add-machine-modal label[for="machine-in-workshop"] {
+    font-size: var(--fs-md) !important;
+    color: #fff !important;
+    min-height: 44px;
+    padding: 0 14px 0 12px;
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: transform 0.2s, opacity 0.2s, background 0.2s, border-color 0.2s, box-shadow 0.2s, color 0.2s;
+}
+#add-machine-modal label[for="machine-in-workshop"]:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.15);
+}
+#add-machine-modal #machine-in-workshop:checked ~ * ,
+#add-machine-modal label[for="machine-in-workshop"]:has(#machine-in-workshop:checked) {
+    background: rgba(52, 211, 153, 0.08);
+    border-color: rgba(52, 211, 153, 0.35);
+}
+
+/* Mobil: volle Fläche, größere Tap-Targets */
+@media (max-width: 768px) {
+    #add-machine-modal .modal-content {
+        width: 100% !important;
+        max-width: 100% !important;
+        max-height: 94vh !important;
+        border-radius: var(--radius-lg) !important;
+    }
+    #add-machine-modal h2 {
+        padding: 1.15rem 3.75rem 0.9rem 1.15rem;
+        font-size: var(--fs-lg) !important;
+    }
+    #add-machine-modal .modal-form-area {
+        padding: 1.1rem 1.15rem 1.4rem !important;
+    }
+    #add-machine-modal .modal-actions {
+        padding: 0.85rem 1.15rem;
+        padding-bottom: calc(0.85rem + env(safe-area-inset-bottom));
+    }
+    #add-machine-modal .modal-actions button {
+        flex: 1;
+        min-width: 0 !important;
+        min-height: 48px;
+    }
+    #add-machine-modal input:not([type="hidden"]):not([type="checkbox"]):not([type="file"]),
+    #add-machine-modal .glass-select {
+        /* 16px verhindert den Auto-Zoom von iOS beim Fokus */
+        font-size: 16px !important;
+        padding: 12px 14px !important;
+    }
+}
+/* == Ende Maschinen-Modal == */
+/* Contact persons full-width: 3-col grid for name/phone/position */
+#machine-contact-persons-list .contact-person-row > div {
+    grid-template-columns: 1fr 1fr 1fr !important;
+}

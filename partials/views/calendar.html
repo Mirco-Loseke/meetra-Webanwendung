@@ -1,0 +1,123 @@
+                <!-- ========================================================= -->
+                <!-- ================== WARTUNG / KALENDER =================== -->
+                <!-- ========================================================= -->
+                <section id="calendar" class="view hidden">
+                    <div class="view-header-layout">
+                        <div class="view-header-row-top">
+                            <div class="view-header-left">
+                                <h1 style="margin: 0; display:flex; align-items:center; gap:12px;">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                                    </svg>
+                                    Wartung
+                                </h1>
+                            </div>
+                            <div class="view-header-right">
+                                <!-- Calendar Search Field -->
+                                <div class="custom-search-wrapper" style="width: 250px;">
+                                    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <circle cx="11" cy="11" r="8"></circle>
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                    </svg>
+                                    <input type="text" id="calendar-search-input" placeholder="Ereignisse suchen..."
+                                        autocomplete="off">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="view-header-row-bottom" style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; width: 100%; position: relative; z-index: 1000;">
+                            <div class="view-header-left" style="display: flex; gap: 16px; align-items: center;">
+                                <div class="calendar-view-tabs" style="margin-bottom: 0;">
+                                    <button class="calendar-tab-btn" id="btn-events-view-processes" onclick="window.switchEventsSubView('processes')" style="display:none;">Vorgänge</button>
+                                    <button class="calendar-tab-btn active" id="btn-events-view-calendar" onclick="window.switchEventsSubView('calendar')">Wartung</button>
+                                </div>
+
+                                <!-- Filter for Machine Categories in Events (Only visible for calendar view) -->
+                                <div class="custom-filter-dropdown" id="calendar-category-filter-trigger" style="position: relative;">
+                                    <span class="filter-label" id="calendar-current-category-name">Kategorien</span>
+                                    <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                    <div class="custom-filter-menu" id="calendar-category-filter-menu" style="position: absolute; z-index: 10000;">
+                                        <ul id="calendar-category-filter-options">
+                                            <!-- Dynamically populated -->
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                <!-- Filter for Processes (Only visible for processes view) -->
+                                <div class="custom-filter-dropdown" id="process-status-filter-trigger" style="position: relative; display: none;">
+                                    <span class="filter-label" id="process-current-status-name">Status: Alle</span>
+                                    <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                    <div class="custom-filter-menu" id="process-status-filter-menu" style="position: absolute; z-index: 10000;">
+                                        <ul id="process-status-filter-options">
+                                            <li class="selected" onclick="window.setProcessStatusFilter('all')">Status: Alle</li>
+                                            <li onclick="window.setProcessStatusFilter('offen')">Offen</li>
+                                            <li onclick="window.setProcessStatusFilter('in_bearbeitung')">In Bearbeitung</li>
+                                            <li onclick="window.setProcessStatusFilter('erledigt')">Erledigt</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="view-header-right">
+                                <button class="btn-add-bg" id="btn-add-event-action" onclick="window.openCreateEventModal()">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                    Ereignis erstellen
+                                </button>
+                                <div id="process-header-msg-dropzone"
+                                    onclick="document.getElementById('process-header-msg-file-input').click()"
+                                    ondragover="event.preventDefault(); this.style.borderColor='var(--color-primary-green)'; this.style.background='rgba(52,211,153,0.1)';"
+                                    ondragleave="this.style.borderColor='rgba(255,255,255,0.25)'; this.style.background='transparent';"
+                                    ondrop="window.handleProcessHeaderMsgDrop(event)"
+                                    title=".msg-Datei hierher ziehen oder klicken"
+                                    style="display: none; align-items: center; justify-content: center; gap: 10px; border: 2px dashed rgba(255,255,255,0.25); border-radius: 50px; padding: 0.95rem 2.5rem; min-width: 220px; font-size: 0.85rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.6); cursor: pointer; transition: border-color 0.2s, background 0.2s;">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                    <span class="btn-label-full">.msg importieren</span>
+                                </div>
+                                <input type="file" id="process-header-msg-file-input" accept=".msg" style="display:none;" onchange="window.handleProcessHeaderMsgSelect(event)">
+                                <button class="btn-add-bg" id="btn-ai-capture-process" style="display: none; background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.4); color: #a78bfa;" onclick="window.openAiCaptureModal('vorgaenge')" title="Aus Freitext automatisch Vorgänge erzeugen">
+                                    <span style="font-size:1.05rem;">✨</span>
+                                    <span>KI-Erfassung</span>
+                                </button>
+                                <button class="btn-add-bg btn-red-animated" id="btn-import-email-action" style="display: none;" onclick="window.openProcessAddModal()">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                                    </svg>
+                                    <span class="btn-label-full">Vorgang hinzufügen</span>
+                                    <span class="btn-label-short">hinzufügen</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Subview 1: Calendar/Events -->
+                    <div id="events-calendar-subview">
+                        <div id="events-list-container" style="display: flex; flex-direction: column; gap: 15px; min-height: 400px;">
+                            <!-- Events will be rendered as a list here -->
+                        </div>
+                    </div>
+
+                    <!-- Subview 2: Internal Processes -->
+                    <div id="events-processes-subview" style="display: none;">
+                        <div id="processes-list-container" style="min-height: 400px;">
+                            <!-- KPIs, Grafen und Vorgangs-Karten werden hier gerendert -->
+                        </div>
+                    </div>
+                </section>

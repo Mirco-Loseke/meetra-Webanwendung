@@ -1,0 +1,152 @@
+        <!-- Etikettendrucker Settings View -->
+        <section id="settings-etiketten" class="view hidden">
+            <div class="users-header-container" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                <h1 style="margin: 0;">Etikettendrucker</h1>
+                <div class="users-header-actions" style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <div id="label-etiketten-actions" style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button class="btn-add-bg" style="background: rgba(255,255,255,0.06); color: #fff;" onclick="window.openLabelImportModal()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                            IMPORTIEREN
+                        </button>
+                        <button class="btn-add-bg" onclick="window.openLabelArticleModal(null)">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            ANLEGEN
+                        </button>
+                    </div>
+                    <button class="btn-back-custom" data-target="settings">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="M12 19l-7-7 7-7"></path></svg>
+                        ZURÜCK
+                    </button>
+                </div>
+            </div>
+
+            <!-- Ansicht umschalten (Tab-Leiste) -->
+            <div style="margin: 1rem 0;">
+                <div class="calendar-view-tabs" style="margin:0;">
+                    <button class="calendar-tab-btn active" id="label-tab-btn-etiketten" onclick="window.switchLabelTab('etiketten')">Etiketten</button>
+                    <button class="calendar-tab-btn" id="label-tab-btn-beschriftung" onclick="window.switchLabelTab('beschriftung')">Beschriftung</button>
+                    <button class="calendar-tab-btn" id="label-tab-btn-vorlagen" onclick="window.switchLabelTab('vorlagen')">Vorlagen</button>
+                </div>
+            </div>
+
+            <!-- Tab: Etiketten -->
+            <div id="label-tab-content-etiketten">
+                <!-- Toolbar: Search + Print Selected -->
+                <div style="display: flex; gap: 12px; align-items: center; margin: 0 0 1rem 0; flex-wrap: wrap;">
+                    <input type="text" id="label-search-input" class="glass-form-input" placeholder="Suche nach Artikelnummer oder Bezeichnung..." style="flex: 0 1 440px; min-width: 160px; height: 42px;" oninput="window.renderLabelArticles()">
+                    <div style="flex: 1;"></div>
+                    <label style="display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.6); font-size: 0.85rem; cursor: pointer; white-space: nowrap;">
+                        <input type="checkbox" id="label-qty-disabled">
+                        QTY nicht drucken
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.6); font-size: 0.85rem; cursor: pointer; white-space: nowrap;">
+                        <input type="checkbox" id="label-select-all" onchange="window.toggleAllLabelSelection(this.checked)">
+                        Alle auswählen
+                    </label>
+                    <span id="label-selected-count" style="color: rgba(255,255,255,0.4); font-size: 0.85rem; white-space: nowrap;">0 ausgewählt</span>
+                    <button class="btn-primary" style="padding: 10px 20px; font-weight: 700; white-space: nowrap;" onclick="window.printSelectedLabels()">
+                        Etiketten drucken
+                    </button>
+                </div>
+
+                <!-- Article List -->
+                <div id="label-articles-container" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+            </div>
+
+            <!-- Tab: Beschriftung (A4-Aushang fürs Palette aufkleben) -->
+            <div id="label-tab-content-beschriftung" class="hidden">
+                <!-- Seiten-Navigation -->
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom: 1.25rem; flex-wrap: wrap;">
+                    <div id="beschriftung-page-tabs" style="display:flex; gap:6px;"></div>
+                    <button onclick="window.addBeschriftungPage()" style="padding: 6px 14px; border-radius: 8px; background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: #10b981; font-weight:700; font-size:0.8rem; cursor:pointer;">
+                        + Seite hinzufügen
+                    </button>
+                    <button onclick="window.removeBeschriftungPage()" style="padding: 6px 14px; border-radius: 8px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; font-weight:700; font-size:0.8rem; cursor:pointer;">
+                        Seite löschen
+                    </button>
+                </div>
+
+                <div class="beschriftung-grid" style="display:grid; grid-template-columns: 1fr 600px; gap: 1.5rem; align-items: start;">
+                    <!-- Formular -->
+                    <div style="display:flex; flex-direction:column; gap: 1.25rem;">
+                        <div class="form-group">
+                            <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Ausrichtung</label>
+                            <div style="display:flex; gap:8px;">
+                                <button id="beschriftung-orientation-p" onclick="window.setBeschriftungOrientation('p')" style="padding:8px 18px; border-radius: 10px; border:1.5px solid #ef4444; background:#ef4444; color:#fff; font-weight:700; font-size:0.85rem; cursor:pointer;">Hochformat</button>
+                                <button id="beschriftung-orientation-l" onclick="window.setBeschriftungOrientation('l')" style="padding:8px 18px; border-radius: 10px; border:1.5px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.05); color:rgba(255,255,255,0.6); font-weight:700; font-size:0.85rem; cursor:pointer;">Querformat</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Titel (in einer Reihe mit dem Logo)</label>
+                            <input type="text" id="beschriftung-title" class="glass-form-input" placeholder="z.B. Kabinenfilter JT 580" style="height:44px; width: 100%;" oninput="window.updateBeschriftungTitle(this.value)">
+                            <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+                                <label style="font-size:0.78rem; color:rgba(255,255,255,0.5); white-space:nowrap;">Schriftgröße</label>
+                                <input type="range" id="beschriftung-title-fontsize" min="6" max="40" step="1" value="18" oninput="window.updateBeschriftungTitleFontSize(this.value)" style="flex:1;">
+                                <span id="beschriftung-title-fontsize-value" style="font-size:0.78rem; color:rgba(255,255,255,0.6); width:24px; text-align:right;">18</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Kurzbeschreibung / Bezeichnung 2</label>
+                            <input type="text" id="beschriftung-bez2" class="glass-form-input" placeholder="z.B. Achtung Ausgetauscht" style="height:44px; width: 100%;" oninput="window.updateBeschriftungBez2(this.value)">
+                            <div style="display:flex; align-items:center; gap:10px; margin-top:8px;">
+                                <label style="font-size:0.78rem; color:rgba(255,255,255,0.5); white-space:nowrap;">Schriftgröße</label>
+                                <input type="range" id="beschriftung-bez2-fontsize" min="6" max="40" step="1" value="11" oninput="window.updateBeschriftungBez2FontSize(this.value)" style="flex:1;">
+                                <span id="beschriftung-bez2-fontsize-value" style="font-size:0.78rem; color:rgba(255,255,255,0.6); width:24px; text-align:right;">11</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Bild</label>
+                            <div id="beschriftung-image-dropzone" onclick="document.getElementById('beschriftung-image-input').click()" style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 16px; padding: 1.5rem; text-align: center; cursor: pointer;">
+                                <input type="file" id="beschriftung-image-input" accept="image/*" style="display:none;" onchange="window.handleBeschriftungImage(this.files[0])">
+                                <p style="color: rgba(255,255,255,0.5); margin: 0; font-size: 0.85rem;">Bild hinzufügen — aus Galerie wählen oder Foto aufnehmen</p>
+                            </div>
+                            <button onclick="window.removeBeschriftungImage()" style="margin-top: 8px; padding: 8px 16px; border-radius: 8px; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; font-weight:700; font-size:0.8rem; cursor:pointer;">
+                                Bild entfernen
+                            </button>
+                            <div style="display:flex; align-items:center; gap:10px; margin-top:10px;">
+                                <label style="font-size:0.78rem; color:rgba(255,255,255,0.5); white-space:nowrap;">Drehung</label>
+                                <input type="range" id="beschriftung-image-rotation" min="-180" max="180" step="1" value="0" oninput="window.updateBeschriftungImageRotation(this.value)" style="flex:1;">
+                                <span id="beschriftung-image-rotation-value" style="font-size:0.78rem; color:rgba(255,255,255,0.6); width:36px; text-align:right;">0°</span>
+                                <button onclick="window.resetBeschriftungImageRotation()" style="padding:5px 10px; border-radius:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.15); color:rgba(255,255,255,0.6); font-size:0.72rem; cursor:pointer; white-space:nowrap;">0°</button>
+                            </div>
+                            <p style="font-size:0.72rem; color:rgba(255,255,255,0.35); margin: 6px 0 0 0;">Tipp: Bild in der Vorschau an einer der 4 Ecken ziehen, um es zu skalieren — mitten im Bild ziehen, um es zu verschieben — oder am blauen Punkt oben ziehen, um es frei zu drehen.</p>
+                        </div>
+
+                        <label style="display: flex; align-items: center; gap: 10px; color: rgba(255,255,255,0.8); font-size: 0.9rem; cursor: pointer;">
+                            <input type="checkbox" id="beschriftung-stueckliste-toggle" onchange="window.toggleBeschriftungStueckliste(this.checked)" style="width:18px; height:18px; cursor:pointer;">
+                            Stückliste hinzufügen
+                        </label>
+
+                        <div id="beschriftung-stueckliste-editor" class="hidden" style="display:flex; flex-direction:column; gap: 0.6rem;">
+                            <div style="display:grid; grid-template-columns: 1fr 1.3fr 1.3fr 70px 80px 32px; gap:6px; font-size:0.68rem; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.4px; padding: 0 2px;">
+                                <span>Art.-Nr.</span><span>Bez. 1</span><span>Bez. 2</span><span>Menge</span><span>Einheit</span><span></span>
+                            </div>
+                            <div id="beschriftung-stueckliste-rows" style="display:flex; flex-direction:column; gap:6px;"></div>
+                            <button onclick="window.addBeschriftungRow()" style="align-self:flex-start; padding: 6px 14px; border-radius: 8px; background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: #10b981; font-weight:700; font-size:0.8rem; cursor:pointer;">
+                                + Zeile
+                            </button>
+                        </div>
+
+                        <button class="btn-primary" style="padding: 12px 24px; font-weight: 700; align-self:flex-start;" onclick="window.printBeschriftung()">
+                            Beschriftung drucken
+                        </button>
+                    </div>
+
+                    <!-- Live-Vorschau — mehrseitig: falls die Stückliste nicht mehr auf die erste
+                         Seite passt, werden hier (wie später im PDF) automatisch weitere Seiten
+                         mit der Fortsetzung der Stückliste angezeigt. -->
+                    <div>
+                        <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Vorschau</label>
+                        <div id="beschriftung-preview-pages" style="max-width:600px; display:flex; flex-direction:column; align-items:center; gap:20px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Vorlagen (feste Schnelldruck-Etiketten, unabhängig von der Artikel-Auswahl oben) -->
+            <div id="label-tab-content-vorlagen" class="hidden">
+                <div id="vorlagen-list-container" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+            </div>
+        </section>

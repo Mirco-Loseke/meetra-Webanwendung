@@ -1,0 +1,196 @@
+/* ========================================================= */
+/* ==================== MACHINES VIEW STYLES ================ */
+/* ========================================================= */
+
+.machine-selection-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: start;
+}
+
+@media (max-width: 768px) {
+    .machine-selection-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.glass-search-input-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.glass-search-input-wrapper .search-icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255, 255, 255, 0.5);
+    pointer-events: none;
+    transition: color 0.3s ease;
+}
+
+.glass-input-premium {
+    width: 100%;
+    padding: 16px 16px 16px 50px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    color: white;
+    font-size: var(--fs-base);
+    font-family: var(--font-body);
+    transition: transform 0.3s ease, opacity 0.3s ease, background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+    backdrop-filter: blur(var(--blur-surface));
+}
+
+.glass-input-premium:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--color-primary-green);
+    box-shadow: 0 0 0 4px rgba(46, 204, 113, 0.15);
+}
+
+.glass-input-premium:focus+.search-icon {
+    color: var(--color-primary-green);
+}
+
+.premium-selectable-list {
+    max-height: 300px;
+    overflow-y: auto;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-lg);
+    padding: 0.5rem;
+}
+
+.premium-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid transparent;
+    font-family: var(--font-body);
+}
+
+.premium-item:last-child {
+    margin-bottom: 0;
+}
+
+.premium-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    transform: translateX(5px);
+}
+
+.premium-item.selected {
+    background: rgba(0, 150, 64, 0.1);
+    border: 2px solid var(--color-primary-green);
+    box-shadow: 0 0 20px rgba(0, 150, 64, 0.2);
+    transform: translateX(8px);
+}
+
+.premium-item-img {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.05);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.premium-item-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.premium-item-info strong {
+    display: block;
+    font-size: var(--fs-base);
+    color: white;
+    margin-bottom: 2px;
+}
+
+.premium-item-info small {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: var(--fs-md);
+}
+
+.machine-modal-image-slot {
+    width: 100%;
+    height: 240px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 2px dashed rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    margin-bottom: 2.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.3s ease, opacity 0.3s ease, background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+    overflow: hidden;
+    position: relative;
+    color: rgba(255, 255, 255, 0.4);
+    box-sizing: border-box;
+}
+
+.machine-modal-image-slot:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.machine-modal-image-slot.drag-over {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: var(--success);
+    color: var(--success);
+}
+
+.machine-modal-image-slot img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.machine-modal-image-slot .placeholder-content-inner {
+    pointer-events: none;
+}
+
+.history-timeline {
+    position: relative;
+}
+
+.history-item {
+    transition: transform 0.2s, background 0.2s;
+}
+
+.history-item:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.history-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.history-icon {
+    z-index: 2;
+}
+
+/* Letzte Wartungsart auf der Maschinenkarte */
+.maint-lastart-val {
+    font-weight: 700;
+    color: #fff;
+}

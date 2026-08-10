@@ -1,0 +1,1511 @@
+/* ============================================================
+   ADRESSBUCH – Visitenkarten-Ansicht, Detailmodal, Formulare
+   Ergänzt style.css (gleiche CSS-Variablen, Dark Mode, Glassmorphism).
+   ============================================================ */
+
+#addressbook .ab-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+.ab-select {
+    height: 44px;
+    padding: 0 36px 0 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    background-color: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(var(--blur-surface));
+    -webkit-backdrop-filter: blur(var(--blur-surface));
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--fs-md);
+    font-weight: 600;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.ab-select:hover,
+.ab-select:focus {
+    border-color: rgba(34, 197, 94, 0.45);
+    outline: none;
+}
+
+.ab-select option {
+    background: #0f172a;
+    color: var(--text-1);
+}
+
+.ab-count {
+    font-size: var(--fs-md);
+    color: var(--color-secondary);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* ---------- Kartenraster ---------- */
+.ab-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 18px;
+    margin-top: 0.5rem;
+}
+
+.ab-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 20px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--glass-border);
+    background: linear-gradient(150deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.04) 100%);
+    backdrop-filter: blur(var(--blur-raised));
+    -webkit-backdrop-filter: blur(var(--blur-raised));
+    box-shadow: 0 12px 32px -18px rgba(0, 0, 0, 0.8);
+    cursor: pointer;
+    overflow: hidden;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.ab-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 3px;
+    background: rgba(148, 163, 184, 0.35);
+    transition: background 0.25s ease;
+}
+
+.ab-card.is-customer::before {
+    background: linear-gradient(180deg, var(--color-primary-green), rgba(34, 197, 94, 0.15));
+}
+
+.ab-card:hover,
+.ab-card:focus-visible {
+    transform: translateY(-4px);
+    border-color: rgba(34, 197, 94, 0.4);
+    box-shadow: 0 22px 44px -20px rgba(0, 0, 0, 0.9);
+    outline: none;
+}
+
+.ab-card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.ab-avatar {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: var(--fs-sm);
+    letter-spacing: 0.5px;
+    color: #fff;
+    background: linear-gradient(140deg, hsl(var(--ab-hue, 200) 65% 45%), hsl(var(--ab-hue, 200) 70% 28%));
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.ab-avatar-lg {
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-lg);
+    font-size: var(--fs-xl);
+}
+
+.ab-avatar-sm {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-sm);
+}
+
+.ab-card-heading {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Kein Abschneiden: der komplette Firmenname bleibt lesbar, damit kein
+   Hover-Tooltip nötig ist, der den Namen ein zweites Mal anzeigt. */
+.ab-card-name {
+    font-weight: 700;
+    font-size: var(--fs-md);
+    color: var(--color-text);
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.ab-card-sub {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 5px;
+    font-size: var(--fs-sm);
+    color: var(--color-secondary);
+}
+
+.ab-badge-customer,
+.ab-badge-address {
+    flex-shrink: 0;
+    font-size: var(--fs-2xs);
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: var(--radius-pill);
+    border: 1px solid;
+}
+
+.ab-badge-customer {
+    color: #4ade80;
+    border-color: rgba(34, 197, 94, 0.45);
+    background: rgba(34, 197, 94, 0.14);
+}
+
+.ab-badge-address {
+    color: var(--text-3);
+    border-color: rgba(148, 163, 184, 0.3);
+    background: rgba(148, 163, 184, 0.1);
+}
+
+.ab-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.ab-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    font-size: var(--fs-md);
+    line-height: 1.45;
+    color: var(--text-2);
+    min-width: 0;
+}
+
+/* Umbrechen statt abschneiden – lange Adressen und E-Mails bleiben vollständig lesbar */
+.ab-line > span,
+.ab-line > a {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.ab-line > .ab-ic {
+    margin-top: 2px;
+}
+
+.ab-line a {
+    color: var(--text-2);
+    text-decoration: none;
+}
+
+.ab-line a:hover {
+    color: var(--color-primary-green);
+}
+
+.ab-ic {
+    flex-shrink: 0;
+    color: var(--color-secondary);
+}
+
+/* margin-top:auto hält die Chip-Leiste am Kartenfuß, auch wenn Karten einer
+   Zeile durch unterschiedlich lange Firmennamen verschieden viel Text haben. */
+.ab-card-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.ab-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    padding: 4px 9px;
+    border-radius: var(--radius-pill);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-2);
+}
+
+.ab-chip .ab-ic {
+    color: inherit;
+}
+
+.ab-chip-machine {
+    color: #7dd3fc;
+    border-color: rgba(125, 211, 252, 0.3);
+}
+
+.ab-chip-contact {
+    color: #c4b5fd;
+    border-color: rgba(196, 181, 253, 0.3);
+}
+
+.ab-chip-link {
+    color: var(--warning);
+    border-color: rgba(251, 191, 36, 0.3);
+}
+
+.ab-more {
+    display: block;
+    margin: 24px auto 8px;
+    padding: 12px 28px;
+    min-height: 44px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: var(--fs-md);
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.ab-more:hover {
+    background: rgba(255, 255, 255, 0.11);
+    border-color: rgba(34, 197, 94, 0.4);
+}
+
+/* ---------- Auswahlmodus (Route zusammenstellen) ---------- */
+.ab-select-toggle {
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--fs-md);
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.ab-select-toggle:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.ab-select-toggle.active {
+    color: #4ade80;
+    border-color: rgba(34, 197, 94, 0.5);
+    background: rgba(34, 197, 94, 0.16);
+}
+
+.ab-card.ab-selectable {
+    border-style: dashed;
+}
+
+.ab-card.ab-selected {
+    border-style: solid;
+    border-color: var(--color-primary-green);
+    box-shadow: 0 0 0 1px var(--color-primary-green), 0 16px 34px -18px rgba(0, 0, 0, 0.9);
+}
+
+/* Reihenfolge-Nummer auf der ausgewählten Karte */
+.ab-select-order {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 8px;
+    border-radius: var(--radius-pill);
+    font-size: var(--fs-sm);
+    font-weight: 800;
+    color: #0f172a;
+    background: var(--color-primary-green);
+    box-shadow: 0 4px 12px -4px rgba(0, 0, 0, 0.8);
+}
+
+/* Aktionsleiste am unteren Rand während der Auswahl */
+.ab-selection-bar {
+    position: fixed;
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%) translateY(140%);
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    max-width: min(940px, calc(100vw - 32px));
+    padding: 14px 18px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--glass-border);
+    background: rgba(15, 23, 42, 0.97);
+    backdrop-filter: blur(var(--blur-raised));
+    -webkit-backdrop-filter: blur(var(--blur-raised));
+    box-shadow: 0 22px 48px -20px rgba(0, 0, 0, 0.95);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+}
+
+.ab-selection-bar.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.ab-selection-info {
+    flex: 1;
+    min-width: 200px;
+    font-size: var(--fs-md);
+    color: var(--color-text);
+}
+
+.ab-selection-names {
+    margin-top: 4px;
+    font-size: var(--fs-sm);
+    color: var(--color-secondary);
+    overflow-wrap: anywhere;
+}
+
+.ab-selection-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* ---------- Gruppen: Einträge von verknüpften Adressen ---------- */
+.ab-linked-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.ab-linked-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+    border-radius: var(--radius-lg);
+    border: 1px dashed rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.02);
+    position: relative;
+}
+
+.ab-linked-group.ab-linked-group-own {
+    border-style: solid;
+    border-color: rgba(34, 197, 94, 0.35);
+    background: rgba(34, 197, 94, 0.05);
+}
+
+.ab-linked-group::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 20px;
+    bottom: 20px;
+    width: 3px;
+    border-radius: var(--radius-xs);
+    background: var(--ab-link-color, rgba(148, 163, 184, 0.4));
+    opacity: 0.7;
+}
+
+.ab-linked-group.ab-linked-group-own::before {
+    background: var(--color-primary-green);
+    opacity: 1;
+}
+
+.ab-linked-group-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.ab-linked-group-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    color: var(--color-text);
+    overflow-wrap: anywhere;
+}
+
+.ab-linked-group-title svg {
+    flex-shrink: 0;
+    color: var(--ab-link-color, var(--text-3));
+}
+
+.ab-linked-group-own .ab-linked-group-title svg {
+    color: var(--color-primary-green);
+}
+
+/* readonly-Karten (aus verknüpfter Adresse gespiegelt) optisch etwas ruhiger */
+.ab-sub-card-readonly {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.ab-empty-compact {
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+}
+
+.ab-empty-compact .ab-empty-text {
+    font-size: var(--fs-sm);
+    margin-top: 0;
+}
+
+.ab-sub-grid-nested {
+    grid-template-columns: 1fr;
+}
+
+.ab-btn-sm {
+    min-height: 34px;
+    padding: 0 12px;
+    font-size: var(--fs-sm);
+}
+
+/* Zuordnung „bei: <Adresse>" auf jeder Maschinenkarte — deutlich hervorgehoben */
+.ab-machine-owner {
+    color: var(--color-text);
+    font-weight: 600;
+}
+
+.ab-machine-owner a {
+    color: #7dd3fc;
+    text-decoration: none;
+}
+
+.ab-machine-owner a:hover {
+    text-decoration: underline;
+}
+
+/* ---------- Maschinen-Historie (aufklappbar) ---------- */
+.ab-machine-history {
+    display: none;
+}
+
+.ab-machine-history.open {
+    display: block;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ab-timeline-compact {
+    gap: 10px;
+    padding-left: 0;
+}
+
+.ab-timeline-compact .ab-timeline-dot {
+    width: 24px;
+    height: 24px;
+}
+
+.ab-timeline-compact .ab-timeline-item::before {
+    left: 11px;
+    top: 26px;
+    bottom: -10px;
+}
+
+.ab-timeline-compact .ab-timeline-body {
+    padding: 9px 11px;
+}
+
+/* Maschinen einer verknüpften Adresse */
+.ab-linked-machines {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.ab-linked-machine {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 9px;
+    border-radius: var(--radius-sm);
+    border-left: 2px solid rgba(125, 211, 252, 0.4);
+    background: rgba(125, 211, 252, 0.07);
+    font-size: var(--fs-sm);
+    color: var(--text-2);
+}
+
+.ab-linked-machine > span {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.ab-linked-machine .ab-icon-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+}
+
+.ab-warning {
+    margin-bottom: 18px;
+    padding: 14px 18px;
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(251, 191, 36, 0.35);
+    background: rgba(251, 191, 36, 0.09);
+    color: #fcd34d;
+    font-size: var(--fs-md);
+    line-height: 1.6;
+}
+
+.ab-warning strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: var(--fs-md);
+    color: var(--warning);
+}
+
+.ab-warning code {
+    font-family: 'Courier New', monospace;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: var(--radius-xs);
+    padding: 1px 6px;
+}
+
+/* ---------- Maschinen ohne Adresszuordnung ---------- */
+.ab-unassigned-panel > summary {
+    cursor: pointer;
+    list-style: none;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ab-unassigned-panel > summary::-webkit-details-marker {
+    display: none;
+}
+
+.ab-unassigned-panel > summary strong {
+    display: inline;
+    margin-bottom: 0;
+}
+
+.ab-unassigned-panel > summary::before {
+    content: '▸';
+    font-size: var(--fs-sm);
+    color: var(--warning);
+}
+
+.ab-unassigned-panel[open] > summary::before {
+    content: '▾';
+}
+
+.ab-unassigned-list {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 340px;
+    overflow-y: auto;
+}
+
+.ab-unassigned-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.ab-unassigned-main {
+    min-width: 0;
+}
+
+.ab-unassigned-row .ab-sub-name {
+    color: #fff;
+}
+
+.ab-suggest-head {
+    padding: 8px 14px;
+    font-size: var(--fs-xs);
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.45);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ab-empty {
+    text-align: center;
+    padding: 3.5rem 1.5rem;
+    border-radius: var(--radius-lg);
+    border: 1px dashed rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.ab-empty-title {
+    font-weight: 700;
+    font-size: var(--fs-base);
+    color: var(--color-text);
+}
+
+.ab-empty-text {
+    margin-top: 8px;
+    font-size: var(--fs-md);
+    color: var(--color-secondary);
+}
+
+/* ---------- Modale ---------- */
+.ab-modal-backdrop {
+    z-index: 10000;
+}
+
+#addressbook-form-modal {
+    z-index: 10050;
+}
+
+.ab-detail-content {
+    max-width: 1100px;
+    padding: 0 !important;
+}
+
+.ab-form-content {
+    max-width: 720px;
+    padding: 2rem !important;
+}
+
+.ab-modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 5;
+}
+
+.ab-detail-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    padding: 2rem 2rem 1.25rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-wrap: wrap;
+}
+
+.ab-detail-title {
+    flex: 1;
+    min-width: 220px;
+}
+
+.ab-detail-title h2 {
+    margin: 0 0 8px !important;
+    font-size: clamp(1.25rem, 3vw, 1.6rem);
+    line-height: 1.25;
+}
+
+.ab-detail-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--fs-sm);
+    color: var(--color-secondary);
+}
+
+.ab-detail-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-right: 44px;
+}
+
+.ab-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 0 18px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    font-family: var(--font-sans);
+    font-size: var(--fs-md);
+    font-weight: 700;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--color-text);
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+    text-decoration: none;
+}
+
+.ab-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-1px);
+}
+
+.ab-btn-primary {
+    background: linear-gradient(135deg, var(--color-primary-green), #15803d);
+    border-color: rgba(34, 197, 94, 0.5);
+    color: #fff;
+}
+
+.ab-btn-primary:hover {
+    background: linear-gradient(135deg, var(--success-soft), #16a34a);
+}
+
+.ab-btn-danger {
+    color: #fca5a5;
+    border-color: rgba(239, 68, 68, 0.4);
+    background: rgba(239, 68, 68, 0.12);
+}
+
+.ab-btn-danger:hover {
+    background: rgba(239, 68, 68, 0.22);
+}
+
+.ab-btn-ghost {
+    background: transparent;
+    border-color: rgba(255, 255, 255, 0.14);
+    color: var(--color-secondary);
+}
+
+.ab-btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.28);
+    color: var(--color-text);
+}
+
+/* Klickbarer Pill-Button (Typ / Hersteller inline ändern) */
+.ab-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: var(--radius-pill);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-2);
+    font-family: inherit;
+    font-size: var(--fs-2xs);
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s ease, filter 0.15s ease;
+}
+
+.ab-pill-btn:hover {
+    background: rgba(255, 255, 255, 0.14);
+    filter: brightness(1.15);
+}
+
+.ab-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-secondary);
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.ab-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--color-text);
+}
+
+.ab-icon-btn.ab-danger:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+}
+
+.ab-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+.ab-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.ab-tab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 48px;
+    padding: 0 16px;
+    border: none;
+    background: transparent;
+    color: var(--color-secondary);
+    font-family: var(--font-sans);
+    font-size: var(--fs-md);
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color 0.2s ease;
+}
+
+.ab-tab:hover {
+    color: var(--color-text);
+}
+
+.ab-tab.active {
+    color: var(--color-primary-green);
+}
+
+.ab-tab.active::after {
+    content: '';
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: -1px;
+    height: 2px;
+    border-radius: var(--radius-xs);
+    background: var(--color-primary-green);
+}
+
+.ab-tab-count {
+    font-size: var(--fs-xs);
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: var(--radius-pill);
+    background: rgba(255, 255, 255, 0.09);
+    color: inherit;
+}
+
+.ab-tab-panel {
+    padding: 1.75rem 2rem 2rem;
+    max-height: 64vh;
+    overflow-y: auto;
+}
+
+/* ---------- Übersicht ---------- */
+.ab-overview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+}
+
+.ab-panel {
+    padding: 18px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.ab-panel-wide {
+    grid-column: 1 / -1;
+}
+
+.ab-panel h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 14px;
+    font-size: var(--fs-sm);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-secondary);
+}
+
+.ab-address-block {
+    font-size: var(--fs-md);
+    line-height: 1.65;
+    color: var(--color-text);
+}
+
+.ab-maps {
+    margin-top: 14px;
+    min-height: 40px;
+    padding: 0 14px;
+    font-size: var(--fs-sm);
+}
+
+.ab-kv {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: var(--fs-md);
+}
+
+.ab-kv:last-child {
+    border-bottom: none;
+}
+
+.ab-kv-label {
+    color: var(--color-secondary);
+    white-space: nowrap;
+}
+
+.ab-kv-value {
+    color: var(--color-text);
+    text-align: right;
+    word-break: break-word;
+}
+
+.ab-kv-value a {
+    color: var(--color-primary-green);
+    text-decoration: none;
+}
+
+.ab-kv-value a:hover {
+    text-decoration: underline;
+}
+
+.ab-notes-text {
+    white-space: pre-wrap;
+    font-size: var(--fs-md);
+    line-height: 1.6;
+    color: var(--text-2);
+}
+
+.ab-muted {
+    color: var(--color-secondary);
+}
+
+.ab-small {
+    font-size: var(--fs-sm);
+}
+
+.ab-hint {
+    font-size: var(--fs-sm);
+    color: var(--color-secondary);
+    line-height: 1.55;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+}
+
+/* ---------- Unterlisten (Kontakte / Maschinen / Verknüpfungen) ---------- */
+.ab-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.ab-sub-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 14px;
+}
+
+@media (min-width: 640px) {
+    .ab-sub-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.ab-sub-card {
+    padding: 16px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--glass-border);
+    background: linear-gradient(150deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.03) 100%);
+    backdrop-filter: blur(var(--blur-raised));
+    -webkit-backdrop-filter: blur(var(--blur-raised));
+    transition: border-color 0.2s ease;
+}
+
+.ab-sub-card:hover {
+    border-color: rgba(255, 255, 255, 0.22);
+}
+
+.ab-sub-card-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+}
+
+.ab-sub-card-title {
+    flex: 1;
+    min-width: 0;
+}
+
+.ab-sub-name {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+    font-weight: 700;
+    font-size: var(--fs-md);
+    color: var(--color-text);
+}
+
+.ab-sub-card-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.ab-sub-card-actions-column {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-end;
+    flex-shrink: 0;
+}
+
+.ab-sub-card-actions .ab-icon-btn,
+.ab-sub-card-actions-column .ab-icon-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+}
+
+.ab-sub-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.ab-sub-card-body:empty {
+    display: none;
+}
+
+.ab-machine-icon,
+.ab-link-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+    border: 1px solid rgba(125, 211, 252, 0.28);
+    background: rgba(125, 211, 252, 0.12);
+    color: #7dd3fc;
+}
+
+/* Vorschaubild einer Maschine, oben links auf der Karte */
+.ab-machine-thumb {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60px;
+    height: 60px;
+    border-radius: var(--radius-md);
+    flex-shrink: 0;
+    overflow: hidden;
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.ab-machine-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.ab-machine-thumb-fallback {
+    color: #7dd3fc;
+    background: rgba(125, 211, 252, 0.12);
+    border-color: rgba(125, 211, 252, 0.28);
+}
+
+/* Maschinen-Kategorie (Siebtrommel, Zerkleinerer …) über dem Titel */
+.ab-machine-category {
+    font-size: var(--fs-2xs);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #7dd3fc;
+    margin-bottom: 2px;
+}
+
+.ab-link-icon {
+    border-color: var(--ab-link-color, var(--text-3));
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--ab-link-color, var(--text-3));
+}
+
+.ab-pill {
+    display: inline-flex;
+    align-items: center;
+    font-size: var(--fs-2xs);
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    padding: 3px 8px;
+    border-radius: var(--radius-pill);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-2);
+    white-space: nowrap;
+}
+
+/* Klickbarer Typ-Tag: Art der Verknüpfung nachträglich ändern */
+.ab-pill-editable {
+    gap: 4px;
+    font-family: inherit;
+    transition: background 0.15s, filter 0.15s;
+}
+
+.ab-pill-editable:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+    filter: brightness(1.15);
+}
+
+.ab-pill-editable svg {
+    opacity: 0.65;
+}
+
+.ab-pill-green {
+    color: #4ade80;
+    border-color: rgba(34, 197, 94, 0.4);
+}
+
+.ab-pill-warn {
+    color: var(--warning);
+    border-color: rgba(251, 191, 36, 0.4);
+}
+
+/* ---------- Historie ---------- */
+.ab-timeline {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-left: 6px;
+}
+
+.ab-timeline-item {
+    position: relative;
+    display: flex;
+    gap: 14px;
+}
+
+.ab-timeline-item::before {
+    content: '';
+    position: absolute;
+    left: 15px;
+    top: 34px;
+    bottom: -16px;
+    width: 1px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.ab-timeline-item:last-child::before {
+    display: none;
+}
+
+.ab-timeline-dot {
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-circle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--ab-entry-color, var(--text-3));
+    background: rgba(15, 23, 42, 0.9);
+    color: var(--ab-entry-color, var(--text-3));
+}
+
+.ab-timeline-body {
+    flex: 1;
+    min-width: 0;
+    padding: 12px 14px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.ab-timeline-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+    color: var(--color-text);
+    font-size: var(--fs-md);
+}
+
+.ab-timeline-del {
+    margin-left: auto;
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+}
+
+.ab-timeline-text {
+    margin-top: 8px;
+    white-space: pre-wrap;
+    font-size: var(--fs-md);
+    line-height: 1.6;
+    color: var(--text-2);
+}
+
+/* ---------- Formulare ---------- */
+.ab-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+}
+
+.ab-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+}
+
+.ab-field-wide {
+    grid-column: 1 / -1;
+}
+
+.ab-field > span {
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--color-secondary);
+}
+
+.ab-field input[type="text"],
+.ab-field input[type="tel"],
+.ab-field input[type="email"],
+.ab-field input[type="date"],
+.ab-field textarea,
+.ab-field select {
+    width: 100%;
+    min-height: 46px;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--fs-md);
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.ab-field textarea {
+    resize: vertical;
+    line-height: 1.55;
+}
+
+.ab-field select option {
+    background: #0f172a;
+    color: var(--text-1);
+}
+
+.ab-field input:focus,
+.ab-field textarea:focus,
+.ab-field select:focus {
+    outline: none;
+    border-color: rgba(34, 197, 94, 0.5);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.ab-field-check {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    min-height: 46px;
+    padding: 0 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.04);
+    cursor: pointer;
+}
+
+.ab-field-check input {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--color-primary-green);
+    cursor: pointer;
+}
+
+.ab-field-check > span {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: var(--fs-md);
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.ab-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 1.75rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Vorschlagsliste (Adress-/Maschinensuche im Formular) */
+.ab-suggest {
+    display: none;
+    max-height: 260px;
+    overflow-y: auto;
+    margin-top: 6px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    background: rgba(15, 23, 42, 0.97);
+    box-shadow: 0 18px 36px -18px rgba(0, 0, 0, 0.9);
+}
+
+.ab-suggest.open {
+    display: block;
+}
+
+.ab-suggest-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    width: 100%;
+    min-height: 48px;
+    padding: 10px 14px;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    transition: background 0.15s ease;
+}
+
+.ab-suggest-item:last-child {
+    border-bottom: none;
+}
+
+.ab-suggest-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.ab-suggest-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: var(--fs-md);
+    color: var(--color-text);
+}
+
+.ab-suggest-sub {
+    font-size: var(--fs-sm);
+    color: var(--color-secondary);
+}
+
+.ab-suggest-empty {
+    padding: 14px;
+    font-size: var(--fs-md);
+    color: var(--color-secondary);
+}
+
+.ab-selected-hint {
+    font-size: var(--fs-sm);
+    color: var(--color-primary-green);
+    min-height: 1em;
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 768px) {
+    #addressbook .ab-toolbar {
+        gap: 10px;
+    }
+
+    #addressbook .ab-toolbar > * {
+        flex: 1 1 140px;
+    }
+
+    .ab-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .ab-card {
+        padding: 16px;
+    }
+
+    .ab-detail-content,
+    .ab-form-content {
+        width: 100%;
+        border-radius: var(--radius-lg);
+    }
+
+    .ab-form-content {
+        padding: 1.5rem !important;
+    }
+
+    .ab-detail-head {
+        padding: 1.5rem 1.25rem 1rem;
+        gap: 14px;
+    }
+
+    .ab-detail-actions {
+        margin-right: 0;
+        width: 100%;
+    }
+
+    .ab-detail-actions .ab-btn {
+        flex: 1;
+    }
+
+    .ab-tabs {
+        padding: 0 1rem;
+    }
+
+    .ab-tab-panel {
+        padding: 1.25rem 1rem 1.5rem;
+        max-height: none;
+    }
+
+    .ab-overview,
+    .ab-sub-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ab-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .ab-form-actions .ab-btn {
+        flex: 1;
+    }
+
+    .ab-kv {
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .ab-kv-value {
+        text-align: left;
+    }
+}

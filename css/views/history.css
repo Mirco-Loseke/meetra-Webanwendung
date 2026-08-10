@@ -1,0 +1,309 @@
+/* ==========================================================
+   Historie und Schnelleintrag: Zeitstrahl, Karten, Rundbuttons
+   ==========================================================
+   Ausgelagert aus index.html (vormals Zeilen 245-546).
+   Wird per <link> an unveraenderter Stelle geladen — die Reihenfolge
+   gegenueber css/style.css darf nicht vertauscht werden.
+   ========================================================== */
+
+/* History & Quick Entry Premium Styles */
+.btn-icon-circular {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-circle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: white;
+    cursor: pointer;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    backdrop-filter: blur(var(--blur-surface));
+    padding: 0;
+}
+
+.btn-icon-circular svg {
+    width: 14px;
+    height: 14px;
+}
+
+.btn-icon-circular:hover {
+    transform: scale(1.15);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.btn-icon-circular.edit {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: #3b82f6;
+}
+
+.btn-icon-circular.edit:hover {
+    background: rgba(59, 130, 246, 0.25);
+    border-color: rgba(59, 130, 246, 0.6);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+}
+
+.btn-icon-circular.delete {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.4);
+    color: var(--danger);
+}
+
+.btn-icon-circular.delete:hover {
+    background: rgba(239, 68, 68, 0.25);
+    border-color: rgba(239, 68, 68, 0.6);
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+}
+
+.history-clamp-wrap {
+    position: relative;
+    max-height: 130px;
+    overflow: hidden;
+}
+
+.history-clamp-wrap.expanded {
+    max-height: none;
+}
+
+.history-clamp-fade {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 48px;
+    background: linear-gradient(to bottom, transparent, rgba(20, 25, 38, 0.96));
+    pointer-events: none;
+}
+
+.history-readmore-btn {
+    display: none;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+    background: none;
+    border: none;
+    color: var(--color-primary-green, var(--success-soft));
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+.history-readmore-btn:hover {
+    text-decoration: underline;
+}
+
+.history-readmore-btn svg {
+    transition: transform 0.2s ease;
+}
+
+.history-tag-badge {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    padding: 4px 12px;
+    border-radius: var(--radius-lg);
+    font-size: var(--fs-2xs);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    backdrop-filter: blur(var(--blur-raised));
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    z-index: 5;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+
+.history-user-initials {
+    position: absolute;
+    right: -8px;
+    bottom: -8px;
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-circle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--fs-2xs);
+    font-weight: 800;
+    color: white;
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    z-index: 2;
+}
+
+.quick-entry-btn-premium {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.9);
+    padding: 18px 12px;
+    border-radius: var(--radius-xl);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    transition: transform 0.4s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.4s cubic-bezier(0.23, 1, 0.32, 1), background 0.4s cubic-bezier(0.23, 1, 0.32, 1), border-color 0.4s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.4s cubic-bezier(0.23, 1, 0.32, 1), color 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+    backdrop-filter: blur(var(--blur-surface));
+}
+
+.quick-entry-btn-premium:hover {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+.quick-entry-icon-ring {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-circle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid currentColor;
+    background: rgba(0, 0, 0, 0.25);
+    transition: transform 0.3s ease, opacity 0.3s ease, background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+    margin-bottom: 2px;
+}
+
+.quick-entry-btn-premium:hover .quick-entry-icon-ring {
+    transform: scale(1.1);
+    background: currentColor;
+}
+
+.quick-entry-btn-premium:hover .quick-entry-icon-ring svg {
+    color: #0f172a;
+}
+
+.history-item-premium {
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    position: relative;
+    backdrop-filter: blur(var(--blur-raised));
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease, opacity 0.3s ease, background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+}
+
+.history-item-premium:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
+}
+
+.history-timeline-container {
+    position: relative;
+    padding-left: 20px !important;
+    margin-top: 1rem;
+}
+
+/* Vertical line between icons */
+.history-icon-connector {
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.1) 5%, rgba(255, 255, 255, 0.1) 95%, transparent);
+    z-index: 0;
+}
+
+.history-item-premium {
+    position: relative;
+    margin-left: 3rem !important;
+    /* Move card right to make room for icon */
+    padding: 1.5rem;
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    margin-bottom: 2rem;
+    backdrop-filter: blur(var(--blur-raised));
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    transition: transform 0.3s ease, opacity 0.3s ease, background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+}
+
+/* Horizontal connector from icon to card */
+.history-icon::after {
+    content: '';
+    position: absolute;
+    right: -16px;
+    /* Bridge the gap to the card */
+    top: 50%;
+    width: 16px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    z-index: -1;
+}
+
+.history-item-year {
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-color: rgba(255, 255, 255, 0.05) !important;
+    text-align: center;
+    padding: 1rem !important;
+}
+
+.history-item-year h3 {
+    margin: 0;
+    color: #fff !important;
+    font-size: var(--fs-xl);
+    font-weight: 900;
+    letter-spacing: 5px;
+}
+
+.btn-close-premium {
+    background: rgba(239, 68, 68, 0.1) !important;
+    border: 1px solid rgba(239, 68, 68, 0.2) !important;
+    color: var(--danger) !important;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+}
+
+.btn-close-premium:hover {
+    background: var(--danger) !important;
+    color: white !important;
+    transform: rotate(90deg) scale(1.1);
+    box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+}
+
+.quick-entry-btn-premium::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.quick-entry-btn-premium:hover {
+    transform: translateY(-4px);
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.quick-entry-btn-premium:hover::before {
+    opacity: 1;
+}
+
+.quick-entry-btn-premium span:first-child {
+    font-size: var(--fs-xl);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.quick-entry-btn-premium span:last-child {
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+/* User Management Circular Buttons (Compatibility) */
+.user-actions .btn-icon-circular {
+    width: 32px;
+    height: 32px;
+}

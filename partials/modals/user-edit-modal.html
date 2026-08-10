@@ -1,0 +1,89 @@
+    <!-- Edit User Modal -->
+    <div id="user-edit-modal"
+        style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999999; backdrop-filter: blur(10px); flex-direction: column; align-items: center; justify-content: center;">
+        <div class="glass-card" style="padding: 2.5rem; max-width: 500px; width: 90%; position: relative; max-height: 90vh; overflow-y: auto; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px); border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+            <button onclick="closeEditUserModal()"
+                style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: white; cursor: pointer;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+            <h2 style="margin-bottom: 1.5rem;">Benutzer bearbeiten</h2>
+            <input type="hidden" id="edit-user-id">
+
+            <div class="form-group">
+                <label>Name</label>
+                <input type="text" id="edit-user-name" class="glass-input">
+            </div>
+
+            <div class="form-group">
+                <label>E-Mail-Adresse (für Supabase-Login im Hintergrund)</label>
+                <input type="email" id="edit-user-email" class="glass-input" placeholder="Z.B. name@company.de">
+            </div>
+
+            <div class="form-group">
+                <label>PIN (Optional, 4-8 Ziffern)</label>
+                <input type="text" id="edit-user-pin" class="glass-input" placeholder="Z.B. 1234 oder leer lassen">
+            </div>
+
+            <div class="form-group">
+                <label style="display: block; margin-bottom: 0.5rem;">Unterschrift</label>
+                <div id="user-signature-preview-container" style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; height: 120px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.25); cursor: pointer; position: relative; margin-bottom: 0.5rem;" onclick="window.openUserSignaturePad()">
+                    <span id="user-signature-placeholder" style="color: rgba(255,255,255,0.45); font-size: 0.9rem;">👉 Klicken zum Unterschreiben</span>
+                    <img id="user-signature-preview-img" class="hidden" style="max-height: 100%; max-width: 100%; object-fit: contain; padding: 10px;">
+                    <button type="button" id="btn-clear-user-signature" class="hidden" onclick="event.stopPropagation(); window.clearUserSignature()" style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;">Löschen</button>
+                </div>
+                <input type="hidden" id="edit-user-signature">
+                <p style="font-size: 0.78rem; color: rgba(255,255,255,0.4); margin: 0;">Wird bei neuen Serviceberichten automatisch als Techniker-Unterschrift vorausgefüllt.</p>
+            </div>
+
+            <div id="edit-permissions-section" class="form-group" style="margin-top: 1.5rem;">
+                <label style="margin-bottom: 0.75rem; display: block; color: var(--color-primary-green); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.85rem;">Berechtigungen</label>
+
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 12px; backdrop-filter: blur(12px);">
+                    <div style="font-size: 0.78rem; font-weight: 800; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.75rem;">Hauptmenü — Ansichten</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-home"> Startseite</label>
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-tasks"> Aufgaben</label>
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-machines"> Maschinen</label>
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-workshop"> Werkstatt</label>
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-service"> Service</label>
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-protocols"> Protokolle</label>
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-settings-etiketten"> Etikettendrucker</label>
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-documents"> Dokumente</label>
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-listen"> Listen</label>
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-history"> Historie</label>
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-accounting"> Buchhaltung</label>
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-calendar"> Kalender</label>
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-settings"> Einstellungen</label>
+                    </div>
+                </div>
+
+                <div id="perm-settings-subpages-box" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 12px; backdrop-filter: blur(12px);">
+                    <div style="font-size: 0.78rem; font-weight: 800; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.75rem;">Einstellungen — Unterseiten</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-users"> Benutzerverwaltung</label>
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-categories"> Kategorien</label>
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-protocol-templates"> Protokollvorlagen</label>
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-settings-textbausteine"> Textbausteine</label>
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-settings-firmeneinstellungen"> Firmendaten</label>
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-settings-import"> Import</label>
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-settings-uvv-wartungsplaene"> UVV &amp; Wartungspläne</label>
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-settings-ai"> KI-Konfiguration</label>
+                    </div>
+                </div>
+
+                <div style="background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.25); border-radius: 14px; padding: 1rem 1.25rem; backdrop-filter: blur(12px);">
+                    <div style="font-size: 0.78rem; font-weight: 800; color: rgba(248,113,113,0.7); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.75rem;">Aktionen</div>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #f87171; font-weight: 700;"><input class="clickable" type="checkbox"
+                            id="perm-delete"> Einträge löschen</label>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
+                <button class="btn-secondary" onclick="closeEditUserModal()">Abbrechen</button>
+                <button class="btn-primary" onclick="saveUserEdit()">Speichern</button>
+            </div>
+        </div>
+    </div>

@@ -1,0 +1,300 @@
+/* ========================================================= */
+/* ========== EINHEITLICHER DROPDOWN-LOOK (APP-WEIT) ======== */
+/* ========================================================= */
+/*
+   Vorbild: das Hersteller-Feld in "Maschine bearbeiten".
+   Dieses Aussehen gilt ab hier fuer alle Auswahlfelder und
+   fuer die Filterzeilen oben auf den Seiten.
+
+   Rueckgaengig machen: in index.html die <link>-Zeile auf
+   diese Datei loeschen. Sonst aendert sie nichts.
+
+   ---------------------------------------------------------
+   WICHTIG — WARUM HIER NUR OPTIK STEHT
+   ---------------------------------------------------------
+   Ein frueherer Versuch hat die Menues funktionsunfaehig
+   gemacht: Adresstyp-Filter und die Status-Auswahl in
+   Vorgaengen gingen nicht mehr auf.
+
+   Ursache: js/dropdown-position.js rechnet die Menues selbst
+   aus und setzt position, top, left, width, max-height und
+   margin per !important. Werden dieselben Eigenschaften im
+   CSS gesetzt, geraet die Rechnung durcheinander und das
+   Menue landet ausserhalb des Bildes.
+
+   Deshalb fasst diese Datei NIEMALS an:
+       position, top, left, right, bottom, width, min-width,
+       max-height, margin, overflow, display, visibility,
+       z-index, backdrop-filter (auf dem Menue selbst)
+
+   Erlaubt ist nur Aussehen: Farbe, Rahmen, Radius, Schatten,
+   Innenabstand der Liste, Schrift.
+   Wer hier etwas ergaenzt, haelt sich an diese Trennung.
+   ---------------------------------------------------------
+*/
+
+/* --------------------------------------------------------- */
+/* 1. Das Feld, auf das man klickt                            */
+/* --------------------------------------------------------- */
+/* .glass-select ist in dieser App immer ein <div>, nie ein
+   echtes <select> — geprueft, 17 Vorkommen. Deshalb darf der
+   Pfeil ueber ::after kommen und die background-Kurzschreibung
+   ist unbedenklich. */
+.glass-select,
+.custom-filter-dropdown {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 44px 10px 18px;
+    border-radius: var(--radius-pill);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-family: var(--font-body);
+    font-size: var(--fs-md);
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+}
+
+.glass-select:hover,
+.custom-filter-dropdown:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Beschriftung darf das Feld nicht sprengen */
+.glass-select > span,
+.custom-filter-dropdown .filter-label {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Pfeil — nur wo das Markup keinen eigenen mitbringt.
+   .custom-filter-dropdown hat ein .filter-icon, bekommt also keinen. */
+.glass-select::after {
+    content: '';
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    width: 16px;
+    height: 16px;
+    margin-top: -8px;
+    pointer-events: none;
+    transition: transform 0.3s ease;
+    background: no-repeat center/contain
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+}
+
+/* Aufgeklappt: Pfeil dreht sich */
+.custom-filter-dropdown.active .filter-icon,
+:has(> .user-dropdown-menu.show) > .glass-select::after {
+    transform: rotate(180deg);
+}
+
+/* Auslöser mit aktiver Auswahl: Markenrot — man sieht auf einen
+   Blick, welcher Filter gerade greift. */
+.custom-filter-dropdown.has-selection,
+.glass-select.has-selection {
+    background: var(--primary-red);
+    border-color: var(--primary-red);
+    color: #fff;
+}
+
+.custom-filter-dropdown.has-selection:hover,
+.glass-select.has-selection:hover {
+    background: var(--brand-red-deep, #a31825);
+    border-color: var(--brand-red-deep, #a31825);
+}
+
+/* --------------------------------------------------------- */
+/* 2. Die aufgeklappte Flaeche — nur Optik, keine Geometrie    */
+/* --------------------------------------------------------- */
+/* Vollstaendige Liste aller Menue-Flaechen der App. Wer eine neue
+   Variante anlegt, traegt sie hier ein — dann sieht sie automatisch
+   aus wie alle anderen. */
+.user-dropdown-menu,
+.custom-filter-menu,
+.proc-select-menu,
+.process-status-menu,
+.tech-dropdown-panel,
+.autocomplete-suggestions,
+.suggestions-box,
+.snippet-dropdown {
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.user-dropdown-menu ul,
+.custom-filter-menu ul,
+.proc-select-menu ul,
+.process-status-menu ul,
+.tech-dropdown-panel ul,
+.dropdown-options {
+    padding: 8px;
+    margin: 0;
+    list-style: none;
+}
+
+/* --------------------------------------------------------- */
+/* 3. Die Eintraege — Schrift weiss                           */
+/* --------------------------------------------------------- */
+.user-dropdown-menu li,
+.custom-filter-menu li,
+.proc-select-menu li,
+.process-status-menu li,
+.tech-dropdown-panel li,
+.dropdown-options li,
+.suggestion-item {
+    padding: 12px 16px;
+    border-bottom: none;
+    border-radius: var(--radius-md);
+    font-family: var(--font-body);
+    font-size: var(--fs-md);
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.user-dropdown-menu li:hover,
+.custom-filter-menu li:hover,
+.proc-select-menu li:hover,
+.process-status-menu li:hover,
+.tech-dropdown-panel li:hover,
+.dropdown-options li:hover,
+.suggestion-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    transform: translateX(2px);
+}
+
+/* --------------------------------------------------------- */
+/* 4. Ausgewaehlt — rot hinterlegt.                           */
+/* Gilt fuer Einfach- UND Mehrfachauswahl: das JS setzt bei   */
+/* beiden .selected bzw. .active, mehrere Eintraege duerfen   */
+/* die Klasse gleichzeitig tragen.                            */
+/* --------------------------------------------------------- */
+.user-dropdown-menu li.selected,
+.user-dropdown-menu li.active,
+.custom-filter-menu li.selected,
+.custom-filter-menu li.active,
+.proc-select-menu li.selected,
+.proc-select-menu li.active,
+.process-status-menu li.selected,
+.process-status-menu li.active,
+.tech-dropdown-panel li.selected,
+.tech-dropdown-panel li.active,
+.dropdown-options li.selected,
+.dropdown-options li.active,
+.suggestion-item.selected,
+.suggestion-item.active {
+    background: var(--primary-red);
+    color: #fff;
+}
+
+.user-dropdown-menu li.selected:hover,
+.user-dropdown-menu li.active:hover,
+.custom-filter-menu li.selected:hover,
+.custom-filter-menu li.active:hover,
+.proc-select-menu li.selected:hover,
+.proc-select-menu li.active:hover,
+.process-status-menu li.selected:hover,
+.process-status-menu li.active:hover,
+.tech-dropdown-panel li.selected:hover,
+.tech-dropdown-panel li.active:hover,
+.dropdown-options li.selected:hover,
+.dropdown-options li.active:hover,
+.suggestion-item.selected:hover,
+.suggestion-item.active:hover {
+    background: var(--brand-red-deep, #a31825);
+    color: #fff;
+}
+
+/* Mehrfachauswahl mit Ankreuzfeld (Protokolle, Aufgaben):
+   Kaestchen in Markenrot, Beschriftung weiss. */
+.custom-filter-menu li label {
+    color: #fff;
+}
+
+.custom-filter-menu li input[type="checkbox"] {
+    accent-color: var(--primary-red);
+}
+
+/* --------------------------------------------------------- */
+/* 4b. Kompakte Menues — gleiche Optik, weniger Platz         */
+/* --------------------------------------------------------- */
+/* Fuer Listen mit vielen kurzen Eintraegen (Laender, Kunden).
+   js/select-enhance.js setzt .menu-compact ab 10 Optionen,
+   im Markup dient .filter-compact am Ausloeser demselben Zweck. */
+.user-dropdown-menu.menu-compact ul,
+.custom-filter-dropdown.filter-compact .custom-filter-menu ul {
+    padding: 6px;
+}
+
+.user-dropdown-menu.menu-compact li,
+.custom-filter-dropdown.filter-compact .custom-filter-menu li {
+    padding: 7px 12px;
+    font-size: var(--fs-sm);
+}
+
+.user-dropdown-menu.menu-compact li:hover,
+.custom-filter-dropdown.filter-compact .custom-filter-menu li:hover {
+    transform: none;
+}
+
+/* --------------------------------------------------------- */
+/* 5. Echte <select>-Felder                                   */
+/* --------------------------------------------------------- */
+/* Diese Felder sind vom Browser gezeichnet und wurden vom Rest
+   dieser Datei bisher nicht erfasst — daher sahen z.B. im
+   Adressbuch "Adressart", "Land" und "Sortierung" anders aus
+   als das Dropdown "Adresstyp" direkt daneben.
+
+   Der Pfeil muss hier als background-image kommen: ein <select>
+   hat kein ::after. Geometrie (height, width) bleibt bewusst bei
+   der jeweiligen View — hier steht nur Optik. */
+.ab-select,
+select.glass-input,
+select.glass-form-input {
+    padding: 10px 44px 10px 18px;
+    border-radius: var(--radius-pill);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: var(--fs-md);
+    font-weight: 700;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 18px center;
+    background-size: 16px;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.ab-select:hover,
+.ab-select:focus,
+select.glass-input:hover,
+select.glass-input:focus,
+select.glass-form-input:hover,
+select.glass-form-input:focus {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    outline: none;
+}
+
+/* Die aufgeklappte Liste zeichnet das Betriebssystem — steuerbar
+   ist nur Hintergrund und Schriftfarbe der Eintraege. */
+.ab-select option,
+select.glass-input option,
+select.glass-form-input option {
+    background: #0f172a;
+    color: #fff;
+}

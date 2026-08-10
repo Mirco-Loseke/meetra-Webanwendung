@@ -1,0 +1,121 @@
+/* ========================================================= */
+/* ============ MARKENAKZENTE (VORSCHAU-EBENE) ============= */
+/* ========================================================= */
+/*
+   VORSCHAU — komplett additiv.
+   Rueckgaengig machen: in css/style.css die Zeile
+   @import 'base/brand-accents.css'; loeschen. Sonst aendert
+   diese Datei nichts an bestehenden Regeln.
+
+   ---------------------------------------------------------
+   Farben direkt aus dem Logo gemessen (assets/images/
+   meetra-logo-bw-source.png, Pixelanalyse):
+       Rot  #be1e2d   (Wortmarke + rechter Pfeil)
+       Gruen #10a068  (linker Pfeil)
+
+   Beobachtung: das Logo-Gruen liegt fast exakt auf dem
+   --success (#10b981), das die App ohnehin schon benutzt.
+   Gruen muss also gar nicht "eingefuehrt" werden — es ist
+   bereits da und wird hier nur exakt auf die Marke gezogen.
+
+   ---------------------------------------------------------
+   ROLLENTRENNUNG — der eigentliche Punkt.
+
+   Rot ist in einer Service-App doppelt belegt: Marke UND
+   Gefahr/Fehler. Wenn beides gleich aussieht, weiss der
+   Techniker nicht mehr, ob eine rote Flaeche "wichtig" oder
+   "kaputt" heisst. Darum strikt getrennt:
+
+     Markenrot  #be1e2d  — tief, leicht braeunlich.
+                Nur Identitaet: Haupt-Aktion, aktiver
+                Navigationspunkt, Markenkante.
+     Fehlerrot  #ef4444  — heller, oranger. Nur Stoerung,
+                immer zusammen mit Icon + Text, nie als
+                grosse Flaeche.
+
+   Die beiden sind nebeneinander klar unterscheidbar, weil
+   sie sich in Helligkeit UND Saettigung unterscheiden —
+   nicht nur im Ton. Das funktioniert auch bei Rotsehschwaeche.
+
+   ---------------------------------------------------------
+   DOSIERUNG: Akzentfarbe auf hoechstens ~10 % der Flaeche,
+   und pro Ansicht genau EINE Hauptaktion in Markenrot. Ein
+   zweiter roter Button macht den ersten wertlos.
+*/
+
+:root {
+    /* Markenrot */
+    --brand-red: #be1e2d;
+    --brand-red-deep: #a31825;
+    --brand-red-bright: #d42a3a;
+    --brand-red-glow: rgba(190, 30, 45, 0.45);
+    --brand-red-tint: rgba(190, 30, 45, 0.12);
+
+    /* Markengruen */
+    --brand-green: #10a068;
+    --brand-green-bright: #14b87a;
+    --brand-green-tint: rgba(16, 160, 104, 0.12);
+
+    /* Markenverlauf: die beiden Pfeile im Logo bilden einen
+       Kreislauf rot -> gruen. Als 2px-Kante ist das ein
+       Wiedererkennungsmerkmal, das kein Baukasten-Theme hat.
+       Sparsam einsetzen: Oberkante von Login/Modal, sonst
+       verliert es die Wirkung. */
+    --brand-seam: linear-gradient(90deg,
+            transparent 0%,
+            var(--brand-red) 18%,
+            var(--brand-red) 46%,
+            var(--brand-green) 54%,
+            var(--brand-green) 82%,
+            transparent 100%);
+}
+
+/* ========================================================= */
+/* VORSCHAU-BEREICH: ANMELDEBILDSCHIRM                       */
+/* ========================================================= */
+/*
+   Das Markup des Login-Screens steht mit inline style="…"
+   in index.html. Inline schlaegt jede CSS-Datei, darum hier
+   ausnahmsweise !important — es ist der Preis dafuer, dass
+   die Vorschau ohne Eingriff ins Markup auskommt und sich
+   restlos zuruecknehmen laesst. Wird der Akzent uebernommen,
+   gehoeren die Werte in die Inline-Styles bzw. in login.css,
+   und das !important faellt weg.
+*/
+
+/* Markenkante an der Oberkante der Login-Karte */
+#supabase-login-screen .login-card-responsive {
+    position: relative;
+}
+
+#supabase-login-screen .login-card-responsive::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--brand-seam);
+    pointer-events: none;
+}
+
+/* Hauptaktion im Logo-Rot statt im Rose-Ton */
+#supabase-login-screen .btn-primary {
+    background: linear-gradient(135deg, var(--brand-red-bright), var(--brand-red-deep)) !important;
+    box-shadow: 0 4px 16px var(--brand-red-glow) !important;
+    border: 1px solid rgba(255, 255, 255, 0.18) !important;
+    letter-spacing: 0.02em;
+}
+
+#supabase-login-screen .btn-primary:hover {
+    box-shadow: 0 8px 26px rgba(190, 30, 45, 0.6) !important;
+}
+
+/* Eingabefelder: im Ruhezustand neutral, beim Tippen Marke.
+   Der Akzent markiert damit genau das eine Feld, an dem der
+   Nutzer gerade steht — Akzent als Wegweiser, nicht als Deko. */
+#supabase-login-screen .glass-input:focus {
+    border-color: var(--brand-red) !important;
+    box-shadow: 0 0 0 3px var(--brand-red-tint) !important;
+    outline: none !important;
+}

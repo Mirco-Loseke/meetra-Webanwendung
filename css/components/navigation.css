@@ -1,0 +1,333 @@
+/* ========================================================= */
+/* =================  NAVIGATION & TOPBAR ================== */
+/* ========================================================= */
+
+#sidebar {
+    width: 280px;
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.4) 0%, rgba(30, 27, 75, 0.32) 50%, rgba(2, 6, 23, 0.42) 100%);
+    backdrop-filter: blur(var(--blur-overlay));
+    -webkit-backdrop-filter: blur(var(--blur-overlay));
+    border-right: 1px solid var(--glass-border);
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    height: 100vh;
+    left: 0;
+    top: 0;
+    z-index: 1000;
+    overflow: hidden;
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#sidebar.collapsed {
+    width: 80px;
+}
+
+#sidebar-toggle {
+    position: fixed;
+    left: 65px;
+    top: 65px;
+    width: 30px;
+    height: 30px;
+    background: var(--primary-red);
+    border: none;
+    border-radius: var(--radius-circle);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    box-shadow: 0 0 15px rgba(190, 30, 45, 0.3);
+    transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+#app-layout:has(#sidebar:not(.collapsed)) #sidebar-toggle {
+    left: 265px;
+}
+
+#sidebar-toggle:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(190, 30, 45, 0.5);
+}
+
+.sidebar-header {
+    padding: 0;
+    border-bottom: 1px solid transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80px;
+    overflow: hidden;
+    position: relative;
+}
+
+.sidebar-header .logo {
+    width: auto;
+    max-width: 92%;
+    max-height: 82px;
+    height: auto;
+    display: block;
+    object-fit: contain;
+    padding: 8px 12px;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 1;
+    transform: scale(1);
+    position: absolute;
+}
+
+.sidebar-header .logo-icon {
+    width: 48px;
+    height: 48px;
+    max-width: 80%;
+    max-height: 80%;
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.4s cubic-bezier(0.4, 0, 0.2, 1), color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity: 0;
+    transform: scale(0.5);
+    position: absolute;
+    pointer-events: none;
+}
+
+#sidebar.collapsed .sidebar-header .logo {
+    opacity: 0;
+    transform: scale(0.8);
+    pointer-events: none;
+}
+
+#sidebar.collapsed .sidebar-header .logo-icon {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+}
+
+.sidebar-nav {
+    padding: calc(var(--spacing-unit) * 2);
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.sidebar-nav ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-unit);
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 20px;
+    border-radius: var(--radius-lg);
+    font-family: var(--font-body);
+    color: var(--text-3);
+    text-decoration: none;
+    transition: transform 0.3s ease, opacity 0.3s ease, background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+    font-weight: 500;
+    margin: 4px 12px;
+    white-space: nowrap;
+}
+
+#sidebar.collapsed .nav-link span {
+    display: none;
+}
+
+#sidebar.collapsed .nav-link {
+    padding: 14px 0;
+    justify-content: center;
+    margin: 4px 10px;
+}
+
+.nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--text-1);
+    transform: translateX(4px);
+}
+
+.nav-link.active {
+    background-color: var(--primary-red);
+    color: white;
+    box-shadow: 0 0 20px rgba(190, 30, 45, 0.4);
+}
+
+.nav-link.active svg,
+.nav-link:hover svg {
+    stroke: currentColor;
+}
+
+/* Sidebar User Profile (Bottom) */
+.sidebar-user-profile {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    position: relative;
+    padding: 8px 12px;
+    background: transparent;
+    border: none;
+    backdrop-filter: none;
+    transition: transform 0.3s ease, opacity 0.3s ease, background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, color 0.3s ease;
+}
+
+.sidebar-user-profile:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-user-profile .user-avatar {
+    width: 44px;
+    height: 44px;
+    background-color: var(--primary-red);
+    border-radius: var(--radius-circle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: var(--fs-base);
+    color: white;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.sidebar-user-profile .user-info {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar-user-profile .user-name {
+    font-family: var(--font-body);
+    font-weight: 600;
+    font-size: var(--fs-md);
+    color: white;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#sidebar.collapsed .sidebar-user-profile {
+    justify-content: center;
+    padding: 16px 0;
+}
+
+#sidebar.collapsed .sidebar-user-profile .user-info {
+    display: none;
+}
+
+/* ========================================================= */
+/* ==================== TOPBAR STYLES ====================== */
+/* ========================================================= */
+
+#topbar {
+    height: 70px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 2rem;
+    position: fixed;
+    top: 0;
+    left: 280px;
+    right: 0;
+    z-index: 999;
+    background: transparent !important;
+    backdrop-filter: blur(var(--blur-surface));
+    -webkit-backdrop-filter: blur(var(--blur-surface));
+    border-bottom: none !important;
+    transition: left 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#app-layout:has(#sidebar.collapsed) #topbar {
+    left: 80px;
+}
+
+.header-social-links,
+.social-links {
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    flex: 1;
+    max-width: 100%;
+    margin-right: 0;
+    padding: 0 1rem;
+}
+
+.social-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: var(--radius-circle);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.8);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    text-decoration: none;
+    backdrop-filter: blur(var(--blur-surface));
+}
+
+.social-icon-btn svg {
+    width: 20px;
+    height: 20px;
+    transition: transform 0.3s ease;
+}
+
+.social-icon-btn:hover svg {
+    transform: scale(1.15);
+}
+
+/* Permanent Brand Colors & Hover Animations */
+.social-icon-btn.instagram {
+    background: rgba(225, 48, 108, 0.12);
+    border-color: rgba(225, 48, 108, 0.3);
+    color: #e1306c;
+}
+
+.social-icon-btn.instagram:hover {
+    background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%) !important;
+    border-color: transparent !important;
+    color: #fff !important;
+    box-shadow: 0 0 18px rgba(225, 48, 108, 0.5);
+}
+
+.social-icon-btn.facebook {
+    background: rgba(24, 119, 242, 0.12);
+    border-color: rgba(24, 119, 242, 0.3);
+    color: #1877f2;
+}
+
+.social-icon-btn.facebook:hover {
+    background: #1877f2 !important;
+    border-color: #1877f2 !important;
+    color: #fff !important;
+    box-shadow: 0 0 18px rgba(24, 119, 242, 0.5);
+}
+
+.social-icon-btn.youtube {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: var(--danger);
+}
+
+.social-icon-btn.youtube:hover {
+    background: var(--danger) !important;
+    border-color: var(--danger) !important;
+    color: #fff !important;
+    box-shadow: 0 0 18px rgba(239, 68, 68, 0.5);
+}
+
+.social-icon-btn.linkedin {
+    background: rgba(10, 102, 194, 0.12);
+    border-color: rgba(10, 102, 194, 0.3);
+    color: #0a66c2;
+}
+
+.social-icon-btn.linkedin:hover {
+    background: #0a66c2 !important;
+    border-color: #0a66c2 !important;
+    color: #fff !important;
+    box-shadow: 0 0 18px rgba(10, 102, 194, 0.5);
+}

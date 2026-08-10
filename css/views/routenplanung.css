@@ -1,0 +1,856 @@
+/* ============================================================
+   ROUTENPLANUNG – Panel links, Karte rechts
+   Optik an das Adressbuch angeglichen (Glaskarten, Avatare,
+   Badges, Chips). Ergänzt style.css.
+   ============================================================ */
+
+#routenplanung.view.active {
+    display: flex !important;
+    flex-direction: column;
+    height: calc(100vh - 90px);
+}
+
+#rp2-layout {
+    flex: 1;
+    display: flex;
+    gap: 1rem;
+    min-height: 0;
+}
+
+#rp2-panel {
+    width: 520px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 1.1rem;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+#rp2-map-wrap {
+    flex: 1;
+    padding: 0;
+    overflow: hidden;
+    min-height: 0;
+}
+
+#rp2-map {
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+    border-radius: inherit;
+}
+
+/* ---------- Bausteine ---------- */
+.rp2-card {
+    padding: 12px 14px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--glass-border);
+    background: linear-gradient(150deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.035) 100%);
+    backdrop-filter: blur(var(--blur-raised));
+    -webkit-backdrop-filter: blur(var(--blur-raised));
+}
+
+.rp2-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.rp2-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: var(--fs-sm);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-secondary);
+}
+
+.rp2-label-count {
+    font-size: var(--fs-xs);
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: var(--radius-pill);
+    background: rgba(255, 255, 255, 0.09);
+    color: var(--text-2);
+}
+
+.rp2-label-mode {
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    padding: 3px 8px;
+    border-radius: var(--radius-pill);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    background: rgba(56, 189, 248, 0.1);
+    color: #7dd3fc;
+    white-space: nowrap;
+}
+
+/* Filterchips der Trefferliste */
+.rp2-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.rp2-filter-chip {
+    flex: 1 1 auto;
+    min-height: 34px;
+    padding: 0 12px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-secondary);
+    font-family: var(--font-sans);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.rp2-filter-chip:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--color-text);
+}
+
+.rp2-filter-chip.active {
+    color: #4ade80;
+    border-color: rgba(34, 197, 94, 0.5);
+    background: rgba(34, 197, 94, 0.16);
+}
+
+.rp2-avatar {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: var(--fs-md);
+    color: #fff;
+    background: linear-gradient(140deg, hsl(var(--rp2-hue, 200) 65% 45%), hsl(var(--rp2-hue, 200) 70% 28%));
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.rp2-badge {
+    flex-shrink: 0;
+    font-size: var(--fs-2xs);
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: var(--radius-pill);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    background: rgba(148, 163, 184, 0.1);
+    color: var(--text-3);
+    white-space: nowrap;
+}
+
+.rp2-badge.customer {
+    color: #4ade80;
+    border-color: rgba(34, 197, 94, 0.45);
+    background: rgba(34, 197, 94, 0.14);
+}
+
+.rp2-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: var(--radius-pill);
+    border: 1px solid rgba(125, 211, 252, 0.3);
+    background: rgba(125, 211, 252, 0.1);
+    color: #7dd3fc;
+    white-space: nowrap;
+}
+
+.rp2-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 0 16px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--fs-md);
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.rp2-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+    transform: translateY(-1px);
+}
+
+.rp2-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.rp2-btn-primary {
+    background: linear-gradient(135deg, var(--color-primary-green), #15803d);
+    border-color: rgba(34, 197, 94, 0.5);
+    color: #fff;
+}
+
+.rp2-btn-primary:hover:not(:disabled) {
+    background: linear-gradient(135deg, var(--success-soft), #16a34a);
+}
+
+.rp2-btn-sm {
+    min-height: 34px;
+    padding: 0 12px;
+    font-size: var(--fs-sm);
+    border-radius: var(--radius-sm);
+}
+
+.rp2-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-secondary);
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.rp2-icon-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--color-text);
+}
+
+.rp2-icon-btn.danger:hover {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+}
+
+.rp2-input {
+    width: 100%;
+    min-height: 42px;
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--fs-md);
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+/* Hersteller-Auswahl: das Aufklappmenü erbt die Systemfarben, deshalb die
+   Optionen explizit dunkel setzen – sonst weiße Schrift auf Weiß. */
+select.rp2-input {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 11px center;
+    padding-right: 32px;
+}
+
+select.rp2-input option {
+    background: #0f172a;
+    color: #e2e8f0;
+}
+
+.rp2-input:focus {
+    outline: none;
+    border-color: rgba(34, 197, 94, 0.5);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.rp2-input.radius-active {
+    border-color: rgba(34, 197, 94, 0.8) !important;
+    background: rgba(34, 197, 94, 0.12) !important;
+    color: #4ade80 !important;
+    box-shadow: 0 0 14px rgba(34, 197, 94, 0.35) !important;
+}
+
+.rp2-hint {
+    padding: 11px;
+    font-size: var(--fs-xs);
+    line-height: 1.5;
+    color: var(--color-secondary);
+    text-align: center;
+    border-radius: var(--radius-md);
+    border: 1px dashed rgba(255, 255, 255, 0.13);
+    background: rgba(255, 255, 255, 0.025);
+}
+
+.rp2-status {
+    font-size: var(--fs-2xs);
+    color: var(--color-secondary);
+    min-height: 1em;
+}
+
+.rp2-status.error {
+    color: #fca5a5;
+}
+
+/* ---------- Start / Firmenstandort ---------- */
+.rp2-hq-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(56, 189, 248, 0.28);
+    background: rgba(56, 189, 248, 0.09);
+}
+
+.rp2-hq-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    background: rgba(56, 189, 248, 0.15);
+    color: #7dd3fc;
+}
+
+.rp2-hq-text {
+    min-width: 0;
+}
+
+.rp2-hq-title {
+    font-size: var(--fs-xs);
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: #7dd3fc;
+}
+
+.rp2-hq-name {
+    font-size: var(--fs-md);
+    font-weight: 700;
+    color: var(--color-text);
+    overflow-wrap: anywhere;
+}
+
+.rp2-hq-address {
+    font-size: var(--fs-md);
+    color: var(--color-secondary);
+    overflow-wrap: anywhere;
+}
+
+/* ---------- Suche ---------- */
+.rp2-search-wrap {
+    position: relative;
+}
+
+.rp2-search-results {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    z-index: 900;
+    max-height: 300px;
+    overflow-y: auto;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    background: rgba(15, 23, 42, 0.98);
+    box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.9);
+}
+
+.rp2-search-results.open {
+    display: block;
+}
+
+.rp2-search-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    font-family: var(--font-sans);
+    transition: background 0.15s ease;
+}
+
+.rp2-search-item:last-child {
+    border-bottom: none;
+}
+
+.rp2-search-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.rp2-search-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.rp2-search-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: var(--fs-md);
+    font-weight: 700;
+    color: var(--color-text);
+    overflow-wrap: anywhere;
+}
+
+.rp2-search-sub {
+    margin-top: 2px;
+    font-size: var(--fs-sm);
+    color: var(--color-secondary);
+    overflow-wrap: anywhere;
+}
+
+/* ---------- Routen-Kopfzeile ---------- */
+.rp2-route-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.rp2-metric {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-2);
+}
+
+.rp2-metric strong {
+    color: var(--color-text);
+}
+
+.rp2-metric.estimate {
+    border-style: dashed;
+    color: var(--color-secondary);
+}
+
+.rp2-route-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* ---------- Stopp-Liste ---------- */
+.rp2-scroll-list {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.rp2-stop {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    background: linear-gradient(150deg, rgba(255, 255, 255, 0.075) 0%, rgba(255, 255, 255, 0.03) 100%);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.rp2-stop:hover {
+    border-color: rgba(255, 255, 255, 0.22);
+}
+
+.rp2-stop.dragging {
+    opacity: 0.45;
+    border-color: rgba(34, 197, 94, 0.6);
+    box-shadow: 0 14px 30px -14px rgba(0, 0, 0, 0.9);
+}
+
+.rp2-stop.drop-target {
+    border-color: var(--color-primary-green);
+    box-shadow: 0 0 0 1px var(--color-primary-green);
+}
+
+.rp2-drag-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    min-height: 42px;
+    flex-shrink: 0;
+    margin: -3px 0;
+    color: rgba(148, 163, 184, 0.7);
+    cursor: grab;
+    touch-action: none;
+}
+
+.rp2-drag-handle:active {
+    cursor: grabbing;
+}
+
+.rp2-stop-num {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-sm);
+    font-weight: 800;
+    color: #0f172a;
+    background: var(--color-primary-green);
+}
+
+.rp2-stop-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.rp2-stop-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.rp2-stop-label {
+    font-size: var(--fs-md);
+    font-weight: 700;
+    color: var(--color-text);
+    overflow-wrap: anywhere;
+}
+
+.rp2-stop-address {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: var(--fs-md);
+    line-height: 1.4;
+    color: var(--color-secondary);
+    overflow-wrap: anywhere;
+}
+
+.rp2-stop-address svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.rp2-stop-contact {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: var(--fs-md);
+    color: var(--text-2);
+}
+
+.rp2-stop-contact a {
+    color: #7dd3fc;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.rp2-stop-contact a:hover {
+    text-decoration: underline;
+}
+
+.rp2-stop-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.rp2-stop-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 2px;
+}
+
+.rp2-stop-side {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+/* ---------- Vorschläge (verknüpfte Adressen / Umkreis) ---------- */
+.rp2-suggest {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 9px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.035);
+}
+
+.rp2-suggest.linked {
+    border-color: rgba(251, 191, 36, 0.3);
+    background: rgba(251, 191, 36, 0.06);
+}
+
+.rp2-suggest-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.rp2-suggest-name {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    color: var(--color-text);
+    overflow-wrap: anywhere;
+}
+
+.rp2-suggest-sub {
+    font-size: var(--fs-2xs);
+    color: var(--color-secondary);
+    overflow-wrap: anywhere;
+}
+
+.rp2-distance {
+    font-size: var(--fs-2xs);
+    font-weight: 700;
+    color: #7dd3fc;
+    white-space: nowrap;
+}
+
+.rp2-add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(34, 197, 94, 0.45);
+    background: rgba(34, 197, 94, 0.14);
+    color: #4ade80;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.rp2-add-btn:hover {
+    background: rgba(34, 197, 94, 0.28);
+}
+
+/* ---------- Karte: Marker & Popups ---------- */
+.rp2-marker-wrap {
+    background: transparent;
+    border: none;
+}
+
+.rp2-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-circle);
+    font-size: var(--fs-2xs);
+    font-weight: 800;
+    color: #0f172a;
+    background: var(--rp2-color, var(--success));
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 14px 4px var(--rp2-color, var(--success));
+    animation: rp2-pulse 2s ease-in-out infinite;
+}
+
+@keyframes rp2-pulse {
+    0%, 100% { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 10px 2px var(--rp2-color, var(--success)); }
+    50% { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 20px 8px var(--rp2-color, var(--success)); }
+}
+
+#rp2-map .leaflet-popup-content-wrapper {
+    background: rgba(15, 23, 42, 0.97);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    color: var(--color-text);
+    box-shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.9);
+}
+
+#rp2-map .leaflet-popup-content {
+    margin: 12px 14px;
+    font-family: var(--font-sans);
+    font-size: var(--fs-sm);
+    line-height: 1.5;
+}
+
+#rp2-map .leaflet-popup-tip {
+    background: rgba(15, 23, 42, 0.97);
+}
+
+.rp2-popup-title {
+    font-weight: 700;
+    margin-bottom: 3px;
+    overflow-wrap: anywhere;
+}
+
+.rp2-popup-address {
+    color: var(--color-secondary);
+    margin-bottom: 8px;
+    overflow-wrap: anywhere;
+}
+
+.rp2-popup-btn {
+    width: 100%;
+    margin-top: 5px;
+}
+
+/* Überschrift der Abschnitte im Karten-Popup (Maschinen / Verknüpfungen).
+   Beide Listen stehen direkt im Popup, nicht mehr hinter einem Knopf. */
+.rp2-popup-section-title {
+    margin-top: 9px;
+    font-size: var(--fs-2xs);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-3);
+}
+
+.rp2-tag-manual {
+    color: var(--warning);
+    font-size: var(--fs-2xs);
+    font-weight: 700;
+}
+
+.rp2-popup-machines {
+    margin-top: 7px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.rp2-popup-machine {
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.05);
+    font-size: var(--fs-xs);
+}
+
+.rp2-popup-linktype {
+    font-size: var(--fs-2xs);
+    color: var(--warning);
+    margin: 2px 0 5px;
+}
+
+.rp2-popup-machine-sub {
+    padding: 3px 0 3px 10px;
+    border-left: 2px solid rgba(125, 211, 252, 0.35);
+    margin-top: 3px;
+    font-size: var(--fs-2xs);
+    color: var(--text-2);
+}
+
+.rp2-muted {
+    color: var(--color-secondary);
+    border-left-color: rgba(148, 163, 184, 0.3);
+}
+
+/* ---------- Dialog (Route speichern / laden) ---------- */
+.rp2-dialog-content {
+    max-width: 560px;
+    padding: 1.75rem !important;
+}
+
+.rp2-saved-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 50vh;
+    overflow-y: auto;
+}
+
+.rp2-saved-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.rp2-saved-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.rp2-saved-name {
+    font-size: var(--fs-md);
+    font-weight: 700;
+    color: var(--color-text);
+    overflow-wrap: anywhere;
+}
+
+.rp2-saved-sub {
+    font-size: var(--fs-2xs);
+    color: var(--color-secondary);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1024px) {
+    #rp2-panel {
+        width: 400px;
+    }
+}
+
+@media (max-width: 768px) {
+    #routenplanung.view.active {
+        height: auto;
+        min-height: calc(100vh - 90px);
+    }
+
+    #rp2-layout {
+        flex-direction: column;
+    }
+
+    #rp2-panel {
+        width: 100%;
+        max-height: none;
+    }
+
+    #rp2-map-wrap {
+        min-height: 360px;
+    }
+
+    .rp2-route-actions .rp2-btn,
+    .rp2-export-actions .rp2-btn {
+        flex: 1 1 140px;
+    }
+
+    .rp2-stop-side {
+        gap: 6px;
+    }
+}

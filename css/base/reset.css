@@ -1,0 +1,255 @@
+/* ========================================================= */
+/* ==================== BASE CSS RESET ===================== */
+/* ========================================================= */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background: var(--app-gradient);
+    pointer-events: none;
+}
+
+body {
+    font-family: var(--font-serif);
+    background: var(--bg-gradient);
+    color: var(--color-text);
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    position: relative;
+}
+
+.hidden {
+    display: none !important;
+}
+
+/* ================================================== */
+/* TASTATUR-BEDIENUNG                                 */
+/* ================================================== */
+/* Wer mit Tab durch ein Formular geht, muss sehen, wo er
+   steht. :focus-visible greift nur bei Tastatur, nicht bei
+   Maus/Touch — der Ring stoert also niemanden, der tippt. */
+:focus-visible {
+    outline: 2px solid var(--info);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+}
+
+/* Browser-Standardring bei Mausklick unterdruecken, damit
+   Buttons/Karten beim Antippen nicht aufblitzen. */
+:focus:not(:focus-visible) {
+    outline: none;
+}
+
+/* Sprungziel fuer Screenreader/Tastatur, sichtbar nur bei Fokus */
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: var(--space-2);
+    z-index: 100000;
+    padding: var(--space-3) var(--space-4);
+    background: var(--midnight-blue);
+    color: var(--text-1);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-md);
+}
+
+.skip-link:focus {
+    left: var(--space-2);
+}
+
+/* ================================================== */
+/* BEWEGUNG REDUZIEREN                                */
+/* ================================================== */
+/* Systemeinstellung des Nutzers respektieren: Animationen
+   aus, Funktion bleibt. Nicht auf 0s setzen — manche
+   Skripte warten auf transitionend. */
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+#main-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-left: 280px;
+    padding-top: 70px;
+    transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    min-height: 100vh;
+}
+
+#app-layout:has(#sidebar.collapsed) #main-wrapper,
+#main-wrapper.collapsed-sidebar {
+    margin-left: 80px;
+}
+
+#main-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.75rem 2rem 2rem 2rem;
+    background: transparent;
+    width: 100%;
+}
+
+.view {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+    display: none;
+}
+
+.view.active {
+    display: block;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ================================================== */
+/* VIEW HEADER RESPONSIVE LAYOUT (v2 Base)           */
+/* ================================================== */
+.view-header-layout {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    margin-bottom: 2rem;
+    gap: 1.5rem;
+}
+
+.view-header-row-top,
+.view-header-row-bottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
+.view-header-left {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+}
+
+.view-header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    justify-content: flex-end;
+    flex: 1;
+}
+
+.view-header-left h1,
+.view-header-row-top h1,
+.view-header h1,
+.view h1 {
+    font-family: var(--font-heading) !important;
+    font-size: var(--fs-3xl) !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.03em !important;
+    color: white !important;
+    margin: 0 !important;
+    line-height: 1.2 !important;
+}
+
+h1 {
+    font-family: var(--font-heading);
+    font-size: var(--fs-3xl);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: white;
+    margin: 0;
+}
+
+.hero-headline {
+    font-family: var(--font-heading);
+    font-size: var(--fs-4xl);
+    font-weight: 700;
+    letter-spacing: -0.05em;
+    color: white;
+    background: none;
+    -webkit-text-fill-color: initial;
+    margin-bottom: 1.5rem;
+}
+
+.hero-subheadline {
+    font-size: var(--fs-lg);
+    color: var(--color-secondary);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(380px, 100%), 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+@media (min-width: 1400px) {
+    .card-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.card {
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.22) 0%, rgba(180, 30, 45, 0.12) 60%, rgba(10, 10, 20, 0.35) 100%) padding-box,
+        linear-gradient(90deg,
+            rgba(255, 255, 255, 0.00) 0%,
+            rgba(255, 255, 255, 0.08) 8%,
+            rgba(255, 255, 255, 0.22) 18%,
+            rgba(255, 255, 255, 0.45) 32%,
+            rgba(255, 255, 255, 0.58) 50%,
+            rgba(255, 255, 255, 0.45) 68%,
+            rgba(255, 255, 255, 0.22) 82%,
+            rgba(255, 255, 255, 0.08) 92%,
+            rgba(255, 255, 255, 0.00) 100%) border-box;
+    backdrop-filter: blur(var(--blur-overlay));
+    -webkit-backdrop-filter: blur(var(--blur-overlay));
+    border: 3px solid transparent;
+    border-radius: var(--radius-xl);
+    padding: 32px;
+    min-height: 400px;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+.card:hover {
+    transform: scale(1.03) translateY(-8px);
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.26) 0%, rgba(180, 30, 45, 0.16) 60%, rgba(10, 10, 20, 0.4) 100%) padding-box,
+        linear-gradient(90deg,
+            rgba(255, 255, 255, 0.00) 0%,
+            rgba(255, 255, 255, 0.12) 8%,
+            rgba(255, 255, 255, 0.32) 18%,
+            rgba(255, 255, 255, 0.60) 32%,
+            rgba(255, 255, 255, 0.75) 50%,
+            rgba(255, 255, 255, 0.60) 68%,
+            rgba(255, 255, 255, 0.32) 82%,
+            rgba(255, 255, 255, 0.12) 92%,
+            rgba(255, 255, 255, 0.00) 100%) border-box;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+}

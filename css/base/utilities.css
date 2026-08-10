@@ -1,0 +1,45 @@
+/* ==========================================================
+   WIEDERKEHRENDE MUSTER
+   ==========================================================
+   Diese Klassen ersetzen style="…"-Attribute, die im Markup immer wieder
+   identisch auftauchten. Vorteil: eine Schriftgroesse oder Farbe aendert man
+   hier einmal statt an achtzig Stellen.
+
+   Bewusst NICHT hierher gewandert sind Muster wie display:none oder
+   position:relative — die werden teils zur Laufzeit per JavaScript gesetzt
+   und muessen inline bleiben.
+
+   Diese Datei wird als letztes Stylesheet geladen: die Regeln standen vorher
+   inline und haben damit alles uebertroffen. Wuerde sie frueher geladen,
+   koennten Modul-Stylesheets sie ueberschreiben und das Aussehen sich aendern.
+   ========================================================== */
+
+/* Beschriftung ueber einem Eingabefeld — Grossbuchstaben, gesperrt, gedaempft */
+.form-label-caps {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: var(--fs-md);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: block;
+}
+
+/* Anklickbare Zeile: Symbol und Text nebeneinander */
+.row-clickable {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+/* Nur der Mauszeiger — fuer Elemente, die auf Klick reagieren */
+.clickable {
+    cursor: pointer;
+}
+
+/* Kleiner, zurueckgenommener Begleittext */
+.text-muted-sm {
+    font-size: var(--fs-md);
+    color: rgba(255, 255, 255, 0.7);
+}

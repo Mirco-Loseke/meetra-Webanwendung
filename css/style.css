@@ -1,0 +1,39 @@
+/* ========================================================= */
+/* ============= MEETRA WEBAPP MASTER STYLESHEET ============ */
+/* ========================================================= */
+
+/* Base & Core Layout */
+@import 'base/variables.css';   /* Farbpalette, Verlaeufe, Alt-Namen */
+@import 'base/tokens.css';      /* Schriften, Skalen (Groesse, Abstand, Radius, Tiefe) */
+@import 'base/reset.css';
+@import 'base/brand-accents.css'; /* VORSCHAU Markenakzente — diese Zeile loeschen = rueckgaengig */
+
+/* Shared Components */
+@import 'components/navigation.css';
+@import 'components/modals.css';
+@import 'components/buttons.css';
+@import 'components/forms.css';
+@import 'components/notifications.css';
+@import 'components/calendar.css';
+@import 'components/calendar-widget.css';
+@import 'components/dropdowns.css';
+@import 'components/focus-mode.css';
+@import 'components/elements.css';
+
+/* Views & Modules */
+@import 'views/documents.css';
+@import 'views/protocols.css';
+@import 'views/tasks.css';
+@import 'views/service-reports.css';
+@import 'views/machines.css';
+@import 'views/procurement.css';
+@import 'views/settings.css';
+@import 'views/accounting.css';
+@import 'views/workshop.css';
+@import 'views/dashboard.css';
+@import 'views/listen.css';
+@import 'views/addressbook.css';
+@import 'views/routenplanung.css';
+
+/* Responsive & Overrides */
+@import 'base/responsive.css';
