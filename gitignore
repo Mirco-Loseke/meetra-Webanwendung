@@ -1,0 +1,9 @@
+.gemini/
+.agent/
+!.agent/skills/
+.vscode/
+.DS_Store
+node_modules/
+dist/
+build/
+*.log
