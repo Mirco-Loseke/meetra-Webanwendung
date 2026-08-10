@@ -1,6 +1,7 @@
 # meetra Webapp – Coding Guidelines
 
-> **Für KI-Agenten:** Lies diese Datei zu Beginn jeder neuen Konversation, um den Projektstatus und die Regeln zu kennen.
+> **Für KI-Agenten:** `CLAUDE.md` wird automatisch geladen und enthält Layout, Datei-Karte und Arbeitsweise.
+> Diese Datei hier nur bei Bedarf lesen — und dann gezielt den passenden Abschnitt (Design, PDF-Generator, DB-Schema, Besonderheiten).
 
 ---
 
@@ -13,11 +14,14 @@
 ### Hauptdateien
 | Datei | Zweck |
 |---|---|
-| `index.html` | Haupt-App (15.000+ Zeilen) – alle Views, Modals, PDF-Generator |
+| `index.html` | Haupt-App – Topbar, Inline-Logik, PDF-Generator; Views/Modals kommen aus `partials/` |
+| `partials/**` | Ausgelagertes HTML: `views/` (Ansichten), `settings/` (Einstellungsseiten), `modals/`, `components/sidebar.html` |
 | `app.js` | Globale App-Logik, Auth, Navigation |
 | `checklists.js` | UVV- und Wartungsplan-Rendering + Datenlogik |
 | `machines-grouped.js` | Maschinenübersicht mit Gruppierung |
-| `customers.js` | Kundenverwaltung |
+| `customers.js` | Kundenverwaltung (Sage-Import, Autocomplete) |
+| `addressbook.js` / `addressbook.css` | Adressbuch: Visitenkarten aller Adressen, Suche/Filter, Detailmodal mit Ansprechpartnern, Maschinen, Verknüpfungen, Historie |
+| `routenplanung.js` / `routenplanung.css` | Routenplanung: Karte (Leaflet), Stopps per Drag & Drop, Auto-Optimierung, Umkreissuche, Speichern/Laden, Export Google/Apple Maps |
 | `accounting.js` | Buchhaltungsmodul |
 | `documents.js` / `documents-r2.js` | Dokumentenverwaltung |
 
@@ -77,6 +81,15 @@
 | `checklist_templates` | UVV/Wartungs-Vorlagen mit `type` ('uvv' oder 'wartung') |
 | `checklist_entries` | Ausgefüllte Checklisten |
 | `users` | Techniker (`window.userList`) |
+| `customer_contacts` | Ansprechpartner je Adresse (Adressbuch) |
+| `customer_links` | Verknüpfungen zwischen Adressen: Liefer-/Rechnungsadresse, Konzern, Filiale |
+| `customer_notes` | Historie/Notizen je Adresse (Adressbuch); Typ `visit` wird auch aus der Routenplanung geschrieben |
+| `saved_routes` | Gespeicherte Touren der Routenplanung (optional – ohne die Tabelle wird auf localStorage ausgewichen) |
+
+> **Achtung – gemischte ID-Typen:** `customers.id` ist **UUID**, `machines.id` und
+> `service_entries.machine_id` sind **bigint**. Bei neuen Fremdschlüsseln, Filtern und
+> Testdaten den jeweils richtigen Typ verwenden — ein UUID-String gegen eine bigint-Spalte
+> liefert `invalid input syntax for type bigint`.
 
 ### Globale Variablen
 - `window.machineList` – alle Maschinen
@@ -99,6 +112,38 @@
 2. Touch-Targets groß genug?
 3. Passt ins bestehende Dark-Mode Design?
 4. PDF-Ausgabe betroffen? → `didParseCell` für Header-Ausrichtung
+
+---
+
+## 6b. HTML-Bausteine (partials/)
+
+Ansichten, Einstellungsseiten und einige Modals werden in eigenen Dateien unter
+`partials/` **gepflegt** und von `build.js` fest ins `index.html` **eingesetzt**.
+Im `index.html` steht der Inhalt zwischen Markern:
+
+```html
+<!-- @partial:views/calendar.html -->
+   ... eingesetzter Inhalt, nicht von Hand ändern ...
+<!-- /@partial:views/calendar.html -->
+```
+
+**Arbeitsweise:**
+1. Datei unter `partials/` bearbeiten (nicht den eingesetzten Block im `index.html`)
+2. danach ausführen:
+
+```bash
+node build.js
+```
+
+Das Skript ist beliebig oft wiederholbar und ersetzt nur die Bereiche zwischen den Markern.
+
+> **Kein Nachladen zur Laufzeit!** Die App wird auch per Doppelklick direkt aus dem
+> Ordner geöffnet (`file://`). Dabei blockiert der Browser jedes Nachladen weiterer
+> Dateien — ein `fetch`/XHR-Loader für die Bausteine funktioniert dort grundsätzlich
+> nicht. Deshalb der Build-Schritt.
+
+**Neuen Baustein anlegen:** Datei unter `partials/…` erstellen, im `index.html` an der
+gewünschten Stelle das Marker-Paar einfügen (Anfang + Ende, leer), `node build.js` laufen lassen.
 
 ---
 
