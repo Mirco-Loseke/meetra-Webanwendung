@@ -834,12 +834,7 @@
             try {
                 window.closeHistoryModal();
                 if (typeof window.switchView === 'function') {
-                    window.switchView('tasks');
-                }
-                if (typeof window.selectTaskViewTab === 'function') {
-                    window.selectTaskViewTab('vorgaenge');
-                } else if (typeof window.switchTaskView === 'function') {
-                    window.switchTaskView('vorgaenge');
+                    window.switchView('processes');
                 }
                 if (typeof window.fetchProcesses === 'function') {
                     await window.fetchProcesses();

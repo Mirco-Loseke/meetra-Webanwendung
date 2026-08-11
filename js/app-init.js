@@ -196,7 +196,11 @@
                         fetchServiceEntries();
                     }
                 } else if (targetId === 'processes') {
-                    if (typeof window.renderProcesses === 'function') {
+                    // Über filterProcessesByUser, damit der zuletzt gewählte Tab
+                    // ("Vorgänge" / "Meine Vorgänge") auch optisch stimmt.
+                    if (typeof window.filterProcessesByUser === 'function') {
+                        window.filterProcessesByUser(window.isMyProcessesFilterActive ? 'me' : 'all');
+                    } else if (typeof window.renderProcesses === 'function') {
                         window.renderProcesses('standalone-processes-container');
                     }
                     if (!window.eventsState || !Array.isArray(window.eventsState.processes) || window.eventsState.processes.length === 0) {

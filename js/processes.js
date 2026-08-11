@@ -83,14 +83,21 @@ window.toggleProcessKpiFilter = function (status) {
 window.renderProcesses = function(targetId, opts) {
     opts = opts || {};
     if (!targetId) {
-        ['processes-list-container', 'tasks-processes-container', 'standalone-processes-container'].forEach(id => {
+        ['processes-list-container', 'standalone-processes-container'].forEach(id => {
             if (document.getElementById(id)) window.renderProcesses(id);
         });
-        if (typeof window.renderMyProcessesSection === 'function') window.renderMyProcessesSection();
         return;
     }
     const container = document.getElementById(targetId);
     if (!container) return;
+
+    // In der Vorgänge-Ansicht bleibt der "Meine Vorgänge"-Tab auch bei einem
+    // Neuaufbau ohne opts erhalten.
+    if (targetId === 'standalone-processes-container' && !opts.onlyAssignedTo && window.isMyProcessesFilterActive) {
+        opts = Object.assign({}, opts, {
+            onlyAssignedTo: window.activeUser?.id || localStorage.getItem('activeUserId') || window.activeUser?.name
+        });
+    }
 
     const searchQuery = (document.getElementById('calendar-search-input')?.value || '').toLowerCase();
     const statusFilter = opts.compact ? 'all' : window.eventsState.processStatusFilter;
@@ -574,25 +581,20 @@ window.deleteProcess = async function(id) {
 
 window.isMyProcessesFilterActive = false;
 
-window.toggleMyProcessesFilter = function () {
-    const activeId = window.activeUser?.id || localStorage.getItem('activeUserId');
-    const activeName = window.activeUser?.name || '';
+// Ansicht umschalten: 'all' = alle Vorgänge, 'me' = nur mir zugewiesene
+window.filterProcessesByUser = function (mode) {
+    const isMe = mode === 'me';
+    window.isMyProcessesFilterActive = isMe;
+
     const btnAll = document.getElementById('btn-process-tab-all');
     const btnMe = document.getElementById('btn-process-user-me');
+    if (btnAll) btnAll.classList.toggle('active', !isMe);
+    if (btnMe) btnMe.classList.toggle('active', isMe);
 
-    if (window.isMyProcessesFilterActive) {
-        window.isMyProcessesFilterActive = false;
-        if (btnAll) btnAll.classList.add('active');
-        if (btnMe) btnMe.classList.remove('active');
-        window.renderProcesses('standalone-processes-container');
-    } else {
-        window.isMyProcessesFilterActive = true;
-        if (btnAll) btnAll.classList.remove('active');
-        if (btnMe) btnMe.classList.add('active');
+    window.renderProcesses('standalone-processes-container');
+};
 
-        // Render processes filtered to assigned user
-        const targetUserId = activeId || activeName;
-        window.renderProcesses('standalone-processes-container', { onlyAssignedTo: targetUserId });
-    }
+window.toggleMyProcessesFilter = function () {
+    window.filterProcessesByUser(window.isMyProcessesFilterActive ? 'all' : 'me');
 };
 

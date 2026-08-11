@@ -318,6 +318,55 @@ select.rp2-input option {
     background: rgba(56, 189, 248, 0.09);
 }
 
+/* Startpunkt ist anklickbar: Firmenadresse oder aktueller Standort */
+.rp2-hq-info[data-rp2-action] {
+    cursor: pointer;
+    transition: border-color var(--motion-fast, .15s) ease, background var(--motion-fast, .15s) ease;
+}
+
+.rp2-hq-info[data-rp2-action]:hover,
+.rp2-hq-info[data-rp2-action]:focus-visible {
+    border-color: rgba(56, 189, 248, 0.6);
+    background: rgba(56, 189, 248, 0.16);
+}
+
+.rp2-hq-change {
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    color: rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* Auswahl im Dialog „Startpunkt der Tour" */
+.rp2-start-choice {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.rp2-start-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px;
+    text-align: left;
+}
+
+.rp2-start-option span {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.rp2-start-option small {
+    font-weight: 500;
+    color: var(--text-3, rgba(255, 255, 255, 0.6));
+}
+
 .rp2-hq-icon {
     display: flex;
     align-items: center;
@@ -750,6 +799,26 @@ select.rp2-input option {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    /* Adressgruppen mit vielen Maschinen sollen das Popup nicht sprengen */
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+/* Kopfzeile: Gesamtzahl inkl. verknüpfter Adressen */
+.rp2-popup-total {
+    font-size: var(--fs-2xs);
+    font-weight: 700;
+    color: #7dd3fc;
+    margin-bottom: 4px;
+}
+
+/* Block je verknüpfter Adresse mit deren Maschinen */
+.rp2-popup-linked {
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 2px solid rgba(245, 158, 11, 0.45);
+    font-size: var(--fs-xs);
 }
 
 .rp2-popup-machine {

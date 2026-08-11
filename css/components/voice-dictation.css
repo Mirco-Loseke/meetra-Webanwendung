@@ -44,6 +44,64 @@
     50% { transform: scale(1.15); opacity: 0.8; }
 }
 
+/* ----------------------------------------------------------
+   Diktier-Knopf unter den KI-Eingabefeldern (js/speech-input.js)
+   ---------------------------------------------------------- */
+/* Der Knopf steht in der Knopfreihe der Modals zwischen „Abbrechen" und
+   „Analysieren" — Höhe und Radius richten sich deshalb nach .btn-modal-base. */
+.mic-btn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 36px;
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(56, 189, 248, 0.45);
+    background: rgba(56, 189, 248, 0.12);
+    color: #7dd3fc;
+    font-family: inherit;
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .18s ease, border-color .18s ease, color .18s ease;
+}
+
+.mic-btn:hover {
+    background: rgba(56, 189, 248, 0.22);
+    border-color: rgba(56, 189, 248, 0.7);
+}
+
+.mic-btn-icon {
+    display: inline-flex;
+}
+
+.mic-btn.listening {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: var(--danger);
+    color: #fca5a5;
+}
+
+.mic-btn.listening .mic-btn-icon {
+    animation: mic-pulse 1.2s infinite ease-in-out;
+}
+
+.mic-status {
+    font-size: var(--fs-xs);
+    color: var(--text-3, rgba(255, 255, 255, 0.6));
+    margin-top: 6px;
+    min-height: 1em;
+}
+
+.mic-status:empty {
+    margin-top: 0;
+}
+
+.mic-status.error {
+    color: #fca5a5;
+}
+
 .stars-container div:nth-child(2n) {
     animation-delay: 1s;
 }

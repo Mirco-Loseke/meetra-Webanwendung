@@ -16,8 +16,10 @@
             </div>
             <div class="view-header-right" style="display: flex; align-items: center; gap: 12px;">
                 <div class="calendar-view-tabs" style="margin-bottom: 0;">
-                    <button class="calendar-tab-btn" onclick="window.switchView('tasks')">Aufgaben</button>
-                    <button class="calendar-tab-btn active">Vorgänge</button>
+                    <button class="calendar-tab-btn active" id="btn-process-tab-all"
+                        onclick="window.filterProcessesByUser('all')">Vorgänge</button>
+                    <button class="calendar-tab-btn" id="btn-process-user-me"
+                        onclick="window.filterProcessesByUser('me')">Meine Vorgänge</button>
                 </div>
                 <button class="btn-add-bg" onclick="window.openAiCaptureModal('vorgaenge')"
                     title="Aus Freitext automatisch Vorgänge erzeugen"

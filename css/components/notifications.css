@@ -134,6 +134,93 @@
     justify-content: center;
 }
 
+.notif-header-actions .notif-icon-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.notif-header-actions .notif-icon-btn.active {
+    background: rgba(139, 92, 246, 0.22);
+    border-color: rgba(139, 92, 246, 0.45);
+    color: #c4b5fd;
+}
+
+/* Einstellungs-Klappe unter der Kopfzeile (Zahnrad) */
+#notif-settings {
+    padding: 12px 14px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.notif-settings-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+}
+
+.notif-settings-check {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    color: var(--text-2);
+    cursor: pointer;
+}
+
+.notif-settings-check input {
+    width: 15px;
+    height: 15px;
+    accent-color: #8b5cf6;
+    cursor: pointer;
+}
+
+.notif-settings-nums {
+    margin-top: 12px;
+    gap: 10px;
+}
+
+.notif-settings-num {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    font-size: var(--fs-xs);
+    font-weight: 800;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.notif-settings-num input {
+    width: 74px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-sm);
+    color: #fff;
+    padding: 5px 8px;
+    font-size: var(--fs-sm);
+    font-weight: 700;
+}
+
+.notif-settings-num em {
+    font-style: normal;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text-3);
+}
+
+.notif-settings-hint {
+    margin-top: 10px;
+    font-size: var(--fs-xs);
+    color: var(--text-3);
+    line-height: 1.4;
+}
+
 #notif-list {
     overflow-y: auto;
     padding: 8px;

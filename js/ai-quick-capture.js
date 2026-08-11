@@ -339,10 +339,12 @@
                     </div>
                     <div style="display:flex; gap:0.6rem; margin-top:0.9rem;">
                         <button onclick="window.closeAiCaptureModal()" class="btn-modal-base btn-modal-cancel" style="flex:0 0 auto;">Abbrechen</button>
+                        ${window.micButtonHtml ? window.micButtonHtml('ai-capture-text') : ''}
                         <button id="ai-capture-run-btn" onclick="window.runAiCapture()" class="btn-modal-base btn-modal-save" style="flex:1; gap:8px;">
                             <span>✨</span> Analysieren
                         </button>
                     </div>
+                    ${window.micStatusHtml ? window.micStatusHtml('ai-capture-text') : ''}
 
                     <div style="display:flex; align-items:center; gap:10px; margin: 1.1rem 0 0.9rem;">
                         <div style="flex:1; height:1px; background:rgba(255,255,255,0.1);"></div>
@@ -413,6 +415,7 @@
     };
 
     window.closeAiCaptureModal = function () {
+        if (window.stopSpeechInput) window.stopSpeechInput();
         const modal = document.getElementById('ai-capture-modal');
         if (!modal) return;
         modal.classList.remove('show');
@@ -476,6 +479,8 @@
       "machine_hint": "falls genannt, sonst leer",
       "assignee_hint": "Name(n) der zuständigen Person(en), falls genannt — mehrere mit Komma trennen, sonst leer",
       "remark": "optional",
+      "remind_at": "Erinnerung als YYYY-MM-DDTHH:MM, sonst leer",
+      "appointment": { "date": "YYYY-MM-DD", "time": "HH:MM oder leer", "title": "Betreff des Termins" },
       "steps": [ "kurzer Schritt-Text" ] }
   ]`;
 
@@ -504,6 +509,23 @@ ${[willAufgaben && schemaAufgaben, willVorgaenge && schemaVorgaenge].filter(Bool
 - appointment = Termin/Besuch/vor Ort.
 - note = interne Notiz/Information ohne Aktion.
 - other = nur wenn nichts davon passt.`);
+
+            teile.push(`TERMIN und ERINNERUNG unterscheiden (wichtig):
+- TERMIN ("appointment") = eine feste Verabredung zu einer Zeit, die in den Kalender gehört.
+  Auslöser: "Termin", "Besuch", "vorbeifahren", "treffen", "vor Ort am …", "um 9 Uhr", "am Dienstag um 14:00".
+  Dann "appointment" mit Datum und — falls genannt — Uhrzeit füllen.
+- ERINNERUNG ("remind_at") = ein Zeitpunkt, zu dem man daran erinnert werden will.
+  Auslöser: "erinnere mich", "Erinnerung", "nachfassen", "nicht vergessen", "Bescheid geben bis", "melden bis".
+  Ohne genannte Uhrzeit 08:00 nehmen.
+- Beides kann gleichzeitig vorkommen ("Termin am Donnerstag 10 Uhr, zwei Tage vorher erinnern").
+- Ist nichts davon genannt: "appointment" weglassen bzw. null, "remind_at" leer lassen. NICHTS erfinden.
+
+Datumsangaben immer ausrechnen, heute ist ${new Date().toISOString().slice(0, 10)} (${new Date().toLocaleDateString('de-DE', { weekday: 'long' })}):
+- "heute"/"morgen"/"übermorgen" -> entsprechendes Datum
+- "nächste Woche" -> Montag der nächsten Woche
+- "in X Tagen"/"in X Wochen" -> entsprechend addieren
+- Wochentage ("Dienstag") -> der nächste Tag mit diesem Namen
+- Ein konkretes Datum ("14.08.") übernehmen, Jahr ergänzen.`);
         }
 
         teile.push(`Bekannte Mitarbeiter (für assignee_hint, exakt so schreiben, mehrere mit Komma): ${userNames || 'keine'}.`);
@@ -748,6 +770,7 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
                     </div>
                     <textarea class="ai-cap-remark glass-form-input" placeholder="Mail Inhalt" style="width:100%; box-sizing:border-box; font-size:0.88rem; height:90px; resize:vertical; margin-bottom:0.6rem;">${escapeHtml(v.remark || '')}</textarea>` : `
                     <input type="text" class="ai-cap-remark glass-form-input" value="${escapeHtml(v.remark || '')}" placeholder="Bemerkung (optional)" style="width:100%; box-sizing:border-box; font-size:0.9rem; margin-bottom:0.6rem;">`}
+                    ${remindAndAppointmentHtml(v)}
                     <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
                         <div style="font-size:0.72rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px;">Schritte${Array.isArray(v.steps) && v.steps.length ? ' <span style="color:#fbbf24; font-weight:800;">💡 von der KI vorgeschlagen – prüfen</span>' : ''}</div>
                         ${v._fromMsg ? `<button type="button" id="aicap-proc-${i}-suggest-btn" onclick="window.aiCapSuggestStepsForCard(${i})" style="display:inline-flex; align-items:center; gap:5px; background:rgba(139,92,246,0.15); color:#a78bfa; border:1px solid rgba(139,92,246,0.4); border-radius:8px; padding:5px 10px; font-size:0.75rem; font-weight:700; cursor:pointer;">
@@ -847,6 +870,40 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
     };
 
     // ---- Speichern ---------------------------------------------------------
+    // Erinnerung + Termin aus der KI-Antwort — beides sichtbar und änderbar,
+    // gespeichert wird erst beim Klick auf „Übernehmen".
+    //   Erinnerung -> internal_processes.remind_at (Benachrichtigung)
+    //   Termin     -> Eintrag im Kalender (maintenance_events)
+    function remindAndAppointmentHtml(v) {
+        const remind = normalizeLocalDateTime(v.remind_at);
+        const appt = v.appointment && typeof v.appointment === 'object' ? v.appointment : {};
+        const apptDate = /^\d{4}-\d{2}-\d{2}$/.test(appt.date || '') ? appt.date : '';
+        const apptTime = /^\d{1,2}:\d{2}$/.test(appt.time || '') ? String(appt.time).padStart(5, '0') : '';
+        return `
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.6rem;">
+            <div style="flex:1; min-width:170px;">
+                <div style="font-size:0.72rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">⏰ Erinnerung</div>
+                <input type="datetime-local" class="ai-cap-remind glass-form-input" value="${escapeHtml(remind)}" style="width:100%; box-sizing:border-box; font-size:0.85rem;">
+            </div>
+            <div style="flex:1; min-width:170px;">
+                <div style="font-size:0.72rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">📅 Termin im Kalender</div>
+                <div style="display:flex; gap:6px;">
+                    <input type="date" class="ai-cap-appt-date glass-form-input" value="${escapeHtml(apptDate)}" style="flex:2; box-sizing:border-box; font-size:0.85rem;">
+                    <input type="time" class="ai-cap-appt-time glass-form-input" value="${escapeHtml(apptTime)}" style="flex:1; box-sizing:border-box; font-size:0.85rem;">
+                </div>
+            </div>
+        </div>`;
+    }
+
+    // "2026-08-14T09:30" / ISO / "2026-08-14" -> Wert für <input datetime-local>
+    function normalizeLocalDateTime(v) {
+        if (!v) return '';
+        const s = String(v).trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s + 'T08:00';
+        const m = s.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{1,2}):(\d{2})/);
+        return m ? `${m[1]}T${m[2].padStart(2, '0')}:${m[3]}` : '';
+    }
+
     window.saveAiCaptureResults = async function () {
         const saveBtn = document.getElementById('ai-capture-save-btn');
         const cards = Array.from(document.querySelectorAll('#ai-capture-preview .ai-cap-card'));
@@ -884,7 +941,7 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
 
         if (saveBtn) { saveBtn.disabled = true; saveBtn.innerHTML = '<span>⏳</span> Speichere...'; }
 
-        let createdTasks = 0, updatedTasks = 0, createdProcesses = 0, updatedProcesses = 0;
+        let createdTasks = 0, updatedTasks = 0, createdProcesses = 0, updatedProcesses = 0, createdAppointments = 0;
         try {
             for (const card of chosen) {
                 const kind = card.dataset.kind;
@@ -995,13 +1052,34 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
                     } else {
                         // Ersteller setzt window.insertMitErsteller (app-core.js) —
                         // user_id ist uuid, die App-Nutzer haben bigint-IDs.
-                        const { error } = await window.insertMitErsteller('internal_processes', {
+                        const remindRaw = card.querySelector('.ai-cap-remind')?.value || '';
+                        const payload = {
                             title, process_type: type, process_date: new Date().toISOString(),
                             machine_id: machineId, workshop_order_number: null, status: 'offen',
                             remark, sender, recipient, assigned_users: assignedArr, steps: editedSteps
-                        });
+                        };
+                        if (remindRaw) payload.remind_at = new Date(remindRaw).toISOString();
+
+                        let { error } = await window.insertMitErsteller('internal_processes', payload);
+                        // Spalte remind_at fehlt noch -> Vorgang trotzdem anlegen.
+                        if (error && /remind_at/.test(error.message || '')) {
+                            const reduced = { ...payload };
+                            delete reduced.remind_at;
+                            ({ error } = await window.insertMitErsteller('internal_processes', reduced));
+                        }
                         if (error) throw error;
                         createdProcesses++;
+                    }
+
+                    // Termin im Kalender — unabhängig davon, ob der Vorgang neu
+                    // ist oder ein bestehender ergänzt wurde.
+                    const apptDate = card.querySelector('.ai-cap-appt-date')?.value || '';
+                    const apptTime = card.querySelector('.ai-cap-appt-time')?.value || '';
+                    if (apptDate && typeof window.createAppointment === 'function') {
+                        const id = await window.createAppointment({
+                            title, date: apptDate, time: apptTime, description: remark || null
+                        });
+                        if (id) createdAppointments++;
                     }
                 }
             }
@@ -1015,7 +1093,10 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
             if (updatedTasks) parts.push(`${updatedTasks} Aufgabe(n) ergänzt`);
             if (createdProcesses) parts.push(`${createdProcesses} neue(r) Vorgang/Vorgänge`);
             if (updatedProcesses) parts.push(`${updatedProcesses} Vorgang/Vorgänge mit Status ergänzt`);
+            if (createdAppointments) parts.push(`${createdAppointments} Termin(e) im Kalender`);
             window.showToast('Gespeichert: ' + (parts.join(', ') || 'nichts'));
+            if (createdAppointments && typeof window.refreshCalendarWidget === 'function') window.refreshCalendarWidget();
+            if (typeof window.refreshNotifications === 'function') window.refreshNotifications({ force: true });
         } catch (err) {
             console.error('AI Capture Speichern fehlgeschlagen:', err);
             window.showToast('Fehler beim Speichern: ' + (err.message || err));
@@ -1071,10 +1152,12 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
                     </div>
                     <div style="display:flex; gap:0.6rem; margin-top:0.9rem;">
                         <button onclick="window.closeAiServiceReportModal()" class="btn-modal-base btn-modal-cancel" style="flex:0 0 auto;">Abbrechen</button>
+                        ${window.micButtonHtml ? window.micButtonHtml('ai-sr-text') : ''}
                         <button id="ai-sr-run-btn" onclick="window.runAiServiceReportAnalysis()" class="btn-modal-base btn-modal-save" style="flex:1; gap:8px;">
                             <span>✨</span> Analysieren
                         </button>
                     </div>
+                    ${window.micStatusHtml ? window.micStatusHtml('ai-sr-text') : ''}
                 </div>
 
                 <div id="ai-sr-status" style="display:none; text-align:center; color:#60a5fa; padding:1.5rem 0; font-weight:600;"></div>
@@ -1103,6 +1186,7 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
     };
 
     window.closeAiServiceReportModal = function () {
+        if (window.stopSpeechInput) window.stopSpeechInput();
         const modal = document.getElementById('ai-sr-modal');
         if (!modal) return;
         modal.classList.remove('show');

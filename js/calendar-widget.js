@@ -168,6 +168,14 @@
                 .select('*, machines(name, manufacturer, serial)')
                 .limit(500);
             if (!error && data) {
+                // Teilnehmer der Termine dazuladen — daraus entstehen die
+                // Daumen-Knöpfe und die Zeile „Meier zugesagt · Schulz offen".
+                let partsByEvent = new Map();
+                if (typeof window.loadParticipantsForEvents === 'function') {
+                    partsByEvent = await window.loadParticipantsForEvents(data.map(e => e.id));
+                }
+                const uid = currentUserId();
+
                 data.forEach(ev => {
                     const key = dayKey(ev.event_date || ev.start_date);
                     if (!key) return;
@@ -175,18 +183,25 @@
                     const machineLabel = m
                         ? `${m.manufacturer || ''} ${m.name || ''}`.trim() + (m.serial ? ` #${m.serial}` : '')
                         : (ev.manual_machine || '');
+                    const participants = partsByEvent.get(String(ev.id)) || [];
+                    const mineInvite = participants.find(p => String(p.user_id) === uid);
                     // Ohne Maschinenbezug ist es eine sonstige Erinnerung, sonst eine Wartung.
                     const type = (ev.machine_id || ev.manual_machine) ? 'wartung' : 'sonstige';
                     out.push({
                         id: `event:${ev.id}`,
                         type,
                         day: key,
+                        time: window.fmtAppointmentTime ? window.fmtAppointmentTime(ev.start_time) : '',
                         title: ev.title || (machineLabel || 'Eintrag'),
-                        subject: machineLabel,
+                        subject: machineLabel || ev.location_label || '',
                         note: ev.description || '',
                         tag: ev.maintenance_types || '',
-                        mine: isMine(null, ev.user_id),
+                        // Eingeladene sehen den Termin ebenfalls als „meinen".
+                        mine: isMine(null, ev.user_id) || !!mineInvite,
                         editableId: ev.id,
+                        eventId: ev.id,
+                        participants,
+                        myStatus: mineInvite ? mineInvite.status : null,
                         targetType: null
                     });
                 });
@@ -471,13 +486,17 @@
             <span class="calw-entry-bar"></span>
             <div class="calw-entry-body">
                 <div class="calw-entry-top">
-                    <span class="calw-entry-title">${esc(e.title)}</span>
+                    <span class="calw-entry-title">${e.time ? `<span class="calw-entry-time">${esc(e.time)}</span> ` : ''}${esc(e.title)}</span>
                     <span class="calw-entry-type" style="color:${t.color};">${t.short}</span>
                 </div>
                 ${e.subject ? `<div class="calw-entry-subject">${esc(e.subject)}</div>` : ''}
-                <div class="calw-entry-meta">${fmtDate(e.day)}${e.done ? ' · erledigt' : (diff !== null ? ' · ' + relLabel(diff) : '')}${e.tag && !e.done ? ' · ' + esc(e.tag) : ''}</div>
+                <div class="calw-entry-meta">${fmtDate(e.day)}${e.time ? ' · ' + esc(e.time) + ' Uhr' : ''}${e.done ? ' · erledigt' : (diff !== null ? ' · ' + relLabel(diff) : '')}${e.tag && !e.done ? ' · ' + esc(e.tag) : ''}</div>
                 ${e.note ? `<div class="calw-entry-note">${esc(e.note)}</div>` : ''}
+                ${e.participants && e.participants.length && window.appointmentParticipantsLine
+                    ? `<div class="calw-entry-parts">${window.appointmentParticipantsLine(e.participants)}</div>` : ''}
             </div>
+            ${e.myStatus && window.appointmentResponseButtons
+                ? window.appointmentResponseButtons(e.eventId, e.myStatus) : ''}
             ${e.editableId ? `<button type="button" class="calw-entry-edit" data-calw-edit="${esc(e.editableId)}" title="Eintrag bearbeiten">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>
             </button>` : ''}

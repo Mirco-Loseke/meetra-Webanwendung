@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meetra-app-v116';
+const CACHE_NAME = 'meetra-app-v126';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
@@ -9,6 +9,7 @@ const PRECACHE = [
     'css/components/calendar-widget.css',
     'js/calendar-widget.js',
     'js/notifications.js',
+    'js/appointments.js',
     'css/base/variables.css',
     'css/base/tokens.css',
     'css/base/brand-accents.css',
@@ -31,6 +32,7 @@ const PRECACHE = [
     'css/components/dropdowns.css',
     'css/components/dropdown-look.css',
     'css/components/focus-mode.css',
+    'css/components/appointments.css',
     'css/views/documents.css',
     'css/views/protocols.css',
     'css/views/tasks.css',
@@ -100,6 +102,7 @@ const PRECACHE = [
     'js/signature-pads.js',
     'js/servicebericht-pdf.js',
     'js/modal-sections.js',
+    'js/speech-input.js',
     'js/ai-quick-capture.js',
     'js/photo-lightbox.js',
     'js/documents-modal.js',

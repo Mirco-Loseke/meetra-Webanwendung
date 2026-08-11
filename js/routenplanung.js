@@ -50,9 +50,21 @@
     let nearbyRadius = 50;
     let machineCountAll = new Map(); // customerId -> Anzahl Maschinen (alle Kunden)
     let linkedCountAll = new Map();  // customerId -> Anzahl verknüpfte Adressen
+    let linkGraph = new Map();       // customerId -> Map(andere customerId -> link_type)
     let nearbyManufacturer = '';     // gewählter Hersteller ('' = alle)
     let manufacturersByCustomer = new Map(); // customerId -> Set(Hersteller, kleingeschrieben)
     let manufacturerNames = new Map();       // kleingeschrieben -> Originalschreibweise
+
+    // --- Leistung -------------------------------------------------
+    // Marker werden wiederverwendet statt bei jedem Filterklick neu gebaut,
+    // und es werden nur die im sichtbaren Kartenausschnitt gezeichnet.
+    const MAX_VISIBLE_MARKERS = 400;  // Obergrenze pro Ausschnitt
+    const MAX_NEARBY_ROWS = 200;      // Obergrenze der Trefferliste im DOM
+    let markerCache = new Map();      // key -> L.Marker (überlebt Re-Renders)
+    let routeSegments = null;         // vorprojizierte Streckensegmente für die Korridorsuche
+    let routeProj = null;             // { kx, ky } Projektion der Strecke
+    let filterTimer = null;
+    let markerFrame = null;
 
     // ---------------------------------------------------------------
     // Helfer
@@ -134,32 +146,63 @@
     // Lokale Ebenen-Projektion (equirectangular) um den Punkt herum — bei den hier
     // relevanten Entfernungen (< einige hundert km) genau genug und deutlich
     // schneller als eine exakte Kugelrechnung pro Segment.
-    function pointToSegmentKm(lat, lng, aLat, aLng, bLat, bLng) {
-        const latRef = (lat + aLat + bLat) / 3;
-        const kx = 111.32 * Math.cos(latRef * Math.PI / 180);
-        const ky = 110.57;
-        const px = lng * kx, py = lat * ky;
-        const ax = aLng * kx, ay = aLat * ky;
-        const bx = bLng * kx, by = bLat * ky;
+    // Die Strecke wird EINMAL projiziert (statt pro Kunde und Segment neu, mit
+    // je einem cos-Aufruf) — bei tausend Adressen × 500 Segmenten sind das
+    // eine halbe Million eingesparter Trigonometrie-Aufrufe pro Filterklick.
+    // Die Projektion nimmt die mittlere Breite der Strecke als Bezug; bei sehr
+    // langen Nord-Süd-Routen weicht der Abstand dadurch um wenige hundert Meter
+    // ab — für einen Suchkorridor von zig Kilometern ohne Belang.
+    function buildRouteSegments() {
+        routeSegments = null;
+        routeProj = null;
+        if (!routeGeometry || routeGeometry.length < 2) return;
 
-        const dx = bx - ax, dy = by - ay;
-        const lenSq = dx * dx + dy * dy;
-        let t = lenSq === 0 ? 0 : ((px - ax) * dx + (py - ay) * dy) / lenSq;
-        t = Math.max(0, Math.min(1, t));
-        const cx = ax + t * dx, cy = ay + t * dy;
-        return Math.hypot(px - cx, py - cy);
+        let latSum = 0;
+        for (const p of routeGeometry) latSum += p[0];
+        const kx = 111.32 * Math.cos((latSum / routeGeometry.length) * Math.PI / 180);
+        const ky = 110.57;
+        routeProj = { kx, ky };
+
+        const count = routeGeometry.length - 1;
+        const segs = new Float64Array(count * 8); // je Segment: ax, ay, dx, dy, Länge^2, xMin, xMax, (frei)
+        const ys = new Float64Array(count * 2);   // yMin, yMax je Segment
+        for (let i = 1; i <= count; i++) {
+            const ax = routeGeometry[i - 1][1] * kx, ay = routeGeometry[i - 1][0] * ky;
+            const bx = routeGeometry[i][1] * kx, by = routeGeometry[i][0] * ky;
+            const dx = bx - ax, dy = by - ay;
+            const o = (i - 1) * 8;
+            segs[o] = ax; segs[o + 1] = ay; segs[o + 2] = dx; segs[o + 3] = dy;
+            segs[o + 4] = dx * dx + dy * dy;
+            segs[o + 5] = Math.min(ax, bx); segs[o + 6] = Math.max(ax, bx);
+            ys[(i - 1) * 2] = Math.min(ay, by);
+            ys[(i - 1) * 2 + 1] = Math.max(ay, by);
+        }
+        routeSegments = { segs, ys, count };
     }
 
     // Kürzester Abstand zur gesamten Streckenlinie (Korridorsuche).
     function distanceToRouteKm(lat, lng) {
-        if (!routeGeometry || routeGeometry.length < 2) return null;
+        if (!routeSegments) return null;
+        const { segs, ys, count } = routeSegments;
+        const px = lng * routeProj.kx, py = lat * routeProj.ky;
         let min = Infinity;
-        for (let i = 1; i < routeGeometry.length; i++) {
-            const d = pointToSegmentKm(lat, lng, routeGeometry[i - 1][0], routeGeometry[i - 1][1], routeGeometry[i][0], routeGeometry[i][1]);
+        for (let i = 0; i < count; i++) {
+            const o = i * 8;
+            // Kästchen-Vorprüfung: Segmente, die schon als Rechteck weiter weg
+            // liegen als der bisher beste Treffer, gar nicht erst ausrechnen.
+            if (px < segs[o + 5] - min || px > segs[o + 6] + min) continue;
+            if (py < ys[i * 2] - min || py > ys[i * 2 + 1] + min) continue;
+
+            const ax = segs[o], ay = segs[o + 1], dx = segs[o + 2], dy = segs[o + 3];
+            const lenSq = segs[o + 4];
+            let t = lenSq === 0 ? 0 : ((px - ax) * dx + (py - ay) * dy) / lenSq;
+            if (t < 0) t = 0; else if (t > 1) t = 1;
+            const ex = px - (ax + t * dx), ey = py - (ay + t * dy);
+            const d = Math.sqrt(ex * ex + ey * ey);
             if (d < min) min = d;
             if (min === 0) break;
         }
-        return min;
+        return min === Infinity ? null : min;
     }
 
     // OSRM liefert bei "overview=full" mehrere tausend Punkte. Für die Korridorsuche
@@ -250,11 +293,21 @@
         }
     }
 
+    // Nominatim-Limit: max. 1 Anfrage/Sek. Die Drosselung läuft als Warteschlange,
+    // sonst rechnen parallele Aufrufe alle mit demselben `lastGeocodeAt` und
+    // feuern gleichzeitig los (Sperre durch den Dienst).
+    let nominatimQueue = Promise.resolve();
+    function nominatimSlot() {
+        nominatimQueue = nominatimQueue.then(async () => {
+            const wait = NOMINATIM_DELAY_MS - (Date.now() - lastGeocodeAt);
+            if (wait > 0) await new Promise(r => setTimeout(r, wait));
+            lastGeocodeAt = Date.now();
+        });
+        return nominatimQueue;
+    }
+
     async function geocodeNominatim(params) {
-        // Nominatim-Limit: max. 1 Anfrage/Sek. — global drosseln.
-        const wait = NOMINATIM_DELAY_MS - (Date.now() - lastGeocodeAt);
-        if (wait > 0) await new Promise(r => setTimeout(r, wait));
-        lastGeocodeAt = Date.now();
+        await nominatimSlot();
         try {
             const qs = new URLSearchParams({ format: 'json', limit: '1', 'accept-language': 'de', ...params });
             const res = await fetch(`https://nominatim.openstreetmap.org/search?${qs.toString()}`);
@@ -319,14 +372,8 @@
 
     async function getHqInfo() {
         if (hqInfo) return hqInfo;
-        let hq = null;
-        try { hq = JSON.parse(localStorage.getItem('meetra_company_hq') || 'null'); } catch (e) { }
-        const street = hq?.street || 'Am Alten Bahnhof 6';
-        const zip = hq?.zip || '38122';
-        const city = hq?.city || 'Braunschweig';
-        const country = hq?.country || 'Deutschland';
-        const name = hq?.name || 'Meetra GmbH';
-        const address = [street, [zip, city].filter(Boolean).join(' '), country].filter(Boolean).join(', ');
+        const { street, zip, city, country, name } = companyHqDefaults();
+        const address = companyHqAddress();
 
         let cached = null;
         try { cached = JSON.parse(localStorage.getItem('meetra_hq_coords') || 'null'); } catch (e) { }
@@ -343,6 +390,136 @@
             hqInfo = { name, address, lat: null, lng: null };
         }
         return hqInfo;
+    }
+
+    // ---------------------------------------------------------------
+    // Startpunkt: Firmenadresse oder aktueller Standort
+    // ---------------------------------------------------------------
+    let startIsCurrentLocation = false;
+
+    function renderHqInfo() {
+        const el = document.getElementById('rp2-hq-info');
+        if (!el || !hqInfo) return;
+        const ok = typeof hqInfo.lat === 'number';
+        el.classList.add('clickable');
+        el.setAttribute('role', 'button');
+        el.setAttribute('tabindex', '0');
+        el.setAttribute('title', 'Startpunkt ändern');
+        el.setAttribute('data-rp2-action', 'pick-start');
+        el.innerHTML = `
+            <div class="rp2-hq-icon">${ic(startIsCurrentLocation ? 'pin' : 'home', 17)}</div>
+            <div class="rp2-hq-text">
+                <div class="rp2-hq-title">Start der Tour <span class="rp2-hq-change">ändern</span></div>
+                <div class="rp2-hq-name">${esc(hqInfo.name)}</div>
+                <div class="rp2-hq-address">${esc(hqInfo.address)}${ok ? '' : ' — Ortung fehlgeschlagen'}</div>
+            </div>`;
+    }
+
+    function pickStartDialog() {
+        openDialog('Startpunkt der Tour', `
+            <div class="rp2-start-choice">
+                <button class="rp2-btn rp2-start-option${startIsCurrentLocation ? '' : ' rp2-btn-primary'}" data-rp2-action="start-hq">
+                    ${ic('home', 18)}
+                    <span>
+                        <strong>Firmenadresse</strong>
+                        <small>${esc(companyHqAddress())}</small>
+                    </span>
+                </button>
+                <button class="rp2-btn rp2-start-option${startIsCurrentLocation ? ' rp2-btn-primary' : ''}" data-rp2-action="start-current">
+                    ${ic('pin', 18)}
+                    <span>
+                        <strong>Aktueller Standort</strong>
+                        <small>Position des Geräts abfragen</small>
+                    </span>
+                </button>
+            </div>`, null, null);
+    }
+
+    function companyHqDefaults() {
+        let hq = null;
+        try { hq = JSON.parse(localStorage.getItem('meetra_company_hq') || 'null'); } catch (e) { }
+        return {
+            street: hq?.street || 'Am Alten Bahnhof 6',
+            zip: hq?.zip || '38122',
+            city: hq?.city || 'Braunschweig',
+            country: hq?.country || 'Deutschland',
+            name: hq?.name || 'Meetra GmbH'
+        };
+    }
+
+    function companyHqAddress() {
+        const d = companyHqDefaults();
+        return [d.street, [d.zip, d.city].filter(Boolean).join(' '), d.country].filter(Boolean).join(', ');
+    }
+
+    // Umgekehrte Ortung nur für die Beschriftung — schlägt sie fehl, stehen
+    // dort eben die Koordinaten. Der Startpunkt funktioniert so oder so.
+    async function reverseGeocode(lat, lng) {
+        try {
+            const res = await fetch(`https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}&lang=de`);
+            if (!res.ok) return null;
+            const data = await res.json();
+            const p = data && data.features && data.features[0] && data.features[0].properties;
+            if (!p) return null;
+            const street = [p.street || p.name, p.housenumber].filter(Boolean).join(' ');
+            return [street, [p.postcode, p.city || p.district].filter(Boolean).join(' '), p.country]
+                .filter(Boolean).join(', ') || null;
+        } catch (e) { return null; }
+    }
+
+    async function useCurrentLocationAsStart() {
+        if (!navigator.geolocation) {
+            window.showToast('Dieses Gerät kann den Standort nicht bestimmen.');
+            return;
+        }
+        closeDialog();
+        setStatus('Aktueller Standort wird bestimmt…');
+        try {
+            const pos = await new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: true, timeout: 15000, maximumAge: 60000
+                });
+            });
+            const lat = pos.coords.latitude, lng = pos.coords.longitude;
+            const address = await reverseGeocode(lat, lng)
+                || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+
+            startIsCurrentLocation = true;
+            hqInfo = { name: 'Aktueller Standort', address, lat, lng };
+            setStatus('');
+            afterStartPointChanged();
+        } catch (err) {
+            setStatus('');
+            const msg = err && err.code === 1
+                ? 'Der Zugriff auf den Standort wurde abgelehnt. Bitte im Browser erlauben.'
+                : 'Der aktuelle Standort konnte nicht bestimmt werden.';
+            window.showToast(msg);
+        }
+    }
+
+    async function useCompanyAsStart() {
+        closeDialog();
+        if (!startIsCurrentLocation && hqInfo && typeof hqInfo.lat === 'number') return;
+        startIsCurrentLocation = false;
+        hqInfo = null;
+        setStatus('Firmenadresse wird geortet…');
+        await getHqInfo();
+        setStatus('');
+        afterStartPointChanged();
+    }
+
+    // Nach dem Wechsel: Anzeige, Marker und Route auffrischen. Die Trefferliste
+    // wird nur neu gefiltert, wenn schon einmal gesucht wurde — beim Öffnen der
+    // Seite soll weiterhin nichts von allein erscheinen.
+    function afterStartPointChanged() {
+        renderHqInfo();
+        if (map && hqInfo && typeof hqInfo.lat === 'number') map.setView([hqInfo.lat, hqInfo.lng], Math.max(map.getZoom(), 9));
+        scheduleMarkerRender();
+        scheduleRouteLine();
+        if (nearbyRawRecords.length) {
+            nearbyBase = stops.length > 0 ? stops[stops.length - 1] : { lat: hqInfo.lat, lng: hqInfo.lng };
+            scheduleNearbyFilter();
+        }
     }
 
     async function resolveCoords(record) {
@@ -396,12 +573,24 @@
         }
         await new Promise(r => setTimeout(r, 150));
         if (map) return;
-        map = L.map('rp2-map').setView([51.1657, 10.4515], 6);
+        map = L.map('rp2-map', {
+            preferCanvas: true,        // Linien über Canvas statt SVG — flüssigeres Zoomen
+            zoomAnimation: true,
+            markerZoomAnimation: false // spart das Umrechnen hunderter Marker je Zoomstufe
+        }).setView([51.1657, 10.4515], 6);
         // Deutschsprachige Kacheln + Ansichtswechsel Karte/Luftbild/Gelände (siehe customers.js)
         window.addGermanBaseLayers(map, 'routenplanung');
         L.control.scale({ metric: true, imperial: false }).addTo(map);
         markersLayer = L.layerGroup().addTo(map);
+        // Beim Schwenken/Zoomen nur die Marker des neuen Ausschnitts nachziehen.
+        map.on('moveend zoomend', scheduleMarkerRender);
         setTimeout(() => map.invalidateSize(), 200);
+    }
+
+    let canvasRenderer = null;
+    function routeRenderer() {
+        if (!canvasRenderer) canvasRenderer = L.canvas({ padding: 0.3 });
+        return canvasRenderer;
     }
 
     function glowIcon(color, content) {
@@ -416,62 +605,199 @@
     // Popup-Inhalt einer Adresse: Maschinen und verknüpfte Adressen stehen
     // direkt darunter — früher lagen beide hinter einem Knopf, wodurch die
     // manuell angelegten Maschinen auf der Karte praktisch unsichtbar waren.
-    // Gefüllt wird beim Öffnen des Popups (siehe bindAddressPopup).
+    // Gefüllt wird beim Öffnen des Popups (siehe attachPopupLoader).
     function machinesButtonHtml(point) {
         if (!point.customerId) return '';
-        const key = String(point.customerId);
-        const hasLinked = (linkedCountAll.get(key) || 0) > 0;
-        let html = `<div class="rp2-popup-section-title">Maschinen</div>` +
+        return `<div class="rp2-popup-section-title">Maschinen</div>` +
             `<div id="rp2-mach-${point.id}" class="rp2-popup-machines"></div>`;
-        if (hasLinked) {
-            html += `<div class="rp2-popup-section-title">Verknüpfte Adressen &amp; deren Maschinen</div>` +
-                `<div id="rp2-linked-${point.id}" class="rp2-popup-machines"></div>`;
-        }
-        return html;
     }
 
-    // Popup an einen Marker hängen und beim Öffnen beide Listen nachladen.
-    function bindAddressPopup(marker, point, html) {
-        marker.bindPopup(html);
-        if (!point.customerId) return marker;
+    // Maschinen/Verknüpfungen erst beim Öffnen des Popups nachladen. Der
+    // Handler hängt am Marker und wird nur einmal registriert — der Punkt
+    // dahinter kann sich bei Re-Renders ändern.
+    function attachPopupLoader(marker, point) {
+        marker._rp2Point = point;
+        if (marker._rp2LoaderBound) return marker;
+        marker._rp2LoaderBound = true;
         marker.on('popupopen', () => {
-            window.rp2ShowMachines(point.customerId, `rp2-mach-${point.id}`);
-            if ((linkedCountAll.get(String(point.customerId)) || 0) > 0) {
-                window.rp2ShowLinked(point.customerId, `rp2-linked-${point.id}`);
-            }
+            const p = marker._rp2Point;
+            if (!p || !p.customerId) return;
+            window.rp2ShowMachines(p.customerId, `rp2-mach-${p.id}`);
         });
         return marker;
     }
 
-    // Zeigt im Karten-Popup die verknüpften Adressen einer Adresse UND je
-    // verknüpfter Adresse deren Maschinen — damit erkennbar ist, an welchem
-    // Standort eine Maschine tatsächlich steht.
-    window.rp2ShowLinked = async function (customerId, containerId) {
+    // Manuell im Adressbuch angelegte Maschinen (localStorage, siehe
+    // getAddressCustomMachines in js/addressbook.js) — sie stehen in keiner
+    // Tabelle und würden sonst auf der Karte fehlen.
+    function customMachinesOf(addressId) {
+        try {
+            const raw = localStorage.getItem('ab_custom_machines_' + addressId);
+            const list = raw ? JSON.parse(raw) : [];
+            return Array.isArray(list) ? list.map(m => ({ ...m, isCustom: true })) : [];
+        } catch (e) { return []; }
+    }
+
+    // Alle über customer_links erreichbaren Adressen — auch über mehrere Ecken
+    // (A–B und B–C heißt: an A gehört auch C zur Gruppe). Läuft auf dem beim
+    // Start vorgeladenen Graphen, also ohne weitere Abfrage.
+    function collectLinkedGroup(customerId) {
+        const start = String(customerId);
+        const out = [];
+        if (!linkGraph.size) return out;
+
+        const seen = new Set([start]);
+        let level = [start];
+        let depth = 0;
+        while (level.length && depth < 4) {
+            depth++;
+            const next = [];
+            for (const id of level) {
+                const neighbours = linkGraph.get(id);
+                if (!neighbours) continue;
+                neighbours.forEach((type, otherId) => {
+                    if (seen.has(otherId)) return;
+                    seen.add(otherId);
+                    out.push({ id: otherId, type: depth === 1 ? type : null, depth });
+                    next.push(otherId);
+                });
+            }
+            level = next;
+        }
+        return out;
+    }
+
+    // Marker-Rendering, auf Flüssigkeit getrimmt:
+    //   1. bereits gebaute Marker werden wiederverwendet (Cache nach Schlüssel),
+    //   2. gezeichnet wird nur, was im Kartenausschnitt liegt (+ Rand),
+    //   3. der Popup-Inhalt entsteht erst beim Öffnen, nicht für alle Marker vorab.
+    // Vorher wurde bei jedem Filterklick der gesamte Layer geleert und für jede
+    // Adresse ein DivIcon samt HTML-Popup neu erzeugt — daher das Ruckeln.
+    function scheduleMarkerRender() {
+        if (markerFrame) return;
+        markerFrame = requestAnimationFrame(() => { markerFrame = null; renderMarkers(); });
+    }
+
+    function markerFor(key, lat, lng, color, content, popupFn) {
+        let marker = markerCache.get(key);
+        if (!marker) {
+            marker = L.marker([lat, lng], { icon: glowIcon(color, content) });
+            marker.bindPopup(popupFn, { minWidth: 220 });
+            marker._rp2Color = color;
+            marker._rp2Content = content;
+            markerCache.set(key, marker);
+        } else {
+            const ll = marker.getLatLng();
+            if (ll.lat !== lat || ll.lng !== lng) marker.setLatLng([lat, lng]);
+            if (marker._rp2Color !== color || marker._rp2Content !== content) {
+                marker.setIcon(glowIcon(color, content));
+                marker._rp2Color = color;
+                marker._rp2Content = content;
+            }
+            marker.setPopupContent(popupFn);
+        }
+        return marker;
+    }
+
+    // Kartenausschnitt auf Startpunkt + Stopps legen (nicht auf die Treffer).
+    function fitToRoute() {
+        if (!map) return;
+        const pts = [];
+        if (hqInfo && typeof hqInfo.lat === 'number') pts.push([hqInfo.lat, hqInfo.lng]);
+        stops.forEach(s => { if (typeof s.lat === 'number') pts.push([s.lat, s.lng]); });
+        if (!pts.length) return;
+        if (pts.length === 1) map.setView(pts[0], Math.max(map.getZoom(), 11));
+        else map.fitBounds(L.latLngBounds(pts), { padding: [40, 40], maxZoom: 13 });
+    }
+
+    function renderMarkers() {
+        if (!map || !markersLayer) return;
+
+        const bounds = map.getBounds().pad(0.25);
+        const wanted = new Map(); // key -> marker
+
+        if (hqInfo && typeof hqInfo.lat === 'number') {
+            wanted.set('hq', markerFor('hq', hqInfo.lat, hqInfo.lng, '#38bdf8', 'S',
+                () => `<div class="rp2-popup-title">${esc(hqInfo.name)}</div><div class="rp2-popup-address">${esc(hqInfo.address)}</div><span class="rp2-badge">Start</span>`));
+        }
+
+        // Stopps immer zeigen — sie sind die Route selbst.
+        stops.forEach((s, i) => {
+            if (typeof s.lat !== 'number') return;
+            const key = 'stop:' + s.id;
+            const marker = markerFor(key, s.lat, s.lng, '#10b981', i + 1, () =>
+                `<div class="rp2-popup-title">${esc(s.label)}</div>` +
+                `<div class="rp2-popup-address">${esc(s.address)}</div>` +
+                `<button class="rp2-btn rp2-btn-sm rp2-popup-btn" onclick="window.rp2RemoveStop('${s.id}')">Aus Route entfernen</button>` +
+                machinesButtonHtml(s));
+            attachPopupLoader(marker, s);
+            wanted.set(key, marker);
+        });
+
+        // Treffer nur im Ausschnitt, und höchstens MAX_VISIBLE_MARKERS
+        // (nach Entfernung sortiert, die nächsten zuerst).
+        let shown = 0;
+        for (const c of nearbyCandidates) {
+            if (typeof c.lat !== 'number') continue;
+            if (!bounds.contains([c.lat, c.lng])) continue;
+            if (++shown > MAX_VISIBLE_MARKERS) break;
+
+            const key = 'cand:' + c.id;
+            const color = firstAddressTypeColor(c.addressType) || '#f59e0b';
+            const marker = markerFor(key, c.lat, c.lng, color, null, () =>
+                `<div class="rp2-popup-title">${esc(c.label)}</div>` +
+                `<div class="rp2-popup-address">${esc(c.address)}</div>` +
+                `<div class="rp2-distance">${(c.distanceKm || 0).toFixed(1).replace('.', ',')} km entfernt</div>` +
+                `<button class="rp2-btn rp2-btn-sm rp2-btn-primary rp2-popup-btn" onclick="window.rp2AddCandidate('${c.id}')">Zur Route hinzufügen</button>` +
+                machinesButtonHtml(c));
+            attachPopupLoader(marker, c);
+            wanted.set(key, marker);
+        }
+
+        // Differenz bilden statt alles neu zu zeichnen.
+        markersLayer.eachLayer(l => { if (!wanted.has(l._rp2Key)) markersLayer.removeLayer(l); });
+        wanted.forEach((marker, key) => {
+            marker._rp2Key = key;
+            if (!markersLayer.hasLayer(marker)) markersLayer.addLayer(marker);
+        });
+
+        // Cache begrenzen, damit er nach vielen Suchen nicht unbegrenzt wächst.
+        if (markerCache.size > 3000) {
+            for (const [key, m] of markerCache) {
+                if (wanted.has(key)) continue;
+                markerCache.delete(key);
+                if (markerCache.size <= 1500) break;
+            }
+        }
+    }
+
+
+    // Zeigt im Karten-Popup ALLE Maschinen rund um eine Adresse:
+    //   - die Maschinen der Adresse selbst (Maschinenpark + manuell angelegte),
+    //   - dazu die Maschinen jeder verknüpften Adresse, auch über mehrere Ecken.
+    // Manuell im Adressbuch erfasste Maschinen stehen nur im localStorage und
+    // waren auf der Karte deshalb früher nirgends zu sehen.
+    window.rp2ShowMachines = async function (customerId, containerId) {
         const el = document.getElementById(containerId);
         if (!el) return;
-        el.innerHTML = '<div class="rp2-hint">Verknüpfungen werden geladen…</div>';
+        el.innerHTML = '<div class="rp2-hint">Maschinen werden geladen…</div>';
         try {
-            const { data: links, error } = await sb()
-                .from('customer_links')
-                .select('id, customer_id, linked_customer_id, link_type')
-                .or(`customer_id.eq.${customerId},linked_customer_id.eq.${customerId}`);
-            if (error) throw error;
+            // Popup kann geöffnet werden, bevor die Verknüpfungen vorgeladen
+            // sind — dann kurz nachladen statt die Gruppe zu unterschlagen.
+            if (!linkGraph.size) await preloadBaseData();
+            const group = collectLinkedGroup(customerId);
+            const ids = [String(customerId), ...group.map(g => g.id)];
 
-            const otherIds = [...new Set((links || []).map(l =>
-                String(l.customer_id) === String(customerId) ? l.linked_customer_id : l.customer_id
-            ))];
-
-            if (!otherIds.length) {
-                el.innerHTML = '<div class="rp2-hint">Keine verknüpften Adressen hinterlegt.</div>';
-                return;
-            }
-
-            const [{ data: others, error: cErr }, machRes] = await Promise.all([
-                sb().from('customers').select('id, name, street, zip_code, city, customer_number').in('id', otherIds),
-                sb().from('machines').select('id, name, manufacturer, serial, year, customer_id').in('customer_id', otherIds)
+            const [machRes, custRes] = await Promise.all([
+                sb().from('machines')
+                    .select('id, name, manufacturer, serial, year, customer_id')
+                    .in('customer_id', ids),
+                group.length
+                    ? sb().from('customers').select('id, name, zip_code, city').in('id', group.map(g => g.id))
+                    : Promise.resolve({ data: [] })
             ]);
-            if (cErr) throw cErr;
-            if (machRes.error) console.warn('Maschinen verknüpfter Adressen nicht ladbar:', machRes.error.message);
+            if (machRes.error) throw machRes.error;
+            if (custRes.error) console.warn('Verknüpfte Adressen nicht ladbar:', custRes.error.message);
 
             const machinesBy = new Map();
             (machRes.data || []).forEach(m => {
@@ -479,111 +805,54 @@
                 if (!machinesBy.has(k)) machinesBy.set(k, []);
                 machinesBy.get(k).push(m);
             });
-
-            const typeOf = (otherId) => {
-                const l = (links || []).find(x =>
-                    String(x.customer_id) === String(otherId) || String(x.linked_customer_id) === String(otherId));
-                return l ? (LINK_TYPE_LABEL[l.link_type] || 'Verknüpft') : 'Verknüpft';
+            const machinesOf = (id) => {
+                const list = [...customMachinesOf(id), ...(machinesBy.get(String(id)) || [])];
+                return list.sort((a, b) => machineTitle(a).localeCompare(machineTitle(b), 'de'));
             };
 
-            el.innerHTML = (others || []).map(o => {
-                // Manuell angelegte Maschinen (localStorage, siehe Adressbuch)
-                // gehören genauso dazu wie die aus dem Maschinenpark.
-                let custom = [];
-                try {
-                    const raw = localStorage.getItem('ab_custom_machines_' + o.id);
-                    custom = raw ? JSON.parse(raw) : [];
-                } catch (e) { }
-                const ms = [
-                    ...custom.map(c => ({ ...c, isCustom: true })),
-                    ...(machinesBy.get(String(o.id)) || [])
-                ];
-                const machineHtml = ms.length
-                    ? ms.map(m => `<div class="rp2-popup-machine-sub">${m.isCustom ? '<span class="rp2-tag-manual">(Manuell)</span> ' : ''}${esc(machineTitle(m))}${m.serial ? ' · SN ' + esc(m.serial) : ''}</div>`).join('')
-                    : '<div class="rp2-popup-machine-sub rp2-muted">keine Maschinen</div>';
-                return `<div class="rp2-popup-machine">
-                    <strong>${esc(o.name)}</strong>
-                    <div class="rp2-popup-linktype">${esc(typeOf(o.id))}${o.city ? ' · ' + esc([o.zip_code, o.city].filter(Boolean).join(' ')) : ''}</div>
-                    ${machineHtml}
-                </div>`;
-            }).join('');
-        } catch (err) {
-            console.error('Verknüpfte Adressen konnten nicht geladen werden:', err);
-            el.innerHTML = '<div class="rp2-hint" style="color:#f87171;">Verknüpfungen nicht verfügbar.</div>';
-        }
-    };
-
-    function renderMarkers() {
-        if (!map || !markersLayer) return;
-        markersLayer.clearLayers();
-
-        if (hqInfo && typeof hqInfo.lat === 'number') {
-            L.marker([hqInfo.lat, hqInfo.lng], { icon: glowIcon('#38bdf8', 'S') })
-                .addTo(markersLayer)
-                .bindPopup(`<div class="rp2-popup-title">${esc(hqInfo.name)}</div><div class="rp2-popup-address">${esc(hqInfo.address)}</div><span class="rp2-badge">Start</span>`);
-        }
-
-        stops.forEach((s, i) => {
-            if (typeof s.lat !== 'number') return;
-            const marker = L.marker([s.lat, s.lng], { icon: glowIcon('#10b981', i + 1) })
-                .addTo(markersLayer);
-            bindAddressPopup(marker, s,
-                `<div class="rp2-popup-title">${esc(s.label)}</div>` +
-                `<div class="rp2-popup-address">${esc(s.address)}</div>` +
-                `<button class="rp2-btn rp2-btn-sm rp2-popup-btn" onclick="window.rp2RemoveStop('${s.id}')">Aus Route entfernen</button>` +
-                machinesButtonHtml(s)
-            );
-        });
-
-        nearbyCandidates.forEach(c => {
-            if (typeof c.lat !== 'number') return;
-            const color = firstAddressTypeColor(c.addressType) || '#f59e0b';
-            const marker = L.marker([c.lat, c.lng], { icon: glowIcon(color) })
-                .addTo(markersLayer);
-            bindAddressPopup(marker, c,
-                `<div class="rp2-popup-title">${esc(c.label)}</div>` +
-                `<div class="rp2-popup-address">${esc(c.address)}</div>` +
-                `<div class="rp2-distance">${c.distanceKm.toFixed(1).replace('.', ',')} km entfernt</div>` +
-                `<button class="rp2-btn rp2-btn-sm rp2-btn-primary rp2-popup-btn" onclick="window.rp2AddCandidate('${c.id}')">Zur Route hinzufügen</button>` +
-                machinesButtonHtml(c)
-            );
-        });
-    }
-
-    window.rp2ShowMachines = async function (customerId, containerId) {
-        const el = document.getElementById(containerId);
-        if (!el) return;
-        el.innerHTML = '<div class="rp2-hint">Maschinen werden geladen…</div>';
-        try {
-            let customList = [];
-            try {
-                const raw = localStorage.getItem('ab_custom_machines_' + customerId);
-                customList = raw ? JSON.parse(raw) : [];
-            } catch (e) { }
-
-            const { data, error } = await sb()
-                .from('machines')
-                .select('id, name, manufacturer, serial, year')
-                .eq('customer_id', customerId)
-                .order('manufacturer', { ascending: true });
-            if (error) throw error;
-
-            const allMach = [
-                ...customList.map(c => ({ ...c, isCustom: true })),
-                ...(data || [])
-            ];
-
-            if (allMach.length === 0) {
-                el.innerHTML = '<div class="rp2-hint">Keine Maschinen bei dieser Adresse hinterlegt.</div>';
-                return;
-            }
-
-            el.innerHTML = allMach.map(m => {
-                const title = [m.manufacturer, m.name].filter(Boolean).join(' ') || 'Maschine';
+            const rowHtml = (m) => {
                 const details = [m.serial ? 'SN ' + m.serial : '', m.year || ''].filter(Boolean).join(' · ');
                 const tag = m.isCustom ? '<span class="rp2-tag-manual">(Manuell)</span> ' : '';
-                return `<div class="rp2-popup-machine">${tag}<strong>${esc(title)}</strong>${details ? `<br><span style="color:rgba(255,255,255,0.6);">${esc(details)}</span>` : ''}</div>`;
-            }).join('');
+                return `<div class="rp2-popup-machine">${tag}<strong>${esc(machineTitle(m))}</strong>` +
+                    `${details ? `<br><span class="rp2-muted">${esc(details)}</span>` : ''}</div>`;
+            };
+
+            const own = machinesOf(customerId);
+            let html = own.length
+                ? own.map(rowHtml).join('')
+                : '<div class="rp2-hint">Keine Maschinen bei dieser Adresse hinterlegt.</div>';
+
+            // Verknüpfte Adressen — nur die, an denen auch etwas steht, werden
+            // mit Maschinen aufgeführt; leere bleiben als Hinweis sichtbar,
+            // damit erkennbar ist, wohin die Verknüpfung zeigt.
+            const custById = new Map((custRes.data || []).map(c => [String(c.id), c]));
+            let total = own.length;
+            const blocks = group.map(g => {
+                const c = custById.get(g.id);
+                if (!c) return '';
+                const ms = machinesOf(g.id);
+                total += ms.length;
+                const label = g.type ? (LINK_TYPE_LABEL[g.type] || 'Verknüpft') : 'Verknüpft (indirekt)';
+                const place = [c.zip_code, c.city].filter(Boolean).join(' ');
+                return `<div class="rp2-popup-linked">
+                    <strong>${esc(c.name || 'Adresse')}</strong>
+                    <div class="rp2-popup-linktype">${esc(label)}${place ? ' · ' + esc(place) : ''}</div>
+                    ${ms.length
+                        ? ms.map(m => `<div class="rp2-popup-machine-sub">${m.isCustom ? '<span class="rp2-tag-manual">(Manuell)</span> ' : ''}${esc(machineTitle(m))}${m.serial ? ' · SN ' + esc(m.serial) : ''}</div>`).join('')
+                        : '<div class="rp2-popup-machine-sub rp2-muted">keine Maschinen</div>'}
+                </div>`;
+            }).filter(Boolean);
+
+            if (blocks.length) {
+                html += `<div class="rp2-popup-section-title">Verknüpfte Adressen &amp; deren Maschinen</div>`
+                    + blocks.join('');
+            }
+            if (total > own.length) {
+                html = `<div class="rp2-popup-total">${total} ${total === 1 ? 'Maschine' : 'Maschinen'} insgesamt `
+                    + `(${own.length} an dieser Adresse)</div>` + html;
+            }
+
+            el.innerHTML = html;
         } catch (err) {
             console.error('Maschinen konnten nicht geladen werden:', err);
             el.innerHTML = '<div class="rp2-hint" style="color:#f87171;">Fehler beim Laden der Maschinen.</div>';
@@ -593,6 +862,15 @@
     // ---------------------------------------------------------------
     // Routenlinie (echte Straßenroute via OSRM, Luftlinie als Fallback)
     // ---------------------------------------------------------------
+    // Beim Umsortieren per Drag & Drop oder mehreren Stopps hintereinander
+    // fasst der kurze Aufschub die Routenabfragen zusammen — statt für jeden
+    // Zwischenschritt einmal OSRM zu fragen und die Linie neu zu zeichnen.
+    let routeLineTimer = null;
+    function scheduleRouteLine() {
+        if (routeLineTimer) clearTimeout(routeLineTimer);
+        routeLineTimer = setTimeout(() => { routeLineTimer = null; updateRouteLine(); }, 150);
+    }
+
     async function updateRouteLine() {
         const seq = ++routeRequestSeq;
         const points = [];
@@ -607,6 +885,7 @@
         if (points.length < 2) {
             routeMetrics = { km: null, min: null, estimated: false };
             routeGeometry = null;
+            buildRouteSegments();
             renderRouteSummary();
             renderNearbyHeader();
             return;
@@ -615,12 +894,16 @@
         const drawStraightFallback = () => {
             if (seq !== routeRequestSeq || !map) return;
             const straight = points.map(p => [p.lat, p.lng]);
-            routeLine = L.polyline(straight, { color: '#38bdf8', weight: 3, opacity: 0.6, dashArray: '6, 8' }).addTo(map);
+            routeLine = L.polyline(straight, {
+                color: '#38bdf8', weight: 3, opacity: 0.6, dashArray: '6, 8',
+                interactive: false, renderer: routeRenderer()
+            }).addTo(map);
             let km = 0;
             for (let i = 1; i < points.length; i++) km += haversineKm(points[i - 1].lat, points[i - 1].lng, points[i].lat, points[i].lng);
             routeMetrics = { km, min: null, estimated: true };
             // Auch ohne Straßendaten entlang der Luftlinie suchen können.
             routeGeometry = straight;
+            buildRouteSegments();
             renderRouteSummary();
             renderNearbyHeader();
         };
@@ -638,11 +921,18 @@
 
             const latlngs = route.geometry.coordinates.map(([lng, lat]) => [lat, lng]);
             if (!map) return;
-            routeLine = L.polyline(latlngs, { color: '#38bdf8', weight: 4, opacity: 0.85 }).addTo(map);
+            // Gezeichnet wird eine ausgedünnte Fassung: OSRM liefert mehrere
+            // tausend Punkte, die Leaflet bei jedem Zoom/Schwenk neu projizieren
+            // müsste — sichtbar ist der Unterschied nicht.
+            routeLine = L.polyline(simplifyGeometry(latlngs, 1200), {
+                color: '#38bdf8', weight: 4, opacity: 0.85,
+                smoothFactor: 2, interactive: false, renderer: routeRenderer()
+            }).addTo(map);
             routeLine.bringToBack();
 
             routeMetrics = { km: route.distance / 1000, min: route.duration / 60, estimated: false };
             routeGeometry = simplifyGeometry(latlngs);
+            buildRouteSegments();
             renderRouteSummary();
             renderNearbyHeader();
         } catch (err) {
@@ -689,7 +979,12 @@
         machineCountByCustomer = new Map();
         linkedSuggestions = [];
 
+        // Termine an den Stopps laufen nebenher — die Kontaktdaten sollen
+        // nicht darauf warten.
+        loadStopAppointments();
+
         if (!ids.length) {
+            appointmentsByCustomer = new Map();
             renderStops();
             renderLinked();
             return;
@@ -828,8 +1123,9 @@
                     ${meta.length ? `<div class="rp2-stop-meta">${meta.join('')}</div>` : ''}
                     ${s.customerId ? `<div class="rp2-stop-tools">
                         <button class="rp2-btn rp2-btn-sm" data-rp2-action="open-address" data-rp2-id="${esc(String(s.customerId))}">${ic('book', 13)} Adresse</button>
-                        <button class="rp2-btn rp2-btn-sm" data-rp2-action="note-visit" data-rp2-id="${esc(String(s.customerId))}">${ic('note', 13)} Besuch notieren</button>
+                        <button class="rp2-btn rp2-btn-sm" data-rp2-action="add-appointment" data-rp2-id="${esc(String(s.customerId))}">${ic('note', 13)} Termin anlegen</button>
                     </div>` : ''}
+                    ${appointmentsHtml(s.customerId)}
                 </div>
                 <div class="rp2-stop-side">
                     <button class="rp2-icon-btn" data-rp2-action="move-up" data-rp2-id="${esc(s.id)}" title="Nach oben" ${i === 0 ? 'disabled' : ''}>${ic('up', 15)}</button>
@@ -885,16 +1181,23 @@
             return;
         }
 
-        list.innerHTML = nearbyCandidates.map(c => `
+        // Nur die nächsten Treffer in den DOM legen — bei mehreren hundert
+        // Adressen kostete das Aufbauen der Liste sonst bei jedem Filterklick
+        // spürbar Zeit. Wer weiter unten sucht, verkleinert den Radius.
+        const shown = nearbyCandidates.slice(0, MAX_NEARBY_ROWS);
+        const rest = nearbyCandidates.length - shown.length;
+
+        list.innerHTML = shown.map(c => `
             <div class="rp2-suggest">
                 <div class="rp2-avatar" style="--rp2-hue:${avatarHue(c.label)}">${esc(initials(c.label))}</div>
                 <div class="rp2-suggest-body">
                     <div class="rp2-suggest-name">${esc(c.label)}${c.isCustomer ? '<span class="rp2-badge customer">Kunde</span>' : ''}${c.machineCount ? `<span class="rp2-chip">${ic('machine', 12)} ${c.machineCount}</span>` : ''}</div>
                     <div class="rp2-suggest-sub">${esc(c.address)}</div>
                 </div>
-                <span class="rp2-distance">${c.distanceKm.toFixed(1).replace('.', ',')} km</span>
+                <span class="rp2-distance">${(c.distanceKm || 0).toFixed(1).replace('.', ',')} km</span>
                 <button class="rp2-add-btn" data-rp2-action="add-candidate" data-rp2-id="${esc(c.id)}" title="Zur Route hinzufügen">${ic('plus', 17)}</button>
-            </div>`).join('');
+            </div>`).join('')
+            + (rest > 0 ? `<div class="rp2-hint">… ${rest} weitere Adressen im Umkreis. Radius verkleinern oder filtern, um sie einzugrenzen.</div>` : '');
     }
 
     // ---------------------------------------------------------------
@@ -908,16 +1211,16 @@
         renderStops();
         renderNearby();
         renderLinked();
-        renderMarkers();
-        updateRouteLine();
+        scheduleMarkerRender();
+        scheduleRouteLine();
         loadStopExtras();
     }
 
     window.rp2RemoveStop = function (id) {
         stops = stops.filter(s => s.id !== id);
         renderStops();
-        renderMarkers();
-        updateRouteLine();
+        scheduleMarkerRender();
+        scheduleRouteLine();
         loadStopExtras();
     };
 
@@ -928,8 +1231,8 @@
         if (j < 0 || j >= stops.length) return;
         [stops[i], stops[j]] = [stops[j], stops[i]];
         renderStops();
-        renderMarkers();
-        updateRouteLine();
+        scheduleMarkerRender();
+        scheduleRouteLine();
     };
 
     window.rp2AddCandidate = function (id) {
@@ -1007,8 +1310,8 @@
 
         stops = order.concat(unlocated);
         renderStops();
-        renderMarkers();
-        updateRouteLine();
+        scheduleMarkerRender();
+        scheduleRouteLine();
         setStatus('Reihenfolge optimiert (kürzeste Strecke ab Start).');
         setTimeout(() => setStatus(''), 4000);
     };
@@ -1064,8 +1367,8 @@
                 const [moved] = stops.splice(from, 1);
                 stops.splice(to, 0, moved);
                 renderStops();
-                renderMarkers();
-                updateRouteLine();
+                scheduleMarkerRender();
+                scheduleRouteLine();
             }
         };
 
@@ -1202,7 +1505,85 @@
     // ---------------------------------------------------------------
     window.rp2RunNearbySearch = function () { runNearbySearch(); };
 
+    // Die drei Tabellen ändern sich während einer Planung praktisch nicht.
+    // Ein erneuter Klick auf „Suchen" holte bisher jedes Mal bis zu 17.000
+    // Zeilen neu — jetzt nur noch, wenn die Daten älter als fünf Minuten sind.
+    let baseDataCache = null;
+    let baseDataAt = 0;
+    const BASE_DATA_TTL_MS = 5 * 60 * 1000;
+    let nearbySearchSeq = 0;
+
+    async function loadBaseData() {
+        if (baseDataCache && Date.now() - baseDataAt < BASE_DATA_TTL_MS) return baseDataCache;
+        const res = await Promise.all([
+            sb().from('customers')
+                .select('id, name, matchcode, customer_number, address_type, street, zip_code, city, country, lat, lng, geocoded_address')
+                .not('city', 'is', null)
+                .limit(2000),
+            sb().from('machines').select('id, customer_id, manufacturer').not('customer_id', 'is', null).limit(5000),
+            sb().from('customer_links').select('customer_id, linked_customer_id, link_type').limit(10000)
+        ]);
+        if (res[0].error) throw res[0].error;
+        baseDataCache = res;
+        baseDataAt = Date.now();
+        return res;
+    }
+
+    // Zählt Maschinen/Verknüpfungen je Adresse aus und füllt die Filterlisten.
+    // Wird sowohl beim stillen Vorladen als auch bei der Suche gebraucht.
+    function applyBaseData(machineRes, linksRes) {
+        machineCountAll = new Map();
+        manufacturersByCustomer = new Map();
+        manufacturerNames = new Map();
+        if (machineRes.error) console.warn('Maschinenanzahl konnte nicht geladen werden:', machineRes.error.message);
+        else (machineRes.data || []).forEach(m => {
+            const k = String(m.customer_id);
+            machineCountAll.set(k, (machineCountAll.get(k) || 0) + 1);
+
+            const man = (m.manufacturer || '').trim();
+            if (man) {
+                const key = man.toLowerCase();
+                if (!manufacturersByCustomer.has(k)) manufacturersByCustomer.set(k, new Set());
+                manufacturersByCustomer.get(k).add(key);
+                if (!manufacturerNames.has(key)) manufacturerNames.set(key, man);
+            }
+        });
+
+        linkedCountAll = new Map();
+        linkGraph = new Map();
+        if (linksRes.error) console.warn('Verknüpfungsanzahl konnte nicht geladen werden:', linksRes.error.message);
+        else (linksRes.data || []).forEach(l => {
+            const a = l.customer_id ? String(l.customer_id) : null;
+            const b = l.linked_customer_id ? String(l.linked_customer_id) : null;
+            [a, b].forEach(k => { if (k) linkedCountAll.set(k, (linkedCountAll.get(k) || 0) + 1); });
+            if (!a || !b || a === b) return;
+            // Verknüpfungen gelten in beide Richtungen.
+            if (!linkGraph.has(a)) linkGraph.set(a, new Map());
+            if (!linkGraph.has(b)) linkGraph.set(b, new Map());
+            linkGraph.get(a).set(b, l.link_type || null);
+            linkGraph.get(b).set(a, l.link_type || null);
+        });
+
+        renderAddressTypeFilter();
+        renderManufacturerFilter();
+    }
+
+    // Still im Hintergrund laden, ohne Treffer anzuzeigen: die Popups der
+    // Stopps brauchen die Maschinen-/Verknüpfungszahlen, und ein späterer
+    // Klick auf „Suchen“ ist dann sofort da (Daten liegen im Cache).
+    async function preloadBaseData() {
+        if (!window.supabaseClient) return;
+        try {
+            const [, machineRes, linksRes] = await loadBaseData();
+            applyBaseData(machineRes, linksRes);
+            scheduleMarkerRender();
+        } catch (err) {
+            console.warn('Stammdaten der Routenplanung konnten nicht vorgeladen werden:', err.message || err);
+        }
+    }
+
     async function runNearbySearch() {
+        nearbySearchSeq++; // laufende Hintergrund-Ortung der vorigen Suche abbrechen
         isRadiusFilterEnabled = true; // Suchen-Klick schaltet Radius-Filter garantiert wieder ein
         const base = stops.length > 0 ? stops[stops.length - 1] : (hqInfo && typeof hqInfo.lat === 'number' ? { lat: hqInfo.lat, lng: hqInfo.lng } : null);
         const radiusInput = document.getElementById('rp2-radius');
@@ -1216,46 +1597,11 @@
         setStatus(routeGeometry ? 'Kunden entlang der Route werden gesucht…' : 'Kunden im Umkreis werden geladen…');
 
         try {
-            const [{ data: customers, error }, machineRes, linksRes] = await Promise.all([
-                sb().from('customers')
-                    .select('id, name, matchcode, customer_number, address_type, street, zip_code, city, country, lat, lng, geocoded_address')
-                    .not('city', 'is', null)
-                    .limit(2000),
-                sb().from('machines').select('id, customer_id, manufacturer').not('customer_id', 'is', null).limit(5000),
-                sb().from('customer_links').select('customer_id, linked_customer_id').limit(10000)
-            ]);
+            const [{ data: customers, error }, machineRes, linksRes] = await loadBaseData();
             if (error) throw error;
 
             // Maschinenanzahl je Adresse — Grundlage für den Filter „nur mit Maschinen“.
-            machineCountAll = new Map();
-            manufacturersByCustomer = new Map();
-            manufacturerNames = new Map();
-            if (machineRes.error) console.warn('Maschinenanzahl konnte nicht geladen werden:', machineRes.error.message);
-            else (machineRes.data || []).forEach(m => {
-                const k = String(m.customer_id);
-                machineCountAll.set(k, (machineCountAll.get(k) || 0) + 1);
-
-                const man = (m.manufacturer || '').trim();
-                if (man) {
-                    const key = man.toLowerCase();
-                    if (!manufacturersByCustomer.has(k)) manufacturersByCustomer.set(k, new Set());
-                    manufacturersByCustomer.get(k).add(key);
-                    if (!manufacturerNames.has(key)) manufacturerNames.set(key, man);
-                }
-            });
-
-            linkedCountAll = new Map();
-            if (linksRes.error) console.warn('Verknüpfungsanzahl konnte nicht geladen werden:', linksRes.error.message);
-            else (linksRes.data || []).forEach(l => {
-                [l.customer_id, l.linked_customer_id].forEach(cid => {
-                    if (!cid) return;
-                    const k = String(cid);
-                    linkedCountAll.set(k, (linkedCountAll.get(k) || 0) + 1);
-                });
-            });
-
-            renderAddressTypeFilter();
-            renderManufacturerFilter();
+            applyBaseData(machineRes, linksRes);
 
             const withAddress = (customers || []).filter(c => customerAddress(c));
             const alreadyGeocoded = withAddress.filter(c => typeof c.lat === 'number' && typeof c.lng === 'number' && c.geocoded_address === customerAddress(c));
@@ -1267,11 +1613,31 @@
             setStatus('');
 
             // Fehlende Koordinaten im Hintergrund nachladen (rate-limitiert).
+            // Photon verträgt mehrere Anfragen gleichzeitig — vier parallele
+            // Arbeiter statt strikt nacheinander. Die Treffer erscheinen
+            // zwischendurch auf der Karte, statt erst ganz am Ende.
             if (needsGeocoding.length > 0) {
-                for (let i = 0; i < needsGeocoding.length; i++) {
-                    await resolveCoords(needsGeocoding[i]);
-                    setStatus(`Weitere Adressen werden geortet… ${i + 1} / ${needsGeocoding.length}`);
-                }
+                const searchSeq = ++nearbySearchSeq;
+                let done = 0;
+                let nextIndex = 0;
+
+                const worker = async () => {
+                    while (nextIndex < needsGeocoding.length) {
+                        const rec = needsGeocoding[nextIndex++];
+                        if (searchSeq !== nearbySearchSeq) return;
+                        try { await resolveCoords(rec); } catch (e) { }
+                        done++;
+                        if (searchSeq !== nearbySearchSeq) return;
+                        setStatus(`Weitere Adressen werden geortet… ${done} / ${needsGeocoding.length}`);
+                        if (done % 25 === 0) {
+                            nearbyRawRecords = alreadyGeocoded.concat(needsGeocoding.slice(0, nextIndex));
+                            applyNearbyFilter();
+                        }
+                    }
+                };
+                await Promise.all([worker(), worker(), worker(), worker()]);
+                if (searchSeq !== nearbySearchSeq) return;
+
                 setStatus('');
                 nearbyRawRecords = alreadyGeocoded.concat(needsGeocoding);
                 applyNearbyFilter();
@@ -1286,14 +1652,12 @@
 
     window.rp2ToggleRadiusActive = function () {
         isRadiusFilterEnabled = !isRadiusFilterEnabled;
-        applyNearbyFilter();
+        scheduleNearbyFilter();
     };
 
     window.rp2OnRadiusInput = function () {
-        if (!isRadiusFilterEnabled) {
-            isRadiusFilterEnabled = true;
-            applyNearbyFilter();
-        }
+        isRadiusFilterEnabled = true;
+        scheduleNearbyFilter();
     };
 
     // Wandelt die geladenen Adressen in Kandidaten um und wendet Radius +
@@ -1307,48 +1671,66 @@
         const activeRadius = Math.max(1, parseFloat(radiusInput?.value) || nearbyRadius || 50);
         nearbyRadius = activeRadius;
 
-        nearbyCandidates = nearbyRawRecords
-            .filter(c => typeof c.lat === 'number' && typeof c.lng === 'number')
-            .map(c => {
-                const dist = useCorridor
-                    ? distanceToRouteKm(c.lat, c.lng)
-                    : (nearbyBase ? haversineKm(nearbyBase.lat, nearbyBase.lng, c.lat, c.lng) : null);
-                return {
-                    id: stopIdFor('customer', c.id),
-                    kind: 'customer',
-                    customerId: c.id,
-                    label: customerLabel(c),
-                    address: customerAddress(c),
-                    isCustomer: isCustomerRecord(c),
-                    addressType: c.address_type ? String(c.address_type) : null,
-                    machineCount: machineCountAll.get(String(c.id)) || 0,
-                    lat: c.lat,
-                    lng: c.lng,
-                    distanceKm: dist
-                };
-            })
-            .filter(c => {
-                if (!isRadiusFilterEnabled) return true; // Radius disabled via X button -> show all matching
-                return typeof c.distanceKm === 'number' && c.distanceKm <= activeRadius && !stopIds.has(c.id);
-            })
-            .filter(c => !stopIds.has(c.id))
-            .filter(c => !nearbyOnlyCustomers || c.isCustomer)
-            .filter(c => !nearbyOnlyWithMachines || c.machineCount > 0)
-            .filter(c => {
-                if (!nearbyManufacturer) return true;
-                const set = manufacturersByCustomer.get(String(c.customerId));
-                return !!(set && set.has(nearbyManufacturer.toLowerCase()));
-            })
-            .filter(c => {
-                if (!nearbyAddressTypes.size) return true;
-                const types = (c.addressType || '').split(',').map(s => s.trim()).filter(Boolean);
-                return types.some(t => nearbyAddressTypes.has(t));
-            })
-            .sort((a, b) => (a.distanceKm || 0) - (b.distanceKm || 0));
+        // Ein Durchlauf statt sieben verketteter Zwischen-Arrays: die billigen
+        // Filter (Kunde, Maschinen, Hersteller, Adresstyp) laufen VOR der teuren
+        // Abstandsberechnung, damit die gar nicht erst nötig wird.
+        const manFilter = nearbyManufacturer ? nearbyManufacturer.toLowerCase() : '';
+        const out = [];
+        for (const c of nearbyRawRecords) {
+            if (typeof c.lat !== 'number' || typeof c.lng !== 'number') continue;
+
+            const key = String(c.id);
+            if (stopIds.has(stopIdFor('customer', c.id))) continue;
+            if (nearbyOnlyCustomers && !isCustomerRecord(c)) continue;
+
+            const machineCount = machineCountAll.get(key) || 0;
+            if (nearbyOnlyWithMachines && machineCount === 0) continue;
+
+            if (manFilter) {
+                const set = manufacturersByCustomer.get(key);
+                if (!set || !set.has(manFilter)) continue;
+            }
+
+            const addressType = c.address_type ? String(c.address_type) : null;
+            if (nearbyAddressTypes.size) {
+                const types = (addressType || '').split(',');
+                let hit = false;
+                for (const t of types) { if (nearbyAddressTypes.has(t.trim())) { hit = true; break; } }
+                if (!hit) continue;
+            }
+
+            const dist = useCorridor
+                ? distanceToRouteKm(c.lat, c.lng)
+                : (nearbyBase ? haversineKm(nearbyBase.lat, nearbyBase.lng, c.lat, c.lng) : null);
+            if (isRadiusFilterEnabled && !(typeof dist === 'number' && dist <= activeRadius)) continue;
+
+            out.push({
+                id: stopIdFor('customer', c.id),
+                kind: 'customer',
+                customerId: c.id,
+                label: customerLabel(c),
+                address: customerAddress(c),
+                isCustomer: isCustomerRecord(c),
+                addressType,
+                machineCount,
+                lat: c.lat,
+                lng: c.lng,
+                distanceKm: dist
+            });
+        }
+        out.sort((a, b) => (a.distanceKm || 0) - (b.distanceKm || 0));
+        nearbyCandidates = out;
 
         renderNearby();
         renderNearbyHeader();
-        renderMarkers();
+        scheduleMarkerRender();
+    }
+
+    // Filterklicks und Tippen im Radiusfeld zusammenfassen — ohne das lief die
+    // komplette Neuberechnung bei jedem Tastendruck.
+    function scheduleNearbyFilter() {
+        if (filterTimer) clearTimeout(filterTimer);
+        filterTimer = setTimeout(() => { filterTimer = null; applyNearbyFilter(); }, 120);
     }
 
     // Überschrift + Filterzustand der Trefferliste
@@ -1376,14 +1758,14 @@
     window.rp2ToggleNearbyFilter = function (which) {
         if (which === 'customers') nearbyOnlyCustomers = !nearbyOnlyCustomers;
         if (which === 'machines') nearbyOnlyWithMachines = !nearbyOnlyWithMachines;
-        applyNearbyFilter();
+        scheduleNearbyFilter();
     };
 
     window.rp2ToggleAddressType = function (name) {
         if (nearbyAddressTypes.has(name)) nearbyAddressTypes.delete(name);
         else nearbyAddressTypes.add(name);
         renderAddressTypeFilter();
-        applyNearbyFilter();
+        scheduleNearbyFilter();
     };
 
     // Hersteller-Auswahl: Es stehen IMMER alle in den Einstellungen angelegten
@@ -1430,7 +1812,7 @@
             select.dataset.rp2Bound = '1';
             select.addEventListener('change', () => {
                 nearbyManufacturer = select.value || '';
-                applyNearbyFilter();
+                scheduleNearbyFilter();
             });
         }
     }
@@ -1475,36 +1857,64 @@
         else setTimeout(open, 1200);
     }
 
-    function noteVisit(customerId) {
+    // ---------------------------------------------------------------
+    // Termine an den Stopps (js/appointments.js)
+    // ---------------------------------------------------------------
+    let appointmentsByCustomer = new Map();
+
+    // Termine der Stopps laden und in der Liste anzeigen. Wird nach jeder
+    // Änderung an den Stopps und nach dem Speichern eines Termins gerufen.
+    async function loadStopAppointments() {
+        const ids = stops.map(s => s.customerId).filter(v => v !== null && v !== undefined);
+        if (!ids.length || typeof window.loadAppointmentsForCustomers !== 'function') {
+            appointmentsByCustomer = new Map();
+            return;
+        }
+        appointmentsByCustomer = await window.loadAppointmentsForCustomers(ids);
+        renderStops();
+    }
+    window.rp2RefreshAppointments = loadStopAppointments;
+
+    // „Termin · 14.08.2026, 09:30 Uhr · Wartung — Meier zugesagt"
+    function appointmentsHtml(customerId) {
+        if (customerId === null || customerId === undefined) return '';
+        const list = appointmentsByCustomer.get(String(customerId)) || [];
+        if (!list.length) return '';
+        const todayKey = new Date().toISOString().slice(0, 10);
+        // Vergangenes interessiert bei der Tourplanung nicht mehr.
+        const upcoming = list.filter(a => !a.date || a.date >= todayKey);
+        if (!upcoming.length) return '';
+        return upcoming.map(a => {
+            const when = [fmtStopDate(a.date), a.time ? a.time + ' Uhr' : ''].filter(Boolean).join(', ');
+            const parts = (a.participants || []).length && window.appointmentParticipantsLine
+                ? ` · ${window.appointmentParticipantsLine(a.participants)}`
+                : '';
+            return `<div class="rp2-stop-appt">${ic('note', 12)}
+                <span><strong>${esc(when)}</strong> · ${esc(a.title)}${parts}</span>
+            </div>`;
+        }).join('');
+    }
+
+    function fmtStopDate(d) {
+        if (!d) return '';
+        const dt = new Date(d + 'T00:00:00');
+        return isNaN(dt) ? d : dt.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    // Termin an einem Stopp anlegen — Fenster kommt aus js/appointments.js,
+    // damit Kalender und Benachrichtigungen dieselbe Fassung nutzen.
+    function addAppointment(customerId) {
         const stop = stops.find(s => String(s.customerId) === String(customerId));
-        const today = new Date().toISOString().slice(0, 10);
-        openDialog('Besuch notieren', `
-            <div class="rp2-section">
-                <div class="rp2-hq-name">${esc(stop ? stop.label : '')}</div>
-                <label class="rp2-label" for="rp2-visit-date">Datum</label>
-                <input type="date" id="rp2-visit-date" class="rp2-input" value="${today}">
-                <label class="rp2-label" for="rp2-visit-title">Betreff</label>
-                <input type="text" id="rp2-visit-title" class="rp2-input" value="Besuch vor Ort" placeholder="z. B. Wartung durchgeführt">
-                <label class="rp2-label" for="rp2-visit-body">Notiz</label>
-                <textarea id="rp2-visit-body" class="rp2-input" rows="4" placeholder="Was wurde besprochen oder gemacht?"></textarea>
-            </div>`, 'Eintrag speichern', async () => {
-            const title = document.getElementById('rp2-visit-title').value.trim();
-            const body = document.getElementById('rp2-visit-body').value.trim();
-            if (!title && !body) { window.showToast('Bitte Betreff oder Notiz ausfüllen.'); return; }
-            const { error } = await sb().from('customer_notes').insert([{
-                customer_id: customerId,
-                entry_type: 'visit',
-                title: title || null,
-                body: body || null,
-                author: currentAuthor(),
-                entry_date: document.getElementById('rp2-visit-date').value || today
-            }]);
-            if (error) {
-                throw new Error('Historie nicht verfügbar — bitte supabase_add_addressbook.sql ausführen. (' + error.message + ')');
-            }
-            closeDialog();
-            setStatus('Besuch in der Historie festgehalten.');
-            setTimeout(() => setStatus(''), 4000);
+        if (typeof window.openAppointmentDialog !== 'function') {
+            window.showToast('Termin-Fenster ist nicht geladen.');
+            return;
+        }
+        window.openAppointmentDialog({
+            customerId: customerId,
+            label: stop ? stop.label : '',
+            address: stop ? stop.address : '',
+            title: 'Termin vor Ort',
+            onSaved: loadStopAppointments
         });
     }
 
@@ -1609,8 +2019,8 @@
         }));
         closeDialog();
         renderStops();
-        renderMarkers();
-        updateRouteLine();
+        scheduleMarkerRender();
+        scheduleRouteLine();
         loadStopExtras();
         setStatus(`Route „${r.name}“ geladen.`);
         setTimeout(() => setStatus(''), 4000);
@@ -1710,6 +2120,15 @@
 
         if (!append) stops = [];
 
+        // Aus dem Adressbuch übernommene Routen starten aufgeräumt: auf der
+        // Karte liegen nur der Startpunkt und die ausgewählten Adressen.
+        // Der Umkreis kommt erst dazu, wenn man ihn selbst startet.
+        nearbySearchSeq++;          // laufende Hintergrund-Ortung stoppen
+        nearbyCandidates = [];
+        nearbyRawRecords = [];
+        renderNearby();
+        renderNearbyHeader();
+
         let added = 0, failed = [];
         for (let i = 0; i < addresses.length; i++) {
             const a = addresses[i];
@@ -1729,15 +2148,16 @@
             });
             added++;
             renderStops();
-            renderMarkers();
+            scheduleMarkerRender();
         }
 
         setStatus('');
         renderStops();
         renderNearby();
-        renderMarkers();
-        updateRouteLine();
+        scheduleMarkerRender();
+        scheduleRouteLine();
         loadStopExtras();
+        fitToRoute();
 
         if (failed.length) {
             setStatus(`${added} übernommen, ${failed.length} ohne Koordinaten: ${failed.slice(0, 3).join(', ')}${failed.length > 3 ? ' …' : ''}`, true);
@@ -1808,7 +2228,10 @@
             case 'move-up': window.rp2MoveStop(id, -1); break;
             case 'move-down': window.rp2MoveStop(id, 1); break;
             case 'open-address': openAddressInAddressbook(id); break;
-            case 'note-visit': noteVisit(id); break;
+            case 'add-appointment': addAppointment(id); break;
+            case 'pick-start': pickStartDialog(); break;
+            case 'start-hq': useCompanyAsStart(); break;
+            case 'start-current': useCurrentLocationAsStart(); break;
             case 'optimize': window.rp2Optimize(); break;
             case 'nearby': window.rp2RunNearbySearch(); break;
             case 'filter-customers': window.rp2ToggleNearbyFilter('customers'); break;
@@ -1844,6 +2267,10 @@
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && document.getElementById('rp2-dialog')?.classList.contains('show')) closeDialog();
+        if ((e.key === 'Enter' || e.key === ' ') && e.target?.id === 'rp2-hq-info') {
+            e.preventDefault();
+            pickStartDialog();
+        }
     });
 
     // ---------------------------------------------------------------
@@ -1869,17 +2296,7 @@
         await getHqInfo();
         setStatus('');
 
-        const hqEl = document.getElementById('rp2-hq-info');
-        if (hqEl) {
-            const ok = hqInfo && typeof hqInfo.lat === 'number';
-            hqEl.innerHTML = `
-                <div class="rp2-hq-icon">${ic('home', 17)}</div>
-                <div class="rp2-hq-text">
-                    <div class="rp2-hq-title">Start der Tour</div>
-                    <div class="rp2-hq-name">${esc(hqInfo.name)}</div>
-                    <div class="rp2-hq-address">${esc(hqInfo.address)}${ok ? '' : ' — Ortung fehlgeschlagen'}</div>
-                </div>`;
-        }
+        renderHqInfo();
 
         renderStops();
         renderNearby();
@@ -1891,8 +2308,12 @@
         setTimeout(() => { renderAddressTypeFilter(); renderManufacturerFilter(); }, 800);
         setTimeout(() => { renderAddressTypeFilter(); renderManufacturerFilter(); }, 2500);
         renderLinked();
-        renderMarkers();
-        updateRouteLine();
-        runNearbySearch();
+        scheduleMarkerRender();
+        scheduleRouteLine();
+
+        // Beim Öffnen läuft KEINE Umkreissuche mehr: zuerst nur Startpunkt und
+        // die selbst gewählten Stopps auf der Karte. Weitere Adressen kommen
+        // erst auf Klick auf „Suchen“ dazu.
+        preloadBaseData();
     }
 })();

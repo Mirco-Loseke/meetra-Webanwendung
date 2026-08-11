@@ -47,8 +47,6 @@
     let currentCustomerId = null;
     let currentAddressLabel = '';
     let currentContactName = '';
-    let recognition = null;
-    let recognitionActive = false;
 
     function ensureModal() {
         if (document.getElementById('ab-ai-task-modal')) return;
@@ -60,27 +58,39 @@
                 <button class="ab-icon-btn" data-abai-close style="position:absolute; top:14px; right:14px;" title="Schließen">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
-                <h2 style="margin-top:0;">KI‑Vorgang aus Adresse</h2>
+                <h2 style="margin-top:0; display:flex; align-items:center; gap:10px;">
+                    <span style="font-size:1.4rem;">✨</span> KI-Erfassung
+                </h2>
                 <div id="ab-ai-task-subtitle" style="color:var(--color-secondary); margin-top:-8px; margin-bottom:12px; font-size:0.85rem;"></div>
 
-                <label style="font-size:0.72rem; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:var(--color-secondary); display:block; margin-bottom:6px;">
-                    Beschreibung (Text oder Mikrofon)
-                </label>
-                <div style="position:relative;">
+                <p style="color:rgba(255,255,255,0.55); font-size:0.85rem; margin:0 0 0.75rem 0; line-height:1.5;">
+                    Beschreibe frei, was an dieser Adresse ansteht. Die KI schlägt einen Vorgang mit Schritten vor — du prüfst alles, bevor gespeichert wird.
+                </p>
+
+                <!-- Gleiche Aufteilung wie unter Aufgaben/Vorgänge: Feld links, Tipps rechts -->
+                <div style="display:flex; gap:0.75rem; align-items:flex-start;">
                     <textarea id="ab-ai-task-input" rows="6" placeholder="z. B. Bis Ende der Woche ein Angebot für die neue Siebtrommel schicken, dann Termin für die Vorführung nächste Woche absprechen …"
-                              style="width:100%; padding:12px 48px 12px 12px; border-radius:12px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.05); color:var(--color-text); font-family:var(--font-sans); font-size:0.9rem; resize:vertical;"></textarea>
-                    <button type="button" id="ab-ai-task-mic" title="Diktieren (Mikrofon starten/stoppen)"
-                            style="position:absolute; top:8px; right:8px; width:36px; height:36px; border-radius:10px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.06); color:var(--color-text); cursor:pointer; display:flex; align-items:center; justify-content:center;">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-                    </button>
+                              style="flex:1; min-width:0; padding:12px; border-radius:12px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.05); color:var(--color-text); font-family:var(--font-sans); font-size:0.9rem; resize:vertical; box-sizing:border-box;"></textarea>
+                    <div style="flex:0 0 150px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:0.65rem 0.75rem; align-self:stretch;">
+                        <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:rgba(255,255,255,0.4); margin-bottom:6px;">Tipps</div>
+                        <ul style="margin:0; padding-left:1.05rem; font-size:0.78rem; color:rgba(255,255,255,0.6); line-height:1.65;">
+                            <li>Titel</li>
+                            <li>Ansprechpartner</li>
+                            <li>Maschine</li>
+                            <li>Schritte</li>
+                            <li>Frist / Termin</li>
+                        </ul>
+                    </div>
                 </div>
-                <div id="ab-ai-task-mic-status" style="font-size:0.72rem; color:var(--color-secondary); margin-top:4px; min-height:1em;"></div>
 
                 <div style="display:flex; gap:10px; margin-top:12px;">
+                    <button type="button" class="ab-btn ab-btn-ghost" data-abai-close style="flex:0 0 auto;">Abbrechen</button>
+                    ${window.micButtonHtml ? window.micButtonHtml('ab-ai-task-input') : ''}
                     <button type="button" id="ab-ai-task-analyze" class="ab-btn ab-btn-primary" style="flex:1;">
-                        KI analysieren
+                        <span>✨</span> Analysieren
                     </button>
                 </div>
+                ${window.micStatusHtml ? window.micStatusHtml('ab-ai-task-input') : ''}
 
                 <div id="ab-ai-task-preview" style="display:none; margin-top:16px; padding:14px; border-radius:14px; border:1px solid rgba(167,139,250,0.35); background:rgba(167,139,250,0.06);"></div>
 
@@ -97,13 +107,13 @@
             if (e.target.closest('[data-abai-close]')) closeModal();
         });
 
-        document.getElementById('ab-ai-task-mic').addEventListener('click', toggleMic);
         document.getElementById('ab-ai-task-analyze').addEventListener('click', runAnalysis);
         document.getElementById('ab-ai-task-save').addEventListener('click', saveResult);
     }
 
     function closeModal() {
-        stopMic();
+        // Aufnahme nicht im Hintergrund weiterlaufen lassen (js/speech-input.js)
+        if (window.stopSpeechInput) window.stopSpeechInput();
         const el = document.getElementById('ab-ai-task-modal');
         if (el) { el.classList.remove('show', 'active'); }
         document.body.style.overflow = '';
@@ -121,88 +131,11 @@
         document.getElementById('ab-ai-task-subtitle').textContent = addressLabel
             ? `für ${addressLabel}${contactName ? ' · ' + contactName : ''}`
             : '';
-        document.getElementById('ab-ai-task-mic-status').textContent = '';
         const el = document.getElementById('ab-ai-task-modal');
         el.classList.add('show', 'active');
         document.body.style.overflow = 'hidden';
         setTimeout(() => document.getElementById('ab-ai-task-input').focus(), 50);
     };
-
-    // ---------------------------------------------------------------
-    // Mikrofon (Web Speech API, deutsch)
-    // ---------------------------------------------------------------
-    function toggleMic() {
-        const status = document.getElementById('ab-ai-task-mic-status');
-        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SR) {
-            status.textContent = 'Spracheingabe ist in diesem Browser nicht verfügbar (nur Chrome/Edge).';
-            status.style.color = '#fca5a5';
-            return;
-        }
-        // Web Speech API funktioniert nur über HTTPS oder localhost. file:// und
-        // plain http:// liefern beim Start meist gar keinen sichtbaren Fehler.
-        const proto = location.protocol;
-        const host = location.hostname;
-        const isSecureCtx = proto === 'https:' || host === 'localhost' || host === '127.0.0.1';
-        if (!isSecureCtx) {
-            status.textContent = 'Mikrofon geht nur über HTTPS oder localhost. Aktuelle URL: ' + location.href;
-            status.style.color = '#fca5a5';
-            return;
-        }
-        if (recognitionActive) { stopMic(); return; }
-        status.style.color = '';
-
-        recognition = new SR();
-        recognition.lang = 'de-DE';
-        recognition.interimResults = true;
-        recognition.continuous = true;
-
-        const input = document.getElementById('ab-ai-task-input');
-        const micBtn = document.getElementById('ab-ai-task-mic');
-        let baseText = input.value ? input.value.trim() + ' ' : '';
-
-        recognition.onstart = () => {
-            recognitionActive = true;
-            status.textContent = '🎙  Hört zu … erneut klicken zum Beenden.';
-            micBtn.style.background = 'rgba(239,68,68,0.2)';
-            micBtn.style.borderColor = 'rgba(239,68,68,0.6)';
-            micBtn.style.color = '#fca5a5';
-        };
-        recognition.onerror = (e) => {
-            status.textContent = 'Fehler: ' + (e.error || 'unbekannt');
-            stopMic();
-        };
-        recognition.onend = () => {
-            recognitionActive = false;
-            micBtn.style.background = '';
-            micBtn.style.borderColor = '';
-            micBtn.style.color = '';
-            if (status.textContent.startsWith('🎙')) status.textContent = '';
-        };
-        recognition.onresult = (event) => {
-            let interim = '';
-            let finalText = '';
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-                const r = event.results[i];
-                if (r.isFinal) finalText += r[0].transcript + ' ';
-                else interim += r[0].transcript;
-            }
-            if (finalText) {
-                baseText += finalText;
-                input.value = baseText;
-            } else {
-                input.value = baseText + interim;
-            }
-        };
-        try { recognition.start(); } catch (e) { status.textContent = 'Konnte Mikrofon nicht starten: ' + e.message; }
-    }
-
-    function stopMic() {
-        if (recognition && recognitionActive) {
-            try { recognition.stop(); } catch (e) { }
-        }
-        recognitionActive = false;
-    }
 
     // ---------------------------------------------------------------
     // KI-Analyse
@@ -238,6 +171,8 @@ Antwortformat: NUR gültiges JSON, kein Fließtext davor/danach:
   "title": "Kurzer Titel des Vorgangs (max. 80 Zeichen)",
   "description": "Frei formulierte Zusammenfassung des Anliegens in 1-2 Sätzen",
   "due_date": "YYYY-MM-DD oder null (Fälligkeit des Gesamt-Vorgangs)",
+  "remind_time": "HH:MM oder null (Uhrzeit der Erinnerung, wenn genannt)",
+  "appointment": { "date": "YYYY-MM-DD", "time": "HH:MM oder null", "title": "Betreff" },
   "subtasks": [
     { "title": "Kurzer, imperativer Schritt", "due_date": "YYYY-MM-DD oder null" }
   ]
@@ -249,7 +184,14 @@ Wichtig:
 - Wenn ein Datum sich auf den ganzen Vorgang bezieht, setze es unter "due_date" oben
 - Wenn KEIN Datum genannt ist, IMMER null verwenden (nicht raten)
 - Schritte im Imperativ ("Angebot rüberschicken", "Termin absprechen")
-- Wenn nur ein einzelnes To-Do genannt ist, ist "subtasks" leer`;
+- Wenn nur ein einzelnes To-Do genannt ist, ist "subtasks" leer
+
+TERMIN und ERINNERUNG auseinanderhalten:
+- TERMIN ("appointment") = feste Verabredung, gehört in den Kalender.
+  Auslöser: "Termin", "Besuch", "vorbeifahren", "treffen", "vor Ort am …", eine Uhrzeit ("um 9 Uhr", "Dienstag 14:00").
+- ERINNERUNG ("due_date" + "remind_time") = Zeitpunkt, zu dem eine Benachrichtigung kommen soll.
+  Auslöser: "erinnere mich", "Erinnerung", "nachfassen", "nicht vergessen", "melden bis".
+- Beides darf gleichzeitig gesetzt sein. Ist nichts genannt: "appointment" auf null, Datum null. Nichts erfinden.`;
 
         try {
             const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -298,6 +240,13 @@ Wichtig:
         const dueGlobal = res.due_date || null;
         const subs = Array.isArray(res.subtasks) ? res.subtasks : [];
 
+        // Erinnerung (Benachrichtigung) und Termin (Kalender) getrennt.
+        const timeOrEmpty = (v) => /^\d{1,2}:\d{2}$/.test(v || '') ? String(v).padStart(5, '0') : '';
+        const remindTime = timeOrEmpty(res.remind_time) || (dueGlobal ? '08:00' : '');
+        const appt = res.appointment && typeof res.appointment === 'object' ? res.appointment : {};
+        const apptDate = /^\d{4}-\d{2}-\d{2}$/.test(appt.date || '') ? appt.date : '';
+        const apptTime = timeOrEmpty(appt.time);
+
         preview.innerHTML = `
             <div style="font-size:0.72rem; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:#c4b5fd; margin-bottom:8px;">
                 Vorschau
@@ -310,10 +259,21 @@ Wichtig:
                 <div style="font-size:0.72rem; color:var(--color-secondary);">Beschreibung</div>
                 <textarea id="ab-ai-preview-desc" rows="2" style="width:100%; padding:8px 10px; border-radius:10px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.05); color:var(--color-text); font-family:var(--font-sans); font-size:0.85rem; resize:vertical;">${esc(desc)}</textarea>
             </div>
-            <div style="margin-bottom:12px;">
-                <div style="font-size:0.72rem; color:var(--color-secondary);">Erinnerung Gesamt‑Vorgang</div>
-                <input type="date" id="ab-ai-preview-due" value="${esc(dueGlobal || '')}" style="padding:8px 10px; border-radius:10px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.05); color:var(--color-text); font-family:var(--font-sans); font-size:0.85rem;">
-                ${dueGlobal ? `<span style="margin-left:8px; font-size:0.78rem; color:#c4b5fd;">→ ${esc(fmtDeDate(dueGlobal))}</span>` : ''}
+            <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+                <div style="flex:1; min-width:190px;">
+                    <div style="font-size:0.72rem; color:var(--color-secondary);">⏰ Erinnerung Gesamt‑Vorgang</div>
+                    <div style="display:flex; gap:6px; margin-top:4px;">
+                        <input type="date" id="ab-ai-preview-due" value="${esc(dueGlobal || '')}" style="flex:2; padding:8px 10px; border-radius:10px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.05); color:var(--color-text); font-family:var(--font-sans); font-size:0.85rem;">
+                        <input type="time" id="ab-ai-preview-due-time" value="${esc(remindTime || '')}" style="flex:1; padding:8px 10px; border-radius:10px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.05); color:var(--color-text); font-family:var(--font-sans); font-size:0.85rem;">
+                    </div>
+                </div>
+                <div style="flex:1; min-width:190px;">
+                    <div style="font-size:0.72rem; color:var(--color-secondary);">📅 Termin im Kalender</div>
+                    <div style="display:flex; gap:6px; margin-top:4px;">
+                        <input type="date" id="ab-ai-preview-appt-date" value="${esc(apptDate)}" style="flex:2; padding:8px 10px; border-radius:10px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.05); color:var(--color-text); font-family:var(--font-sans); font-size:0.85rem;">
+                        <input type="time" id="ab-ai-preview-appt-time" value="${esc(apptTime)}" style="flex:1; padding:8px 10px; border-radius:10px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.05); color:var(--color-text); font-family:var(--font-sans); font-size:0.85rem;">
+                    </div>
+                </div>
             </div>
             <div style="font-size:0.72rem; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:#c4b5fd; margin-bottom:6px;">
                 Schritte (${subs.length})
@@ -361,6 +321,9 @@ Wichtig:
         if (!title) { window.showToast('Bitte einen Titel angeben.'); return; }
         const description = document.getElementById('ab-ai-preview-desc').value.trim();
         const dueDate = document.getElementById('ab-ai-preview-due').value || null;
+        const remindTime = document.getElementById('ab-ai-preview-due-time')?.value || '';
+        const apptDate = document.getElementById('ab-ai-preview-appt-date')?.value || '';
+        const apptTime = document.getElementById('ab-ai-preview-appt-time')?.value || '';
 
         const subs = [...document.querySelectorAll('#ab-ai-preview-subs [data-sub]')].map(row => ({
             title: row.querySelector('.ab-ai-sub-title').value.trim(),
@@ -418,8 +381,9 @@ Wichtig:
                 ...basePayload,
                 customer_id: currentCustomerId,
                 contact_name: currentContactName || null,
-                // Das erkannte Fälligkeitsdatum wird zur Erinnerung am Vorgang.
-                remind_at: dueDate ? new Date(dueDate + 'T08:00:00').toISOString() : null
+                // Das erkannte Fälligkeitsdatum wird zur Erinnerung am Vorgang —
+                // mit der Uhrzeit aus dem Feld daneben (sonst morgens um 8).
+                remind_at: dueDate ? new Date(`${dueDate}T${remindTime || '08:00'}:00`).toISOString() : null
             };
 
             let { data, error } = await sb().from('internal_processes').insert([payload]).select();
@@ -434,6 +398,21 @@ Wichtig:
                 window.showToast('Der Vorgang wurde gespeichert, aber ohne Adressbezug.\n\nBitte die Datei supabase_add_process_customer.sql im Supabase SQL-Editor ausführen.');
             } else if (error) {
                 throw error;
+            }
+
+            // Termin im Kalender — hängt an derselben Adresse und taucht
+            // dadurch auch in der Routenplanung am Stopp auf.
+            let apptCreated = false;
+            if (apptDate && typeof window.createAppointment === 'function') {
+                const eventId = await window.createAppointment({
+                    title,
+                    date: apptDate,
+                    time: apptTime,
+                    description: description || null,
+                    customerId: currentCustomerId,
+                    locationLabel: currentAddressLabel || null
+                });
+                apptCreated = !!eventId;
             }
 
             // Historie-Eintrag (customer_notes) — best effort
@@ -472,6 +451,11 @@ Wichtig:
             if (typeof window.fetchProcesses === 'function') {
                 window.fetchProcesses();
             }
+            if (apptCreated) {
+                window.showToast(`Vorgang gespeichert und Termin am ${fmtDeDate(apptDate)}${apptTime ? ', ' + apptTime + ' Uhr' : ''} im Kalender angelegt.`);
+                if (typeof window.refreshCalendarWidget === 'function') window.refreshCalendarWidget();
+            }
+            if (typeof window.refreshNotifications === 'function') window.refreshNotifications({ force: true });
         } catch (err) {
             window.showToast('Speichern fehlgeschlagen: ' + (err.message || err));
         } finally {

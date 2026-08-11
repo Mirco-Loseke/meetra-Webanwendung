@@ -34,7 +34,7 @@
             }
         })();
     </script>
-    <link rel="stylesheet" href="css/style.css?v=58">
+    <link rel="stylesheet" href="css/style.css?v=59">
 
     <!-- ========================================================= -->
     <!-- ============ EINBINDUNG DER HTML-BAUSTEINE ============== -->
@@ -139,7 +139,7 @@
     <link rel="stylesheet" href="css/views/login.css?v=2">
     <link rel="stylesheet" href="css/views/history.css?v=2">
     <link rel="stylesheet" href="css/base/landscape.css?v=2">
-    <link rel="stylesheet" href="css/components/voice-dictation.css?v=2">
+    <link rel="stylesheet" href="css/components/voice-dictation.css?v=3">
     <link rel="stylesheet" href="css/views/machine-modal.css?v=3">
     <!-- Zuletzt: ersetzt frueher inline gesetzte Stile, muss deshalb zuletzt greifen -->
     <link rel="stylesheet" href="css/base/utilities.css?v=2">
@@ -680,11 +680,15 @@
                                 <div class="notif-header-actions">
                                     <button type="button" id="notif-push-toggle" onclick="window.toggleNotificationPush(event)" title="Systemmeldungen einschalten">🔕 Meldungen aus</button>
                                     <button type="button" onclick="event.stopPropagation(); window.markAllNotificationsRead()" title="Alle als gelesen markieren">Alle gelesen</button>
+                                    <button type="button" class="notif-icon-btn" id="notif-settings-btn" onclick="window.toggleNotificationSettings(event)" title="Einstellungen">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                                    </button>
                                     <button type="button" class="notif-close" onclick="event.stopPropagation(); window.closeNotificationPanel()" title="Schließen">
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                                     </button>
                                 </div>
                             </div>
+                            <div id="notif-settings" style="display:none;"></div>
                             <div id="notif-list"></div>
                         </div>
                     </div>
@@ -1447,12 +1451,10 @@
                                         <div class="view-header-row-bottom">
                                             <div class="view-header-left" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                                                 <div class="calendar-view-tabs" style="margin-bottom: 0;">
-                                                    <button class="calendar-tab-btn active">Aufgaben</button>
-                                                    <button class="calendar-tab-btn" onclick="window.switchView('processes')">Vorgänge</button>
-                                                </div>
-                                                <div class="calendar-view-tabs" style="margin-bottom: 0;">
+                                                    <button class="calendar-tab-btn active" id="btn-task-tab-all"
+                                                        onclick="window.filterTasksByUser('all')">Aufgaben</button>
                                                     <button class="calendar-tab-btn" id="btn-task-user-me"
-                                                        onclick="window.toggleMyTasksFilter()">Meine Aufgaben / Vorgänge</button>
+                                                        onclick="window.filterTasksByUser('me')">Meine Aufgaben</button>
                                                 </div>
                                             </div>
                                             <div class="view-header-right" style="display: flex; align-items: center; gap: 12px;">
@@ -1483,14 +1485,6 @@
                                                     <span style="font-size:1.05rem;">✨</span>
                                                     KI-Erfassung
                                                 </button>
-                                                <button class="btn-add-bg btn-red-animated" id="btn-add-process-header" onclick="window.openProcessAddModal()" style="display:none;">
-                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                                        <line x1="12" y1="5" x2="12" y2="19"></line>
-                                                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                                                    </svg>
-                                                    Vorgang erstellen
-                                                </button>
                                                 <button class="btn-add-bg" id="btn-add-task-header" onclick="openAddTaskModal()">
                                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                                         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -1513,12 +1507,6 @@
                                             <div class="task-list" id="list-completed"></div>
                                         </div>
                                     </div>
-                                    <!-- Vorgänge (in Aufgaben integriert) -->
-                                    <div id="tasks-vorgaenge" class="hidden">
-                                        <div id="tasks-processes-container"></div>
-                                    </div>
-                                    <!-- Meine Vorgänge (erscheint unter Meine Aufgaben) -->
-                                    <div id="tasks-my-processes" class="hidden" style="margin-top:2rem;"></div>
                                 </section>
                 <!-- /@partial:views/tasks.html -->
 
@@ -1541,8 +1529,10 @@
                             </div>
                             <div class="view-header-right" style="display: flex; align-items: center; gap: 12px;">
                                 <div class="calendar-view-tabs" style="margin-bottom: 0;">
-                                    <button class="calendar-tab-btn" onclick="window.switchView('tasks')">Aufgaben</button>
-                                    <button class="calendar-tab-btn active">Vorgänge</button>
+                                    <button class="calendar-tab-btn active" id="btn-process-tab-all"
+                                        onclick="window.filterProcessesByUser('all')">Vorgänge</button>
+                                    <button class="calendar-tab-btn" id="btn-process-user-me"
+                                        onclick="window.filterProcessesByUser('me')">Meine Vorgänge</button>
                                 </div>
                                 <button class="btn-add-bg" onclick="window.openAiCaptureModal('vorgaenge')"
                                     title="Aus Freitext automatisch Vorgänge erzeugen"
@@ -3774,20 +3764,20 @@
     </script>
     <script src="js/dashboard.js?v=1"></script>
     <script src="js/app-core.js?v=2"></script>
-    <script src="js/app-init.js?v=6"></script>
+    <script src="js/app-init.js?v=7"></script>
     <script src="js/settings-uvv-plans.js?v=1"></script>
     <script src="js/machine-details-modal.js?v=1"></script>
     <script src="js/machine-modal.js?v=1"></script>
     <script src="js/service-report-form.js?v=1"></script>
     <script src="js/service-list.js?v=1"></script>
-    <script src="js/history-modal.js?v=1"></script>
+    <script src="js/history-modal.js?v=2"></script>
     <script src="js/calendar-events.js?v=3"></script>
     <script src="js/processes-ui.js?v=3"></script>
     <script src="js/process-messages.js?v=1"></script>
     <script src="js/process-machine-select.js?v=1"></script>
     <script src="js/customer-matching.js?v=1"></script>
     <script src="js/ui-modals.js?v=1"></script>
-    <script src="js/processes.js?v=100"></script>
+    <script src="js/processes.js?v=101"></script>
     <script src="js/service-reports.js?v=1"></script>
     <script src="js/service-entries.js?v=2"></script>
     <script src="js/service-picker.js?v=1"></script>
@@ -5561,9 +5551,12 @@
     </main>
     </div><!-- End main-wrapper -->
 
-    <script src="js/tasks.js?v=4"></script>
+    <script src="js/tasks.js?v=5"></script>
     <script src="js/task_templates.js?v=99"></script>
-    <script src="js/ai-quick-capture.js?v=15"></script>
+    <!-- Spracheingabe für die KI-Felder — muss vor den KI-Modulen stehen,
+         die beim Aufbau ihrer Modals window.micButtonHtml() aufrufen. -->
+    <script src="js/speech-input.js?v=2"></script>
+    <script src="js/ai-quick-capture.js?v=18"></script>
     <script>
         window.addEventListener('load', () => {
             if (typeof window.initTaskTemplates === 'function') {
@@ -6318,15 +6311,18 @@
     <script src="js/documents-r2.js?v=6"></script>
     <script src="js/checklists.js?v=1"></script>
     <script src="js/customers.js"></script>
-    <script src="js/addressbook.js?v=14"></script>
-    <script src="js/ai-address-task.js?v=6"></script>
-    <script src="js/notifications.js?v=4"></script>
-    <script src="js/calendar-widget.js?v=3"></script>
+    <script src="js/addressbook.js?v=15"></script>
+    <script src="js/ai-address-task.js?v=10"></script>
+    <!-- Termine mit Teilnehmern: liefert die Bausteine, die Benachrichtigungen,
+         Kalender und Routenplanung darunter benutzen. -->
+    <script src="js/appointments.js?v=3"></script>
+    <script src="js/notifications.js?v=6"></script>
+    <script src="js/calendar-widget.js?v=4"></script>
     <!-- tasks.js und processes.js werden bereits weiter oben geladen (vor ihren
          jeweiligen Folgemodulen). Ein zweites Einbinden ließ beide Module doppelt
          laufen — mit doppelt registrierten Event-Handlern. -->
     <script src="js/routeplanner.js"></script>
-    <script src="js/routenplanung.js?v=9"></script>
+    <script src="js/routenplanung.js?v=13"></script>
     <script src="js/listen.js?v=11"></script>
     <script src="assets/data/meetra_logo_base64.js"></script>
     <script src="js/labels.js"></script>

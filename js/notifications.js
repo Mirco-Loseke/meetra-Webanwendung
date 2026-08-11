@@ -19,8 +19,22 @@
     'use strict';
 
     const READ_KEY_PREFIX = 'meetra_notif_read_';
-    const SOON_DAYS = 3;        // ab wann eine Erinnerung als "demnächst" gilt
-    const MAINT_SOON_DAYS = 30; // Wartungen kündigen sich länger im Voraus an
+    const PREFS_KEY_PREFIX = 'meetra_notif_prefs_';
+
+    // Voreinstellung, wenn der Benutzer nichts geändert hat.
+    //   before      = Vorlauf in Tagen (wie früh wird erinnert)
+    //   after       = Rückblick in Tagen (wie lange bleibt Überfälliges stehen)
+    //   maintBefore = eigener Vorlauf für Wartungen, die kündigen sich länger an
+    const DEFAULT_PREFS = {
+        processes: true,
+        tasks: true,
+        maintenance: true,
+        offers: true,
+        appointments: true,
+        before: 3,
+        after: 14,
+        maintBefore: 30
+    };
 
     let items = [];
     let isOpen = false;
@@ -42,6 +56,32 @@
         if (u && u.id) return String(u.id);
         const stored = localStorage.getItem('activeUserId');
         return stored ? String(stored) : null;
+    }
+
+    // ---------------------------------------------------------------
+    // Einstellungen je Benutzer (Zahnrad im Panel)
+    // ---------------------------------------------------------------
+    function prefs() {
+        const uid = currentUserId();
+        let stored = null;
+        try { stored = JSON.parse(localStorage.getItem(PREFS_KEY_PREFIX + (uid || 'anon')) || 'null'); }
+        catch (e) { stored = null; }
+        return Object.assign({}, DEFAULT_PREFS, stored || {});
+    }
+    window.notificationPrefs = prefs;
+
+    function savePrefs(patch) {
+        const uid = currentUserId();
+        const next = Object.assign({}, prefs(), patch);
+        localStorage.setItem(PREFS_KEY_PREFIX + (uid || 'anon'), JSON.stringify(next));
+        return next;
+    }
+
+    // Zahl aus einem Eingabefeld in einen sinnvollen Bereich zwingen
+    function clampDays(v, fallback) {
+        const n = parseInt(v, 10);
+        if (isNaN(n)) return fallback;
+        return Math.min(365, Math.max(0, n));
     }
 
     // ---------------------------------------------------------------
@@ -121,10 +161,15 @@
         if (!uid || !sb()) return [];
 
         const out = [];
+        const P = prefs();
+
+        // Alles, was länger überfällig ist als der eingestellte Rückblick,
+        // taucht gar nicht erst auf.
+        const inRange = (diff, before) => diff !== null && diff <= before && diff >= -P.after;
 
         // --- Vorgänge (internal_processes) ---
         let processes = [];
-        try {
+        if (P.processes) try {
             let { data, error } = await sb()
                 .from('internal_processes')
                 .select('*, machines(name, manufacturer, serial), customers(id, name)')
@@ -160,7 +205,7 @@
             // ausgegeben wird nur der dringendste. Die übrigen Gründe hängen
             // als Zusatz an der Meta-Zeile, damit nichts verloren geht.
             const reminderDiff = p.remind_at ? dayDiff(p.remind_at) : null;
-            const hasReminder = reminderDiff !== null && reminderDiff <= SOON_DAYS;
+            const hasReminder = inRange(reminderDiff, P.before);
 
             let item;
             if (hasReminder) {
@@ -173,7 +218,9 @@
                 };
             } else if (mine && openSteps > 0) {
                 item = {
-                    key: `proc:${p.id}:steps:${steps.length}:${openSteps}`,
+                    // Bewusst ohne Zähler im Schlüssel: sonst gilt der Eintrag
+                    // nach jedem abgehakten Schritt wieder als ungelesen.
+                    key: `proc:${p.id}:steps`,
                     kind: 'steps',
                     severity: 'info',
                     meta: `${openSteps} offene${openSteps === 1 ? 'r' : ''} Schritt${openSteps === 1 ? '' : 'e'} von ${steps.length}`,
@@ -207,7 +254,7 @@
         });
 
         // --- Aufgaben (tasks) mit Fälligkeitsdatum ---
-        try {
+        if (P.tasks) try {
             const { data, error } = await sb()
                 .from('tasks')
                 .select('id, title, due_date, status, assigned_to, machines(name, manufacturer)')
@@ -218,7 +265,7 @@
                 data.forEach(t => {
                     if (!isAssignedToMe(t.assigned_to)) return;
                     const diff = dayDiff(t.due_date);
-                    if (diff === null || diff > SOON_DAYS) return;
+                    if (!inRange(diff, P.before)) return;
                     out.push({
                         key: `task-due:${t.id}:${t.due_date}`,
                         kind: 'deadline',
@@ -240,7 +287,7 @@
         // --- Wartungen (machines.next_maintenance) ---
         // Betrifft alle, nicht nur den angemeldeten Benutzer: eine überfällige
         // Wartung ist für jeden wichtig. Deshalb hier ohne Zuweisungsfilter.
-        try {
+        if (P.maintenance) try {
             const { data, error } = await sb()
                 .from('machines')
                 .select('id, name, manufacturer, serial, next_maintenance')
@@ -249,7 +296,7 @@
             if (!error && data) {
                 data.forEach(m => {
                     const diff = dayDiff(m.next_maintenance);
-                    if (diff === null || diff > MAINT_SOON_DAYS) return;
+                    if (!inRange(diff, P.maintBefore)) return;
                     const label = [m.manufacturer, m.name].filter(Boolean).join(' ') +
                         (m.serial ? ` #${m.serial}` : '');
                     out.push({
@@ -270,7 +317,7 @@
         }
 
         // --- Angebots-Erinnerungen (angebote.erinnerung) ---
-        try {
+        if (P.offers) try {
             const { data, error } = await sb()
                 .from('angebote')
                 .select('id, belegnummer, erinnerung, status, kundenmatchcode, customers(name)')
@@ -279,7 +326,7 @@
             if (!error && data) {
                 data.forEach(a => {
                     const diff = dayDiff(a.erinnerung);
-                    if (diff === null || diff > SOON_DAYS) return;
+                    if (!inRange(diff, P.before)) return;
                     // Abgeschlossene Angebote nicht mehr melden
                     const s = (a.status || '').toLowerCase();
                     if (/gewonnen|auftrag|bestellt|verkauft|angenommen|zusage|verloren|abgelehnt|absage|abgesagt|storniert|kein interesse/.test(s)) return;
@@ -301,6 +348,82 @@
             console.warn('Benachrichtigungen: Angebote nicht ladbar:', err.message || err);
         }
 
+        // --- Termine mit Teilnehmern (event_participants) ---
+        // Zwei Sorten: Einladungen an mich, auf die ich noch nicht geantwortet
+        // habe, und die Antworten der Kollegen auf meine eigenen Termine.
+        if (P.appointments) try {
+            const { data: parts, error } = await sb()
+                .from('event_participants')
+                .select('*')
+                .or(`user_id.eq.${uid},invited_by.eq.${uid}`)
+                .limit(400);
+            if (error) throw error;
+
+            const rows = parts || [];
+            const eventIds = [...new Set(rows.map(p => p.event_id))];
+            let eventsById = new Map();
+            if (eventIds.length) {
+                const { data: evs } = await sb()
+                    .from('maintenance_events')
+                    .select('*')
+                    .in('id', eventIds);
+                eventsById = new Map((evs || []).map(e => [String(e.id), e]));
+            }
+
+            rows.forEach(p => {
+                const ev = eventsById.get(String(p.event_id));
+                if (!ev) return;
+                const day = ev.event_date || ev.start_date;
+                const diff = dayDiff(day);
+                const time = window.fmtAppointmentTime ? window.fmtAppointmentTime(ev.start_time) : '';
+                const whenLabel = `${fmtDate(day)}${time ? ', ' + time + ' Uhr' : ''}`;
+                const place = ev.location_label || '';
+
+                // 1) Einladung an mich, noch unbeantwortet
+                if (String(p.user_id) === uid && p.status === 'offen') {
+                    if (diff !== null && diff < -P.after) return;   // längst vorbei
+                    out.push({
+                        key: `appt:${p.event_id}:invite`,
+                        kind: 'appointment',
+                        severity: diff !== null && diff < 0 ? 'overdue' : (diff === 0 ? 'today' : 'soon'),
+                        title: ev.title || 'Termin',
+                        subject: place,
+                        meta: `Einladung von ${p.invited_by_name || 'einem Kollegen'} · ${whenLabel}`,
+                        sortAt: new Date(day || 0).getTime(),
+                        targetType: 'appointment',
+                        targetId: p.event_id,
+                        // Zusagen/Absagen direkt in der Liste
+                        actionsHtml: window.appointmentResponseButtons
+                            ? window.appointmentResponseButtons(p.event_id, p.status)
+                            : ''
+                    });
+                    return;
+                }
+
+                // 2) Antwort auf einen Termin, zu dem ich eingeladen habe
+                if (String(p.invited_by) === uid && p.status !== 'offen' && String(p.user_id) !== uid) {
+                    const respDiff = p.responded_at ? dayDiff(p.responded_at) : null;
+                    if (respDiff !== null && respDiff < -P.after) return;
+                    out.push({
+                        key: `appt:${p.event_id}:resp:${p.user_id}:${p.status}:${p.responded_at || ''}`,
+                        kind: 'appointment',
+                        severity: p.status === 'abgesagt' ? 'today' : 'info',
+                        title: window.appointmentResponseLabel
+                            ? window.appointmentResponseLabel(p)
+                            : `${p.user_name || 'Ein Kollege'} hat ${p.status}`,
+                        subject: ev.title || 'Termin',
+                        meta: `Termin · ${whenLabel}`,
+                        sortAt: new Date(p.responded_at || day || 0).getTime(),
+                        targetType: 'appointment',
+                        targetId: p.event_id
+                    });
+                }
+            });
+        } catch (err) {
+            // Tabelle fehlt (Migration nicht gelaufen) -> Termine still überspringen
+            console.warn('Benachrichtigungen: Termine nicht ladbar:', err.message || err);
+        }
+
         // Wichtigstes zuerst: überfällig -> heute -> demnächst -> Rest
         const rank = { overdue: 0, today: 1, soon: 2, info: 3 };
         out.sort((a, b) => (rank[a.severity] - rank[b.severity]) || (a.sortAt - b.sortAt));
@@ -309,7 +432,9 @@
         // Dringlichkeit sortiert ist, gewinnt automatisch der wichtigste.
         const seen = new Set();
         return out.filter(n => {
-            const id = `${n.targetType}:${n.targetId}`;
+            // Termine sind ausgenommen: Einladung und die Antworten mehrerer
+            // Kollegen betreffen denselben Termin, sollen aber einzeln stehen.
+            const id = n.kind === 'appointment' ? n.key : `${n.targetType}:${n.targetId}`;
             if (seen.has(id)) return false;
             seen.add(id);
             return true;
@@ -344,7 +469,8 @@
         assigned: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle>',
         steps: '<line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line>',
         maintenance: '<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>',
-        offer: '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>'
+        offer: '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>',
+        appointment: '<rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>'
     };
 
     function unreadCount() {
@@ -369,8 +495,13 @@
 
     function itemHtml(n, isRead) {
         const sev = SEVERITY[n.severity] || SEVERITY.info;
+        // Einträge mit eigenen Knöpfen (Termin zusagen/absagen) dürfen kein
+        // <button> sein — verschachtelte Knöpfe sind ungültig und der Browser
+        // zieht sie aus dem Element heraus. Der Klick-Handler hängt ohnehin
+        // an [data-notif-key], nicht am Elementtyp.
+        const tag = n.actionsHtml ? 'div' : 'button';
         return `
-        <button type="button" class="notif-item${isRead ? ' is-read' : ''}" data-notif-key="${esc(n.key)}"
+        <${tag} ${tag === 'button' ? 'type="button"' : 'role="button" tabindex="0"'} class="notif-item${isRead ? ' is-read' : ''}" data-notif-key="${esc(n.key)}"
                 data-notif-target-type="${esc(n.targetType)}" data-notif-target-id="${esc(n.targetId)}">
             <span class="notif-item-icon" style="color:${sev.color}; background:${sev.bg}; border-color:${sev.border};">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${KIND_ICON[n.kind] || KIND_ICON.assigned}</svg>
@@ -380,8 +511,9 @@
                 ${n.subject ? `<span class="notif-item-subject">${esc(n.subject)}</span>` : ''}
                 <span class="notif-item-meta" style="color:${sev.color};">${esc(n.meta)}</span>
             </span>
+            ${n.actionsHtml || ''}
             ${isRead ? '' : '<span class="notif-item-dot"></span>'}
-        </button>`;
+        </${tag}>`;
     }
 
     function render() {
@@ -421,6 +553,81 @@
         });
         list.innerHTML = html;
     }
+
+    // ---------------------------------------------------------------
+    // Einstellungs-Klappe (Zahnrad)
+    // ---------------------------------------------------------------
+    const PREF_TOGGLES = [
+        { key: 'processes', label: 'Vorgänge' },
+        { key: 'tasks', label: 'Aufgaben' },
+        { key: 'maintenance', label: 'Wartung' },
+        { key: 'offers', label: 'Angebote' },
+        { key: 'appointments', label: 'Termine' }
+    ];
+
+    function renderSettings() {
+        const box = document.getElementById('notif-settings');
+        if (!box) return;
+        const P = prefs();
+        box.innerHTML = `
+            <div class="notif-settings-group">
+                ${PREF_TOGGLES.map(t => `
+                    <label class="notif-settings-check">
+                        <input type="checkbox" data-notif-pref="${t.key}" ${P[t.key] ? 'checked' : ''}>
+                        <span>${t.label}</span>
+                    </label>`).join('')}
+            </div>
+            <div class="notif-settings-group notif-settings-nums">
+                <label class="notif-settings-num">
+                    <span>Vorlauf</span>
+                    <input type="number" min="0" max="365" data-notif-pref-num="before" value="${P.before}">
+                    <em>Tage vorher</em>
+                </label>
+                <label class="notif-settings-num">
+                    <span>Wartung</span>
+                    <input type="number" min="0" max="365" data-notif-pref-num="maintBefore" value="${P.maintBefore}">
+                    <em>Tage vorher</em>
+                </label>
+                <label class="notif-settings-num">
+                    <span>Rückblick</span>
+                    <input type="number" min="0" max="365" data-notif-pref-num="after" value="${P.after}">
+                    <em>Tage überfällig</em>
+                </label>
+            </div>
+            <div class="notif-settings-hint">Überfälliges verschwindet nach dem Rückblick-Zeitraum von selbst.</div>`;
+    }
+
+    window.toggleNotificationSettings = function (event) {
+        if (event) event.stopPropagation();
+        const box = document.getElementById('notif-settings');
+        if (!box) return;
+        const show = box.style.display === 'none' || !box.style.display;
+        if (show) renderSettings();
+        box.style.display = show ? 'block' : 'none';
+        const btn = document.getElementById('notif-settings-btn');
+        if (btn) btn.classList.toggle('active', show);
+    };
+
+    // Änderung an einer Einstellung -> speichern und neu einsammeln
+    function onPrefChange(el) {
+        if (el.dataset.notifPref) {
+            savePrefs({ [el.dataset.notifPref]: el.checked });
+        } else if (el.dataset.notifPrefNum) {
+            const k = el.dataset.notifPrefNum;
+            const v = clampDays(el.value, DEFAULT_PREFS[k]);
+            el.value = v;
+            savePrefs({ [k]: v });
+        } else {
+            return;
+        }
+        cache = { at: 0, data: null };
+        refresh({ push: false });
+    }
+
+    document.addEventListener('change', (e) => {
+        const el = e.target.closest('[data-notif-pref], [data-notif-pref-num]');
+        if (el) { e.stopPropagation(); onPrefChange(el); }
+    });
 
     // ---------------------------------------------------------------
     // Öffnen / Schließen / Laden
@@ -476,6 +683,10 @@
     function closePanel() {
         const panel = document.getElementById('notif-panel');
         if (panel) panel.style.display = 'none';
+        const box = document.getElementById('notif-settings');
+        if (box) box.style.display = 'none';
+        const btn = document.getElementById('notif-settings-btn');
+        if (btn) btn.classList.remove('active');
         isOpen = false;
     }
     window.closeNotificationPanel = closePanel;
@@ -490,7 +701,7 @@
         const go = (view) => { if (typeof window.switchView === 'function') window.switchView(view); };
 
         if (targetType === 'process') {
-            go('tasks');
+            go('processes');
             setTimeout(() => {
                 if (typeof window.openEditProcessModal === 'function') window.openEditProcessModal(targetId);
             }, 120);
@@ -502,6 +713,12 @@
         } else if (targetType === 'machine') {
             // Wartung: in den Kalender, dort auf überfällige Wartungen gefiltert
             if (window.eventsState) window.eventsState.statusFilter = 'overdue';
+            go('calendar');
+            setTimeout(() => {
+                if (typeof window.switchEventsSubView === 'function') window.switchEventsSubView('calendar');
+            }, 120);
+        } else if (targetType === 'appointment') {
+            // Termin: in den Kalender, dort steht er mit Uhrzeit und Teilnehmern
             go('calendar');
             setTimeout(() => {
                 if (typeof window.switchEventsSubView === 'function') window.switchEventsSubView('calendar');
@@ -601,10 +818,24 @@
     }
 
     function pushUrgent() {
-        if (!window.notificationsPushEnabled()) return;
         const pushed = pushedKeys();
-        const urgent = items.filter(n => (n.severity === 'overdue' || n.severity === 'today') && !pushed.has(n.key));
+
+        // Termine melden sich immer, auch wenn sie erst nächste Woche sind:
+        // eine Einladung oder eine Zu-/Absage will man sofort mitbekommen.
+        const urgent = items.filter(n =>
+            (n.severity === 'overdue' || n.severity === 'today' || n.kind === 'appointment') && !pushed.has(n.key));
         if (!urgent.length) return;
+
+        // Ohne erlaubte Systemmeldungen wenigstens im Fenster darauf hinweisen.
+        if (!window.notificationsPushEnabled()) {
+            const appts = urgent.filter(n => n.kind === 'appointment');
+            appts.forEach(n => {
+                if (typeof window.showToast === 'function') window.showToast(`${n.title} — ${n.meta}`);
+                pushed.add(n.key);
+            });
+            if (appts.length) savePushed(pushed);
+            return;
+        }
 
         // Höchstens drei Meldungen auf einmal, der Rest wird zusammengefasst.
         urgent.slice(0, 3).forEach(n => {

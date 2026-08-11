@@ -175,4 +175,10 @@ formfüllenden Feldern zusätzlich `.menu-block`. Ausgewählter Eintrag: `.selec
 einem Inline-`style` suchen.
 
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v113 (Stand 2026-08-05) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v117 (Stand 2026-08-10) — bei jeder Änderung hochzählen.
+
+**Aufgaben und Vorgänge sind getrennt (seit 2026-08-10).** Die Ansicht „Aufgaben"
+zeigt nur Aufgaben, die Ansicht „Vorgänge" nur Vorgänge. Beide haben denselben
+Umschalter: alle / „Meine …" (`filterTasksByUser`, `filterProcessesByUser`).
+Der frühere Vorgänge-Tab innerhalb der Aufgaben (`tasks-vorgaenge`,
+`renderMyProcessesSection`) ist entfernt.

@@ -782,6 +782,18 @@
     background: rgba(239, 68, 68, 0.22);
 }
 
+/* KI-Erfassung: dasselbe Violett wie der Knopf unter Aufgaben und Vorgängen */
+.ab-btn-ai {
+    background: rgba(139, 92, 246, 0.15);
+    border-color: rgba(139, 92, 246, 0.4);
+    color: #a78bfa;
+}
+
+.ab-btn-ai:hover {
+    background: rgba(139, 92, 246, 0.25);
+    border-color: rgba(139, 92, 246, 0.65);
+}
+
 .ab-btn-ghost {
     background: transparent;
     border-color: rgba(255, 255, 255, 0.14);

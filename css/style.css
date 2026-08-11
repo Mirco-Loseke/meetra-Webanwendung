@@ -19,6 +19,7 @@
 @import 'components/dropdowns.css';
 @import 'components/focus-mode.css';
 @import 'components/elements.css';
+@import 'components/appointments.css';
 
 /* Views & Modules */
 @import 'views/documents.css';

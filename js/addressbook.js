@@ -2468,9 +2468,9 @@
         <div class="ab-section-head">
             <span class="ab-muted">${procList.length} ${procList.length === 1 ? 'Vorgang' : 'Vorgänge'} an dieser Adresse</span>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button class="ab-btn ab-btn-ghost" data-ab-action="task-ai" title="Freitext/Diktat per KI zu Vorgang + Schritten machen">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-                    KI‑Analyse
+                <button class="ab-btn ab-btn-ai" data-ab-action="task-ai" title="Aus Freitext automatisch Vorgänge erzeugen">
+                    <span style="font-size:1.05rem;">✨</span>
+                    KI-Erfassung
                 </button>
                 <button class="ab-btn ab-btn-primary" data-ab-action="task-new">${ic('plus', 16)} Vorgang erstellen</button>
             </div>
