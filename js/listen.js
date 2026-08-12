@@ -562,7 +562,6 @@
             jahrSelect.innerHTML = '<option value="">Alle Jahre</option>' +
                 sortedYears.map(y => `<option value="${y}">${y}</option>`).join('');
             if (sortedYears.some(y => String(y) === prevValue)) jahrSelect.value = prevValue;
-            if (typeof window.initGlassSelect === 'function') window.initGlassSelect(jahrSelect);
             jahrSelect.dispatchEvent(new Event('change'));
         }
 
@@ -573,8 +572,6 @@
             statusSelect.innerHTML = '<option value="">Alle Status</option>' +
                 statusOptions.map(cat => `<option value="${escapeHtml(cat.name)}">${escapeHtml(cat.name)}</option>`).join('');
             if (statusOptions.some(c => c.name === prevValue)) statusSelect.value = prevValue;
-            // Natives Dropdown durch das im Rest der App genutzte gestylte Dropdown ersetzen.
-            if (typeof window.initGlassSelect === 'function') window.initGlassSelect(statusSelect);
             statusSelect.dispatchEvent(new Event('change'));
         }
 
@@ -599,7 +596,6 @@
                 sortedReal.map(label => `<option value="${escapeHtml(label)}" data-color="#34d399">${escapeHtml(label)}</option>`).join('') +
                 sortedFrei.map(label => `<option value="${escapeHtml(label)}" data-color="#f59e0b">${escapeHtml(label)}</option>`).join('');
             if (sortedReal.includes(prevValue) || sortedFrei.includes(prevValue)) machineSelect.value = prevValue;
-            if (typeof window.initGlassSelect === 'function') window.initGlassSelect(machineSelect);
             machineSelect.dispatchEvent(new Event('change'));
         }
     }

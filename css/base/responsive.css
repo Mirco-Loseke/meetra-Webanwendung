@@ -1012,6 +1012,44 @@
     }
 }
 
+/* Angebote-Tabelle: auf dem Desktop exakt auf 100% Breite ausfüllen statt
+   horizontal zu scrollen. Feste Spaltenanteile, Inhalte umbrechen. */
+@media (min-width: 901px) {
+    #listen-tab-content-angebote .angebote-table-wrap {
+        overflow-x: visible;
+    }
+    #listen-tab-content-angebote .angebote-table-wrap table {
+        table-layout: fixed;
+        width: 100%;
+    }
+    #listen-tab-content-angebote .angebote-table-wrap th,
+    #listen-tab-content-angebote .angebote-table-wrap td {
+        min-width: 0 !important;
+        padding-left: 6px;
+        padding-right: 6px;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+    #listen-tab-content-angebote .angebote-table-wrap input.glass-form-input,
+    #listen-tab-content-angebote .angebote-table-wrap .angebot-realisierbar-input {
+        width: 100% !important;
+        box-sizing: border-box;
+    }
+    /* Spaltenanteile (Summe = 100%) */
+    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(1)  { width: 7%; }
+    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(2)  { width: 8%; }
+    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(3)  { width: 11%; }
+    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(4)  { width: 6%; }
+    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(5)  { width: 7%; }
+    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(6)  { width: 7%; }
+    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(7)  { width: 8%; }
+    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(8)  { width: 10%; }
+    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(9)  { width: 11%; }
+    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(10) { width: 12%; }
+    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(11) { width: 10%; }
+    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(12) { width: 3%; }
+}
+
 .dash-header {
     display: flex;
     justify-content: space-between;
