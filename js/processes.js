@@ -80,6 +80,86 @@ window.toggleProcessKpiFilter = function (status) {
     window.setProcessStatusFilter(next);
 };
 
+window.toggleProcessRemindersPanel = function() {
+    const collapsed = localStorage.getItem('processRemindersCollapsed') === '1';
+    localStorage.setItem('processRemindersCollapsed', collapsed ? '0' : '1');
+    window.renderProcesses();
+};
+
+window.toggleProcessRemindersMine = function(ev) {
+    if (ev) ev.stopPropagation();
+    const mine = localStorage.getItem('processRemindersMine') === '1';
+    localStorage.setItem('processRemindersMine', mine ? '0' : '1');
+    window.renderProcesses();
+};
+
+// Ein- und ausklappbare Übersicht aller Erinnerungen: Vorgänge mit remind_at
+// und einzelne Schritte mit remind_at (jeweils nur, solange nicht erledigt).
+window.buildProcessRemindersPanel = function(base) {
+    const items = [];
+    const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const midnight = new Date().setHours(0, 0, 0, 0);
+    const onlyMine = localStorage.getItem('processRemindersMine') === '1';
+    const myId = String(window.activeUser?.id || localStorage.getItem('activeUserId') || '').toLowerCase().trim();
+    const myName = String(window.activeUser?.name || '').toLowerCase().trim();
+    const matchMe = (v) => { const x = String(v == null ? '' : v).toLowerCase().trim(); return x !== '' && ((myId && x === myId) || (myName && x === myName)); };
+    const processMine = (p) => Array.isArray(p.assigned_users) && p.assigned_users.some(matchMe);
+    const stepMine = (s) => matchMe(s.assigned_id) || matchMe(s.assigned_to);
+    (base || []).forEach(p => {
+        if (p.status === 'erledigt') return;
+        const pTitle = p.title || 'Unbenannter Vorgang';
+        if (p.remind_at && (!onlyMine || processMine(p))) {
+            const t = new Date(p.remind_at).getTime();
+            if (!isNaN(t)) items.push({ id: p.id, at: t, kind: 'Vorgang', title: pTitle, sub: '' });
+        }
+        (Array.isArray(p.steps) ? p.steps : []).forEach(s => {
+            if (!s.remind_at || s.done) return;
+            if (onlyMine && !stepMine(s)) return;
+            const t = new Date(s.remind_at).getTime();
+            if (!isNaN(t)) items.push({ id: p.id, at: t, kind: 'Schritt', title: (s.text || 'Schritt'), sub: pTitle });
+        });
+    });
+    // Panel bleibt sichtbar (mit Filter-Umschalter), sobald es überhaupt
+    // Erinnerungen gibt – auch wenn der "Für mich"-Filter gerade leer ist.
+    const hasAny = (base || []).some(p => p.status !== 'erledigt' && (p.remind_at || (Array.isArray(p.steps) && p.steps.some(s => s.remind_at && !s.done))));
+    if (!hasAny) return '';
+    items.sort((a, b) => a.at - b.at);
+    const overdue = items.filter(i => new Date(i.at).setHours(0, 0, 0, 0) < midnight).length;
+    const collapsed = localStorage.getItem('processRemindersCollapsed') === '1';
+    const fmtRow = (i) => {
+        const dd = Math.round((new Date(i.at).setHours(0, 0, 0, 0) - midnight) / 86400000);
+        const rc = dd < 0 ? '#f87171' : (dd <= 3 ? '#fbbf24' : '#93c5fd');
+        const rel = dd < 0 ? `überfällig (${Math.abs(dd)} T)` : (dd === 0 ? 'heute' : (dd === 1 ? 'morgen' : `in ${dd} Tagen`));
+        const dateStr = new Date(i.at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        return `<div onclick="window.openEditProcessModal('${i.id}')" title="Vorgang öffnen" style="display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-left:3px solid ${rc}; cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+            <div style="flex-shrink:0; display:flex; flex-direction:column; align-items:center; min-width:58px;">
+                <span style="color:${rc}; font-weight:800; font-size:0.82rem;">${dateStr}</span>
+                <span style="color:${rc}; opacity:0.85; font-size:0.72rem; font-weight:600;">${rel}</span>
+            </div>
+            <div style="flex:1; min-width:0;">
+                <div style="color:#fff; font-weight:700; font-size:0.92rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(i.title)}</div>
+                <div style="color:rgba(255,255,255,0.5); font-size:0.78rem;">${i.kind}${i.sub ? ` · ${esc(i.sub)}` : ''}</div>
+            </div>
+        </div>`;
+    };
+    return `
+        <div style="margin-bottom:16px; border:1px solid rgba(255,255,255,0.1); border-radius:14px; background:rgba(255,255,255,0.02); overflow:hidden;">
+            <div onclick="window.toggleProcessRemindersPanel()" style="display:flex; align-items:center; gap:10px; padding:12px 16px; cursor:pointer; user-select:none;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
+                <span style="color:#fff; font-weight:800; font-size:0.9rem; text-transform:uppercase; letter-spacing:0.5px;">Erinnerungen</span>
+                <span style="background:rgba(251,191,36,0.15); color:#fbbf24; font-weight:800; font-size:0.78rem; padding:2px 9px; border-radius:999px;">${items.length}</span>
+                ${overdue ? `<span style="background:rgba(248,113,113,0.15); color:#f87171; font-weight:800; font-size:0.78rem; padding:2px 9px; border-radius:999px;">${overdue} überfällig</span>` : ''}
+                <span style="flex:1;"></span>
+                <button type="button" onclick="window.toggleProcessRemindersMine(event)" title="Nur mir zugeordnete Erinnerungen" style="display:inline-flex; align-items:center; gap:5px; padding:5px 11px; border-radius:999px; border:1px solid ${onlyMine ? 'rgba(16,185,129,0.5)' : 'rgba(255,255,255,0.15)'}; background:${onlyMine ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.04)'}; color:${onlyMine ? '#34d399' : 'rgba(255,255,255,0.7)'}; font-size:0.78rem; font-weight:700; cursor:pointer;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    Für mich
+                </button>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; transform:rotate(${collapsed ? '0' : '180'}deg); transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </div>
+            ${collapsed ? '' : `<div style="display:flex; flex-direction:column; gap:6px; padding:0 16px 14px;">${items.length ? items.map(fmtRow).join('') : `<div style="text-align:center; color:rgba(255,255,255,0.4); font-style:italic; font-size:0.85rem; padding:12px;">Keine dir zugeordneten Erinnerungen.</div>`}</div>`}
+        </div>`;
+};
+
 window.renderProcesses = function(targetId, opts) {
     opts = opts || {};
     if (!targetId) {
@@ -165,6 +245,8 @@ window.renderProcesses = function(targetId, opts) {
         </div>
     `;
 
+    if (!opts.compact) html += window.buildProcessRemindersPanel(base);
+
     const now = new Date();
     const monthBuckets = [];
     for (let i = 5; i >= 0; i--) {
@@ -224,13 +306,9 @@ window.renderProcesses = function(targetId, opts) {
 
         const statusCell = `
             <div class="process-status-wrapper" style="position: relative; display: inline-block;">
-                <div onclick="window.toggleProcessStatusMenu(event, '${p.id}')" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                <div onclick="window.toggleProcessStatusMenu(event, '${p.id}')" title="Status ändern" style="cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
                     ${statusBadge}
-                </div>
-                <div class="process-status-menu" id="process-status-menu-${p.id}" style="display: none; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); margin-top: 6px; z-index: 50; min-width: 140px;">
-                    <div onclick="window.setProcessStatus('${p.id}', 'offen')" style="padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 800; color: #ef4444; text-transform: uppercase; letter-spacing: 0.5px; transition: background 0.15s;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='transparent'">Offen</div>
-                    <div onclick="window.setProcessStatus('${p.id}', 'in_bearbeitung')" style="padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 800; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.5px; transition: background 0.15s;" onmouseover="this.style.background='rgba(245,158,11,0.15)'" onmouseout="this.style.background='transparent'">In Arbeit</div>
-                    <div onclick="window.setProcessStatus('${p.id}', 'erledigt')" style="padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 800; color: #10b981; text-transform: uppercase; letter-spacing: 0.5px; transition: background 0.15s;" onmouseover="this.style.background='rgba(16,185,129,0.15)'" onmouseout="this.style.background='transparent'">Erledigt</div>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="${statusColor}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="6 9 12 15 18 9"></polyline></svg>
                 </div>
             </div>
         `;
@@ -310,14 +388,24 @@ window.renderProcesses = function(targetId, opts) {
                     ${procSteps.map((s, i) => {
                         const createdMetaS = (s.created_by || s.created_at) ? `erstellt${s.created_by ? ` von ${escStep(s.created_by)}` : ''}${s.created_at ? ` am ${fmtDay(s.created_at)}` : ''}` : '';
                         const doneMetaS = (s.done && s.done_at) ? `✓ ${s.done_by ? escStep(s.done_by) : ''}${s.done_by ? ' · ' : ''}${fmtDay(s.done_at)}` : '';
+                        const assignMetaS = s.assigned_to ? `zuständig: ${escStep(s.assigned_to)}` : '';
+                        let remindMetaS = '';
+                        if (s.remind_at && !s.done) {
+                            const rdS = new Date(s.remind_at);
+                            const ddS = Math.round((new Date(rdS).setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / 86400000);
+                            const rcS = ddS < 0 ? '#f87171' : (ddS <= 3 ? '#fbbf24' : '#93c5fd');
+                            remindMetaS = `<div class="proc-step-remind-meta" style="font-size:0.78rem; font-weight:600; color:${rcS}; margin-top:2px; padding:0 4px;">⏰ Erinnerung ${fmtDay(s.remind_at)}</div>`;
+                        }
                         return `
                     <div class="proc-step-crow" style="display:flex; align-items:flex-start; gap:8px; padding:6px 8px; border-radius:8px;">
                         <span style="flex-shrink:0; color:rgba(255,255,255,0.4); font-weight:800; font-size:0.75rem; width:16px; padding-top:2px;">${i + 1}</span>
                         <span class="proc-step-check" onclick="window.toggleProcessCardStep('${p.id}', ${i}, event)" title="Abhaken" style="flex-shrink:0; width:20px; height:20px; border-radius:5px; border:2px solid ${s.done ? '#10b981' : 'rgba(255,255,255,0.3)'}; background:${s.done ? '#10b981' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; margin-top:1px;">${s.done ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}</span>
                         <div style="flex:1; min-width:0;">
                             <span class="proc-step-label" contenteditable="true" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}" onblur="this.style.background='transparent'; window.updateProcessCardStepText('${p.id}', ${i}, this.textContent)" title="Klicken zum Bearbeiten" style="display:block; color:#fff; font-size:0.9rem; text-decoration:${s.done ? 'line-through' : 'none'}; opacity:${s.done ? '0.5' : '1'}; outline:none; border-radius:4px; padding:2px 4px; cursor:text;" onfocus="this.style.background='rgba(255,255,255,0.08)'">${escStep(s.text)}</span>
-                            ${createdMetaS ? `<div class="proc-step-created-meta" style="font-size:0.6rem; color:rgba(255,255,255,0.3); margin-top:1px; padding:0 4px;">${createdMetaS}</div>` : ''}
-                            ${doneMetaS ? `<div class="proc-step-meta" style="font-size:0.6rem; color:rgba(16,185,129,0.6); margin-top:1px; padding:0 4px;">${doneMetaS}</div>` : ''}
+                            ${remindMetaS}
+                            ${assignMetaS ? `<div class="proc-step-assign-meta" style="font-size:0.78rem; font-weight:600; color:#93c5fd; margin-top:2px; padding:0 4px;">${assignMetaS}</div>` : ''}
+                            ${createdMetaS ? `<div class="proc-step-created-meta" style="font-size:0.78rem; color:rgba(255,255,255,0.5); margin-top:2px; padding:0 4px;">${createdMetaS}</div>` : ''}
+                            ${doneMetaS ? `<div class="proc-step-meta" style="font-size:0.78rem; color:rgba(16,185,129,0.75); margin-top:2px; padding:0 4px;">${doneMetaS}</div>` : ''}
                         </div>
                     </div>`;
                     }).join('')}
@@ -418,20 +506,36 @@ window.toggleProcDoneGroup = function() {
     window.renderProcesses();
 };
 
+function closeProcessStatusMenu() {
+    const m = document.getElementById('process-status-fixed-menu');
+    if (m) m.remove();
+}
 window.toggleProcessStatusMenu = function(event, id) {
-    event.stopPropagation();
-    document.querySelectorAll('.process-status-menu').forEach(el => {
-        if (el.id !== `process-status-menu-${id}`) el.style.display = 'none';
-    });
-    const menu = document.getElementById(`process-status-menu-${id}`);
-    if (menu) menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
-};
-
-document.addEventListener('click', function(e) {
-    if (!e.target.closest('.process-status-wrapper')) {
-        document.querySelectorAll('.process-status-menu').forEach(el => el.style.display = 'none');
+    if (event) event.stopPropagation();
+    const existing = document.getElementById('process-status-fixed-menu');
+    if (existing && existing.dataset.forId === String(id)) { closeProcessStatusMenu(); return; }
+    closeProcessStatusMenu();
+    const anchor = event ? (event.currentTarget || event.target) : null;
+    const opts = [
+        ['offen', 'Offen', '#ef4444'],
+        ['in_bearbeitung', 'In Arbeit', '#f59e0b'],
+        ['erledigt', 'Erledigt', '#10b981']
+    ];
+    const menu = document.createElement('div');
+    menu.id = 'process-status-fixed-menu';
+    menu.dataset.forId = String(id);
+    menu.style.cssText = 'position:fixed; z-index:1000000; background:#0f172a; border:1px solid rgba(255,255,255,0.2); border-radius:12px; padding:6px; box-shadow:0 16px 48px rgba(0,0,0,0.75); min-width:150px;';
+    menu.innerHTML = opts.map(o => `<div onclick="window.setProcessStatus('${id}', '${o[0]}'); (function(){var m=document.getElementById('process-status-fixed-menu'); if(m) m.remove();})();" style="padding:9px 12px; border-radius:8px; cursor:pointer; font-size:0.78rem; font-weight:800; color:${o[2]}; text-transform:uppercase; letter-spacing:0.5px;" onmouseover="this.style.background='${o[2]}22'" onmouseout="this.style.background='transparent'">${o[1]}</div>`).join('');
+    document.body.appendChild(menu);
+    if (anchor) {
+        const r = anchor.getBoundingClientRect();
+        menu.style.top = Math.min(r.bottom + 4, window.innerHeight - menu.offsetHeight - 8) + 'px';
+        menu.style.left = Math.min(r.left, window.innerWidth - menu.offsetWidth - 8) + 'px';
     }
-});
+    setTimeout(() => document.addEventListener('click', function h(e) {
+        if (!menu.contains(e.target)) { closeProcessStatusMenu(); document.removeEventListener('click', h); }
+    }), 0);
+};
 
 window.setProcessStatus = async function(id, status) {
     if (!window.supabaseClient) return;
@@ -513,6 +617,8 @@ window.updateProcess = async function(event) {
         const remark = document.getElementById('edit-process-remark-input').value;
         const description = document.getElementById('edit-process-body-input').value;
         const serviceReportId = document.getElementById('edit-process-service-report-select').value;
+        const customerId = document.getElementById('edit-process-customer-id')?.value;
+        const contactName = document.getElementById('edit-process-contact-name')?.value;
 
         const processDate = date ? new Date(date).toISOString() : new Date().toISOString();
         const remindRaw = document.getElementById('edit-process-remind-input')?.value;
@@ -531,7 +637,9 @@ window.updateProcess = async function(event) {
             assigned_users: window.processAssignedUsers['edit-process'],
             steps: (window.processSteps['edit-process'] || []).filter(s => (s.text || '').trim()),
             linked_service_report_id: serviceReportId ? parseInt(serviceReportId) : null,
-            remind_at: remindRaw ? new Date(remindRaw).toISOString() : null
+            remind_at: remindRaw ? new Date(remindRaw).toISOString() : null,
+            customer_id: customerId ? parseInt(customerId) : null,
+            contact_name: contactName || null
         };
 
         let { error } = await window.supabaseClient
@@ -539,10 +647,12 @@ window.updateProcess = async function(event) {
             .update(patch)
             .eq('id', id);
 
-        if (error && /remind_at/.test(error.message || '')) {
-            console.warn('Spalte remind_at fehlt, speichere ohne Erinnerung:', error.message);
+        if (error && /remind_at|customer_id|contact_name/.test(error.message || '')) {
+            console.warn('Spalte fehlt, speichere ohne Erinnerung/Adressbezug:', error.message);
             const reduced = { ...patch };
             delete reduced.remind_at;
+            delete reduced.customer_id;
+            delete reduced.contact_name;
             ({ error } = await window.supabaseClient.from('internal_processes').update(reduced).eq('id', id));
         }
 

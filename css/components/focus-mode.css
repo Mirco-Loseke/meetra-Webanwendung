@@ -169,7 +169,77 @@ body.focus-mode-active #topbar {
     background: #000000 !important;
 }
 
+/* Kino-Modus: komplettes Vollbild – Topbar, Sidebar und beide Menü-Buttons
+   (roter Einklapp-Kreis oben links + mobiler Hamburger) werden ausgeblendet.
+   Sichtbar bleibt nur die schwebende Stopp-Taste. */
 .cinema-mode-active #topbar,
-.cinema-mode-active #sidebar {
+.cinema-mode-active #sidebar,
+.cinema-mode-active #sidebar-toggle,
+.cinema-mode-active #mobile-sidebar-toggle,
+.cinema-mode-active #sidebar-overlay {
     display: none !important;
+}
+
+/* Kino-Modus: nur die Aufgabenkarten – Kopfzeile (Titel „Aufgaben", Suche,
+   Tabs, Kino-Steuerung, Buttons) komplett ausblenden. */
+.cinema-mode-active #tasks .view-header-layout {
+    display: none !important;
+}
+
+/* ---- Aufgaben nebeneinander (gilt in Normal-, Fokus- und Kino-Modus) ---- */
+#tasks-board.cinema-cols-2 .task-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    align-content: start;
+}
+
+#tasks-board.cinema-cols-3 .task-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+    align-content: start;
+}
+
+@media (max-width: 768px) {
+    #tasks-board .task-list {
+        display: flex !important;
+        grid-template-columns: none !important;
+    }
+}
+
+/* Umschalter 1 / 2 / 3 Spalten */
+.cinema-cols-ui {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    height: 44px;
+    padding: 0 6px;
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cinema-col-btn {
+    min-width: 30px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 800;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.cinema-col-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+}
+
+.cinema-col-btn.active {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #fff;
 }

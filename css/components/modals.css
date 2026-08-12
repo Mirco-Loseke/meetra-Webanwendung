@@ -150,3 +150,16 @@
     font-size: clamp(1.4rem, 4vw, 1.8rem);
     font-weight: 700;
 }
+
+/* Zweispaltiges Layout des "Vorgang hinzufügen"-Dialogs (Desktop nutzt die
+   volle Breite; unter 900px wird wieder einspaltig gestapelt). */
+.proc-add-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 28px;
+    align-items: start;
+}
+.proc-add-col { min-width: 0; }
+@media (max-width: 900px) {
+    .proc-add-columns { grid-template-columns: 1fr; gap: 0; }
+}

@@ -314,11 +314,17 @@ document.addEventListener('DOMContentLoaded', function () {
 (function () {
     let scrollHideTimer = null;
     function onAnyScroll() {
-        if (window.innerWidth > 768) return;
-        document.body.classList.add('is-scrolling');
+        if (window.innerWidth > 768) {
+            // Desktop / iPad: Topbar-Elemente beim Scrollen abdunkeln,
+            // nach dem Scrollen wieder voll einblenden.
+            document.body.classList.add('topbar-scrolling');
+        } else {
+            document.body.classList.add('is-scrolling');
+        }
         if (scrollHideTimer) clearTimeout(scrollHideTimer);
         scrollHideTimer = setTimeout(function () {
             document.body.classList.remove('is-scrolling');
+            document.body.classList.remove('topbar-scrolling');
         }, 250);
     }
     window.addEventListener('scroll', onAnyScroll, { passive: true, capture: true });

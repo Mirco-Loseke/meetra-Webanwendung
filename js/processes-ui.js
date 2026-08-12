@@ -321,6 +321,9 @@
             document.getElementById('process-add-tech-dropdown-panel').style.display = 'none';
             renderProcessTechDropdown('process-add');
 
+            // Reset Adresse / Ansprechpartner
+            window.resetProcessAddressFields('process-add');
+
             // Reset Schritte
             window.processSteps['process-add'] = [];
             window.renderProcessSteps('process-add');
@@ -335,6 +338,7 @@
                 : null;
             const addrBanner = document.getElementById('process-add-address-banner');
             const machineGroup = document.getElementById('process-add-machine-group');
+            const addrGroup = document.getElementById('process-add-address-group');
             if (window.processPendingAddress) {
                 document.getElementById('process-add-address-name').textContent =
                     window.processPendingAddress.name +
@@ -342,9 +346,12 @@
                 if (addrBanner) addrBanner.style.display = 'block';
                 // Ein Adress-Vorgang hängt nicht an einer Maschine.
                 if (machineGroup) machineGroup.style.display = 'none';
+                // Adresse ist über den Banner bereits fest gesetzt.
+                if (addrGroup) addrGroup.style.display = 'none';
             } else {
                 if (addrBanner) addrBanner.style.display = 'none';
                 if (machineGroup) machineGroup.style.display = '';
+                if (addrGroup) addrGroup.style.display = '';
             }
         };
 
@@ -397,6 +404,15 @@
                 if (addr) {
                     payload.customer_id = addr.id;
                     if (addr.contact) payload.contact_name = addr.contact;
+                } else {
+                    // Inline im Formular gewählte Adresse (normaler Vorgang):
+                    // Adresse UND Maschine dürfen hier gleichzeitig hängen.
+                    const inlineCustomerId = document.getElementById('process-add-customer-id')?.value;
+                    const inlineContact = document.getElementById('process-add-contact-name')?.value;
+                    if (inlineCustomerId) {
+                        payload.customer_id = parseInt(inlineCustomerId);
+                        if (inlineContact) payload.contact_name = inlineContact;
+                    }
                 }
                 if (remindRaw) payload.remind_at = new Date(remindRaw).toISOString();
 
@@ -466,7 +482,7 @@
             window.syncProcessSelectDisplay('edit-process', 'type');
             window.syncProcessSelectDisplay('edit-process', 'status');
             window.processSteps['edit-process'] = Array.isArray(proc.steps)
-                ? proc.steps.map(s => ({ id: s.id || genStepId(), text: s.text || '', done: !!s.done, created_at: s.created_at || null, created_by: s.created_by || null, done_at: s.done_at || null, done_by: s.done_by || null }))
+                ? proc.steps.map(s => ({ id: s.id || genStepId(), text: s.text || '', done: !!s.done, created_at: s.created_at || null, created_by: s.created_by || null, done_at: s.done_at || null, done_by: s.done_by || null, assigned_to: s.assigned_to || null, assigned_id: s.assigned_id || null, remind_at: s.remind_at || null }))
                 : [];
             window.renderProcessSteps('edit-process');
             window.updateEmailBodyVisibility('edit-process');
@@ -489,19 +505,12 @@
                 }
             }
 
-            // Adress- vs. Maschinen-Vorgang
+            // Adresse + Ansprechpartner sind jetzt bearbeitbar (Maschine bleibt daneben sichtbar).
             const editAddrBanner = document.getElementById('edit-process-address-banner');
+            if (editAddrBanner) editAddrBanner.style.display = 'none';
             const editMachineGroup = document.getElementById('edit-process-machine-group');
-            if (proc.customer_id) {
-                const addrName = (proc.customers && proc.customers.name) || 'Adresse';
-                document.getElementById('edit-process-address-name').textContent =
-                    addrName + (proc.contact_name ? ' · ' + proc.contact_name : '');
-                if (editAddrBanner) editAddrBanner.style.display = 'block';
-                if (editMachineGroup) editMachineGroup.style.display = 'none';
-            } else {
-                if (editAddrBanner) editAddrBanner.style.display = 'none';
-                if (editMachineGroup) editMachineGroup.style.display = '';
-            }
+            if (editMachineGroup) editMachineGroup.style.display = '';
+            window.prefillProcessAddressFields('edit-process', proc);
 
             // Verknuepfter Servicebericht
             window._editProcessServiceLink = proc.service_entries
@@ -758,6 +767,23 @@
             list.innerHTML = steps.map((s, i) => {
                 const createdMeta = (s.created_by || s.created_at) ? `erstellt${s.created_by ? ` von ${escStepAttr(s.created_by)}` : ''}${s.created_at ? ` am ${fmtDT(s.created_at)}` : ''}` : '';
                 const doneMeta = s.done ? `✓ erledigt${s.done_by ? ` von ${escStepAttr(s.done_by)}` : ''}${s.done_at ? ` am ${fmtDT(s.done_at)}` : ''}` : '';
+                const assignedUser = s.assigned_to ? (window.userList || []).find(u => u.name === s.assigned_to) : null;
+                const assignInitials = s.assigned_to ? (assignedUser ? (assignedUser.initials || assignedUser.name.substring(0, 2).toUpperCase()) : s.assigned_to.substring(0, 2).toUpperCase()) : '';
+                const assignColor = assignedUser ? (assignedUser.color || '#666') : '#64748b';
+                const assignBtn = s.assigned_to
+                    ? `<button type="button" onclick="window.openStepAssigneeMenu('${prefix}','${s.id}', event)" title="Zuständig: ${escStepAttr(s.assigned_to)}" style="flex-shrink:0; width:24px; height:24px; border-radius:50%; border:none; background:${assignColor}; color:#fff; font-size:0.62rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center; margin-top:1px;">${assignInitials}</button>`
+                    : `<button type="button" onclick="window.openStepAssigneeMenu('${prefix}','${s.id}', event)" title="Zuständigen zuweisen" style="flex-shrink:0; width:24px; height:24px; border-radius:50%; border:1px dashed rgba(255,255,255,0.35); background:transparent; color:rgba(255,255,255,0.4); cursor:pointer; display:flex; align-items:center; justify-content:center; margin-top:1px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></button>`;
+                const assignMeta = s.assigned_to ? `zuständig: ${escStepAttr(s.assigned_to)}` : '';
+                let remBtn, remindMeta = '';
+                if (s.remind_at) {
+                    const rd = new Date(s.remind_at);
+                    const diffDays = Math.round((new Date(rd).setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / 86400000);
+                    const rc = s.done ? 'rgba(255,255,255,0.35)' : (diffDays < 0 ? '#f87171' : (diffDays <= 3 ? '#fbbf24' : '#93c5fd'));
+                    remBtn = `<button type="button" onclick="window.openStepReminderMenu('${prefix}','${s.id}', event)" title="Erinnerung: ${escStepAttr(fmtDT(s.remind_at))}" style="flex-shrink:0; width:24px; height:24px; border-radius:50%; border:none; background:${rc}22; color:${rc}; cursor:pointer; display:flex; align-items:center; justify-content:center; margin-top:1px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg></button>`;
+                    remindMeta = `erinnert ${escStepAttr(fmtDT(s.remind_at))}`;
+                } else {
+                    remBtn = `<button type="button" onclick="window.openStepReminderMenu('${prefix}','${s.id}', event)" title="Erinnerung setzen" style="flex-shrink:0; width:24px; height:24px; border-radius:50%; border:1px dashed rgba(255,255,255,0.35); background:transparent; color:rgba(255,255,255,0.4); cursor:pointer; display:flex; align-items:center; justify-content:center; margin-top:1px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg></button>`;
+                }
                 return `
                 <div class="proc-step-row" draggable="true" data-step-id="${s.id}"
                      ondragstart="window.procStepDragStart(event,'${prefix}','${s.id}')"
@@ -774,14 +800,18 @@
                         <textarea rows="1" placeholder="Schritt beschreiben..."
                             oninput="this.style.height='auto'; this.style.height=this.scrollHeight+'px'; window.updateProcessStepText('${prefix}','${s.id}', this.value)"
                             style="flex:1; min-width:0; background:transparent; border:none; color:#fff; font-size:0.9rem; outline:none; resize:none; overflow:hidden; word-break:break-word; white-space:pre-wrap; font-family:inherit; line-height:1.4; padding-top:3px; text-decoration:${s.done ? 'line-through' : 'none'}; opacity:${s.done ? '0.55' : '1'};">${escStepAttr(s.text)}</textarea>
+                        ${assignBtn}
+                        ${remBtn}
                         <button type="button" onclick="window.deleteProcessStep('${prefix}','${s.id}')" title="Entfernen"
                             style="flex-shrink:0; background:none; border:none; color:#ef4444; cursor:pointer; padding:4px; display:flex; align-items:center; margin-top:1px;">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                         </button>
                     </div>
-                    ${(createdMeta || doneMeta) ? `<div style="padding-left:80px; display:flex; flex-wrap:wrap; align-items:center; gap:12px;">
-                        ${createdMeta ? `<span style="font-size:0.6rem; color:rgba(255,255,255,0.35);">${createdMeta}</span>` : ''}
-                        ${doneMeta ? `<span style="font-size:0.6rem; color:rgba(16,185,129,0.6);">${doneMeta}</span>` : ''}
+                    ${(createdMeta || doneMeta || assignMeta || remindMeta) ? `<div style="padding-left:80px; display:flex; flex-wrap:wrap; align-items:center; gap:12px;">
+                        ${remindMeta ? `<span style="font-size:0.78rem; font-weight:600; color:#93c5fd; display:inline-flex; align-items:center; gap:4px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>${remindMeta}</span>` : ''}
+                        ${assignMeta ? `<span style="font-size:0.78rem; font-weight:600; color:${assignColor};">${assignMeta}</span>` : ''}
+                        ${createdMeta ? `<span style="font-size:0.78rem; color:rgba(255,255,255,0.5);">${createdMeta}</span>` : ''}
+                        ${doneMeta ? `<span style="font-size:0.78rem; color:rgba(16,185,129,0.75);">${doneMeta}</span>` : ''}
                     </div>` : ''}
                 </div>`;
             }).join('');
@@ -892,7 +922,7 @@
                             if (wrapDiv) {
                                 metaEl = document.createElement('div');
                                 metaEl.className = 'proc-step-meta';
-                                metaEl.style.cssText = 'font-size:0.6rem; color:rgba(255,255,255,0.35); margin-top:1px; padding:0 4px;';
+                                metaEl.style.cssText = 'font-size:0.78rem; color:rgba(255,255,255,0.5); margin-top:2px; padding:0 4px;';
                                 wrapDiv.appendChild(metaEl);
                             }
                         }
@@ -935,7 +965,7 @@
             if (!proc) return;
             window.stepsModalProcessId = id;
             window.processSteps['steps-modal'] = Array.isArray(proc.steps)
-                ? proc.steps.map(s => ({ id: s.id || genStepId(), text: s.text || '', done: !!s.done, created_at: s.created_at || null, created_by: s.created_by || null, done_at: s.done_at || null, done_by: s.done_by || null }))
+                ? proc.steps.map(s => ({ id: s.id || genStepId(), text: s.text || '', done: !!s.done, created_at: s.created_at || null, created_by: s.created_by || null, done_at: s.done_at || null, done_by: s.done_by || null, assigned_to: s.assigned_to || null, assigned_id: s.assigned_id || null, remind_at: s.remind_at || null }))
                 : [];
             const sub = document.getElementById('steps-modal-subtitle');
             if (sub) sub.textContent = proc.title || 'Vorgang';
@@ -965,4 +995,337 @@
                 console.error('Fehler beim Speichern der Schritte:', e);
                 window.showToast('Fehler beim Speichern: ' + e.message);
             }
+        };
+
+        // ==========================================
+        // ADRESSE + ANSPRECHPARTNER IM VORGANG (add / edit)
+        // Suche über alle Adressen (Name / PLZ / Ort). Ist eine Adresse gewählt,
+        // wird der Vorgang an ihr gespeichert (customer_id) und ihre
+        // Ansprechpartner – inkl. verknüpfter Adressen – zur Auswahl angeboten.
+        // ==========================================
+        window.processAddressCache = null;   // [{id,name,zip_code,city,matchcode}]
+        window.processContactCache = {};      // prefix -> [contacts]
+
+        async function ensureProcessAddresses() {
+            if (window.processAddressCache) return window.processAddressCache;
+            try {
+                const { data, error } = await window.supabaseClient
+                    .from('customers')
+                    .select('id, name, zip_code, city, matchcode')
+                    .order('name');
+                if (error) throw error;
+                window.processAddressCache = data || [];
+            } catch (e) {
+                console.warn('Adressen für Vorgang konnten nicht geladen werden:', e);
+                window.processAddressCache = [];
+            }
+            return window.processAddressCache;
+        }
+
+        window.showProcessAddressDropdown = async function(prefix) {
+            await ensureProcessAddresses();
+            const input = document.getElementById(`${prefix}-address-search`);
+            window.filterProcessAddressDropdown(prefix, input ? input.value : '');
+        };
+
+        window.filterProcessAddressDropdown = function(prefix, q) {
+            const box = document.getElementById(`${prefix}-address-suggestions`);
+            if (!box) return;
+            const list = window.processAddressCache || [];
+            const term = (q || '').toLowerCase().trim();
+            let res = term
+                ? list.filter(a => [a.name, a.zip_code, a.city, a.matchcode]
+                    .map(v => (v || '').toString().toLowerCase()).join(' ').includes(term))
+                : list;
+            res = res.slice(0, 40);
+            if (!res.length) {
+                box.innerHTML = `<div style="padding:10px 12px; color:rgba(255,255,255,0.4); font-size:0.85rem;">Keine Adresse gefunden</div>`;
+                box.style.display = 'block';
+                return;
+            }
+            box.innerHTML = res.map(a => {
+                const sub = [a.zip_code, a.city].filter(Boolean).join(' ');
+                return `<div onclick="window.selectProcessAddress('${prefix}', '${a.id}')" style="padding:9px 12px; cursor:pointer; border-radius:8px;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'">
+                    <div style="color:#fff; font-weight:600; font-size:0.9rem;">${escStepAttr(a.name || '—')}</div>
+                    ${(sub || a.matchcode) ? `<div style="color:rgba(255,255,255,0.45); font-size:0.78rem;">${escStepAttr(sub)}${a.matchcode ? (sub ? ' · ' : '') + escStepAttr(a.matchcode) : ''}</div>` : ''}
+                </div>`;
+            }).join('');
+            box.style.display = 'block';
+        };
+
+        window.selectProcessAddress = async function(prefix, id) {
+            const a = (window.processAddressCache || []).find(x => String(x.id) === String(id));
+            if (!a) return;
+            const hidden = document.getElementById(`${prefix}-customer-id`);
+            if (hidden) hidden.value = a.id;
+            const input = document.getElementById(`${prefix}-address-search`);
+            if (input) {
+                const sub = [a.zip_code, a.city].filter(Boolean).join(' ');
+                input.value = a.name + (sub ? ' · ' + sub : '');
+                input.style.color = 'var(--color-primary-green)';
+            }
+            const box = document.getElementById(`${prefix}-address-suggestions`);
+            if (box) box.style.display = 'none';
+            // Ansprechpartner der Adresse (und verknüpfter Adressen) laden.
+            window.selectProcessContact(prefix, '');
+            await loadProcessContacts(prefix, a.id);
+        };
+
+        // Neue Adresse direkt aus dem Vorgang-Dialog anlegen (inkl. .vcf-Import).
+        // Nach dem Speichern wird die Adresse hier übernommen und ausgewählt.
+        window.openProcessAddressCreate = function(prefix) {
+            if (typeof window.openAddressForm !== 'function') {
+                window.showToast && window.showToast('Adressformular nicht verfügbar.');
+                return;
+            }
+            window._addressCreateCallback = async (addr) => {
+                if (!addr) return;
+                if (!window.processAddressCache) window.processAddressCache = [];
+                const entry = {
+                    id: addr.id, name: addr.name || 'Adresse',
+                    zip_code: addr.zip_code || '', city: addr.city || '',
+                    matchcode: addr.matchcode || ''
+                };
+                const idx = window.processAddressCache.findIndex(x => String(x.id) === String(addr.id));
+                if (idx >= 0) window.processAddressCache[idx] = entry;
+                else window.processAddressCache.push(entry);
+                await window.selectProcessAddress(prefix, addr.id);
+            };
+            window.openAddressForm();
+        };
+
+        // Adresse wieder entfernen (leert Suche + Ansprechpartner).
+        window.clearProcessAddress = function(prefix) {
+            const hidden = document.getElementById(`${prefix}-customer-id`);
+            if (hidden) hidden.value = '';
+            const input = document.getElementById(`${prefix}-address-search`);
+            if (input) { input.value = ''; input.style.color = ''; }
+            window.processContactCache[prefix] = [];
+            window.selectProcessContact(prefix, '');
+            const grp = document.getElementById(`${prefix}-contact-group`);
+            if (grp) grp.style.display = 'none';
+        };
+
+        async function loadProcessContacts(prefix, customerId) {
+            let ids = [customerId];
+            try {
+                const { data: links } = await window.supabaseClient
+                    .from('customer_links')
+                    .select('customer_id, linked_customer_id')
+                    .or(`customer_id.eq.${customerId},linked_customer_id.eq.${customerId}`);
+                (links || []).forEach(l => { ids.push(l.customer_id); ids.push(l.linked_customer_id); });
+            } catch (e) { /* Verknüpfungen optional */ }
+            ids = [...new Set(ids.map(String))];
+            let contacts = [];
+            try {
+                const { data, error } = await window.supabaseClient
+                    .from('customer_contacts')
+                    .select('*')
+                    .in('customer_id', ids);
+                if (error) throw error;
+                contacts = data || [];
+            } catch (e) {
+                console.warn('Ansprechpartner konnten nicht geladen werden:', e);
+            }
+            window.processContactCache[prefix] = contacts;
+            const grp = document.getElementById(`${prefix}-contact-group`);
+            if (grp) grp.style.display = '';
+            renderProcessContactMenu(prefix);
+        }
+
+        window.toggleProcessContactDropdown = function(prefix) {
+            const box = document.getElementById(`${prefix}-contact-suggestions`);
+            if (!box) return;
+            const open = box.style.display !== 'none';
+            document.querySelectorAll('.proc-contact-suggestions').forEach(b => b.style.display = 'none');
+            if (!open) { renderProcessContactMenu(prefix); box.style.display = 'block'; }
+        };
+
+        function renderProcessContactMenu(prefix) {
+            const box = document.getElementById(`${prefix}-contact-suggestions`);
+            if (!box) return;
+            const contacts = window.processContactCache[prefix] || [];
+            const curEl = document.getElementById(`${prefix}-contact-name`);
+            const cur = curEl ? curEl.value : '';
+            let html = `<div onclick="window.selectProcessContact('${prefix}', '')" style="padding:9px 12px; cursor:pointer; border-radius:8px; color:rgba(255,255,255,0.6);" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'">— Kein Ansprechpartner —</div>`;
+            html += contacts.map(c => {
+                const label = [c.salutation, c.name].filter(Boolean).join(' ');
+                const sub = [c.position, c.department].filter(Boolean).join(' · ');
+                const active = c.name === cur;
+                return `<div onclick="window.selectProcessContact('${prefix}', '${escStepAttr(c.name)}')" style="padding:9px 12px; cursor:pointer; border-radius:8px; ${active ? 'background:rgba(16,185,129,0.12);' : ''}" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='${active ? 'rgba(16,185,129,0.12)' : 'transparent'}'">
+                    <div style="color:#fff; font-weight:600; font-size:0.9rem;">${escStepAttr(label || c.name)}</div>
+                    ${sub ? `<div style="color:rgba(255,255,255,0.45); font-size:0.78rem;">${escStepAttr(sub)}</div>` : ''}
+                </div>`;
+            }).join('');
+            if (!contacts.length) html += `<div style="padding:8px 12px; color:rgba(255,255,255,0.35); font-size:0.8rem;">Keine Ansprechpartner hinterlegt</div>`;
+            box.innerHTML = html;
+        }
+
+        window.selectProcessContact = function(prefix, name) {
+            const hidden = document.getElementById(`${prefix}-contact-name`);
+            if (hidden) hidden.value = name || '';
+            const txt = document.getElementById(`${prefix}-contact-text`);
+            if (txt) {
+                txt.textContent = name || 'Ansprechpartner wählen...';
+                txt.style.color = name ? '#fff' : 'rgba(255,255,255,0.4)';
+            }
+            const box = document.getElementById(`${prefix}-contact-suggestions`);
+            if (box) box.style.display = 'none';
+        };
+
+        // Adress-/Ansprechpartner-Felder für ein Modal zurücksetzen.
+        window.resetProcessAddressFields = function(prefix) {
+            const hidden = document.getElementById(`${prefix}-customer-id`);
+            if (hidden) hidden.value = '';
+            const input = document.getElementById(`${prefix}-address-search`);
+            if (input) { input.value = ''; input.style.color = ''; }
+            const sugg = document.getElementById(`${prefix}-address-suggestions`);
+            if (sugg) sugg.style.display = 'none';
+            window.processContactCache[prefix] = [];
+            window.selectProcessContact(prefix, '');
+            const grp = document.getElementById(`${prefix}-contact-group`);
+            if (grp) grp.style.display = 'none';
+        };
+
+        // Adress-/Ansprechpartner-Felder aus einem bestehenden Vorgang befüllen.
+        window.prefillProcessAddressFields = async function(prefix, proc) {
+            window.resetProcessAddressFields(prefix);
+            if (!proc || !proc.customer_id) return;
+            await ensureProcessAddresses();
+            const hidden = document.getElementById(`${prefix}-customer-id`);
+            if (hidden) hidden.value = proc.customer_id;
+            const input = document.getElementById(`${prefix}-address-search`);
+            const a = (window.processAddressCache || []).find(x => String(x.id) === String(proc.customer_id));
+            const name = (proc.customers && proc.customers.name) || (a && a.name) || 'Adresse';
+            if (input) {
+                const sub = a ? [a.zip_code, a.city].filter(Boolean).join(' ') : '';
+                input.value = name + (sub ? ' · ' + sub : '');
+                input.style.color = 'var(--color-primary-green)';
+            }
+            await loadProcessContacts(prefix, proc.customer_id);
+            if (proc.contact_name) window.selectProcessContact(prefix, proc.contact_name);
+        };
+
+        // Suggestion-Listen bei Klick außerhalb schließen.
+        document.addEventListener('click', function(e) {
+            ['process-add', 'edit-process'].forEach(prefix => {
+                const addrBox = document.getElementById(`${prefix}-address-suggestions`);
+                const addrInput = document.getElementById(`${prefix}-address-search`);
+                if (addrBox && addrBox.style.display !== 'none' && !addrBox.contains(e.target) && e.target !== addrInput) {
+                    addrBox.style.display = 'none';
+                }
+                const contBox = document.getElementById(`${prefix}-contact-suggestions`);
+                const contTrig = document.getElementById(`${prefix}-contact-trigger`);
+                if (contBox && contBox.style.display !== 'none' && !contBox.contains(e.target) && !(contTrig && contTrig.contains(e.target))) {
+                    contBox.style.display = 'none';
+                }
+            });
+        });
+
+        // ==========================================
+        // SCHRITT-ZUWEISUNG (pro Schritt ein Zuständiger)
+        // ==========================================
+        function closeStepAssigneeMenu() {
+            const m = document.getElementById('step-assignee-menu');
+            if (m) m.remove();
+        }
+        window.openStepAssigneeMenu = function(prefix, id, ev) {
+            if (ev) ev.stopPropagation();
+            closeStepAssigneeMenu();
+            const btn = ev ? ev.currentTarget : null;
+            const arr = window.processSteps[prefix] || [];
+            const step = arr.find(x => x.id === id);
+            const cur = step ? (step.assigned_to || '') : '';
+            const users = window.userList || [];
+            const menu = document.createElement('div');
+            menu.id = 'step-assignee-menu';
+            menu.style.cssText = 'position:fixed; z-index:1000000; background:#0f172a; border:1px solid rgba(255,255,255,0.2); border-radius:12px; padding:6px; box-shadow:0 16px 48px rgba(0,0,0,0.75); max-height:280px; overflow-y:auto; min-width:200px;';
+            let html = `<div onclick="window.setStepAssignee('${prefix}','${id}','','')" style="display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:9px; cursor:pointer; color:rgba(255,255,255,0.6);" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='transparent'">— Niemand —</div>`;
+            html += users.map(u => {
+                const initials = u.initials || u.name.substring(0, 2).toUpperCase();
+                const color = u.color || '#666';
+                const active = u.name === cur;
+                return `<div onclick="window.setStepAssignee('${prefix}','${id}','${u.id}','${escStepAttr(u.name)}')" style="display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:9px; cursor:pointer; ${active ? 'background:rgba(16,185,129,0.12);' : ''}" onmouseover="this.style.background='rgba(255,255,255,0.06)'" onmouseout="this.style.background='${active ? 'rgba(16,185,129,0.12)' : 'transparent'}'">
+                    <div style="width:28px; height:28px; border-radius:50%; background:${color}; display:flex; align-items:center; justify-content:center; font-size:0.7rem; font-weight:800; color:#fff; flex-shrink:0;">${initials}</div>
+                    <span style="flex:1; color:#fff; font-size:0.9rem; font-weight:500;">${escStepAttr(u.name)}</span>
+                    ${active ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+                </div>`;
+            }).join('');
+            menu.innerHTML = html;
+            document.body.appendChild(menu);
+            if (btn) {
+                const r = btn.getBoundingClientRect();
+                menu.style.top = Math.min(r.bottom + 4, window.innerHeight - menu.offsetHeight - 8) + 'px';
+                menu.style.left = Math.min(r.left, window.innerWidth - menu.offsetWidth - 8) + 'px';
+            }
+            setTimeout(() => document.addEventListener('click', closeStepAssigneeMenu, { once: true }), 0);
+        };
+        window.setStepAssignee = function(prefix, id, uid, name) {
+            const arr = window.processSteps[prefix] || [];
+            const s = arr.find(x => x.id === id);
+            if (!s) { closeStepAssigneeMenu(); return; }
+            s.assigned_to = name || null;
+            s.assigned_id = uid || null;
+            closeStepAssigneeMenu();
+            window.renderProcessSteps(prefix);
+        };
+
+        // ==========================================
+        // SCHRITT-ERINNERUNG (pro Schritt ein Datum)
+        // ==========================================
+        function closeStepReminderMenu() {
+            const m = document.getElementById('step-reminder-menu');
+            if (m) m.remove();
+        }
+        window.openStepReminderMenu = function(prefix, id, ev) {
+            if (ev) ev.stopPropagation();
+            closeStepReminderMenu();
+            const btn = ev ? ev.currentTarget : null;
+            const arr = window.processSteps[prefix] || [];
+            const step = arr.find(x => x.id === id);
+            if (!step) return;
+            let cur = '';
+            if (step.remind_at) {
+                const d = new Date(step.remind_at);
+                const tz = d.getTimezoneOffset() * 60000;
+                cur = new Date(d.getTime() - tz).toISOString().slice(0, 16);
+            }
+            const menu = document.createElement('div');
+            menu.id = 'step-reminder-menu';
+            menu.style.cssText = 'position:fixed; z-index:1000000; background:#0f172a; border:1px solid rgba(255,255,255,0.2); border-radius:12px; padding:10px; box-shadow:0 16px 48px rgba(0,0,0,0.75); min-width:230px;';
+            const quick = [['Heute', 0], ['Morgen', 1], ['In 3 Tagen', 3], ['In 1 Woche', 7]];
+            menu.innerHTML = `
+                <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;">
+                    ${quick.map(q => `<button type="button" onclick="window.setStepReminderQuick('${prefix}','${id}',${q[1]})" style="flex:1 1 auto; padding:6px 8px; border-radius:8px; border:1px solid rgba(255,255,255,0.15); background:rgba(255,255,255,0.05); color:#fff; font-size:0.78rem; font-weight:600; cursor:pointer; white-space:nowrap;">${q[0]}</button>`).join('')}
+                </div>
+                <input type="datetime-local" id="step-reminder-input" value="${cur}" onchange="window.setStepReminder('${prefix}','${id}', this.value)" style="width:100%; box-sizing:border-box; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.2); border-radius:8px; color:#fff; padding:7px 9px; font-size:0.85rem; margin-bottom:8px; color-scheme:dark;">
+                <button type="button" onclick="window.setStepReminder('${prefix}','${id}','')" style="width:100%; padding:7px; border-radius:8px; border:none; background:rgba(239,68,68,0.15); color:#f87171; font-size:0.8rem; font-weight:700; cursor:pointer;">Erinnerung löschen</button>`;
+            document.body.appendChild(menu);
+            if (btn) {
+                const r = btn.getBoundingClientRect();
+                menu.style.top = Math.min(r.bottom + 4, window.innerHeight - menu.offsetHeight - 8) + 'px';
+                menu.style.left = Math.min(r.left, window.innerWidth - menu.offsetWidth - 8) + 'px';
+            }
+            setTimeout(() => document.addEventListener('click', function h(e) {
+                if (!menu.contains(e.target)) { closeStepReminderMenu(); document.removeEventListener('click', h); }
+            }), 0);
+        };
+        window.setStepReminderQuick = function(prefix, id, daysFromToday) {
+            const d = new Date();
+            d.setDate(d.getDate() + daysFromToday);
+            d.setHours(8, 0, 0, 0);
+            const arr = window.processSteps[prefix] || [];
+            const s = arr.find(x => x.id === id);
+            if (!s) { closeStepReminderMenu(); return; }
+            s.remind_at = d.toISOString();
+            closeStepReminderMenu();
+            window.renderProcessSteps(prefix);
+        };
+        window.setStepReminder = function(prefix, id, val) {
+            const arr = window.processSteps[prefix] || [];
+            const s = arr.find(x => x.id === id);
+            if (!s) { closeStepReminderMenu(); return; }
+            s.remind_at = val ? new Date(val).toISOString() : null;
+            closeStepReminderMenu();
+            window.renderProcessSteps(prefix);
         };

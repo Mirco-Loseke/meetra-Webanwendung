@@ -1,6 +1,6 @@
     <!-- PROCESS ADD MODAL (Manueller Vorgang) -->
     <div id="process-add-modal" class="modal-new hidden" style="z-index: 10000; display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);">
-        <div class="modal-content glass-card proc-modal-scroll" style="max-width: 750px; width: 90%; max-height: 90vh; overflow-y: auto !important; padding: 2rem; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+        <div class="modal-content glass-card proc-modal-scroll" style="max-width: 1080px; width: 94%; max-height: 92vh; overflow-y: auto !important; padding: 1.75rem 2rem; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
                 <h2 style="margin: 0; color: #fff; font-size: 1.8rem; font-weight: 800;">Vorgang hinzufügen</h2>
                 <button class="btn-close" onclick="window.closeProcessAddModal()" style="background: none; border: none; color: rgba(255,255,255,0.4); cursor: pointer;">
@@ -17,6 +17,9 @@
                         <span id="process-add-address-name">-</span>
                     </div>
                 </div>
+
+                <div class="proc-add-columns">
+                <div class="proc-add-col">
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 0.75rem;">
                     <div class="form-group">
@@ -82,6 +85,37 @@
                     </div>
                 </div>
 
+                <div class="form-group" id="process-add-address-group" style="margin-bottom: 0.75rem;">
+                    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px;">
+                        <div class="form-group" style="position: relative; margin: 0;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                                <label class="form-label-caps">Adresse</label>
+                                <button type="button" onclick="window.openProcessAddressCreate('process-add')" title="Neue Adresse anlegen (auch .vcf-Import)" style="display:inline-flex; align-items:center; gap:4px; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:0.72rem; font-weight:700; padding:3px 9px; border-radius:999px; cursor:pointer;">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    Adresse anlegen
+                                </button>
+                            </div>
+                            <input type="hidden" id="process-add-customer-id" value="">
+                            <input type="text" id="process-add-address-search" class="glass-input" placeholder="Name, PLZ oder Ort suchen..." autocomplete="off"
+                                oninput="window.filterProcessAddressDropdown('process-add', this.value)"
+                                onfocus="window.showProcessAddressDropdown('process-add')">
+                            <div id="process-add-address-suggestions" class="autocomplete-suggestions proc-address-suggestions" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:9999; max-height:220px; overflow-y:auto; margin-top:4px;"></div>
+                        </div>
+                        <div class="form-group" id="process-add-contact-group" style="position: relative; margin: 0; display: none;">
+                            <label class="form-label-caps">Ansprechpartner</label>
+                            <input type="hidden" id="process-add-contact-name" value="">
+                            <div id="process-add-contact-trigger" class="glass-select" style="cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="window.toggleProcessContactDropdown('process-add')">
+                                <span id="process-add-contact-text" style="flex:1; color:rgba(255,255,255,0.4);">Ansprechpartner wählen...</span>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </div>
+                            <div id="process-add-contact-suggestions" class="autocomplete-suggestions proc-contact-suggestions" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:9999; max-height:220px; overflow-y:auto; margin-top:4px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                </div>
+                <div class="proc-add-col">
+
                 <div class="form-group" style="margin-bottom: 1.25rem;">
                     <label class="form-label-caps">Mitarbeiter zuweisen</label>
                     <div id="process-add-tech-dropdown-wrapper" style="position: relative; z-index: 3000;">
@@ -118,6 +152,9 @@
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                         Schritt hinzufügen
                     </button>
+                </div>
+
+                </div>
                 </div>
 
                 <div style="display: flex; gap: 15px;">
@@ -279,6 +316,34 @@
                                 <span id="edit-process-status-select-text" style="flex:1;">Offen</span>
                             </div>
                             <div id="edit-process-status-menu" class="proc-select-menu user-dropdown-menu" style="width:100%; top:105%; right:auto; left:0;"><ul></ul></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group" id="edit-process-address-group" style="margin-bottom: 1.25rem;">
+                    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px;">
+                        <div class="form-group" style="position: relative; margin: 0;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+                                <label class="form-label-caps">Adresse</label>
+                                <button type="button" onclick="window.openProcessAddressCreate('edit-process')" title="Neue Adresse anlegen (auch .vcf-Import)" style="display:inline-flex; align-items:center; gap:4px; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:0.72rem; font-weight:700; padding:3px 9px; border-radius:999px; cursor:pointer;">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                    Adresse anlegen
+                                </button>
+                            </div>
+                            <input type="hidden" id="edit-process-customer-id" value="">
+                            <input type="text" id="edit-process-address-search" class="glass-input" placeholder="Name, PLZ oder Ort suchen..." autocomplete="off"
+                                oninput="window.filterProcessAddressDropdown('edit-process', this.value)"
+                                onfocus="window.showProcessAddressDropdown('edit-process')">
+                            <div id="edit-process-address-suggestions" class="autocomplete-suggestions proc-address-suggestions" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:9999; max-height:220px; overflow-y:auto; margin-top:4px;"></div>
+                        </div>
+                        <div class="form-group" id="edit-process-contact-group" style="position: relative; margin: 0; display: none;">
+                            <label class="form-label-caps">Ansprechpartner</label>
+                            <input type="hidden" id="edit-process-contact-name" value="">
+                            <div id="edit-process-contact-trigger" class="glass-select" style="cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="window.toggleProcessContactDropdown('edit-process')">
+                                <span id="edit-process-contact-text" style="flex:1; color:rgba(255,255,255,0.4);">Ansprechpartner wählen...</span>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            </div>
+                            <div id="edit-process-contact-suggestions" class="autocomplete-suggestions proc-contact-suggestions" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:9999; max-height:220px; overflow-y:auto; margin-top:4px;"></div>
                         </div>
                     </div>
                 </div>

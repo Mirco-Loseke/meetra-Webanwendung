@@ -26,6 +26,7 @@
     }
 
     function positionieren(menu) {
+        if (istAusgenommen(menu)) return;
         const trigger = findeTrigger(menu);
         if (!trigger) return;
 
@@ -100,9 +101,19 @@
         });
     });
 
+    // Der Benutzerwechsel oben rechts in der Sidebar nutzt dieselbe Klasse
+    // (.user-dropdown-menu), ist aber kein Feld in einem scrollenden Modal.
+    // Ihn positioniert reines CSS (absolute; top:100%; right:0) — der
+    // Modal-Positionierer darf ihn nicht anfassen, sonst landet er versetzt
+    // und abgeschnitten unter dem schmalen Namensfeld.
+    function istAusgenommen(menu) {
+        return !!menu.closest('.sidebar-user-profile');
+    }
+
     function beobachten(wurzel) {
         wurzel.querySelectorAll(MENU_SELECTOR).forEach(menu => {
             if (menu.dataset.posBeobachtet) return;
+            if (istAusgenommen(menu)) { menu.dataset.posBeobachtet = '1'; return; }
             menu.dataset.posBeobachtet = '1';
             beobachter.observe(menu, { attributes: true, attributeFilter: ['class'] });
             if (menu.classList.contains('show')) positionieren(menu);

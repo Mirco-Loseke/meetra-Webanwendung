@@ -440,6 +440,22 @@
     background: rgba(255, 255, 255, 0.1) !important;
 }
 
+/* Farbpunkt bei Vorgangs-Typ/-Status (Auslöser + Menüeinträge):
+   klein und exakt rund. Ohne feste Breite zieht der Flex-Container den
+   Punkt in die Breite ("breit gezogen"). */
+[id$="-select-dot"],
+.proc-select-menu li > span:first-child {
+    width: 8px !important;
+    height: 8px !important;
+    min-width: 8px !important;
+    max-width: 8px !important;
+    aspect-ratio: 1 / 1 !important;
+    border-radius: 50% !important;
+    flex: 0 0 auto !important;
+    display: inline-block !important;
+    padding: 0 !important;
+}
+
 .process-status-wrapper {
     position: relative;
 }

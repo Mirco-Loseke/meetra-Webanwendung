@@ -251,6 +251,26 @@
             item.targetType = 'process';
             item.targetId = p.id;
             out.push(item);
+
+            // Schritt-Erinnerungen: jeder offene Schritt mit remind_at ergibt
+            // einen eigenen Eintrag (unabhängig vom Vorgangs-Eintrag oben).
+            steps.forEach((s, si) => {
+                if (!s.remind_at || s.done) return;
+                if (!mine && !isCreator) return;
+                const sd = dayDiff(s.remind_at);
+                if (!inRange(sd, P.before)) return;
+                out.push({
+                    key: `proc:${p.id}:step:${si}:remind:${s.remind_at}`,
+                    kind: 'reminder',
+                    severity: sd < 0 ? 'overdue' : (sd === 0 ? 'today' : 'soon'),
+                    meta: `Schritt-Erinnerung · ${relLabel(sd)} · ${fmtDate(s.remind_at)}`,
+                    sortAt: new Date(s.remind_at).getTime(),
+                    title: (s.text || 'Schritt') + ' — ' + (p.title || 'Vorgang'),
+                    subject: subject,
+                    targetType: 'process',
+                    targetId: p.id
+                });
+            });
         });
 
         // --- Aufgaben (tasks) mit Fälligkeitsdatum ---

@@ -103,7 +103,7 @@
                 .from('tasks')
                 .select(`
                     *,
-                    machines(manufacturer, name, serial, year),
+                    machines(manufacturer, name, serial, year, image_url),
                     subtasks(*)
                 `)
                 .order('created_at', { ascending: false });
@@ -204,6 +204,8 @@
         } else {
             renderBoard(filteredTasks);
         }
+
+        if (typeof window.applyCinemaColumns === 'function') window.applyCinemaColumns();
     }
     window.renderTasks = renderTasks;
 
@@ -350,10 +352,11 @@
                     <div class="task-quick-complete ${task.status === 'completed' ? 'completed' : ''}" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="${task.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}" style="margin-top: 2px;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     </div>
-                    ${task.machines ? `<span class="task-card-machine" style="color: var(--color-primary-green); font-weight: 800; font-size: 1.05rem; white-space:normal; line-height: 1.2;" title="${getMachineLabel(task.machines)}">${getMachineLabel(task.machines)}</span>` : ''}
+                    ${task.machines ? `<span class="task-card-machine" style="color: var(--color-primary-green); font-weight: 800; font-size: 1.35rem; white-space:normal; line-height: 1.2;" title="${getMachineLabel(task.machines)}">${getMachineLabel(task.machines)}</span>` : ''}
                     ${!task.machines && task.workshop_order_number ? `<span class="task-card-machine" style="color: #60a5fa; font-weight: 800; font-size: 1.05rem; white-space:normal; line-height: 1.2;" title="Werkstattauftrag ${task.workshop_order_number}">Werkstattauftrag ${task.workshop_order_number}</span>` : ''}
                     ${(task.address_id || task.customer_id || (task.description && task.description.includes('[Adresse:'))) ? `<span class="task-card-machine" style="color: #a78bfa; background: rgba(167, 139, 250, 0.15); border: 1px solid rgba(167, 139, 250, 0.4); padding: 2px 8px; border-radius: 999px; font-weight: 800; font-size: 0.72rem; letter-spacing: 0.04em;" title="Aus Ansprechpartner/Adresse erstellt">📍 ADRESSE</span>` : ''}
                 </div>
+                ${task.machines && task.machines.image_url ? `<img src="${task.machines.image_url}" alt="" class="task-card-machine-thumb" onclick="event.stopPropagation(); window.openMachineDetails && window.openMachineDetails('${task.machine_id}')" style="width:121px; height:121px; border-radius:8px; object-fit:cover; flex-shrink:0; align-self:center; margin:0 auto; border:1px solid rgba(255,255,255,0.12); cursor:pointer;" onerror="this.remove()">` : ''}
                 <div class="task-card-actions" style="display: flex; gap: 6px; align-items: center;">
                     <button id="star-card-${task.id}" onclick="event.stopPropagation(); window.saveTaskAsQuickTemplate('${task.id}')" title="Als Schnellvorlage speichern"
                         class="btn-star-premium btn-premium-action">
@@ -729,7 +732,7 @@
                         .from('tasks')
                         .select(`
                             *,
-                            machines(manufacturer, name, serial, year),
+                            machines(manufacturer, name, serial, year, image_url),
                             subtasks(*)
                         `)
                         .eq('id', taskId)
@@ -1683,6 +1686,9 @@
             if (typeof window.switchTaskView === 'function') {
                 window.switchTaskView('board');
             }
+            if (typeof window.applyCinemaColumns === 'function') {
+                window.applyCinemaColumns();
+            }
         }
     };
 
@@ -1691,6 +1697,22 @@
     // ==========================================
     let cinemaActive = false;
     let cinemaRequestId = null;
+
+    // Anzahl der nebeneinander angezeigten Aufgaben (1–3) im Fokus-/Kino-Modus.
+    window.applyCinemaColumns = function () {
+        const board = document.getElementById('tasks-board');
+        if (!board) return;
+        const n = parseInt(localStorage.getItem('cinemaColumns') || '2', 10);
+        board.classList.remove('cinema-cols-1', 'cinema-cols-2', 'cinema-cols-3');
+        board.classList.add('cinema-cols-' + (n >= 1 && n <= 3 ? n : 2));
+        document.querySelectorAll('#cinema-cols-ui .cinema-col-btn').forEach(b => {
+            b.classList.toggle('active', String(b.dataset.cols) === String(n));
+        });
+    };
+    window.setCinemaColumns = function (n) {
+        localStorage.setItem('cinemaColumns', String(n));
+        window.applyCinemaColumns();
+    };
 
     window.toggleCinemaMode = function () {
         const btn = document.getElementById('btn-cinema-toggle');
@@ -1702,10 +1724,13 @@
             if (!document.body.classList.contains('focus-mode-active')) {
                 window.toggleFocusMode();
             }
+            document.body.classList.add('cinema-mode-active');
             btn.classList.add('active');
             if (floatingBtn) floatingBtn.classList.add('active');
             startCinemaScrolling();
         } else {
+            document.body.classList.remove('cinema-mode-active');
+            window.closeMobileSidebar && window.closeMobileSidebar();
             btn.classList.remove('active');
             if (floatingBtn) floatingBtn.classList.remove('active');
             if (cinemaRequestId) {

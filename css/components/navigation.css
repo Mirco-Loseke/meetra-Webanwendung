@@ -243,6 +243,18 @@
     left: 80px;
 }
 
+/* Beim Scrollen (Desktop/iPad) werden Social-Icons, Kalender, Glocke und
+   Benutzer-Wechsler dezent transparent; nach dem Scrollen wieder voll da. */
+.header-social-links,
+.topbar-right {
+    transition: opacity 0.4s ease;
+}
+
+body.topbar-scrolling .header-social-links,
+body.topbar-scrolling .topbar-right {
+    opacity: 0.25;
+}
+
 .header-social-links,
 .social-links {
     display: flex;

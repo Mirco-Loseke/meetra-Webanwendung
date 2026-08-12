@@ -2635,25 +2635,811 @@
     // ==========================================
     // ADRESSE: ANLEGEN / BEARBEITEN / LÖSCHEN
     // ==========================================
+    // ==========================================
+    // DUBLETTENPRÜFUNG + KONTAKT-IMPORT (Outlook / vCard)
+    // ==========================================
+    // Wird beim Befüllen des Formulars per Drag&Drop gesetzt: eine Person, die
+    // zusammen mit der neuen Firmen-Adresse als Ansprechpartner angelegt wird.
+    let importPendingContact = null;
+
+    // Firmennamen für den Vergleich vereinheitlichen (Rechtsformen/Sonderzeichen raus).
+    function normCompany(s) {
+        return (s || '').toLowerCase()
+            .replace(/[äàâ]/g, 'a').replace(/[öô]/g, 'o').replace(/[üû]/g, 'u').replace(/ß/g, 'ss')
+            .replace(/\b(gmbh|mbh|ag|kg|ohg|ug|co|kgaa|e\.?\s?k|e\.?\s?v|inc|ltd|llc|se|gbr|und|the)\b/g, ' ')
+            .replace(/&/g, ' ')
+            .replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
+    }
+    function normDigits(s) { return (s || '').replace(/\D+/g, ''); }
+    // Telefonnummern vergleichbar machen: Ländervorwahl (+49 / 0049) auf führende 0 bringen.
+    function normPhone(s) {
+        let d = normDigits(s);
+        if (d.startsWith('00')) d = d.slice(2);
+        if (d.startsWith('49')) d = '0' + d.slice(2);
+        return d;
+    }
+    function normStreet(s) { return (s || '').toLowerCase().replace(/stra(ss|ß)e/g, 'str').replace(/[^a-z0-9]+/g, ' ').trim(); }
+
+    // Ähnlichkeit zweier Strings über Bigramm-Überlappung (Dice-Koeffizient), 0..1.
+    function strSim(a, b) {
+        a = a || ''; b = b || '';
+        if (a === b) return a ? 1 : 0;
+        if (a.length < 2 || b.length < 2) return 0;
+        const bigrams = s => { const m = new Map(); for (let i = 0; i < s.length - 1; i++) { const g = s.substr(i, 2); m.set(g, (m.get(g) || 0) + 1); } return m; };
+        const A = bigrams(a), B = bigrams(b);
+        let inter = 0, total = 0;
+        A.forEach((v, k) => { total += v; if (B.has(k)) inter += Math.min(v, B.get(k)); });
+        B.forEach(v => total += v);
+        return total ? (2 * inter) / total : 0;
+    }
+
+    // Ähnliche/identische Adressen zu einem Payload finden (für die Dublettenwarnung).
+    function findDuplicateAddresses(payload, excludeId) {
+        const nName = normCompany(payload.name);
+        const pEmail = (payload.email || '').toLowerCase().trim();
+        const pPhone = normPhone(payload.phone);
+        const pZip = (payload.zip_code || '').toString().trim();
+        const pStreet = normStreet(payload.street);
+        const pCity = (payload.city || '').toLowerCase().trim();
+        const out = [];
+        (state.addresses || []).forEach(a => {
+            if (excludeId && String(a.id) === String(excludeId)) return;
+            const aName = normCompany(a.name);
+            const sim = strSim(nName, aName);
+            let score = 0; const reasons = [];
+            if (nName && aName && sim >= 0.92) { score += 0.6; reasons.push('fast identischer Name'); }
+            else if (nName && aName && sim >= 0.74) { score += 0.35; reasons.push('ähnlicher Name'); }
+            if (pEmail && a.email && a.email.toLowerCase().trim() === pEmail) { score += 0.6; reasons.push('gleiche E-Mail'); }
+            if (pPhone && a.phone && normPhone(a.phone) === pPhone) { score += 0.5; reasons.push('gleiche Telefonnummer'); }
+            if (pZip && pStreet && a.zip_code && String(a.zip_code).trim() === pZip && normStreet(a.street) === pStreet) { score += 0.5; reasons.push('gleiche Anschrift'); }
+            else if (pCity && sim >= 0.6 && a.city && a.city.toLowerCase().trim() === pCity) { score += 0.2; reasons.push('gleicher Ort'); }
+            if (score >= 0.5) out.push({ addr: a, score, reasons: [...new Set(reasons)] });
+        });
+        return out.sort((x, y) => y.score - x.score).slice(0, 6);
+    }
+
+    // Firmen finden, zu denen eine importierte Person passen könnte (Name-Ähnlichkeit).
+    // Personennamen reihenfolge-unabhängig normalisieren (Vor-/Nachname vertauscht = gleich).
+    function normName(s) {
+        return (s || '').toLowerCase()
+            .replace(/\b(herr|herrn|frau|dr|prof|dipl|ing|mba|msc|bsc)\b\.?/g, ' ')
+            .replace(/[äàâ]/g, 'a').replace(/[öô]/g, 'o').replace(/[üû]/g, 'u').replace(/ß/g, 'ss')
+            .replace(/[^a-z\s-]/g, ' ').split(/\s+/).filter(Boolean).sort().join(' ');
+    }
+
+    // Passende Adressen zu einem importierten Kontakt finden – über MEHRERE Signale
+    // (Firmenname, Straße+Ort, E-Mail/-Domain, Telefon), nicht nur den Namen.
+    function findImportAddressMatches(p) {
+        const nOrg = normCompany(p.org || '');
+        const nPerson = normCompany(p.name || '');
+        const pStreet = normStreet(p.street);
+        const pCity = (p.city || '').toLowerCase().trim();
+        const pZip = (p.zip || '').toString().trim();
+        const pEmail = (p.email || '').toLowerCase().trim();
+        const pDomain = pEmail.split('@')[1] || '';
+        const genericDomain = /^(gmail|googlemail|web|gmx|t-online|outlook|hotmail|yahoo|icloud|me|aol)\./.test(pDomain);
+        const pPhone = normPhone(p.phone || p.mobile);
+        const out = [];
+        (state.addresses || []).forEach(a => {
+            const aName = normCompany(a.name);
+            const sim = Math.max(nOrg ? strSim(nOrg, aName) : 0, nPerson ? strSim(nPerson, aName) : 0);
+            let score = 0; const reasons = [];
+            if (sim >= 0.9) { score += 0.6; reasons.push('fast identischer Firmenname'); }
+            else if (sim >= 0.62) { score += 0.3; reasons.push('ähnlicher Firmenname'); }
+            const sameStreet = pStreet && normStreet(a.street) === pStreet;
+            const sameCity = pCity && (a.city || '').toLowerCase().trim() === pCity;
+            if (sameStreet && sameCity) { score += 0.55; reasons.push('gleiche Straße & Ort'); }
+            else if (sameCity && sim >= 0.4) { score += 0.2; reasons.push('gleicher Ort'); }
+            if (pZip && String(a.zip_code || '').trim() === pZip && sameStreet) { score += 0.2; }
+            if (pEmail && a.email && a.email.toLowerCase().trim() === pEmail) { score += 0.5; reasons.push('gleiche E-Mail'); }
+            else if (pDomain && !genericDomain && a.email && (a.email.toLowerCase().split('@')[1] || '') === pDomain) { score += 0.35; reasons.push('gleiche E-Mail-Domain'); }
+            if (pPhone && a.phone && normPhone(a.phone) === pPhone) { score += 0.4; reasons.push('gleiche Telefonnummer'); }
+            if (score >= 0.45) out.push({ addr: a, score, reasons: [...new Set(reasons)] });
+        });
+        return out.sort((x, y) => y.score - x.score).slice(0, 6);
+    }
+
+    // Existiert die Person schon als Ansprechpartner? (per Name-Token / E-Mail in der DB)
+    async function findExistingContacts(p) {
+        const person = (p.name || '').trim();
+        const email = (p.email || '').toLowerCase().trim();
+        if (!person && !email) return [];
+        const conds = [];
+        const parts = person.split(/\s+/).filter(w => w.length >= 3);
+        const last = parts.length ? parts[parts.length - 1] : '';
+        if (last) conds.push(`name.ilike.%${last}%`);
+        if (email) conds.push(`email.eq.${email}`);
+        if (!conds.length) return [];
+        let rows = [];
+        try {
+            const { data, error } = await sb().from('customer_contacts').select('id, customer_id, name, email, phone').or(conds.join(','));
+            if (error) throw error;
+            rows = data || [];
+        } catch (e) { console.warn('Ansprechpartner-Suche fehlgeschlagen:', e); return []; }
+        const nn = normName(person);
+        return rows
+            .map(c => ({ c, sim: nn ? strSim(nn, normName(c.name)) : 0, sameEmail: !!(email && c.email && c.email.toLowerCase().trim() === email) }))
+            .filter(x => x.sameEmail || x.sim >= 0.82)
+            .sort((a, b) => (b.sameEmail - a.sameEmail) || (b.sim - a.sim))
+            .slice(0, 5);
+    }
+
+    // ---- Sicheres Ergänzen fehlender Daten (ohne vorhandene Werte zu überschreiben) ----
+    async function complementMissingAddressData(customerId, p) {
+        try {
+            const a = state.byId.get(String(customerId));
+            if (!a) throw new Error('Adresse nicht gefunden');
+
+            const updates = {};
+            const complementedFields = [];
+
+            // Adress-Stammdaten: Nur auffüllen wenn Feld in `a` leer/null ist
+            const addressFieldMapping = [
+                ['phone', p.phone || p.mobile, 'Telefon'],
+                ['email', p.email, 'E-Mail'],
+                ['website', p.website, 'Webseite'],
+                ['street', p.street, 'Straße'],
+                ['zip_code', p.zip, 'PLZ'],
+                ['city', p.city, 'Ort'],
+                ['country', p.country, 'Land'],
+                ['notes', p.note, 'Notiz']
+            ];
+
+            for (const [key, newVal, label] of addressFieldMapping) {
+                const currentVal = a[key];
+                const isEmpty = currentVal === null || currentVal === undefined || String(currentVal).trim() === '';
+                if (isEmpty && newVal && String(newVal).trim() !== '') {
+                    updates[key] = String(newVal).trim();
+                    complementedFields.push(label);
+                }
+            }
+
+            // 1) Adress-Updates durchführen falls leere Felder ergänzt wurden
+            if (Object.keys(updates).length > 0) {
+                const { data, error } = await sb().from('customers').update(updates).eq('id', a.id).select().single();
+                if (error) throw error;
+                Object.assign(a, data);
+                state.byId.set(String(a.id), a);
+            }
+
+            // 2) Ansprechpartner prüfen / ergänzen
+            const personName = (p.name || '').trim();
+            if (personName) {
+                // Supabase nach bestehenden Ansprechpartnern abfragen
+                const { data: dbContacts } = await sb().from('customer_contacts').select('*').eq('customer_id', a.id);
+                const allContacts = dbContacts || [];
+                const matchC = allContacts.find(c =>
+                    normName(c.name) === normName(personName) ||
+                    (p.email && c.email && c.email.toLowerCase().trim() === p.email.toLowerCase().trim())
+                );
+
+                if (matchC) {
+                    // Person existiert: Nur leere Felder bei der Person ergänzen
+                    const cUpdates = {};
+                    const cMapping = [
+                        ['position', p.title, 'Position'],
+                        ['department', p.department, 'Abteilung'],
+                        ['phone', p.phone, 'Telefon'],
+                        ['mobile', p.mobile, 'Mobil'],
+                        ['email', p.email, 'E-Mail'],
+                        ['notes', p.note, 'Notiz']
+                    ];
+                    for (const [ckey, cval, clabel] of cMapping) {
+                        const curCVal = matchC[ckey];
+                        const cIsEmpty = curCVal === null || curCVal === undefined || String(curCVal).trim() === '';
+                        if (cIsEmpty && cval && String(cval).trim() !== '') {
+                            cUpdates[ckey] = String(cval).trim();
+                            complementedFields.push(`Ansprechpartner ${clabel}`);
+                        }
+                    }
+                    if (Object.keys(cUpdates).length > 0) {
+                        await sb().from('customer_contacts').update(cUpdates).eq('id', matchC.id);
+                    }
+                } else {
+                    // Person existiert noch nicht bei dieser Firma: Neu als Ansprechpartner anlegen
+                    const newC = {
+                        customer_id: a.id,
+                        name: personName,
+                        salutation: null,
+                        position: p.title || null,
+                        department: p.department || null,
+                        phone: p.phone || null,
+                        mobile: p.mobile || null,
+                        email: p.email || null,
+                        notes: p.note || 'Aus Kontaktimport ergänzt'
+                    };
+                    await sb().from('customer_contacts').insert([newC]);
+                    state.contactCount.set(String(a.id), (state.contactCount.get(String(a.id)) || 0) + 1);
+                    complementedFields.push(`Ansprechpartner „${personName}“ angelegt`);
+                }
+            }
+
+            const summaryText = complementedFields.length > 0
+                ? `Fehlende Daten aus Kontaktimport ergänzt (${complementedFields.join(', ')})`
+                : 'Kontaktimport geprüft (keine leeren Felder zu ergänzen)';
+
+            await addHistoryEntry(String(a.id), 'system', summaryText, null, true);
+
+            closeAbOverlay();
+            closeFormModal();
+            buildCountryFilter();
+            renderAddressList();
+            await openDetail(String(a.id), personName ? 'contacts' : 'overview');
+
+            if (complementedFields.length > 0) {
+                toast(`Ergänzt: ${complementedFields.join(', ')}`);
+            } else {
+                toast('Es waren bereits alle Daten vorhanden (nichts überschrieben).');
+            }
+        } catch (e) {
+            console.error('Ergänzen fehlgeschlagen:', e);
+            window.showToast('Konnte Daten nicht ergänzen: ' + (e.message || e));
+        }
+    }
+
+    // ---- generisches Overlay über dem Formular (Dublette / Firmenzuordnung) ----
+    function showAbOverlay(html) {
+        let el = document.getElementById('ab-overlay-modal');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'ab-overlay-modal';
+            el.className = 'modal-backdrop ab-modal-backdrop';
+            document.body.appendChild(el);
+            el.addEventListener('click', e => { if (e.target === el) closeAbOverlay(); });
+        }
+        el.innerHTML = `<div class="modal-content ab-form-content" style="max-width:560px;">${html}</div>`;
+        openModal('ab-overlay-modal');
+        return el;
+    }
+    function closeAbOverlay() { closeModal('ab-overlay-modal'); }
+
+    // Insert einer neuen Adresse (+ optionalem Ansprechpartner aus Import).
+    async function insertNewAddress(payload, pendingContacts) {
+        const { data, error } = await sb().from('customers').insert([payload]).select().single();
+        if (error) throw error;
+        state.addresses.push(data);
+        state.byId.set(String(data.id), data);
+        await addHistoryEntry(String(data.id), 'system', 'Adresse angelegt', null, true);
+        // Rückwärtskompatibel: Einzelobjekt oder Array erlaubt.
+        const list = Array.isArray(pendingContacts) ? pendingContacts : (pendingContacts ? [pendingContacts] : []);
+        const valid = list.filter(c => c && c.name);
+        if (valid.length) {
+            try {
+                await sb().from('customer_contacts').insert(valid.map(c => ({ customer_id: data.id, ...c })));
+                state.contactCount.set(String(data.id), (state.contactCount.get(String(data.id)) || 0) + valid.length);
+                await addHistoryEntry(String(data.id), 'system', `${valid.length} Ansprechpartner mit angelegt`, null, true);
+            } catch (e) { console.warn('Ansprechpartner-Anlage fehlgeschlagen:', e); }
+        }
+        closeFormModal();
+        buildCountryFilter();
+        renderAddressList();
+        toast('Adresse angelegt.');
+        // Einmal-Callback (z. B. aus dem "Vorgang anlegen"-Dialog): die neue
+        // Adresse wird direkt dort übernommen, statt ins Adressbuch zu springen.
+        const cb = window._addressCreateCallback;
+        if (typeof cb === 'function') {
+            window._addressCreateCallback = null;
+            try { await cb(data); } catch (e) { console.warn('addressCreateCallback fehlgeschlagen:', e); }
+            return;
+        }
+        if (valid.length) openDetail(String(data.id), 'contacts');
+    }
+
+    // Hilfsfunktion: Führt Treffer aus Firmentreffer, Dubletten und bestehenden Ansprechpartnern pro Adresse zusammen
+    function getCombinedImportMatches(p, companyMatches, dupes, contactMatches) {
+        const combinedMap = new Map();
+
+        (companyMatches || []).forEach(m => {
+            const id = String(m.addr.id);
+            combinedMap.set(id, {
+                addr: m.addr,
+                reasons: [m.reason || 'Passende Firma'],
+                contacts: []
+            });
+        });
+
+        (dupes || []).forEach(d => {
+            const id = String(d.addr.id);
+            if (!combinedMap.has(id)) {
+                combinedMap.set(id, {
+                    addr: d.addr,
+                    reasons: d.reasons || ['Ähnliche Adresse'],
+                    contacts: []
+                });
+            } else {
+                const item = combinedMap.get(id);
+                (d.reasons || []).forEach(r => { if (!item.reasons.includes(r)) item.reasons.push(r); });
+            }
+        });
+
+        (contactMatches || []).forEach(cm => {
+            const c = cm.c;
+            const id = String(c.customer_id);
+            let item = combinedMap.get(id);
+            if (!item) {
+                const a = state.byId.get(id);
+                if (a) {
+                    item = { addr: a, reasons: ['Ansprechpartner dort hinterlegt'], contacts: [] };
+                    combinedMap.set(id, item);
+                }
+            }
+            if (item) {
+                if (!item.contacts.some(existingC => String(existingC.id) === String(c.id))) {
+                    item.contacts.push(c);
+                }
+                const reasonLabel = cm.sameEmail ? 'Gleiche E-Mail des Ansprechpartners' : 'Gleicher Name des Ansprechpartners';
+                if (!item.reasons.includes(reasonLabel)) item.reasons.push(reasonLabel);
+            }
+        });
+
+        return Array.from(combinedMap.values());
+    }
+
+    // ---- vCard / Text parsen ----
+    function unescapeV(s) { return (s || '').replace(/\\n/gi, ' ').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\').trim(); }
+    function normalizeParsed(r) {
+        return { name: r.fullName || '', org: r.org || '', title: r.title || '', department: r.department || '', website: r.website || '', email: r.email || '', phone: r.phone || '', mobile: r.mobile || '', street: r.street || '', zip: r.zip || '', city: r.city || '', country: r.country || '', note: r.note || '' };
+    }
+    // QUOTED-PRINTABLE (Outlook-vCards) in Text zurückwandeln, Bytes als UTF-8 (o. a.) lesen.
+    function decodeQP(str, charset) {
+        const bytes = [];
+        for (let i = 0; i < str.length; i++) {
+            if (str[i] === '=' && /^[0-9A-Fa-f]{2}$/.test(str.substr(i + 1, 2))) { bytes.push(parseInt(str.substr(i + 1, 2), 16)); i += 2; }
+            else { bytes.push(str.charCodeAt(i) & 0xff); }
+        }
+        try { return new TextDecoder(charset || 'utf-8').decode(new Uint8Array(bytes)).trim(); }
+        catch (e) { return str.trim(); }
+    }
+    // Entfaltet vCard-Zeilen: erst QP-Soft-Breaks (Zeile endet auf '='), dann normale Faltung.
+    function unfoldVCard(text) {
+        return (text || '')
+            .replace(/=\r?\n/g, '')
+            .replace(/\r\n[ \t]/g, '')
+            .replace(/\n[ \t]/g, '');
+    }
+    function parseVCard(text) {
+        const lines = unfoldVCard(text).split(/\r?\n/);
+        const r = {};
+        lines.forEach(line => {
+            const idx = line.indexOf(':');
+            if (idx < 0) return;
+            const rawKey = line.slice(0, idx);
+            const value = line.slice(idx + 1);
+            const segs = rawKey.split(';');
+            const key = segs[0].split('.').pop().toUpperCase();
+            const params = segs.slice(1).map(s => s.toUpperCase());
+            const paramStr = params.join(';');
+            const isQP = /QUOTED-PRINTABLE/.test(paramStr);
+            let charset = 'utf-8';
+            params.forEach(pp => { const m = pp.match(/CHARSET=(.+)/); if (m) charset = m[1].toLowerCase().replace(/"/g, ''); });
+            const dec = v => isQP ? decodeQP(v, charset) : unescapeV(v);
+            const isMobile = /CELL|MOBILE/.test(paramStr);
+            if (key === 'FN') r.fullName = dec(value);
+            else if (key === 'N' && !r.fullName) { const p = value.split(';'); r.fullName = dec([p[1], p[0]].filter(Boolean).join(' ')); }
+            else if (key === 'ORG') { const p = value.split(';'); r.org = dec(p[0]); if (p[1] && !r.department) r.department = dec(p[1]); }
+            else if (key === 'TITLE' || key === 'ROLE') { if (!r.title) r.title = dec(value); }
+            else if (key === 'EMAIL') { if (!r.email) r.email = dec(value); }
+            else if (key === 'URL' || key === 'X-WORK-URL' || key === 'X-HOME-URL') { if (!r.website) r.website = dec(value); }
+            else if (key === 'TEL') { const v = dec(value); if (isMobile) { if (!r.mobile) r.mobile = v; } else if (!r.phone) { r.phone = v; } }
+            else if (key === 'NOTE') { r.note = dec(value); }
+            else if (key === 'ADR') { const p = value.split(';').map(dec); r.street = r.street || [p[2], p[1]].filter(Boolean).join(' '); r.city = r.city || p[3]; r.zip = r.zip || p[5]; r.country = r.country || p[6]; }
+        });
+        return normalizeParsed(r);
+    }
+    function parseContactText(text) {
+        const r = {};
+        const rawLines = (text || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+        const countries = ['deutschland', 'germany', 'österreich', 'oesterreich', 'schweiz', 'austria', 'switzerland', 'niederlande', 'belgien', 'frankreich', 'polen', 'luxemburg', 'dänemark', 'daenemark'];
+        const phoneRe = /(\+?\d[\d\s\/().-]{5,}\d)/;
+        // Reihenfolge wichtig: Fax vor Telefon (sonst schluckt "tel" das "Telefax").
+        const labelFax = /^(fax|telefax)/i;
+        const labelEmail = /^e[\s-]?mail/i;
+        const labelWeb = /^(web|url|homepage|webseite|internet)/i;
+        const labelMobile = /^(mobil|handy|cell|mobile|mob\b)/i;
+        const labelPhone = /^(tel|telefon|festnetz|gesch|arbeit|work|business|b(?:ü|ue)ro|zentrale|phone)/i;
+        const labelPrivate = /^(privat|private|home)/i;
+        const labelName = /^(name|kontakt|ansprechpartner)\s*:/i;
+        const labelStreet = /^(stra(?:ß|ss)e|str\.?|anschrift|adresse)\s*:/i;
+
+        const rest = [];
+        rawLines.forEach(l => {
+            const email = l.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+            if (labelEmail.test(l)) { if (email && !r.email) r.email = email[0]; return; }
+            if (labelWeb.test(l)) { const w = l.replace(labelWeb, '').replace(/^[:\s]+/, '').trim(); if (w && !r.website) r.website = w; return; }
+            if (labelFax.test(l)) return; // Fax wird nicht übernommen
+            if (labelMobile.test(l)) { const m = l.match(phoneRe); if (m && !r.mobile) r.mobile = m[1].trim(); return; }
+            if (labelPhone.test(l)) { const m = l.match(phoneRe); if (m && !r.phone) r.phone = m[1].trim(); return; }
+            if (labelPrivate.test(l)) { const m = l.match(phoneRe); if (m && !r._priv) r._priv = m[1].trim(); return; }
+            if (labelName.test(l)) { r.fullName = l.replace(labelName, '').trim(); return; }
+            if (labelStreet.test(l)) { r.street = l.replace(labelStreet, '').trim(); return; }
+            if (email) { if (!r.email) r.email = email[0]; return; }
+            rest.push(l);
+        });
+        if (!r.phone && r._priv) r.phone = r._priv;
+        if (!r.website) { const w = (text || '').match(/\b((https?:\/\/)?www\.[\w-]+\.[\w.\/-]+)/i); if (w) r.website = w[1]; }
+
+        // Aus den nicht gelabelten Zeilen: Firma, Anschrift, Land, Name.
+        const orgIdx = rest.findIndex(l => /\b(gmbh|mbh|ag|kg|ohg|ug|e\.?\s?k|e\.?\s?v|inc|ltd|llc|se|gbr)\b/i.test(l));
+        if (orgIdx >= 0) r.org = rest[orgIdx];
+        const zipIdx = rest.findIndex(l => /^\d{5}\b/.test(l));
+        if (zipIdx >= 0) { const zm = rest[zipIdx].match(/^(\d{5})\s+(.*)$/); if (zm) { r.zip = zm[1]; r.city = zm[2].trim(); } }
+        const countryIdx = rest.findIndex(l => countries.includes(l.toLowerCase()));
+        if (countryIdx >= 0) r.country = rest[countryIdx];
+        if (!r.street) {
+            const streetIdx = rest.findIndex((l, i) => i !== zipIdx && i !== orgIdx && /\d/.test(l) && /[a-zäöüß]/i.test(l) && !/^\d{5}\b/.test(l) && !/@/.test(l) && !countries.includes(l.toLowerCase()));
+            if (streetIdx >= 0) r.street = rest[streetIdx];
+        }
+        if (!r.fullName) {
+            const used = new Set([orgIdx, zipIdx, countryIdx].filter(i => i >= 0));
+            if (r.street) { const si = rest.indexOf(r.street); if (si >= 0) used.add(si); }
+            const nameLine = rest.find((l, i) => !used.has(i) && !/@/.test(l) && l.length <= 60 && /[a-zäöü]/i.test(l));
+            // "Nachname, Vorname" -> "Vorname Nachname"
+            if (nameLine) r.fullName = /,/.test(nameLine) ? nameLine.split(',').map(s => s.trim()).filter(Boolean).reverse().join(' ') : nameLine;
+        } else if (/,/.test(r.fullName)) {
+            r.fullName = r.fullName.split(',').map(s => s.trim()).filter(Boolean).reverse().join(' ');
+        }
+        // Notiz: alles nach einer Zeile mit "Notiz"/"Notes"/"Bemerkung".
+        const noteIdx = rawLines.findIndex(l => /^(notiz|notizen|notes|bemerkung|anmerkung)\s*:?/i.test(l));
+        if (noteIdx >= 0) {
+            const noteRest = [rawLines[noteIdx].replace(/^(notiz|notizen|notes|bemerkung|anmerkung)\s*:?/i, '').trim(), ...rawLines.slice(noteIdx + 1)].filter(Boolean).join(' ');
+            if (noteRest) r.note = noteRest;
+        }
+        delete r._priv;
+        return normalizeParsed(r);
+    }
+    function stripHtml(html) {
+        try { const doc = new DOMParser().parseFromString(html, 'text/html'); return (doc.body ? doc.body.textContent : '') || ''; }
+        catch (e) { return (html || '').replace(/<[^>]+>/g, '\n'); }
+    }
+    function parseVCardOrText(text) {
+        if (/BEGIN:VCARD/i.test(text || '')) return parseVCard(text);
+        return parseContactText(text || '');
+    }
+    // .msg (Outlook) best-effort über den vorhandenen MSGReader in Text wandeln.
+    function extractMsgText(file) {
+        return new Promise(resolve => {
+            const Reader = window.MSGReaderClass;
+            if (!Reader) { resolve(''); return; }
+            const fr = new FileReader();
+            fr.onload = e => {
+                try {
+                    const m = new Reader(e.target.result);
+                    const d = m.getFileData ? m.getFileData() : {};
+                    // Bei einem Kontakt-.msg steckt der Adressblock meist im Text (body).
+                    // Name/Notiz aus den weiteren Feldern voranstellen, HTML als Rückfall.
+                    let body = (d.body || '').trim();
+                    if (!body && d.bodyHTML) body = stripHtml(d.bodyHTML).trim();
+                    const parts = [d.senderName || d.name, d.subject, body, d.headers].filter(Boolean);
+                    resolve(parts.join('\n'));
+                } catch (err) { resolve(''); }
+            };
+            fr.onerror = () => resolve('');
+            fr.readAsArrayBuffer(file);
+        });
+    }
+
+    async function handleContactFile(file) {
+        const status = document.getElementById('ab-vcf-status');
+        try {
+            const name = (file.name || '').toLowerCase();
+            const text = name.endsWith('.msg') ? await extractMsgText(file) : await file.text();
+            const parsed = parseVCardOrText(text);
+            if (!parsed.name && !parsed.email && !parsed.org) {
+                if (status) status.textContent = 'Keine Kontaktdaten erkannt (am besten eine .vcf-Datei nutzen).';
+                return;
+            }
+            applyParsedContact(parsed);
+        } catch (e) {
+            console.warn('Kontaktdatei konnte nicht gelesen werden:', e);
+            if (status) status.textContent = 'Datei konnte nicht gelesen werden.';
+        }
+    }
+
+    function applyParsedContact(p) {
+        showImportPreview(p);
+    }
+
+    // Vorschau des importierten Kontakts + gefundene Treffer, VOR dem Speichern.
+    async function showImportPreview(p) {
+        const company = p.org || '';
+        const person = p.name || '';
+        const companyMatches = findImportAddressMatches(p);
+        const dupPayload = { name: company || person, email: p.email, phone: p.phone || p.mobile, zip_code: p.zip, street: p.street, city: p.city };
+        const dupes = findDuplicateAddresses(dupPayload).filter(d => !companyMatches.some(m => String(m.addr.id) === String(d.addr.id)));
+        const contactMatches = await findExistingContacts(p);
+
+        const allMatches = getCombinedImportMatches(p, companyMatches, dupes, contactMatches);
+
+        // Editierbare Vorschau: alle Felder klar beschriftet
+        const impFields = [
+            ['name', 'Name (Person)', person], ['org', 'Firma', company], ['title', 'Position', p.title], ['department', 'Abteilung', p.department],
+            ['website', 'Webseite', p.website], ['email', 'E-Mail', p.email], ['phone', 'Telefon', p.phone], ['mobile', 'Mobil', p.mobile],
+            ['street', 'Straße & Nr.', p.street], ['zip', 'PLZ', p.zip], ['city', 'Ort', p.city], ['country', 'Land', p.country], ['note', 'Notiz', p.note]
+        ];
+        const fieldRows = impFields.map(f =>
+            `<label style="display:flex; gap:10px; align-items:center; padding:3px 0;">
+                <span style="width:118px; flex-shrink:0; color:rgba(255,255,255,0.55); font-size:0.8rem;">${f[1]}</span>
+                <input id="ab-imp-${f[0]}" value="${esc(f[2] || '')}" style="flex:1; min-width:0; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:7px 10px; color:#fff; font-size:0.86rem;">
+            </label>`
+        ).join('');
+
+        let matchesHtml = '';
+        if (allMatches.length) {
+            const rows = allMatches.map((m, idx) => {
+                const a = m.addr;
+                const loc = [a.zip_code, a.city].filter(Boolean).join(' ');
+                const hasContact = m.contacts && m.contacts.length > 0;
+                const contactBadge = hasContact
+                    ? `<div style="color:#60a5fa; font-size:0.8rem; font-weight:600; margin-top:3px;">
+                        Person „${esc(m.contacts.map(c => c.name).join(', '))}“ ist dort bereits als Ansprechpartner hinterlegt
+                       </div>`
+                    : '';
+                const reasonBadges = m.reasons.map(r => `<span style="font-size:0.68rem; background:rgba(56,189,248,0.15); color:#38bdf8; padding:2px 8px; border-radius:999px;">${esc(r)}</span>`).join(' ');
+
+                return `<label style="display:flex; gap:12px; align-items:flex-start; padding:10px 12px; border:1px solid ${hasContact ? 'rgba(96,165,250,0.35)' : 'rgba(255,255,255,0.1)'}; background:${hasContact ? 'rgba(96,165,250,0.06)' : 'rgba(255,255,255,0.02)'}; border-radius:10px; margin-bottom:8px; cursor:pointer;">
+                    <input type="radio" name="ab-attach-company" value="${esc(a.id)}" ${idx === 0 ? 'checked' : ''} style="margin-top:4px;">
+                    <div style="flex:1; min-width:0;">
+                        <div style="color:#fff; font-weight:700;">${esc(a.name)}</div>
+                        <div style="color:rgba(255,255,255,0.5); font-size:0.8rem;">${esc([a.street, loc].filter(Boolean).join(' · ')) || '—'}</div>
+                        ${contactBadge}
+                        <div style="margin-top:4px; display:flex; flex-wrap:wrap; gap:4px;">${reasonBadges}</div>
+                    </div>
+                </label>`;
+            }).join('');
+
+            matchesHtml = `<div style="margin-top:14px; padding:12px; border:1px solid rgba(56,189,248,0.3); background:rgba(56,189,248,0.04); border-radius:12px;">
+                <div style="color:#38bdf8; font-weight:800; font-size:0.82rem; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Bestehende Adresse(n) erkannt</div>
+                <div style="color:rgba(255,255,255,0.6); font-size:0.85rem; margin-bottom:10px;">Bitte die gewünschte Firma auswählen:</div>
+                ${rows}
+            </div>`;
+        } else {
+            matchesHtml = `<div style="margin-top:14px; padding:11px 12px; border:1px solid rgba(255,255,255,0.1); border-radius:12px; color:rgba(255,255,255,0.55); font-size:0.85rem;">Keine passende Adresse gefunden – wird als neue Adresse übernommen.${company && person && normCompany(company) !== normCompany(person) ? ` „${esc(person)}" wird als Ansprechpartner mit angelegt.` : ''}</div>`;
+        }
+
+        const el = showAbOverlay(`
+            <h2 style="margin-top:0;">Kontakt-Vorschau</h2>
+            <p style="color:rgba(255,255,255,0.55); font-size:0.85rem; margin:0 0 10px;">Bitte die Zuordnung prüfen und bei Bedarf korrigieren, bevor du sie übernimmst.</p>
+            <div style="padding:12px 14px; border:1px solid rgba(255,255,255,0.1); border-radius:12px; background:rgba(255,255,255,0.03);">${fieldRows}</div>
+            ${matchesHtml}
+            <div class="ab-form-actions" style="margin-top:16px; flex-wrap:wrap; gap:8px;">
+                <button type="button" class="ab-btn ab-btn-ghost" id="ab-prev-cancel">Abbrechen</button>
+                <button type="button" class="ab-btn ${allMatches.length ? 'ab-btn-ghost' : 'ab-btn-primary'}" id="ab-prev-fill">Ins Formular übernehmen</button>
+                ${allMatches.length ? '<button type="button" class="ab-btn ab-btn-primary" id="ab-prev-complement">Fehlende Daten ergänzen</button>' : ''}
+                ${allMatches.length ? '<button type="button" class="ab-btn ab-btn-ghost" id="ab-prev-attach">Als Ansprechpartner hinterlegen</button>' : ''}
+            </div>`);
+
+        // Liest die (evtl. korrigierten) Werte aus der Vorschau.
+        const readImp = () => {
+            const g = id => { const e = document.getElementById('ab-imp-' + id); return e ? e.value.trim() : ''; };
+            return { name: g('name'), org: g('org'), title: g('title'), department: g('department'), website: g('website'), email: g('email'), phone: g('phone'), mobile: g('mobile'), street: g('street'), zip: g('zip'), city: g('city'), country: g('country'), note: g('note') };
+        };
+        el.querySelector('#ab-prev-cancel').addEventListener('click', closeAbOverlay);
+        el.querySelector('#ab-prev-fill').addEventListener('click', () => {
+            const p2 = readImp();
+            closeAbOverlay();
+            fillAddressFormFromParsed(p2);
+            const st = document.getElementById('ab-vcf-status');
+            if (st) st.textContent = (p2.org && p2.name && normCompany(p2.org) !== normCompany(p2.name))
+                ? `Übernommen: Firma „${p2.org}", „${p2.name}" als Ansprechpartner.`
+                : 'Kontaktdaten übernommen – bitte prüfen und speichern.';
+        });
+        const complementBtn = el.querySelector('#ab-prev-complement');
+        if (complementBtn) complementBtn.addEventListener('click', async () => {
+            const sel = el.querySelector('input[name="ab-attach-company"]:checked');
+            const targetId = sel ? sel.value : (allMatches.length ? allMatches[0].addr.id : null);
+            if (targetId) await complementMissingAddressData(targetId, readImp());
+        });
+        const attachBtn = el.querySelector('#ab-prev-attach');
+        if (attachBtn) attachBtn.addEventListener('click', async () => {
+            const sel = el.querySelector('input[name="ab-attach-company"]:checked');
+            const targetId = sel ? sel.value : (allMatches.length ? allMatches[0].addr.id : null);
+            if (targetId) await attachContactToCompany(targetId, readImp());
+        });
+    }
+
+    function fillAddressFormFromParsed(p) {
+        const set = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+        const hasOrg = !!p.org;
+        set('ab-f-name', hasOrg ? p.org : p.name);
+        set('ab-f-street', p.street);
+        set('ab-f-zip', p.zip);
+        set('ab-f-city', p.city);
+        if (p.country) set('ab-f-country', p.country);
+        set('ab-f-phone', p.phone || p.mobile);
+        set('ab-f-email', p.email);
+        set('ab-f-website', p.website);
+        if (hasOrg && p.name && normCompany(p.name) !== normCompany(p.org)) {
+            // Firma = Adresse, Person = Ansprechpartner. Notiz gehört zur Person.
+            importPendingContact = { name: p.name, salutation: null, position: p.title || null, department: p.department || null, phone: p.phone || null, mobile: p.mobile || null, email: p.email || null, notes: p.note || 'Aus Kontaktimport' };
+            set('ab-f-c-name', p.name);
+            set('ab-f-c-position', p.title);
+            set('ab-f-c-department', p.department);
+            set('ab-f-c-phone', p.phone);
+            set('ab-f-c-mobile', p.mobile);
+            set('ab-f-c-email', p.email);
+            set('ab-f-c-notes', p.note || 'Aus Kontaktimport');
+            const detailsEl = document.getElementById('ab-c-details');
+            if (detailsEl) detailsEl.open = true;
+        } else {
+            importPendingContact = null;
+            if (p.note) set('ab-f-notes', p.note);
+        }
+    }
+
+    async function attachContactToCompany(customerId, p) {
+        try {
+            await sb().from('customer_contacts').insert([{ customer_id: customerId, name: p.name || p.org, salutation: null, position: p.title || null, department: p.department || null, phone: p.phone || null, mobile: p.mobile || null, email: p.email || null, notes: p.note || 'Aus Kontaktimport' }]);
+            await addHistoryEntry(String(customerId), 'system', `Ansprechpartner „${p.name || ''}“ aus Kontaktimport angelegt`, null, true);
+            state.contactCount.set(String(customerId), (state.contactCount.get(String(customerId)) || 0) + 1);
+            closeAbOverlay();
+            closeFormModal();
+            renderAddressList();
+            openDetail(String(customerId), 'contacts');
+            toast('Ansprechpartner hinterlegt.');
+        } catch (e) {
+            console.error(e);
+            window.showToast('Konnte Ansprechpartner nicht anlegen: ' + (e.message || e));
+        }
+    }
+
+    function wireVcfDropzone() {
+        const zone = document.getElementById('ab-vcf-dropzone');
+        const input = document.getElementById('ab-vcf-input');
+        if (!zone || !input) return;
+        zone.addEventListener('click', () => input.click());
+        input.addEventListener('change', e => { if (e.target.files && e.target.files[0]) handleContactFile(e.target.files[0]); });
+        ['dragover', 'dragenter'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); zone.style.borderColor = '#38bdf8'; zone.style.background = 'rgba(56,189,248,0.06)'; }));
+        ['dragleave', 'dragend'].forEach(ev => zone.addEventListener(ev, e => { e.preventDefault(); zone.style.borderColor = 'rgba(255,255,255,0.2)'; zone.style.background = 'transparent'; }));
+        zone.addEventListener('drop', e => {
+            e.preventDefault();
+            zone.style.borderColor = 'rgba(255,255,255,0.2)'; zone.style.background = 'transparent';
+            const dt = e.dataTransfer;
+            // 1) Echte Datei? (auch über die items-API, falls files leer ist)
+            let file = dt.files && dt.files[0];
+            if (!file && dt.items) {
+                for (const it of dt.items) { if (it.kind === 'file') { const f = it.getAsFile(); if (f) { file = f; break; } } }
+            }
+            if (file) { handleContactFile(file); return; }
+            // 2) Kein File -> vCard/Text aus den Drag-Daten (mehrere Formate probieren).
+            let text = '';
+            ['text/vcard', 'text/x-vcard', 'text/directory', 'text/plain', 'text/html', 'text/uri-list', 'text'].forEach(t => {
+                if (text && /BEGIN:VCARD/i.test(text)) return;
+                let v = ''; try { v = dt.getData(t); } catch (_) { v = ''; }
+                if (v && v.trim()) { if (t === 'text/html' && !/BEGIN:VCARD/i.test(v)) v = stripHtml(v); if (!text || /BEGIN:VCARD/i.test(v)) text = v; }
+            });
+            const parsed = text ? parseVCardOrText(text) : null;
+            if (parsed && (parsed.name || parsed.email || parsed.org || parsed.phone)) { applyParsedContact(parsed); return; }
+            // 3) Outlook gibt beim direkten Ziehen keine Datei her -> Hinweis.
+            const status = document.getElementById('ab-vcf-status');
+            if (status) status.innerHTML = 'Beim Ziehen direkt aus Outlook kommt keine Datei an (nur Text). Bitte den Kontakt als <b>.vcf</b> speichern und die Datei hier ablegen – oder in die Fläche <b>klicken</b> und die Datei auswählen.';
+        });
+    }
+
+    // Fügt im Adressformular eine weitere Ansprechpartner-Zeile hinzu.
+    window.abAddContactRow = function () {
+        const host = document.getElementById('ab-extra-contacts');
+        if (!host) return;
+        const row = document.createElement('div');
+        row.className = 'ab-extra-contact-row';
+        row.style.cssText = 'margin-top:14px; padding-top:12px; border-top:1px dashed rgba(255,255,255,0.12);';
+        row.innerHTML = `
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+                <span style="font-size:0.8rem; font-weight:700; color:rgba(255,255,255,0.55);">Weiterer Ansprechpartner</span>
+                <button type="button" onclick="this.closest('.ab-extra-contact-row').remove()" title="Entfernen" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:2px; display:inline-flex; align-items:center;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+            <div class="ab-form-grid">
+                <label class="ab-field"><span>Anrede</span><input type="text" class="js-xc-salutation" placeholder="Herr / Frau"></label>
+                <label class="ab-field"><span>Name</span><input type="text" class="js-xc-name" placeholder="z. B. Max Mustermann"></label>
+                <label class="ab-field"><span>Funktion / Position</span><input type="text" class="js-xc-position" placeholder="z. B. Betriebsleiter"></label>
+                <label class="ab-field"><span>Abteilung</span><input type="text" class="js-xc-department" placeholder="z. B. Einkauf"></label>
+                <label class="ab-field"><span>Telefon</span><input type="tel" class="js-xc-phone" placeholder="+49 ..."></label>
+                <label class="ab-field"><span>Mobil</span><input type="tel" class="js-xc-mobile" placeholder="+49 ..."></label>
+                <label class="ab-field"><span>E-Mail</span><input type="email" class="js-xc-email" placeholder="m.mustermann@..."></label>
+                <label class="ab-field ab-field-wide"><span>Notiz</span><textarea class="js-xc-notes" rows="2" placeholder="Zusätzliche Infos zum Ansprechpartner …"></textarea></label>
+            </div>`;
+        host.appendChild(row);
+        const nameInput = row.querySelector('.js-xc-name');
+        if (nameInput) nameInput.focus();
+    };
+
+    // Liest alle zusätzlichen Ansprechpartner-Zeilen aus dem Formular.
+    function collectExtraContacts() {
+        const rows = document.querySelectorAll('#ab-extra-contacts .ab-extra-contact-row');
+        const out = [];
+        rows.forEach(r => {
+            const g = (sel) => { const el = r.querySelector(sel); return el && el.value.trim() ? el.value.trim() : null; };
+            const name = g('.js-xc-name');
+            if (!name) return;
+            out.push({
+                salutation: g('.js-xc-salutation'), name,
+                position: g('.js-xc-position'), department: g('.js-xc-department'),
+                phone: g('.js-xc-phone'), mobile: g('.js-xc-mobile'),
+                email: g('.js-xc-email'), notes: g('.js-xc-notes')
+            });
+        });
+        return out;
+    }
+
     function openAddressForm(id) {
         const a = id ? state.byId.get(String(id)) : null;
         const isEdit = !!a;
+        importPendingContact = null;
+
+        const dropzone = isEdit ? '' : `
+        <div id="ab-vcf-dropzone" style="grid-column:1/-1; border:2px dashed rgba(255,255,255,0.2); border-radius:14px; padding:14px 16px; text-align:center; cursor:pointer; margin-bottom:14px; transition:border-color 0.2s, background 0.2s;">
+            <input type="file" id="ab-vcf-input" accept=".vcf,.vcard,.txt,.contact,.msg" style="display:none;">
+            <div style="display:flex; align-items:center; justify-content:center; gap:8px; color:rgba(255,255,255,0.6); font-size:0.88rem; font-weight:600;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>
+                Outlook-Kontakt (.vcf) hierher ziehen oder klicken
+            </div>
+            <div id="ab-vcf-status" style="margin-top:6px; font-size:0.78rem; color:#38bdf8; min-height:1em;"></div>
+        </div>`;
+
+        const contactSection = isEdit ? '' : `
+        <details id="ab-c-details" class="ab-contact-collapsible">
+            <summary class="ab-contact-summary">
+                <span class="ab-contact-summary-title">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:#38bdf8;">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <line x1="19" y1="8" x2="19" y2="14"></line>
+                        <line x1="22" y1="11" x2="16" y2="11"></line>
+                    </svg>
+                    <span>Ansprechpartner direkt mit anlegen</span>
+                    <span class="ab-contact-summary-badge">Optional</span>
+                </span>
+                <svg class="ab-contact-summary-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            </summary>
+            <div class="ab-contact-body">
+                <div class="ab-form-grid">
+                    ${field('Anrede', 'ab-f-c-salutation', '', { placeholder: 'Herr / Frau' })}
+                    ${field('Name', 'ab-f-c-name', '', { placeholder: 'z. B. Max Mustermann' })}
+                    ${field('Funktion / Position', 'ab-f-c-position', '', { placeholder: 'z. B. Betriebsleiter' })}
+                    ${field('Abteilung', 'ab-f-c-department', '', { placeholder: 'z. B. Einkauf' })}
+                    ${field('Telefon', 'ab-f-c-phone', '', { type: 'tel', placeholder: '+49 ...' })}
+                    ${field('Mobil', 'ab-f-c-mobile', '', { type: 'tel', placeholder: '+49 ...' })}
+                    ${field('E-Mail', 'ab-f-c-email', '', { type: 'email', placeholder: 'm.mustermann@...' })}
+                    ${field('Notiz', 'ab-f-c-notes', '', { type: 'textarea', wide: true, rows: 2, placeholder: 'Zusätzliche Infos zum Ansprechpartner …' })}
+                </div>
+                <div id="ab-extra-contacts"></div>
+                <button type="button" onclick="window.abAddContactRow()" style="display:inline-flex; align-items:center; gap:6px; margin-top:12px; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; font-size:0.82rem; font-weight:700; padding:7px 14px; border-radius:10px; cursor:pointer;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    Weiteren Ansprechpartner hinzufügen
+                </button>
+            </div>
+        </details>`;
 
         const fields = `
+        ${dropzone}
         <div class="ab-form-grid">
             ${field('Firma / Name', 'ab-f-name', a && a.name, { required: true, wide: true, placeholder: 'z. B. Mustermann Recycling GmbH' })}
             ${field('Matchcode', 'ab-f-matchcode', a && a.matchcode)}
             ${field('Adressnummer', 'ab-f-address-number', a && a.address_number)}
             ${field('Kundennummer', 'ab-f-customer-number', a && a.customer_number)}
-            ${state.migrationMissing ? '' : field('Als Kunde kennzeichnen', 'ab-f-is-customer', a ? isCustomer(a) : false, { type: 'checkbox' })}
             ${field('Straße & Nr.', 'ab-f-street', a && a.street, { wide: true })}
             ${field('PLZ', 'ab-f-zip', a && a.zip_code)}
             ${field('Ort', 'ab-f-city', a && a.city)}
             ${field('Land', 'ab-f-country', a ? a.country : 'Deutschland')}
+
             ${field('Telefon', 'ab-f-phone', a && a.phone, { type: 'tel' })}
             ${field('E-Mail', 'ab-f-email', a && a.email, { type: 'email' })}
             ${state.migrationMissing ? '' : field('Webseite', 'ab-f-website', a && a.website, { placeholder: 'www.beispiel.de' })}
-            
+
+            ${contactSection}
+
+            ${state.migrationMissing ? '' : field('Notiz', 'ab-f-notes', a && a.notes, { type: 'textarea', wide: true, placeholder: 'Interne Notizen zu dieser Adresse …' })}
+
+            <details class="ab-contact-collapsible ab-field-wide" open>
+                <summary class="ab-contact-summary">
+                    <span class="ab-contact-summary-title"><span>Adresstyp &amp; Hersteller</span><span class="ab-contact-summary-badge">Optional</span></span>
+                    <svg class="ab-contact-summary-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </summary>
+                <div class="ab-contact-body">
+                    <div class="ab-form-grid">
             <div class="ab-field ab-field-wide">
                 <span>Adresstyp (Mehrfachauswahl)</span>
                 <div class="custom-multiselect-container" style="display:flex; flex-wrap:wrap; gap:8px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.1); padding:10px; border-radius:12px; min-height:44px;">
@@ -2686,8 +3472,9 @@
                     }).join('') || '<span style="font-size:0.8rem; color:rgba(255,255,255,0.4)">Keine Hersteller in den Einstellungen definiert.</span>'}
                 </div>
             </div>`}
-
-            ${state.migrationMissing ? '' : field('Notiz', 'ab-f-notes', a && a.notes, { type: 'textarea', wide: true, placeholder: 'Interne Notizen zu dieser Adresse …' })}
+                    </div>
+                </div>
+            </details>
         </div>`;
 
         openFormModal(isEdit ? 'Adresse bearbeiten' : 'Neue Adresse', fields, isEdit ? 'Änderungen speichern' : 'Adresse anlegen', async () => {
@@ -2719,7 +3506,8 @@
             // Zusatzfelder nur senden, wenn die Migration eingespielt ist – sonst
             // scheitert der ganze Insert/Update an unbekannten Spalten.
             if (!state.migrationMissing) {
-                payload.is_customer = checked('ab-f-is-customer');
+                // Kunde ist automatisch, wer eine Kundennummer hinterlegt hat.
+                payload.is_customer = !!((val('ab-f-customer-number') || '').trim());
                 payload.website = val('ab-f-website') || null;
                 payload.notes = val('ab-f-notes') || null;
             }
@@ -2785,20 +3573,44 @@
                 }
 
                 await addHistoryEntry(String(a.id), 'system', 'Stammdaten geändert (Cluster synchronisiert)', null, true);
-            } else {
-                const { data, error } = await sb().from('customers').insert([payload]).select().single();
-                if (error) throw error;
-                state.addresses.push(data);
-                state.byId.set(String(data.id), data);
-                await addHistoryEntry(String(data.id), 'system', 'Adresse angelegt', null, true);
-            }
 
-            closeFormModal();
-            buildCountryFilter();
-            renderAddressList();
-            if (isEdit && state.currentId === String(a.id)) renderDetail();
-            toast(isEdit ? 'Adresse gespeichert.' : 'Adresse angelegt.');
+                closeFormModal();
+                buildCountryFilter();
+                renderAddressList();
+                if (state.currentId === String(a.id)) renderDetail();
+                toast('Adresse gespeichert.');
+            } else {
+                // Ansprechpartner aus Klappbereich auslesen, falls eingegeben
+                const cName = val('ab-f-c-name');
+                const contacts = [];
+                if (cName) {
+                    contacts.push({
+                        salutation: val('ab-f-c-salutation') || null,
+                        name: cName,
+                        position: val('ab-f-c-position') || null,
+                        department: val('ab-f-c-department') || null,
+                        phone: val('ab-f-c-phone') || null,
+                        mobile: val('ab-f-c-mobile') || null,
+                        email: val('ab-f-c-email') || null,
+                        notes: val('ab-f-c-notes') || null
+                    });
+                } else if (importPendingContact) {
+                    contacts.push(importPendingContact);
+                }
+                // Zusätzliche Ansprechpartner-Zeilen anhängen
+                contacts.push(...collectExtraContacts());
+
+                // Vor dem Anlegen auf Dubletten prüfen. Bei Treffern zuerst nachfragen.
+                const dupes = findDuplicateAddresses(payload);
+                if (dupes.length) {
+                    showDuplicateDialog(dupes, () => insertNewAddress(payload, contacts));
+                    return;
+                }
+                await insertNewAddress(payload, contacts);
+            }
         });
+
+        if (!isEdit) wireVcfDropzone();
     }
 
     async function deleteAddress(id) {

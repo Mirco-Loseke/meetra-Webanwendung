@@ -1372,6 +1372,69 @@
     color: var(--color-text);
 }
 
+/* Ansprechpartner Klappbereich im Adressformular */
+.ab-contact-collapsible {
+    grid-column: 1 / -1;
+    margin-top: 8px;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.02);
+    overflow: hidden;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.ab-contact-collapsible[open] {
+    border-color: rgba(56, 189, 248, 0.35);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.ab-contact-summary {
+    padding: 12px 16px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--color-text);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+    list-style: none;
+}
+
+.ab-contact-summary::-webkit-details-marker {
+    display: none;
+}
+
+.ab-contact-summary-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ab-contact-summary-badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--color-secondary);
+}
+
+.ab-contact-summary-arrow {
+    transition: transform 0.2s ease;
+    color: var(--color-secondary);
+}
+
+.ab-contact-collapsible[open] .ab-contact-summary-arrow {
+    transform: rotate(180deg);
+    color: #38bdf8;
+}
+
+.ab-contact-body {
+    padding: 14px 16px 16px 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 .ab-form-actions {
     display: flex;
     justify-content: flex-end;
