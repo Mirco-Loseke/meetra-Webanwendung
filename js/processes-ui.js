@@ -295,8 +295,15 @@
             document.getElementById('process-add-remark-input').value = '';
             document.getElementById('process-add-type-select').value = 'note';
             document.getElementById('process-add-status-select').value = 'offen';
+            const addSender = document.getElementById('process-add-sender-input');
+            const addRecipient = document.getElementById('process-add-recipient-input');
+            const addBody = document.getElementById('process-add-body-input');
+            if (addSender) addSender.value = '';
+            if (addRecipient) addRecipient.value = '';
+            if (addBody) addBody.value = '';
             window.syncProcessSelectDisplay('process-add', 'type');
             window.syncProcessSelectDisplay('process-add', 'status');
+            if (typeof window.updateEmailBodyVisibility === 'function') window.updateEmailBodyVisibility('process-add');
 
             // Set default date to now
             const now = new Date();
@@ -380,6 +387,9 @@
                 const workshopOrderNumber = document.getElementById('process-add-workshop-order-select').value;
                 const status = document.getElementById('process-add-status-select').value;
                 const remark = document.getElementById('process-add-remark-input').value;
+                const sender = document.getElementById('process-add-sender-input')?.value || '';
+                const recipient = document.getElementById('process-add-recipient-input')?.value || '';
+                const description = document.getElementById('process-add-body-input')?.value || '';
 
                 const processDate = date ? new Date(date).toISOString() : new Date().toISOString();
 
@@ -395,6 +405,9 @@
                     workshop_order_number: (!addr && workshopOrderNumber) ? workshopOrderNumber : null,
                     status: status,
                     remark: remark || null,
+                    sender: sender || null,
+                    recipient: recipient || null,
+                    description: description || null,
                     assigned_users: window.processAssignedUsers['process-add'],
                     steps: (window.processSteps['process-add'] || []).filter(s => (s.text || '').trim())
                     // Ersteller setzt window.insertMitErsteller (app-core.js): die
@@ -416,24 +429,29 @@
                 }
                 if (remindRaw) payload.remind_at = new Date(remindRaw).toISOString();
 
-                let { error } = await window.insertMitErsteller('internal_processes', payload);
-
-                // Falls die Migration supabase_add_process_customer.sql noch nicht
-                // gelaufen ist, fehlen customer_id/contact_name/remind_at. Dann ohne
-                // diese Felder speichern, damit der Vorgang nicht verloren geht.
-                if (error && /customer_id|contact_name|remind_at/.test(error.message || '')) {
-                    console.warn('Spalte fehlt, speichere Vorgang ohne Adressbezug/Erinnerung:', error.message);
-                    const reduced = { ...payload };
-                    delete reduced.customer_id;
-                    delete reduced.contact_name;
-                    delete reduced.remind_at;
-                    ({ error } = await window.insertMitErsteller('internal_processes', reduced));
-                    if (!error) {
-                        window.showToast('Der Vorgang wurde gespeichert, aber ohne Adressbezug.\n\nBitte die Datei supabase_add_process_customer.sql im Supabase SQL-Editor ausführen.');
-                    }
+                // Nur die tatsächlich fehlenden Spalten entfernen (nicht pauschal alle),
+                // damit eine fehlende contact_name-Spalte nicht die gültige customer_id
+                // mit wegwirft.
+                const attempt = { ...payload };
+                const optionalCols = ['customer_id', 'contact_name', 'remind_at'];
+                const dropped = [];
+                let error;
+                for (let i = 0; i < optionalCols.length + 1; i++) {
+                    ({ error } = await window.insertMitErsteller('internal_processes', attempt));
+                    if (!error) break;
+                    const msg = error.message || '';
+                    const offending = optionalCols.filter(c => (c in attempt) && msg.includes(c));
+                    if (!offending.length) break;
+                    offending.forEach(c => { delete attempt[c]; dropped.push(c); });
                 }
 
                 if (error) throw error;
+
+                if (dropped.length) {
+                    const labelMap = { customer_id: 'Adresse', contact_name: 'Ansprechpartner', remind_at: 'Erinnerung' };
+                    const fehlend = dropped.map(c => labelMap[c] || c).join(', ');
+                    window.showToast('Vorgang gespeichert, aber NICHT übernommen: ' + fehlend + '.\n\nDazu fehlt eine Spalte – bitte supabase_add_process_customer.sql in Supabase ausführen.');
+                }
 
                 const savedAddressId = addr ? addr.id : null;
                 window.closeProcessAddModal();

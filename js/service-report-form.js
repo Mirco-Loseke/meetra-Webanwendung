@@ -410,16 +410,51 @@
                 position: row.querySelector('.scp-position')?.value.trim() || ''
             })).filter(p => p.name || p.phone || p.position);
         };
-        window.renderServiceCpSuggestions = function(machine) {
-            const cps = machine?.contact_persons;
+        // Ansprechpartner-Vorschläge = an der Maschine hinterlegte Personen
+        // PLUS die Ansprechpartner der Adresse (customer_contacts) hinter der
+        // Maschine. Beide Quellen werden zusammengeführt und nach Name/Telefon
+        // dedupliziert (Maschine hat Vorrang).
+        window._serviceCpMachine = [];
+        window._serviceCpAddress = [];
+        function _renderServiceCpChips() {
             const box = document.getElementById('service-cp-suggestions');
             const chips = document.getElementById('service-cp-suggestion-chips');
             const btn = document.getElementById('btn-show-cp-suggestions');
             if (!box || !chips) return;
-            if (!cps || !cps.length) { box.style.display = 'none'; if (btn) btn.style.display = 'none'; return; }
-            chips.innerHTML = cps.map((p, i) => `<button type="button" onclick="window.addServiceContactPerson(${JSON.stringify(p).replace(/"/g,'&quot;')})" style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:rgba(255,255,255,0.85);padding:3px 8px;border-radius:16px;font-size:0.75rem;cursor:pointer;white-space:nowrap;">${_cpEsc(p.name)||'Ansprechpartner '+(i+1)}${p.position?' · '+_cpEsc(p.position):''}</button>`).join('');
+            const seen = new Set();
+            const all = [];
+            [...(window._serviceCpMachine || []), ...(window._serviceCpAddress || [])].forEach(p => {
+                if (!p || (!p.name && !p.phone && !p.position)) return;
+                const key = (p.name || '').trim().toLowerCase() + '|' + (p.phone || '').trim();
+                if (seen.has(key)) return;
+                seen.add(key);
+                all.push(p);
+            });
+            if (!all.length) { box.style.display = 'none'; if (btn) btn.style.display = 'none'; return; }
+            chips.innerHTML = all.map((p, i) => `<button type="button" onclick="window.addServiceContactPerson(${JSON.stringify(p).replace(/"/g,'&quot;')})" style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:rgba(255,255,255,0.85);padding:3px 8px;border-radius:16px;font-size:0.75rem;cursor:pointer;white-space:nowrap;">${_cpEsc(p.name)||'Ansprechpartner '+(i+1)}${p.position?' · '+_cpEsc(p.position):''}</button>`).join('');
             if (btn) btn.style.display = '';
             box.style.display = 'block';
+        }
+        window.renderServiceCpSuggestions = function(machine) {
+            window._serviceCpMachine = (machine && Array.isArray(machine.contact_persons)) ? machine.contact_persons : [];
+            window._serviceCpAddress = [];
+            _renderServiceCpChips();
+            const customerId = machine && machine.customer_id;
+            if (customerId && window.supabaseClient) {
+                window.supabaseClient
+                    .from('customer_contacts')
+                    .select('name, position, phone, mobile')
+                    .eq('customer_id', customerId)
+                    .then(({ data }) => {
+                        window._serviceCpAddress = (data || []).map(c => ({
+                            name: c.name || '',
+                            phone: c.phone || c.mobile || '',
+                            position: c.position || ''
+                        }));
+                        _renderServiceCpChips();
+                    })
+                    .catch(() => {});
+            }
         };
         window.toggleServiceCpSuggestions = function() {
             const box = document.getElementById('service-cp-suggestions');

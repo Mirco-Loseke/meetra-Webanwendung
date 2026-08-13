@@ -115,7 +115,8 @@
       "Bash(node --check js/ai-quick-capture.js)",
       "Bash(sed -i 's|js/ai-quick-capture.js?v=12|js/ai-quick-capture.js?v=13|' index.html)",
       "Bash(sed -i 's/meetra-app-v111/meetra-app-v112/' sw.js)",
-      "PowerShell($node = \"C:\\\\Users\\\\mirco.loseke\\\\AppData\\\\Local\\\\ms-playwright-go\\\\1.57.0\\\\node.exe\"; & $node --check js/addressbook.js; if\\($?\\){ \"CHECK OK\"; & $node -e \"function nd\\(s\\){return \\(s||''\\).replace\\(/\\\\D+/g,''\\);} function np\\(s\\){let d=nd\\(s\\);if\\(d.startsWith\\('00'\\)\\)d=d.slice\\(2\\);if\\(d.startsWith\\('49'\\)\\)d='0'+d.slice\\(2\\);return d;} console.log\\(np\\('+49 441 1234567'\\), np\\('0441 1234567'\\), np\\('+49 441 1234567'\\)===np\\('0441 1234567'\\)\\);\" })"
+      "PowerShell($node = \"C:\\\\Users\\\\mirco.loseke\\\\AppData\\\\Local\\\\ms-playwright-go\\\\1.57.0\\\\node.exe\"; & $node --check js/addressbook.js; if\\($?\\){ \"CHECK OK\"; & $node -e \"function nd\\(s\\){return \\(s||''\\).replace\\(/\\\\D+/g,''\\);} function np\\(s\\){let d=nd\\(s\\);if\\(d.startsWith\\('00'\\)\\)d=d.slice\\(2\\);if\\(d.startsWith\\('49'\\)\\)d='0'+d.slice\\(2\\);return d;} console.log\\(np\\('+49 441 1234567'\\), np\\('0441 1234567'\\), np\\('+49 441 1234567'\\)===np\\('0441 1234567'\\)\\);\" })",
+      "Bash(node --check js/addressbook.js)"
     ]
   }
 }

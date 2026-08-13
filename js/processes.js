@@ -32,7 +32,7 @@ window.fetchProcesses = async function() {
     try {
         let { data, error } = await window.supabaseClient
             .from('internal_processes')
-            .select('*, machines(id, name, manufacturer, serial, year, company, operator_city), customers(id, name)')
+            .select('*, machines(id, name, manufacturer, serial, year, company, operator_city, customer_id), customers(id, name)')
             .order('process_date', { ascending: false });
 
         if (error) {
@@ -369,7 +369,7 @@ window.renderProcesses = function(targetId, opts) {
             const rd = new Date(p.remind_at);
             if (!isNaN(rd)) {
                 const diffDays = Math.round((new Date(rd).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000);
-                const rc = diffDays < 0 ? '#f87171' : (diffDays <= 3 ? '#fbbf24' : 'rgba(255,255,255,0.55)');
+                const rc = diffDays < 0 ? '#f87171' : '#fbbf24';
                 const rlabel = diffDays < 0 ? 'Erinnerung überfällig' : (diffDays === 0 ? 'Erinnerung heute' : 'Erinnerung');
                 remindBadge = `<div style="margin-bottom: 8px;"><span style="display:inline-flex; align-items:center; gap:5px; color:${rc}; border:1px solid ${rc}55; background:${rc}18; padding:3px 9px; border-radius:999px; font-size:0.75rem; font-weight:700;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
@@ -393,8 +393,8 @@ window.renderProcesses = function(targetId, opts) {
                         if (s.remind_at && !s.done) {
                             const rdS = new Date(s.remind_at);
                             const ddS = Math.round((new Date(rdS).setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / 86400000);
-                            const rcS = ddS < 0 ? '#f87171' : (ddS <= 3 ? '#fbbf24' : '#93c5fd');
-                            remindMetaS = `<div class="proc-step-remind-meta" style="font-size:0.78rem; font-weight:600; color:${rcS}; margin-top:2px; padding:0 4px;">⏰ Erinnerung ${fmtDay(s.remind_at)}</div>`;
+                            const rcS = ddS < 0 ? '#f87171' : '#fbbf24';
+                            remindMetaS = `<div class="proc-step-remind-meta" style="margin-top:4px;"><span style="display:inline-flex; align-items:center; gap:5px; color:${rcS}; border:1px solid ${rcS}55; background:${rcS}18; padding:2px 8px; border-radius:999px; font-size:0.75rem; font-weight:700;">⏰ Erinnerung ${fmtDay(s.remind_at)}</span></div>`;
                         }
                         return `
                     <div class="proc-step-crow" style="display:flex; align-items:flex-start; gap:8px; padding:6px 8px; border-radius:8px;">
@@ -468,6 +468,14 @@ window.renderProcesses = function(targetId, opts) {
                                 ${hasRemark ? remarkEsc : '<span style="color:rgba(255,255,255,0.4); font-style:italic;">Keine Notiz hinterlegt</span>'}
                             </div>
                         </div>`; })()}
+                        ${(() => {
+                            const addrCustomerId = p.customer_id || (p.machines && p.machines.customer_id) || null;
+                            if (!addrCustomerId) return '';
+                            return `
+                        <button onclick="event.stopPropagation(); window.openAddressbookDetail('${addrCustomerId}', 'tasks')" class="btn-icon-soft" title="Adresse öffnen" style="background: rgba(167,139,250,0.1); color: #a78bfa; border: 1px solid rgba(167,139,250,0.3); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(167,139,250,0.25)'" onmouseout="this.style.background='rgba(167,139,250,0.1)'">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        </button>`;
+                        })()}
                         <button onclick="window.openEditProcessModal('${p.id}')" class="btn-icon-soft" title="Bearbeiten" style="background: rgba(255,255,255,0.05); color: #60a5fa; border: 1px solid rgba(255,255,255,0.1); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"></path></svg>
                         </button>
@@ -642,21 +650,29 @@ window.updateProcess = async function(event) {
             contact_name: contactName || null
         };
 
-        let { error } = await window.supabaseClient
-            .from('internal_processes')
-            .update(patch)
-            .eq('id', id);
-
-        if (error && /remind_at|customer_id|contact_name/.test(error.message || '')) {
-            console.warn('Spalte fehlt, speichere ohne Erinnerung/Adressbezug:', error.message);
-            const reduced = { ...patch };
-            delete reduced.remind_at;
-            delete reduced.customer_id;
-            delete reduced.contact_name;
-            ({ error } = await window.supabaseClient.from('internal_processes').update(reduced).eq('id', id));
+        // Nur die tatsächlich fehlenden Spalten entfernen (nicht pauschal Adresse UND
+        // Ansprechpartner UND Erinnerung zusammen), damit z. B. eine fehlende
+        // contact_name-Spalte nicht die gültige customer_id mit wegwirft.
+        const attempt = { ...patch };
+        const optionalCols = ['remind_at', 'customer_id', 'contact_name', 'linked_service_report_id'];
+        const dropped = [];
+        let error;
+        for (let i = 0; i < optionalCols.length + 1; i++) {
+            ({ error } = await window.supabaseClient.from('internal_processes').update(attempt).eq('id', id));
+            if (!error) break;
+            const msg = error.message || '';
+            const offending = optionalCols.filter(c => (c in attempt) && msg.includes(c));
+            if (!offending.length) break; // anderer Fehler -> unten werfen
+            offending.forEach(c => { delete attempt[c]; dropped.push(c); });
         }
 
         if (error) throw error;
+
+        if (dropped.length) {
+            const labelMap = { customer_id: 'Adresse', contact_name: 'Ansprechpartner', remind_at: 'Erinnerung', linked_service_report_id: 'Servicebericht-Link' };
+            const fehlend = dropped.map(c => labelMap[c] || c).join(', ');
+            window.showToast('Gespeichert, aber NICHT übernommen: ' + fehlend + '.\n\nDazu fehlt eine Spalte in der Datenbank – bitte supabase_add_process_customer.sql in Supabase ausführen.');
+        }
 
         window.closeEditProcessModal();
         window.fetchProcesses();

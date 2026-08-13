@@ -1210,7 +1210,7 @@
 
         state.currentId = String(id);
         state.detailTab = tab || 'overview';
-        state.detail = { contacts: [], links: [], notes: [], machines: [], linkedMachines: new Map(), linkedContacts: new Map(), clusterMeta: new Map() };
+        state.detail = { contacts: [], links: [], notes: [], machines: [], appointments: [], linkedMachines: new Map(), linkedContacts: new Map(), clusterMeta: new Map() };
 
         ensureDetailModal();
         renderDetail(true);
@@ -1477,6 +1477,43 @@
         })());
 
         await Promise.all(tasks);
+
+        // Termine (maintenance_events) dieser Adresse + aller Cluster-Maschinen.
+        // Läuft nach Promise.all, weil allClusterMachines erst durch die Maschinen-
+        // Aufgabe oben gefüllt wird.
+        try {
+            const allClusterCustomerIds = [id, ...Array.from(state.detail.clusterMeta.keys())];
+            const mIds = (state.detail.allClusterMachines || []).map(m => m.id);
+
+            let evQuery = sb().from('maintenance_events').select('*');
+            if (mIds.length > 0) {
+                evQuery = evQuery.or(`customer_id.in.(${allClusterCustomerIds.join(',')}),machine_id.in.(${mIds.join(',')})`);
+            } else {
+                evQuery = evQuery.in('customer_id', allClusterCustomerIds);
+            }
+
+            const { data, error } = await evQuery.order('event_date', { ascending: false });
+            if (error) throw error;
+            state.detail.appointments = data || [];
+        } catch (err) {
+            const msg = String(err && (err.message || err.code || err) || '');
+            // Nur wenn die Spalte wirklich fehlt, den Migrations-Hinweis zeigen.
+            // Bei anderen Fehlern (RLS, Netzwerk) NICHT den irreführenden SQL-Hinweis anzeigen.
+            const columnMissing = /customer_id|history_ref|column|schema cache|42703|PGRST204/i.test(msg);
+            console.warn('Termine zur Adresse konnten nicht geladen werden:', msg);
+            try {
+                const mIds = (state.detail.allClusterMachines || []).map(m => m.id);
+                if (mIds.length > 0) {
+                    const { data } = await sb().from('maintenance_events').select('*').in('machine_id', mIds).order('event_date', { ascending: false });
+                    state.detail.appointments = data || [];
+                } else {
+                    state.detail.appointments = [];
+                }
+            } catch (e2) {
+                state.detail.appointments = [];
+            }
+            state.detail.appointmentsError = columnMissing;
+        }
     }
 
     function ensureDetailModal() {
@@ -1530,7 +1567,20 @@
         // Gesamtzahl Verknüpfungen (alle verknüpften Adressen im Cluster)
         const totalLinksCount = state.detail.clusterMeta ? state.detail.clusterMeta.size : links.length;
 
-        const tasksList = state.detail.tasks || [];
+        // Vorgänge: die Karten kommen aus state.detail.processes (nicht .tasks — das
+        // wird nie gefüllt und ließ das Reiter-Badge dauerhaft 0 anzeigen).
+        const tasksList = state.detail.processes || [];
+
+        // Historie zeigt eine zusammengeführte Zeitleiste (Adress-Notizen +
+        // Maschinen-Historie + Vorgänge + Maschinen-Aufgaben). Automatisch erzeugte
+        // System-Einträge (entry_type 'system') sind standardmäßig ausgeblendet, daher
+        // zählt das Badge sie nur, wenn der Nutzer sie eingeblendet hat.
+        const nonSystemNotes = notes.filter(n => n.entry_type !== 'system').length;
+        const shownNotes = state.showSystemHistory ? notes.length : nonSystemNotes;
+        const historyCount = shownNotes
+            + (state.detail.machineHistoryEntries || []).length
+            + (state.detail.processes || []).length
+            + (state.detail.machineTasks || []).length;
 
         const tabs = [
             { key: 'overview', label: 'Übersicht' },
@@ -1538,7 +1588,8 @@
             { key: 'machines', label: 'Maschinen', count: totalMachinesCount },
             { key: 'links', label: 'Verknüpfungen', count: totalLinksCount },
             { key: 'tasks', label: 'Vorgänge', count: tasksList.length },
-            { key: 'history', label: 'Historie', count: notes.length }
+            { key: 'appointments', label: 'Termine', count: (state.detail.appointments || []).length },
+            { key: 'history', label: 'Historie', count: historyCount }
         ];
 
         body.innerHTML = `
@@ -1579,6 +1630,7 @@
             case 'machines': return renderMachinesTab();
             case 'links': return renderLinksTab();
             case 'tasks': return renderTasksTab();
+            case 'appointments': return renderAppointmentsTab();
             case 'history': return renderHistoryTab();
             default: return renderOverviewTab(a);
         }
@@ -2147,6 +2199,77 @@
     // ---------- Historie ----------
     state.historyFilter = 'all'; // 'all', 'address', 'machine'
 
+    // Kleines Kalender-Icon zum Anlegen eines Termins zu einem Historien-/Listeneintrag.
+    function appointmentIconBtn(label, machineId) {
+        // In ein onclick-Attribut (doppelt gequotet) mit einfach gequotetem JS-Argument:
+        // Anführungszeichen/Backslashes entfernen, damit weder HTML noch JS bricht.
+        const l = String(label || '').replace(/["'\\]/g, ' ').replace(/\s+/g, ' ').trim();
+        const mid = machineId ? String(machineId) : '';
+        return `<button type="button" class="ab-icon-btn" title="Termin zu diesem Eintrag anlegen"
+            onclick="event.stopPropagation(); window.openAddressAppointmentModal('${esc(state.currentId)}','${mid}','${l}')"
+            style="color:#38bdf8;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><line x1="12" y1="14" x2="12" y2="18"></line><line x1="10" y1="16" x2="14" y2="16"></line></svg>
+        </button>`;
+    }
+
+    function renderAppointmentsTab() {
+        const list = (state.detail.appointments || []).slice();
+        const machinesMap = new Map((state.detail.allClusterMachines || state.detail.machines || []).map(m => [String(m.id), m]));
+        const addr = state.byId.get(state.currentId);
+        const addrName = addr ? addr.name : 'Adresse';
+
+        const todayMs = new Date().setHours(0, 0, 0, 0);
+        const withDate = list.map(ev => {
+            const d = new Date(ev.event_date || ev.start_date || ev.created_at);
+            return { ev, ms: isNaN(d) ? 0 : new Date(d).setHours(0, 0, 0, 0) };
+        });
+        const upcoming = withDate.filter(x => x.ms >= todayMs).sort((a, b) => a.ms - b.ms);
+        const past = withDate.filter(x => x.ms < todayMs).sort((a, b) => b.ms - a.ms);
+
+        const rowHtml = (x, isPast) => {
+            const ev = x.ev;
+            const m = ev.machine_id ? machinesMap.get(String(ev.machine_id)) : null;
+            const src = m
+                ? `${m.manufacturer || ''} ${m.name || ''}`.trim()
+                : (ev.manual_machine || `📍 ${addrName}`);
+            const dateStr = formatDate(ev.event_date || ev.start_date) || formatDateTime(ev.created_at);
+            const diff = Math.round((x.ms - todayMs) / 86400000);
+            const when = isPast ? '' : (diff === 0 ? 'heute' : (diff === 1 ? 'morgen' : `in ${diff} Tagen`));
+            const accent = isPast ? 'rgba(255,255,255,0.25)' : (diff <= 3 ? '#fbbf24' : '#38bdf8');
+            return `
+            <div class="ab-timeline-item" style="--ab-entry-color:${accent}; ${isPast ? 'opacity:0.72;' : ''}">
+                <div class="ab-timeline-dot">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                </div>
+                <div class="ab-timeline-body">
+                    <div style="font-size: 0.82rem; font-weight: 700; color: ${m ? '#22c55e' : '#38bdf8'}; margin-bottom: 6px;">${esc(src)}</div>
+                    <div class="ab-timeline-head" style="align-items:center;">
+                        <span class="ab-pill" style="border-color:${accent}55; color:${accent}">${esc(dateStr)}${when ? ' · ' + when : ''}</span>
+                        ${ev.title ? `<strong>${esc(ev.title)}</strong>` : ''}
+                        <button class="ab-icon-btn ab-danger delete-permission-required" title="Termin löschen"
+                            onclick="event.stopPropagation(); window.deleteAddressAppointment('${esc(ev.id)}')" style="margin-left:auto;">${ic('trash', 14)}</button>
+                    </div>
+                    ${ev.history_ref ? `<div class="ab-timeline-text" style="color:rgba(255,255,255,0.6); font-style:italic;">Bezug: ${esc(ev.history_ref)}</div>` : ''}
+                    ${ev.description ? `<div class="ab-timeline-text" style="white-space:pre-wrap;">${esc(ev.description)}</div>` : ''}
+                </div>
+            </div>`;
+        };
+
+        const migrationHint = state.detail.appointmentsError
+            ? `<div class="ab-empty" style="margin-bottom:1rem;"><div class="ab-empty-text">Hinweis: Für adressbezogene Termine muss die Migration <strong>supabase_add_event_customer.sql</strong> in Supabase ausgeführt werden.</div></div>`
+            : '';
+
+        return `
+        ${migrationHint}
+        <div class="ab-section-head" style="align-items:center; justify-content:space-between; margin-bottom:1.25rem;">
+            <span class="ab-muted" style="font-weight:600;">${upcoming.length} anstehend · ${past.length} vergangen</span>
+            <button class="ab-btn ab-btn-primary" onclick="window.openAddressAppointmentModal('${esc(state.currentId)}','','')">${ic('plus', 16)} Termin hinzufügen</button>
+        </div>
+        ${upcoming.length ? `<div class="ab-timeline">${upcoming.map(x => rowHtml(x, false)).join('')}</div>` : ''}
+        ${past.length ? `<div style="margin-top:${upcoming.length ? '1.5rem' : '0'};"><div class="ab-muted" style="font-weight:700; text-transform:uppercase; letter-spacing:0.5px; font-size:0.78rem; margin-bottom:0.75rem;">Vergangen</div><div class="ab-timeline">${past.map(x => rowHtml(x, true)).join('')}</div></div>` : ''}
+        ${(!upcoming.length && !past.length) ? '<div class="ab-empty"><div class="ab-empty-title">Keine Termine</div><div class="ab-empty-text">Lege über „Termin hinzufügen" oder das Kalender-Symbol an einem Historieneintrag einen Termin an.</div></div>' : ''}`;
+    }
+
     function renderHistoryTab() {
         const addr = state.byId.get(state.currentId);
         const addrName = addr ? addr.name : 'Adresse';
@@ -2249,8 +2372,22 @@
             };
         });
 
+        // Automatisch erzeugte System-Einträge (Adresse geändert/synchronisiert …) sind
+        // standardmäßig ausgeblendet. Manuelle Adress-Einträge, Maschinen-Historie,
+        // Vorgänge etc. immer sichtbar.
+        const showSystem = !!state.showSystemHistory;
+        const isSystemEntry = (item) => item.type === 'address' && item.raw && item.raw.entry_type === 'system';
+        const systemCount = [...notes, ...machineEntries, ...processEntries, ...taskEntries].filter(isSystemEntry).length;
+
         // Alle Einträge zusammenführen & sortieren (neueste zuerst)
-        let combined = [...notes, ...machineEntries, ...processEntries, ...taskEntries].sort((a, b) => b.timestamp - a.timestamp);
+        let combined = [...notes, ...machineEntries, ...processEntries, ...taskEntries]
+            .filter(item => showSystem || !isSystemEntry(item))
+            .sort((a, b) => b.timestamp - a.timestamp);
+
+        // Zähler VOR dem Typ-Filtern bestimmen, damit die Filter-Buttons zur Liste passen.
+        const totalCount = combined.length;
+        const addressCount = combined.filter(item => item.type === 'address').length;
+        const machineCount = combined.filter(item => item.type === 'machine').length;
 
         // Filtern nach gewähltem Filter
         const filter = state.historyFilter || 'all';
@@ -2260,15 +2397,14 @@
             combined = combined.filter(item => item.type === 'machine');
         }
 
-        const totalCount = notes.length + machineEntries.length;
-
         return `
         <div class="ab-section-head" style="flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                 <span class="ab-muted" style="font-weight: 600;">Filter:</span>
                 <button class="ab-btn ${filter === 'all' ? 'ab-btn-primary' : 'ab-btn-secondary'}" onclick="window.setAddressbookHistoryFilter('all')" style="padding: 4px 12px; font-size: 0.82rem; border-radius: 20px;">Alle (${totalCount})</button>
-                <button class="ab-btn ${filter === 'address' ? 'ab-btn-primary' : 'ab-btn-secondary'}" onclick="window.setAddressbookHistoryFilter('address')" style="padding: 4px 12px; font-size: 0.82rem; border-radius: 20px;">Nur Adress-Einträge (${notes.length})</button>
-                <button class="ab-btn ${filter === 'machine' ? 'ab-btn-primary' : 'ab-btn-secondary'}" onclick="window.setAddressbookHistoryFilter('machine')" style="padding: 4px 12px; font-size: 0.82rem; border-radius: 20px;">Nur Maschinen-Historie (${machineEntries.length})</button>
+                <button class="ab-btn ${filter === 'address' ? 'ab-btn-primary' : 'ab-btn-secondary'}" onclick="window.setAddressbookHistoryFilter('address')" style="padding: 4px 12px; font-size: 0.82rem; border-radius: 20px;">Nur Adress-Einträge (${addressCount})</button>
+                <button class="ab-btn ${filter === 'machine' ? 'ab-btn-primary' : 'ab-btn-secondary'}" onclick="window.setAddressbookHistoryFilter('machine')" style="padding: 4px 12px; font-size: 0.82rem; border-radius: 20px;">Nur Maschinen-Historie (${machineCount})</button>
+                ${systemCount ? `<button class="ab-btn ${showSystem ? 'ab-btn-primary' : 'ab-btn-secondary'}" onclick="window.toggleAddressbookHistorySystem()" style="padding: 4px 12px; font-size: 0.82rem; border-radius: 20px;" title="Automatisch erzeugte System-Einträge (Adresse geändert, synchronisiert …)">${showSystem ? '✓ ' : ''}System-Einträge (${systemCount})</button>` : ''}
             </div>
             <button class="ab-btn ab-btn-primary" data-ab-action="note-new">${ic('plus', 16)} Adress-Eintrag hinzufügen</button>
         </div>
@@ -2278,6 +2414,15 @@
 
     window.setAddressbookHistoryFilter = function(filter) {
         state.historyFilter = filter;
+        const body = document.getElementById('addressbook-detail-body');
+        if (body && typeof renderDetail === 'function') {
+            renderDetail(false);
+        }
+    };
+
+    // Automatisch erzeugte System-Einträge in der Historie ein-/ausblenden.
+    window.toggleAddressbookHistorySystem = function() {
+        state.showSystemHistory = !state.showSystemHistory;
         const body = document.getElementById('addressbook-detail-body');
         if (body && typeof renderDetail === 'function') {
             renderDetail(false);
@@ -2299,6 +2444,7 @@
                         <span class="ab-pill" style="border-color:${meta.color}55; color:${meta.color}">${esc(meta.label)}</span>
                         ${n.title ? `<strong>${esc(n.title)}</strong>` : ''}
                         <span class="ab-muted ab-small">${esc(item.dateStr)}${n.author ? ' · ' + esc(n.author) : ''}</span>
+                        ${appointmentIconBtn(`${meta.label}${n.title ? ': ' + n.title : ''} (${item.dateStr})`, null)}
                         <button class="ab-icon-btn ab-danger ab-timeline-del delete-permission-required" data-ab-action="note-delete" data-ab-id="${esc(n.id)}" title="Eintrag löschen">${ic('trash', 14)}</button>
                     </div>
                     ${n.body ? `<div class="ab-timeline-text">${esc(n.body)}</div>` : ''}
@@ -2377,6 +2523,7 @@
                         <span class="ab-pill" style="border-color:${config.color}55; color:${config.color}">${esc(config.label)}</span>
                         ${mh.title ? `<strong>${esc(mh.title)}</strong>` : ''}
                         <span class="ab-muted ab-small">${esc(item.dateStr)}</span>
+                        ${appointmentIconBtn(`${config.label}${mh.title ? ': ' + mh.title : ''} (${item.dateStr})`, item.machineId || null)}
                         ${pdfBtnHtml}
                     </div>
                     ${mh.content ? `<div class="ab-timeline-text" style="white-space: pre-wrap;">${esc(mh.content)}</div>` : ''}
@@ -2977,6 +3124,8 @@
 
     // ---- vCard / Text parsen ----
     function unescapeV(s) { return (s || '').replace(/\\n/gi, ' ').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\').trim(); }
+    // Wie unescapeV, behält aber Zeilenumbrüche (\n) als echte Umbrüche — für NOTE.
+    function unescapeVNote(s) { return (s || '').replace(/\\n/gi, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\').replace(/[ \t]+$/gm, '').replace(/^\n+|\n+$/g, ''); }
     function normalizeParsed(r) {
         return { name: r.fullName || '', org: r.org || '', title: r.title || '', department: r.department || '', website: r.website || '', email: r.email || '', phone: r.phone || '', mobile: r.mobile || '', street: r.street || '', zip: r.zip || '', city: r.city || '', country: r.country || '', note: r.note || '' };
     }
@@ -3021,7 +3170,7 @@
             else if (key === 'EMAIL') { if (!r.email) r.email = dec(value); }
             else if (key === 'URL' || key === 'X-WORK-URL' || key === 'X-HOME-URL') { if (!r.website) r.website = dec(value); }
             else if (key === 'TEL') { const v = dec(value); if (isMobile) { if (!r.mobile) r.mobile = v; } else if (!r.phone) { r.phone = v; } }
-            else if (key === 'NOTE') { r.note = dec(value); }
+            else if (key === 'NOTE') { r.note = isQP ? decodeQP(value, charset) : unescapeVNote(value); }
             else if (key === 'ADR') { const p = value.split(';').map(dec); r.street = r.street || [p[2], p[1]].filter(Boolean).join(' '); r.city = r.city || p[3]; r.zip = r.zip || p[5]; r.country = r.country || p[6]; }
         });
         return normalizeParsed(r);
@@ -3118,11 +3267,22 @@
         });
     }
 
+    // Liest eine Textdatei mit der richtigen Kodierung, damit ä/ö/ü/ß stimmen.
+    // Reihenfolge: BOM (UTF-8/UTF-16) → strenges UTF-8 → Fallback Windows-1252.
+    // file.text() nimmt immer UTF-8 an und zerlegt so Windows-1252-vCards (Outlook).
+    async function readTextSmart(file) {
+        const buf = new Uint8Array(await file.arrayBuffer());
+        if (buf.length >= 3 && buf[0] === 0xEF && buf[1] === 0xBB && buf[2] === 0xBF) return new TextDecoder('utf-8').decode(buf.subarray(3));
+        if (buf.length >= 2 && buf[0] === 0xFF && buf[1] === 0xFE) return new TextDecoder('utf-16le').decode(buf.subarray(2));
+        if (buf.length >= 2 && buf[0] === 0xFE && buf[1] === 0xFF) return new TextDecoder('utf-16be').decode(buf.subarray(2));
+        try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); }
+        catch (_) { return new TextDecoder('windows-1252').decode(buf); }
+    }
     async function handleContactFile(file) {
         const status = document.getElementById('ab-vcf-status');
         try {
             const name = (file.name || '').toLowerCase();
-            const text = name.endsWith('.msg') ? await extractMsgText(file) : await file.text();
+            const text = name.endsWith('.msg') ? await extractMsgText(file) : await readTextSmart(file);
             const parsed = parseVCardOrText(text);
             if (!parsed.name && !parsed.email && !parsed.org) {
                 if (status) status.textContent = 'Keine Kontaktdaten erkannt (am besten eine .vcf-Datei nutzen).';
@@ -4279,9 +4439,160 @@
     }
     // Für externe Module (ai-address-task.js, Vorgänge-Modul in index.html)
     window.refreshAddressbookDetail = refreshDetail;
+
+    // ==========================================
+    // TERMINE (maintenance_events) an einer Adresse
+    // ==========================================
+    function ensureAppointmentModal() {
+        if (document.getElementById('ab-appointment-modal')) return;
+        const el = document.createElement('div');
+        el.id = 'ab-appointment-modal';
+        el.className = 'modal-backdrop hidden';
+        el.style.cssText = 'z-index: 10050; display:none; align-items:center; justify-content:center;';
+        el.innerHTML = `
+            <div class="modal-content glass-card" style="max-width: 460px; width: 92%; padding: 1.75rem; border: 1px solid rgba(255,255,255,0.1);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <h2 style="margin:0; color:#fff; font-size:1.4rem; font-weight:800;">Termin anlegen</h2>
+                    <button type="button" onclick="window.closeAddressAppointmentModal()" style="background:none; border:none; color:rgba(255,255,255,0.4); cursor:pointer;">
+                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <form onsubmit="window.saveAddressAppointment(event)">
+                    <input type="hidden" id="ab-appt-customer-id">
+                    <input type="hidden" id="ab-appt-machine-id">
+                    <input type="hidden" id="ab-appt-history-ref">
+                    <div id="ab-appt-ref-hint" style="display:none; font-size:0.82rem; color:#38bdf8; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); border-radius:10px; padding:8px 12px; margin-bottom:14px; word-break:break-word;"></div>
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label class="form-label-caps">Datum</label>
+                        <input type="date" id="ab-appt-date" class="glass-input" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label class="form-label-caps">Titel</label>
+                        <input type="text" id="ab-appt-title" class="glass-input" required placeholder="z. B. Rückruf, Nachfassen, Besuch...">
+                    </div>
+                    <div class="form-group" style="margin-bottom:18px;">
+                        <label class="form-label-caps">Notiz (optional)</label>
+                        <textarea id="ab-appt-desc" class="glass-input" style="height:70px; resize:vertical; padding-top:12px;" placeholder="Details zum Termin..."></textarea>
+                    </div>
+                    <div style="display:flex; gap:12px;">
+                        <button type="button" class="ab-btn ab-btn-secondary" onclick="window.closeAddressAppointmentModal()" style="flex:1;">Abbrechen</button>
+                        <button type="submit" class="ab-btn ab-btn-primary" style="flex:1;">Speichern</button>
+                    </div>
+                </form>
+            </div>`;
+        document.body.appendChild(el);
+        el.addEventListener('click', (e) => { if (e.target === el) window.closeAddressAppointmentModal(); });
+    }
+
+    window.openAddressAppointmentModal = function(customerId, machineId, historyRef) {
+        ensureAppointmentModal();
+        const modal = document.getElementById('ab-appointment-modal');
+        document.getElementById('ab-appt-customer-id').value = customerId || '';
+        document.getElementById('ab-appt-machine-id').value = machineId || '';
+        document.getElementById('ab-appt-history-ref').value = historyRef || '';
+        const hint = document.getElementById('ab-appt-ref-hint');
+        if (historyRef) { hint.style.display = 'block'; hint.textContent = 'Bezug: ' + historyRef; }
+        else { hint.style.display = 'none'; hint.textContent = ''; }
+        // Standard: heute, Titel aus dem Bezug vorbelegen (editierbar).
+        const now = new Date();
+        const tz = now.getTimezoneOffset() * 60000;
+        document.getElementById('ab-appt-date').value = new Date(now.getTime() - tz).toISOString().slice(0, 10);
+        document.getElementById('ab-appt-title').value = historyRef ? String(historyRef).slice(0, 80) : '';
+        document.getElementById('ab-appt-desc').value = '';
+        // .modal-backdrop ist per Default opacity:0 + pointer-events:none — erst
+        // die Klasse .show macht es sichtbar UND klickbar.
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+        requestAnimationFrame(() => modal.classList.add('show'));
+    };
+
+    window.closeAddressAppointmentModal = function() {
+        const modal = document.getElementById('ab-appointment-modal');
+        if (modal) { modal.classList.remove('show'); modal.classList.add('hidden'); modal.style.display = 'none'; }
+    };
+
+    window.saveAddressAppointment = async function(ev) {
+        if (ev) ev.preventDefault();
+        const customerId = document.getElementById('ab-appt-customer-id').value;
+        const machineId = document.getElementById('ab-appt-machine-id').value;
+        const historyRef = document.getElementById('ab-appt-history-ref').value;
+        const date = document.getElementById('ab-appt-date').value;
+        const title = document.getElementById('ab-appt-title').value.trim();
+        const desc = document.getElementById('ab-appt-desc').value.trim();
+        if (!date || !title) return;
+
+        const payload = {
+            title: title,
+            event_date: date,
+            start_date: date,
+            customer_id: customerId ? parseInt(customerId) : null,
+            machine_id: machineId ? parseInt(machineId) : null,
+            history_ref: historyRef || null,
+            description: desc || null,
+            status: 'geplant'
+        };
+
+        try {
+            let error;
+            if (typeof window.insertMitErsteller === 'function') {
+                ({ error } = await window.insertMitErsteller('maintenance_events', payload));
+            } else {
+                ({ error } = await sb().from('maintenance_events').insert(payload));
+            }
+            // Spalten customer_id/history_ref evtl. noch nicht vorhanden -> ohne sie speichern.
+            if (error && /customer_id|history_ref/.test(error.message || '')) {
+                const reduced = { ...payload };
+                delete reduced.customer_id;
+                delete reduced.history_ref;
+                if (typeof window.insertMitErsteller === 'function') {
+                    ({ error } = await window.insertMitErsteller('maintenance_events', reduced));
+                } else {
+                    ({ error } = await sb().from('maintenance_events').insert(reduced));
+                }
+                if (!error) window.showToast('Termin gespeichert, aber ohne Adressbezug.\n\nBitte supabase_add_event_customer.sql in Supabase ausführen.');
+            }
+            if (error) throw error;
+
+            window.closeAddressAppointmentModal();
+            window.showToast('Termin gespeichert.');
+            state.detailTab = 'appointments';
+            await refreshDetail();
+            if (typeof window.renderEvents === 'function') window.renderEvents();
+        } catch (err) {
+            console.error('Termin konnte nicht gespeichert werden:', err);
+            window.showToast('Fehler beim Speichern des Termins: ' + (err.message || err));
+        }
+    };
+
+    window.deleteAddressAppointment = async function(id) {
+        if (!id) return;
+        if (!confirm('Diesen Termin wirklich löschen?')) return;
+        try {
+            const { error } = await sb().from('maintenance_events').delete().eq('id', id);
+            if (error) throw error;
+            window.showToast('Termin gelöscht.');
+            await refreshDetail();
+            if (typeof window.renderEvents === 'function') window.renderEvents();
+        } catch (err) {
+            console.error('Termin konnte nicht gelöscht werden:', err);
+            window.showToast('Fehler beim Löschen: ' + (err.message || err));
+        }
+    };
     // Öffnet das Adress-Detail erneut, z. B. nachdem im Vorgangs-Modal
     // gespeichert wurde. tab = 'tasks' springt direkt auf die Vorgänge.
-    window.openAddressbookDetail = (id, tab) => openDetail(String(id), tab);
+    window.openAddressbookDetail = async (id, tab) => {
+        if (!id) return;
+        // Aus fremden Modulen (z. B. Vorgänge-Karte) ist das Adressbuch evtl.
+        // noch nicht geladen -> state.byId wäre leer und openDetail bräche still ab.
+        if (!state.byId.has(String(id)) && typeof window.loadAddressbook === 'function') {
+            await window.loadAddressbook();
+        }
+        if (!state.byId.has(String(id))) {
+            window.showToast('Diese Adresse konnte im Adressbuch nicht gefunden werden.');
+            return;
+        }
+        openDetail(String(id), tab);
+    };
 
     // ==========================================
     // EVENTS
