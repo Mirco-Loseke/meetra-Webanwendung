@@ -3316,12 +3316,20 @@
             ['website', 'Webseite', p.website], ['email', 'E-Mail', p.email], ['phone', 'Telefon', p.phone], ['mobile', 'Mobil', p.mobile],
             ['street', 'Straße & Nr.', p.street], ['zip', 'PLZ', p.zip], ['city', 'Ort', p.city], ['country', 'Land', p.country], ['note', 'Notiz', p.note]
         ];
-        const fieldRows = impFields.map(f =>
-            `<label style="display:flex; gap:10px; align-items:center; padding:3px 0;">
+        const fieldRows = impFields.map(f => {
+            // Notiz kann mehrzeilig sein -> Textarea, sonst verschluckt das
+            // einzeilige <input> die Zeilenumbrüche.
+            if (f[0] === 'note') {
+                return `<label style="display:flex; gap:10px; align-items:flex-start; padding:3px 0;">
+                    <span style="width:118px; flex-shrink:0; color:rgba(255,255,255,0.55); font-size:0.8rem; padding-top:7px;">${f[1]}</span>
+                    <textarea id="ab-imp-note" rows="4" style="flex:1; min-width:0; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:7px 10px; color:#fff; font-size:0.86rem; resize:vertical; white-space:pre-wrap; font-family:inherit;">${esc(f[2] || '')}</textarea>
+                </label>`;
+            }
+            return `<label style="display:flex; gap:10px; align-items:center; padding:3px 0;">
                 <span style="width:118px; flex-shrink:0; color:rgba(255,255,255,0.55); font-size:0.8rem;">${f[1]}</span>
                 <input id="ab-imp-${f[0]}" value="${esc(f[2] || '')}" style="flex:1; min-width:0; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); border-radius:8px; padding:7px 10px; color:#fff; font-size:0.86rem;">
-            </label>`
-        ).join('');
+            </label>`;
+        }).join('');
 
         let matchesHtml = '';
         if (allMatches.length) {
@@ -3408,8 +3416,11 @@
         set('ab-f-phone', p.phone || p.mobile);
         set('ab-f-email', p.email);
         set('ab-f-website', p.website);
+        // Notiz immer ins Adress-Notizfeld übernehmen, damit sie sichtbar ist
+        // (nicht nur im ggf. zugeklappten Ansprechpartner-Block).
+        if (p.note) set('ab-f-notes', p.note);
         if (hasOrg && p.name && normCompany(p.name) !== normCompany(p.org)) {
-            // Firma = Adresse, Person = Ansprechpartner. Notiz gehört zur Person.
+            // Firma = Adresse, Person = Ansprechpartner. Notiz zusätzlich an der Person.
             importPendingContact = { name: p.name, salutation: null, position: p.title || null, department: p.department || null, phone: p.phone || null, mobile: p.mobile || null, email: p.email || null, notes: p.note || 'Aus Kontaktimport' };
             set('ab-f-c-name', p.name);
             set('ab-f-c-position', p.title);
@@ -3422,7 +3433,6 @@
             if (detailsEl) detailsEl.open = true;
         } else {
             importPendingContact = null;
-            if (p.note) set('ab-f-notes', p.note);
         }
     }
 

@@ -1819,6 +1819,23 @@
                         try { window.handleMachineRealtimeChange(payload); } catch (e) { console.error('Realtime machines Fehler:', e); }
                     })
                     .subscribe();
+
+                // Vorgänge live bei allen Clients. Der Realtime-Payload enthält keine
+                // Joins (machines/customers), daher wird komplett neu geladen — aber
+                // gebündelt (Debounce), damit ein Schwall Änderungen nur einmal lädt.
+                window.supabaseClient
+                    .channel('internal_processes_live')
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'internal_processes' }, () => {
+                        try { window.scheduleProcessesRefetch(); } catch (e) { console.error('Realtime internal_processes Fehler:', e); }
+                    })
+                    .subscribe();
+            };
+
+            let _processesRefetchTimer = null;
+            window.scheduleProcessesRefetch = function () {
+                if (typeof window.fetchProcesses !== 'function') return;
+                clearTimeout(_processesRefetchTimer);
+                _processesRefetchTimer = setTimeout(() => { window.fetchProcesses(); }, 400);
             };
 
             window.handleServiceEntryRealtimeChange = function (payload) {

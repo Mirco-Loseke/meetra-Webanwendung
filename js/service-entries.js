@@ -252,6 +252,59 @@ window.openEditServicebericht = async function (id) {
     }
 };
 
+// „Daten retten": sucht auf DIESEM Gerät die lokal (IndexedDB) gespeicherte
+// Vollkopie des gerade bearbeiteten Berichts und ergänzt damit leere Felder.
+// Überschreibt nichts, was aktuell schon Inhalt hat. Speichern erst nach Prüfung.
+window.rescueServiceReportData = async function () {
+    const id = window.currentEditingServiceId;
+    const toast = (m) => (window.showToast ? window.showToast(m) : alert(m));
+    if (!id) { toast('Nur beim Bearbeiten eines bereits gespeicherten Berichts möglich.'); return; }
+    if (!window.offlineService) { toast('Offline-Speicher auf diesem Gerät nicht verfügbar.'); return; }
+
+    let cached;
+    try { cached = await window.offlineService.getCachedFullEntry(id); }
+    catch (e) { toast('Lokale Kopie konnte nicht gelesen werden: ' + (e.message || e)); return; }
+    if (!cached) { toast('Auf diesem Gerät ist keine lokale Kopie dieses Berichts gespeichert. Bitte an einem Gerät versuchen, das den Bericht früher offen hatte.'); return; }
+
+    // Aktuellen Serverstand als Basis holen (falls online), sonst den Cache selbst.
+    let base = cached;
+    try {
+        if (navigator.onLine && window.supabaseClient) {
+            const { data } = await window.supabaseClient.from('service_entries').select('*').eq('id', id).single();
+            if (data) base = data;
+        }
+    } catch (e) { /* offline o. Fehler -> base bleibt cached */ }
+
+    const RECOVER = ['work_log', 'materials', 'tasks', 'description', 'remarks', 'checklist_payload',
+        'contact_persons', 'hours', 'operating_hours', 'travel_distance_km', 'travel_time_minutes',
+        'customer_name', 'customer_signature', 'tech_signature', 'tech_sig_date', 'customer_sig_date',
+        'status_repaired', 'status_repaired_en', 'title', 'category_id', 'category_ids',
+        'datum_von', 'datum_bis', 'date', 'technicians', 'workshop_order_number',
+        'hotel_company', 'hotel_street', 'hotel_zip', 'hotel_city', 'hotel_country'];
+    const isEmpty = (v) => v == null || v === '' ||
+        (Array.isArray(v) && v.length === 0) ||
+        (typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0);
+
+    const merged = Object.assign({}, base);
+    const restored = [];
+    RECOVER.forEach(f => {
+        if (isEmpty(base[f]) && !isEmpty(cached[f])) { merged[f] = cached[f]; restored.push(f); }
+    });
+
+    if (!restored.length) {
+        toast('Lokale Kopie gefunden, aber sie enthält keine zusätzlichen Daten (evtl. auf diesem Gerät bereits überschrieben).');
+        return;
+    }
+    if (!confirm('Aus lokaler Kopie wiederherstellbar:\n\n• ' + restored.join('\n• ') +
+        '\n\nJetzt ins Formular übernehmen? Gespeichert wird erst, wenn du danach auf „Speichern" klickst.')) return;
+
+    window.closeServiceberichtModal(true);
+    setTimeout(() => {
+        window.openServiceberichtModal(merged);
+        toast('Wiederhergestellt: ' + restored.length + ' Felder. Bitte prüfen und dann speichern.');
+    }, 340);
+};
+
 window.openServiceberichtModal = function (editData = null) {
     try {
         const modal = document.getElementById('servicebericht-modal');
@@ -353,14 +406,17 @@ window.openServiceberichtModal = function (editData = null) {
             window.removedServiceFiles = [];
             window.selectedTechs = [];
 
+            const rescueBtn = document.getElementById('btn-servicebericht-rescue');
             if (editData) {
                 window.currentEditingServiceId = editData.id;
                 window._serviceReportBaseline = Object.assign({}, editData);
                 if (titleEl) titleEl.textContent = 'Servicebericht bearbeiten';
+                if (rescueBtn) rescueBtn.classList.remove('hidden');
             } else {
                 window.currentEditingServiceId = null;
                 window._serviceReportBaseline = null;
                 if (titleEl) titleEl.textContent = 'Neuer Servicebericht';
+                if (rescueBtn) rescueBtn.classList.add('hidden');
             }
         }
     } catch (err) {

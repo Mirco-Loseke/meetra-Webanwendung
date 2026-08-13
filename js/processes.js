@@ -88,7 +88,8 @@ window.toggleProcessRemindersPanel = function() {
 
 window.toggleProcessRemindersMine = function(ev) {
     if (ev) ev.stopPropagation();
-    const mine = localStorage.getItem('processRemindersMine') === '1';
+    // Standard ist "Für mich" AN (fehlender Wert = an), nur explizites Aus merkt '0'.
+    const mine = localStorage.getItem('processRemindersMine') !== '0';
     localStorage.setItem('processRemindersMine', mine ? '0' : '1');
     window.renderProcesses();
 };
@@ -99,7 +100,7 @@ window.buildProcessRemindersPanel = function(base) {
     const items = [];
     const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const midnight = new Date().setHours(0, 0, 0, 0);
-    const onlyMine = localStorage.getItem('processRemindersMine') === '1';
+    const onlyMine = localStorage.getItem('processRemindersMine') !== '0';
     const myId = String(window.activeUser?.id || localStorage.getItem('activeUserId') || '').toLowerCase().trim();
     const myName = String(window.activeUser?.name || '').toLowerCase().trim();
     const matchMe = (v) => { const x = String(v == null ? '' : v).toLowerCase().trim(); return x !== '' && ((myId && x === myId) || (myName && x === myName)); };
@@ -150,7 +151,7 @@ window.buildProcessRemindersPanel = function(base) {
                 <span style="background:rgba(251,191,36,0.15); color:#fbbf24; font-weight:800; font-size:0.78rem; padding:2px 9px; border-radius:999px;">${items.length}</span>
                 ${overdue ? `<span style="background:rgba(248,113,113,0.15); color:#f87171; font-weight:800; font-size:0.78rem; padding:2px 9px; border-radius:999px;">${overdue} überfällig</span>` : ''}
                 <span style="flex:1;"></span>
-                <button type="button" onclick="window.toggleProcessRemindersMine(event)" title="Nur mir zugeordnete Erinnerungen" style="display:inline-flex; align-items:center; gap:5px; padding:5px 11px; border-radius:999px; border:1px solid ${onlyMine ? 'rgba(16,185,129,0.5)' : 'rgba(255,255,255,0.15)'}; background:${onlyMine ? 'rgba(16,185,129,0.15)' : 'rgba(255,255,255,0.04)'}; color:${onlyMine ? '#34d399' : 'rgba(255,255,255,0.7)'}; font-size:0.78rem; font-weight:700; cursor:pointer;">
+                <button type="button" onclick="window.toggleProcessRemindersMine(event)" title="Nur mir zugeordnete Erinnerungen" style="display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:999px; border:1px solid ${onlyMine ? 'rgba(16,185,129,0.85)' : 'rgba(255,255,255,0.15)'}; background:${onlyMine ? 'rgba(16,185,129,0.28)' : 'rgba(255,255,255,0.04)'}; color:${onlyMine ? '#6ee7b7' : 'rgba(255,255,255,0.7)'}; font-size:0.78rem; font-weight:800; cursor:pointer; text-shadow:${onlyMine ? '0 0 8px rgba(16,185,129,0.7)' : 'none'}; box-shadow:${onlyMine ? '0 0 0 1px rgba(16,185,129,0.35), 0 0 16px rgba(16,185,129,0.55)' : 'none'}; animation:${onlyMine ? 'proc-mine-glow 2s ease-in-out infinite' : 'none'}; transition:all 0.2s;">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                     Für mich
                 </button>
