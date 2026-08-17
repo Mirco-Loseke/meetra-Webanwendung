@@ -49,3 +49,10 @@
     0%, 100% { box-shadow: 0 0 0 1px rgba(16,185,129,0.35), 0 0 12px rgba(16,185,129,0.45); }
     50%      { box-shadow: 0 0 0 1px rgba(16,185,129,0.55), 0 0 20px rgba(16,185,129,0.75); }
 }
+
+/* Löschen-Berechtigung: Ohne den Haken „Einträge löschen" (body.disable-delete)
+   werden alle Lösch-Buttons ausgeblendet. js/permissions.js setzt die Klasse,
+   canDelete() ist die zusätzliche Absicherung dahinter. */
+body.disable-delete .delete-permission-required {
+    display: none !important;
+}

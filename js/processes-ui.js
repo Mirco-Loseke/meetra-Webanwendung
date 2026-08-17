@@ -80,6 +80,7 @@
                 if (status === 'all') labelEl.textContent = 'Status: Alle';
                 else if (status === 'offen') labelEl.textContent = 'Status: Offen';
                 else if (status === 'in_bearbeitung') labelEl.textContent = 'Status: In Bearbeitung';
+                else if (status === 'wartet') labelEl.textContent = 'Status: Wartet';
                 else if (status === 'erledigt') labelEl.textContent = 'Status: Erledigt';
                 else if (status === 'stale') labelEl.textContent = 'Länger als 7 Tage offen';
             }
@@ -423,7 +424,9 @@
                     const inlineCustomerId = document.getElementById('process-add-customer-id')?.value;
                     const inlineContact = document.getElementById('process-add-contact-name')?.value;
                     if (inlineCustomerId) {
-                        payload.customer_id = parseInt(inlineCustomerId);
+                        // customers.id ist eine UUID — NICHT parseInt (das würde aus
+                        // "6f2a…" die Zahl 6 machen und die uuid-Spalte ablehnen).
+                        payload.customer_id = inlineCustomerId;
                         if (inlineContact) payload.contact_name = inlineContact;
                     }
                 }
@@ -692,6 +695,7 @@
         window.PROCESS_STATUS_INFO = {
             offen: { label: 'Offen', color: '#ef4444' },
             in_bearbeitung: { label: 'In Bearbeitung', color: '#f59e0b' },
+            wartet: { label: 'Wartet', color: '#a78bfa' },
             erledigt: { label: 'Erledigt', color: '#10b981' }
         };
 

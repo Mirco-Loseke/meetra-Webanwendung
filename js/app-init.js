@@ -1829,6 +1829,11 @@
                         try { window.scheduleProcessesRefetch(); } catch (e) { console.error('Realtime internal_processes Fehler:', e); }
                     })
                     .subscribe();
+
+                // Werkstatt-Liste laden + live halten (eigener Kanal in workshop-tasks.js)
+                if (typeof window.initWorkshopTasks === 'function') {
+                    try { window.initWorkshopTasks(); } catch (e) { console.error('Werkstatt-Liste init Fehler:', e); }
+                }
             };
 
             let _processesRefetchTimer = null;

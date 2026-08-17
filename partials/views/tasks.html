@@ -98,14 +98,27 @@
                         </div>
                     </div>
 
-                    <div id="tasks-board" class="kanban-board">
-                        <div class="kanban-column" data-status="open">
-                            <h3 class="column-title">Offen <span class="task-count">0</span></h3>
-                            <div class="task-list" id="list-open"></div>
+                    <div class="tasks-with-workshop">
+                        <div id="tasks-board" class="kanban-board">
+                            <div class="kanban-column" data-status="open">
+                                <h3 class="column-title">Offen <span class="task-count">0</span></h3>
+                                <div class="task-list" id="list-open"></div>
+                            </div>
+                            <div class="kanban-column" data-status="completed">
+                                <h3 class="column-title">Erledigt <span class="task-count">0</span></h3>
+                                <div class="task-list" id="list-completed"></div>
+                            </div>
                         </div>
-                        <div class="kanban-column" data-status="completed">
-                            <h3 class="column-title">Erledigt <span class="task-count">0</span></h3>
-                            <div class="task-list" id="list-completed"></div>
-                        </div>
+                        <aside id="workshop-panel" class="workshop-panel">
+                            <div class="workshop-head">
+                                <h3><span class="workshop-ic">🔧</span> Werkstatt</h3>
+                                <span id="workshop-count" class="workshop-count">0</span>
+                            </div>
+                            <form id="workshop-add-form" class="workshop-add" autocomplete="off">
+                                <input type="text" id="workshop-add-input" placeholder="Kleine Aufgabe + Enter…" autocomplete="off" maxlength="200">
+                                <button type="submit" title="Hinzufügen" aria-label="Hinzufügen">+</button>
+                            </form>
+                            <div id="workshop-list" class="workshop-list"></div>
+                        </aside>
                     </div>
                 </section>

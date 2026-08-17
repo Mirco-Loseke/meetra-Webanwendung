@@ -34,7 +34,7 @@
             }
         })();
     </script>
-    <link rel="stylesheet" href="css/style.css?v=64">
+    <link rel="stylesheet" href="css/style.css?v=67">
 
     <!-- ========================================================= -->
     <!-- ============ EINBINDUNG DER HTML-BAUSTEINE ============== -->
@@ -142,11 +142,11 @@
     <link rel="stylesheet" href="css/components/voice-dictation.css?v=3">
     <link rel="stylesheet" href="css/views/machine-modal.css?v=3">
     <!-- Zuletzt: ersetzt frueher inline gesetzte Stile, muss deshalb zuletzt greifen -->
-    <link rel="stylesheet" href="css/base/utilities.css?v=3">
+    <link rel="stylesheet" href="css/base/utilities.css?v=4">
     <!-- Einheitlicher Dropdown-Look (Vorbild: Hersteller-Feld in "Maschine
          bearbeiten"). Bewusst zuletzt geladen, damit er ohne !important
          gewinnt. Diese Zeile loeschen = alles wie vorher. -->
-    <link rel="stylesheet" href="css/components/dropdown-look.css?v=4">
+    <link rel="stylesheet" href="css/components/dropdown-look.css?v=5">
 
     <!-- @partial:modals/pin-prompt-modal.html -->
         <!-- PIN Prompt Modal -->
@@ -1502,15 +1502,28 @@
                                         </div>
                                     </div>
 
-                                    <div id="tasks-board" class="kanban-board">
-                                        <div class="kanban-column" data-status="open">
-                                            <h3 class="column-title">Offen <span class="task-count">0</span></h3>
-                                            <div class="task-list" id="list-open"></div>
+                                    <div class="tasks-with-workshop">
+                                        <div id="tasks-board" class="kanban-board">
+                                            <div class="kanban-column" data-status="open">
+                                                <h3 class="column-title">Offen <span class="task-count">0</span></h3>
+                                                <div class="task-list" id="list-open"></div>
+                                            </div>
+                                            <div class="kanban-column" data-status="completed">
+                                                <h3 class="column-title">Erledigt <span class="task-count">0</span></h3>
+                                                <div class="task-list" id="list-completed"></div>
+                                            </div>
                                         </div>
-                                        <div class="kanban-column" data-status="completed">
-                                            <h3 class="column-title">Erledigt <span class="task-count">0</span></h3>
-                                            <div class="task-list" id="list-completed"></div>
-                                        </div>
+                                        <aside id="workshop-panel" class="workshop-panel">
+                                            <div class="workshop-head">
+                                                <h3><span class="workshop-ic">🔧</span> Werkstatt</h3>
+                                                <span id="workshop-count" class="workshop-count">0</span>
+                                            </div>
+                                            <form id="workshop-add-form" class="workshop-add" autocomplete="off">
+                                                <input type="text" id="workshop-add-input" placeholder="Kleine Aufgabe + Enter…" autocomplete="off" maxlength="200">
+                                                <button type="submit" title="Hinzufügen" aria-label="Hinzufügen">+</button>
+                                            </form>
+                                            <div id="workshop-list" class="workshop-list"></div>
+                                        </aside>
                                     </div>
                                 </section>
                 <!-- /@partial:views/tasks.html -->
@@ -3721,7 +3734,7 @@
     <script src="js/ui-feedback.js?v=1"></script>
     <script src="js/auto-nachladen.js?v=2"></script>
     <!-- Berechtigungen: ausgelagert aus index.html -->
-    <script src="js/permissions.js?v=1"></script>
+    <script src="js/permissions.js?v=2"></script>
     <script src="lib/supabase.min.js"></script>
     <script>
         if (typeof supabase === 'undefined') {
@@ -3769,24 +3782,24 @@
     </script>
     <script src="js/dashboard.js?v=1"></script>
     <script src="js/app-core.js?v=2"></script>
-    <script src="js/app-init.js?v=8"></script>
+    <script src="js/app-init.js?v=9"></script>
     <script src="js/settings-uvv-plans.js?v=1"></script>
     <script src="js/machine-details-modal.js?v=1"></script>
     <script src="js/machine-modal.js?v=1"></script>
-    <script src="js/service-report-form.js?v=2"></script>
+    <script src="js/service-report-form.js?v=4"></script>
     <script src="js/service-list.js?v=1"></script>
     <script src="js/history-modal.js?v=2"></script>
     <script src="js/calendar-events.js?v=3"></script>
-    <script src="js/processes-ui.js?v=8"></script>
+    <script src="js/processes-ui.js?v=10"></script>
     <script src="js/process-messages.js?v=1"></script>
     <script src="js/process-machine-select.js?v=1"></script>
     <script src="js/customer-matching.js?v=1"></script>
     <script src="js/ui-modals.js?v=1"></script>
-    <script src="js/processes.js?v=109"></script>
+    <script src="js/processes.js?v=113"></script>
     <script src="js/service-reports.js?v=1"></script>
-    <script src="js/service-entries.js?v=3"></script>
+    <script src="js/service-entries.js?v=5"></script>
     <script src="js/service-picker.js?v=1"></script>
-    <script src="js/worklog-tables.js?v=1"></script>
+    <script src="js/worklog-tables.js?v=2"></script>
     <script src="js/signature-pads.js?v=1"></script>
     <script src="js/servicebericht-pdf.js?v=1"></script>
     <!-- Modal: Service Action Choice (View or Create) - Moved to root for better centering -->
@@ -4177,9 +4190,9 @@
                             </svg>
                         </div>
                         <div class="section-content" style="display: none; transition: all 0.3s ease;">
-                            <div class="form-group" style="margin-top: 1rem; margin-bottom: 1.5rem;">
-                                <label for="service-description">Fehlerbeschreibung / Kurzbeschreibung Einsatz</label>
+                            <div class="form-group" style="margin-top: 1rem; margin-bottom: 1.5rem; width: 100%;">
                                 <textarea id="service-description" rows="4" class="glass-form-input"
+                                    style="width: 100%; box-sizing: border-box; display: block;"
                                     placeholder="z.B. Fehlerbeschreibung oder Tätigkeitsbericht eintragen..." required></textarea>
                             </div>
 
@@ -4500,11 +4513,6 @@
                         <button type="button" class="btn-modal-base btn-modal-cancel" onclick="closeServiceberichtModal()" style="flex: 1;">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                             Abbrechen
-                        </button>
-
-                        <button type="button" class="btn-modal-base hidden" id="btn-servicebericht-rescue" onclick="window.rescueServiceReportData()" title="Auf diesem Gerät nach einer lokal gespeicherten Kopie suchen und leere Felder damit ergänzen" style="background: rgba(249, 115, 22, 0.15); border: 1px solid rgba(249, 115, 22, 0.4); color: #fb923c; gap: 8px; flex: 1;" onmouseover="this.style.background='rgba(249,115,22,0.28)'" onmouseout="this.style.background='rgba(249,115,22,0.15)'">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
-                            Daten retten
                         </button>
 
                         <button type="button" class="btn-modal-base hidden" id="btn-servicebericht-follow-up" onclick="window.createFolgebericht()" title="Neuen Servicebericht anlegen, der mit diesem verknüpft ist" style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.35); color: var(--color-primary-green); gap: 8px; flex: 1;" onmouseover="this.style.background='rgba(16,185,129,0.28)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">
@@ -5562,6 +5570,7 @@
     </div><!-- End main-wrapper -->
 
     <script src="js/tasks.js?v=13"></script>
+    <script src="js/workshop-tasks.js?v=1"></script>
     <script src="js/task_templates.js?v=99"></script>
     <!-- Spracheingabe für die KI-Felder — muss vor den KI-Modulen stehen,
          die beim Aufbau ihrer Modals window.micButtonHtml() aufrufen. -->
@@ -6321,7 +6330,7 @@
     <script src="js/documents-r2.js?v=6"></script>
     <script src="js/checklists.js?v=1"></script>
     <script src="js/customers.js"></script>
-    <script src="js/addressbook.js?v=32"></script>
+    <script src="js/addressbook.js?v=34"></script>
     <script src="js/ai-address-task.js?v=10"></script>
     <!-- Termine mit Teilnehmern: liefert die Bausteine, die Benachrichtigungen,
          Kalender und Routenplanung darunter benutzen. -->
@@ -6513,6 +6522,7 @@
                                 <select id="email-status-select" style="display:none;">
                                     <option value="offen">Offen</option>
                                     <option value="in_bearbeitung">In Bearbeitung</option>
+                                    <option value="wartet">Wartet</option>
                                     <option value="erledigt">Erledigt</option>
                                 </select>
                                 <div id="email-status-select-trigger" class="glass-select" style="cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="window.toggleProcessSelectDropdown('email','status')">
@@ -6661,6 +6671,7 @@
                                 <select id="process-add-status-select" style="display:none;">
                                     <option value="offen">Offen</option>
                                     <option value="in_bearbeitung">In Bearbeitung</option>
+                                    <option value="wartet">Wartet</option>
                                     <option value="erledigt">Erledigt</option>
                                 </select>
                                 <div id="process-add-status-select-trigger" class="glass-select" style="cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="window.toggleProcessSelectDropdown('process-add','status')">
@@ -6889,6 +6900,7 @@
                                 <select id="edit-process-status-select" style="display:none;">
                                     <option value="offen">Offen</option>
                                     <option value="in_bearbeitung">In Bearbeitung</option>
+                                    <option value="wartet">Wartet</option>
                                     <option value="erledigt">Erledigt</option>
                                 </select>
                                 <div id="edit-process-status-select-trigger" class="glass-select" style="cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="window.toggleProcessSelectDropdown('edit-process','status')">

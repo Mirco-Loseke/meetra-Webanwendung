@@ -31,6 +31,7 @@
 @import 'views/settings.css';
 @import 'views/accounting.css';
 @import 'views/workshop.css';
+@import 'views/workshop-tasks.css';
 @import 'views/dashboard.css';
 @import 'views/listen.css';
 @import 'views/addressbook.css';

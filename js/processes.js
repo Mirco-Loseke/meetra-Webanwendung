@@ -125,30 +125,54 @@ window.buildProcessRemindersPanel = function(base) {
     const hasAny = (base || []).some(p => p.status !== 'erledigt' && (p.remind_at || (Array.isArray(p.steps) && p.steps.some(s => s.remind_at && !s.done))));
     if (!hasAny) return '';
     items.sort((a, b) => a.at - b.at);
-    const overdue = items.filter(i => new Date(i.at).setHours(0, 0, 0, 0) < midnight).length;
+    items.forEach(i => { i.dd = Math.round((new Date(i.at).setHours(0, 0, 0, 0) - midnight) / 86400000); });
+    const overdue = items.filter(i => i.dd < 0).length;
+    // Nur Überfällig + Heute/Morgen anzeigen; weiter entfernte Erinnerungen ("Später")
+    // bewusst ausblenden, damit die Liste kurz bleibt.
+    const shownCount = items.filter(i => i.dd <= 1).length;
     const collapsed = localStorage.getItem('processRemindersCollapsed') === '1';
+
+    // Zwei Kategorien, platzsparend 2 nebeneinander je Kategorie.
+    const groupsDef = [
+        { label: 'Überfällig',     color: '#f87171', test: (dd) => dd < 0 },
+        { label: 'Heute & morgen', color: '#fbbf24', test: (dd) => dd >= 0 && dd <= 1 }
+    ];
+
     const fmtRow = (i) => {
-        const dd = Math.round((new Date(i.at).setHours(0, 0, 0, 0) - midnight) / 86400000);
-        const rc = dd < 0 ? '#f87171' : (dd <= 3 ? '#fbbf24' : '#93c5fd');
-        const rel = dd < 0 ? `überfällig (${Math.abs(dd)} T)` : (dd === 0 ? 'heute' : (dd === 1 ? 'morgen' : `in ${dd} Tagen`));
-        const dateStr = new Date(i.at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        return `<div onclick="window.openEditProcessModal('${i.id}')" title="Vorgang öffnen" style="display:flex; align-items:center; gap:12px; padding:9px 12px; border-radius:10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-left:3px solid ${rc}; cursor:pointer;" onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">
-            <div style="flex-shrink:0; display:flex; flex-direction:column; align-items:center; min-width:58px;">
-                <span style="color:${rc}; font-weight:800; font-size:0.82rem;">${dateStr}</span>
-                <span style="color:${rc}; opacity:0.85; font-size:0.72rem; font-weight:600;">${rel}</span>
+        const dd = i.dd;
+        const rc = dd < 0 ? '#f87171' : (dd <= 1 ? '#fbbf24' : '#93c5fd');
+        const rel = dd < 0 ? `überfällig (${Math.abs(dd)} T)` : (dd === 0 ? 'heute' : (dd === 1 ? 'morgen' : `in ${dd} T`));
+        const dateStr = new Date(i.at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+        return `<div onclick="window.openEditProcessModal('${i.id}')" title="Vorgang öffnen" style="display:flex; align-items:center; gap:9px; padding:7px 10px; border-radius:9px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-left:3px solid ${rc}; cursor:pointer; min-width:0;" onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+            <div style="flex-shrink:0; display:flex; flex-direction:column; align-items:center; min-width:46px;">
+                <span style="color:${rc}; font-weight:800; font-size:0.78rem;">${dateStr}</span>
+                <span style="color:${rc}; opacity:0.85; font-size:0.66rem; font-weight:600; white-space:nowrap;">${rel}</span>
             </div>
             <div style="flex:1; min-width:0;">
-                <div style="color:#fff; font-weight:700; font-size:0.92rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(i.title)}</div>
-                <div style="color:rgba(255,255,255,0.5); font-size:0.78rem;">${i.kind}${i.sub ? ` · ${esc(i.sub)}` : ''}</div>
+                <div style="color:#fff; font-weight:700; font-size:0.85rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(i.title)}</div>
+                <div style="color:rgba(255,255,255,0.5); font-size:0.72rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${i.kind}${i.sub ? ` · ${esc(i.sub)}` : ''}</div>
             </div>
         </div>`;
     };
+
+    const groupsHtml = groupsDef.map(g => {
+        const gi = items.filter(i => g.test(i.dd));
+        if (!gi.length) return '';
+        return `<div style="margin-top:10px;">
+            <div style="display:flex; align-items:center; gap:8px; margin:0 2px 6px;">
+                <span style="width:8px; height:8px; border-radius:50%; background:${g.color};"></span>
+                <span style="color:${g.color}; font-weight:800; font-size:0.7rem; text-transform:uppercase; letter-spacing:0.5px;">${g.label}</span>
+                <span style="color:rgba(255,255,255,0.4); font-size:0.7rem; font-weight:700;">${gi.length}</span>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:6px;">${gi.map(fmtRow).join('')}</div>
+        </div>`;
+    }).join('');
     return `
         <div style="margin-bottom:16px; border:1px solid rgba(255,255,255,0.1); border-radius:14px; background:rgba(255,255,255,0.02); overflow:hidden;">
             <div onclick="window.toggleProcessRemindersPanel()" style="display:flex; align-items:center; gap:10px; padding:12px 16px; cursor:pointer; user-select:none;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
                 <span style="color:#fff; font-weight:800; font-size:0.9rem; text-transform:uppercase; letter-spacing:0.5px;">Erinnerungen</span>
-                <span style="background:rgba(251,191,36,0.15); color:#fbbf24; font-weight:800; font-size:0.78rem; padding:2px 9px; border-radius:999px;">${items.length}</span>
+                <span style="background:rgba(251,191,36,0.15); color:#fbbf24; font-weight:800; font-size:0.78rem; padding:2px 9px; border-radius:999px;">${shownCount}</span>
                 ${overdue ? `<span style="background:rgba(248,113,113,0.15); color:#f87171; font-weight:800; font-size:0.78rem; padding:2px 9px; border-radius:999px;">${overdue} überfällig</span>` : ''}
                 <span style="flex:1;"></span>
                 <button type="button" onclick="window.toggleProcessRemindersMine(event)" title="Nur mir zugeordnete Erinnerungen" style="display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:999px; border:1px solid ${onlyMine ? 'rgba(16,185,129,0.85)' : 'rgba(255,255,255,0.15)'}; background:${onlyMine ? 'rgba(16,185,129,0.28)' : 'rgba(255,255,255,0.04)'}; color:${onlyMine ? '#6ee7b7' : 'rgba(255,255,255,0.7)'}; font-size:0.78rem; font-weight:800; cursor:pointer; text-shadow:${onlyMine ? '0 0 8px rgba(16,185,129,0.7)' : 'none'}; box-shadow:${onlyMine ? '0 0 0 1px rgba(16,185,129,0.35), 0 0 16px rgba(16,185,129,0.55)' : 'none'}; animation:${onlyMine ? 'proc-mine-glow 2s ease-in-out infinite' : 'none'}; transition:all 0.2s;">
@@ -157,7 +181,7 @@ window.buildProcessRemindersPanel = function(base) {
                 </button>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; transform:rotate(${collapsed ? '0' : '180'}deg); transition:transform 0.2s;"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </div>
-            ${collapsed ? '' : `<div style="display:flex; flex-direction:column; gap:6px; padding:0 16px 14px;">${items.length ? items.map(fmtRow).join('') : `<div style="text-align:center; color:rgba(255,255,255,0.4); font-style:italic; font-size:0.85rem; padding:12px;">Keine dir zugeordneten Erinnerungen.</div>`}</div>`}
+            ${collapsed ? '' : `<div style="padding:0 16px 14px;">${groupsHtml ? groupsHtml : `<div style="text-align:center; color:rgba(255,255,255,0.4); font-style:italic; font-size:0.85rem; padding:12px;">Keine aktuellen Erinnerungen (heute, morgen oder überfällig).</div>`}</div>`}
         </div>`;
 };
 
@@ -218,6 +242,7 @@ window.renderProcesses = function(targetId, opts) {
     const counts = {
         offen: base.filter(p => p.status === 'offen').length,
         in_bearbeitung: base.filter(p => p.status === 'in_bearbeitung').length,
+        wartet: base.filter(p => p.status === 'wartet').length,
         erledigt: base.filter(p => p.status === 'erledigt').length,
         stale: base.filter(isStale).length
     };
@@ -234,6 +259,10 @@ window.renderProcesses = function(targetId, opts) {
             <div class="maint-kpi-tile${kpiActive('in_bearbeitung')}" onclick="window.toggleProcessKpiFilter('in_bearbeitung')" title="Nur Vorgänge in Bearbeitung anzeigen">
                 <div class="maint-kpi-value" style="color: #f59e0b;">${counts.in_bearbeitung}</div>
                 <div class="maint-kpi-label">In Arbeit</div>
+            </div>
+            <div class="maint-kpi-tile${kpiActive('wartet')}" onclick="window.toggleProcessKpiFilter('wartet')" title="Nur wartende Vorgänge anzeigen">
+                <div class="maint-kpi-value" style="color: #a78bfa;">${counts.wartet}</div>
+                <div class="maint-kpi-label">Wartet</div>
             </div>
             <div class="maint-kpi-tile${kpiActive('erledigt')}" onclick="window.toggleProcessKpiFilter('erledigt')" title="Nur erledigte Vorgänge anzeigen">
                 <div class="maint-kpi-value" style="color: #10b981;">${counts.erledigt}</div>
@@ -286,6 +315,7 @@ window.renderProcesses = function(targetId, opts) {
 
     const openCards = [];
     const doneCards = [];
+    const waitingCards = [];
     filtered.forEach(p => {
         const typeInfo = window.PROCESS_TYPE_INFO[p.process_type] || window.PROCESS_TYPE_INFO.manual;
         const typeHtml = `<span title="${typeInfo.label}" style="color: ${typeInfo.color}; display: inline-flex; align-items: center; justify-content: center; background: ${typeInfo.bg}; width: 36px; height: 36px; border-radius: 10px; border: 1px solid ${typeInfo.border};">
@@ -300,6 +330,9 @@ window.renderProcesses = function(targetId, opts) {
         } else if (p.status === 'in_bearbeitung') {
             statusColor = '#f59e0b';
             statusBadge = `<span style="font-size: 0.86rem; padding: 6px 14px; border-radius: 8px; background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">In Arbeit</span>`;
+        } else if (p.status === 'wartet') {
+            statusColor = '#a78bfa';
+            statusBadge = `<span style="font-size: 0.86rem; padding: 6px 14px; border-radius: 8px; background: rgba(167, 139, 250, 0.15); color: #a78bfa; border: 1px solid rgba(167, 139, 250, 0.3); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Wartet</span>`;
         } else {
             statusColor = '#10b981';
             statusBadge = `<span style="font-size: 0.86rem; padding: 6px 14px; border-radius: 8px; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Erledigt</span>`;
@@ -487,17 +520,33 @@ window.renderProcesses = function(targetId, opts) {
                 </div>
             </div>
         `;
-        if (p.status === 'erledigt') doneCards.push(cardHtml); else openCards.push(cardHtml);
+        if (p.status === 'erledigt') doneCards.push(cardHtml);
+        else if (p.status === 'wartet') waitingCards.push(cardHtml);
+        else openCards.push(cardHtml);
     });
 
     if (openCards.length) {
         html += `<div class="proc-cards-grid">${openCards.join('')}</div>`;
     }
 
+    // "Wartet" wie "Erledigt": eigene, standardmäßig eingeklappte Gruppe unten.
+    if (waitingCards.length) {
+        const wExpanded = !!window._procWaitingExpanded || statusFilter === 'wartet';
+        html += `
+            <div style="margin-top: ${openCards.length ? '1.25rem' : '0'};">
+                <div onclick="window.toggleProcWaitingGroup()" style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:0.7rem 1rem; background:rgba(167,139,250,0.08); border:1px solid rgba(167,139,250,0.25); border-radius:12px; user-select:none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.25s; transform: rotate(${wExpanded ? '0' : '-90'}deg);"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    <span style="color:#a78bfa; font-weight:800; font-size:0.9rem; text-transform:uppercase; letter-spacing:0.5px;">Wartet</span>
+                    <span style="background:rgba(167,139,250,0.2); color:#a78bfa; font-size:0.72rem; font-weight:800; min-width:20px; height:20px; padding:0 6px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center;">${waitingCards.length}</span>
+                </div>
+                <div class="proc-cards-grid" style="margin-top:0.75rem; display:${wExpanded ? '' : 'none'};">${waitingCards.join('')}</div>
+            </div>`;
+    }
+
     if (doneCards.length) {
         const expanded = !!window._procDoneExpanded || statusFilter === 'erledigt';
         html += `
-            <div style="margin-top: ${openCards.length ? '1.25rem' : '0'};">
+            <div style="margin-top: ${(openCards.length || waitingCards.length) ? '1.25rem' : '0'};">
                 <div onclick="window.toggleProcDoneGroup()" style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:0.7rem 1rem; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:12px; user-select:none;">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.25s; transform: rotate(${expanded ? '0' : '-90'}deg);"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     <span style="color:#10b981; font-weight:800; font-size:0.9rem; text-transform:uppercase; letter-spacing:0.5px;">Erledigt</span>
@@ -515,6 +564,11 @@ window.toggleProcDoneGroup = function() {
     window.renderProcesses();
 };
 
+window.toggleProcWaitingGroup = function() {
+    window._procWaitingExpanded = !window._procWaitingExpanded;
+    window.renderProcesses();
+};
+
 function closeProcessStatusMenu() {
     const m = document.getElementById('process-status-fixed-menu');
     if (m) m.remove();
@@ -528,6 +582,7 @@ window.toggleProcessStatusMenu = function(event, id) {
     const opts = [
         ['offen', 'Offen', '#ef4444'],
         ['in_bearbeitung', 'In Arbeit', '#f59e0b'],
+        ['wartet', 'Wartet', '#a78bfa'],
         ['erledigt', 'Erledigt', '#10b981']
     ];
     const menu = document.createElement('div');
@@ -647,7 +702,7 @@ window.updateProcess = async function(event) {
             steps: (window.processSteps['edit-process'] || []).filter(s => (s.text || '').trim()),
             linked_service_report_id: serviceReportId ? parseInt(serviceReportId) : null,
             remind_at: remindRaw ? new Date(remindRaw).toISOString() : null,
-            customer_id: customerId ? parseInt(customerId) : null,
+            customer_id: customerId || null, // UUID — kein parseInt (siehe processes-ui.js)
             contact_name: contactName || null
         };
 

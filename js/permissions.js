@@ -102,11 +102,15 @@
             }
         });
 
-        // Einstellungs-Karten (Unterseiten) je nach Berechtigung ein-/ausblenden
+        // Einstellungs-Karten (Unterseiten): Wer „Einstellungen" sehen darf, sieht
+        // ALLE Einstellungs-Karten (Kategorien, Textbausteine usw.). Nur wenn
+        // „Einstellungen" komplett verboten ist, wird die ganze Ansicht ohnehin
+        // über die Sidebar ausgeblendet.
+        const settingsAllowed = perms.settings !== false;
         document.querySelectorAll('#settings .settings-card').forEach(card => {
             const target = card.getAttribute('data-target');
             if (!target) return;
-            card.style.display = (perms[target] === false) ? 'none' : '';
+            card.style.display = settingsAllowed ? '' : 'none';
         });
 
         // Ist der Nutzer gerade auf einer verbotenen Ansicht (inkl. Startseite oder

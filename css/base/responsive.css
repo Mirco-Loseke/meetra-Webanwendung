@@ -555,6 +555,23 @@
     gap: 12px;
     margin-bottom: 1.25rem;
 }
+
+/* Vorgänge hat 5 Filter-Kacheln (Offen, In Arbeit, Wartet, Erledigt, >7 Tage) —
+   die sollen auf iPad und Rechner in EINER Reihe passen; erst auf dem Handy umbrechen.
+   Höhere Spezifität (#processes) schlägt die 900px-2-Spalten-Regel weiter unten. */
+#processes .maint-kpi-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+}
+#processes .maint-kpi-tile {
+    padding: 12px 10px;
+    min-width: 0;
+}
+@media (max-width: 600px) {
+    #processes .maint-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
 .maint-kpi-tile {
     border-radius: var(--radius-md);
     padding: 14px 16px;

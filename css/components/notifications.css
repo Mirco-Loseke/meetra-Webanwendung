@@ -67,9 +67,10 @@
     max-height: 72vh;
     display: flex;
     flex-direction: column;
-    background: rgba(12, 18, 34, 0.985);
-    backdrop-filter: blur(var(--blur-raised));
-    -webkit-backdrop-filter: blur(var(--blur-raised));
+    /* Voll deckend: sonst scheint beim Scrollen der Seiteninhalt durch und das
+       Panel wirkt transparent. Kein backdrop-filter mehr (bei deckendem
+       Hintergrund wirkungslos, verursachte aber genau das Durchscheinen). */
+    background: #0c1222;
     border: 1px solid rgba(255, 255, 255, 0.12);
     border-radius: var(--radius-lg);
     box-shadow: 0 24px 70px rgba(0, 0, 0, 0.65);

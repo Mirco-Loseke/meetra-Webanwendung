@@ -115,4 +115,83 @@
             return data;
         };
 
+        // ── Arbeitszeit-/Fahrzeit-Protokoll (work_log) ────────────────────
+        // Diese drei Funktionen gingen bei der Modularisierung verloren; ohne sie
+        // wurden beim Bearbeiten keine Zeilen angezeigt UND beim Speichern ein
+        // leeres work_log geschrieben. Zeilenform: { datum, typ, pause, zeit, kilometer }.
+        window.addWorkLogTableRow = function(data = null, defaultTyp = 'Arbeitszeit') {
+            const tbody = document.getElementById('service-work-log-table-body');
+            if (!tbody) return;
+            const escAttr = (s) => String(s == null ? '' : s).replace(/"/g, '&quot;');
+
+            const datum = data?.datum || (document.getElementById('service-date-start')?.value || '');
+            const typ   = data?.typ || defaultTyp || 'Arbeitszeit';
+            const pause = data?.pause || '';
+            const zeit  = data?.zeit || data?.arbeitszeit || data?.fahrzeit || '';
+            const km    = data?.kilometer || '';
+            const opt = (v) => `<option value="${v}"${typ === v ? ' selected' : ''}>${v}</option>`;
+
+            const tr = document.createElement('tr');
+            tr.className = 'service-work-log-row';
+            tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+            tr.innerHTML = `
+                <td style="padding: 6px;">
+                    <input type="date" class="glass-form-input wl-datum" value="${escAttr(datum)}" style="padding: 6px 10px; height: 36px; border-radius: 8px; font-size: 0.85rem; width: 100%;">
+                </td>
+                <td style="padding: 6px;">
+                    <select class="glass-form-input wl-typ" style="padding: 6px 10px; height: 36px; border-radius: 8px; font-size: 0.85rem; width: 100%;">
+                        ${opt('Anfahrt')}${opt('Arbeitszeit')}${opt('Abfahrt')}
+                    </select>
+                </td>
+                <td style="padding: 6px;">
+                    <input type="text" class="glass-form-input wl-pause" value="${escAttr(pause)}" placeholder="z.B. 30 min" style="padding: 6px 10px; height: 36px; border-radius: 8px; font-size: 0.85rem; width: 100%;">
+                </td>
+                <td style="padding: 6px;">
+                    <input type="text" class="glass-form-input wl-zeit" value="${escAttr(zeit)}" placeholder="08:00 - 12:00" style="padding: 6px 10px; height: 36px; border-radius: 8px; font-size: 0.85rem; width: 100%;">
+                </td>
+                <td style="padding: 6px;">
+                    <input type="text" class="glass-form-input wl-kilometer" value="${escAttr(km)}" placeholder="km" style="padding: 6px 10px; height: 36px; border-radius: 8px; font-size: 0.85rem; width: 100%;">
+                </td>
+                <td style="padding: 6px; text-align: center;">
+                    <button type="button" class="btn-icon-circular delete" onclick="this.closest('tr').remove()" style="background: rgba(239, 68, 68, 0.1); border: 1.5px solid rgba(239, 68, 68, 0.2); color: #ef4444; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(239, 68, 68, 0.25)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.1)'">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path></svg>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        };
+
+        window.getWorkLogTableData = function() {
+            const rows = document.querySelectorAll('.service-work-log-row');
+            const data = [];
+            rows.forEach(tr => {
+                const datum     = tr.querySelector('.wl-datum')?.value.trim() || '';
+                const typ       = tr.querySelector('.wl-typ')?.value.trim() || '';
+                const pause     = tr.querySelector('.wl-pause')?.value.trim() || '';
+                const zeit      = tr.querySelector('.wl-zeit')?.value.trim() || '';
+                const kilometer = tr.querySelector('.wl-kilometer')?.value.trim() || '';
+                if (datum || zeit || pause || kilometer) {
+                    data.push({ datum, typ, pause, zeit, kilometer });
+                }
+            });
+            return data;
+        };
+
+        // Sortiert die Zeilen nach Datum, dann Anfahrt -> Arbeitszeit -> Abfahrt.
+        window.sortWorkLogTable = function() {
+            const tbody = document.getElementById('service-work-log-table-body');
+            if (!tbody) return;
+            const order = { 'Anfahrt': 0, 'Arbeitszeit': 1, 'Abfahrt': 2 };
+            const rows = Array.from(tbody.querySelectorAll('.service-work-log-row'));
+            rows.sort((a, b) => {
+                const da = a.querySelector('.wl-datum')?.value || '';
+                const db = b.querySelector('.wl-datum')?.value || '';
+                if (da !== db) return da < db ? -1 : 1;
+                const ta = order[a.querySelector('.wl-typ')?.value] ?? 1;
+                const tb = order[b.querySelector('.wl-typ')?.value] ?? 1;
+                return ta - tb;
+            });
+            rows.forEach(r => tbody.appendChild(r));
+        };
+
         // Signature Canvas State

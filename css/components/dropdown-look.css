@@ -129,6 +129,14 @@
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
 }
 
+/* Vorgangstyp-/Status-Menü scrollbar machen, damit bei vielen Einträgen
+   (12 Vorgangstypen) alles erreichbar bleibt statt unten abgeschnitten zu werden. */
+.proc-select-menu,
+.process-status-menu {
+    max-height: 320px;
+    overflow-y: auto;
+}
+
 .user-dropdown-menu ul,
 .custom-filter-menu ul,
 .proc-select-menu ul,

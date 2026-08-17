@@ -3032,13 +3032,20 @@
             el.id = 'ab-overlay-modal';
             el.className = 'modal-backdrop ab-modal-backdrop';
             document.body.appendChild(el);
-            el.addEventListener('click', e => { if (e.target === el) closeAbOverlay(); });
+            el.addEventListener('click', e => { if (e.target === el) closeAbOverlayAsk(); });
         }
         el.innerHTML = `<div class="modal-content ab-form-content" style="max-width:560px;">${html}</div>`;
         openModal('ab-overlay-modal');
         return el;
     }
     function closeAbOverlay() { closeModal('ab-overlay-modal'); }
+    // Schließen mit Rückfrage — nur für Abbrechen/Klick daneben, damit man die
+    // Kontakt-Vorschau nicht versehentlich verwirft. Die Aktions-Knöpfe
+    // (Übernehmen/Ergänzen) schließen weiterhin direkt über closeAbOverlay().
+    function closeAbOverlayAsk() {
+        if (!confirm('Kontakt-Vorschau wirklich schließen? Noch nicht übernommene Daten gehen verloren.')) return;
+        closeAbOverlay();
+    }
 
     // Insert einer neuen Adresse (+ optionalem Ansprechpartner aus Import).
     async function insertNewAddress(payload, pendingContacts) {
@@ -3381,7 +3388,7 @@
             const g = id => { const e = document.getElementById('ab-imp-' + id); return e ? e.value.trim() : ''; };
             return { name: g('name'), org: g('org'), title: g('title'), department: g('department'), website: g('website'), email: g('email'), phone: g('phone'), mobile: g('mobile'), street: g('street'), zip: g('zip'), city: g('city'), country: g('country'), note: g('note') };
         };
-        el.querySelector('#ab-prev-cancel').addEventListener('click', closeAbOverlay);
+        el.querySelector('#ab-prev-cancel').addEventListener('click', closeAbOverlayAsk);
         el.querySelector('#ab-prev-fill').addEventListener('click', () => {
             const p2 = readImp();
             closeAbOverlay();
@@ -4535,7 +4542,7 @@
             title: title,
             event_date: date,
             start_date: date,
-            customer_id: customerId ? parseInt(customerId) : null,
+            customer_id: customerId || null, // UUID — kein parseInt
             machine_id: machineId ? parseInt(machineId) : null,
             history_ref: historyRef || null,
             description: desc || null,

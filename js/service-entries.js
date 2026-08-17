@@ -107,16 +107,40 @@ window.syncFullServiceEntriesForOffline = async function() {
     }
 };
 
-const SERVICEBERICHT_LOCK_TIMEOUT_MIN = 10;
+// Eine Sperre gilt nur als "aktiv", solange sie höchstens so alt ist. Ein
+// geöffneter Bericht hält sie per Heartbeat frisch; wird der Tab geschlossen
+// (oder stürzt ab), altert sie und ist nach wenigen Sekunden wieder frei —
+// so wird niemand mehr fälschlich als "drin" angezeigt.
+const SERVICEBERICHT_LOCK_STALE_SEC = 40;
+const SERVICEBERICHT_LOCK_HEARTBEAT_MS = 15000;
+let _serviceLockHeartbeat = null;
+let _serviceLockId = null;
+
+function _startServiceLockHeartbeat(id) {
+    _stopServiceLockHeartbeat();
+    _serviceLockId = id;
+    const myName = (window.activeUser && window.activeUser.name) || 'Unbekannt';
+    _serviceLockHeartbeat = setInterval(() => {
+        if (!navigator.onLine || !window.supabaseClient || !_serviceLockId) return;
+        window.supabaseClient
+            .from('service_entries')
+            .update({ locked_by: myName, locked_at: new Date().toISOString() })
+            .eq('id', _serviceLockId)
+            .then(() => {}, () => {});
+    }, SERVICEBERICHT_LOCK_HEARTBEAT_MS);
+}
+function _stopServiceLockHeartbeat() {
+    if (_serviceLockHeartbeat) { clearInterval(_serviceLockHeartbeat); _serviceLockHeartbeat = null; }
+    _serviceLockId = null;
+}
 
 window.tryAcquireServiceberichtLock = async function(entry) {
     const myName = (window.activeUser && window.activeUser.name) || 'Unbekannt';
     const lockedAtMs = entry.locked_at ? new Date(entry.locked_at).getTime() : 0;
-    const lockAgeMin = (Date.now() - lockedAtMs) / 60000;
+    const lockAgeSec = (Date.now() - lockedAtMs) / 1000;
 
-    if (entry.locked_by && entry.locked_by !== myName && lockAgeMin < SERVICEBERICHT_LOCK_TIMEOUT_MIN) {
-        const minutesAgo = Math.max(1, Math.round(lockAgeMin));
-        window.showToast(`Dieser Servicebericht wird gerade von ${entry.locked_by} bearbeitet (seit ${minutesAgo} Min.) und kann daher nicht geöffnet werden.`);
+    if (entry.locked_by && entry.locked_by !== myName && lockAgeSec < SERVICEBERICHT_LOCK_STALE_SEC) {
+        window.showToast(`Dieser Servicebericht wird gerade von ${entry.locked_by} bearbeitet und kann daher nicht geöffnet werden.`);
         return false;
     }
 
@@ -128,10 +152,12 @@ window.tryAcquireServiceberichtLock = async function(entry) {
     } catch (e) {
         console.warn('Konnte Bearbeitungssperre nicht setzen:', e);
     }
+    _startServiceLockHeartbeat(entry.id); // Sperre frisch halten, solange offen
     return true;
 };
 
 window.releaseServiceberichtLock = async function (id) {
+    _stopServiceLockHeartbeat();
     if (!id || !navigator.onLine || !window.supabaseClient) return;
     try {
         await window.supabaseClient
@@ -142,6 +168,19 @@ window.releaseServiceberichtLock = async function (id) {
         console.warn('Konnte Bearbeitungssperre nicht freigeben:', e);
     }
 };
+
+// Tab/Fenster geschlossen: Sperre sofort freigeben (best effort). Fällt das
+// aus (Absturz), sorgt der Stale-Timeout dafür, dass sie trotzdem frei wird.
+window.addEventListener('pagehide', () => {
+    const id = _serviceLockId;
+    _stopServiceLockHeartbeat();
+    if (id && window.supabaseClient) {
+        try {
+            window.supabaseClient.from('service_entries')
+                .update({ locked_by: null, locked_at: null }).eq('id', id).then(() => {}, () => {});
+        } catch (e) {}
+    }
+});
 
 window.createFolgebericht = function () {
     if (!window.currentEditingServiceId) return;
@@ -412,6 +451,11 @@ window.openServiceberichtModal = function (editData = null) {
                 window._serviceReportBaseline = Object.assign({}, editData);
                 if (titleEl) titleEl.textContent = 'Servicebericht bearbeiten';
                 if (rescueBtn) rescueBtn.classList.remove('hidden');
+                // Formular aus dem geladenen Bericht vorbefüllen (Maschine + alle Felder).
+                if (typeof window.populateServiceberichtForm === 'function') {
+                    try { window.populateServiceberichtForm(editData); }
+                    catch (e) { console.error('Vorbefüllung des Serviceberichts fehlgeschlagen:', e); }
+                }
             } else {
                 window.currentEditingServiceId = null;
                 window._serviceReportBaseline = null;
