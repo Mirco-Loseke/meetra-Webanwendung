@@ -51,7 +51,12 @@
                         ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>'
                         : ''}
                 </button>
-                <span class="workshop-text">${esc(i.text)}</span>
+                <span class="workshop-text" contenteditable="true" spellcheck="false" title="Klicken zum Bearbeiten"
+                    onclick="event.stopPropagation()"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();} else if(event.key==='Escape'){this.textContent=this.dataset.orig||''; this.blur();}"
+                    onfocus="this.dataset.orig=this.textContent"
+                    onblur="window.workshopUpdateText('${esc(i.id)}', this.textContent)"
+                    data-orig="${esc(i.text)}">${esc(i.text)}</span>
                 <button type="button" class="workshop-del delete-permission-required" title="Löschen" onclick="window.workshopDelete('${esc(i.id)}')">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
@@ -103,6 +108,25 @@
         } catch (e) {
             item.done = !newDone; render();
             console.warn('Werkstatt-Eintrag umschalten fehlgeschlagen:', e);
+        }
+    };
+
+    window.workshopUpdateText = async function (id, text) {
+        const item = state.items.find(i => String(i.id) === String(id));
+        if (!item || !sb()) return;
+        const value = (text || '').replace(/\s+$/, '').replace(/^\s+/, '');
+        if (value === (item.text || '')) return; // nichts geaendert
+        if (!value) { render(); return; } // leer nicht speichern, Original zuruecksetzen
+        const prev = item.text;
+        item.text = value; // optimistisch
+        try {
+            const { error } = await sb().from('workshop_tasks').update({ text: value }).eq('id', id);
+            if (error) throw error;
+            if (!state.subscribed) fetchItems();
+        } catch (e) {
+            item.text = prev; render();
+            console.warn('Werkstatt-Eintrag speichern fehlgeschlagen:', e);
+            if (window.showToast) window.showToast('Werkstatt-Eintrag konnte nicht gespeichert werden.', 'error');
         }
     };
 

@@ -530,13 +530,35 @@
             }
 
             const normalize = (s) => (s || '').toString().trim().toLowerCase().replace(/\s+/g, ' ');
+            const normPhone = (s) => (s || '').toString().replace(/[^\d+]/g, '').replace(/^00/, '+');
+            const normStreet = (s) => normalize(s).replace(/stra(ss|ß)e/g, 'str').replace(/[.,]/g, '').replace(/\s+/g, ' ').trim();
+            // Ähnlichkeit 0..1 (Levenshtein-basiert), für "fast gleicher Name".
+            const strSim = (a, b) => {
+                a = a || ''; b = b || '';
+                if (!a || !b) return 0;
+                if (a === b) return 1;
+                const m = a.length, n = b.length;
+                const dp = Array.from({ length: m + 1 }, (_, i) => i);
+                for (let j = 1; j <= n; j++) {
+                    let prev = dp[0]; dp[0] = j;
+                    for (let i = 1; i <= m; i++) {
+                        const tmp = dp[i];
+                        dp[i] = Math.min(dp[i] + 1, dp[i - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+                        prev = tmp;
+                    }
+                }
+                return 1 - dp[m] / Math.max(m, n);
+            };
+
             const unmatched = customersToUpsert.filter(c => !existingByAddressNumber[c.address_number]);
 
-            // Sage selbst legt Firmen manchmal versehentlich doppelt an (zwei ECHTE, unterschiedliche
-            // Adressnummern für dieselbe Firma). Das System darf das nicht stumpf übernehmen, sondern
-            // muss erkennen können "die gibt es schon" — aber auch nicht blind zusammenführen, denn
-            // zwei unterschiedliche Adressnummern können auch zwei echte Standorte sein. Deshalb hier
-            // nur warnen + nachfragen, statt automatisch zu entscheiden.
+            // Alle erkannten UNKLAREN möglichen Dopplungen sammeln -> eine einzige Rückfrage am Ende.
+            // Eindeutige Treffer werden weiter unten automatisch zusammengeführt (ohne Nachfrage).
+            const possibleDuplicates = [];
+
+            // (A) Firmen, die bereits MIT einer (anderen) Adressnummer existieren. Sage legt Firmen
+            // manchmal versehentlich doppelt an — nicht blind übernehmen, aber auch nicht blind
+            // zusammenführen (zwei Adressnummern können echte Standorte sein): nur nachfragen.
             if (unmatched.length > 0) {
                 const { data: realCandidates, error: realCandError } = await window.supabaseClient
                     .from('customers')
@@ -548,16 +570,14 @@
                 (realCandidates || []).forEach(c => {
                     const key = normalize(c.name);
                     if (!key) return;
-                    if (!realByName[key]) realByName[key] = [];
-                    realByName[key].push(c);
+                    (realByName[key] = realByName[key] || []).push(c);
                 });
 
-                const possibleDuplicates = [];
                 unmatched.forEach(c => {
                     const candidates = realByName[normalize(c.name)] || [];
                     const matched = candidates.find(o =>
                         (c.zip_code && o.zip_code && normalize(o.zip_code) === normalize(c.zip_code)) ||
-                        (c.street && o.street && normalize(o.street) === normalize(c.street))
+                        (c.street && o.street && normStreet(o.street) === normStreet(c.street))
                     );
                     if (matched) {
                         possibleDuplicates.push(
@@ -565,61 +585,94 @@
                         );
                     }
                 });
-
-                if (possibleDuplicates.length > 0) {
-                    const proceed = confirm(
-                        `${possibleDuplicates.length} Firma(n) im Import sehen wie bereits vorhandene Kunden mit einer ANDEREN Adressnummer aus (evtl. Dopplung in Sage):\n\n` +
-                        possibleDuplicates.slice(0, 15).join('\n') +
-                        (possibleDuplicates.length > 15 ? `\n... und ${possibleDuplicates.length - 15} weitere` : '') +
-                        `\n\nTrotzdem als separate/neue Kunden importieren? "Abbrechen" stoppt den gesamten Import, damit du das vorher prüfen kannst.`
-                    );
-                    if (!proceed) {
-                        resetImportUI();
-                        return;
-                    }
-                }
             }
 
-            // Alte Datensätze ohne Adressnummer (z.B. aus der Zeit vor Einführung des Felds, oder
-            // weil Adress- und Kundenliste für dieselbe Firma unterschiedliche Nummern mitbringen)
-            // per Name + PLZ/Straße erkennen, statt versehentlich einen zweiten Datensatz anzulegen.
-            // Nur bei eindeutigem Treffer übernommen — bleibt es mehrdeutig, lieber nichts anfassen.
-            const orphansByName = {};
+            // (B) Bestehende Datensätze OHNE Adressnummer — das sind v.a. MANUELL angelegte Adressen.
+            // Damit der Import sie nicht ein zweites Mal anlegt, über MEHRERE Signale abgleichen:
+            //   exakter Name / gleiche E-Mail / gleiche Telefonnummer / gleicher Matchcode
+            //   -> eindeutig -> automatisch zusammenführen (bekommt jetzt die Adressnummer).
+            //   nur ÄHNLICHER Name (+ gleiche PLZ/Straße) -> nicht automatisch, sondern nachfragen.
+            const toUpdateOrphan = []; // { id, payload }
+            const usedOrphanIds = new Set();
 
             if (unmatched.length > 0) {
-                const { data: orphans, error: orphanError } = await window.supabaseClient
-                    .from('customers')
-                    .select('id, name, customer_number, matchcode, street, zip_code, city, country, phone, email')
-                    .is('address_number', null);
-                if (orphanError) throw orphanError;
+                const orphanCols = 'id, name, customer_number, matchcode, street, zip_code, city, country, phone, email';
+                let orphans = [];
+                const pageSize = 1000;
+                for (let from = 0; ; from += pageSize) {
+                    const { data: page, error: orphanError } = await window.supabaseClient
+                        .from('customers')
+                        .select(orphanCols)
+                        .is('address_number', null)
+                        .range(from, from + pageSize - 1);
+                    if (orphanError) throw orphanError;
+                    orphans = orphans.concat(page || []);
+                    if (!page || page.length < pageSize) break;
+                }
 
-                (orphans || []).forEach(c => {
-                    const key = normalize(c.name);
-                    if (!key) return;
-                    if (!orphansByName[key]) orphansByName[key] = [];
-                    orphansByName[key].push(c);
+                const byName = {}, byEmail = {}, byPhone = {}, byMatchcode = {};
+                const push = (map, key, o) => { if (key) (map[key] = map[key] || []).push(o); };
+                orphans.forEach(o => {
+                    push(byName, normalize(o.name), o);
+                    push(byEmail, normalize(o.email), o);
+                    push(byPhone, normPhone(o.phone), o);
+                    push(byMatchcode, normalize(o.matchcode), o);
+                });
+                const free = (arr) => (arr || []).filter(o => !usedOrphanIds.has(o.id));
+
+                unmatched.forEach(c => {
+                    let match = null;
+                    const nName = free(byName[normalize(c.name)]);
+                    const nEmail = c.email ? free(byEmail[normalize(c.email)]) : [];
+                    const nPhone = normPhone(c.phone) ? free(byPhone[normPhone(c.phone)]) : [];
+                    const nMc = c.matchcode ? free(byMatchcode[normalize(c.matchcode)]) : [];
+
+                    if (nEmail.length === 1) match = nEmail[0];
+                    else if (nPhone.length === 1) match = nPhone[0];
+                    else if (nName.length === 1) match = nName[0];
+                    else if (nName.length > 1) {
+                        const refined = nName.filter(o =>
+                            (c.zip_code && o.zip_code && normalize(o.zip_code) === normalize(c.zip_code)) ||
+                            (c.street && o.street && normStreet(o.street) === normStreet(c.street))
+                        );
+                        if (refined.length === 1) match = refined[0];
+                    }
+                    if (!match && nMc.length === 1) match = nMc[0];
+
+                    if (match) {
+                        usedOrphanIds.add(match.id);
+                        existingByAddressNumber[c.address_number] = match;
+                        c._mergeIntoOrphanId = match.id;
+                        return;
+                    }
+
+                    // Kein eindeutiger Treffer: ähnlichen Namen + gleiche PLZ/Straße als mögliche
+                    // Dublette melden (Nutzer entscheidet), statt still ein Duplikat anzulegen.
+                    const near = orphans.find(o => !usedOrphanIds.has(o.id) &&
+                        strSim(normalize(c.name), normalize(o.name)) >= 0.86 &&
+                        ((c.zip_code && o.zip_code && normalize(o.zip_code) === normalize(c.zip_code)) ||
+                         (c.street && o.street && normStreet(o.street) === normStreet(c.street))));
+                    if (near) {
+                        possibleDuplicates.push(
+                            `${c.name} (PLZ ${c.zip_code || '?'}) — ähnlich zu bestehender Adresse ohne Adressnr.: „${near.name}"${near.customer_number ? ` (Kdnr. ${near.customer_number})` : ''}`
+                        );
+                    }
                 });
             }
 
-            const toUpdateOrphan = []; // { id, payload }
-
-            unmatched.forEach(c => {
-                const candidates = orphansByName[normalize(c.name)] || [];
-                if (candidates.length === 0) return;
-
-                let match = candidates[0];
-                if (candidates.length > 1) {
-                    const refined = candidates.filter(o =>
-                        (c.zip_code && o.zip_code && normalize(o.zip_code) === normalize(c.zip_code)) ||
-                        (c.street && o.street && normalize(o.street) === normalize(c.street))
-                    );
-                    if (refined.length !== 1) return; // weiterhin mehrdeutig -> nicht automatisch zusammenführen
-                    match = refined[0];
+            // Eine einzige Rückfrage für ALLE unklaren möglichen Dopplungen.
+            if (possibleDuplicates.length > 0) {
+                const proceed = confirm(
+                    `${possibleDuplicates.length} mögliche Dopplung(en) erkannt:\n\n` +
+                    possibleDuplicates.slice(0, 15).join('\n') +
+                    (possibleDuplicates.length > 15 ? `\n... und ${possibleDuplicates.length - 15} weitere` : '') +
+                    `\n\nEindeutige Treffer (gleiche E-Mail/Telefon/Adressnr./Name+Anschrift) werden ohnehin automatisch zusammengeführt.\nFür die oben gelisteten UNKLAREN Fälle: trotzdem als neue Kunden importieren?\n„Abbrechen" stoppt den gesamten Import, damit du das vorher prüfen kannst.`
+                );
+                if (!proceed) {
+                    resetImportUI();
+                    return;
                 }
-
-                existingByAddressNumber[c.address_number] = match;
-                c._mergeIntoOrphanId = match.id;
-            });
+            }
 
             customersToUpsert.forEach(c => {
                 const existing = existingByAddressNumber[c.address_number];

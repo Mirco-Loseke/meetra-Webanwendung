@@ -15,9 +15,9 @@
 @import 'components/forms.css';
 @import 'components/notifications.css';
 @import 'components/calendar.css';
-@import 'components/calendar-widget.css';
+@import 'components/calendar-widget.css?v=2';
 @import 'components/dropdowns.css';
-@import 'components/focus-mode.css';
+@import 'components/focus-mode.css?v=2';
 @import 'components/elements.css';
 @import 'components/appointments.css';
 
@@ -25,17 +25,20 @@
 @import 'views/documents.css';
 @import 'views/protocols.css';
 @import 'views/tasks.css';
-@import 'views/service-reports.css';
+@import 'views/service-reports.css?v=3';
 @import 'views/machines.css';
 @import 'views/procurement.css';
 @import 'views/settings.css';
 @import 'views/accounting.css';
 @import 'views/workshop.css';
-@import 'views/workshop-tasks.css';
+@import 'views/workshop-tasks.css?v=4';
 @import 'views/dashboard.css';
 @import 'views/listen.css';
 @import 'views/addressbook.css';
 @import 'views/routenplanung.css';
 
 /* Responsive & Overrides */
-@import 'base/responsive.css';
+/* ?v=N hochzaehlen, wenn responsive.css geaendert wurde. Das ?v=68 an
+   style.css im index.html bustet die per @import geladenen Dateien NICHT —
+   deren URL bleibt sonst gleich und der Browser nimmt die alte Fassung. */
+@import 'base/responsive.css?v=12';

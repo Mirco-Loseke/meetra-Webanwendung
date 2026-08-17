@@ -281,3 +281,172 @@
 .service-erledigt-row:hover td {
     opacity: 0.85;
 }
+
+/* ── Arbeitszeit-/Fahrzeit-Protokoll ─────────────────────────────────
+   Zeitspanne "von – bis" als zwei Felder. Auf dem Handy wird die
+   Tabelle zu Karten (eine Zeile = eine Karte), sonst muesste man
+   quer scrollen (min-width: 650px). */
+.work-log-table .wl-time-range input[type="time"] {
+    text-align: center;
+}
+
+@media (max-width: 768px) {
+    .work-log-scroll {
+        overflow-x: visible;
+        padding: 6px;
+    }
+
+    .work-log-table {
+        min-width: 0 !important;
+        display: block;
+    }
+
+    .work-log-table thead {
+        display: none;
+    }
+
+    .work-log-table tbody {
+        display: block;
+    }
+
+    .work-log-table tr.service-work-log-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        position: relative;
+        padding: 10px 10px 10px;
+        margin-bottom: 10px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: var(--radius-md, 12px);
+    }
+
+    .work-log-table tr.service-work-log-row td {
+        display: block;
+        padding: 0 !important;
+        min-width: 0;
+    }
+
+    /* Zeitspanne und Aktion ueber die volle Breite */
+    .work-log-table tr.service-work-log-row td[data-label="Fahr.- / Arbeitszeit"] {
+        grid-column: 1 / -1;
+    }
+
+    .work-log-table tr.service-work-log-row td::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 4px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.55);
+    }
+
+    /* Loeschen-Knopf oben rechts in der Karte */
+    .work-log-table tr.service-work-log-row td.wl-action-cell {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: auto;
+    }
+
+    .work-log-table tr.service-work-log-row td.wl-action-cell::before {
+        content: none;
+    }
+
+    .work-log-table tr.service-work-log-row td[data-label="Typ"] {
+        padding-right: 40px !important;
+    }
+
+    /* 16px verhindert das automatische Hineinzoomen von iOS */
+    .work-log-table .glass-form-input {
+        font-size: 16px !important;
+        height: 42px !important;
+    }
+}
+
+/* ── Servicebericht auf dem Handy ────────────────────────────────────
+   Mittelgroße Geräte (390–430px) sind der Maßstab: alles was per
+   Inline-Style zweispaltig oder nebeneinander steht, braucht hier eine
+   Regel mit !important — Inline schlägt sonst jedes Stylesheet. */
+@media (max-width: 768px) {
+    /* Datum von/bis: Inline-Grid "1fr 1fr" auf eine Spalte */
+    #servicebericht-modal .service-date-row {
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;
+        margin-bottom: 1rem !important;
+    }
+
+    /* Überschrift + "➕"-Knöpfe einer Tabelle: untereinander statt
+       nebeneinander, sonst quetschen sich drei Knöpfe neben den Text */
+    #servicebericht-modal .form-section > label {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px;
+    }
+
+    #servicebericht-modal .form-section > label > span {
+        justify-content: flex-start;
+    }
+
+    /* Fahrzeit-Zeile: Feld und Stunden-Vorschau dürfen umbrechen */
+    #servicebericht-modal #service-driving-time {
+        min-width: 0;
+    }
+
+    #servicebericht-modal #service-driving-time-hours-preview {
+        min-width: 56px !important;
+        text-align: right;
+    }
+
+    /* Route-Schätzen-Knopf über die volle Breite */
+    #servicebericht-modal .section-content > div > .btn-secondary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Maschinen-Vorschau: 80px-Bild und 1,5rem Abstand fressen die Breite */
+    #selected-machine-preview {
+        padding: 1rem !important;
+    }
+
+    #selected-machine-preview #preview-image {
+        width: 56px !important;
+        height: 56px !important;
+    }
+
+    #selected-machine-preview #preview-name {
+        font-size: 1.15rem !important;
+    }
+
+    #selected-machine-preview #preview-category {
+        font-size: 0.9rem !important;
+    }
+
+    #selected-machine-preview > div[style*="gap: 1.5rem"] {
+        gap: 0.75rem !important;
+    }
+
+    /* Reihenfolge in der Protokoll-Karte: Datum/Typ, Pause/Kilometer,
+       darunter die Zeitspanne über die volle Breite. Ohne die Reihenfolge
+       stünde die Pause allein in einer halbleeren Zeile. */
+    .work-log-table tr.service-work-log-row td[data-label="Datum"]     { order: 1; }
+    .work-log-table tr.service-work-log-row td[data-label="Typ"]       { order: 2; }
+    .work-log-table tr.service-work-log-row td[data-label="Pause"]     { order: 3; }
+    .work-log-table tr.service-work-log-row td[data-label="Kilometer"] { order: 4; }
+    .work-log-table tr.service-work-log-row td[data-label="Fahr.- / Arbeitszeit"] { order: 5; }
+    .work-log-table tr.service-work-log-row td.wl-action-cell          { order: 6; }
+}
+
+/* Schmale Geräte: Datum und Typ untereinander, sonst wird das
+   Datumsfeld (16px Pflichtgröße) abgeschnitten. */
+@media (max-width: 400px) {
+    .work-log-table tr.service-work-log-row {
+        grid-template-columns: 1fr;
+    }
+
+    .work-log-table tr.service-work-log-row td {
+        grid-column: 1 / -1;
+    }
+}

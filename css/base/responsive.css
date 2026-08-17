@@ -90,6 +90,38 @@
     }
 }
 
+/* Inline-gestylte Bearbeiten-Fenster (nicht .modal-backdrop/.modal-new,
+   sondern per id + inline width/max-width): auf dem Handy ebenfalls Vollbild.
+   Die Innencontainer haben inline-Styles OHNE !important, deshalb greift hier
+   CSS mit !important. Neues Fenster dieser Bauart? id unten ergänzen. */
+@media (max-width: 768px) {
+    #plan-editor-modal,
+    #label-article-modal,
+    #label-import-modal,
+    #user-edit-modal {
+        padding: 0 !important;
+        align-items: stretch !important;
+        justify-content: stretch !important;
+    }
+    #plan-editor-modal > .glass-card,
+    #label-article-modal > .glass-card,
+    #label-import-modal > .glass-card,
+    #user-edit-modal > .glass-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100% !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+        border: none !important;
+        margin: 0 !important;
+        padding: 1.25rem 1rem !important;
+        box-shadow: none !important;
+        box-sizing: border-box !important;
+        overflow-y: auto !important;
+    }
+}
+
 @media (max-width: 1024px) {
     #tasks .calendar-view-tabs {
         display: none !important;
@@ -820,6 +852,58 @@
     gap: 12px;
     align-items: start;
 }
+
+/* Sortier-Leiste über den Vorgangs-Karten (Alter / Termin) */
+.proc-sort-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 1rem 0 0.75rem;
+    font-family: var(--font-body);
+}
+.proc-sort-label {
+    font-size: var(--fs-sm);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.45);
+}
+.proc-sort-btn {
+    padding: 6px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    cursor: pointer;
+    font-family: var(--font-body);
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.proc-sort-btn:hover {
+    background: rgba(255, 255, 255, 0.09);
+    color: #fff;
+}
+.proc-sort-btn.active {
+    background: rgba(59, 130, 246, 0.18);
+    border-color: rgba(59, 130, 246, 0.55);
+    color: #93c5fd;
+}
+.proc-sort-hint {
+    font-size: var(--fs-sm);
+    color: rgba(255, 255, 255, 0.35);
+    font-weight: 600;
+}
+@media (max-width: 768px) {
+    .proc-sort-hint {
+        display: none;
+    }
+    .proc-sort-btn {
+        flex: 1;
+        min-width: 0;
+    }
+}
 .proc-card {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.06);
@@ -831,6 +915,18 @@
 }
 .proc-card:hover {
     background: rgba(255, 255, 255, 0.045);
+}
+
+/* Alt = auffällig. Der farbige linke Rand bleibt der Status, deshalb wird
+   das Alter über Flächenton und Rahmen gezeigt, nicht über den Rand. */
+.proc-card.is-old {
+    background: rgba(248, 113, 113, 0.05);
+    border-color: rgba(248, 113, 113, 0.22);
+}
+.proc-card.is-very-old {
+    background: rgba(248, 113, 113, 0.1);
+    border-color: rgba(248, 113, 113, 0.4);
+    box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.12) inset;
 }
 .proc-card-head {
     display: flex;
@@ -1849,3 +1945,511 @@ details.category-group-details[open] .group-chevron {
         padding: 0 1rem;
     }
 }
+
+/* ================================================== */
+/* HANDY-FEINSCHLIFF                                 */
+/* ================================================== */
+
+/* iOS zoomt beim Antippen eines Eingabefelds automatisch hinein, sobald
+   dessen Schrift kleiner als 16px ist — und zoomt danach nicht von allein
+   zurück, die Ansicht bleibt verschoben. 225 der 305 Felder lagen darunter.
+   Die 16px sind hier eine Verhaltensschwelle von Safari, keine Stilfrage:
+   dieser Wert darf nicht „aus Designgründen" kleiner gesetzt werden. */
+@media (max-width: 768px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="search"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="date"],
+    input[type="time"],
+    input[type="datetime-local"],
+    input[type="month"],
+    input:not([type]),
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+
+    /* Die Regel oben ist ein blanker Element-Selektor (0,0,1) und verliert
+       deshalb gegen bestehende Regeln, die die Schriftgröße selbst per
+       !important setzen — konkret gegen `.glass-form-input` (0,1,0) und
+       `[id^="settings-"] input[type="text"]` (0,2,1) in views/settings.css
+       sowie `#accounting-modal .glass-form-input` (1,1,0) in
+       views/accounting-modal.css. Das vorangestellte `body` hebt die
+       Spezifität hier jeweils genau eine Stufe über den Gegenspieler.
+       Wer einen dieser Selektoren umbenennt, muss ihn hier mitziehen. */
+    body [id^="settings-"] input[type],
+    body [id^="settings-"] select,
+    body [id^="settings-"] textarea,
+    body input.glass-form-input,
+    body select.glass-form-input,
+    body textarea.glass-form-input,
+    body input.glass-input,
+    body select.glass-input,
+    body textarea.glass-input,
+    body #accounting-modal .glass-form-input,
+    body #machine-evaluation-modal select,
+    body #acc-global-machine-search,
+    body #acc-global-workshop-machine,
+    body #acc-global-assignment-area {
+        font-size: 16px !important;
+    }
+}
+
+/* Notch und Home-Balken: durch viewport-fit=cover im <meta viewport> reicht
+   die Seite unter beide. Alles was fest am Rand klebt, braucht deshalb
+   echten Abstand — sonst liegt die Kopfzeile unter dem Notch und der
+   unterste Knopf unter dem Home-Balken. env() ist 0, wo es kein Notch gibt,
+   die Regel kostet auf Android und im Browser also nichts. */
+@media (max-width: 768px) {
+    /* Angebote-Karten (Listen → Angebote). Die Felder, die über die ganze
+       Zeile gehen (Bemerkung, Maschine, Erinnerung), tragen in js/listen.js
+       nur ein `min-width`, kein `width` — sie blieben deshalb auf der
+       Standardbreite eines <input> stehen (249px) und liessen rechts rund
+       70px der Karte leer. Hier füllen sie ihre Rasterzelle aus.
+       Die Höhen von 34/36px sind zudem knapp für Finger — 42px trifft
+       sicherer, ohne die Karte spürbar länger zu machen. */
+    .ang-card-fields input,
+    .ang-card-fields select,
+    .ang-card-fields .glass-form-input {
+        width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+    }
+    .ang-card-fields input,
+    .ang-card-fields select {
+        height: 42px !important;
+    }
+    .ang-card-fields > div {
+        min-width: 0 !important;
+    }
+
+    /* Fokusmodus, Kinomodus, Geschwindigkeitsregler und die Spaltenwahl
+       1/2/3 sind Werkzeuge für den grossen Bildschirm — auf dem Handy
+       ergeben sie keinen Sinn (nebeneinander passt ohnehin nur eine Spalte)
+       und sie drängen die beiden Knöpfe weg, die man unterwegs braucht.
+       Sichtbar bleiben nur „KI-Erfassung" und „Aufgabe erstellen". */
+    #focus-mode-container,
+    .cinema-mode-controls {
+        display: none !important;
+    }
+
+    /* Aufgaben randlos über die volle Breite. Das -10px hebt genau den
+       Seitenrand von #main-content wieder auf, die Karten laufen dadurch bis
+       an den Displayrand. Die Gruppierung bleibt bestehen: .kanban-column
+       trägt weiter Titel und Zähler („Offen 3" / „Erledigt"), verliert aber
+       Seitenabstand, Seitenrahmen und Radius. Der Gruppentitel bekommt
+       seinen Abstand einzeln zurück, sonst klebt er am Rand.
+       Oben/unten behalten die Karten ihren 3px-Rahmen — der trennt sie
+       weiterhin sichtbar voneinander. */
+    #tasks #tasks-board {
+        margin-left: -10px !important;
+        margin-right: -10px !important;
+        gap: 1rem !important;
+    }
+    #tasks .kanban-column {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        border-radius: 0 !important;
+    }
+    #tasks .kanban-column > .column-title {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+    #tasks .task-card {
+        border-left: none !important;
+        border-right: none !important;
+        border-radius: 0 !important;
+        padding: 14px 12px !important;
+    }
+
+    /* Aufgaben-Karte: Kopfzeile ist [Titel] [Bild] [Sternchen/Bearbeiten/
+       Löschen] nebeneinander. Auf dem Handy nahm das 121px-Bild dem
+       Maschinentitel so viel Breite, dass er umbrach und kaum lesbar war.
+       Deshalb: Titel und Knöpfe bleiben oben in einer Zeile, das Bild rutscht
+       per order/flex-basis in eine eigene Zeile darunter und wird 10% kleiner
+       (121 → 109px). `flex: 0 0 100%` erzwingt den Umbruch, `max-width`
+       klammert es wieder auf 109px, die auto-Ränder zentrieren es.
+       Die Masse am <img> steht inline in js/tasks.js — daher !important. */
+    .task-card-header {
+        flex-wrap: wrap !important;
+        align-items: flex-start !important;
+    }
+    .task-card-header > div:first-child {
+        order: 1;
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+    }
+    .task-card-header .task-card-actions {
+        order: 2;
+        flex: 0 0 auto !important;
+    }
+    /* Erzwingt den Zeilenumbruch vor dem Bild. `flex-basis:100%` am Bild
+       selbst reicht nicht: ein `max-width` würde die Flex-Basis schon vor
+       der Umbruchberechnung kappen, das Bild bliebe neben den Knöpfen. */
+    .task-card-header::after {
+        content: "";
+        order: 3;
+        flex: 0 0 100%;
+        height: 0;
+    }
+    .task-card-header .task-card-machine-thumb {
+        order: 4;
+        flex: 0 0 auto !important;
+        width: 109px !important;
+        height: 109px !important;
+        margin: 10px auto 0 auto !important;
+        align-self: center !important;
+    }
+    /* Maschinentitel: darf umbrechen und lange Namen trennen, statt
+       abgeschnitten oder über den Rand geschoben zu werden. */
+    .task-card-header .task-card-machine {
+        min-width: 0 !important;
+        white-space: normal !important;
+        overflow-wrap: anywhere !important;
+    }
+
+    /* Seitenränder: die Innenabstände stapelten sich auf dem Handy —
+       #main-content 32px + #settings/#home 24px = 56px je Seite. Von 375px
+       blieben so nur 263px Inhalt übrig, fast ein Drittel der Breite ging
+       für leeren Rand drauf. Hier zusammen 14px je Seite, das reicht als
+       Luft zum Displayrand und gibt rund 80px zurück.
+       Betrifft nur Inhaltsseiten: Modals liegen als `position: fixed`
+       ausserhalb von #main-content und behalten ihre eigenen Abstände. */
+    #main-content {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+    #settings,
+    #home {
+        padding-left: 4px !important;
+        padding-right: 4px !important;
+    }
+
+    /* Einstellungs-Übersicht (die Kacheln nach Klick auf „Einstellungen"):
+       zwei Spalten sind auf dem Handy zu schmal. Bei 375px bleibt je Kachel
+       rund 147px, davon gehen 2x32px Innenabstand und das 64px-Icon ab — für
+       die Überschrift blieben ein paar Pixel, „Benutzerverwaltung" wurde
+       deshalb zu „Be… ve" abgeschnitten. Darum eine Kachel pro Zeile, dazu
+       kleineres Icon und kleinere Überschrift, damit Titel und Beschreibung
+       in einer Zeile stehen statt Wort für Wort umzubrechen.
+       Das font-size am <h2> steht inline im Markup (ohne !important) — das
+       !important hier schlägt es. */
+    .settings-grid {
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+        margin-top: 20px !important;
+    }
+    .settings-card {
+        padding: 18px 20px !important;
+        min-height: 0 !important;
+    }
+    .settings-card h2 {
+        font-size: 1.15rem !important;
+        line-height: 1.25 !important;
+    }
+    .settings-card > div:first-child {
+        gap: 12px !important;
+        margin-bottom: 0.6rem !important;
+    }
+    .settings-icon-container {
+        width: 46px !important;
+        height: 46px !important;
+    }
+    .settings-icon-container svg {
+        width: 26px !important;
+        height: 26px !important;
+    }
+
+    /* Einstellungen: feste Mehrspalten-Raster stehen dort als Inline-Style im
+       Markup und brechen von sich aus nie um. Auf 375px bleibt pro Spalte so
+       wenig übrig, dass die Beschriftung unlesbar wird — deshalb hier alles
+       untereinander. Die Inline-Styles haben kein !important, ein !important
+       hier genügt also.
+       `1fr 2fr`  = PLZ / Ort in den Firmeneinstellungen
+       `1fr 600px` = Beschriftungs-Editor mit fester 600px-Vorschauspalte,
+                     die auf dem Handy sonst weit über den Rand hinausläuft. */
+    #settings .form-row,
+    [id^="settings-"] .form-row,
+    .beschriftung-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+
+    /* Stückliste im Beschriftungs-Editor: sechs Spalten (Art.-Nr., Bez. 1,
+       Bez. 2, Menge, Einheit, Löschen) ergäben je rund 50px. Stattdessen die
+       drei Textfelder je über die volle Breite, darunter Menge / Einheit / ×
+       in einer Reihe. Die Kopfzeile entfällt — welches Feld welches ist,
+       sagen die Platzhalter in js/labels.js (dort mitpflegen!). */
+    .beschriftung-stueckliste-head {
+        display: none !important;
+    }
+    #beschriftung-stueckliste-rows .beschriftung-row {
+        grid-template-columns: 1fr 1fr 34px !important;
+    }
+    #beschriftung-stueckliste-rows .beschriftung-row > input:nth-child(-n+3) {
+        grid-column: 1 / -1 !important;
+    }
+
+    /* Social-Icons (Instagram, Facebook, YouTube, LinkedIn) raus: sie stehen
+       per flex:1 mitten in der Topbar und nehmen dort den Platz weg, den auf
+       dem Handy das Hamburger-Menü, die Glocke und der Benutzer brauchen.
+       Nur die Topbar-Leiste — .social-links in der Sidebar bleibt. */
+    .header-social-links {
+        display: none !important;
+    }
+
+    #topbar,
+    #app-layout:has(#sidebar.collapsed) #topbar {
+        height: calc(70px + env(safe-area-inset-top));
+        padding-top: env(safe-area-inset-top);
+    }
+
+    #main-wrapper,
+    #main-wrapper.collapsed-sidebar,
+    #app-layout:has(#sidebar.collapsed) #main-wrapper {
+        padding-top: calc(70px + env(safe-area-inset-top)) !important;
+    }
+
+    #sidebar {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .modal-backdrop .modal-content,
+    .modal-new .modal-content,
+    .protocol-modal,
+    #plan-editor-modal > .glass-card,
+    #label-article-modal > .glass-card,
+    #label-import-modal > .glass-card,
+    #user-edit-modal > .glass-card {
+        padding-top: max(1.25rem, env(safe-area-inset-top)) !important;
+        padding-bottom: max(1.25rem, env(safe-area-inset-bottom)) !important;
+    }
+}
+
+/* ================================================== */
+/* TOUCH-FEINSCHLIFF (Handy UND iPad)                */
+/* ================================================== */
+
+/* `hover: none` + `pointer: coarse` trifft Finger-Geraete (Handy, iPad),
+   nicht aber ein Notebook mit Touchscreen samt Maus. Am Finger gibt es kein
+   :hover â€” der Browser feuert es beim Antippen trotzdem einmal und laesst es
+   danach am Element haengen, bis irgendwo anders hingetippt wird. Karten
+   blieben so dauerhaft aufgehellt bzw. angehoben. Deshalb hier zurueckgedreht. */
+@media (hover: none) and (pointer: coarse) {
+    .maint-card:hover,
+    .proc-card:hover,
+    .dash-todo-row:hover,
+    .dash-chip:hover,
+    .dash-quick-btn:hover,
+    .ang-nachfass-row:hover,
+    .maint-kpi-tile:hover,
+    .maint-chart-card:hover,
+    #listen .maint-chart-card:hover,
+    #accounting .maint-chart-card:hover,
+    #home .maint-chart-card:hover,
+    #calendar .maint-kpi-tile:hover,
+    #listen .ang-nachfass-row:hover,
+    .double-kpi-subtile:hover,
+    .angebote-table-wrap tbody tr:hover,
+    .maint-action-btn:hover,
+    .proc-sort-btn:hover,
+    .subtask-action-btn:hover,
+    .fin-type-tab:hover {
+        transform: none !important;
+        filter: none !important;
+    }
+
+    /* Graue Blitz-Flaeche, die iOS und Android beim Antippen ueber den Knopf
+       legen â€” passt nicht zum Glas-Design. Rueckmeldung gibt :active. */
+    a, button, .clickable, .row-clickable,
+    .task-card, .proc-card, .maint-card, .ang-card,
+    .maint-kpi-tile, .dash-quick-btn, .dash-chip, .settings-card {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Ohne `touch-action: manipulation` wartet Safari nach jedem Tipp 300ms
+       ab, ob ein Doppeltipp (Zoom) folgt. Knoepfe fuehlen sich dadurch traege
+       an. Nur auf Bedienelemente gesetzt, nicht auf Textflaechen. */
+    button, a, input[type="checkbox"], input[type="radio"],
+    select, .clickable, .row-clickable, .settings-tab, .fin-type-tab {
+        touch-action: manipulation;
+    }
+
+    /* Fingerkuppe trifft rund 44px. Kleine Icon-Knoepfe (Loeschen, Stern,
+       Bearbeiten) lagen bei 24 bis 30px. Die sichtbare Groesse bleibt, der
+       Trefferbereich waechst ueber ein Pseudoelement nach aussen â€” dadurch
+       verschiebt sich nichts im Layout. */
+    .subtask-action-btn,
+    .maint-action-btn,
+    .task-card-actions button,
+    .ang-card-top button,
+    .proc-card-head button {
+        position: relative;
+    }
+    .subtask-action-btn::after,
+    .maint-action-btn::after,
+    .task-card-actions button::after,
+    .ang-card-top button::after,
+    .proc-card-head button::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 44px;
+        height: 44px;
+        transform: translate(-50%, -50%);
+    }
+
+    /* Traegheitsscrollen in allen Bereichen, die selbst scrollen. Fehlt es,
+       stoppt der Inhalt in aelteren iOS-Fassungen abrupt am Finger. */
+    .modal-scroll-area,
+    .modal-body,
+    .modal-form-area,
+    .custom-scrollbar,
+    .table-responsive-wrapper,
+    .angebote-table-wrap,
+    .accounting-table-container,
+    .menu-panel {
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* ================================================== */
+/* IPAD (769 bis 1024px)                             */
+/* ================================================== */
+
+/* iPad-Safari zoomt genau wie das iPhone in jedes Feld hinein, dessen
+   Schrift unter 16px liegt â€” die Regel im Abschnitt HANDY-FEINSCHLIFF endete
+   aber bei 768px. Hier dieselben Selektoren fuer den iPad-Bereich.
+   Wer dort etwas umbenennt, muss es auch hier mitziehen. */
+@media (min-width: 769px) and (max-width: 1024px) and (pointer: coarse) {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="search"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="date"],
+    input[type="time"],
+    input[type="datetime-local"],
+    input[type="month"],
+    input:not([type]),
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+
+    body [id^="settings-"] input[type],
+    body [id^="settings-"] select,
+    body [id^="settings-"] textarea,
+    body input.glass-form-input,
+    body select.glass-form-input,
+    body textarea.glass-form-input,
+    body input.glass-input,
+    body select.glass-input,
+    body textarea.glass-input,
+    body #accounting-modal .glass-form-input {
+        font-size: 16px !important;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    /* Fenster fuellten auf dem iPad entweder den ganzen Bildschirm (durch
+       feste Breiten im Markup) oder standen als schmaler Streifen mittendrin.
+       92vw/92vh laesst rundum sichtbar Hintergrund stehen, ohne dass der
+       Inhalt einschnuert. */
+    .modal-backdrop .modal-content,
+    .modal-new .modal-content {
+        max-width: 92vw !important;
+        max-height: 92vh !important;
+    }
+
+    /* Startseite: fuenf Kacheln nebeneinander ergaben auf 1024px minus
+       80px Sidebar je rund 180px â€” Zahl und Beschriftung passten nicht mehr
+       nebeneinander. Drei pro Reihe. */
+    .dash-kpi-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+
+    /* 1.25fr / 1fr laesst der rechten Spalte auf dem iPad rund 380px â€” die
+       Listen darin (Aufgaben, Maschinen) brachen Wort fuer Wort um.
+       Untereinander ist dort besser lesbar. */
+    .dash-main-grid,
+    .acc-eval-charts-grid,
+    .fin-summary-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Die Diagramm-Reihen setzen `auto-fit, minmax(260px, ...)` und ergaeben
+       auf dem iPad drei sehr schmale Saeulendiagramme. Zwei sind lesbar. */
+    .ang-charts-row,
+    .proc-charts-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    /* Die Angebote-Tabelle hat zwoelf Spalten und ist mit festen Prozent-
+       Breiten gebaut. Auf dem iPad wird sie waagerecht scrollbar, statt die
+       Zellen bis zur Unlesbarkeit zu quetschen. */
+    .angebote-table-wrap {
+        overflow-x: auto !important;
+    }
+    .angebote-table-wrap table {
+        min-width: 900px;
+    }
+}
+
+/* ================================================== */
+/* HANDY: NICHTS DARF SEITWAERTS HERAUSRAGEN         */
+/* ================================================== */
+
+@media (max-width: 768px) {
+    /* Einzelne breite Elemente (Tabellen, feste Pixelbreiten aus Inline-
+       Styles) schoben die ganze Seite waagerecht â€” man wischte den Inhalt
+       versehentlich zur Seite und die Topbar rutschte mit. Der Riegel sitzt
+       auf #main-content, nicht auf <body>: `overflow: hidden` am Wurzel-
+       element wuerde `position: sticky` in den Listen ausser Kraft setzen.
+       `clip` statt `hidden`, weil `overflow-x: hidden` das Element selbst zum
+       Scroll-Container macht (overflow-y wird dann auf `auto` gerechnet) und
+       dadurch ebenfalls jedes `position: sticky` darin bricht. `clip` laesst
+       overflow-y auf `visible`. */
+    #main-content {
+        overflow-x: clip !important;
+        max-width: 100vw !important;
+    }
+
+    /* Tabellen bleiben trotzdem vollstaendig erreichbar â€” sie scrollen
+       innerhalb ihres eigenen Rahmens. */
+    .table-responsive-wrapper,
+    .angebote-table-wrap,
+    .accounting-table-container {
+        overflow-x: auto !important;
+        max-width: 100% !important;
+    }
+
+    /* Lange Bezeichnungen ohne Leerzeichen (Maschinennummern, Mailadressen,
+       Dateinamen) sind sonst breiter als die Karte und schieben sie auf. */
+    .task-card,
+    .proc-card,
+    .maint-card,
+    .ang-card,
+    .dash-todo-row,
+    .settings-card {
+        overflow-wrap: anywhere;
+        min-width: 0;
+    }
+
+    /* Kalender-Ansicht: die Monatsuebersicht braucht sieben Spalten. Statt
+       sie zu quetschen, darf sie scrollen. */
+    #calendar .table-responsive-wrapper table {
+        min-width: 640px;
+    }
+}
+

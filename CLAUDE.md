@@ -89,11 +89,33 @@ Reihenfolge der ausgelagerten Module:
   Deshalb positioniert `js/dropdown-position.js` Menüs über einen gemessenen Versatz.
 - **`*/` innerhalb eines CSS-Kommentars** beendet ihn vorzeitig — die nachfolgende
   Regel wird stillschweigend verschluckt.
+- **`?v=N` an `style.css` bustet die per `@import` geladenen Dateien NICHT.**
+  Deren URL bleibt gleich, der Browser nimmt die alte Fassung — die Änderung
+  kommt schlicht nie an, ohne jede Fehlermeldung. Wer `css/base/responsive.css`
+  o.ä. ändert, muss das `?v=N` **an der `@import`-Zeile in `style.css`**
+  hochzählen. Nur die per eigenem `<link>` eingebundenen CSS-Dateien
+  (`login.css`, `machine-modal.css` …) werden über `index.html` versioniert.
+- **Blanke Element-Selektoren verlieren im CSS fast immer.** Eine Regel wie
+  `select { … !important }` (0,0,1) wird von `.glass-form-input` (0,1,0) in
+  `views/settings.css` geschlagen — `!important` auf beiden Seiten entscheidet
+  die Spezifität, nicht die Reihenfolge. Greift eine neue Regel nicht: im
+  Browser `getComputedStyle` prüfen und die konkurrierende Regel suchen,
+  statt weitere `!important` zu stapeln.
 - **Spaltennamen nicht aus dem Code raten.** `tasks` hat **kein** `due_date`
   (Aufgaben haben gar kein Fälligkeitsdatum), `internal_processes` hat **kein**
   `created_by` — der Ersteller steht dort in `user_id`. Bei Abfragen deshalb
   `select('*')` nehmen und im Browser filtern/sortieren, statt Spalten fest zu
   verdrahten; eine einzige fehlende Spalte lässt sonst die ganze Abfrage scheitern.
+- **`maintenance_events` enthält zweierlei: Wartungen UND Termine.**
+  `window.createAppointment` (`js/appointments.js`) schreibt Kundentermine in
+  dieselbe Tabelle wie `saveEvent` (`js/calendar-events.js`) die Wartungen —
+  ein Typ-Kennzeichen gibt es in den Daten **nicht**. Unterscheidbar sind sie
+  nur daran, dass ein Termin weder `machine_id` noch `manual_machine` noch
+  `maintenance_types` gesetzt hat. `fetchCalendarEvents` filtert danach,
+  sonst stehen Termine mit in der Wartungsliste. **Vorsicht:** eine über das
+  Ereignis-Modal angelegte „Wartung" ganz ohne Maschine und ohne Wartungsart
+  ist davon nicht zu unterscheiden und taucht dort ebenfalls nicht auf. Wer
+  das sauber trennen will, braucht eine echte Typ-Spalte.
 - **Der angemeldete Nutzer heißt `window.activeUser`** (gesetzt in `js/auth.js`),
   mit `.id`, `.name`, `.permissions`. **`window.currentUser` gibt es nicht** —
   Code, der es benutzt, bekommt stillschweigend `undefined`. An fünf Stellen war
@@ -127,6 +149,18 @@ Neue Regeln deshalb immer in den passenden Baustein, nicht in den Kopf.
 Ein Chat-Assistent unten rechts (`js/ki-assistent.js`, Strg+K) existierte bis
 2026-08-05 und wurde **auf Wunsch komplett entfernt**; er brachte gegenüber der
 Schnellerfassung nichts. Nicht wieder einführen.
+
+## Die Aufgaben-Ansicht läuft auf dem Fernseher
+Die Aufgaben werden als **Anzeigetafel auf einem Fernseher in der Werkstatt**
+dargestellt. Daher stammen Kinomodus, Geschwindigkeitsregler und die Spaltenwahl
+1/2/3 — das ist die Fernseher-Darstellung, kein Schreibtisch-Werkzeug. Auf dem
+Handy sind diese Bedienelemente deshalb ausgeblendet (`responsive.css`).
+
+Daraus folgt eine **bewusste Entscheidung (2026-08-15): Aufgaben bekommen kein
+Annehmen/Ablehnen.** Wer sie abarbeitet, steht vor dem Fernseher und hat kein
+Gerät, auf dem er zustimmen könnte. Zusagen/Absagen gibt es nur für **Termine**
+(existiert: `event_participants`) und künftig **Vorgänge** — siehe
+`PLAN_BENACHRICHTIGUNGEN.md`. Nicht „nachrüsten", ohne vorher zu fragen.
 
 ## Was bewusst noch offen ist
 `js/app-init.js` (3.249 Zeilen) ist ein einziger `DOMContentLoaded`-Handler.
@@ -175,7 +209,34 @@ formfüllenden Feldern zusätzlich `.menu-block`. Ausgewählter Eintrag: `.selec
 einem Inline-`style` suchen.
 
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v117 (Stand 2026-08-10) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v190 (Stand 2026-08-15) — bei jeder Änderung hochzählen.
+
+**Handy-Optimierung (2026-08-15).** In `css/base/responsive.css` unter
+„HANDY-FEINSCHLIFF": alle Eingabefelder sind ab ≤768px auf **16px** gesetzt —
+darunter zoomt iOS beim Antippen automatisch hinein und zoomt nicht zurück.
+Das ist eine Verhaltensschwelle von Safari, kein Stilwert; nicht kleiner setzen.
+Dazu `env(safe-area-inset-*)` für Topbar, Sidebar und Vollbild-Fenster (Notch
+und Home-Balken). Fenster, die per Inline-Style statt `.modal-backdrop`/
+`.modal-new` gebaut sind, werden dort einzeln per ID auf Vollbild gezogen —
+**neues Fenster dieser Bauart? ID in beide Listen eintragen.**
+
+**Seitenränder auf dem Handy.** Die Innenabstände stapelten sich:
+`#main-content` 32px + `#settings`/`#home` 24px = 56px je Seite, von 375px
+blieben 263px Inhalt. Ab ≤768px sind es zusammen 14px je Seite (93–99% der
+Breite genutzt). Wer neue Abstände setzt: **nicht erneut am Seitenrand
+aufaddieren** — die Kästen haben ihren eigenen Innenabstand.
+
+**Feste Mehrspalten-Raster brechen nicht von selbst um.** In den Einstellungen
+standen `1fr 2fr` (PLZ/Ort), `1fr 600px` (Beschriftungs-Vorschau), ein
+6-Spalten-Raster (Stückliste) und `repeat(2, 1fr)` (`.settings-grid`) als
+**Inline-Style** im Markup — auf dem Handy wurden Titel abgeschnitten
+(„Benutzerverwaltung" → „Be… ve"). Alle vier sind in `responsive.css` auf eine
+Spalte gesetzt. Neues Raster im Markup? Dort eine Handy-Regel ergänzen.
+
+**Protokolle: die Listenansicht ist entfernt (2026-08-15).** Es gibt nur noch
+das Board. Weg sind der Board/Liste-Umschalter, `#protocol-list-view`,
+`#protocol-table-body`, `window.switchProtocolView` und
+`window.protocolViewMode` samt Listen-Render-Zweig in `js/protocols.js`.
 
 **Aufgaben und Vorgänge sind getrennt (seit 2026-08-10).** Die Ansicht „Aufgaben"
 zeigt nur Aufgaben, die Ansicht „Vorgänge" nur Vorgänge. Beide haben denselben

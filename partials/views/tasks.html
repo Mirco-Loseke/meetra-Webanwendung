@@ -75,6 +75,11 @@
                                         </svg>
                                         <input type="range" min="0.1" max="10" step="0.1" value="1.0" id="cinema-speed-slider">
                                     </div>
+                                    <label id="cinema-workshop-ui" class="cinema-workshop-ui" title="Werkstatt-Liste im Kino-Modus anzeigen">
+                                        <input type="checkbox" id="cinema-workshop-toggle" checked
+                                            onchange="window.setCinemaWorkshopVisible(this.checked)">
+                                        <span>Werkstatt</span>
+                                    </label>
                                     <div id="cinema-cols-ui" class="cinema-cols-ui" title="Aufgaben nebeneinander">
                                         <button type="button" class="cinema-col-btn" data-cols="1" onclick="window.setCinemaColumns(1)">1</button>
                                         <button type="button" class="cinema-col-btn active" data-cols="2" onclick="window.setCinemaColumns(2)">2</button>

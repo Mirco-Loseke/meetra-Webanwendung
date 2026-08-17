@@ -37,6 +37,15 @@
 
             if (maintEvents) {
                 maintEvents.forEach(ev => {
+                    // Termine (window.createAppointment in js/appointments.js) landen in
+                    // derselben Tabelle maintenance_events wie die Wartungen — ein eigenes
+                    // Kennzeichen gibt es in den Daten nicht. Unterscheidbar sind sie nur
+                    // daran, dass ein Termin weder auf eine Maschine verweist noch eine
+                    // Wartungsart trägt. Ohne diese Zeile steht jeder Kundentermin mit in
+                    // der Wartungsliste.
+                    const istWartung = ev.machine_id || ev.manual_machine || ev.maintenance_types;
+                    if (!istWartung) return;
+
                     const m = ev.machines;
                     const titleParts = m ? [
                         m.manufacturer,

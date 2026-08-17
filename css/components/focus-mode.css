@@ -243,3 +243,36 @@ body.focus-mode-active #topbar {
     border-color: #3b82f6;
     color: #fff;
 }
+
+/* Haken "Werkstatt": blendet die Werkstatt-Liste im Kino-Modus aus.
+   Sitzt neben der Spaltenwahl und ist wie diese nur im Fokus-/Kino-Modus
+   sichtbar (siehe .cinema-mode-controls oben). */
+.cinema-workshop-ui {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 44px;
+    padding: 0 10px;
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.cinema-workshop-ui input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #3b82f6;
+    cursor: pointer;
+    margin: 0;
+}
+
+.cinema-workshop-ui:hover {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.25);
+}

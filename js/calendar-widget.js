@@ -73,6 +73,24 @@
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
+    // Alle Tagesschlüssel von startKey bis endKey (einschliesslich). Deckelt
+    // bei 60 Tagen, damit ein Tippfehler im Enddatum nicht den ganzen Kalender
+    // mit einem einzigen Bericht zupflastert.
+    function daysBetween(startKey, endKey) {
+        if (!startKey) return [];
+        if (!endKey || endKey <= startKey) return [startKey];
+        const [ys, ms, ds] = startKey.split('-').map(Number);
+        const [ye, me, de] = endKey.split('-').map(Number);
+        const cur = new Date(ys, ms - 1, ds);
+        const end = new Date(ye, me - 1, de);
+        const keys = [];
+        while (cur <= end && keys.length < 60) {
+            keys.push(dayKey(cur));
+            cur.setDate(cur.getDate() + 1);
+        }
+        return keys;
+    }
+
     function fmtDate(key) {
         if (!key) return '';
         const [y, m, d] = key.split('-');
@@ -246,39 +264,50 @@
         try {
             let { data, error } = await sb()
                 .from('service_entries')
-                .select('id, title, date, technicians, is_finalized, machines(name, manufacturer, serial), customers(name)')
-                .not('date', 'is', null)
+                .select('id, title, date, datum_von, datum_bis, technicians, is_finalized, machines(name, manufacturer, serial), customers(name)')
                 .order('date', { ascending: false })
                 .limit(600);
             if (error) {
                 // Ohne Kunden-Beziehung erneut versuchen (Join existiert evtl. nicht)
                 ({ data, error } = await sb()
                     .from('service_entries')
-                    .select('id, title, date, technicians, is_finalized, machines(name, manufacturer, serial)')
-                    .not('date', 'is', null)
+                    .select('id, title, date, datum_von, datum_bis, technicians, is_finalized, machines(name, manufacturer, serial)')
                     .order('date', { ascending: false })
                     .limit(600));
             }
             if (!error && data) {
                 data.forEach(s => {
-                    const key = dayKey(s.date);
-                    if (!key) return;
+                    // Ein Bericht kann über mehrere Tage gehen (datum_von/datum_bis).
+                    // Dann steht er an jedem Tag des Zeitraums im Kalender, damit
+                    // man den Einsatz über die Tage hinweg sieht. `date` ist der
+                    // Rückfall für Berichte ohne Zeitraum.
+                    const startKey = dayKey(s.datum_von || s.date);
+                    if (!startKey) return;
+                    const endKey = dayKey(s.datum_bis) || startKey;
+                    const days = daysBetween(startKey, endKey);
                     const m = s.machines;
                     const subject = m
                         ? `${m.manufacturer || ''} ${m.name || ''}`.trim() + (m.serial ? ` #${m.serial}` : '')
                         : ((s.customers && s.customers.name) || '');
                     const techs = Array.isArray(s.technicians) ? s.technicians : [];
-                    out.push({
-                        id: `service:${s.id}`,
-                        type: 'service',
-                        day: key,
-                        title: s.title || 'Servicebericht',
-                        subject,
-                        note: '',
-                        tag: s.is_finalized ? 'abgeschlossen' : '',
-                        mine: isMine(techs, null),
-                        targetType: 'service',
-                        targetId: s.id
+                    days.forEach((key, i) => {
+                        out.push({
+                            id: `service:${s.id}:${key}`,
+                            type: 'service',
+                            day: key,
+                            title: s.title || 'Servicebericht',
+                            subject,
+                            note: '',
+                            tag: s.is_finalized ? 'abgeschlossen' : '',
+                            mine: isMine(techs, null),
+                            targetType: 'service',
+                            targetId: s.id,
+                            spanStart: startKey,
+                            spanEnd: endKey,
+                            spanIndex: i + 1,
+                            spanTotal: days.length,
+                            spanPos: days.length === 1 ? '' : (i === 0 ? 'start' : (i === days.length - 1 ? 'end' : 'mid'))
+                        });
                     });
                 });
             }
@@ -460,10 +489,19 @@
             let body = `<span class="calw-dots">${dots}</span>`;
             if (state.full) {
                 const rows = rowsByDay[key] || [];
-                body = rows.slice(0, 4).map(r =>
-                    `<span class="calw-cell-item" style="--calw-type:${TYPES[r.type].color};" title="${esc(r.title + (r.subject ? ' – ' + r.subject : ''))}">
-                        <i></i>${esc(r.title)}
-                    </span>`).join('');
+                body = rows.slice(0, 4).map(r => {
+                    // Mehrtägiges: als durchgehender Balken über die Tage. Nur am
+                    // ersten Tag steht der Titel, danach zeigt der Balken die
+                    // Fortsetzung — sonst steht derselbe Text viermal im Monat.
+                    const span = r.spanTotal > 1;
+                    const cls = 'calw-cell-item' + (span ? ' is-span span-' + r.spanPos : '');
+                    const tip = r.title + (r.subject ? ' – ' + r.subject : '')
+                        + (span ? ` (${fmtDate(r.spanStart)} – ${fmtDate(r.spanEnd)}, Tag ${r.spanIndex} von ${r.spanTotal})` : '');
+                    const label = (span && r.spanPos !== 'start') ? '' : esc(r.title);
+                    return `<span class="${cls}" style="--calw-type:${TYPES[r.type].color};" title="${esc(tip)}">
+                        <i></i>${label}
+                    </span>`;
+                }).join('');
                 if (rows.length > 4) body += `<span class="calw-cell-more">+${rows.length - 4} weitere</span>`;
             }
 
@@ -480,7 +518,11 @@
         const diff = dayDiff(e.day);
         const sev = e.done ? 'done' : severityOf(diff);
         const clickable = !!e.targetType;
-        return `<div class="calw-entry sev-${sev}${e.done ? ' is-done' : ''}${clickable ? ' is-clickable' : ''}"
+        // Mehrtägiger Eintrag: Zeitraum und "Tag x von y" statt nur des Datums.
+        const spanNote = e.spanTotal > 1
+            ? `${fmtDate(e.spanStart)} – ${fmtDate(e.spanEnd)} · Tag ${e.spanIndex} von ${e.spanTotal}`
+            : '';
+        return `<div class="calw-entry sev-${sev}${e.done ? ' is-done' : ''}${clickable ? ' is-clickable' : ''}${e.spanTotal > 1 ? ' is-span span-' + e.spanPos : ''}"
                      style="--calw-type:${t.color};"
                      ${clickable ? `data-calw-target-type="${esc(e.targetType)}" data-calw-target-id="${esc(e.targetId)}"` : ''}>
             <span class="calw-entry-bar"></span>
@@ -490,7 +532,7 @@
                     <span class="calw-entry-type" style="color:${t.color};">${t.short}</span>
                 </div>
                 ${e.subject ? `<div class="calw-entry-subject">${esc(e.subject)}</div>` : ''}
-                <div class="calw-entry-meta">${fmtDate(e.day)}${e.time ? ' · ' + esc(e.time) + ' Uhr' : ''}${e.done ? ' · erledigt' : (diff !== null ? ' · ' + relLabel(diff) : '')}${e.tag && !e.done ? ' · ' + esc(e.tag) : ''}</div>
+                <div class="calw-entry-meta">${spanNote || fmtDate(e.day)}${e.time ? ' · ' + esc(e.time) + ' Uhr' : ''}${e.done ? ' · erledigt' : (diff !== null ? ' · ' + relLabel(diff) : '')}${e.tag && !e.done ? ' · ' + esc(e.tag) : ''}</div>
                 ${e.note ? `<div class="calw-entry-note">${esc(e.note)}</div>` : ''}
                 ${e.participants && e.participants.length && window.appointmentParticipantsLine
                     ? `<div class="calw-entry-parts">${window.appointmentParticipantsLine(e.participants)}</div>` : ''}

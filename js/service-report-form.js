@@ -634,6 +634,8 @@
         let serviceberichtIsDirty = false;
         function markServiceberichtDirty() { serviceberichtIsDirty = true; }
         function onServiceberichtFieldChange() { serviceberichtIsDirty = true; }
+        // Reload-Schutz: der Merker ist modul-lokal, deshalb als Prueffunktion anmelden.
+        if (typeof window.registerUnsavedCheck === 'function') window.registerUnsavedCheck(() => serviceberichtIsDirty);
 
         function handleServiceFiles(files) {
             Array.from(files).forEach(file => {
@@ -807,6 +809,20 @@
         // War verloren gegangen: das Modal setzte nur die ID, füllte aber keine
         // Felder — dadurch war beim Bearbeiten alles leer und Speichern überschrieb
         // den Datensatz. Diese Funktion stellt die Vorbefüllung wieder her.
+        // Maschinenauswahl sperren: Suchfeld und Liste verstecken, "FIXIERT" zeigen.
+        // Wird beim Bearbeiten eines bereits gespeicherten Berichts benutzt — die
+        // Maschine eines Berichts darf nachträglich nicht mehr gewechselt werden.
+        window.lockServiceMachineSelection = function () {
+            const modal = document.getElementById('servicebericht-modal');
+            if (!modal) return;
+            const searchBox = modal.querySelector('.machine-selector-wrapper .search-input-container');
+            const list = document.getElementById('service-machine-list');
+            const lockHint = document.getElementById('selection-lock-hint');
+            if (searchBox) searchBox.style.display = 'none';
+            if (list) list.style.display = 'none';
+            if (lockHint) { lockHint.classList.remove('hidden'); lockHint.style.display = 'flex'; }
+        };
+
         window.populateServiceberichtForm = function (d) {
             if (!d) return;
             const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = (v == null ? '' : v); };
@@ -821,6 +837,7 @@
             } else if (d.machine_id != null) {
                 setVal('selected-machine-id', d.machine_id);
             }
+            if (d.machine_id != null && d.machine_id !== '') window.lockServiceMachineSelection();
 
             // Kategorie(n)
             const catIds = Array.isArray(d.category_ids) && d.category_ids.length ? d.category_ids : (d.category_id != null ? [d.category_id] : []);

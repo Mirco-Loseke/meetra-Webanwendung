@@ -187,15 +187,22 @@
 
 /* ---- Kino-Modus (Fernseher): groß & gut lesbar ---- */
 .cinema-mode-active .workshop-panel {
-    flex-basis: 30vw;
-    width: 30vw;
+    flex-basis: 27vw;
+    width: 27vw;
     max-height: calc(100vh - 40px);
     background: rgba(255, 255, 255, 0.05);
 }
 .cinema-mode-active .workshop-head h3 { font-size: 2rem; }
 .cinema-mode-active .workshop-count { font-size: 1.3rem; padding: 4px 14px; }
 .cinema-mode-active .workshop-row { padding: 16px 16px; }
-.cinema-mode-active .workshop-row .workshop-text { font-size: 1.7rem; line-height: 1.3; }
+/* Punkte kleiner als der Rest im Kino-Modus (1.7rem -> 1.5rem -> 1.3rem) */
+.cinema-mode-active .workshop-row .workshop-text { font-size: 1.3rem; line-height: 1.3; }
 .cinema-mode-active .workshop-check { width: 34px; height: 34px; }
 .cinema-mode-active .workshop-check svg { width: 22px; height: 22px; }
 .cinema-mode-active .workshop-empty { font-size: 1.4rem; }
+
+/* Haken "Werkstatt" in der Kino-Leiste: Liste ausblenden. Wirkt nur im
+   Kino-Modus — daneben bleibt die Liste immer sichtbar. */
+body.cinema-mode-active.cinema-hide-workshop .workshop-panel {
+    display: none !important;
+}

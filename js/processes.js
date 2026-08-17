@@ -26,6 +26,55 @@ window.getProcessAgeDays = function (p) {
     return Math.round((today - d) / 86400000);
 };
 
+// ==========================================
+// SORTIERUNG DER VORGÄNGE
+// ==========================================
+// 'alter'  = wie bisher: neueste zuerst (Reihenfolge aus fetchProcesses).
+// 'termin' = nach Erinnerung: überfällig und heute zuerst, danach die
+//            zukünftigen aufsteigend, ganz unten die ohne Erinnerung.
+// Eine dritte Stufe 'prioritaet' kommt dazu, sobald es die Spalte gibt —
+// sortProcesses ist dafür schon vorbereitet.
+window.PROCESS_SORT_MODES = {
+    alter: 'Alter',
+    termin: 'Termin/Erinnerung'
+};
+
+window.getProcessSortMode = function () {
+    const m = localStorage.getItem('processSortMode');
+    return window.PROCESS_SORT_MODES[m] ? m : 'alter';
+};
+
+window.setProcessSortMode = function (mode) {
+    localStorage.setItem('processSortMode', window.PROCESS_SORT_MODES[mode] ? mode : 'alter');
+    window.renderProcesses();
+};
+
+// Tage bis zur Erinnerung; null, wenn keine gesetzt ist.
+window.getProcessRemindDiff = function (p) {
+    if (!p || !p.remind_at) return null;
+    const d = new Date(p.remind_at);
+    if (isNaN(d)) return null;
+    return Math.round((d.setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000);
+};
+
+window.sortProcesses = function (list, mode) {
+    const rows = list.slice();
+    if (mode !== 'termin') return rows;
+    // Gruppe 0: überfällig oder heute (das Dringendste zuoberst),
+    // Gruppe 1: in der Zukunft (das Nächste zuerst),
+    // Gruppe 2: ohne Erinnerung (dahinter, in der bisherigen Reihenfolge).
+    const rank = p => {
+        const diff = window.getProcessRemindDiff(p);
+        if (diff === null) return { group: 2, val: 0 };
+        if (diff <= 0) return { group: 0, val: diff };
+        return { group: 1, val: diff };
+    };
+    return rows
+        .map((p, i) => ({ p, i, r: rank(p) }))
+        .sort((a, b) => (a.r.group - b.r.group) || (a.r.val - b.r.val) || (a.i - b.i))
+        .map(x => x.p);
+};
+
 window.fetchProcesses = async function() {
     if (!window.supabaseClient) return;
     
@@ -204,7 +253,8 @@ window.renderProcesses = function(targetId, opts) {
         });
     }
 
-    const searchQuery = (document.getElementById('calendar-search-input')?.value || '').toLowerCase();
+    const searchSourceId = targetId === 'standalone-processes-container' ? 'process-search-input' : 'calendar-search-input';
+    const searchQuery = (document.getElementById(searchSourceId)?.value || '').toLowerCase().trim();
     const statusFilter = opts.compact ? 'all' : window.eventsState.processStatusFilter;
 
     let base = window.eventsState.processes || [];
@@ -218,13 +268,18 @@ window.renderProcesses = function(targetId, opts) {
     }
 
     if (searchQuery) {
-        base = base.filter(p =>
-            (p.title && p.title.toLowerCase().includes(searchQuery)) ||
-            (p.sender && p.sender.toLowerCase().includes(searchQuery)) ||
-            (p.recipient && p.recipient.toLowerCase().includes(searchQuery)) ||
-            (p.description && p.description.toLowerCase().includes(searchQuery)) ||
-            (p.remark && p.remark.toLowerCase().includes(searchQuery))
-        );
+        base = base.filter(p => {
+            const m = p.machines || {};
+            const hay = [
+                p.title, p.sender, p.recipient, p.description, p.remark,
+                p.contact_name,
+                p.customers && p.customers.name,
+                m.name, m.manufacturer, m.serial, m.company, m.operator_city,
+                Array.isArray(p.assigned_users) ? p.assigned_users.join(' ') : '',
+                Array.isArray(p.steps) ? p.steps.map(s => s && s.text).join(' ') : ''
+            ].filter(Boolean).join(' ').toLowerCase();
+            return hay.includes(searchQuery);
+        });
     }
 
     const isStale = p => {
@@ -238,6 +293,11 @@ window.renderProcesses = function(targetId, opts) {
     } else if (statusFilter !== 'all') {
         filtered = base.filter(p => p.status === statusFilter);
     }
+
+    // Sortierung (Alter / Termin). In der kompakten Einbettung bleibt es
+    // bei der Standardreihenfolge, dort gibt es keinen Umschalter.
+    const sortMode = opts.compact ? 'alter' : window.getProcessSortMode();
+    filtered = window.sortProcesses(filtered, sortMode);
 
     const counts = {
         offen: base.filter(p => p.status === 'offen').length,
@@ -272,6 +332,19 @@ window.renderProcesses = function(targetId, opts) {
                 <div class="maint-kpi-value" style="color: #F87171;">${counts.stale}</div>
                 <div class="maint-kpi-label">&gt; 7 Tage offen</div>
             </div>
+        </div>
+    `;
+
+    if (!opts.compact) html += `
+        <div class="proc-sort-bar">
+            <span class="proc-sort-label">Sortieren nach</span>
+            ${Object.keys(window.PROCESS_SORT_MODES).map(k => `
+                <button type="button" class="proc-sort-btn${sortMode === k ? ' active' : ''}"
+                    onclick="window.setProcessSortMode('${k}')">${window.PROCESS_SORT_MODES[k]}</button>
+            `).join('')}
+            ${sortMode === 'termin'
+                ? '<span class="proc-sort-hint">Überfällig und heute zuerst, danach das Kommende.</span>'
+                : '<span class="proc-sort-hint">Neueste Vorgänge zuerst.</span>'}
         </div>
     `;
 
@@ -435,7 +508,7 @@ window.renderProcesses = function(targetId, opts) {
                         <span style="flex-shrink:0; color:rgba(255,255,255,0.4); font-weight:800; font-size:0.75rem; width:16px; padding-top:2px;">${i + 1}</span>
                         <span class="proc-step-check" onclick="window.toggleProcessCardStep('${p.id}', ${i}, event)" title="Abhaken" style="flex-shrink:0; width:20px; height:20px; border-radius:5px; border:2px solid ${s.done ? '#10b981' : 'rgba(255,255,255,0.3)'}; background:${s.done ? '#10b981' : 'transparent'}; display:flex; align-items:center; justify-content:center; cursor:pointer; margin-top:1px;">${s.done ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}</span>
                         <div style="flex:1; min-width:0;">
-                            <span class="proc-step-label" contenteditable="true" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}" onblur="this.style.background='transparent'; window.updateProcessCardStepText('${p.id}', ${i}, this.textContent)" title="Klicken zum Bearbeiten" style="display:block; color:#fff; font-size:0.9rem; text-decoration:${s.done ? 'line-through' : 'none'}; opacity:${s.done ? '0.5' : '1'}; outline:none; border-radius:4px; padding:2px 4px; cursor:text;" onfocus="this.style.background='rgba(255,255,255,0.08)'">${escStep(s.text)}</span>
+                            <span class="proc-step-label" contenteditable="true" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){event.preventDefault(); this.blur();}" onblur="this.style.background='transparent'; window.updateProcessCardStepText('${p.id}', ${i}, this.textContent)" title="Klicken zum Bearbeiten" style="display:block; color:#fff; font-size:0.9rem; white-space:pre-wrap; word-break:break-word; text-decoration:${s.done ? 'line-through' : 'none'}; opacity:${s.done ? '0.5' : '1'}; outline:none; border-radius:4px; padding:2px 4px; cursor:text;" onfocus="this.style.background='rgba(255,255,255,0.08)'">${escStep(s.text)}</span>
                             ${remindMetaS}
                             ${assignMetaS ? `<div class="proc-step-assign-meta" style="font-size:0.78rem; font-weight:600; color:#93c5fd; margin-top:2px; padding:0 4px;">${assignMetaS}</div>` : ''}
                             ${createdMetaS ? `<div class="proc-step-created-meta" style="font-size:0.78rem; color:rgba(255,255,255,0.5); margin-top:2px; padding:0 4px;">${createdMetaS}</div>` : ''}
@@ -458,13 +531,19 @@ window.renderProcesses = function(targetId, opts) {
                 </div>`;
         }
 
+        // Alt = auffällig: ab 8 Tagen ohne Erledigung ein Hinweis, ab 21 Tagen
+        // deutlicher (die Karte selbst bekommt einen roten Schimmer). Das
+        // braucht keine Pflege und fängt genau die Vorgänge, an die niemand
+        // mehr denkt.
         const ageDays = window.getProcessAgeDays(p);
-        const ageBadge = (p.status !== 'erledigt' && ageDays !== null && ageDays > 7)
-            ? `<span style="font-size: 0.68rem; padding: 3px 9px; border-radius: 6px; background: rgba(248,113,113,0.14); color: #F87171; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;">seit ${ageDays} Tagen</span>`
+        const isOld = p.status !== 'erledigt' && ageDays !== null && ageDays > 7;
+        const isVeryOld = isOld && ageDays > 21;
+        const ageBadge = isOld
+            ? `<span style="font-size: 0.68rem; padding: 3px 9px; border-radius: 6px; background: rgba(248,113,113,${isVeryOld ? '0.24' : '0.14'}); color: #F87171; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;">seit ${ageDays} Tagen offen</span>`
             : '';
 
         const cardHtml = `
-            <div class="proc-card" style="border-left-color: ${statusColor};">
+            <div class="proc-card${isOld ? ' is-old' : ''}${isVeryOld ? ' is-very-old' : ''}" style="border-left-color: ${statusColor};">
                 <div class="proc-card-head">
                     ${typeHtml}
                     <div class="proc-card-headmain">

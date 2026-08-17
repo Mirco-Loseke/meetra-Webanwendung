@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meetra-app-v181';
+const CACHE_NAME = 'meetra-app-v209';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
@@ -244,12 +244,22 @@ self.addEventListener('fetch', event => {
                     if (cachedResponse) {
                         return cachedResponse;
                     }
-                    // Wenn HTML angefragt wurde und nicht im Cache ist: Fallback-Page
-                    if (event.request.headers.get('accept')?.includes('text/html')) {
-                        return new Response(FALLBACK_HTML, {
-                            headers: { 'Content-Type': 'text/html; charset=utf-8' }
-                        });
-                    }
+                    // Zweiter Versuch ohne ?v=N. Die PRECACHE-Liste enthält die
+                    // Dateien ohne Query, angefragt werden sie aber mit — ohne
+                    // diesen Schritt fehlt eine frisch hochgezählte Datei genau
+                    // dann, wenn die App nach dem Update zuerst offline startet.
+                    // Lieber eine ältere Fassung ausliefern als gar keine.
+                    return caches.match(event.request, { ignoreSearch: true }).then(looseMatch => {
+                        if (looseMatch) {
+                            return looseMatch;
+                        }
+                        // Wenn HTML angefragt wurde und nicht im Cache ist: Fallback-Page
+                        if (event.request.headers.get('accept')?.includes('text/html')) {
+                            return new Response(FALLBACK_HTML, {
+                                headers: { 'Content-Type': 'text/html; charset=utf-8' }
+                            });
+                        }
+                    });
                 });
             })
     );

@@ -277,6 +277,23 @@ window.editUser = function (id) {
     const defaultPerms = { home: true, tasks: true, machines: true, history: true, accounting: true, settings: true, can_delete: true };
     const perms = (typeof user.permissions === 'object' && user.permissions !== null) ? user.permissions : defaultPerms;
 
+    // Menüpunkte-Liste immer aktuell aus der echten Sidebar erzeugen — so tauchen
+    // neue/entfernte Seiten hier automatisch auf, ohne feste Liste pflegen zu müssen.
+    const sidebarBox = document.getElementById('perm-sidebar-pages');
+    if (sidebarBox) {
+        const links = Array.from(document.querySelectorAll('.sidebar-nav li a[data-target]'));
+        const seen = new Set();
+        sidebarBox.innerHTML = links.map(a => {
+            const target = a.getAttribute('data-target');
+            if (!target || seen.has(target)) return '';
+            seen.add(target);
+            const label = (a.textContent || target).replace(/\s+/g, ' ').trim() || target;
+            const checked = perms[target] !== false ? 'checked' : '';
+            return `<label class="row-clickable"><input class="clickable" type="checkbox" id="perm-${target}" ${checked}> ${label}</label>`;
+        }).join('');
+    }
+
+    // Restliche (fest hinterlegte) Häkchen — z. B. Einstellungen-Unterseiten — setzen.
     window.PERM_VIEW_KEYS.forEach(key => {
         const cb = document.getElementById('perm-' + key);
         if (cb) cb.checked = perms[key] !== false;
@@ -309,9 +326,11 @@ window.saveUserEdit = async function () {
     let permsToSave;
     if (isAdmin) {
         permsToSave = {};
-        window.PERM_VIEW_KEYS.forEach(key => {
-            const cb = document.getElementById('perm-' + key);
-            if (cb) permsToSave[key] = cb.checked;
+        // Alle Berechtigungs-Häkchen generisch einsammeln (dynamische Menüpunkte
+        // aus der Sidebar + fest hinterlegte Unterseiten), damit nichts fehlt.
+        document.querySelectorAll('#edit-permissions-section input[type="checkbox"][id^="perm-"]').forEach(cb => {
+            if (cb.id === 'perm-delete') return;
+            permsToSave[cb.id.slice(5)] = cb.checked;
         });
         permsToSave.can_delete = document.getElementById('perm-delete').checked;
     } else {

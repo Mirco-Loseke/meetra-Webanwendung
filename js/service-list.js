@@ -94,10 +94,55 @@
         window.toggleServiceCategoryDropdown = function (e) {
             if (e) e.stopPropagation();
             const dropdown = document.getElementById('service-category-dropdown');
-            if (dropdown) dropdown.classList.toggle('show');
+            if (!dropdown) return;
+            const oeffnetJetzt = !dropdown.classList.contains('show');
+            dropdown.classList.toggle('show');
+
+            // Beim Öffnen die Liste aufbauen. Vorher geschah das NUR in
+            // updateServiceCategoryUI(), und die läuft ausschließlich als Folge
+            // eines Klicks auf einen Eintrag — es gab also keinen Weg, den
+            // ersten Eintrag zu erzeugen: die Liste blieb dauerhaft leer, und
+            // damit war das Auswahlfeld praktisch tot.
+            if (oeffnetJetzt) {
+                syncServiceCategoriesFromInput();
+                window.renderServiceCategoryList();
+            }
         };
 
         let selectedServiceCategories = [];
+
+        // Wahrheit ist das versteckte Feld #service-category-id (dort schreibt
+        // und liest das Formular beim Speichern und Laden, siehe
+        // service-report-form.js:739/845/1041). Die Liste hier hielt daneben
+        // ihren eigenen Stand und wurde beim Öffnen eines bestehenden Berichts
+        // nie damit abgeglichen — die Häkchen fehlten deshalb, obwohl oben im
+        // Feld "Wartung, Reparatur" stand.
+        function syncServiceCategoriesFromInput() {
+            const idInput = document.getElementById('service-category-id');
+            if (!idInput) return;
+            const roh = (idInput.value || '').trim();
+            if (!roh) { selectedServiceCategories = []; return; }
+            let werte;
+            try {
+                werte = JSON.parse(roh);
+            } catch (e) {
+                // Ältere Berichte haben hier nur eine einzelne Zahl stehen.
+                werte = roh;
+            }
+            if (!Array.isArray(werte)) werte = [werte];
+            selectedServiceCategories = werte
+                .map(v => parseInt(v, 10))
+                .filter(v => !isNaN(v));
+        }
+
+        // Wird aus service-report-form.js aufgerufen, wenn ein bestehender
+        // Bericht geöffnet wird. Die Funktion existierte bisher NICHT — der
+        // Aufruf dort ist mit `typeof … === 'function'` abgesichert und lief
+        // deshalb jahrelang wirkungslos ins Leere.
+        window.renderSelectedServiceCategories = function () {
+            syncServiceCategoriesFromInput();
+            window.renderServiceCategoryList();
+        };
 
         window.selectServiceCategory = function (id, name) {
             if (id === null) {
@@ -133,7 +178,20 @@
             const idInput = document.getElementById('service-category-id');
             if (idInput) idInput.value = JSON.stringify(selectedServiceCategories);
 
+            // Zweite Kopie derselben Auswahl: service-entries.js hält ein
+            // window.selectedServiceCategories und nimmt es für den
+            // Folgebericht (service-entries.js:195). Ohne diesen Abgleich
+            // startete ein Folgebericht immer ohne Kategorie.
+            window.selectedServiceCategories = [...selectedServiceCategories];
+
             renderServiceCategoryList();
+
+            // Die Auswahl steuert, welche Prüfpläne im Bericht angeboten
+            // werden (UVV / Wartung / Einweisung) — nach jeder Änderung neu
+            // bewerten, sonst passt die Checkliste nicht zur Kategorie.
+            if (typeof window.evaluateChecklistVisibility === 'function') {
+                try { window.evaluateChecklistVisibility(); } catch (e) {}
+            }
         }
 
         window.renderServiceCategoryList = function () {

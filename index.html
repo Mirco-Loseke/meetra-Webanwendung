@@ -34,7 +34,103 @@
             }
         })();
     </script>
-    <link rel="stylesheet" href="css/style.css?v=67">
+    <script>
+        // ==========================================================
+        // ALTGERAETE-WEICHE
+        // ==========================================================
+        // ACHTUNG: Dieser Block MUSS in ES5 geschrieben bleiben — kein `let`,
+        // kein `const`, keine Pfeilfunktionen, kein `?.`, keine Backticks.
+        // Er ist die einzige Datei, die auf einem alten Geraet noch laeuft;
+        // benutzt er selbst neue Syntax, scheitert er am selben Problem, das
+        // er melden soll, und der Nutzer sieht wieder gar nichts.
+        //
+        // Hintergrund: `lib/supabase.min.js` und 36 der 54 eigenen Module
+        // enthalten `?.` (Optional Chaining, ab iOS 13.4) und `||=`
+        // (logische Zuweisung, ab iOS 14). Trifft Safari beim EINLESEN auf
+        // unbekannte Syntax, ist das ein SyntaxError beim Parsen: nicht eine
+        // Zeile schlaegt fehl, die GANZE Datei wird verworfen. Danach ist
+        // `supabase` undefiniert und die App meldete bisher
+        // "Datenbank-Fehler … Bitte Internetverbindung pruefen" — eine
+        // Meldung, die auf die voellig falsche Faehrte fuehrt, weil mit dem
+        // Netz alles in Ordnung ist.
+        //
+        // Geprueft wird die Faehigkeit, nicht das Geraet: `new Function`
+        // laesst den Browser den Schnipsel einlesen, ohne ihn auszufuehren.
+        // Kein Abklopfen des User-Agent — das raet nur und liegt bei jedem
+        // neuen Geraet wieder daneben.
+        (function () {
+            var kannNeueSyntax = true;
+            try { new Function('var a = {}; return a?.b;'); } catch (e) { kannNeueSyntax = false; }
+            try { new Function('var a = 0; a ||= 1; return a;'); } catch (e) { kannNeueSyntax = false; }
+            if (kannNeueSyntax) return;
+
+            // Merker fuer spaeter: der Supabase-Fehler weiter unten im
+            // index.html soll dann NICHT zusaetzlich seine irrefuehrende
+            // Netzwerk-Meldung werfen.
+            window.__meetraAltesGeraet = true;
+
+            // iOS-Version nur zur Anzeige — sie entscheidet nichts.
+            var version = '';
+            try {
+                var m = navigator.userAgent.match(/OS (\d+)[._](\d+)/);
+                if (m) version = m[1] + '.' + m[2];
+            } catch (e) {}
+
+            function zeigeHinweis() {
+                if (document.getElementById('altgeraet-hinweis')) return;
+                var box = document.createElement('div');
+                box.id = 'altgeraet-hinweis';
+                box.setAttribute('style', 'position:fixed; inset:0; top:0; left:0; right:0; bottom:0; z-index:2147483647; background:#0b1220; color:#e5e7eb; display:flex; align-items:center; justify-content:center; padding:24px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif; -webkit-box-sizing:border-box; box-sizing:border-box;');
+
+                var inner = document.createElement('div');
+                inner.setAttribute('style', 'max-width:520px; text-align:center;');
+
+                var h = document.createElement('h1');
+                h.setAttribute('style', 'font-size:22px; line-height:1.3; margin:0 0 14px 0; color:#fff;');
+                h.appendChild(document.createTextNode('Dieses Gerät ist zu alt für die App'));
+
+                var p1 = document.createElement('p');
+                p1.setAttribute('style', 'font-size:16px; line-height:1.55; margin:0 0 14px 0; color:#cbd5e1;');
+                p1.appendChild(document.createTextNode(
+                    'Die meetra Webapp benötigt mindestens iOS 15.4. Der Browser auf diesem Gerät'
+                    + (version ? ' (iOS ' + version + ')' : '')
+                    + ' kann Teile des Programmcodes nicht lesen — die App würde nur leere oder halb aufgebaute Seiten zeigen.'
+                ));
+
+                var p2 = document.createElement('p');
+                p2.setAttribute('style', 'font-size:15px; line-height:1.55; margin:0 0 22px 0; color:#94a3b8;');
+                p2.appendChild(document.createTextNode(
+                    'Es liegt NICHT an der Internetverbindung und nicht an der Datenbank. '
+                    + 'Falls für dieses iPad noch ein Systemupdate angeboten wird, hilft das — sonst wird ein neueres Gerät gebraucht.'
+                ));
+
+                var btn = document.createElement('button');
+                btn.setAttribute('type', 'button');
+                btn.setAttribute('style', 'background:rgba(255,255,255,0.08); color:#e5e7eb; border:1px solid rgba(255,255,255,0.18); border-radius:10px; padding:12px 20px; font-size:15px; cursor:pointer; -webkit-appearance:none;');
+                btn.appendChild(document.createTextNode('Trotzdem versuchen'));
+                btn.onclick = function () {
+                    if (box.parentNode) box.parentNode.removeChild(box);
+                };
+
+                inner.appendChild(h);
+                inner.appendChild(p1);
+                inner.appendChild(p2);
+                inner.appendChild(btn);
+                box.appendChild(inner);
+                document.body.appendChild(box);
+            }
+
+            // Der <body> existiert an dieser Stelle noch nicht. Der Listener
+            // wird aus DIESEM Block heraus gesetzt und ueberlebt deshalb,
+            // auch wenn spaeter jede andere Datei am Parser scheitert.
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', zeigeHinweis, false);
+            } else {
+                zeigeHinweis();
+            }
+        })();
+    </script>
+    <link rel="stylesheet" href="css/style.css?v=68">
 
     <!-- ========================================================= -->
     <!-- ============ EINBINDUNG DER HTML-BAUSTEINE ============== -->
@@ -216,21 +312,7 @@
 
                     <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 12px; backdrop-filter: blur(12px);">
                         <div style="font-size: 0.78rem; font-weight: 800; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.75rem;">Hauptmenü — Ansichten</div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-home"> Startseite</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-tasks"> Aufgaben</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-machines"> Maschinen</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-workshop"> Werkstatt</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-service"> Service</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-protocols"> Protokolle</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-settings-etiketten"> Etikettendrucker</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-documents"> Dokumente</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-listen"> Listen</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-history"> Historie</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-accounting"> Buchhaltung</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-calendar"> Kalender</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-settings"> Einstellungen</label>
-                        </div>
+                        <div id="perm-sidebar-pages" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"></div>
                     </div>
 
                     <div id="perm-settings-subpages-box" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 12px; backdrop-filter: blur(12px);">
@@ -1220,12 +1302,6 @@
                                                     <button class="calendar-tab-btn active" id="btn-protocol-tab-protocols"
                                                         onclick="switchServicePage('protocols')">Protokolle</button>
                                                 </div>
-                                                <div class="calendar-view-tabs" style="margin-bottom: 0;">
-                                                    <button class="calendar-tab-btn active" id="btn-protocol-view-board"
-                                                        onclick="window.switchProtocolView('board')">Board</button>
-                                                    <button class="calendar-tab-btn" id="btn-protocol-view-list"
-                                                        onclick="window.switchProtocolView('list')">Liste</button>
-                                                </div>
                                             </div>
                                             <div class="view-header-right" style="gap: 16px;">
                                                 <!-- Filter Group -->
@@ -1250,26 +1326,6 @@
                                                 style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; background: rgba(255,255,255,0.02); border-radius: 24px; border: 1px dashed rgba(255,255,255,0.1);">
                                                 <p style="color: rgba(255,255,255,0.4); font-size: 1.1rem;">Lade Protokolle...</p>
                                             </div>
-                                        </div>
-                                    </div>
-
-                                    <div id="protocol-list-view" class="hidden">
-                                        <div class="glass-card"
-                                            style="padding: 0.75rem; background: transparent; border: none; box-shadow: none;">
-                                            <table class="task-table" style="border-collapse: separate; border-spacing: 0 10px;">
-                                                <thead>
-                                                    <tr>
-                                                        <th style="min-width: 200px;">Maschine</th>
-                                                        <th>Datum</th>
-                                                        <th>Typ</th>
-                                                        <th>Status</th>
-                                                        <th style="text-align: right;">Aktionen</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="protocol-table-body">
-                                                    <!-- Populated by JS -->
-                                                </tbody>
-                                            </table>
                                         </div>
                                     </div>
                                 </section>
@@ -1479,6 +1535,11 @@
                                                         </svg>
                                                         <input type="range" min="0.1" max="10" step="0.1" value="1.0" id="cinema-speed-slider">
                                                     </div>
+                                                    <label id="cinema-workshop-ui" class="cinema-workshop-ui" title="Werkstatt-Liste im Kino-Modus anzeigen">
+                                                        <input type="checkbox" id="cinema-workshop-toggle" checked
+                                                            onchange="window.setCinemaWorkshopVisible(this.checked)">
+                                                        <span>Werkstatt</span>
+                                                    </label>
                                                     <div id="cinema-cols-ui" class="cinema-cols-ui" title="Aufgaben nebeneinander">
                                                         <button type="button" class="cinema-col-btn" data-cols="1" onclick="window.setCinemaColumns(1)">1</button>
                                                         <button type="button" class="cinema-col-btn active" data-cols="2" onclick="window.setCinemaColumns(2)">2</button>
@@ -1545,7 +1606,19 @@
                                     Vorgänge
                                 </h1>
                             </div>
-                            <div class="view-header-right" style="display: flex; align-items: center; gap: 12px;">
+                            <div class="view-header-right" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                                <div style="position: relative; display: flex; align-items: center;">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute; left:12px; pointer-events:none;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                    <input type="text" id="process-search-input" class="glass-input" autocomplete="off"
+                                        placeholder="Suchen: Adresse, Titel, Maschine..."
+                                        oninput="window.renderProcesses('standalone-processes-container')"
+                                        style="width: 260px; max-width: 42vw; padding-left: 38px; padding-right: 30px; height: 40px;">
+                                    <button type="button" title="Suche leeren"
+                                        onclick="const i=document.getElementById('process-search-input'); i.value=''; window.renderProcesses('standalone-processes-container'); i.focus();"
+                                        style="position:absolute; right:8px; background:none; border:none; color:rgba(255,255,255,0.4); cursor:pointer; padding:4px; display:flex; align-items:center;">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    </button>
+                                </div>
                                 <div class="calendar-view-tabs" style="margin-bottom: 0;">
                                     <button class="calendar-tab-btn active" id="btn-process-tab-all"
                                         onclick="window.filterProcessesByUser('all')">Vorgänge</button>
@@ -1907,7 +1980,7 @@
                                 </label>
 
                                 <div id="beschriftung-stueckliste-editor" class="hidden" style="display:flex; flex-direction:column; gap: 0.6rem;">
-                                    <div style="display:grid; grid-template-columns: 1fr 1.3fr 1.3fr 70px 80px 32px; gap:6px; font-size:0.68rem; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.4px; padding: 0 2px;">
+                                    <div class="beschriftung-stueckliste-head" style="display:grid; grid-template-columns: 1fr 1.3fr 1.3fr 70px 80px 32px; gap:6px; font-size:0.68rem; color:rgba(255,255,255,0.35); text-transform:uppercase; letter-spacing:0.4px; padding: 0 2px;">
                                         <span>Art.-Nr.</span><span>Bez. 1</span><span>Bez. 2</span><span>Menge</span><span>Einheit</span><span></span>
                                     </div>
                                     <div id="beschriftung-stueckliste-rows" style="display:flex; flex-direction:column; gap:6px;"></div>
@@ -2442,9 +2515,14 @@
             </div>
 
             <div class="user-list-container">
+                <!-- Alle elf Gruppen tragen `open`. Ohne das Attribut startet ein
+                     <details> ZUGEKLAPPT - die Seite zeigte dann nur elf
+                     Gruppentitel und darunter nichts, obwohl die Kategorien
+                     korrekt geladen und eingehaengt waren. Wer hier eine
+                     Gruppe ergaenzt: `open` nicht vergessen. -->
                 <div class="categories-grid">
                     <div class="category-group">
-                        <details class="category-group-details">
+                        <details class="category-group-details" open>
                             <summary class="category-group-title">
                                 <div class="group-title-content">
                                     <div class="group-icon-wrapper" id="icon-group-machine"
@@ -2472,7 +2550,7 @@
                     </div>
 
                     <div class="category-group">
-                        <details class="category-group-details">
+                        <details class="category-group-details" open>
                             <summary class="category-group-title">
                                 <div class="group-title-content">
                                     <div class="group-icon-wrapper" id="icon-group-service"
@@ -2496,7 +2574,7 @@
                     </div>
 
                     <div class="category-group">
-                        <details class="category-group-details">
+                        <details class="category-group-details" open>
                             <summary class="category-group-title">
                                 <div class="group-title-content">
                                     <div class="group-icon-wrapper" id="icon-group-contact"
@@ -2522,7 +2600,7 @@
                     </div>
 
                     <div class="category-group">
-                        <details class="category-group-details">
+                        <details class="category-group-details" open>
                             <summary class="category-group-title">
                                 <div class="group-title-content">
                                     <div class="group-icon-wrapper" id="icon-group-address_type"
@@ -2546,7 +2624,7 @@
                     </div>
 
                     <div class="category-group">
-                        <details class="category-group-details">
+                        <details class="category-group-details" open>
                             <summary class="category-group-title">
                                 <div class="group-title-content">
                                     <div class="group-icon-wrapper" id="icon-group-link"
@@ -2570,7 +2648,7 @@
                     </div>
 
                     <div class="category-group">
-                        <details class="category-group-details">
+                        <details class="category-group-details" open>
                             <summary class="category-group-title">
                                 <div class="group-title-content">
                                     <div class="group-icon-wrapper" id="icon-group-document"
@@ -2597,7 +2675,7 @@
                     </div>
 
                     <div class="category-group">
-                        <details class="category-group-details">
+                        <details class="category-group-details" open>
                             <summary class="category-group-title">
                                 <div class="group-title-content">
                                     <div class="group-icon-wrapper" id="icon-group-manufacturer"
@@ -2622,7 +2700,7 @@
                     </div>
 
                     <div class="category-group">
-                        <details class="category-group-details">
+                        <details class="category-group-details" open>
                             <summary class="category-group-title">
                                 <div class="group-title-content">
                                     <div class="group-icon-wrapper" id="icon-group-series"
@@ -2647,7 +2725,7 @@
                     </div>
 
                     <div class="category-group">
-                        <details class="category-group-details">
+                        <details class="category-group-details" open>
                             <summary class="category-group-title">
                                 <div class="group-title-content">
                                     <div class="group-icon-wrapper" id="icon-group-equipment"
@@ -2670,7 +2748,7 @@
                     </div>
 
                     <div class="category-group">
-                        <details class="category-group-details">
+                        <details class="category-group-details" open>
                             <summary class="category-group-title">
                                 <div class="group-title-content">
                                     <div class="group-icon-wrapper" id="icon-group-status"
@@ -2694,7 +2772,7 @@
                     </div>
 
                     <div class="category-group">
-                        <details class="category-group-details">
+                        <details class="category-group-details" open>
                             <summary class="category-group-title">
                                 <div class="group-title-content">
                                     <div class="group-icon-wrapper" id="icon-group-area"
@@ -3766,7 +3844,24 @@
             window.supabaseClient = supabaseClient; // Make global for debugging
         } catch (err) {
             console.error('Supabase initialization critical error:', err);
-            window.showToast('Datenbank-Fehler: ' + err.message + '\nBitte prüfen Sie Ihre Internetverbindung und laden Sie die Seite neu.');
+            // Auf einem zu alten Geraet steht der erklaerende Hinweis bereits
+            // auf dem Bildschirm (Altgeraete-Weiche im <head>). Dann hier
+            // schweigen, statt denselben Sachverhalt ein zweites Mal und
+            // obendrein falsch als Netzwerkproblem zu melden.
+            if (!window.__meetraAltesGeraet) {
+                // Frueher stand hier pauschal "Bitte Internetverbindung
+                // pruefen" — auch dann, wenn das Netz einwandfrei war und in
+                // Wahrheit nur lib/supabase.min.js fehlte oder unvollstaendig
+                // im Cache lag. Das hat die Fehlersuche wiederholt in die
+                // falsche Richtung geschickt, deshalb jetzt getrennt.
+                const bibliothekFehlt = /not found|failed to load/i.test(err.message || '');
+                window.showToast(bibliothekFehlt
+                    ? 'Die Programmdatei für die Datenbank konnte nicht geladen werden.\n\n'
+                      + 'Das ist KEIN Verbindungsproblem. Meist liegt eine beschädigte Kopie im Zwischenspeicher.\n\n'
+                      + 'Abhilfe: Einstellungen → Safari → Erweitert → Website-Daten → Eintrag dieser App löschen, '
+                      + 'danach die Seite neu laden.'
+                    : 'Datenbank-Fehler: ' + err.message + '\nBitte prüfen Sie Ihre Internetverbindung und laden Sie die Seite neu.');
+            }
         }
 
         // Verhindert endloses Hängen, wenn das Gerät zwar mit einem WLAN verbunden ist,
@@ -3781,25 +3876,25 @@
         };
     </script>
     <script src="js/dashboard.js?v=1"></script>
-    <script src="js/app-core.js?v=2"></script>
-    <script src="js/app-init.js?v=9"></script>
+    <script src="js/app-core.js?v=3"></script>
+    <script src="js/app-init.js?v=10"></script>
     <script src="js/settings-uvv-plans.js?v=1"></script>
     <script src="js/machine-details-modal.js?v=1"></script>
     <script src="js/machine-modal.js?v=1"></script>
-    <script src="js/service-report-form.js?v=4"></script>
-    <script src="js/service-list.js?v=1"></script>
+    <script src="js/service-report-form.js?v=6"></script>
+    <script src="js/service-list.js?v=2"></script>
     <script src="js/history-modal.js?v=2"></script>
-    <script src="js/calendar-events.js?v=3"></script>
+    <script src="js/calendar-events.js?v=4"></script>
     <script src="js/processes-ui.js?v=10"></script>
     <script src="js/process-messages.js?v=1"></script>
     <script src="js/process-machine-select.js?v=1"></script>
     <script src="js/customer-matching.js?v=1"></script>
     <script src="js/ui-modals.js?v=1"></script>
-    <script src="js/processes.js?v=113"></script>
+    <script src="js/processes.js?v=115"></script>
     <script src="js/service-reports.js?v=1"></script>
     <script src="js/service-entries.js?v=5"></script>
     <script src="js/service-picker.js?v=1"></script>
-    <script src="js/worklog-tables.js?v=2"></script>
+    <script src="js/worklog-tables.js?v=3"></script>
     <script src="js/signature-pads.js?v=1"></script>
     <script src="js/servicebericht-pdf.js?v=1"></script>
     <!-- Modal: Service Action Choice (View or Create) - Moved to root for better centering -->
@@ -4333,8 +4428,8 @@
                                         </button>
                                     </div>
                                 </label>
-                                <div style="overflow-x: auto; background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 8px; margin-top: 8px;">
-                                    <table style="width: 100%; border-collapse: collapse; min-width: 650px;">
+                                <div class="work-log-scroll" style="overflow-x: auto; background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 8px; margin-top: 8px;">
+                                    <table class="work-log-table" style="width: 100%; border-collapse: collapse; min-width: 650px;">
                                         <thead>
                                             <tr style="border-bottom: 1.5px solid rgba(255,255,255,0.15);">
                                                 <th style="padding: 10px; text-align: left; font-size: 0.85rem; color: rgba(255,255,255,0.6); font-weight: 700; width: 18%;">Datum</th>
@@ -5564,13 +5659,13 @@
     </div>
     <!-- Load scripts -->
     <script src="js/machines-grouped.js?v=51"></script>
-    <script src="js/protocols.js?v=52"></script>
+    <script src="js/protocols.js?v=54"></script>
 
     </main>
     </div><!-- End main-wrapper -->
 
-    <script src="js/tasks.js?v=13"></script>
-    <script src="js/workshop-tasks.js?v=1"></script>
+    <script src="js/tasks.js?v=15"></script>
+    <script src="js/workshop-tasks.js?v=2"></script>
     <script src="js/task_templates.js?v=99"></script>
     <!-- Spracheingabe für die KI-Felder — muss vor den KI-Modulen stehen,
          die beim Aufbau ihrer Modals window.micButtonHtml() aufrufen. -->
@@ -6328,15 +6423,15 @@
     <script src="js/file-upload-service-r2.js"></script>
     <script src="js/accounting.js?v=42"></script>
     <script src="js/documents-r2.js?v=6"></script>
-    <script src="js/checklists.js?v=1"></script>
-    <script src="js/customers.js"></script>
+    <script src="js/checklists.js?v=2"></script>
+    <script src="js/customers.js?v=2"></script>
     <script src="js/addressbook.js?v=34"></script>
     <script src="js/ai-address-task.js?v=10"></script>
     <!-- Termine mit Teilnehmern: liefert die Bausteine, die Benachrichtigungen,
          Kalender und Routenplanung darunter benutzen. -->
     <script src="js/appointments.js?v=3"></script>
     <script src="js/notifications.js?v=7"></script>
-    <script src="js/calendar-widget.js?v=4"></script>
+    <script src="js/calendar-widget.js?v=5"></script>
     <!-- tasks.js und processes.js werden bereits weiter oben geladen (vor ihren
          jeweiligen Folgemodulen). Ein zweites Einbinden ließ beide Module doppelt
          laufen — mit doppelt registrierten Event-Handlern. -->
@@ -6344,7 +6439,7 @@
     <script src="js/routenplanung.js?v=13"></script>
     <script src="js/listen.js?v=12"></script>
     <script src="assets/data/meetra_logo_base64.js"></script>
-    <script src="js/labels.js"></script>
+    <script src="js/labels.js?v=2"></script>
     <script src="js/offline-service.js?v=1"></script>
     <script src="js/dropdown-position.js?v=5"></script>
     <!-- Wandelt native <select> in das einheitliche Dropdown um.
@@ -6522,7 +6617,6 @@
                                 <select id="email-status-select" style="display:none;">
                                     <option value="offen">Offen</option>
                                     <option value="in_bearbeitung">In Bearbeitung</option>
-                                    <option value="wartet">Wartet</option>
                                     <option value="erledigt">Erledigt</option>
                                 </select>
                                 <div id="email-status-select-trigger" class="glass-select" style="cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="window.toggleProcessSelectDropdown('email','status')">
@@ -6765,8 +6859,8 @@
 
         <!-- PROCESS STEPS MODAL -->
         <div id="process-steps-modal" class="modal-new hidden" style="z-index: 10001; display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);">
-            <div class="modal-content glass-card" style="max-width: 900px; width: 94%; max-height: 88vh; overflow-y: auto; padding: 2rem; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px;">
+            <div class="modal-content glass-card" style="max-width: 900px; width: 94%; max-height: 88vh; display: flex; flex-direction: column; overflow: hidden; padding: 2rem; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; flex-shrink: 0;">
                     <div>
                         <h2 style="margin: 0; color: #fff; font-size: 1.6rem; font-weight: 800;">Schritte</h2>
                         <div id="steps-modal-subtitle" style="color: rgba(255,255,255,0.45); font-size: 0.9rem; margin-top: 4px; word-break: break-word;"></div>
@@ -6775,12 +6869,14 @@
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
-                <div id="steps-modal-steps-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
-                <button type="button" onclick="window.addProcessStep('steps-modal')" style="margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; background: rgba(52,211,153,0.12); color: #34d399; border: 1px solid rgba(52,211,153,0.35); border-radius: 10px; padding: 10px 16px; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(52,211,153,0.22)'" onmouseout="this.style.background='rgba(52,211,153,0.12)'">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    Schritt hinzufügen
-                </button>
-                <div style="display: flex; gap: 15px; margin-top: 22px;">
+                <div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; margin: 0 -0.5rem; padding: 0 0.5rem;">
+                    <div id="steps-modal-steps-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+                    <button type="button" onclick="window.addProcessStep('steps-modal')" style="margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; background: rgba(52,211,153,0.12); color: #34d399; border: 1px solid rgba(52,211,153,0.35); border-radius: 10px; padding: 10px 16px; font-size: 0.88rem; font-weight: 700; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(52,211,153,0.22)'" onmouseout="this.style.background='rgba(52,211,153,0.12)'">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        Schritt hinzufügen
+                    </button>
+                </div>
+                <div style="display: flex; gap: 15px; margin-top: 22px; flex-shrink: 0;">
                     <button type="button" class="btn-secondary" onclick="window.closeProcessStepsModal()" style="flex: 1; height: 44px; font-size: 0.92rem; font-weight: 700;">Abbrechen</button>
                     <button type="button" class="btn-primary" onclick="window.saveProcessStepsModal()" style="flex: 1; height: 44px; font-size: 0.92rem;">SPEICHERN</button>
                 </div>
@@ -7181,7 +7277,7 @@
     <!-- /@partial:modals/picker-modals.html -->
 
 <script src="js/auth.js"></script>
-<script src="js/users.js?v=1"></script>
+<script src="js/users.js?v=2"></script>
 <script src="js/machines-grouped.js?v=1"></script>
 <script src="js/voice-dictation.js"></script>
 </body>

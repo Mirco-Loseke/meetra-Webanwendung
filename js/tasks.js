@@ -18,6 +18,8 @@
     let viewMode = 'board'; // 'board' or 'list'
     let taskIsDirty = false;
     function onTaskFieldChange() { taskIsDirty = true; }
+    // Reload-Schutz: der Merker ist modul-lokal, deshalb als Prueffunktion anmelden.
+    if (typeof window.registerUnsavedCheck === 'function') window.registerUnsavedCheck(() => taskIsDirty);
     let filters = {
         machine: 'all',
         search: '',
@@ -206,6 +208,7 @@
         }
 
         if (typeof window.applyCinemaColumns === 'function') window.applyCinemaColumns();
+        if (typeof window.applyCinemaWorkshopVisibility === 'function') window.applyCinemaWorkshopVisibility();
     }
     window.renderTasks = renderTasks;
 
@@ -1714,6 +1717,20 @@
         window.applyCinemaColumns();
     };
 
+    // Werkstatt-Liste im Kino-Modus ein-/ausblenden (Haken neben der
+    // Spaltenwahl). Die Wahl bleibt im localStorage; ausserhalb des
+    // Kino-Modus ist die Liste immer sichtbar.
+    window.applyCinemaWorkshopVisibility = function () {
+        const visible = localStorage.getItem('cinemaShowWorkshop') !== '0';
+        document.body.classList.toggle('cinema-hide-workshop', !visible);
+        const cb = document.getElementById('cinema-workshop-toggle');
+        if (cb) cb.checked = visible;
+    };
+    window.setCinemaWorkshopVisible = function (visible) {
+        localStorage.setItem('cinemaShowWorkshop', visible ? '1' : '0');
+        window.applyCinemaWorkshopVisibility();
+    };
+
     window.toggleCinemaMode = function () {
         const btn = document.getElementById('btn-cinema-toggle');
         const floatingBtn = document.getElementById('cinema-floating-btn');
@@ -1725,6 +1742,7 @@
                 window.toggleFocusMode();
             }
             document.body.classList.add('cinema-mode-active');
+            window.applyCinemaWorkshopVisibility();
             btn.classList.add('active');
             if (floatingBtn) floatingBtn.classList.add('active');
             startCinemaScrolling();

@@ -236,9 +236,21 @@ window.populateChecklistSelector = function() {
     const getAssignedSeries = (t) => planAssignments[t.id]?.machine_series || t.machine_series || [];
     const matchesMachineSeries = (t) => {
         const assignedSeries = getAssignedSeries(t);
-        return assignedSeries.length
-            ? !!(selectedMachine && selectedMachine.machine_series && assignedSeries.includes(selectedMachine.machine_series))
-            : machineName.toLowerCase().includes((t.machine_model || '').toLowerCase());
+        if (assignedSeries.length) {
+            return !!(selectedMachine && selectedMachine.machine_series && assignedSeries.includes(selectedMachine.machine_series));
+        }
+        // "generic" ist KEIN Maschinenmodell, sondern das Kennzeichen für einen
+        // universellen Plan — das UVV-Prüfprotokoll gilt für jede Maschine.
+        // Vorher lief der Wert in den Textvergleich unten hinein: gesucht wurde
+        // eine Maschine, deren Name "generic" enthält. Das trifft auf keine
+        // einzige zu, also galt der UVV-Plan als "passt nicht", wurde nicht mehr
+        // als (Empfohlen) markiert und vor allem nicht mehr automatisch
+        // angehakt — im Servicebericht blieben die Prüfpunkte deshalb leer.
+        // (Früher war UVV an dieser Stelle fest auf "uvv-allgemein" verdrahtet;
+        // beim Vereinheitlichen auf diese Regel ist der Sonderfall untergegangen.)
+        const modell = (t.machine_model || '').toLowerCase();
+        if (!modell || modell === 'generic') return true;
+        return machineName.toLowerCase().includes(modell);
     };
 
     // Alle Pläne (eingebaute + in den Einstellungen angelegte), gefiltert auf:

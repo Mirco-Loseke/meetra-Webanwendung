@@ -44,12 +44,6 @@
                                     <button class="calendar-tab-btn active" id="btn-protocol-tab-protocols"
                                         onclick="switchServicePage('protocols')">Protokolle</button>
                                 </div>
-                                <div class="calendar-view-tabs" style="margin-bottom: 0;">
-                                    <button class="calendar-tab-btn active" id="btn-protocol-view-board"
-                                        onclick="window.switchProtocolView('board')">Board</button>
-                                    <button class="calendar-tab-btn" id="btn-protocol-view-list"
-                                        onclick="window.switchProtocolView('list')">Liste</button>
-                                </div>
                             </div>
                             <div class="view-header-right" style="gap: 16px;">
                                 <!-- Filter Group -->
@@ -74,26 +68,6 @@
                                 style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; background: rgba(255,255,255,0.02); border-radius: 24px; border: 1px dashed rgba(255,255,255,0.1);">
                                 <p style="color: rgba(255,255,255,0.4); font-size: 1.1rem;">Lade Protokolle...</p>
                             </div>
-                        </div>
-                    </div>
-
-                    <div id="protocol-list-view" class="hidden">
-                        <div class="glass-card"
-                            style="padding: 0.75rem; background: transparent; border: none; box-shadow: none;">
-                            <table class="task-table" style="border-collapse: separate; border-spacing: 0 10px;">
-                                <thead>
-                                    <tr>
-                                        <th style="min-width: 200px;">Maschine</th>
-                                        <th>Datum</th>
-                                        <th>Typ</th>
-                                        <th>Status</th>
-                                        <th style="text-align: right;">Aktionen</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="protocol-table-body">
-                                    <!-- Populated by JS -->
-                                </tbody>
-                            </table>
                         </div>
                     </div>
                 </section>

@@ -86,4 +86,39 @@
             document.getElementById(overlayId + '-save').onclick = () => { el.remove(); onSave(); };
         };
 
+        // ==========================================
+        // RELOAD-SCHUTZ (beforeunload)
+        // ==========================================
+        // showUnsavedDialog oben greift nur beim Schliessen eines Fensters.
+        // Beim Neuladen (F5), Zurueck oder Tab-Schliessen gab es bislang gar
+        // keine Rueckfrage — der halb ausgefuellte Servicebericht war weg.
+        //
+        // Die Dirty-Merker der Module (serviceberichtIsDirty, taskIsDirty,
+        // protocolIsDirty) sind modul-lokal und von aussen nicht lesbar.
+        // Deshalb meldet jedes Modul hier eine Prueffunktion an; sie wird
+        // erst beim Verlassen aufgerufen.
+        //
+        // Achtung: Den Text der Rueckfrage bestimmt der Browser, nicht wir —
+        // returnValue muss trotzdem gesetzt werden, sonst erscheint sie nicht.
+        window._unsavedChecks = window._unsavedChecks || [];
+
+        window.registerUnsavedCheck = function (fn) {
+            if (typeof fn === 'function' && window._unsavedChecks.indexOf(fn) === -1) {
+                window._unsavedChecks.push(fn);
+            }
+        };
+
+        window.hasUnsavedChanges = function () {
+            return window._unsavedChecks.some(fn => {
+                try { return !!fn(); } catch (e) { return false; }
+            });
+        };
+
+        window.addEventListener('beforeunload', function (e) {
+            if (!window.hasUnsavedChanges()) return;
+            e.preventDefault();
+            e.returnValue = '';
+            return '';
+        });
+
         console.log('Inline Script Loaded');

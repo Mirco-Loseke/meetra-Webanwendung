@@ -17,6 +17,8 @@
     let protocolPhotos = [];
     let customCheckpoints = [];
     let protocolIsDirty = false; // Tracks unsaved changes
+    // Reload-Schutz: der Merker ist modul-lokal, deshalb als Prueffunktion anmelden.
+    if (typeof window.registerUnsavedCheck === 'function') window.registerUnsavedCheck(() => protocolIsDirty);
     let removedProtocolPhotos = [];
     let sessionUploadedPhotos = [];
     let openedMachineId = null;
@@ -2342,35 +2344,9 @@
     let allLoadedProtocols = [];
     let protocolFilterType = 'all'; // 'all', 'intake', 'acceptance'
     let protocolSearchTerm = '';
-    window.protocolViewMode = 'board';
-
-    window.switchProtocolView = function (view) {
-        window.protocolViewMode = view;
-
-        const boardBtn = document.getElementById('btn-protocol-view-board');
-        const listBtn = document.getElementById('btn-protocol-view-list');
-        const boardView = document.getElementById('protocol-board-view');
-        const listView = document.getElementById('protocol-list-view');
-
-        if (view === 'board') {
-            if (boardBtn) boardBtn.classList.add('active');
-            if (listBtn) listBtn.classList.remove('active');
-            if (boardView) boardView.classList.remove('hidden');
-            if (listView) listView.classList.add('hidden');
-        } else {
-            if (boardBtn) boardBtn.classList.remove('active');
-            if (listBtn) listBtn.classList.add('active');
-            if (boardView) boardView.classList.add('hidden');
-            if (listView) listView.classList.remove('hidden');
-        }
-
-        applyFilters();
-    };
-
     window.fetchProtocols = async function () {
         const boardContainer = document.getElementById('protocol-list-container');
-        const listContainer = document.getElementById('protocol-table-body');
-        if (!boardContainer && !listContainer) return;
+        if (!boardContainer) return;
 
         try {
             // Fetch both types + photo counts
@@ -2445,7 +2421,6 @@
 
     function renderProtocols(protocols) {
         const boardContainer = document.getElementById('protocol-list-container');
-        const listBody = document.getElementById('protocol-table-body');
 
         if (!boardContainer) return;
 
@@ -2459,11 +2434,10 @@
                     <p style="color: rgba(255,255,255,0.4); font-size: 1.1rem;">${message}</p>
                 </div>
             `;
-            if (listBody) listBody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 2rem; opacity: 0.6;">${message}</td></tr>`;
             return;
         }
 
-        if (window.protocolViewMode === 'board') {
+        {
             // Render Board (like machine cards)
             const cardsHtml = protocols.map(p => {
                 const isAcceptance = p.type === 'acceptance';
@@ -2596,74 +2570,6 @@
                 `;
             }
             boardContainer.innerHTML = boardHtml;
-        } else {
-            // Render List
-            listBody.innerHTML = protocols.map(p => {
-                const dateStr = new Date(p.created_at).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
-                const timeStr = new Date(p.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-                const statusLabel = p.status === 'completed' ? 'Abgeschlossen' : 'Entwurf';
-                const statusClass = p.status === 'completed' ? 'completed' : 'in-progress';
-                const isAcceptance = p.type === 'acceptance';
-                const typeLabel = isAcceptance ? 'Abnahmeprotokoll' : 'Eingangsprotokoll';
-                const badgeColor = p.status === 'completed' ? '#10b981' : '#f59e0b';
-                // Typ-Farbe: Abnahmeprotokoll = Orange, Eingangsprotokoll = Blau
-                const typeIconColor = isAcceptance ? '#fb923c' : '#60a5fa';
-                const iconPath = isAcceptance
-                    ? '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M9 15l2 2 4-4"></path>'
-                    : '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline>';
-
-                return `
-                    <tr style="cursor: pointer; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: inset 5px 0 0 0 ${badgeColor}, inset 0 1.5px 0 0 ${badgeColor}66, inset -1.5px 0 0 0 ${badgeColor}66, inset 0 -1.5px 0 0 ${badgeColor}66, 0 10px 30px rgba(0,0,0,0.4); border-radius: 16px; overflow: hidden;" onclick="${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')">
-                        <td data-label="Maschine" style="color: var(--color-primary-green); font-weight: 700; font-size: 0.98rem; line-height: 1.3;">
-                            ${p.machines ? `
-                                <div style="font-weight: 900; font-family: 'Outfit', sans-serif; font-size: 1.1rem;">${[p.machines.manufacturer, p.machines.name].filter(Boolean).join(' ')}</div>
-                                <div style="font-size: 0.85rem; opacity: 0.8; text-transform: uppercase;">
-                                    ${[p.machines.serial ? `#${p.machines.serial}` : null, p.machines.year ? `(${p.machines.year})` : null].filter(Boolean).join(' ')}
-                                </div>` : 'Unbekannt'}
-                        </td>
-                        <td data-label="Datum">
-                            <div style="font-weight: 600;">${dateStr}</div>
-                            <div style="font-size: 0.8rem; color: rgba(255,255,255,0.4);">${timeStr} Uhr</div>
-                        </td>
-                        <td data-label="Typ">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <div style="display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 8px; background: ${typeIconColor}22; color: ${typeIconColor};">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        ${iconPath}
-                                    </svg>
-                                </div>
-                                <span style="font-weight: 600; font-size: 0.95rem; color: ${typeIconColor};">${typeLabel}</span>
-                            </div>
-                        </td>
-                        <td data-label="Status">
-                            <span class="status-badge ${statusClass}" style="background: ${badgeColor}25; color: ${badgeColor}; border: 1px solid ${badgeColor}60; border-radius: 20px; padding: 4px 12px; font-size: 0.8rem; font-weight: 800;">${statusLabel}</span>
-                        </td>
-                        <td data-label="Aktionen" onclick="event.stopPropagation()">
-                            <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: flex-end;">
-                                <button onclick="event.stopPropagation(); ${isAcceptance ? 'window.openAcceptanceProtocol' : 'window.openIntakeProtocol'}('${p.machine_id}', '${p.id}')" title="Ansehen"
-                                    style="width:36px; height:36px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
-                                    onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                </button>
-                                ${p.status === 'completed' ? `
-                                <button onclick="event.stopPropagation(); window.openProtocolPDF('${p.machine_id}', '${p.id}', '${p.type}')" title="PDF öffnen"
-                                    style="width:36px; height:36px; border-radius:50%; background: #ef4444; border: 1.5px solid #dc2626; color: #ffffff; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
-                                    onmouseover="this.style.background='#dc2626'; this.style.borderColor='#b91c1c';" onmouseout="this.style.background='#ef4444'; this.style.borderColor='#dc2626'">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                                </button>` : ''}
-                                <button class="delete-permission-required" onclick="event.stopPropagation(); window.deleteProtocol('${p.id}', '${p.type}')" title="Löschen"
-                                    style="width:36px; height:36px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;"
-                                    onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                        <polyline points="3 6 5 6 21 6"></polyline>
-                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
         }
 
     }

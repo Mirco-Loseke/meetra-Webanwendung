@@ -1377,11 +1377,11 @@
         if (!container) return;
         const rows = getCurrentBeschriftungPage().rows;
         container.innerHTML = rows.map((row, i) => `
-            <div style="display:grid; grid-template-columns: 1fr 1.3fr 1.3fr 70px 80px 32px; gap:6px;">
-                <input type="text" value="${escapeHtml(row.nummer)}" oninput="window.updateBeschriftungRow(${i}, 'nummer', this.value)" class="glass-form-input" style="height:34px; padding: 0 6px;">
-                <input type="text" value="${escapeHtml(row.bez1)}" oninput="window.updateBeschriftungRow(${i}, 'bez1', this.value)" class="glass-form-input" style="height:34px; padding: 0 6px;">
-                <input type="text" value="${escapeHtml(row.bez2)}" oninput="window.updateBeschriftungRow(${i}, 'bez2', this.value)" class="glass-form-input" style="height:34px; padding: 0 6px;">
-                <input type="text" value="${escapeHtml(row.menge)}" oninput="window.updateBeschriftungRow(${i}, 'menge', this.value)" class="glass-form-input" style="height:34px; padding: 0 6px; text-align:center;">
+            <div class="beschriftung-row" style="display:grid; grid-template-columns: 1fr 1.3fr 1.3fr 70px 80px 32px; gap:6px;">
+                <input type="text" placeholder="Art.-Nr." value="${escapeHtml(row.nummer)}" oninput="window.updateBeschriftungRow(${i}, 'nummer', this.value)" class="glass-form-input" style="height:34px; padding: 0 6px;">
+                <input type="text" placeholder="Bez. 1" value="${escapeHtml(row.bez1)}" oninput="window.updateBeschriftungRow(${i}, 'bez1', this.value)" class="glass-form-input" style="height:34px; padding: 0 6px;">
+                <input type="text" placeholder="Bez. 2" value="${escapeHtml(row.bez2)}" oninput="window.updateBeschriftungRow(${i}, 'bez2', this.value)" class="glass-form-input" style="height:34px; padding: 0 6px;">
+                <input type="text" placeholder="Menge" value="${escapeHtml(row.menge)}" oninput="window.updateBeschriftungRow(${i}, 'menge', this.value)" class="glass-form-input" style="height:34px; padding: 0 6px; text-align:center;">
                 <input type="text" value="${escapeHtml(row.einheit)}" placeholder="stk" oninput="window.updateBeschriftungRow(${i}, 'einheit', this.value)" class="glass-form-input" style="height:34px; padding: 0 6px; text-align:center;">
                 <button onclick="window.removeBeschriftungRow(${i})" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:6px; color:#ef4444; cursor:pointer; height:34px;">&times;</button>
             </div>

@@ -131,28 +131,42 @@
             const km    = data?.kilometer || '';
             const opt = (v) => `<option value="${v}"${typ === v ? ' selected' : ''}>${v}</option>`;
 
+            // "08:00 - 12:00" in zwei Felder zerlegen; von/bis haben Vorrang,
+            // falls der Datensatz sie schon einzeln enthaelt.
+            const normTime = (s) => {
+                const m = String(s == null ? '' : s).trim().match(/^(\d{1,2}):(\d{2})/);
+                return m ? String(m[1]).padStart(2, '0') + ':' + m[2] : '';
+            };
+            const zeitParts = String(zeit).split(/\s*-\s*/);
+            const von = normTime(data?.von ?? zeitParts[0]);
+            const bis = normTime(data?.bis ?? zeitParts[1]);
+
             const tr = document.createElement('tr');
             tr.className = 'service-work-log-row';
             tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
             tr.innerHTML = `
-                <td style="padding: 6px;">
+                <td data-label="Datum" style="padding: 6px;">
                     <input type="date" class="glass-form-input wl-datum" value="${escAttr(datum)}" style="padding: 6px 10px; height: 36px; border-radius: 8px; font-size: 0.85rem; width: 100%;">
                 </td>
-                <td style="padding: 6px;">
+                <td data-label="Typ" style="padding: 6px;">
                     <select class="glass-form-input wl-typ" style="padding: 6px 10px; height: 36px; border-radius: 8px; font-size: 0.85rem; width: 100%;">
                         ${opt('Anfahrt')}${opt('Arbeitszeit')}${opt('Abfahrt')}
                     </select>
                 </td>
-                <td style="padding: 6px;">
+                <td data-label="Pause" style="padding: 6px;">
                     <input type="text" class="glass-form-input wl-pause" value="${escAttr(pause)}" placeholder="z.B. 30 min" style="padding: 6px 10px; height: 36px; border-radius: 8px; font-size: 0.85rem; width: 100%;">
                 </td>
-                <td style="padding: 6px;">
-                    <input type="text" class="glass-form-input wl-zeit" value="${escAttr(zeit)}" placeholder="08:00 - 12:00" style="padding: 6px 10px; height: 36px; border-radius: 8px; font-size: 0.85rem; width: 100%;">
+                <td data-label="Fahr.- / Arbeitszeit" style="padding: 6px;">
+                    <div class="wl-time-range" style="display: flex; align-items: center; gap: 6px;">
+                        <input type="time" class="glass-form-input wl-von" value="${escAttr(von)}" aria-label="von" style="padding: 6px 8px; height: 36px; border-radius: 8px; font-size: 0.85rem; flex: 1; min-width: 0;">
+                        <span class="wl-time-sep" style="color: rgba(255,255,255,0.4);">–</span>
+                        <input type="time" class="glass-form-input wl-bis" value="${escAttr(bis)}" aria-label="bis" style="padding: 6px 8px; height: 36px; border-radius: 8px; font-size: 0.85rem; flex: 1; min-width: 0;">
+                    </div>
                 </td>
-                <td style="padding: 6px;">
-                    <input type="text" class="glass-form-input wl-kilometer" value="${escAttr(km)}" placeholder="km" style="padding: 6px 10px; height: 36px; border-radius: 8px; font-size: 0.85rem; width: 100%;">
+                <td data-label="Kilometer" style="padding: 6px;">
+                    <input type="text" class="glass-form-input wl-kilometer" value="${escAttr(km)}" placeholder="km" inputmode="decimal" style="padding: 6px 10px; height: 36px; border-radius: 8px; font-size: 0.85rem; width: 100%;">
                 </td>
-                <td style="padding: 6px; text-align: center;">
+                <td class="wl-action-cell" style="padding: 6px; text-align: center;">
                     <button type="button" class="btn-icon-circular delete" onclick="this.closest('tr').remove()" style="background: rgba(239, 68, 68, 0.1); border: 1.5px solid rgba(239, 68, 68, 0.2); color: #ef4444; width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(239, 68, 68, 0.25)'" onmouseout="this.style.background='rgba(239, 68, 68, 0.1)'">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path></svg>
                     </button>
@@ -168,10 +182,14 @@
                 const datum     = tr.querySelector('.wl-datum')?.value.trim() || '';
                 const typ       = tr.querySelector('.wl-typ')?.value.trim() || '';
                 const pause     = tr.querySelector('.wl-pause')?.value.trim() || '';
-                const zeit      = tr.querySelector('.wl-zeit')?.value.trim() || '';
+                const von       = tr.querySelector('.wl-von')?.value.trim() || '';
+                const bis       = tr.querySelector('.wl-bis')?.value.trim() || '';
+                // Weiterhin als "08:00 - 12:00" ablegen — PDF und Stundenuebersicht
+                // rechnen mit diesem Format (computeWorkLogDuration).
+                const zeit      = (von || bis) ? `${von} - ${bis}` : '';
                 const kilometer = tr.querySelector('.wl-kilometer')?.value.trim() || '';
                 if (datum || zeit || pause || kilometer) {
-                    data.push({ datum, typ, pause, zeit, kilometer });
+                    data.push({ datum, typ, pause, zeit, von, bis, kilometer });
                 }
             });
             return data;

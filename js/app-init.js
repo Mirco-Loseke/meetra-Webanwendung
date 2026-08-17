@@ -1456,6 +1456,14 @@
                             console.log('Interval changed, updating affected machines...');
                             await updateAffectedMachines(editingId, intervalValue);
                         }
+
+                        // Name geändert? Maschinen hängen per category_id (unkritisch), aber der
+                        // Kategorie-NAME steckt zusätzlich als Text in Serien-Kategorien und in
+                        // Dokumenten (machine_categories). Dort nachziehen, sonst greifen Filter/
+                        // Zuordnungen dieser Kategorie nicht mehr.
+                        if (!response.error && oldCat && oldCat.name && oldCat.name.trim() !== name) {
+                            await cascadeCategoryRename(oldCat.name, name);
+                        }
                     } else {
                         // INSERT — ans Ende der Liste dieses Typs anhängen
                         const sameTypeCats = (window.categoryList || []).filter(c => c.type === typeValue);
@@ -1475,6 +1483,52 @@
                         if (typeof fetchMachines === 'function') fetchMachines();
                     }
                 });
+            }
+
+            // Kategorie-Namen, die als Text (kommagetrennt) in categories.machine_categories
+            // (Serien) und documents.machine_categories hinterlegt sind, beim Umbenennen mitziehen.
+            // Vergleich case-insensitiv, Schreibweise wird auf den neuen Namen normalisiert.
+            async function cascadeCategoryRename(oldName, newName) {
+                const oldN = (oldName || '').trim();
+                const newN = (newName || '').trim();
+                if (!oldN || !newN || oldN.toLowerCase() === newN.toLowerCase()) {
+                    // gleicher Name (nur andere Groß/Kleinschreibung erlaubt) -> trotzdem normalisieren
+                    if (!oldN || !newN || oldN === newN) return;
+                }
+                const norm = s => (s || '').trim().toLowerCase();
+                // Ersetzt den alten Namen in einer kommagetrennten Liste; null = keine Änderung.
+                const replaceInList = (csv) => {
+                    const parts = (csv || '').split(',').map(s => s.trim()).filter(Boolean);
+                    let changed = false;
+                    const out = parts.map(p => {
+                        if (norm(p) === norm(oldN)) { changed = true; return newN; }
+                        return p;
+                    });
+                    return changed ? [...new Set(out)].join(', ') : null;
+                };
+                try {
+                    // 1) Serien-Kategorien
+                    const { data: series } = await supabaseClient
+                        .from('categories').select('id, machine_categories').eq('type', 'series');
+                    for (const s of (series || [])) {
+                        const upd = replaceInList(s.machine_categories);
+                        if (upd !== null) {
+                            await supabaseClient.from('categories').update({ machine_categories: upd }).eq('id', s.id);
+                        }
+                    }
+                    // 2) Dokumente
+                    const { data: docs } = await supabaseClient
+                        .from('documents').select('id, machine_categories').not('machine_categories', 'is', null);
+                    for (const d of (docs || [])) {
+                        const upd = replaceInList(d.machine_categories);
+                        if (upd !== null) {
+                            await supabaseClient.from('documents').update({ machine_categories: upd }).eq('id', d.id);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Kategorie-Umbenennung konnte nicht überall nachgezogen werden:', e);
+                    if (window.showToast) window.showToast('Kategorie umbenannt, aber Zuordnungen in Serien/Dokumenten evtl. nicht vollständig aktualisiert.');
+                }
             }
 
             async function updateAffectedMachines(categoryId, newInterval) {

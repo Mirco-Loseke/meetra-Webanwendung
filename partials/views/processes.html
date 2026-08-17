@@ -14,7 +14,19 @@
                     Vorgänge
                 </h1>
             </div>
-            <div class="view-header-right" style="display: flex; align-items: center; gap: 12px;">
+            <div class="view-header-right" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <div style="position: relative; display: flex; align-items: center;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute; left:12px; pointer-events:none;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="process-search-input" class="glass-input" autocomplete="off"
+                        placeholder="Suchen: Adresse, Titel, Maschine..."
+                        oninput="window.renderProcesses('standalone-processes-container')"
+                        style="width: 260px; max-width: 42vw; padding-left: 38px; padding-right: 30px; height: 40px;">
+                    <button type="button" title="Suche leeren"
+                        onclick="const i=document.getElementById('process-search-input'); i.value=''; window.renderProcesses('standalone-processes-container'); i.focus();"
+                        style="position:absolute; right:8px; background:none; border:none; color:rgba(255,255,255,0.4); cursor:pointer; padding:4px; display:flex; align-items:center;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
                 <div class="calendar-view-tabs" style="margin-bottom: 0;">
                     <button class="calendar-tab-btn active" id="btn-process-tab-all"
                         onclick="window.filterProcessesByUser('all')">Vorgänge</button>

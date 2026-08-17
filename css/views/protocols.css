@@ -1772,3 +1772,13 @@ tr.completed-task td {
 .task-quick-complete:hover {
     border-color: var(--success);
 }
+
+.task-quick-complete.completed {
+    background: var(--success);
+    border-color: var(--success);
+    color: #fff;
+}
+
+.task-quick-complete.completed svg {
+    color: #fff;
+}
