@@ -637,6 +637,32 @@
         // Reload-Schutz: der Merker ist modul-lokal, deshalb als Prueffunktion anmelden.
         if (typeof window.registerUnsavedCheck === 'function') window.registerUnsavedCheck(() => serviceberichtIsDirty);
 
+        // Der Merker wurde nirgends gesetzt: closeServiceberichtModal haengt die
+        // beiden Zuhoerer beim Schliessen zwar ab, angemeldet hat sie aber nie
+        // jemand. Dadurch blieb serviceberichtIsDirty immer false — weder die
+        // Rueckfrage beim Schliessen noch der Reload-Schutz kamen je zum Zug.
+        // Deshalb beim Oeffnen anmelden (und den Merker zuruecksetzen, weil das
+        // Fuellen der Felder per Skript keine Ereignisse ausloest).
+        // Achtung: js/service-entries.js definiert openServiceberichtModal und
+        // wird SPAETER geladen als diese Datei — deshalb erst beim
+        // DOMContentLoaded umhaengen, sonst waere hier noch nichts da.
+        document.addEventListener('DOMContentLoaded', function () {
+            const origOpenServicebericht = window.openServiceberichtModal;
+            if (typeof origOpenServicebericht !== 'function') return;
+            window.openServiceberichtModal = function () {
+                const res = origOpenServicebericht.apply(this, arguments);
+                serviceberichtIsDirty = false;
+                const modal = document.getElementById('servicebericht-modal');
+                if (modal) {
+                    modal.removeEventListener('input', onServiceberichtFieldChange);
+                    modal.removeEventListener('change', onServiceberichtFieldChange);
+                    modal.addEventListener('input', onServiceberichtFieldChange);
+                    modal.addEventListener('change', onServiceberichtFieldChange);
+                }
+                return res;
+            };
+        });
+
         function handleServiceFiles(files) {
             Array.from(files).forEach(file => {
                 serviceFiles.push(file);

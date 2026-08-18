@@ -1223,6 +1223,29 @@
     window.openAddressDetail = openDetail;
     window.openAddressForm = openAddressForm;
 
+    // Detailansicht neu laden, ohne Tab/Zustand zurückzusetzen — für das
+    // Live-Update (js/addressbook-live.js), wenn ein anderer Client etwas
+    // an Ansprechpartnern, Notizen o. ä. geändert hat.
+    window.refreshAddressDetail = async function () {
+        if (!state.currentId) return;
+        const el = document.getElementById('addressbook-detail-modal');
+        if (!el || !el.classList.contains('show')) return;
+        await loadDetailData(String(state.currentId));
+        renderDetail();
+    };
+
+    // Zugriff auf die Modul-Interna für js/addressbook-live.js. Bewusst
+    // schmal gehalten: nur was Auto-Speichern und Live-Update brauchen.
+    window.abInternals = {
+        state,
+        sb,
+        buildAddressPayload,
+        renderList: () => renderAddressList(),
+        renderDetail: () => renderDetail(),
+        buildCountryFilter: () => buildCountryFilter(),
+        toast: (m, e) => toast(m, e)
+    };
+
     // Öffnet das Bearbeiten-Formular einer Adresse direkt aus anderen Modulen
     // heraus (z. B. dem Maschinen-Formular über Betreiber-/Standort-Buttons).
     window.openAddressEditById = async function (id) {
@@ -2694,6 +2717,9 @@
         document.getElementById('addressbook-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             if (!formSubmitHandler) return;
+            // Ab hier wird gespeichert — der Wächter darf beim anschließenden
+            // Schließen nicht mehr dazwischenfragen.
+            if (abGuard) abGuard.markClean();
             const btn = document.getElementById('addressbook-form-submit');
             const original = btn.innerHTML;
             btn.disabled = true;
@@ -2710,18 +2736,47 @@
         });
     }
 
+    // Wächter für alle Formulare dieses Modals (Adresse anlegen, Ansprechpartner,
+    // Verknüpfung, Notiz). Beim BEARBEITEN einer Adresse übernimmt das
+    // Auto-Speichern — dann ist der Wächter still.
+    let abGuard = null;
+    function ensureFormGuard() {
+        if (abGuard || typeof window.createUnsavedGuard !== 'function') return abGuard;
+        abGuard = window.createUnsavedGuard({
+            root: () => document.getElementById('addressbook-form'),
+            overlayId: 'ab-form-unsaved-overlay',
+            isActive: () => {
+                const m = document.getElementById('addressbook-form-modal');
+                const offen = !!(m && m.classList.contains('show'));
+                const autosaveLaeuft = !!(window.abAutosave && window.abAutosave.id);
+                return offen && !autosaveLaeuft;
+            },
+            submit: () => {
+                const btn = document.getElementById('addressbook-form-submit');
+                if (btn) btn.click();
+            }
+        });
+        return abGuard;
+    }
+
     function openFormModal(title, fieldsHtml, submitLabel, onSubmit) {
         ensureFormModal();
         document.getElementById('addressbook-form-title').textContent = title;
         document.getElementById('addressbook-form-fields').innerHTML = fieldsHtml;
         document.getElementById('addressbook-form-submit').textContent = submitLabel || 'Speichern';
         formSubmitHandler = onSubmit;
+        const guard = ensureFormGuard();
+        if (guard) guard.reset();
         openModal('addressbook-form-modal');
         const first = document.querySelector('#addressbook-form-fields input, #addressbook-form-fields textarea');
         if (first) setTimeout(() => first.focus(), 80);
     }
 
-    function closeFormModal() {
+    function closeFormModal(force) {
+        // Beim Anlegen gibt es nichts, wohin automatisch gespeichert werden
+        // könnte — deshalb hier nachfragen, statt die Eingabe verfallen zu lassen.
+        if (!force && abGuard && abGuard.confirmClose(() => closeFormModal(true))) return;
+        if (abGuard) abGuard.markClean();
         formSubmitHandler = null;
         closeModal('addressbook-form-modal');
     }
@@ -2838,11 +2893,80 @@
             else if (nName && aName && sim >= 0.74) { score += 0.35; reasons.push('ähnlicher Name'); }
             if (pEmail && a.email && a.email.toLowerCase().trim() === pEmail) { score += 0.6; reasons.push('gleiche E-Mail'); }
             if (pPhone && a.phone && normPhone(a.phone) === pPhone) { score += 0.5; reasons.push('gleiche Telefonnummer'); }
-            if (pZip && pStreet && a.zip_code && String(a.zip_code).trim() === pZip && normStreet(a.street) === pStreet) { score += 0.5; reasons.push('gleiche Anschrift'); }
-            else if (pCity && sim >= 0.6 && a.city && a.city.toLowerCase().trim() === pCity) { score += 0.2; reasons.push('gleicher Ort'); }
+            // Straße + Hausnummer identisch reicht allein für einen Vorschlag —
+            // auch ohne PLZ und ohne Namensähnlichkeit. Genau dieser Fall (gleiche
+            // Straße, Firmenname nur angetippt) rutschte vorher durch.
+            const sameStreet = !!pStreet && normStreet(a.street) === pStreet;
+            const sameZip = !!pZip && !!a.zip_code && String(a.zip_code).trim() === pZip;
+            const sameCity = !!pCity && !!a.city && a.city.toLowerCase().trim() === pCity;
+            if (sameStreet && (sameZip || sameCity)) { score += 0.6; reasons.push('gleiche Anschrift'); }
+            else if (sameStreet) { score += 0.5; reasons.push('gleiche Straße & Hausnummer'); }
+            else if (sameCity && sim >= 0.6) { score += 0.2; reasons.push('gleicher Ort'); }
             if (score >= 0.5) out.push({ addr: a, score, reasons: [...new Set(reasons)] });
         });
         return out.sort((x, y) => y.score - x.score).slice(0, 6);
+    }
+
+    // Warnung vor dem Anlegen, wenn findDuplicateAddresses Verdachtsfälle liefert.
+    // onConfirm legt die Adresse trotzdem an; „Abbrechen“ lässt das ausgefüllte
+    // Formular stehen, damit man die Eingabe noch korrigieren kann.
+    function showDuplicateDialog(dupes, onConfirm) {
+        const rows = dupes.map(d => {
+            const a = d.addr;
+            const loc = [a.zip_code, a.city].filter(Boolean).join(' ');
+            const meta = [a.street, loc].filter(Boolean).join(' · ') || '—';
+            const contact = [a.phone, a.email].filter(Boolean).join(' · ');
+            const percent = Math.min(100, Math.round(d.score * 100));
+            const badges = d.reasons.map(r => `<span style="font-size:0.68rem; background:rgba(251,191,36,0.15); color:#fbbf24; padding:2px 8px; border-radius:999px;">${esc(r)}</span>`).join(' ');
+            return `<div style="display:flex; gap:12px; align-items:flex-start; padding:10px 12px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.02); border-radius:10px; margin-bottom:8px;">
+                <div style="flex:1; min-width:0;">
+                    <div style="color:#fff; font-weight:700;">${esc(a.name)}</div>
+                    <div style="color:rgba(255,255,255,0.5); font-size:0.8rem;">${esc(meta)}</div>
+                    ${contact ? `<div style="color:rgba(255,255,255,0.4); font-size:0.78rem;">${esc(contact)}</div>` : ''}
+                    <div style="margin-top:4px; display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
+                        ${badges}
+                        <span style="font-size:0.68rem; color:rgba(255,255,255,0.35);">Übereinstimmung ${percent}%</span>
+                    </div>
+                </div>
+                <button type="button" class="ab-btn ab-btn-ghost" data-ab-dupe-open="${esc(a.id)}" style="flex-shrink:0;">Öffnen</button>
+            </div>`;
+        }).join('');
+
+        const el = showAbOverlay(`
+            <h2 style="margin-top:0;">Adresse eventuell schon vorhanden</h2>
+            <p style="color:rgba(255,255,255,0.55); font-size:0.85rem; margin:0 0 12px;">
+                ${dupes.length === 1 ? 'Eine bestehende Adresse ähnelt' : `${dupes.length} bestehende Adressen ähneln`} der neuen Eingabe.
+                Bitte prüfen, bevor ein Doppeleintrag entsteht.
+            </p>
+            <div style="padding:12px; border:1px solid rgba(251,191,36,0.3); background:rgba(251,191,36,0.04); border-radius:12px; max-height:46vh; overflow-y:auto;">
+                ${rows}
+            </div>
+            <div class="ab-form-actions" style="margin-top:16px; flex-wrap:wrap; gap:8px;">
+                <button type="button" class="ab-btn ab-btn-ghost" id="ab-dupe-cancel">Abbrechen</button>
+                <button type="button" class="ab-btn ab-btn-primary" id="ab-dupe-create">Trotzdem neu anlegen</button>
+            </div>`);
+
+        // Bestehende Adresse ansehen: das Formular wird geschlossen, damit die
+        // eingegebenen Daten nicht im Hintergrund liegen bleiben und später
+        // versehentlich doch noch abgeschickt werden.
+        el.querySelectorAll('[data-ab-dupe-open]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-ab-dupe-open');
+                closeAbOverlay();
+                closeFormModal();
+                openDetail(String(id), 'overview');
+            });
+        });
+        el.querySelector('#ab-dupe-cancel').addEventListener('click', closeAbOverlay);
+        el.querySelector('#ab-dupe-create').addEventListener('click', async () => {
+            closeAbOverlay();
+            try {
+                await onConfirm();
+            } catch (e) {
+                console.error('Anlegen trotz Dublette fehlgeschlagen:', e);
+                window.showToast('Speichern fehlgeschlagen: ' + (e.message || e));
+            }
+        });
     }
 
     // Firmen finden, zu denen eine importierte Person passen könnte (Name-Ähnlichkeit).
@@ -3539,6 +3663,43 @@
         return out;
     }
 
+    // Liest das Adress-Formular aus. Auf Modulebene, weil sowohl der
+    // Speichern-Knopf als auch das Auto-Speichern (js/addressbook-live.js)
+    // denselben Stand brauchen.
+    function buildAddressPayload() {
+        const payload = {
+            name: val('ab-f-name'),
+            matchcode: val('ab-f-matchcode') || null,
+            address_number: val('ab-f-address-number') || null,
+            customer_number: val('ab-f-customer-number') || null,
+            street: val('ab-f-street') || null,
+            zip_code: val('ab-f-zip') || null,
+            city: val('ab-f-city') || null,
+            country: val('ab-f-country') || null,
+            phone: val('ab-f-phone') || null,
+            email: val('ab-f-email') || null
+        };
+
+        // Adresstypen aus den Checkboxen
+        const selectedAddressTypes = Array.from(document.querySelectorAll('input[name="ab-f-address-type"]:checked')).map(el => el.value).join(', ');
+        payload.address_type = selectedAddressTypes || null;
+
+        if (!state.manufacturerMissing) {
+            const selectedManufacturers = Array.from(document.querySelectorAll('input[name="ab-f-manufacturer"]:checked')).map(el => el.value).join(', ');
+            payload.manufacturer = selectedManufacturers || null;
+        }
+
+        // Zusatzfelder nur senden, wenn die Migration eingespielt ist – sonst
+        // scheitert der ganze Insert/Update an unbekannten Spalten.
+        if (!state.migrationMissing) {
+            // Kunde ist automatisch, wer eine Kundennummer hinterlegt hat.
+            payload.is_customer = !!((val('ab-f-customer-number') || '').trim());
+            payload.website = val('ab-f-website') || null;
+            payload.notes = val('ab-f-notes') || null;
+        }
+        return payload;
+    }
+
     function openAddressForm(id) {
         const a = id ? state.byId.get(String(id)) : null;
         const isEdit = !!a;
@@ -3658,36 +3819,7 @@
             const name = val('ab-f-name');
             if (!name) { window.showToast('Bitte einen Firmen-/Namen angeben.'); return; }
 
-            const payload = {
-                name: name,
-                matchcode: val('ab-f-matchcode') || null,
-                address_number: val('ab-f-address-number') || null,
-                customer_number: val('ab-f-customer-number') || null,
-                street: val('ab-f-street') || null,
-                zip_code: val('ab-f-zip') || null,
-                city: val('ab-f-city') || null,
-                country: val('ab-f-country') || null,
-                phone: val('ab-f-phone') || null,
-                email: val('ab-f-email') || null
-            };
-
-            // Collect selected address types from checkboxes
-            const selectedAddressTypes = Array.from(document.querySelectorAll('input[name="ab-f-address-type"]:checked')).map(el => el.value).join(', ');
-            payload.address_type = selectedAddressTypes || null;
-
-            if (!state.manufacturerMissing) {
-                const selectedManufacturers = Array.from(document.querySelectorAll('input[name="ab-f-manufacturer"]:checked')).map(el => el.value).join(', ');
-                payload.manufacturer = selectedManufacturers || null;
-            }
-
-            // Zusatzfelder nur senden, wenn die Migration eingespielt ist – sonst
-            // scheitert der ganze Insert/Update an unbekannten Spalten.
-            if (!state.migrationMissing) {
-                // Kunde ist automatisch, wer eine Kundennummer hinterlegt hat.
-                payload.is_customer = !!((val('ab-f-customer-number') || '').trim());
-                payload.website = val('ab-f-website') || null;
-                payload.notes = val('ab-f-notes') || null;
-            }
+            const payload = buildAddressPayload();
 
             if (isEdit) {
                 const { data, error } = await sb().from('customers').update(payload).eq('id', a.id).select().single();
@@ -3751,6 +3883,11 @@
 
                 await addHistoryEntry(String(a.id), 'system', 'Stammdaten geändert (Cluster synchronisiert)', null, true);
 
+                // Dem Auto-Speichern sagen, dass dieser Stand schon in der
+                // Datenbank steht — sonst schreibt es beim Schließen gleich
+                // noch einmal dieselben Werte.
+                if (window.abAutosave) window.abAutosave.markSaved();
+
                 closeFormModal();
                 buildCountryFilter();
                 renderAddressList();
@@ -3788,6 +3925,12 @@
         });
 
         if (!isEdit) wireVcfDropzone();
+
+        // Auto-Speichern nur beim Bearbeiten. Beim Anlegen nicht, dort muss
+        // erst die Dublettenprüfung laufen.
+        if (isEdit && typeof window.abAttachAutosave === 'function') {
+            window.abAttachAutosave(String(a.id));
+        }
     }
 
     async function deleteAddress(id) {

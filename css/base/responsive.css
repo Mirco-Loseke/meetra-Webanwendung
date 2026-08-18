@@ -1834,51 +1834,46 @@ details.category-group-details[open] .group-chevron {
 }
 
 /* iPad / kleine Laptops: Sidebar dauerhaft schmal (nur Icons) */
+/* iPad / kleine Laptops: schmal ist nur der STARTZUSTAND, nicht die
+   Festlegung. Der rote Knopf klappt die Sidebar wieder auf — genau wie am
+   Desktop. Vorher war sie hier fest auf 80px genagelt und `#sidebar-toggle`
+   ausgeblendet; damit gab es auf dem Tablet gar keine Beschriftungen mehr.
+   Alle Regeln haengen deshalb an `.collapsed` statt am Geraet. Auf dem Handy
+   (<=768px) bleibt es beim Off-Canvas-Menue weiter unten, dort gibt es den
+   Knopf bewusst nicht. */
 @media (min-width: 769px) and (max-width: 1024px) {
-    #sidebar {
-        width: 80px !important;
-    }
-
-    #sidebar .nav-link span {
+    #sidebar.collapsed .nav-link span {
         display: none;
     }
 
-    #sidebar .nav-link {
+    #sidebar.collapsed .nav-link {
         padding: 14px 0;
         justify-content: center;
         margin: 4px 10px;
     }
 
-    #sidebar .sidebar-header .logo {
+    #sidebar.collapsed .sidebar-header .logo {
         opacity: 0;
         pointer-events: none;
     }
 
-    #sidebar .sidebar-header .logo-icon {
+    #sidebar.collapsed .sidebar-header .logo-icon {
         opacity: 1;
         transform: scale(1);
     }
 
-    #sidebar .sidebar-user-profile {
+    #sidebar.collapsed .sidebar-user-profile {
         justify-content: center;
         padding: 16px 0;
     }
 
-    #sidebar .sidebar-user-profile .user-info {
+    #sidebar.collapsed .sidebar-user-profile .user-info {
         display: none;
     }
 
-    #main-wrapper,
-    #main-wrapper.collapsed-sidebar {
-        margin-left: 80px !important;
-    }
-
-    #topbar {
-        left: 80px !important;
-    }
-
+    /* Der Knopf gehoert auf dem Tablet wieder dazu. */
     #sidebar-toggle {
-        display: none !important;
+        display: flex !important;
     }
 }
 
@@ -2453,3 +2448,114 @@ details.category-group-details[open] .group-chevron {
     }
 }
 
+
+/* ================================================== */
+/* HANDY: FENSTER UND FORMULARE                       */
+/* ================================================== */
+/* Die Bearbeiten-Fenster sind ueberwiegend mit Inline-Styles gebaut:
+   feste Zwei-Spalten-Raster, 2rem Innenabstand, Ueberschriften mit
+   1.8rem. Auf dem Desktop stimmt das, auf 375px Breite bleiben pro
+   Spalte rund 150px uebrig — Beschriftungen brechen mitten im Wort,
+   Eingabefelder werden unbedienbar schmal.
+
+   Inline-Styles schlagen jede Stylesheet-Regel, deshalb hier `!important`
+   und Treffer ueber `[style*=...]`: das greift genau die Raster, die im
+   Markup fest verdrahtet sind, und laesst `auto-fit`/`auto-fill`-Raster
+   in Ruhe — die brechen von selbst sauber um. */
+
+@media (max-width: 768px) {
+
+    /* --- Feste Mehrspalten-Raster auf eine Spalte --- */
+    .modal-content [style*="1fr 1fr"],
+    .modal-content [style*="1.5fr 1fr"],
+    .modal-content [style*="1fr 1.5fr"],
+    .modal-content [style*="1fr 2fr"],
+    .modal-content [style*="2fr 1fr"],
+    .modal-new [style*="1fr 1fr"],
+    .modal-new [style*="1.5fr 1fr"],
+    .modal-new [style*="1fr 1.5fr"],
+    .modal-new [style*="1fr 2fr"],
+    .modal-new [style*="2fr 1fr"],
+    #main-content [style*="1fr 1fr"],
+    #main-content [style*="1.5fr 1fr"],
+    #main-content [style*="1fr 1.5fr"],
+    #main-content [style*="1fr 2fr"],
+    #main-content [style*="2fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* --- Innenabstaende der Fenster --- */
+    /* 2rem ringsum sind auf 375px 64px, also ein Sechstel der Breite. */
+    .modal-content,
+    .modal-new .modal-content {
+        padding: 1rem 0.9rem !important;
+        border-radius: 16px !important;
+    }
+
+    /* --- Ueberschriften --- */
+    /* 1.8rem = 29px: passt auf dem Desktop, sprengt auf dem Handy die
+       Kopfzeile und draengt den Schliessen-Knopf heraus. */
+    .modal-content h2,
+    .modal-new h2 {
+        font-size: 1.15rem !important;
+        line-height: 1.25 !important;
+        overflow-wrap: anywhere;
+    }
+
+    .modal-content h3,
+    .modal-new h3 {
+        font-size: 1rem !important;
+    }
+
+    /* --- Knopfleisten --- */
+    /* Nebeneinander bleiben zwei Knoepfe mit Text wie "ÄNDERUNGEN
+       SPEICHERN" unter 44px Hoehe nicht lesbar — also untereinander,
+       Hauptaktion oben. */
+    .modal-content .modal-actions,
+    .modal-new .modal-actions,
+    .ab-form-actions {
+        flex-direction: column-reverse !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+    }
+
+    .modal-content .modal-actions > button,
+    .modal-new .modal-actions > button,
+    .ab-form-actions > button {
+        width: 100% !important;
+        flex: none !important;
+    }
+
+    /* Die Statuszeile des Auto-Speicherns steht sonst als erstes Element
+       einer column-reverse-Leiste ganz unten. */
+    .autosave-status,
+    .ab-autosave-status {
+        order: -1;
+        margin-right: 0 !important;
+        text-align: center;
+    }
+
+    /* --- Feste Pixelbreiten in Formularen --- */
+    /* Kleinfelder (Uhrzeit, Anzahl, Kuerzel) mit fester Breite passen
+       einzeln, in einer Reihe schieben sie die Karte auf. */
+    .modal-content input[style*="width: 250px"],
+    .modal-content input[style*="width: 300px"],
+    .modal-content select[style*="width: 250px"],
+    .modal-content [style*="min-width: 200px"],
+    .modal-content [style*="min-width: 220px"] {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    /* --- Reihen aus Feldern --- */
+    /* Inline-`display: flex` laesst Felder nicht umbrechen. Bewusst nur
+       Reihen, die wirklich Eingabefelder enthalten — eine pauschale Regel
+       wuerde auch Kopfzeilen umbrechen und den Schliessen-Knopf unter den
+       Titel schieben. `:has()` gibt es ab iOS 15.4, also genau ab der
+       Mindestversion dieser App; aeltere Browser ignorieren die Regel
+       einfach, statt etwas kaputt zu machen. */
+    .modal-content [style*="display: flex"]:has(> input, > select, > textarea, > .form-group),
+    .modal-new [style*="display: flex"]:has(> input, > select, > textarea, > .form-group) {
+        flex-wrap: wrap;
+    }
+}

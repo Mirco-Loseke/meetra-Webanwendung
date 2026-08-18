@@ -1020,6 +1020,180 @@
         };
 
         // ==========================================
+        // AKTUELLER STAND (status_updates)
+        // Freitext-Meldung pro Vorgang; Benutzer + Zeitpunkt werden automatisch
+        // gesetzt. Neuester Eintrag steht an Position 0, der Verlauf bleibt
+        // erhalten. Anzeige auf der Karte: Zeile + Hover-Popover.
+        // ==========================================
+        window.statusUpdateProcessId = null;
+
+        // Hilfen für das Zeitpunkt-Feld (datetime-local kennt keine Zeitzone,
+        // deshalb von Hand aus den lokalen Bestandteilen bauen).
+        window.isoToLocalInput = function(iso) {
+            const d = iso ? new Date(iso) : new Date();
+            if (isNaN(d)) return '';
+            const pad = (n) => String(n).padStart(2, '0');
+            return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        };
+        window.localInputToIso = function(val) {
+            if (!val) return null;
+            const d = new Date(val);
+            return isNaN(d) ? null : d.toISOString();
+        };
+
+        window.openProcessStatusUpdateModal = function(id, event) {
+            if (event) event.stopPropagation();
+            const proc = (window.eventsState.processes || []).find(p => String(p.id) === String(id));
+            if (!proc) return;
+            window.statusUpdateProcessId = id;
+            const sub = document.getElementById('status-update-modal-subtitle');
+            if (sub) sub.textContent = proc.title || 'Vorgang';
+            const ta = document.getElementById('status-update-text');
+            if (ta) ta.value = '';
+            const when = document.getElementById('status-update-when');
+            if (when) when.value = window.isoToLocalInput(null);
+            window.renderProcessStatusHistory(proc);
+            const modal = document.getElementById('process-status-update-modal');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            requestAnimationFrame(() => {
+                modal.classList.add('show');
+                if (ta) ta.focus();
+            });
+        };
+
+        window.closeProcessStatusUpdateModal = function() {
+            const modal = document.getElementById('process-status-update-modal');
+            if (!modal) return;
+            modal.classList.remove('show');
+            setTimeout(() => { modal.classList.add('hidden'); modal.style.display = 'none'; }, 300);
+        };
+
+        window.renderProcessStatusHistory = function(proc) {
+            const box = document.getElementById('status-update-history');
+            if (!box) return;
+            const list = Array.isArray(proc.status_updates) ? proc.status_updates : [];
+            if (!list.length) {
+                box.innerHTML = `<div style="color:rgba(255,255,255,0.3); font-style:italic; font-size:0.85rem; padding:4px 2px;">Noch kein Stand eingetragen.</div>`;
+                return;
+            }
+            const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            box.innerHTML = list.map((u, i) => `
+                <div style="padding:10px 12px; border-radius:10px; background:${i === 0 ? 'rgba(96,165,250,0.12)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${i === 0 ? 'rgba(96,165,250,0.35)' : 'rgba(255,255,255,0.08)'};">
+                    <div contenteditable="true" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault(); this.blur();}" onfocus="this.style.background='rgba(255,255,255,0.08)'" onblur="this.style.background='transparent'; window.updateProcessStatusUpdateText(${i}, this.textContent)" title="Klicken zum Bearbeiten" style="color:#fff; font-size:0.9rem; white-space:pre-wrap; word-break:break-word; outline:none; border-radius:4px; padding:2px 4px; cursor:text;">${esc(u.text)}</div>
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:6px; flex-wrap:wrap;">
+                        <span style="font-size:0.75rem; color:rgba(255,255,255,0.5);">${esc(u.by || 'Unbekannt')}</span>
+                        <input type="datetime-local" value="${window.isoToLocalInput(u.at)}" onchange="window.updateProcessStatusUpdateDate(${i}, this.value)" title="Zeitpunkt ändern" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; border-radius:8px; padding:3px 8px; font-size:0.75rem;">
+                        <button type="button" onclick="window.deleteProcessStatusUpdate(${i})" title="Eintrag löschen" style="margin-left:auto; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:8px; width:26px; height:26px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>
+                        </button>
+                    </div>
+                </div>`).join('');
+        };
+
+        window.formatProcessStatusStamp = function(iso) {
+            try {
+                const d = new Date(iso);
+                if (isNaN(d)) return '';
+                return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                    + ', ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr';
+            } catch (e) { return ''; }
+        };
+
+        // Verlauf speichern; die Karten zeichnet der Aufrufer neu.
+        async function persistStatusUpdates(proc, list) {
+            const { error } = await window.supabaseClient
+                .from('internal_processes')
+                .update({ status_updates: list })
+                .eq('id', proc.id);
+            if (error) throw error;
+            proc.status_updates = list;
+        }
+
+        function currentStatusProcess() {
+            const id = window.statusUpdateProcessId;
+            if (!id) return null;
+            return (window.eventsState.processes || []).find(p => String(p.id) === String(id)) || null;
+        }
+
+        window.saveProcessStatusUpdate = async function() {
+            const proc = currentStatusProcess();
+            if (!proc) return;
+            const ta = document.getElementById('status-update-text');
+            const text = (ta ? ta.value : '').trim();
+            if (!text) { window.showToast('Bitte einen Stand eingeben.'); return; }
+            const when = document.getElementById('status-update-when');
+            const at = window.localInputToIso(when ? when.value : '') || new Date().toISOString();
+            const list = (Array.isArray(proc.status_updates) ? proc.status_updates.slice() : []);
+            list.unshift({
+                text: text,
+                by: (window.activeUser && window.activeUser.name) || 'Unbekannt',
+                by_id: (window.activeUser && window.activeUser.id) || null,
+                at: at
+            });
+            list.sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0));
+            try {
+                await persistStatusUpdates(proc, list);
+                window.closeProcessStatusUpdateModal();
+                window.fetchProcesses();
+            } catch (e) {
+                console.error('Fehler beim Speichern des Stands:', e);
+                window.showToast('Fehler beim Speichern: ' + e.message);
+            }
+        };
+
+        // Zeitpunkt eines bestehenden Eintrags nachträglich ändern.
+        window.updateProcessStatusUpdateDate = async function(index, value) {
+            const proc = currentStatusProcess();
+            if (!proc || !Array.isArray(proc.status_updates) || !proc.status_updates[index]) return;
+            const iso = window.localInputToIso(value);
+            if (!iso) return;
+            const list = proc.status_updates.slice();
+            list[index] = Object.assign({}, list[index], { at: iso });
+            list.sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0));
+            try {
+                await persistStatusUpdates(proc, list);
+                window.renderProcessStatusHistory(proc);
+                window.renderProcesses();
+            } catch (e) {
+                console.error('Fehler beim Ändern des Zeitpunkts:', e);
+                window.showToast('Fehler beim Speichern: ' + e.message);
+            }
+        };
+
+        window.updateProcessStatusUpdateText = async function(index, text) {
+            const proc = currentStatusProcess();
+            if (!proc || !Array.isArray(proc.status_updates) || !proc.status_updates[index]) return;
+            const val = (text || '').trim();
+            if (!val || proc.status_updates[index].text === val) return;
+            const list = proc.status_updates.slice();
+            list[index] = Object.assign({}, list[index], { text: val });
+            try {
+                await persistStatusUpdates(proc, list);
+                window.renderProcesses();
+            } catch (e) {
+                console.error('Fehler beim Ändern des Stands:', e);
+                window.showToast('Fehler beim Speichern: ' + e.message);
+            }
+        };
+
+        window.deleteProcessStatusUpdate = async function(index) {
+            const proc = currentStatusProcess();
+            if (!proc || !Array.isArray(proc.status_updates) || !proc.status_updates[index]) return;
+            const list = proc.status_updates.slice();
+            list.splice(index, 1);
+            try {
+                await persistStatusUpdates(proc, list);
+                window.renderProcessStatusHistory(proc);
+                window.renderProcesses();
+            } catch (e) {
+                console.error('Fehler beim Löschen des Eintrags:', e);
+                window.showToast('Fehler beim Löschen: ' + e.message);
+            }
+        };
+
+        // ==========================================
         // ADRESSE + ANSPRECHPARTNER IM VORGANG (add / edit)
         // Suche über alle Adressen (Name / PLZ / Ort). Ist eine Adresse gewählt,
         // wird der Vorgang an ihr gespeichert (customer_id) und ihre

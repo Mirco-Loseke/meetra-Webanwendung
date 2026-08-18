@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meetra-app-v209';
+const CACHE_NAME = 'meetra-app-v222';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
@@ -51,6 +51,11 @@ const PRECACHE = [
     // ausgeloest. Neue Eintraege deshalb immer gegen die Platte pruefen.
     'css/views/addressbook.css',
     'js/addressbook.js',
+    'js/addressbook-live.js',
+    'js/autosave.js',
+    'js/unsaved-guard.js',
+    'js/process-autosave.js',
+    'js/process-open-hints.js',
     'css/views/routenplanung.css',
     'js/routenplanung.js',
     'lib/supabase.min.js',

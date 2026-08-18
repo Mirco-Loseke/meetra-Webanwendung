@@ -266,3 +266,127 @@
 .drop-zone-content p {
     margin: 0;
 }
+
+/* ==========================================
+   AUTO-SPEICHERN: Statuszeile in Formular-Fußzeilen
+   Wird von js/autosave.js erzeugt und links neben die Knöpfe gehängt.
+   ========================================== */
+.autosave-status,
+.ab-autosave-status {
+    margin-right: auto;
+    align-self: center;
+    font-size: var(--fs-xs, 0.78rem);
+    color: var(--text-3, rgba(255, 255, 255, 0.5));
+    transition: color var(--dur-fast, 0.15s) ease;
+}
+
+.autosave-status[data-kind="busy"],
+.ab-autosave-status[data-kind="busy"] { color: var(--info, #38bdf8); }
+
+.autosave-status[data-kind="ok"],
+.ab-autosave-status[data-kind="ok"] { color: var(--success, #10a068); }
+
+.autosave-status[data-kind="error"],
+.ab-autosave-status[data-kind="error"] { color: var(--danger, #f87171); }
+
+/* ==========================================
+   HINWEIS AUF SCHON OFFENE VORGÄNGE
+   Erzeugt von js/process-open-hints.js, sitzt im Vorgangs-Fenster
+   direkt unter der Maschinen-/Adressauswahl.
+   ========================================== */
+.proc-open-hints {
+    margin: 18px 0 4px 0;
+    padding: 12px 14px;
+    border: 1px solid rgba(251, 191, 36, 0.32);
+    background: rgba(251, 191, 36, 0.05);
+    border-radius: var(--radius-lg, 14px);
+}
+
+.proc-open-hint-head {
+    color: #fbbf24;
+    font-size: var(--fs-xs, 0.75rem);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-bottom: 10px;
+}
+
+.proc-open-hint-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 10px;
+    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: var(--radius-md, 10px);
+}
+
+.proc-open-hint-row + .proc-open-hint-row {
+    margin-top: 8px;
+}
+
+.proc-open-hint-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.proc-open-hint-title {
+    color: #fff;
+    font-weight: 700;
+    font-size: var(--fs-md, 0.875rem);
+    overflow-wrap: anywhere;
+}
+
+.proc-open-hint-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 3px;
+    color: var(--text-3, rgba(255, 255, 255, 0.5));
+    font-size: var(--fs-xs, 0.75rem);
+}
+
+.proc-open-hint-status {
+    border: 1px solid currentColor;
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-weight: 700;
+}
+
+.proc-open-hint-old {
+    color: var(--danger, #f87171);
+    font-weight: 700;
+}
+
+.proc-open-hint-btn {
+    flex-shrink: 0;
+    padding: 7px 14px;
+    border-radius: var(--radius-md, 10px);
+    border: 1px solid rgba(56, 189, 248, 0.45);
+    background: rgba(56, 189, 248, 0.12);
+    color: #38bdf8;
+    font-family: inherit;
+    font-size: var(--fs-sm, 0.8125rem);
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.proc-open-hint-btn:hover {
+    background: rgba(56, 189, 248, 0.22);
+    transform: translateY(-1px);
+}
+
+/* Handy: Knopf unter den Text, sonst bleibt für den Titel nichts übrig. */
+@media (max-width: 768px) {
+    .proc-open-hint-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+
+    .proc-open-hint-btn {
+        width: 100%;
+    }
+}

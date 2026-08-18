@@ -485,6 +485,32 @@ window.renderProcesses = function(targetId, opts) {
             }
         }
 
+        // Aktueller Stand: letzte Meldung als Zeile auf der Karte, Verlauf im
+        // Hover-Popover, Klick öffnet das Melde-Fenster.
+        const statusUpdates = Array.isArray(p.status_updates) ? p.status_updates : [];
+        const lastUpd = statusUpdates[0] || null;
+        const fmtStamp = (iso) => { try { const d = new Date(iso); if (isNaN(d)) return ''; return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ', ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr'; } catch (e) { return ''; } };
+        const standCardHtml = `
+            <div class="proc-card-stand" onmouseenter="const _p=this.querySelector('.proc-stand-pop'); if(_p) _p.style.display='block';" onmouseleave="const _p=this.querySelector('.proc-stand-pop'); if(_p) _p.style.display='none';" style="position:relative; display:block; margin-bottom:8px;">
+                <div onclick="event.stopPropagation(); window.openProcessStatusUpdateModal('${p.id}', event)" title="Stand melden / ändern" style="cursor:pointer; display:flex; align-items:flex-start; gap:7px; padding:7px 10px; border-radius:10px; background:${lastUpd ? 'rgba(96,165,250,0.12)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${lastUpd ? 'rgba(96,165,250,0.4)' : 'rgba(255,255,255,0.1)'};">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:2px;"><circle cx="12" cy="12" r="9"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    <div style="flex:1; min-width:0;">
+                        <div style="font-size:0.7rem; font-weight:800; color:#60a5fa; text-transform:uppercase; letter-spacing:0.5px;">Aktueller Stand${statusUpdates.length > 1 ? ` <span style="opacity:0.6;">(${statusUpdates.length})</span>` : ''}</div>
+                        ${lastUpd
+                            ? `<div style="color:#fff; font-size:0.86rem; line-height:1.35; word-break:break-word; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;">${escStep(lastUpd.text)}</div>
+                               <div style="font-size:0.72rem; color:rgba(255,255,255,0.45); margin-top:2px;">${escStep(lastUpd.by || 'Unbekannt')} · ${fmtStamp(lastUpd.at)}</div>`
+                            : `<div style="color:rgba(255,255,255,0.35); font-style:italic; font-size:0.84rem;">Kein Stand gemeldet – zum Eintragen klicken</div>`}
+                    </div>
+                </div>
+                ${statusUpdates.length ? `<div class="proc-stand-pop" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:61; margin-top:4px; background:rgba(15,23,42,0.98); border:1px solid rgba(96,165,250,0.3); border-radius:12px; padding:8px; box-shadow:0 12px 40px rgba(0,0,0,0.6); max-height:280px; overflow-y:auto;">
+                    ${statusUpdates.map((u, i) => `
+                    <div style="padding:7px 9px; border-radius:8px; ${i === 0 ? 'background:rgba(96,165,250,0.1);' : ''}">
+                        <div style="color:#fff; font-size:0.85rem; white-space:pre-wrap; word-break:break-word;">${escStep(u.text)}</div>
+                        <div style="font-size:0.72rem; color:rgba(255,255,255,0.45); margin-top:2px;">${escStep(u.by || 'Unbekannt')} · ${fmtStamp(u.at)}</div>
+                    </div>`).join('')}
+                </div>` : ''}
+            </div>`;
+
         const stepsCardHtml = `
             <div class="proc-card-steps" onmousemove="const _pop=this.querySelector('.proc-steps-pop'); if(_pop){ const _r=this.getBoundingClientRect(); _pop.style.display = ((event.clientX - _r.left) < _r.width/2) ? 'block' : 'none'; }" onmouseleave="const _pop=this.querySelector('.proc-steps-pop'); if(_pop) _pop.style.display='none';" style="position:relative; display:block; margin-bottom:8px;">
                 <div class="proc-steps-trigger" style="display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:800; color:#34d399; text-transform:uppercase; letter-spacing:0.5px; cursor:default; padding:2px 0;">
@@ -559,6 +585,7 @@ window.renderProcesses = function(targetId, opts) {
                 ${remindBadge}
                 ${serviceLinkHtml}
                 ${senderRecText ? `<div style="font-size: 0.82rem; color: rgba(255,255,255,0.4); margin-bottom: 8px; word-break: break-word;">${senderRecText}</div>` : ''}
+                ${lastUpd ? standCardHtml : ""}
                 ${stepsCardHtml}
                 <div class="proc-card-footer">
                     <div>${assignedHtml || '<span style="color: rgba(255,255,255,0.25); font-style: italic; font-size: 0.82rem;">Niemand zugewiesen</span>'}</div>
@@ -567,6 +594,11 @@ window.renderProcesses = function(targetId, opts) {
                         <button onclick="window.openProcessStepsModal('${p.id}')" class="btn-icon-soft" title="Schritte verwalten" style="position: relative; background: ${n ? 'rgba(52,211,153,0.12)' : 'rgba(255,255,255,0.05)'}; color: #34d399; border: 1px solid ${n ? 'rgba(52,211,153,0.6)' : 'rgba(255,255,255,0.1)'}; box-shadow: ${n ? '0 0 10px rgba(52,211,153,0.45)' : 'none'}; width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(52,211,153,0.25)'" onmouseout="this.style.background='${n ? 'rgba(52,211,153,0.12)' : 'rgba(255,255,255,0.05)'}'">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
                             ${n ? `<span style="position: absolute; top: -6px; right: -6px; background: #10b981; color: #fff; font-size: 0.62rem; font-weight: 800; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #1e293b; box-shadow: 0 2px 6px rgba(0,0,0,0.4);">${n}</span>` : ''}
+                        </button>`; })()}
+                        ${(() => { const su = statusUpdates.length; return `
+                        <button onclick="event.stopPropagation(); window.openProcessStatusUpdateModal('${p.id}', event)" class="btn-icon-soft" title="Aktueller Stand" style="position: relative; background: ${su ? 'rgba(96,165,250,0.14)' : 'rgba(255,255,255,0.05)'}; color: #60a5fa; border: 1px solid ${su ? 'rgba(96,165,250,0.65)' : 'rgba(255,255,255,0.1)'}; box-shadow: ${su ? '0 0 12px rgba(96,165,250,0.55)' : 'none'}; width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(96,165,250,0.28)'" onmouseout="this.style.background='${su ? 'rgba(96,165,250,0.14)' : 'rgba(255,255,255,0.05)'}'">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
+                            ${su ? `<span style="position: absolute; top: -6px; right: -6px; background: #60a5fa; color: #fff; font-size: 0.62rem; font-weight: 800; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #1e293b; box-shadow: 0 2px 8px rgba(96,165,250,0.7);">${su}</span>` : ''}
                         </button>`; })()}
                         ${(() => {
                             const hasRemark = !!(p.remark && p.remark.trim());

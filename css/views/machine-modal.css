@@ -449,3 +449,37 @@
 #machine-contact-persons-list .contact-person-row > div {
     grid-template-columns: 1fr 1fr 1fr !important;
 }
+
+/* ==========================================
+   „Art des Kontaktes“: kompaktere Einträge
+   Die Zeilen erbten das grosse Bestaetigungs-Haekchen aus
+   components/elements.css (56 px) und den Standard-Innenabstand der
+   Vorschlagslisten — zusammen wurde jeder Punkt unnoetig hoch.
+   Gilt fuer Maschine anlegen UND bearbeiten (dasselbe Fenster).
+   ========================================== */
+#contact-list .suggestion-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 10px;
+    font-size: var(--fs-sm);
+    line-height: 1.3;
+}
+
+#contact-list .checkmark-icon {
+    width: 18px;
+    height: 18px;
+    border-width: 1px;
+    margin: 0;
+    flex-shrink: 0;
+}
+
+#contact-list .checkmark-svg {
+    width: 11px;
+    height: 11px;
+    stroke-width: 3.5;
+}
+
+#contact-list .contact-name {
+    font-size: var(--fs-sm);
+    font-weight: 500;
+}

@@ -1884,6 +1884,11 @@
                     })
                     .subscribe();
 
+                // Adressbuch live halten (eigene Kanäle in addressbook-live.js)
+                if (typeof window.initAddressbookLive === 'function') {
+                    try { window.initAddressbookLive(); } catch (e) { console.error('Adressbuch-Live init Fehler:', e); }
+                }
+
                 // Werkstatt-Liste laden + live halten (eigener Kanal in workshop-tasks.js)
                 if (typeof window.initWorkshopTasks === 'function') {
                     try { window.initWorkshopTasks(); } catch (e) { console.error('Werkstatt-Liste init Fehler:', e); }
