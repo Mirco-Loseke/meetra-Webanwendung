@@ -1084,8 +1084,8 @@
                     <div contenteditable="true" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault(); this.blur();}" onfocus="this.style.background='rgba(255,255,255,0.08)'" onblur="this.style.background='transparent'; window.updateProcessStatusUpdateText(${i}, this.textContent)" title="Klicken zum Bearbeiten" style="color:#fff; font-size:0.9rem; white-space:pre-wrap; word-break:break-word; outline:none; border-radius:4px; padding:2px 4px; cursor:text;">${esc(u.text)}</div>
                     <div style="display:flex; align-items:center; gap:8px; margin-top:6px; flex-wrap:wrap;">
                         <span style="font-size:0.75rem; color:rgba(255,255,255,0.5);">${esc(u.by || 'Unbekannt')}</span>
-                        <input type="datetime-local" value="${window.isoToLocalInput(u.at)}" onchange="window.updateProcessStatusUpdateDate(${i}, this.value)" title="Zeitpunkt ändern" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; border-radius:8px; padding:3px 8px; font-size:0.75rem;">
-                        <button type="button" onclick="window.deleteProcessStatusUpdate(${i})" title="Eintrag löschen" style="margin-left:auto; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:8px; width:26px; height:26px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
+                        <input type="datetime-local" value="${window.isoToLocalInput(u.at)}" onchange="window.updateProcessStatusUpdateDate(${i}, this.value)" onclick="try{this.showPicker()}catch(e){}" title="Zeitpunkt ändern — klicken zum Ändern" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; color-scheme:dark; border-radius:8px; padding:4px 8px; font-size:0.78rem; cursor:pointer;">
+                        <button type="button" class="delete-permission-required" onclick="window.deleteProcessStatusUpdate(${i})" title="Eintrag löschen" style="margin-left:auto; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:8px; width:26px; height:26px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>
                         </button>
                     </div>
@@ -1178,9 +1178,14 @@
             }
         };
 
+        // Löschen: nur mit Löschberechtigung, und der Eintrag verschwindet
+        // sofort aus der Datenbank (die gekürzte Liste wird geschrieben) —
+        // nicht erst beim Speichern irgendeines Formulars.
         window.deleteProcessStatusUpdate = async function(index) {
+            if (typeof window.canDelete === 'function' && !window.canDelete('Stand-Einträgen')) return;
             const proc = currentStatusProcess();
             if (!proc || !Array.isArray(proc.status_updates) || !proc.status_updates[index]) return;
+            if (!confirm('Diesen Stand-Eintrag unwiderruflich löschen?')) return;
             const list = proc.status_updates.slice();
             list.splice(index, 1);
             try {
@@ -1190,6 +1195,111 @@
             } catch (e) {
                 console.error('Fehler beim Löschen des Eintrags:', e);
                 window.showToast('Fehler beim Löschen: ' + e.message);
+            }
+        };
+
+        // ------------------------------------------
+        // Dasselbe direkt auf der Karte (Hover-Popover) — dort ist kein
+        // Fenster offen, deshalb kommt die Vorgangs-Kennung als Parameter.
+        // ------------------------------------------
+        function procById(processId) {
+            return (window.eventsState.processes || []).find(p => String(p.id) === String(processId)) || null;
+        }
+
+        window.updateProcessCardStand = async function(processId, index, text) {
+            const proc = procById(processId);
+            if (!proc || !Array.isArray(proc.status_updates) || !proc.status_updates[index]) return;
+            const val = (text || '').trim();
+            if (!val || proc.status_updates[index].text === val) return;
+            const list = proc.status_updates.slice();
+            list[index] = Object.assign({}, list[index], { text: val });
+            try {
+                await persistStatusUpdates(proc, list);
+            } catch (e) {
+                console.error('Fehler beim Ändern des Stands:', e);
+                window.showToast('Fehler beim Speichern: ' + e.message);
+            }
+        };
+
+        window.updateProcessCardStandDate = async function(processId, index, value) {
+            const proc = procById(processId);
+            if (!proc || !Array.isArray(proc.status_updates) || !proc.status_updates[index]) return;
+            const iso = window.localInputToIso(value);
+            if (!iso) return;
+            const list = proc.status_updates.slice();
+            list[index] = Object.assign({}, list[index], { at: iso });
+            list.sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0));
+            try {
+                await persistStatusUpdates(proc, list);
+                window.renderProcesses();
+            } catch (e) {
+                console.error('Fehler beim Ändern des Zeitpunkts:', e);
+                window.showToast('Fehler beim Speichern: ' + e.message);
+            }
+        };
+
+        window.deleteProcessCardStand = async function(processId, index) {
+            if (typeof window.canDelete === 'function' && !window.canDelete('Stand-Einträgen')) return;
+            const proc = procById(processId);
+            if (!proc || !Array.isArray(proc.status_updates) || !proc.status_updates[index]) return;
+            if (!confirm('Diesen Stand-Eintrag unwiderruflich löschen?')) return;
+            const list = proc.status_updates.slice();
+            list.splice(index, 1);
+            try {
+                await persistStatusUpdates(proc, list);
+                window.renderProcesses();
+            } catch (e) {
+                console.error('Fehler beim Löschen des Eintrags:', e);
+                window.showToast('Fehler beim Löschen: ' + e.message);
+            }
+        };
+
+        // ------------------------------------------
+        // ERINNERUNG DIREKT AUF DER KARTE
+        // ------------------------------------------
+        // Vorschlag für Karten ohne Erinnerung: morgen, 8 Uhr.
+        window.defaultRemindInputValue = function() {
+            const d = new Date();
+            d.setDate(d.getDate() + 1);
+            d.setHours(8, 0, 0, 0);
+            return window.isoToLocalInput(d.toISOString());
+        };
+
+        window.setProcessRemind = async function(processId, value) {
+            const proc = procById(processId);
+            if (!proc) return;
+            const iso = window.localInputToIso(value);
+            if (!iso) return;
+            try {
+                const { error } = await window.supabaseClient
+                    .from('internal_processes')
+                    .update({ remind_at: iso })
+                    .eq('id', processId);
+                if (error) throw error;
+                proc.remind_at = iso;
+                window.renderProcesses();
+                window.showToast('Erinnerung gesetzt: ' + window.formatProcessStatusStamp(iso));
+            } catch (e) {
+                console.error('Fehler beim Setzen der Erinnerung:', e);
+                window.showToast('Fehler beim Speichern: ' + e.message);
+            }
+        };
+
+        window.clearProcessRemind = async function(processId) {
+            if (typeof window.canDelete === 'function' && !window.canDelete('Erinnerungen')) return;
+            const proc = procById(processId);
+            if (!proc) return;
+            try {
+                const { error } = await window.supabaseClient
+                    .from('internal_processes')
+                    .update({ remind_at: null })
+                    .eq('id', processId);
+                if (error) throw error;
+                proc.remind_at = null;
+                window.renderProcesses();
+            } catch (e) {
+                console.error('Fehler beim Entfernen der Erinnerung:', e);
+                window.showToast('Fehler beim Speichern: ' + e.message);
             }
         };
 

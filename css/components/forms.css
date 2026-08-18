@@ -94,6 +94,34 @@
     opacity: 1;
 }
 
+/* Datums-/Zeitfelder allgemein: ohne color-scheme malt der Browser die
+   Zifferngruppen und das Kalender-Symbol dunkel — auf dunklem Grund sieht man
+   dann nichts und das Feld wirkt, als ließe es sich nicht bedienen.
+   Gilt für alle date/time-Felder, nicht nur für .glass-input[type=date]. */
+input[type='date'],
+input[type='datetime-local'],
+input[type='time'],
+input[type='month'] {
+    color-scheme: dark;
+}
+
+input[type='date']::-webkit-calendar-picker-indicator,
+input[type='datetime-local']::-webkit-calendar-picker-indicator,
+input[type='time']::-webkit-calendar-picker-indicator,
+input[type='month']::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.6;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+input[type='date']::-webkit-calendar-picker-indicator:hover,
+input[type='datetime-local']::-webkit-calendar-picker-indicator:hover,
+input[type='time']::-webkit-calendar-picker-indicator:hover,
+input[type='month']::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
 .modal-form-area::-webkit-scrollbar {
     width: 8px;
 }

@@ -471,17 +471,38 @@ window.renderProcesses = function(targetId, opts) {
         const stepsDone = procSteps.filter(s => s.done).length;
         const escStep = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const fmtDay = (d) => { try { return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch (e) { return ''; } };
+        // Erinnerung: direkt auf der Karte änderbar. Das unsichtbare
+        // datetime-local-Feld liegt über dem Abzeichen, ein Klick öffnet den
+        // Kalender (showPicker), die Auswahl wird sofort gespeichert.
+        // Ist noch keine Erinnerung gesetzt, steht dort dasselbe Feld als
+        // blasser Knopf — so kommt man auch ohne Bearbeiten-Fenster hin.
         let remindBadge = '';
-        if (p.remind_at && p.status !== 'erledigt') {
-            const rd = new Date(p.remind_at);
-            if (!isNaN(rd)) {
+        if (p.status !== 'erledigt') {
+            const rd = p.remind_at ? new Date(p.remind_at) : null;
+            const gesetzt = rd && !isNaN(rd);
+            const remindInput = (val) => `<input type="datetime-local" value="${val}" onclick="event.stopPropagation(); try{this.showPicker()}catch(e){}" onchange="window.setProcessRemind('${p.id}', this.value)" title="Erinnerung setzen" style="position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; border:0; padding:0; margin:0;">`;
+            if (gesetzt) {
                 const diffDays = Math.round((new Date(rd).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000);
                 const rc = diffDays < 0 ? '#f87171' : '#fbbf24';
                 const rlabel = diffDays < 0 ? 'Erinnerung überfällig' : (diffDays === 0 ? 'Erinnerung heute' : 'Erinnerung');
-                remindBadge = `<div style="margin-bottom: 8px;"><span style="display:inline-flex; align-items:center; gap:5px; color:${rc}; border:1px solid ${rc}55; background:${rc}18; padding:3px 9px; border-radius:999px; font-size:0.75rem; font-weight:700;">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
-                    ${rlabel} ${rd.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                </span></div>`;
+                remindBadge = `<div style="margin-bottom: 8px; display:flex; align-items:center; gap:6px;">
+                    <span style="position:relative; display:inline-flex; align-items:center; gap:5px; color:${rc}; border:1px solid ${rc}55; background:${rc}18; padding:3px 9px; border-radius:999px; font-size:0.75rem; font-weight:700; cursor:pointer;" title="Klicken, um den Zeitpunkt zu ändern">
+                        ${remindInput(window.isoToLocalInput(p.remind_at))}
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
+                        ${rlabel} ${rd.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}, ${rd.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
+                    </span>
+                    <button type="button" class="delete-permission-required" onclick="event.stopPropagation(); window.clearProcessRemind('${p.id}')" title="Erinnerung entfernen" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:999px; width:22px; height:22px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>`;
+            } else {
+                remindBadge = `<div style="margin-bottom: 8px;">
+                    <span style="position:relative; display:inline-flex; align-items:center; gap:5px; color:rgba(251,191,36,0.75); border:1px dashed rgba(251,191,36,0.4); background:rgba(251,191,36,0.06); padding:3px 9px; border-radius:999px; font-size:0.75rem; font-weight:700; cursor:pointer;" title="Erinnerung setzen">
+                        ${remindInput(window.defaultRemindInputValue())}
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
+                        Erinnerung setzen
+                    </span>
+                </div>`;
             }
         }
 
@@ -505,8 +526,14 @@ window.renderProcesses = function(targetId, opts) {
                 ${statusUpdates.length ? `<div class="proc-stand-pop" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:61; margin-top:4px; background:rgba(15,23,42,0.98); border:1px solid rgba(96,165,250,0.3); border-radius:12px; padding:8px; box-shadow:0 12px 40px rgba(0,0,0,0.6); max-height:280px; overflow-y:auto;">
                     ${statusUpdates.map((u, i) => `
                     <div style="padding:7px 9px; border-radius:8px; ${i === 0 ? 'background:rgba(96,165,250,0.1);' : ''}">
-                        <div style="color:#fff; font-size:0.85rem; white-space:pre-wrap; word-break:break-word;">${escStep(u.text)}</div>
-                        <div style="font-size:0.72rem; color:rgba(255,255,255,0.45); margin-top:2px;">${escStep(u.by || 'Unbekannt')} · ${fmtStamp(u.at)}</div>
+                        <div contenteditable="true" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault(); this.blur();}" onfocus="this.style.background='rgba(255,255,255,0.08)'" onblur="this.style.background='transparent'; window.updateProcessCardStand('${p.id}', ${i}, this.textContent)" title="Klicken zum Bearbeiten" style="color:#fff; font-size:0.85rem; white-space:pre-wrap; word-break:break-word; outline:none; border-radius:4px; padding:2px 4px; cursor:text;">${escStep(u.text)}</div>
+                        <div style="display:flex; align-items:center; gap:8px; margin-top:3px; flex-wrap:wrap;">
+                            <span style="font-size:0.72rem; color:rgba(255,255,255,0.45);">${escStep(u.by || 'Unbekannt')}</span>
+                            <input type="datetime-local" value="${window.isoToLocalInput(u.at)}" onclick="event.stopPropagation(); try{this.showPicker()}catch(e){}" onchange="window.updateProcessCardStandDate('${p.id}', ${i}, this.value)" title="Zeitpunkt ändern" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; color-scheme:dark; border-radius:8px; padding:2px 6px; font-size:0.72rem; cursor:pointer;">
+                            <button type="button" class="delete-permission-required" onclick="event.stopPropagation(); window.deleteProcessCardStand('${p.id}', ${i})" title="Eintrag löschen" style="margin-left:auto; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; width:22px; height:22px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
                     </div>`).join('')}
                 </div>` : ''}
             </div>`;

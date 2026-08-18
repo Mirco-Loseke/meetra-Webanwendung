@@ -240,7 +240,7 @@
             <textarea id="status-update-text" rows="3" class="glass-form-input" placeholder="z. B. Ersatzteil bestellt, Liefertermin KW 34" style="width: 100%; resize: vertical; margin-bottom: 14px;"></textarea>
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
                 <div class="form-label-caps" style="margin: 0;">Zeitpunkt</div>
-                <input type="datetime-local" id="status-update-when" class="glass-form-input" style="flex: 1; max-width: 260px;">
+                <input type="datetime-local" id="status-update-when" class="glass-form-input" onclick="try{this.showPicker()}catch(e){}" style="flex: 1; max-width: 260px; color: #fff; color-scheme: dark; cursor: pointer;">
             </div>
             <div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; margin: 0 -0.5rem; padding: 0 0.5rem;">
                 <div class="form-label-caps" style="margin-bottom: 8px;">Verlauf</div>
