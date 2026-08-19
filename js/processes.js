@@ -899,7 +899,10 @@ window.deleteProcess = async function(id) {
     }
 };
 
-window.isMyProcessesFilterActive = false;
+// Standardansicht beim Laden: „Meine Vorgänge". Der Knopf trägt dazu passend
+// die Klasse `active` im Markup (partials/views/processes.html) — beides muss
+// zusammenpassen, sonst zeigt der Reiter etwas anderes an als die Liste.
+window.isMyProcessesFilterActive = true;
 
 // Ansicht umschalten: 'all' = alle Vorgänge, 'me' = nur mir zugewiesene
 window.filterProcessesByUser = function (mode) {

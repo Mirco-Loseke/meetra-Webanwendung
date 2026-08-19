@@ -1620,9 +1620,11 @@
                                     </button>
                                 </div>
                                 <div class="calendar-view-tabs" style="margin-bottom: 0;">
-                                    <button class="calendar-tab-btn active" id="btn-process-tab-all"
-                                        onclick="window.filterProcessesByUser('all')">Vorgänge</button>
-                                    <button class="calendar-tab-btn" id="btn-process-user-me"
+                                    <!-- Standard ist „Meine Vorgänge" — der aktive Zustand steht
+                                         hier UND in window.isMyProcessesFilterActive (js/processes.js). -->
+                                    <button class="calendar-tab-btn" id="btn-process-tab-all"
+                                        onclick="window.filterProcessesByUser('all')">Alle Vorgänge</button>
+                                    <button class="calendar-tab-btn active" id="btn-process-user-me"
                                         onclick="window.filterProcessesByUser('me')">Meine Vorgänge</button>
                                 </div>
                                 <button class="btn-add-bg" onclick="window.openAiCaptureModal('vorgaenge')"
@@ -2512,6 +2514,18 @@
                         <span class="btn-label-short">ANLEGEN</span>
                     </button>
                 </div>
+            </div>
+
+            <!-- Verwaiste Zuordnungen: Namen, die noch an Datensaetzen haengen,
+                 zu denen es keine Kategorie mehr gibt (z. B. weil frueher
+                 umbenannt wurde, bevor das automatisch nachgezogen wurde).
+                 Wird nur eingeblendet, wenn wirklich etwas gefunden wurde. -->
+            <div id="orphan-categories-panel" class="orphan-panel" style="display:none;">
+                <div class="orphan-panel-head">
+                    <strong>Alte Kategorie-Namen gefunden</strong>
+                    <span>Diese Namen stehen noch an Datensätzen, es gibt aber keine Kategorie mehr dazu. Ziel wählen und übernehmen — der Name wird überall ersetzt.</span>
+                </div>
+                <div id="orphan-categories-list"></div>
             </div>
 
             <div class="user-list-container">
@@ -3877,7 +3891,7 @@
     </script>
     <script src="js/dashboard.js?v=1"></script>
     <script src="js/app-core.js?v=3"></script>
-    <script src="js/app-init.js?v=11"></script>
+    <script src="js/app-init.js?v=12"></script>
     <script src="js/settings-uvv-plans.js?v=1"></script>
     <script src="js/machine-details-modal.js?v=1"></script>
     <script src="js/machine-modal.js?v=1"></script>
@@ -3885,12 +3899,12 @@
     <script src="js/service-list.js?v=2"></script>
     <script src="js/history-modal.js?v=2"></script>
     <script src="js/calendar-events.js?v=4"></script>
-    <script src="js/processes-ui.js?v=15"></script>
+    <script src="js/processes-ui.js?v=16"></script>
     <script src="js/process-messages.js?v=1"></script>
     <script src="js/process-machine-select.js?v=1"></script>
     <script src="js/customer-matching.js?v=1"></script>
     <script src="js/ui-modals.js?v=1"></script>
-    <script src="js/processes.js?v=118"></script>
+    <script src="js/processes.js?v=119"></script>
     <script src="js/service-reports.js?v=1"></script>
     <script src="js/service-entries.js?v=5"></script>
     <script src="js/service-picker.js?v=1"></script>
@@ -5669,8 +5683,8 @@
     <script src="js/task_templates.js?v=99"></script>
     <!-- Spracheingabe für die KI-Felder — muss vor den KI-Modulen stehen,
          die beim Aufbau ihrer Modals window.micButtonHtml() aufrufen. -->
-    <script src="js/speech-input.js?v=2"></script>
-    <script src="js/ai-quick-capture.js?v=18"></script>
+    <script src="js/speech-input.js?v=3"></script>
+    <script src="js/ai-quick-capture.js?v=20"></script>
     <script>
         window.addEventListener('load', () => {
             if (typeof window.initTaskTemplates === 'function') {
@@ -6900,8 +6914,14 @@
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
-                <div class="form-label-caps">Was ist der Stand?</div>
-                <textarea id="status-update-text" rows="3" class="glass-form-input" placeholder="z. B. Ersatzteil bestellt, Liefertermin KW 34" style="width: 100%; resize: vertical; margin-bottom: 14px;"></textarea>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px;">
+                    <div class="form-label-caps" style="margin: 0;">Was ist der Stand?</div>
+                    <!-- Diktier-Knopf: die Klick-Delegation in js/speech-input.js
+                         greift allein über data-mic-for, kein onclick nötig. -->
+                    <button type="button" class="mic-btn" data-mic-for="status-update-text" title="Diktieren — Text wird direkt ins Feld geschrieben"><span class="mic-btn-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span><span class="mic-btn-label">Diktieren</span></button>
+                </div>
+                <textarea id="status-update-text" rows="3" class="glass-form-input" placeholder="z. B. Ersatzteil bestellt, Liefertermin KW 34" style="width: 100%; resize: vertical;"></textarea>
+                <div class="mic-status" data-mic-status-for="status-update-text" style="margin-bottom: 10px;"></div>
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 14px;">
                     <div class="form-label-caps" style="margin: 0;">Zeitpunkt</div>
                     <input type="datetime-local" id="status-update-when" class="glass-form-input" onclick="try{this.showPicker()}catch(e){}" style="flex: 1; max-width: 260px; color: #fff; color-scheme: dark; cursor: pointer;">
@@ -6992,9 +7012,31 @@
                         <input type="text" id="edit-process-title-input" class="glass-input" required placeholder="Betreff der E-Mail...">
                     </div>
 
-                    <div class="form-group" style="margin-bottom: 0.75rem;">
-                        <label class="form-label-caps">Bemerkung / Beschreibung</label>
-                        <textarea id="edit-process-remark-input" class="glass-input" style="height: 80px; resize: vertical; padding-top: 15px;" placeholder="Interne Bemerkung..."></textarea>
+                    <!-- Bemerkung / Notiz: standardmaessig eingeklappt, oeffnet per + -->
+                    <div class="proc-note-section" id="edit-process-note-section" style="margin-bottom: 0.75rem;">
+                        <button type="button" class="proc-note-toggle" id="edit-process-note-toggle" onclick="window.toggleProcessNoteSection()" aria-expanded="false">
+                            <svg class="proc-note-plus" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            <span>Bemerkung / Notiz</span>
+                            <span class="proc-note-hint" id="edit-process-note-hint"></span>
+                        </button>
+                        <div class="proc-note-body" id="edit-process-note-body" hidden>
+                            <div class="form-group" style="margin-bottom: 0.75rem;">
+                                <label class="form-label-caps">Bemerkung</label>
+                                <textarea id="edit-process-remark-input" class="glass-input" style="height: 80px; resize: vertical; padding-top: 15px;" placeholder="Interne Bemerkung..."></textarea>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label-caps">Stand</label>
+                                <div class="proc-note-stand-row">
+                                    <textarea id="edit-process-status-text" class="glass-input" style="height: 60px; resize: vertical; padding-top: 12px;" placeholder="Aktuellen Stand beschreiben..."></textarea>
+                                    <div class="proc-note-stand-actions">
+                                        <button type="button" class="mic-btn" data-mic-for="edit-process-status-text" title="Diktieren — Text wird direkt ins Feld geschrieben"><span class="mic-btn-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span></button>
+                                        <button type="button" class="proc-note-add" onclick="window.addProcessStatusFromEdit()">Eintragen</button>
+                                    </div>
+                                </div>
+                                <div class="mic-status" data-mic-status-for="edit-process-status-text"></div>
+                                <div id="edit-process-status-history" class="proc-note-history"></div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-group" id="edit-process-body-group" style="margin-bottom: 0.75rem; display: none;">
@@ -7313,7 +7355,7 @@
 <script src="js/auth.js"></script>
 <script src="js/users.js?v=2"></script>
 <script src="js/machines-grouped.js?v=1"></script>
-<script src="js/voice-dictation.js"></script>
+<script src="js/voice-dictation.js?v=2"></script>
 </body>
 
 </html>

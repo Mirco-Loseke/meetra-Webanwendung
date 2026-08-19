@@ -181,6 +181,11 @@
                     if (typeof window.loadAddressbook === 'function') {
                         window.loadAddressbook();
                     }
+                } else if (targetId === 'categories') {
+                    // Nach alten Kategorie-Namen suchen, die noch an Datensätzen hängen.
+                    if (typeof window.scanOrphanCategoryNames === 'function') {
+                        window.scanOrphanCategoryNames();
+                    }
                 } else if (targetId === 'tasks') {
                     if (typeof window.switchTaskView === 'function') {
                         window.switchTaskView('board');
@@ -1114,6 +1119,13 @@
                 if (typeof window.populateMachineManufacturerDropdown === 'function') {
                     window.populateMachineManufacturerDropdown();
                 }
+
+                // Verwaiste Namen nur suchen, wenn die Kategorien-Seite offen ist —
+                // beim Programmstart wäre das nur unnötige Last.
+                const catView = document.getElementById('categories');
+                if (catView && catView.offsetParent !== null && typeof window.scanOrphanCategoryNames === 'function') {
+                    window.scanOrphanCategoryNames();
+                }
             }
 
             // ── Kategorien per Ziehen-und-Halten sortieren (Pointer Events statt HTML5
@@ -1457,12 +1469,13 @@
                             await updateAffectedMachines(editingId, intervalValue);
                         }
 
-                        // Name geändert? Maschinen hängen per category_id (unkritisch), aber der
-                        // Kategorie-NAME steckt zusätzlich als Text in Serien-Kategorien und in
-                        // Dokumenten (machine_categories). Dort nachziehen, sonst greifen Filter/
-                        // Zuordnungen dieser Kategorie nicht mehr.
+                        // Name geändert? Vieles hängt per ID (unkritisch), aber etliche
+                        // Zuordnungen speichern den Kategorie-NAMEN als Text — Adresstyp und
+                        // Hersteller an Adressen, Serie/Kategorien an Maschinen und Dokumenten,
+                        // Angebots-Status. Die werden hier nachgezogen, sonst zeigen die
+                        // Datensätze weiter den alten Namen und die Auswahl greift nicht mehr.
                         if (!response.error && oldCat && oldCat.name && oldCat.name.trim() !== name) {
-                            await cascadeCategoryRename(oldCat.name, name);
+                            await cascadeCategoryRename(oldCat.name, name, typeValue);
                         }
                     } else {
                         // INSERT — ans Ende der Liste dieses Typs anhängen
@@ -1485,18 +1498,53 @@
                 });
             }
 
-            // Kategorie-Namen, die als Text (kommagetrennt) in categories.machine_categories
-            // (Serien) und documents.machine_categories hinterlegt sind, beim Umbenennen mitziehen.
-            // Vergleich case-insensitiv, Schreibweise wird auf den neuen Namen normalisiert.
-            async function cascadeCategoryRename(oldName, newName) {
+            // ==========================================
+            // KATEGORIE UMBENENNEN -> ÜBERALL NACHZIEHEN
+            // ==========================================
+            // Ein Teil der Zuordnungen hängt an der Kategorie-ID (Maschinen,
+            // Serviceberichte, Kontaktarten, Zusatzausrüstung) — die sind vom
+            // Umbenennen gar nicht betroffen. Der Rest speichert den NAMEN als
+            // Text; genau dort steht sonst weiter der alte Name und die
+            // Auswahl-Kästchen greifen nicht mehr.
+            //
+            // Pro Kategorie-Typ die Stellen, an denen der Name als Text liegt.
+            // `csv: true` = kommagetrennte Mehrfachauswahl in einer Textspalte.
+            const CATEGORY_NAME_REFS = {
+                machine: [
+                    { table: 'categories', column: 'machine_categories', csv: true, filter: q => q.eq('type', 'series') },
+                    { table: 'documents',  column: 'machine_categories', csv: true }
+                ],
+                series: [
+                    { table: 'machines',  column: 'machine_series', csv: false },
+                    { table: 'documents', column: 'machine_series', csv: true }
+                ],
+                manufacturer: [
+                    { table: 'customers',  column: 'manufacturer', csv: true },
+                    { table: 'machines',   column: 'manufacturer', csv: false },
+                    { table: 'categories', column: 'manufacturer', csv: false, filter: q => q.eq('type', 'series') }
+                ],
+                address_type: [
+                    { table: 'customers', column: 'address_type', csv: true }
+                ],
+                document: [
+                    { table: 'documents', column: 'category', csv: true }
+                ],
+                status: [
+                    { table: 'angebote', column: 'status', csv: false }
+                ]
+            };
+
+            // Verknüpfungsarten liegen als Kürzel ("technischer_partner") in
+            // customer_links.link_type — dieselbe Umwandlung wie in getLinkTypes().
+            const linkTypeSlug = (s) => (s || '').toLowerCase().replace(/\s+/g, '_');
+
+            async function cascadeCategoryRename(oldName, newName, typeValue) {
                 const oldN = (oldName || '').trim();
                 const newN = (newName || '').trim();
-                if (!oldN || !newN || oldN.toLowerCase() === newN.toLowerCase()) {
-                    // gleicher Name (nur andere Groß/Kleinschreibung erlaubt) -> trotzdem normalisieren
-                    if (!oldN || !newN || oldN === newN) return;
-                }
+                if (!oldN || !newN || oldN === newN) return;
+
                 const norm = s => (s || '').trim().toLowerCase();
-                // Ersetzt den alten Namen in einer kommagetrennten Liste; null = keine Änderung.
+                // Kommagetrennte Liste: alten Namen ersetzen; null = nichts zu tun.
                 const replaceInList = (csv) => {
                     const parts = (csv || '').split(',').map(s => s.trim()).filter(Boolean);
                     let changed = false;
@@ -1506,30 +1554,203 @@
                     });
                     return changed ? [...new Set(out)].join(', ') : null;
                 };
+                // Einzelwert: nur bei exakter (case-insensitiver) Übereinstimmung.
+                const replaceSingle = (val) => (norm(val) === norm(oldN) && val !== newN) ? newN : null;
+
+                const refs = CATEGORY_NAME_REFS[typeValue] || [];
+                const fehlgeschlagen = [];
+
+                for (const ref of refs) {
+                    try {
+                        // Ganze Spalte holen und im Browser vergleichen — eine
+                        // fehlende Spalte darf nicht die ganze Umbenennung kippen.
+                        let query = supabaseClient.from(ref.table).select('id, ' + ref.column);
+                        if (ref.filter) query = ref.filter(query);
+                        const { data, error } = await query;
+                        if (error) throw error;
+
+                        for (const row of (data || [])) {
+                            const neu = ref.csv ? replaceInList(row[ref.column]) : replaceSingle(row[ref.column]);
+                            if (neu === null) continue;
+                            const patch = {};
+                            patch[ref.column] = neu;
+                            const { error: updErr } = await supabaseClient
+                                .from(ref.table).update(patch).eq('id', row.id);
+                            if (updErr) throw updErr;
+                        }
+                    } catch (e) {
+                        console.warn(`Umbenennen konnte in ${ref.table}.${ref.column} nicht nachgezogen werden:`, e);
+                        fehlgeschlagen.push(ref.table);
+                    }
+                }
+
+                // Verknüpfungsarten: Kürzel statt Klartext.
+                if (typeValue === 'link') {
+                    try {
+                        const alt = linkTypeSlug(oldN);
+                        const neu = linkTypeSlug(newN);
+                        if (alt !== neu) {
+                            const { error } = await supabaseClient
+                                .from('customer_links').update({ link_type: neu }).eq('link_type', alt);
+                            if (error) throw error;
+                        }
+                    } catch (e) {
+                        console.warn('Umbenennen konnte in customer_links.link_type nicht nachgezogen werden:', e);
+                        fehlgeschlagen.push('customer_links');
+                    }
+                }
+
+                // UVV-/Wartungsplan-Zuordnungen liegen als JSON in app_settings
+                // (Serien stehen dort im Klartext).
+                if (typeValue === 'series') {
+                    try {
+                        const { data } = await supabaseClient
+                            .from('app_settings').select('value').eq('key', 'uvv_plan_assignments').maybeSingle();
+                        const zuord = (data && data.value) ? data.value : null;
+                        let geaendert = false;
+                        if (zuord && typeof zuord === 'object') {
+                            Object.values(zuord).forEach(a => {
+                                if (!a || !Array.isArray(a.machine_series)) return;
+                                a.machine_series = a.machine_series.map(s => {
+                                    if (norm(s) === norm(oldN)) { geaendert = true; return newN; }
+                                    return s;
+                                });
+                            });
+                        }
+                        if (geaendert) {
+                            const { error } = await supabaseClient
+                                .from('app_settings').update({ value: zuord }).eq('key', 'uvv_plan_assignments');
+                            if (error) throw error;
+                        }
+                    } catch (e) {
+                        console.warn('Umbenennen konnte in den UVV-Zuordnungen nicht nachgezogen werden:', e);
+                        fehlgeschlagen.push('app_settings');
+                    }
+                }
+
+                // Zwischengespeicherte Listen neu laden, sonst zeigt die
+                // Adress-/Dokumentenansicht weiter den alten Namen.
                 try {
-                    // 1) Serien-Kategorien
-                    const { data: series } = await supabaseClient
-                        .from('categories').select('id, machine_categories').eq('type', 'series');
-                    for (const s of (series || [])) {
-                        const upd = replaceInList(s.machine_categories);
-                        if (upd !== null) {
-                            await supabaseClient.from('categories').update({ machine_categories: upd }).eq('id', s.id);
-                        }
-                    }
-                    // 2) Dokumente
-                    const { data: docs } = await supabaseClient
-                        .from('documents').select('id, machine_categories').not('machine_categories', 'is', null);
-                    for (const d of (docs || [])) {
-                        const upd = replaceInList(d.machine_categories);
-                        if (upd !== null) {
-                            await supabaseClient.from('documents').update({ machine_categories: upd }).eq('id', d.id);
-                        }
-                    }
-                } catch (e) {
-                    console.warn('Kategorie-Umbenennung konnte nicht überall nachgezogen werden:', e);
-                    if (window.showToast) window.showToast('Kategorie umbenannt, aber Zuordnungen in Serien/Dokumenten evtl. nicht vollständig aktualisiert.');
+                    if (typeof window.loadAddressbook === 'function') await window.loadAddressbook(true);
+                } catch (e) { /* Ansicht evtl. nie geöffnet — unkritisch */ }
+
+                if (fehlgeschlagen.length) {
+                    window.showToast('Kategorie umbenannt, aber nicht überall übernommen: '
+                        + [...new Set(fehlgeschlagen)].join(', ') + '. Details in der Konsole.');
                 }
             }
+
+            // ==========================================
+            // VERWAISTE KATEGORIE-NAMEN
+            // ==========================================
+            // Frühere Umbenennungen wurden nicht nachgezogen — an den Datensätzen
+            // steht dann ein Name, zu dem es keine Kategorie mehr gibt (z. B. ein
+            // Adresstyp, der überall angezeigt, aber nirgends mehr angehakt wird).
+            // Hier werden sie gesucht und lassen sich per Auswahl umschreiben;
+            // das Umschreiben nutzt dieselbe Kaskade wie das Umbenennen.
+            const CATEGORY_TYPE_LABELS = {
+                machine: 'Maschinenkategorie',
+                series: 'Maschinenserie',
+                manufacturer: 'Hersteller',
+                address_type: 'Adresstyp',
+                document: 'Dokumententyp',
+                status: 'Angebots-Status'
+            };
+
+            window.scanOrphanCategoryNames = async function () {
+                const panel = document.getElementById('orphan-categories-panel');
+                const box = document.getElementById('orphan-categories-list');
+                if (!panel || !box || !supabaseClient) return;
+
+                const norm = s => (s || '').trim().toLowerCase();
+                const gefunden = []; // { type, name, anzahl }
+
+                // Dokumententypen bleiben außen vor: die PDF-Erzeugung setzt dort
+                // auch Werte ohne passende Kategorie ('Servicebericht'), das wäre
+                // eine Warnung, die sich nie auflösen lässt.
+                const SCAN_TYPES = ['machine', 'series', 'manufacturer', 'address_type', 'status'];
+
+                for (const [typeValue, refs] of Object.entries(CATEGORY_NAME_REFS)) {
+                    if (!SCAN_TYPES.includes(typeValue)) continue;
+                    const bekannt = new Set(
+                        (window.categoryList || [])
+                            .filter(c => c.type === typeValue)
+                            .map(c => norm(c.name))
+                    );
+                    const zaehler = new Map(); // norm -> { name, anzahl }
+
+                    for (const ref of refs) {
+                        try {
+                            let query = supabaseClient.from(ref.table).select('id, ' + ref.column);
+                            if (ref.filter) query = ref.filter(query);
+                            const { data, error } = await query;
+                            if (error) throw error;
+                            for (const row of (data || [])) {
+                                const roh = row[ref.column];
+                                if (!roh) continue;
+                                const werte = ref.csv
+                                    ? String(roh).split(',').map(s => s.trim()).filter(Boolean)
+                                    : [String(roh).trim()].filter(Boolean);
+                                werte.forEach(w => {
+                                    if (bekannt.has(norm(w))) return;
+                                    const eintrag = zaehler.get(norm(w)) || { name: w, anzahl: 0 };
+                                    eintrag.anzahl++;
+                                    zaehler.set(norm(w), eintrag);
+                                });
+                            }
+                        } catch (e) {
+                            console.warn(`Verwaiste Namen in ${ref.table}.${ref.column} nicht prüfbar:`, e);
+                        }
+                    }
+
+                    zaehler.forEach(e => gefunden.push({ type: typeValue, name: e.name, anzahl: e.anzahl }));
+                }
+
+                if (!gefunden.length) {
+                    panel.style.display = 'none';
+                    box.innerHTML = '';
+                    return;
+                }
+
+                const esc = s => String(s == null ? '' : s)
+                    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+                box.innerHTML = gefunden.map((o, i) => {
+                    const ziele = (window.categoryList || [])
+                        .filter(c => c.type === o.type)
+                        .map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
+                    return `
+                        <div class="orphan-row">
+                            <div class="orphan-row-label">
+                                <span class="orphan-name">${esc(o.name)}</span>
+                                <span class="orphan-meta">${esc(CATEGORY_TYPE_LABELS[o.type] || o.type)} · ${o.anzahl}× hinterlegt</span>
+                            </div>
+                            <select id="orphan-target-${i}" class="glass-form-input">
+                                <option value="">— Ziel wählen —</option>
+                                ${ziele}
+                            </select>
+                            <button type="button" class="orphan-apply" onclick="window.applyOrphanCategoryFix('${esc(o.type)}', ${JSON.stringify(o.name).replace(/"/g, '&quot;')}, ${i})">Übernehmen</button>
+                        </div>`;
+                }).join('');
+                panel.style.display = '';
+            };
+
+            window.applyOrphanCategoryFix = async function (typeValue, altName, index) {
+                const sel = document.getElementById('orphan-target-' + index);
+                const ziel = sel ? sel.value : '';
+                if (!ziel) { window.showToast('Bitte erst eine Ziel-Kategorie wählen.'); return; }
+                if (!confirm(`"${altName}" überall durch "${ziel}" ersetzen?`)) return;
+                try {
+                    await cascadeCategoryRename(altName, ziel, typeValue);
+                    window.showToast(`"${altName}" wurde durch "${ziel}" ersetzt.`);
+                    await fetchCategories();
+                    if (typeof fetchMachines === 'function') fetchMachines();
+                    await window.scanOrphanCategoryNames();
+                } catch (e) {
+                    console.error('Verwaisten Namen ersetzen fehlgeschlagen:', e);
+                    window.showToast('Fehler: ' + e.message);
+                }
+            };
 
             async function updateAffectedMachines(categoryId, newInterval) {
                 try {

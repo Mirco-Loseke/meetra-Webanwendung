@@ -163,3 +163,84 @@
 @media (max-width: 900px) {
     .proc-add-columns { grid-template-columns: 1fr; gap: 0; }
 }
+
+/* ── Vorgang bearbeiten: ausklappbare "Bemerkung / Notiz" ───────────────
+   Kopfzeile mit +/−, darin Bemerkung und der Stand-Verlauf.
+   Jeder Stand-Eintrag beginnt mit Datum und Nutzer. */
+.proc-note-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    color: var(--text-2);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background var(--motion-fast, 0.15s) ease;
+}
+.proc-note-toggle:hover { background: rgba(255, 255, 255, 0.08); }
+.proc-note-plus { flex: none; transition: transform 0.2s ease; }
+.proc-note-toggle[aria-expanded="true"] .proc-note-plus { transform: rotate(45deg); }
+.proc-note-hint {
+    margin-left: auto;
+    font-size: var(--fs-xs);
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--text-3);
+}
+.proc-note-body {
+    padding: var(--space-3) var(--space-3) var(--space-2);
+    margin-top: var(--space-2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.02);
+}
+.proc-note-stand-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+}
+.proc-note-stand-row textarea { flex: 1; }
+.proc-note-add {
+    flex: none;
+    padding: var(--space-2) var(--space-3);
+    background: rgba(96, 165, 250, 0.14);
+    border: 1px solid rgba(96, 165, 250, 0.35);
+    border-radius: var(--radius-md);
+    color: #93c5fd;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    cursor: pointer;
+}
+.proc-note-add:hover { background: rgba(96, 165, 250, 0.24); }
+.proc-note-history {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    max-height: 260px;
+    overflow-y: auto;
+}
+@media (max-width: 768px) {
+    .proc-note-stand-row { flex-direction: column; align-items: stretch; }
+}
+
+/* Stand-Zeile: Diktier-Knopf und „Eintragen" stehen rechts untereinander. */
+.proc-note-stand-actions {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+.proc-note-stand-actions .mic-btn { justify-content: center; }
+@media (max-width: 768px) {
+    .proc-note-stand-actions { flex-direction: row; }
+    .proc-note-stand-actions .proc-note-add { flex: 1; }
+}

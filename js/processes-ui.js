@@ -500,6 +500,17 @@
             document.getElementById('edit-process-status-select').value = proc.status || 'offen';
             document.getElementById('edit-process-remark-input').value = proc.remark || '';
             document.getElementById('edit-process-body-input').value = proc.description || '';
+
+            // Bemerkung / Notiz: Stand-Verlauf desselben Vorgangs anzeigen.
+            // Eingeklappt starten; nur wenn schon etwas hinterlegt ist, offen.
+            window.statusUpdateProcessId = proc.id;
+            const editStandText = document.getElementById('edit-process-status-text');
+            if (editStandText) editStandText.value = '';
+            window.renderProcessStatusHistory(proc);
+            window.updateProcessNoteHint(proc);
+            const hatNotiz = !!(proc.remark && String(proc.remark).trim())
+                || (Array.isArray(proc.status_updates) && proc.status_updates.length > 0);
+            window.setProcessNoteSectionOpen(hatNotiz);
             window.syncProcessSelectDisplay('edit-process', 'type');
             window.syncProcessSelectDisplay('edit-process', 'status');
             window.processSteps['edit-process'] = Array.isArray(proc.steps)
@@ -1070,26 +1081,31 @@
             setTimeout(() => { modal.classList.add('hidden'); modal.style.display = 'none'; }, 300);
         };
 
+        // Zeichnet den Stand-Verlauf in alle vorhandenen Behälter: das eigene
+        // Stand-Fenster und den Abschnitt „Bemerkung / Notiz" im Bearbeiten-Fenster.
         window.renderProcessStatusHistory = function(proc) {
-            const box = document.getElementById('status-update-history');
-            if (!box) return;
+            const boxes = ['status-update-history', 'edit-process-status-history']
+                .map(id => document.getElementById(id))
+                .filter(Boolean);
+            if (!boxes.length) return;
             const list = Array.isArray(proc.status_updates) ? proc.status_updates : [];
             if (!list.length) {
-                box.innerHTML = `<div style="color:rgba(255,255,255,0.3); font-style:italic; font-size:0.85rem; padding:4px 2px;">Noch kein Stand eingetragen.</div>`;
+                boxes.forEach(b => { b.innerHTML = `<div style="color:rgba(255,255,255,0.3); font-style:italic; font-size:0.85rem; padding:4px 2px;">Noch kein Stand eingetragen.</div>`; });
                 return;
             }
             const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            box.innerHTML = list.map((u, i) => `
+            const html = list.map((u, i) => `
                 <div style="padding:10px 12px; border-radius:10px; background:${i === 0 ? 'rgba(96,165,250,0.12)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${i === 0 ? 'rgba(96,165,250,0.35)' : 'rgba(255,255,255,0.08)'};">
-                    <div contenteditable="true" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault(); this.blur();}" onfocus="this.style.background='rgba(255,255,255,0.08)'" onblur="this.style.background='transparent'; window.updateProcessStatusUpdateText(${i}, this.textContent)" title="Klicken zum Bearbeiten" style="color:#fff; font-size:0.9rem; white-space:pre-wrap; word-break:break-word; outline:none; border-radius:4px; padding:2px 4px; cursor:text;">${esc(u.text)}</div>
-                    <div style="display:flex; align-items:center; gap:8px; margin-top:6px; flex-wrap:wrap;">
-                        <span style="font-size:0.75rem; color:rgba(255,255,255,0.5);">${esc(u.by || 'Unbekannt')}</span>
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
                         <input type="datetime-local" value="${window.isoToLocalInput(u.at)}" onchange="window.updateProcessStatusUpdateDate(${i}, this.value)" onclick="try{this.showPicker()}catch(e){}" title="Zeitpunkt ändern — klicken zum Ändern" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; color-scheme:dark; border-radius:8px; padding:4px 8px; font-size:0.78rem; cursor:pointer;">
+                        <span style="font-size:0.75rem; color:rgba(255,255,255,0.5);">${esc(u.by || 'Unbekannt')}</span>
                         <button type="button" class="delete-permission-required" onclick="window.deleteProcessStatusUpdate(${i})" title="Eintrag löschen" style="margin-left:auto; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:8px; width:26px; height:26px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>
                         </button>
                     </div>
+                    <div contenteditable="true" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault(); this.blur();}" onfocus="this.style.background='rgba(255,255,255,0.08)'" onblur="this.style.background='transparent'; window.updateProcessStatusUpdateText(${i}, this.textContent)" title="Klicken zum Bearbeiten" style="color:#fff; font-size:0.9rem; white-space:pre-wrap; word-break:break-word; outline:none; border-radius:4px; padding:2px 4px; cursor:text;">${esc(u.text)}</div>
                 </div>`).join('');
+            boxes.forEach(b => { b.innerHTML = html; });
         };
 
         window.formatProcessStatusStamp = function(iso) {
@@ -1195,6 +1211,62 @@
             } catch (e) {
                 console.error('Fehler beim Löschen des Eintrags:', e);
                 window.showToast('Fehler beim Löschen: ' + e.message);
+            }
+        };
+
+        // ------------------------------------------
+        // Abschnitt „Bemerkung / Notiz" im Bearbeiten-Fenster: aufklappbar,
+        // enthält die Bemerkung und den Stand-Verlauf.
+        // ------------------------------------------
+        window.setProcessNoteSectionOpen = function(open) {
+            const body = document.getElementById('edit-process-note-body');
+            const toggle = document.getElementById('edit-process-note-toggle');
+            if (!body || !toggle) return;
+            body.hidden = !open;
+            toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        };
+
+        window.toggleProcessNoteSection = function() {
+            const toggle = document.getElementById('edit-process-note-toggle');
+            if (!toggle) return;
+            window.setProcessNoteSectionOpen(toggle.getAttribute('aria-expanded') !== 'true');
+        };
+
+        // Kurzhinweis in der Kopfzeile, damit man auch eingeklappt sieht,
+        // dass etwas hinterlegt ist.
+        window.updateProcessNoteHint = function(proc) {
+            const hint = document.getElementById('edit-process-note-hint');
+            if (!hint) return;
+            const teile = [];
+            if (proc && proc.remark && String(proc.remark).trim()) teile.push('Bemerkung');
+            const anz = Array.isArray(proc && proc.status_updates) ? proc.status_updates.length : 0;
+            if (anz) teile.push(anz === 1 ? '1 Stand' : anz + ' Stände');
+            hint.textContent = teile.join(' · ');
+        };
+
+        window.addProcessStatusFromEdit = async function() {
+            const proc = currentStatusProcess();
+            if (!proc) return;
+            const ta = document.getElementById('edit-process-status-text');
+            const text = (ta ? ta.value : '').trim();
+            if (!text) { window.showToast('Bitte einen Stand eingeben.'); return; }
+            const list = (Array.isArray(proc.status_updates) ? proc.status_updates.slice() : []);
+            list.unshift({
+                text: text,
+                by: (window.activeUser && window.activeUser.name) || 'Unbekannt',
+                by_id: (window.activeUser && window.activeUser.id) || null,
+                at: new Date().toISOString()
+            });
+            list.sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0));
+            try {
+                await persistStatusUpdates(proc, list);
+                if (ta) ta.value = '';
+                window.renderProcessStatusHistory(proc);
+                window.updateProcessNoteHint(proc);
+                window.renderProcesses();
+            } catch (e) {
+                console.error('Fehler beim Speichern des Stands:', e);
+                window.showToast('Fehler beim Speichern: ' + e.message);
             }
         };
 

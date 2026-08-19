@@ -13,6 +13,9 @@
     // Modell wird automatisch auf das zuverlässige Standardmodell zurückgefallen.
     const GROQ_FALLBACK_MODEL = 'llama-3.3-70b-versatile';
     function groqModel() { return localStorage.getItem('groq_model') || GROQ_FALLBACK_MODEL; }
+    // Entwurf des Freitexts. Diktieren dauert; ein versehentlicher Klick auf
+    // „Abbrechen" oder ein Fehler der KI hat den ganzen Text gekostet.
+    const ENTWURF_KEY = 'ai_capture_entwurf';
     let lastResult = null; // zuletzt von der KI erzeugtes Objekt
     let lastInputText = ''; // Rohtext der Eingabe (für exakten Seriennummer-Abgleich)
 
@@ -36,6 +39,69 @@
         }
         return best ? best.id : null;
     }
+    // Maschinen-Liste für den Prompt: erst die, die im Eingabetext vorkommen,
+    // dann mit dem Rest auffüllen. Vorher wurden hart die ersten 60 der Liste
+    // genommen — bei einem größeren Bestand fiel die gerade gemeinte Maschine
+    // damit einfach hinten runter und die KI kannte sie gar nicht.
+    // Nebeneffekt: kürzerer Prompt (Groq Free Tier: 12.000 Token/Minute).
+    function relevanteMaschinen(text, max) {
+        const list = window.machineList || [];
+        const grenze = max || 60;
+        const hay = String(text || '').toLowerCase();
+        const label = m => [m.manufacturer, m.name, m.serial].filter(Boolean).join(' ');
+
+        const passt = (m) => {
+            if (!hay) return false;
+            const woerter = [m.name, m.matchcode, m.manufacturer]
+                .filter(Boolean).join(' ').toLowerCase()
+                .split(/[^a-zà-ÿ0-9]+/i).filter(w => w.length > 3);
+            if (woerter.some(w => hay.includes(w))) return true;
+            const ziffern = String(m.serial || '').replace(/[^a-z0-9]/gi, '');
+            return ziffern.length >= 3 && hay.replace(/[^a-z0-9]/gi, '').includes(ziffern.toLowerCase());
+        };
+
+        const treffer = [], rest = [];
+        list.forEach(m => (passt(m) ? treffer : rest).push(m));
+        return treffer.concat(rest).slice(0, grenze).map(label).filter(Boolean);
+    }
+
+    // Groq-Fehler in eine Meldung übersetzen, mit der man etwas anfangen kann.
+    // Roh durchgereicht stand da vorher z. B. „Rate limit reached for model
+    // llama-3.3-70b-versatile in organization org_… on tokens per minute (TPM)".
+    async function groqFehlerText(response) {
+        let roh = response.statusText || '';
+        try { const e = await response.clone().json(); roh = e.error?.message || roh; } catch (_) { }
+        if (response.status === 401 || response.status === 403) {
+            return 'Der Groq API-Key wird nicht akzeptiert. Bitte unter Einstellungen → KI prüfen.';
+        }
+        if (response.status === 429) {
+            return 'Das Minutenlimit von Groq ist erreicht (kostenloser Zugang: 12.000 Token/Minute). Bitte kurz warten und erneut auf „Analysieren" klicken.';
+        }
+        if (response.status >= 500) {
+            return 'Groq antwortet gerade nicht (Serverfehler). Bitte gleich noch einmal versuchen.';
+        }
+        return roh || ('Unerwartete Antwort (' + response.status + ')');
+    }
+
+    // Wie lange laut Antwort gewartet werden soll (Sekunden), sonst 0.
+    function retryAfterSekunden(response) {
+        const h = response.headers && response.headers.get('retry-after');
+        const s = h ? parseFloat(h) : NaN;
+        return isNaN(s) ? 0 : Math.min(s, 20);
+    }
+
+    // Antworttext zu JSON. Manche Modelle hängen trotz response_format Text an
+    // oder brechen ab — deshalb wird notfalls das äußerste { … } herausgeschnitten.
+    function parseKiJson(raw) {
+        let t = String(raw || '').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        try { return JSON.parse(t); } catch (e) { /* zweiter Versuch unten */ }
+        const von = t.indexOf('{'), bis = t.lastIndexOf('}');
+        if (von >= 0 && bis > von) {
+            try { return JSON.parse(t.slice(von, bis + 1)); } catch (e) { /* aufgeben */ }
+        }
+        throw new Error('Die KI hat keine auswertbare Antwort geliefert. Bitte noch einmal versuchen — bei sehr langen Texten in zwei Teilen.');
+    }
+
     let existingTasks = [];      // offene Aufgaben (zum Zuordnen)
     let existingProcesses = [];  // vorhandene Vorgänge (zum Status-Anhängen)
 
@@ -190,12 +256,28 @@
     }
 
     // Erkennt eine Werkstattauftragsnummer im Text: 2026-40123 oder 5-stellig mit 40 (40123)
+    // Diktierte Nummern kommen oft zerlegt an ("40 123", "40-123"). Innerhalb
+    // einer erkannten Auftragsnummer die Trenner entfernen.
+    // Hinweis: kein Lookbehind ((?<!…)) verwenden — Safari kennt das erst ab
+    // 16.4, die App läuft laut Altgeräte-Weiche schon ab iOS 15.4. Ein
+    // Lookbehind im Quelltext lässt die ganze Datei dort gar nicht erst laden.
+    function normalizeWaNumber(wa) {
+        const s = String(wa || '').trim();
+        if (!s) return '';
+        const jahr = s.match(/^(20\d{2})\s*[-\/]?\s*([\d\s.\-]+)$/);
+        if (jahr) return jahr[1] + '-' + jahr[2].replace(/[\s.\-]/g, '');
+        return s.replace(/(\d)[\s.\-]+(?=\d)/g, '$1');
+    }
+
     function detectWorkshopOrder(text) {
-        const s = String(text || '');
+        // Ziffern dürfen durch Leerzeichen/Punkt/Bindestrich getrennt sein —
+        // genau so liefert die Spracherkennung diktierte Nummern. Deshalb
+        // werden die Trenner zwischen Ziffern zuerst entfernt.
+        const s = String(text || '').replace(/(\d)[\s.]+(?=\d)/g, '$1');
         let m = s.match(/\b(20\d{2}-40\d{3})\b/);
         if (m) return m[1];
-        m = s.match(/(?<!\d)(40\d{3})(?!\d)/);
-        if (m) return m[1];
+        m = s.match(/(^|[^\d])(40\d{3})([^\d]|$)/);
+        if (m) return m[2];
         return '';
     }
 
@@ -326,6 +408,9 @@
                     </p>
                     <div style="display:flex; gap:0.75rem; align-items:flex-start;">
                         <textarea id="ai-capture-text" class="glass-form-input" rows="6" placeholder="z.B. Beim Trommelsieb 4230 muss das Sieblager getauscht werden, vorher Ersatzteil bestellen und Kunde Meyer anrufen wegen Termin. Außerdem Angebot für neue Förderbänder rausschicken."
+                            oninput="window.aiCapSaveDraft(this.value)"
+                            onkeydown="if((event.ctrlKey||event.metaKey)&&event.key==='Enter'){event.preventDefault(); window.runAiCapture();}"
+                            title="Strg+Enter analysiert direkt"
                             style="flex:1; min-width:0; box-sizing:border-box; resize:vertical; font-size:0.95rem;"></textarea>
                         <div style="flex:0 0 150px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:0.65rem 0.75rem; align-self:stretch;">
                             <div style="font-size:0.68rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:rgba(255,255,255,0.4); margin-bottom:6px;">Tipps</div>
@@ -411,7 +496,15 @@
 
         modal.classList.remove('hidden');
         modal.style.display = 'flex';
-        requestAnimationFrame(() => modal.classList.add('show'));
+        requestAnimationFrame(() => {
+            modal.classList.add('show');
+            // Ein versehentlich geschlossenes Fenster oder ein Fehler soll ein
+            // langes Diktat nicht vernichten — der letzte Entwurf kommt zurück.
+            const ta = document.getElementById('ai-capture-text');
+            const entwurf = localStorage.getItem(ENTWURF_KEY);
+            if (ta && entwurf && !ta.value) ta.value = entwurf;
+            if (ta) ta.focus();
+        });
     };
 
     window.closeAiCaptureModal = function () {
@@ -420,6 +513,18 @@
         if (!modal) return;
         modal.classList.remove('show');
         setTimeout(() => { modal.classList.add('hidden'); modal.style.display = 'none'; }, 250);
+    };
+
+    // Entwurf mitschreiben (auch das Diktat löst 'input' aus).
+    window.aiCapSaveDraft = function (val) {
+        try {
+            if (val && val.trim()) localStorage.setItem(ENTWURF_KEY, val);
+            else localStorage.removeItem(ENTWURF_KEY);
+        } catch (e) { /* localStorage voll/gesperrt — nicht schlimm */ }
+    };
+
+    window.aiCapClearDraft = function () {
+        try { localStorage.removeItem(ENTWURF_KEY); } catch (e) { }
     };
 
     window.resetAiCapture = function () {
@@ -448,9 +553,7 @@
         if (inp) inp.style.display = 'none';
         if (status) { status.style.display = 'block'; status.textContent = 'KI analysiert deine Eingabe...'; }
 
-        const machineHintList = (window.machineList || [])
-            .map(m => [m.manufacturer, m.name, m.serial].filter(Boolean).join(' '))
-            .filter(Boolean).slice(0, 60).join('; ');
+        const machineHintList = relevanteMaschinen(text).join('; ');
 
         const groupNames = (window.taskSupergroupNames && window.taskSupergroupNames.length)
             ? window.taskSupergroupNames
@@ -552,7 +655,15 @@ Eingangsprotokoll vs. Abnahmeprotokoll NIEMALS verwechseln:
 - Abnahmeprotokoll = wenn eine Maschine FERTIG ist / RAUSGEHT (Endabnahme, vor Auslieferung, Übergabe an Kunde, "fertig", "wird ausgeliefert").
 Nur das jeweils passende als Unteraufgabe anlegen.`);
 
-        teile.push(`Regeln:
+        teile.push(`Der Text kann DIKTIERT sein. Damit umgehen:
+- Füllwörter und Versprecher ignorieren ("äh", "ähm", "also", "genau", "ne", "halt", "sozusagen").
+- Selbstkorrekturen beachten: gilt immer die LETZTE Aussage ("Dienstag, ähm nein, Mittwoch" -> Mittwoch).
+- Fehlende Satzzeichen sind normal — den Redefluss selbst in Sätze/Einträge trennen.
+- Ausgeschriebene Zahlen in Ziffern schreiben ("vierzigtausendeinhundertdreiundzwanzig" -> 40123, "zwei Stück" -> 2).
+- Ziffernfolgen, die die Spracherkennung mit Leerzeichen zerlegt hat, zusammenziehen, wenn erkennbar EINE Nummer gemeint ist ("40 123" nach "Werkstattauftrag" -> "40123", "vier null eins zwei drei" -> "40123"). Im Zweifel unverändert lassen.
+- Diktierte Satzzeichen-Wörter ("Punkt", "Komma", "neue Zeile") nur dann als Satzzeichen deuten, wenn sie im Satz sonst keinen Sinn ergeben.
+
+Regeln:
 - Korrigiere offensichtliche Rechtschreib- und Tippfehler in Titeln, Unteraufgaben und Bemerkungen (Bedeutung/Inhalt unverändert lassen, nur sauber schreiben).
 - ZAHLEN und SERIENNUMMERN NIEMALS ändern/„korrigieren" — exakt Ziffer für Ziffer übernehmen.
 - Wenn NUR eine Seriennummer genannt wird (ohne Maschinennamen), schreibe genau diese Nummer unverändert in machine_hint.
@@ -588,6 +699,10 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
                         { role: 'user', content: text }
                     ],
                     temperature: 0.2,
+                    // Ohne Obergrenze bricht eine lange Antwort mitten im JSON
+                    // ab — dann scheitert das Auswerten mit „Unexpected end of
+                    // JSON input" und die ganze Eingabe war umsonst.
+                    max_tokens: 4096,
                     response_format: { type: 'json_object' }
                 })
             });
@@ -607,15 +722,20 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
                 }
             }
 
-            if (!response.ok) {
-                let msg = response.statusText;
-                try { const e = await response.json(); msg = e.error?.message || msg; } catch (_) {}
-                throw new Error(msg);
+            // Minutenlimit: einmal automatisch nachfassen, statt den Nutzer mit
+            // einer technischen Meldung wegzuschicken.
+            if (response.status === 429) {
+                const warten = retryAfterSekunden(response) || 6;
+                if (status) status.textContent = `Groq-Limit erreicht — neuer Versuch in ${Math.ceil(warten)} s …`;
+                await new Promise(r => setTimeout(r, warten * 1000));
+                if (status) status.textContent = 'KI analysiert deine Eingabe...';
+                response = await callGroq(groqModel());
             }
 
+            if (!response.ok) throw new Error(await groqFehlerText(response));
+
             const data = await response.json();
-            let resultText = (data.choices?.[0]?.message?.content || '').replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-            const parsed = JSON.parse(resultText);
+            const parsed = parseKiJson(data.choices?.[0]?.message?.content);
 
             // Auf den Bereich beschränken: Wer unter Aufgaben erfasst, soll
             // keine Vorgänge angeboten bekommen — auch dann nicht, wenn die
@@ -681,7 +801,7 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
                     || matchMachineId(a.machine_hint)
                     || matchMachineId(`${a.title || ''} ${a.description || ''}`);
                 // WA-Nummer aus KI-Feld; als Fallback aus Text NUR wenn keine Maschine gefunden wurde
-                let waNum = (a.workshop_order || '').trim();
+                let waNum = normalizeWaNumber(a.workshop_order);
                 if (!waNum && !mId) waNum = detectWorkshopOrder(`${a.title || ''} ${a.description || ''}`);
                 const mode = waNum ? 'wa' : 'machine'; // WA-Nummer -> direkt Werkstattauftrag
                 const subs = (Array.isArray(a.subtasks) ? a.subtasks : []).map(s => {
@@ -1087,6 +1207,12 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
             if (typeof window.fetchProcesses === 'function') window.fetchProcesses();
             if (typeof window.fetchTasks === 'function') window.fetchTasks();
 
+            // Gespeichert -> Entwurf und Eingabefeld leeren, damit beim nächsten
+            // Öffnen nicht der alte Text wieder auftaucht.
+            window.aiCapClearDraft();
+            const taFertig = document.getElementById('ai-capture-text');
+            if (taFertig) taFertig.value = '';
+
             window.closeAiCaptureModal();
             const parts = [];
             if (createdTasks) parts.push(`${createdTasks} neue Aufgabe(n)`);
@@ -1219,9 +1345,7 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
         if (inp) inp.style.display = 'none';
         if (status) { status.style.display = 'block'; status.textContent = 'KI analysiert deine Eingabe...'; }
 
-        const machineHintList = (window.machineList || [])
-            .map(m => [m.manufacturer, m.name, m.serial].filter(Boolean).join(' '))
-            .filter(Boolean).slice(0, 60).join('; ');
+        const machineHintList = relevanteMaschinen(text).join('; ');
 
         const userNames = (window.userList || []).map(u => u.name).filter(Boolean).slice(0, 40).join('; ');
 
@@ -1267,6 +1391,7 @@ Regeln:
                             { role: 'user', content: text }
                         ],
                         temperature: 0.2,
+                        max_tokens: 4096,
                         response_format: { type: 'json_object' }
                     })
                 });
@@ -1280,13 +1405,17 @@ Regeln:
                     response = await callGroq(GROQ_FALLBACK_MODEL);
                 }
             }
-            if (!response.ok) {
-                const errBody = await response.text();
-                throw new Error(`Groq-API Fehler (${response.status}): ${errBody.slice(0, 200)}`);
+            // Minutenlimit: einmal automatisch nachfassen (siehe runAiCapture).
+            if (response.status === 429) {
+                const warten = retryAfterSekunden(response) || 6;
+                if (status) status.textContent = `Groq-Limit erreicht — neuer Versuch in ${Math.ceil(warten)} s …`;
+                await new Promise(r => setTimeout(r, warten * 1000));
+                if (status) status.textContent = 'KI analysiert deine Eingabe...';
+                response = await callGroq(groqModel());
             }
+            if (!response.ok) throw new Error(await groqFehlerText(response));
             const data = await response.json();
-            const content = data.choices?.[0]?.message?.content || '{}';
-            const parsed = JSON.parse(content);
+            const parsed = parseKiJson(data.choices?.[0]?.message?.content);
 
             lastSrResult = {
                 machine_hint: parsed.machine_hint || '',
@@ -1527,12 +1656,16 @@ Regeln:
                         { role: 'user', content: `Betreff: ${title}\n\n${body}`.slice(0, 6000) }
                     ],
                     temperature: 0.2,
+                    // Ohne Obergrenze bricht eine lange Antwort mitten im JSON
+                    // ab — dann scheitert das Auswerten mit „Unexpected end of
+                    // JSON input" und die ganze Eingabe war umsonst.
+                    max_tokens: 4096,
                     response_format: { type: 'json_object' }
                 })
             });
-            if (!resp.ok) throw new Error(`Groq-API Fehler (${resp.status})`);
+            if (!resp.ok) throw new Error(await groqFehlerText(resp));
             const data = await resp.json();
-            const parsed = JSON.parse(data.choices?.[0]?.message?.content || '{}');
+            const parsed = parseKiJson(data.choices?.[0]?.message?.content || '{}');
             const newSteps = Array.isArray(parsed.steps) ? parsed.steps.filter(s => typeof s === 'string' && s.trim()).slice(0, 4) : [];
 
             if (newSteps.length === 0) {

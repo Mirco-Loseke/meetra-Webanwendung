@@ -1,86 +1,40 @@
-/* ========================================================= */
-/* ============= VOICE DICTATION MODULE ==================== */
-/* ========================================================= */
+/* =========================================================
+   VOICE DICTATION — nur noch ein Adapter
+   =========================================================
+   Hier lief früher eine ZWEITE, eigenständige Web-Speech-Anbindung neben
+   js/speech-input.js. Zwei Recognizer im selben Dokument vertragen sich
+   nicht: startet der eine, während der andere läuft, wirft Chrome ab und
+   das Diktat brach ohne Meldung ab. Ausserdem fehlten hier der
+   automatische Neustart nach einer Sprechpause und die Fehlermeldungen.
 
-(function() {
+   Deshalb reicht dieser Knopf jetzt nur noch an window.startSpeechInput
+   durch. Das Markup (`class="voice-mic-btn" data-target-id="…"
+   onclick="window.toggleVoiceDictation(this, event)"`) bleibt unverändert
+   gültig — speech-input.js erkennt diesen Knopf an `.voice-mic-btn` mit
+   `data-target-id` und zeichnet seinen Zustand (Aufnahme läuft) mit.
+   `data-mic-for` darf hier NICHT gesetzt werden: dann würde zusätzlich die
+   Klick-Delegation in speech-input.js feuern und die gerade gestartete
+   Aufnahme sofort wieder beenden.
+
+   Für neue Knöpfe stattdessen window.micButtonHtml('<feld-id>') nutzen.
+   ========================================================= */
+(function () {
     'use strict';
-    let recognition = null;
-    let activeBtn = null;
 
-    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-        recognition = new SpeechRec();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = 'de-DE';
-
-        recognition.onresult = (e) => {
-            if (!activeBtn) return;
-            const targetId = activeBtn.getAttribute('data-target-id');
-            const targetEl = document.getElementById(targetId);
-            if (!targetEl) return;
-
-            let finalTranscript = '';
-            for (let i = e.resultIndex; i < e.results.length; ++i) {
-                if (e.results[i].isFinal) {
-                    finalTranscript += e.results[i][0].transcript;
-                }
-            }
-
-            if (finalTranscript) {
-                const existing = targetEl.value;
-                const spacer = existing && !existing.endsWith(' ') ? ' ' : '';
-                targetEl.value = existing + spacer + finalTranscript;
-                targetEl.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-        };
-
-        recognition.onerror = (e) => {
-            console.warn('Spracherkennung Fehler:', e.error);
-            stopRecording();
-        };
-
-        recognition.onend = () => {
-            stopRecording();
-        };
-    }
-
-    function stopRecording() {
-        if (activeBtn) {
-            activeBtn.classList.remove('recording');
-            activeBtn.title = 'Spracheingabe starten (Diktieren)';
-            activeBtn = null;
-        }
-    }
-
-    window.toggleVoiceDictation = function(btnOrId, event) {
+    window.toggleVoiceDictation = function (btnOrId, event) {
         if (event) event.stopPropagation();
         const btn = typeof btnOrId === 'string' ? document.getElementById(btnOrId) : btnOrId;
         if (!btn) return;
 
-        if (!recognition) {
+        const targetId = btn.getAttribute('data-target-id') || btn.getAttribute('data-mic-for');
+        if (!targetId) return;
+
+        if (typeof window.startSpeechInput !== 'function') {
             if (typeof window.showToast === 'function') {
-                window.showToast('Ihr Browser unterstützt die eingebaute Spracherkennung nicht. Bitte nutzen Sie Google Chrome oder Microsoft Edge.');
+                window.showToast('Spracheingabe steht gerade nicht zur Verfügung.');
             }
             return;
         }
-
-        if (activeBtn === btn) {
-            recognition.stop();
-            stopRecording();
-        } else {
-            if (activeBtn) {
-                recognition.stop();
-                stopRecording();
-            }
-            activeBtn = btn;
-            btn.classList.add('recording');
-            btn.title = 'Aufnahme läuft… Klicken zum Stoppen';
-            try {
-                recognition.start();
-            } catch(e) {
-                console.warn('Speech recognition start failed:', e);
-            }
-        }
+        window.startSpeechInput(targetId);
     };
 })();

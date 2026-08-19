@@ -10,7 +10,7 @@
 
 /* Shared Components */
 @import 'components/navigation.css';
-@import 'components/modals.css';
+@import 'components/modals.css?v=3';
 @import 'components/buttons.css';
 @import 'components/forms.css?v=5';
 @import 'components/notifications.css';
@@ -28,7 +28,7 @@
 @import 'views/service-reports.css?v=3';
 @import 'views/machines.css';
 @import 'views/procurement.css';
-@import 'views/settings.css';
+@import 'views/settings.css?v=2';
 @import 'views/accounting.css';
 @import 'views/workshop.css';
 @import 'views/workshop-tasks.css?v=4';
