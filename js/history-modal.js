@@ -505,6 +505,25 @@
                         : `<span class="history-tag-badge" style="background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.4);">SYSTEM</span>`;
 
                     const isAdmin = window.activeUser && (window.activeUser.name === 'Mirco Loseke');
+
+                    // Datum: eigene Zeile UNTER dem Titel, gross, fett, weiss.
+                    // Vorher stand es als kleine graue Pille oben rechts neben
+                    // der Typ-Bezeichnung und war kaum zu lesen. Die Bearbeit-
+                    // barkeit (Klick öffnet den Datumswähler) bleibt erhalten —
+                    // nur bei manuellen Einträgen und für Admins bei den
+                    // systemseitigen Arten.
+                    const systemEditableTypes = ['service', 'workshop', 'procurement', 'intake', 'acceptance', 'calendar'];
+                    const darfDatumAendern = item.source === 'manuell'
+                        || (isAdmin && item.id && systemEditableTypes.includes(item.itemType));
+                    const datumAendernFn = item.source === 'manuell'
+                        ? `window.updateManualEntryDate('${item.id}', this.value)`
+                        : `window.updateSystemEntryDate('${item.itemType}', '${item.id}', this.value)`;
+
+                    const dateBlock = darfDatumAendern
+                        ? `<div class="history-date-line is-editable" title="Datum ändern"
+                                onclick="this.nextElementSibling.showPicker ? this.nextElementSibling.showPicker() : this.nextElementSibling.click()">${dateStr}</div>
+                           <input type="date" value="${item.date.toISOString().split('T')[0]}" style="position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none;" onchange="${datumAendernFn}">`
+                        : `<div class="history-date-line">${dateStr}</div>`;
                     // Use string comparison or conversion to avoid UUID type mismatch if table expects Integer
                     const deleteBtn = (isAdmin && item.id) ? `
                             <button onclick="window.deleteHistoryEntry('${item.id}', '${item.itemType || 'manual'}')" class="btn-icon-circular delete" title="Löschen">
@@ -660,30 +679,6 @@
                                         </div>
                                         <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
                                             ${sourceTag}
-                                            ${(() => {
-                                                const systemEditableTypes = ['service', 'workshop', 'procurement', 'intake', 'acceptance', 'calendar'];
-                                                if (item.source === 'manuell') {
-                                                    return `
-                                            <div style="position: relative; display: inline-flex; align-items: center;" title="Datum bearbeiten">
-                                                <div onclick="this.nextElementSibling.showPicker ? this.nextElementSibling.showPicker() : this.nextElementSibling.click()" style="font-size: clamp(0.6rem, 1.5vw, 0.75rem); color: rgba(255,255,255,0.6); font-weight: 700; text-align: right; background: rgba(16,185,129,0.06); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(16,185,129,0.2); white-space: nowrap; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.15)'; this.style.borderColor='rgba(16,185,129,0.4)'" onmouseout="this.style.background='rgba(16,185,129,0.06)'; this.style.borderColor='rgba(16,185,129,0.2)'">
-                                                    ✏️ ${dateStr}
-                                                </div>
-                                                <input type="date" value="${item.date.toISOString().split('T')[0]}" style="position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none;" onchange="window.updateManualEntryDate('${item.id}', this.value)">
-                                            </div>`;
-                                                } else if (isAdmin && item.id && systemEditableTypes.includes(item.itemType)) {
-                                                    return `
-                                            <div style="position: relative; display: inline-flex; align-items: center;" title="Datum bearbeiten (Admin)">
-                                                <div onclick="this.nextElementSibling.showPicker ? this.nextElementSibling.showPicker() : this.nextElementSibling.click()" style="font-size: clamp(0.6rem, 1.5vw, 0.75rem); color: rgba(255,255,255,0.6); font-weight: 700; text-align: right; background: rgba(0,0,0,0.35); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); white-space: nowrap; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'; this.style.borderColor='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(0,0,0,0.35)'; this.style.borderColor='rgba(255,255,255,0.08)'">
-                                                    ✏️ ${dateStr}
-                                                </div>
-                                                <input type="date" value="${item.date.toISOString().split('T')[0]}" style="position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none;" onchange="window.updateSystemEntryDate('${item.itemType}', '${item.id}', this.value)">
-                                            </div>`;
-                                                }
-                                                return `
-                                            <div style="font-size: clamp(0.6rem, 1.5vw, 0.75rem); color: rgba(255,255,255,0.6); font-weight: 700; text-align: right; background: rgba(0,0,0,0.35); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.08); white-space: nowrap;">
-                                                ${dateStr}
-                                            </div>`;
-                                            })()}
                                         </div>
                                     </div>
                                     ${(() => {
@@ -692,8 +687,9 @@
                                         const t = (item.title || '').trim();
                                         const typeLabel = String(item.type || '').replace(/<[^>]*>/g, '').trim();
                                         if (!t || t.toLowerCase() === typeLabel.toLowerCase()) return '';
-                                        return `<h4 style="margin: 0 0 0.5rem 0; color: #fff; font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; white-space: pre-wrap;">${escHistoryText(t)}</h4>`;
+                                        return `<h4 style="margin: 0 0 0.35rem 0; color: #fff; font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; white-space: pre-wrap;">${escHistoryText(t)}</h4>`;
                                     })()}
+                                    <div class="history-date-row">${dateBlock}</div>
                                     ${item.maintenanceScope ? `
                                     <div style="display:inline-flex; align-items:center; gap:5px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); color:var(--color-primary-green); border-radius:14px; padding:3px 10px; font-size:0.75rem; font-weight:700; margin-bottom:0.5rem;">
                                         Gewartet: ${escHistoryText(item.maintenanceScope)}

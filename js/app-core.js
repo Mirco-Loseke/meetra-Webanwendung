@@ -49,6 +49,76 @@
             return res;
         };
 
+        // ==========================================
+        // EINFÜGEN, DAS AN EINER SPALTE NICHT SCHEITERT
+        // ==========================================
+        // Hintergrund: mehrere Stellen hatten einen Wiederholversuch, der die
+        // störende Spalte am NAMEN in der Fehlermeldung erkannte
+        // (`/customer_id|history_ref/.test(error.message)`). Bei einem
+        // Typkonflikt nennt Postgres den Spaltennamen aber gar nicht:
+        //
+        //   invalid input syntax for type bigint: "976f0107-bdb4-…"
+        //
+        // Genau das passiert, wenn eine Migration nicht (oder in einer alten
+        // Fassung) gelaufen ist und z. B. maintenance_events.customer_id noch
+        // bigint statt uuid ist. Der Wiederholversuch griff nie, und das
+        // Speichern brach komplett ab — obwohl nur EIN Feld unpassend war.
+        //
+        // Diese Fassung sucht die störenden Felder zusätzlich über den WERT aus
+        // der Meldung und lässt nur weg, was in `optional` freigegeben ist.
+        // Zurück kommt neben dem Ergebnis die Liste der weggelassenen Felder,
+        // damit der Aufrufer sagen kann, was fehlt und welche SQL-Datei hilft.
+        window.insertRobust = async function (table, payload, opts) {
+            const o = opts || {};
+            const optional = o.optional || [];
+            const client = window.supabaseClient;
+            const versuch = Object.assign({}, payload);
+            const weggelassen = [];
+            let res;
+
+            for (let i = 0; i <= optional.length; i++) {
+                if (o.mitErsteller === false) {
+                    res = o.select
+                        ? await client.from(table).insert([versuch]).select(o.select).limit(1)
+                        : await client.from(table).insert([versuch]);
+                } else if (o.select) {
+                    // Wie insertMitErsteller, aber mit Rückgabe der neuen id.
+                    const mit = Object.assign({}, versuch, {
+                        user_id: window.uuidUserId(),
+                        created_by_user: (window.activeUser && window.activeUser.id) || null
+                    });
+                    res = await client.from(table).insert([mit]).select(o.select).limit(1);
+                    if (res.error && /created_by_user/.test(res.error.message || '')) {
+                        delete mit.created_by_user;
+                        res = await client.from(table).insert([mit]).select(o.select).limit(1);
+                    }
+                } else {
+                    res = await window.insertMitErsteller(table, versuch);
+                }
+                if (!res.error) break;
+
+                const msg = res.error.message || '';
+                const stoerend = new Set();
+
+                // 1) Spalte ist in der Meldung genannt (fehlende Spalte o. ä.)
+                optional.forEach(k => { if (msg.includes(k)) stoerend.add(k); });
+
+                // 2) Typkonflikt: Postgres nennt nur den WERT. Über den Wert
+                //    zurück auf das Feld schließen.
+                const m = msg.match(/invalid input syntax for type \w+: "([^"]+)"/);
+                if (m) {
+                    optional.forEach(k => {
+                        if (k in versuch && versuch[k] != null && String(versuch[k]) === m[1]) stoerend.add(k);
+                    });
+                }
+
+                if (!stoerend.size) break; // anderer Fehler -> nach oben geben
+                stoerend.forEach(k => { delete versuch[k]; weggelassen.push(k); });
+            }
+
+            return { error: res ? res.error : null, data: res ? res.data : null, weggelassen: weggelassen };
+        };
+
         // Global Error Handler for user feedback
         window.onerror = function (msg, url, lineNo, columnNo, error) {
             const message = [

@@ -3,8 +3,9 @@
 // ==========================================
 // Freitext -> KI (Groq) -> strukturierte Aufgaben (+Unteraufgaben) und
 // Vorgänge. Ergebnis wird IMMER erst in einer Vorschau angezeigt und erst
-// nach Klick gespeichert. Nutzt denselben Groq-Key wie die Buchhaltung
-// (localStorage 'groq_api_key').
+// nach Klick gespeichert. Die Anfragen laufen über window.groqFetch
+// (js/groq-proxy.js) — der Schlüssel liegt serverseitig in der Edge Function,
+// nicht mehr im Browser.
 
 (function () {
     'use strict';
@@ -545,8 +546,8 @@
         if (!text) { window.showToast('Bitte zuerst etwas eingeben.'); return; }
         lastInputText = text;
 
-        const apiKey = localStorage.getItem('groq_api_key');
-        if (!apiKey) { window.showToast('Bitte zuerst einen Groq API-Key in den Einstellungen hinterlegen (wie bei der Buchhaltung).'); return; }
+        // Kein Schlüssel mehr im Browser — den hängt die Edge Function serverseitig an.
+
 
         const inp = document.getElementById('ai-capture-input-area');
         const status = document.getElementById('ai-capture-status');
@@ -688,23 +689,21 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
 
         const systemPrompt = teile.join('\n\n');
 
+        // Läuft über die eigene Edge Function (js/groq-proxy.js) — der
+        // Schlüssel liegt serverseitig, nicht mehr im Browser.
         async function callGroq(model) {
-            return fetch('https://api.groq.com/openai/v1/chat/completions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-                body: JSON.stringify({
-                    model,
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: text }
-                    ],
-                    temperature: 0.2,
-                    // Ohne Obergrenze bricht eine lange Antwort mitten im JSON
-                    // ab — dann scheitert das Auswerten mit „Unexpected end of
-                    // JSON input" und die ganze Eingabe war umsonst.
-                    max_tokens: 4096,
-                    response_format: { type: 'json_object' }
-                })
+            return window.groqFetch({
+                model,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: text }
+                ],
+                temperature: 0.2,
+                // Ohne Obergrenze bricht eine lange Antwort mitten im JSON
+                // ab — dann scheitert das Auswerten mit „Unexpected end of
+                // JSON input" und die ganze Eingabe war umsonst.
+                max_tokens: 4096,
+                response_format: { type: 'json_object' }
             });
         }
 
@@ -1302,8 +1301,8 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
     }
 
     window.openAiServiceReportModal = function () {
-        const apiKey = localStorage.getItem('groq_api_key');
-        if (!apiKey) { window.showToast('Bitte zuerst einen Groq API-Key in den Einstellungen hinterlegen (wie bei der Buchhaltung).'); return; }
+        // Kein Schlüssel mehr im Browser — den hängt die Edge Function serverseitig an.
+
         const modal = ensureSrModal();
         window.resetAiServiceReportPreview();
         modal.classList.remove('hidden');
@@ -1335,8 +1334,8 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
         const text = (document.getElementById('ai-sr-text')?.value || '').trim();
         if (!text) { window.showToast('Bitte zuerst etwas eingeben.'); return; }
 
-        const apiKey = localStorage.getItem('groq_api_key');
-        if (!apiKey) { window.showToast('Bitte zuerst einen Groq API-Key in den Einstellungen hinterlegen.'); return; }
+        // Kein Schlüssel mehr im Browser — den hängt die Edge Function serverseitig an.
+
 
         const inp = document.getElementById('ai-sr-input-area');
         const status = document.getElementById('ai-sr-status');
@@ -1380,20 +1379,17 @@ Regeln:
 
         try {
             const chosenModel = groqModel();
+            // Über die eigene Edge Function, siehe js/groq-proxy.js
             async function callGroq(model) {
-                return fetch('https://api.groq.com/openai/v1/chat/completions', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-                    body: JSON.stringify({
-                        model,
-                        messages: [
-                            { role: 'system', content: systemPrompt },
-                            { role: 'user', content: text }
-                        ],
-                        temperature: 0.2,
-                        max_tokens: 4096,
-                        response_format: { type: 'json_object' }
-                    })
+                return window.groqFetch({
+                    model,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: text }
+                    ],
+                    temperature: 0.2,
+                    max_tokens: 4096,
+                    response_format: { type: 'json_object' }
                 });
             }
 
@@ -1634,8 +1630,8 @@ Regeln:
     window.aiCapSuggestStepsForCard = async function (i) {
         const card = document.querySelector(`.ai-cap-card[data-kind="process"][data-index="${i}"]`);
         if (!card) return;
-        const apiKey = localStorage.getItem('groq_api_key');
-        if (!apiKey) { window.showToast('Bitte zuerst einen Groq API-Key in den Einstellungen hinterlegen.'); return; }
+        // Kein Schlüssel mehr im Browser — den hängt die Edge Function serverseitig an.
+
 
         const title = card.querySelector('.ai-cap-title')?.value || '';
         const body = card.querySelector('.ai-cap-remark')?.value || '';
@@ -1646,10 +1642,7 @@ Regeln:
 
         try {
             const stepsPrompt = `Du bekommst Betreff und Inhalt einer Geschäfts-E-Mail. Schlage NUR wirklich passende, logische Arbeitsschritte vor, die sich aus dieser Mail ergeben (max. 4). Wenn keine sinnvolle Zerlegung möglich ist, gib ein leeres Array zurück. Erfinde keine Fakten. Antworte AUSSCHLIESSLICH mit JSON: { "steps": ["kurzer Schritt-Text"] }`;
-            const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-                body: JSON.stringify({
+            const resp = await window.groqFetch({
                     model: groqModel(),
                     messages: [
                         { role: 'system', content: stepsPrompt },
@@ -1661,7 +1654,6 @@ Regeln:
                     // JSON input" und die ganze Eingabe war umsonst.
                     max_tokens: 4096,
                     response_format: { type: 'json_object' }
-                })
             });
             if (!resp.ok) throw new Error(await groqFehlerText(resp));
             const data = await resp.json();

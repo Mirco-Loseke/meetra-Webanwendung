@@ -14,41 +14,38 @@
                 </div>
             </div>
 
-            <div class="glass-card" style="max-width: 600px; margin-top: 2rem; padding: 2rem;">
-                <div class="form-group" style="margin-bottom: 1.5rem;">
-                    <label
-                        style="color: rgba(255,255,255,0.7); font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Groq
-                        API-Key (Kostenlose KI)</label>
-                    <div
-                        style="font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-bottom: 15px; line-height: 1.4;">
-                        Wird verwendet für das extrem präzise und fehlerfreie Auslesen von Rechnungs-PDFs via
-                        KI. Der Key wird <strong style="color:white;">nur lokal in deinem Browser</strong>
-                        gespeichert.
-                    </div>
-                    <div style="position: relative;">
-                        <input type="password" id="settings-api-key-new" class="glass-input" placeholder="gsk_..."
-                            autocomplete="off" style="font-family: monospace; letter-spacing: 1px; width: 100%;">
-                        <button type="button" onclick="toggleApiKeyVisibilityNew()"
-                            style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: rgba(255,255,255,0.5); cursor: pointer; transition: color 0.2s;"
-                            onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">
-                            <svg id="eye-icon-api-new" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                <circle cx="12" cy="12" r="3"></circle>
-                            </svg>
-                        </button>
-                    </div>
-                    <div style="margin-top: 12px; font-size: 0.85rem;">
-                        <a href="https://console.groq.com/keys" target="_blank"
-                            style="color: #60a5fa; text-decoration: none; transition: color 0.2s;"
-                            onmouseover="this.style.color='#93c5fd'" onmouseout="this.style.color='#60a5fa'">Hier kannst
-                            du deinen API-Key erstellen
-                            &rarr;</a>
-                    </div>
+            <!-- Der Groq-Schlüssel wird hier NICHT mehr eingegeben. Er liegt als
+                 Supabase Secret auf dem Server; die Edge Function groq-proxy
+                 prüft die Anmeldung und hängt ihn dort an. Ein Eingabefeld an
+                 dieser Stelle würde den Schlüssel wieder in jeden Browser holen
+                 und damit genau das aufgeben, wofür der Umbau gemacht wurde. -->
+            <div class="glass-card" style="max-width: 640px; margin-top: 2rem; padding: 2rem;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.75rem;">
+                    <span style="font-size: 1.3rem;">🔒</span>
+                    <h3 style="margin: 0; color: #fff; font-size: 1.1rem;">Zugang liegt zentral</h3>
+                </div>
+                <p style="color: rgba(255,255,255,0.6); font-size: 0.9rem; line-height: 1.6; margin: 0 0 1.25rem 0;">
+                    Der Groq-Schlüssel ist auf dem Server hinterlegt und wird von dort angehängt.
+                    <strong style="color:#fff;">Niemand muss ihn mehr eintragen</strong>, und er
+                    lässt sich aus der App nicht auslesen. Die KI funktioniert für jeden, der
+                    angemeldet ist — ohne Anmeldung antwortet der Dienst gar nicht erst.
+                </p>
+
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <button class="btn-primary" onclick="window.pruefeKiVerbindung()">Verbindung prüfen</button>
+                    <div id="ai-connection-status" style="font-size: 0.88rem; color: rgba(255,255,255,0.6);"></div>
                 </div>
 
-                <div style="margin-top: 2rem; display: flex; justify-content: flex-end;">
-                    <button class="btn-primary" onclick="saveSettingsNew()">Einstellungen speichern</button>
+                <div style="margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <div style="font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.4); margin-bottom: 8px;">
+                        Für die Verwaltung
+                    </div>
+                    <p style="color: rgba(255,255,255,0.5); font-size: 0.84rem; line-height: 1.6; margin: 0;">
+                        Schlüssel wechseln oder Tagesgrenze ändern: als Supabase Secret setzen und die
+                        Edge Function neu ausrollen — die Schritte stehen in
+                        <code style="background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 5px;">supabase/SETUP_GROQ.txt</code>.
+                        In der App ist dafür nichts zu ändern.
+                    </p>
                 </div>
             </div>
         </section>

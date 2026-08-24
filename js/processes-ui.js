@@ -323,9 +323,15 @@
                 machineSearch.style.color = '';
             }
 
-            // Reset assigned employees
-            window.processAssignedUsers['process-add'] = [];
-            document.getElementById('process-add-assigned-users').value = '';
+            // Zuständig: der angemeldete Benutzer ist vorausgewählt — wer einen
+            // Vorgang anlegt, ist in aller Regel selbst dafür zuständig.
+            // Abwählen geht wie gehabt über das Aufklappmenü.
+            // Die Kennung kommt aus window.userList (js/auth.js setzt daraus
+            // window.activeUser), damit der Typ zum Vergleich im Menü passt.
+            const me = window.activeUser && window.activeUser.id;
+            window.processAssignedUsers['process-add'] = me ? [me] : [];
+            document.getElementById('process-add-assigned-users').value =
+                me ? JSON.stringify([me]) : '';
             document.getElementById('process-add-tech-dropdown-panel').style.display = 'none';
             renderProcessTechDropdown('process-add');
 
@@ -508,15 +514,17 @@
             if (editStandText) editStandText.value = '';
             window.renderProcessStatusHistory(proc);
             window.updateProcessNoteHint(proc);
-            const hatNotiz = !!(proc.remark && String(proc.remark).trim())
-                || (Array.isArray(proc.status_updates) && proc.status_updates.length > 0);
-            window.setProcessNoteSectionOpen(hatNotiz);
+            // Der Ausklapp betrifft nur noch die Bemerkung — „Stand" steht
+            // jetzt fest sichtbar darunter. Offen also nur, wenn wirklich
+            // eine Bemerkung hinterlegt ist.
+            window.setProcessNoteSectionOpen(!!(proc.remark && String(proc.remark).trim()));
             window.syncProcessSelectDisplay('edit-process', 'type');
             window.syncProcessSelectDisplay('edit-process', 'status');
             window.processSteps['edit-process'] = Array.isArray(proc.steps)
                 ? proc.steps.map(s => ({ id: s.id || genStepId(), text: s.text || '', done: !!s.done, created_at: s.created_at || null, created_by: s.created_by || null, done_at: s.done_at || null, done_by: s.done_by || null, assigned_to: s.assigned_to || null, assigned_id: s.assigned_id || null, remind_at: s.remind_at || null }))
                 : [];
             window.renderProcessSteps('edit-process');
+            if (typeof window.updateProcessAttachButton === 'function') window.updateProcessAttachButton();
             window.updateEmailBodyVisibility('edit-process');
 
             // Set up assigned employees
@@ -797,6 +805,21 @@
                 return;
             }
             const fmtDT = (d) => { if (!d) return ''; try { return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' · ' + new Date(d).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }); } catch (e) { return ''; } };
+
+            // Dokumente an einem Schritt gibt es erst, wenn der Vorgang
+            // gespeichert ist — vorher fehlt die ID, unter der die Datei
+            // abgelegt wuerde. Beim Neuanlegen bleibt der Knopf deshalb weg.
+            const procIdFuerAnhang = prefix === 'edit-process'
+                ? ((document.getElementById('edit-process-id') || {}).value || '')
+                : (prefix === 'steps-modal' ? (window.stepsModalProcessId || '') : '');
+            const attBtn = (stepId) => {
+                if (!procIdFuerAnhang || typeof window.openProcessAttachments !== 'function') return '';
+                const n = window.processAttachCount(procIdFuerAnhang, stepId);
+                const farbe = n ? '#38bdf8' : 'rgba(255,255,255,0.4)';
+                const rahmen = n ? 'none' : '1px dashed rgba(255,255,255,0.35)';
+                const hg = n ? 'rgba(56,189,248,0.18)' : 'transparent';
+                return `<button type="button" onclick="window.openProcessAttachments('${procIdFuerAnhang}','${stepId}', event)" title="${n ? n + ' Dokument(e)' : 'Dokument hinzufügen'}" style="flex-shrink:0; width:24px; height:24px; border-radius:50%; border:${rahmen}; background:${hg}; color:${farbe}; cursor:pointer; display:flex; align-items:center; justify-content:center; margin-top:1px; font-size:0.7rem; font-weight:800;">${n ? n : '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>'}</button>`;
+            };
             list.innerHTML = steps.map((s, i) => {
                 const createdMeta = (s.created_by || s.created_at) ? `erstellt${s.created_by ? ` von ${escStepAttr(s.created_by)}` : ''}${s.created_at ? ` am ${fmtDT(s.created_at)}` : ''}` : '';
                 const doneMeta = s.done ? `✓ erledigt${s.done_by ? ` von ${escStepAttr(s.done_by)}` : ''}${s.done_at ? ` am ${fmtDT(s.done_at)}` : ''}` : '';
@@ -835,6 +858,7 @@
                             style="flex:1; min-width:0; background:transparent; border:none; color:#fff; font-size:0.9rem; outline:none; resize:none; overflow:hidden; word-break:break-word; white-space:pre-wrap; font-family:inherit; line-height:1.4; padding-top:3px; text-decoration:${s.done ? 'line-through' : 'none'}; opacity:${s.done ? '0.55' : '1'};">${escStepAttr(s.text)}</textarea>
                         ${assignBtn}
                         ${remBtn}
+                        ${attBtn(s.id)}
                         <button type="button" onclick="window.deleteProcessStep('${prefix}','${s.id}')" title="Entfernen"
                             style="flex-shrink:0; background:none; border:none; color:#ef4444; cursor:pointer; padding:4px; display:flex; align-items:center; margin-top:1px;">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -886,8 +910,23 @@
             if (s) s.text = val;
         };
 
-        window.deleteProcessStep = function(prefix, id) {
+        window.deleteProcessStep = async function(prefix, id) {
             if (typeof window.canDelete === 'function' && !window.canDelete('Schritten')) return;
+
+            // Hängen Dokumente an diesem Schritt, würden sie sonst unsichtbar
+            // im Speicher zurückbleiben — niemand käme mehr an sie heran.
+            const procId = prefix === 'edit-process'
+                ? ((document.getElementById('edit-process-id') || {}).value || '')
+                : (prefix === 'steps-modal' ? (window.stepsModalProcessId || '') : '');
+            if (procId && typeof window.processAttachCount === 'function') {
+                const n = window.processAttachCount(procId, id);
+                if (n && !confirm(`An diesem Schritt hängen ${n} Dokument(e).\n\nBeim Löschen des Schritts werden sie endgültig aus dem Speicher entfernt. Fortfahren?`)) return;
+                if (n && typeof window.deleteProcessStepFiles === 'function') {
+                    try { await window.deleteProcessStepFiles(procId, id); }
+                    catch (e) { console.warn('Dokumente des Schritts konnten nicht gelöscht werden:', e); }
+                }
+            }
+
             window.processSteps[prefix] = (window.processSteps[prefix] || []).filter(x => x.id !== id);
             window.renderProcessSteps(prefix);
         };
@@ -1133,12 +1172,41 @@
             return (window.eventsState.processes || []).find(p => String(p.id) === String(id)) || null;
         }
 
+        // Im Fenster lassen sich alte Einträge direkt bearbeiten; die
+        // speichern für sich beim Verlassen des Feldes. Ein Klick auf
+        // „Speichern" löst dieses Verlassen erst aus — deshalb hier erst
+        // abwarten, sonst schriebe das Speichern gleich darauf den alten
+        // Stand zurück.
+        let pendingStatusEdit = Promise.resolve();
+
+        async function commitPendingStatusEdit() {
+            const active = document.activeElement;
+            if (active && active.isContentEditable &&
+                active.closest('#status-update-history, #edit-process-status-history')) {
+                active.blur();
+            }
+            try { await pendingStatusEdit; } catch (e) { /* Fehler meldet der Aufrufer schon */ }
+        }
+
         window.saveProcessStatusUpdate = async function() {
             const proc = currentStatusProcess();
             if (!proc) return;
+
+            await commitPendingStatusEdit();
+
             const ta = document.getElementById('status-update-text');
             const text = (ta ? ta.value : '').trim();
-            if (!text) { window.showToast('Bitte einen Stand eingeben.'); return; }
+            if (!text) {
+                // Kein neuer Text — das ist kein Fehler: wer nur einen alten
+                // Eintrag bearbeitet hat, ist damit fertig, der ist längst
+                // gespeichert. Nur wenn es überhaupt noch keinen Stand gibt,
+                // ist das Feld tatsächlich Pflicht.
+                const hasEntries = Array.isArray(proc.status_updates) && proc.status_updates.length > 0;
+                if (!hasEntries) { window.showToast('Bitte einen Stand eingeben.'); return; }
+                window.closeProcessStatusUpdateModal();
+                window.fetchProcesses();
+                return;
+            }
             const when = document.getElementById('status-update-when');
             const at = window.localInputToIso(when ? when.value : '') || new Date().toISOString();
             const list = (Array.isArray(proc.status_updates) ? proc.status_updates.slice() : []);
@@ -1178,7 +1246,13 @@
             }
         };
 
-        window.updateProcessStatusUpdateText = async function(index, text) {
+        // Der Merker oben wartet auf genau diesen Schreibvorgang.
+        window.updateProcessStatusUpdateText = function(index, text) {
+            pendingStatusEdit = doUpdateStatusText(index, text);
+            return pendingStatusEdit;
+        };
+
+        async function doUpdateStatusText(index, text) {
             const proc = currentStatusProcess();
             if (!proc || !Array.isArray(proc.status_updates) || !proc.status_updates[index]) return;
             const val = (text || '').trim();
@@ -1192,7 +1266,7 @@
                 console.error('Fehler beim Ändern des Stands:', e);
                 window.showToast('Fehler beim Speichern: ' + e.message);
             }
-        };
+        }
 
         // Löschen: nur mit Löschberechtigung, und der Eintrag verschwindet
         // sofort aus der Datenbank (die gekürzte Liste wird geschrieben) —
@@ -1237,11 +1311,10 @@
         window.updateProcessNoteHint = function(proc) {
             const hint = document.getElementById('edit-process-note-hint');
             if (!hint) return;
-            const teile = [];
-            if (proc && proc.remark && String(proc.remark).trim()) teile.push('Bemerkung');
-            const anz = Array.isArray(proc && proc.status_updates) ? proc.status_updates.length : 0;
-            if (anz) teile.push(anz === 1 ? '1 Stand' : anz + ' Stände');
-            hint.textContent = teile.join(' · ');
+            // Nur noch die Bemerkung — der Stand steht jetzt sichtbar
+            // darunter und braucht keinen Hinweis in der Kopfzeile.
+            hint.textContent = (proc && proc.remark && String(proc.remark).trim())
+                ? 'hinterlegt' : '';
         };
 
         window.addProcessStatusFromEdit = async function() {

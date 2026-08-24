@@ -68,6 +68,8 @@
         loaded: false,
         migrationMissing: false,
         manufacturerMissing: false,
+        // phones_extra/emails_extra fehlen (supabase_add_address_extra_contacts.sql)
+        extraContactsMissing: false,
         currentId: null,
         // Auswahlmodus zum Zusammenstellen einer Route: selection hält die
         // Adress-IDs in der Reihenfolge, in der sie angeklickt wurden.
@@ -307,7 +309,22 @@
 
             // Adressen mit absteigendem Spaltenumfang laden: fehlt eine Migration,
             // bleibt die Seite nutzbar – nur ohne die betroffenen Felder.
+            // Weitere Telefonnummern/E-Mails (supabase_add_address_extra_contacts.sql).
+            // Eigener Versuch davor, damit ein Fehlen NUR diese Felder kostet.
+            const EXTRA_CONTACT_COLS = ', phones_extra, emails_extra';
+
             async function ladeAdressen() {
+                try {
+                    const rows = await fetchAllRows('customers', BASE_COLS + EXTRA_COLS + MANUFACTURER_COL + EXTRA_CONTACT_COLS, 'name');
+                    state.migrationMissing = false;
+                    state.manufacturerMissing = false;
+                    state.extraContactsMissing = false;
+                    return rows;
+                } catch (errExtra) {
+                    if (!isMissingColumn(errExtra)) throw errExtra;
+                    state.extraContactsMissing = true;
+                    console.warn('Adressbuch: Spalten "phones_extra"/"emails_extra" fehlen – bitte supabase_add_address_extra_contacts.sql ausführen.');
+                }
                 try {
                     const rows = await fetchAllRows('customers', BASE_COLS + EXTRA_COLS + MANUFACTURER_COL, 'name');
                     state.migrationMissing = false;
@@ -1003,6 +1020,11 @@
         const pos = state.selectMode ? state.selection.indexOf(id) : -1;
         const selected = pos >= 0;
 
+        // Überschrift der Karte: Firma/Name, groß und in Weiß. Der Matchcode
+        // steht bewusst NICHT auf der Karte — er ist ein Suchbegriff, kein
+        // Anzeigename; gesucht wird ohnehin über das Suchfeld.
+        const headline = (a.name || '').trim() || 'Ohne Namen';
+
         // Current Adresstypen list
         const addressTypes = a.address_type ? a.address_type.split(',').map(s => s.trim()).filter(Boolean) : [];
         const typePills = addressTypes.map(t => {
@@ -1019,9 +1041,9 @@
                  data-ab-action="${state.selectMode ? 'toggle-select' : 'open'}" data-ab-id="${esc(id)}" tabindex="0" role="button">
             ${selected ? `<div class="ab-select-order">${pos + 1}</div>` : ''}
             <div class="ab-card-top">
-                <div class="ab-avatar" style="--ab-hue:${hue}">${esc(initials(a.name))}</div>
+                <div class="ab-avatar" style="--ab-hue:${hue}">${esc(initials(headline))}</div>
                 <div class="ab-card-heading">
-                    <div class="ab-card-name">${esc(a.name || 'Ohne Namen')}</div>
+                    <div class="ab-card-name">${esc(headline)}</div>
                     <div class="ab-card-sub">
                         ${a.address_number ? `<span>Adr. ${esc(a.address_number)}</span>` : ''}
                         ${a.customer_number ? `<span>Kd. ${esc(a.customer_number)}</span>` : ''}
@@ -1207,6 +1229,9 @@
     async function openDetail(id, tab) {
         const address = state.byId.get(String(id));
         if (!address) return;
+
+        // Für den Verlaufs-Knopf im Kopf merken (js/address-history.js)
+        if (typeof window.recordAddressVisit === 'function') window.recordAddressVisit(address, 'view');
 
         state.currentId = String(id);
         state.detailTab = tab || 'overview';
@@ -1690,9 +1715,9 @@
 
             <section class="ab-panel">
                 <h3>${ic('phone', 16)} Kontakt</h3>
-                ${(a.phone || a.email || website)
-                ? `${row('Telefon', a.phone, a.phone ? `<a href="tel:${esc(String(a.phone).replace(/\s/g, ''))}">${esc(a.phone)}</a>` : '')}
-                       ${row('E-Mail', a.email, a.email ? `<a href="mailto:${esc(a.email)}">${esc(a.email)}</a>` : '')}
+                ${(a.phone || a.email || website || alleTelefone(a).length > 1 || alleMails(a).length > 1)
+                ? `${row('Telefon', alleTelefone(a).join(' '), alleTelefone(a).map(t => `<a href="tel:${esc(String(t).replace(/\s/g, ''))}">${esc(t)}</a>`).join('<br>'))}
+                       ${row('E-Mail', alleMails(a).join(' '), alleMails(a).map(m => `<a href="mailto:${esc(m)}">${esc(m)}</a>`).join('<br>'))}
                        ${row('Webseite', website, website ? `<a href="${esc(website)}" target="_blank" rel="noopener">${esc(a.website)}</a>` : '')}`
                 : '<div class="ab-muted">Keine Kontaktdaten hinterlegt</div>'}
             </section>
@@ -2256,6 +2281,11 @@
                 ? `${m.manufacturer || ''} ${m.name || ''}`.trim()
                 : (ev.manual_machine || `📍 ${addrName}`);
             const dateStr = formatDate(ev.event_date || ev.start_date) || formatDateTime(ev.created_at);
+            // Uhrzeit nur zeigen, wenn eine hinterlegt ist — sonst ist es ein
+            // Ganztagstermin und "00:00" waere irrefuehrend.
+            const zeitStr = ev.start_time
+                ? ' · ' + String(ev.start_time).slice(0, 5) + (ev.end_time ? '–' + String(ev.end_time).slice(0, 5) : '') + ' Uhr'
+                : '';
             const diff = Math.round((x.ms - todayMs) / 86400000);
             const when = isPast ? '' : (diff === 0 ? 'heute' : (diff === 1 ? 'morgen' : `in ${diff} Tagen`));
             const accent = isPast ? 'rgba(255,255,255,0.25)' : (diff <= 3 ? '#fbbf24' : '#38bdf8');
@@ -2267,10 +2297,12 @@
                 <div class="ab-timeline-body">
                     <div style="font-size: 0.82rem; font-weight: 700; color: ${m ? '#22c55e' : '#38bdf8'}; margin-bottom: 6px;">${esc(src)}</div>
                     <div class="ab-timeline-head" style="align-items:center;">
-                        <span class="ab-pill" style="border-color:${accent}55; color:${accent}">${esc(dateStr)}${when ? ' · ' + when : ''}</span>
+                        <span class="ab-pill" style="border-color:${accent}55; color:${accent}">${esc(dateStr)}${zeitStr}${when ? ' · ' + when : ''}</span>
                         ${ev.title ? `<strong>${esc(ev.title)}</strong>` : ''}
+                        <button class="ab-icon-btn" title="Termin bearbeiten"
+                            onclick="event.stopPropagation(); window.editAddressAppointment('${esc(ev.id)}')" style="margin-left:auto;">${ic('edit', 14)}</button>
                         <button class="ab-icon-btn ab-danger delete-permission-required" title="Termin löschen"
-                            onclick="event.stopPropagation(); window.deleteAddressAppointment('${esc(ev.id)}')" style="margin-left:auto;">${ic('trash', 14)}</button>
+                            onclick="event.stopPropagation(); window.deleteAddressAppointment('${esc(ev.id)}')">${ic('trash', 14)}</button>
                     </div>
                     ${ev.history_ref ? `<div class="ab-timeline-text" style="color:rgba(255,255,255,0.6); font-style:italic;">Bezug: ${esc(ev.history_ref)}</div>` : ''}
                     ${ev.description ? `<div class="ab-timeline-text" style="white-space:pre-wrap;">${esc(ev.description)}</div>` : ''}
@@ -2803,6 +2835,85 @@
             document.body.style.overflow = '';
             modalBaseZIndex = 10000;
         }
+    }
+
+    // ==========================================
+    // MEHRFACHFELD (Telefon / E-Mail)
+    // ==========================================
+    // Der erste Wert bleibt die Hauptnummer bzw. Haupt-Adresse und liegt
+    // weiter in customers.phone / customers.email — daran hängen Anrufen,
+    // mailto-Links und die Dublettenerkennung. Weitere Einträge kommen in
+    // customers.phones_extra / emails_extra (JSONB-Liste), damit der
+    // bestehende Code unverändert weiterläuft.
+    function multiField(label, id, value, extras, opts) {
+        const o = opts || {};
+        const type = o.type || 'text';
+        const liste = Array.isArray(extras) ? extras.filter(v => String(v || '').trim()) : [];
+        const zeile = (wert) => `
+            <div class="ab-multi-row">
+                <input type="${type}" class="ab-multi-extra" data-multi-for="${id}" value="${esc(wert || '')}" placeholder="${esc(o.placeholder || '')}">
+                <button type="button" class="ab-multi-del" title="Entfernen" onclick="window.abRemoveMultiRow(this)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>`;
+        return `<label class="ab-field ${o.wide ? 'ab-field-wide' : ''}">
+            <span>${esc(label)}</span>
+            <div class="ab-multi-row">
+                <input type="${type}" id="${id}" value="${esc(value || '')}" placeholder="${esc(o.placeholder || '')}">
+                <button type="button" class="ab-multi-add" title="${esc(o.addTitle || 'Weitere hinzufügen')}" onclick="window.abAddMultiRow('${id}', '${type}')">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </button>
+            </div>
+            <div class="ab-multi-extras" id="${id}-extras">${liste.map(zeile).join('')}</div>
+        </label>`;
+    }
+
+    window.abAddMultiRow = function (id, type) {
+        const box = document.getElementById(id + '-extras');
+        if (!box) return;
+        const div = document.createElement('div');
+        div.className = 'ab-multi-row';
+        div.innerHTML = `<input type="${type || 'text'}" class="ab-multi-extra" data-multi-for="${id}">
+            <button type="button" class="ab-multi-del" title="Entfernen" onclick="window.abRemoveMultiRow(this)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>`;
+        box.appendChild(div);
+        const inp = div.querySelector('input');
+        if (inp) inp.focus();
+    };
+
+    window.abRemoveMultiRow = function (btn) {
+        const row = btn && btn.closest('.ab-multi-row');
+        if (!row) return;
+        const box = row.parentElement;
+        row.remove();
+        // Auto-Speichern (js/addressbook-live.js) hört auf 'input' — sonst
+        // bliebe der geloeschte Eintrag bis zum naechsten Tastendruck stehen.
+        if (box) box.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    // Haupteintrag + Zusatzeintraege als eine Liste, ohne Leere und Doppelte.
+    function multiAll(haupt, extra) {
+        const liste = [haupt].concat(Array.isArray(extra) ? extra : []);
+        const gesehen = new Set();
+        return liste
+            .map(v => String(v == null ? '' : v).trim())
+            .filter(v => {
+                if (!v) return false;
+                const k = v.toLowerCase();
+                if (gesehen.has(k)) return false;
+                gesehen.add(k);
+                return true;
+            });
+    }
+    function alleTelefone(a) { return a ? multiAll(a.phone, a.phones_extra) : []; }
+    function alleMails(a) { return a ? multiAll(a.email, a.emails_extra) : []; }
+    window.abAlleMails = alleMails;
+
+    function multiValues(id) {
+        return Array.from(document.querySelectorAll(`.ab-multi-extra[data-multi-for="${id}"]`))
+            .map(el => (el.value || '').trim())
+            .filter(Boolean);
     }
 
     function field(label, id, value, opts) {
@@ -3680,6 +3791,14 @@
             email: val('ab-f-email') || null
         };
 
+        // Weitere Nummern/Adressen. Nur senden, solange die Spalten da sind —
+        // sonst scheitert der ganze Insert/Update an unbekannten Spalten und
+        // die Adresse liesse sich gar nicht mehr speichern.
+        if (!state.extraContactsMissing) {
+            payload.phones_extra = multiValues('ab-f-phone');
+            payload.emails_extra = multiValues('ab-f-email');
+        }
+
         // Adresstypen aus den Checkboxen
         const selectedAddressTypes = Array.from(document.querySelectorAll('input[name="ab-f-address-type"]:checked')).map(el => el.value).join(', ');
         payload.address_type = selectedAddressTypes || null;
@@ -3704,6 +3823,10 @@
         const a = id ? state.byId.get(String(id)) : null;
         const isEdit = !!a;
         importPendingContact = null;
+
+        // Bearbeiten zählt im Verlauf höher als bloßes Öffnen (js/address-history.js).
+        // Das Formular speichert automatisch, „geöffnet zum Bearbeiten" reicht daher.
+        if (isEdit && typeof window.recordAddressVisit === 'function') window.recordAddressVisit(a, 'edit');
 
         const dropzone = isEdit ? '' : `
         <div id="ab-vcf-dropzone" style="grid-column:1/-1; border:2px dashed rgba(255,255,255,0.2); border-radius:14px; padding:14px 16px; text-align:center; cursor:pointer; margin-bottom:14px; transition:border-color 0.2s, background 0.2s;">
@@ -3763,8 +3886,8 @@
             ${field('Ort', 'ab-f-city', a && a.city)}
             ${field('Land', 'ab-f-country', a ? a.country : 'Deutschland')}
 
-            ${field('Telefon', 'ab-f-phone', a && a.phone, { type: 'tel' })}
-            ${field('E-Mail', 'ab-f-email', a && a.email, { type: 'email' })}
+            ${multiField('Telefon', 'ab-f-phone', a && a.phone, a && a.phones_extra, { type: 'tel', addTitle: 'Weitere Telefonnummer hinzufügen' })}
+            ${multiField('E-Mail', 'ab-f-email', a && a.email, a && a.emails_extra, { type: 'email', addTitle: 'Weitere E-Mail-Adresse hinzufügen' })}
             ${state.migrationMissing ? '' : field('Webseite', 'ab-f-website', a && a.website, { placeholder: 'www.beispiel.de' })}
 
             ${contactSection}
@@ -4581,7 +4704,9 @@
     }
 
     async function deleteNote(noteId) {
-        if (typeof window.canDelete === 'function' && !window.canDelete('Historien-Einträgen')) return;
+        // Eigener Bereich: das ist der Verlauf AN EINER ADRESSE
+        // (customer_notes) — nicht die Maschinen-Historie in js/history-modal.js.
+        if (typeof window.canDelete === 'function' && !window.canDelete('Adress-Einträgen')) return;
         if (!confirm('Historien-Eintrag löschen?')) return;
         try {
             const { error } = await sb().from('customer_notes').delete().eq('id', noteId);
@@ -4608,32 +4733,99 @@
         const el = document.createElement('div');
         el.id = 'ab-appointment-modal';
         el.className = 'modal-backdrop hidden';
-        el.style.cssText = 'z-index: 10050; display:none; align-items:center; justify-content:center;';
+        // align-items: flex-start (nicht center): bei einem hohen Fenster
+        // schneidet ein zentrierter Flex-Inhalt in einem scrollbaren Behälter
+        // oben ab und lässt sich nicht mehr hochscrollen.
+        el.style.cssText = 'z-index: 10050; display:none; align-items:flex-start; justify-content:center;';
         el.innerHTML = `
-            <div class="modal-content glass-card" style="max-width: 460px; width: 92%; padding: 1.75rem; border: 1px solid rgba(255,255,255,0.1);">
+            <!-- KEIN max-height/overflow hier: .modal-content traegt in
+                 css/components/modals.css ein "overflow: visible !important".
+                 Eine Hoehenbegrenzung schneidet den Kasten dann optisch ab,
+                 waehrend der Inhalt weiterlaeuft - Abbrechen und Speichern
+                 standen dadurch ausserhalb der Karte. Der Kasten waechst jetzt
+                 mit; gescrollt wird der Hintergrund (.modal-backdrop).
+                 ACHTUNG: in diesem Kommentar KEINE Backticks verwenden - er
+                 steht in einem Template-Literal und wuerde es beenden. -->
+            <div class="modal-content glass-card" style="max-width: 520px; width: 92%; padding: 1.75rem; border: 1px solid rgba(255,255,255,0.1);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                    <h2 style="margin:0; color:#fff; font-size:1.4rem; font-weight:800;">Termin anlegen</h2>
+                    <h2 id="ab-appt-heading" style="margin:0; color:#fff; font-size:1.4rem; font-weight:800;">Termin anlegen</h2>
                     <button type="button" onclick="window.closeAddressAppointmentModal()" style="background:none; border:none; color:rgba(255,255,255,0.4); cursor:pointer;">
                         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>
                 <form onsubmit="window.saveAddressAppointment(event)">
+                    <!-- gefuellt = Bearbeiten, leer = Neuanlage -->
+                    <input type="hidden" id="ab-appt-id">
                     <input type="hidden" id="ab-appt-customer-id">
                     <input type="hidden" id="ab-appt-machine-id">
                     <input type="hidden" id="ab-appt-history-ref">
                     <div id="ab-appt-ref-hint" style="display:none; font-size:0.82rem; color:#38bdf8; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); border-radius:10px; padding:8px 12px; margin-bottom:14px; word-break:break-word;"></div>
-                    <div class="form-group" style="margin-bottom:14px;">
-                        <label class="form-label-caps">Datum</label>
-                        <input type="date" id="ab-appt-date" class="glass-input" required>
-                    </div>
+
                     <div class="form-group" style="margin-bottom:14px;">
                         <label class="form-label-caps">Titel</label>
                         <input type="text" id="ab-appt-title" class="glass-input" required placeholder="z. B. Rückruf, Nachfassen, Besuch...">
                     </div>
-                    <div class="form-group" style="margin-bottom:18px;">
+
+                    <!-- Datum + Uhrzeit von/bis. Ohne Uhrzeit wird daraus ein
+                         Ganztagstermin (auch in der .ics-Einladung). -->
+                    <div style="display:grid; grid-template-columns: 1.4fr 1fr 1fr; gap:10px; margin-bottom:14px;" class="ab-appt-when">
+                        <div class="form-group" style="margin:0;">
+                            <label class="form-label-caps">Datum</label>
+                            <input type="date" id="ab-appt-date" class="glass-input" required>
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label class="form-label-caps">Von</label>
+                            <input type="time" id="ab-appt-time" class="glass-input">
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label class="form-label-caps">Bis</label>
+                            <input type="time" id="ab-appt-time-end" class="glass-input">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:14px;">
                         <label class="form-label-caps">Notiz (optional)</label>
                         <textarea id="ab-appt-desc" class="glass-input" style="height:70px; resize:vertical; padding-top:12px;" placeholder="Details zum Termin..."></textarea>
                     </div>
+
+                    <!-- Kollegen einladen: landet in event_participants, die
+                         Betroffenen sehen den Termin dann als „meinen". -->
+                    <div class="form-group" style="margin-bottom:14px;">
+                        <label class="form-label-caps">Kollegen einladen</label>
+                        <!-- Gleicher Aufbau wie die Filter-Menüs im Adressbuch
+                             (Land/Adressart), nur mit Mehrfachauswahl. -->
+                        <div class="custom-filter-dropdown filter-compact ab-appt-users-dd" id="ab-appt-users-trigger">
+                            <span class="filter-label" id="ab-appt-users-label">Niemand eingeladen</span>
+                            <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                            <div class="custom-filter-menu" id="ab-appt-users-menu">
+                                <ul id="ab-appt-users-options"></ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- E-Mail-Einladung nach außen (Kunde/Ansprechpartner) -->
+                    <div class="ab-appt-invite">
+                        <div class="ab-appt-invite-head">
+                            <span class="ab-appt-invite-ic">📅</span>
+                            <span>Einladung für Outlook</span>
+                        </div>
+                        <p class="ab-appt-invite-intro">
+                            Erzeugt eine Termindatei mit Betreff, Datum, Uhrzeit, Ort und Notiz.
+                        </p>
+                        <label class="ab-appt-invite-label" for="ab-appt-mail-select">Empfänger</label>
+                        <select id="ab-appt-mail-select" class="glass-input ab-appt-invite-field"
+                                onchange="window.abApptMailAuswahl()"></select>
+                        <input type="email" id="ab-appt-mail-custom" class="glass-input ab-appt-invite-field"
+                               style="display:none;" placeholder="empfaenger@firma.de">
+                        <button type="button" class="ab-appt-invite-btn"
+                                onclick="window.abApptEinladungErstellen()">Einladung erstellen</button>
+                        <a href="#" class="ab-appt-invite-alt"
+                           onclick="window.abApptMailFallback(); return false;">Kein Outlook? Stattdessen E-Mail öffnen</a>
+                    </div>
+
                     <div style="display:flex; gap:12px;">
                         <button type="button" class="ab-btn ab-btn-secondary" onclick="window.closeAddressAppointmentModal()" style="flex:1;">Abbrechen</button>
                         <button type="submit" class="ab-btn ab-btn-primary" style="flex:1;">Speichern</button>
@@ -4642,11 +4834,50 @@
             </div>`;
         document.body.appendChild(el);
         el.addEventListener('click', (e) => { if (e.target === el) window.closeAddressAppointmentModal(); });
+        bindApptUserDropdown();
     }
+
+    // Vorhandenen Termin im selben Fenster bearbeiten. Gespeichert wird dann
+    // per UPDATE statt INSERT — siehe saveAddressAppointment.
+    window.editAddressAppointment = async function(id) {
+        const ev = (state.detail.appointments || []).find(x => String(x.id) === String(id));
+        if (!ev) { window.showToast('Termin konnte nicht geladen werden.'); return; }
+
+        window.openAddressAppointmentModal(ev.customer_id || state.currentId, ev.machine_id || '', ev.history_ref || '');
+
+        document.getElementById('ab-appt-id').value = ev.id;
+        const kopf = document.getElementById('ab-appt-heading');
+        if (kopf) kopf.textContent = 'Termin bearbeiten';
+        document.getElementById('ab-appt-title').value = ev.title || '';
+        document.getElementById('ab-appt-date').value = (ev.event_date || ev.start_date || '').slice(0, 10);
+        document.getElementById('ab-appt-time').value = ev.start_time || '';
+        document.getElementById('ab-appt-time-end').value = ev.end_time || '';
+        document.getElementById('ab-appt-desc').value = ev.description || '';
+
+        // Bereits eingeladene Kollegen vorbelegen.
+        apptSelectedUsers = new Set();
+        apptParticipantsBefore = new Set();
+        try {
+            if (typeof window.loadParticipantsForEvents === 'function') {
+                const map = await window.loadParticipantsForEvents([ev.id]);
+                (map.get(String(ev.id)) || []).forEach(p => {
+                    if (p.user_id == null) return;
+                    apptSelectedUsers.add(String(p.user_id));
+                    apptParticipantsBefore.add(String(p.user_id));
+                });
+            }
+        } catch (e) {
+            console.warn('Teilnehmer konnten nicht geladen werden:', e);
+        }
+        renderApptUserPicker();
+    };
 
     window.openAddressAppointmentModal = function(customerId, machineId, historyRef) {
         ensureAppointmentModal();
         const modal = document.getElementById('ab-appointment-modal');
+        document.getElementById('ab-appt-id').value = '';
+        const kopf = document.getElementById('ab-appt-heading');
+        if (kopf) kopf.textContent = 'Termin anlegen';
         document.getElementById('ab-appt-customer-id').value = customerId || '';
         document.getElementById('ab-appt-machine-id').value = machineId || '';
         document.getElementById('ab-appt-history-ref').value = historyRef || '';
@@ -4659,6 +4890,12 @@
         document.getElementById('ab-appt-date').value = new Date(now.getTime() - tz).toISOString().slice(0, 10);
         document.getElementById('ab-appt-title').value = historyRef ? String(historyRef).slice(0, 80) : '';
         document.getElementById('ab-appt-desc').value = '';
+        document.getElementById('ab-appt-time').value = '';
+        document.getElementById('ab-appt-time-end').value = '';
+        apptSelectedUsers = new Set();
+        apptParticipantsBefore = new Set();
+        renderApptUserPicker();
+        renderApptMailOptions(customerId);
         // .modal-backdrop ist per Default opacity:0 + pointer-events:none — erst
         // die Klasse .show macht es sichtbar UND klickbar.
         modal.classList.remove('hidden');
@@ -4671,6 +4908,177 @@
         if (modal) { modal.classList.remove('show'); modal.classList.add('hidden'); modal.style.display = 'none'; }
     };
 
+    // ---- Kollegen einladen -------------------------------------------------
+    // Menü im Stil der Adressbuch-Filter (Land/Adressart), aber mit
+    // Mehrfachauswahl: ein Klick schaltet einen Namen an oder aus, das Menü
+    // bleibt offen. Ohne den angemeldeten Nutzer selbst — der ist als
+    // Ersteller ohnehin dabei.
+    let apptSelectedUsers = new Set();
+    // Beim Bearbeiten: wer war beim Öffnen schon eingeladen? Daraus ergibt
+    // sich beim Speichern, wen man hinzufügen und wen man entfernen muss —
+    // bereits erteilte Zusagen bleiben so erhalten.
+    let apptParticipantsBefore = new Set();
+
+    function apptUserList() {
+        const meId = String((window.activeUser && window.activeUser.id) || '');
+        return (window.userList || []).filter(u => u && u.name && String(u.id) !== meId);
+    }
+
+    function renderApptUserPicker() {
+        const list = document.getElementById('ab-appt-users-options');
+        const label = document.getElementById('ab-appt-users-label');
+        if (!list || !label) return;
+        const users = apptUserList();
+
+        if (!users.length) {
+            list.innerHTML = '<li style="opacity:0.5; cursor:default;"><span>Keine weiteren Benutzer</span></li>';
+            label.textContent = 'Niemand eingeladen';
+            return;
+        }
+
+        list.innerHTML = users.map(u => {
+            const gewaehlt = apptSelectedUsers.has(String(u.id));
+            return `<li data-appt-user="${esc(String(u.id))}"${gewaehlt ? ' class="selected"' : ''}>
+                <span>${esc(u.name)}</span>
+                ${gewaehlt ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+            </li>`;
+        }).join('');
+
+        const gewaehlte = users.filter(u => apptSelectedUsers.has(String(u.id)));
+        label.textContent = gewaehlte.length === 0 ? 'Niemand eingeladen'
+            : gewaehlte.length === 1 ? gewaehlte[0].name
+                : gewaehlte.length + ' Kollegen eingeladen';
+    }
+
+    // Einmalig beim Erzeugen des Fensters binden — die Elemente bleiben danach
+    // bestehen, der Inhalt wird nur neu gezeichnet.
+    function bindApptUserDropdown() {
+        const trigger = document.getElementById('ab-appt-users-trigger');
+        const menu = document.getElementById('ab-appt-users-menu');
+        if (!trigger || !menu) return;
+
+        trigger.addEventListener('click', (e) => {
+            const li = e.target.closest('[data-appt-user]');
+            if (li) {
+                // Auswahl umschalten, Menü offen lassen (Mehrfachauswahl).
+                e.stopPropagation();
+                const id = li.getAttribute('data-appt-user');
+                if (apptSelectedUsers.has(id)) apptSelectedUsers.delete(id); else apptSelectedUsers.add(id);
+                renderApptUserPicker();
+                return;
+            }
+            if (menu.contains(e.target)) return;
+            e.stopPropagation();
+            const offen = menu.classList.contains('show');
+            menu.classList.toggle('show', !offen);
+            trigger.classList.toggle('active', !offen);
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!trigger.contains(e.target)) {
+                menu.classList.remove('show');
+                trigger.classList.remove('active');
+            }
+        });
+    }
+
+    function gewaehlteKollegen() {
+        return apptUserList()
+            .filter(u => apptSelectedUsers.has(String(u.id)))
+            .map(u => ({ id: String(u.id), name: u.name || '', email: u.email || '' }));
+    }
+
+    // ---- E-Mail-Empfänger --------------------------------------------------
+    // Zur Auswahl stehen die Adresse selbst und alle Ansprechpartner mit
+    // E-Mail; zusätzlich lässt sich eine beliebige Adresse eintippen.
+    function renderApptMailOptions(customerId) {
+        const sel = document.getElementById('ab-appt-mail-select');
+        if (!sel) return;
+        const a = customerId ? state.byId.get(String(customerId)) : null;
+        const opts = [];
+        // Alle an der Adresse hinterlegten E-Mails, nicht nur die erste.
+        alleMails(a).forEach(m => opts.push({ v: m, l: `${(a && a.name) || 'Adresse'} — ${m}` }));
+        (state.detail.contacts || []).forEach(c => {
+            if (c && c.email) opts.push({ v: c.email, l: `${c.name || 'Ansprechpartner'} — ${c.email}` });
+        });
+        sel.innerHTML = (opts.length
+            ? opts.map(o => `<option value="${esc(o.v)}">${esc(o.l)}</option>`).join('')
+            : '<option value="" disabled>Keine E-Mail hinterlegt</option>')
+            + '<option value="__eigene__">➕ Andere E-Mail eintragen …</option>';
+        if (!opts.length) sel.value = '__eigene__';
+        window.abApptMailAuswahl();
+    }
+
+    window.abApptMailAuswahl = function() {
+        const sel = document.getElementById('ab-appt-mail-select');
+        const frei = document.getElementById('ab-appt-mail-custom');
+        if (!sel || !frei) return;
+        const eigene = sel.value === '__eigene__';
+        frei.style.display = eigene ? 'block' : 'none';
+        if (eigene) frei.focus();
+    };
+
+    function apptFormular() {
+        const val = id => (document.getElementById(id) || {}).value || '';
+        const sel = document.getElementById('ab-appt-mail-select');
+        const empfaenger = (sel && sel.value === '__eigene__')
+            ? val('ab-appt-mail-custom').trim()
+            : (sel ? sel.value : '');
+        const a = state.byId.get(String(val('ab-appt-customer-id'))) || null;
+        return {
+            titel: val('ab-appt-title').trim(),
+            datum: val('ab-appt-date'),
+            zeitVon: val('ab-appt-time'),
+            zeitBis: val('ab-appt-time-end'),
+            notiz: val('ab-appt-desc').trim(),
+            ort: a ? [a.street, [a.zip_code, a.city].filter(Boolean).join(' ')].filter(Boolean).join(', ') : '',
+            empfaenger: empfaenger,
+            kollegen: gewaehlteKollegen()
+        };
+    }
+
+    // ---- „E-Mail-Einladung erstellen" -------------------------------------
+    window.abApptEinladungErstellen = function() {
+        const f = apptFormular();
+        if (!f.titel || !f.datum) {
+            window.showToast('Bitte zuerst Titel und Datum ausfüllen — beides steht in der Einladung.');
+            return;
+        }
+        if (typeof window.downloadAppointmentIcs !== 'function') {
+            window.showToast('Der Einladungs-Baustein ist nicht geladen.');
+            return;
+        }
+        const teilnehmer = [];
+        if (f.empfaenger) teilnehmer.push({ name: f.empfaenger, email: f.empfaenger });
+        f.kollegen.forEach(k => { if (k.email) teilnehmer.push({ name: k.name, email: k.email }); });
+
+        if (!teilnehmer.length) {
+            window.showToast('Kein Empfänger gewählt. Bitte eine E-Mail-Adresse auswählen oder eintragen.');
+            return;
+        }
+
+        const me = window.activeUser || {};
+        window.downloadAppointmentIcs({
+            titel: f.titel, datum: f.datum, zeitVon: f.zeitVon, zeitBis: f.zeitBis,
+            notiz: f.notiz, ort: f.ort,
+            organisatorName: me.name || '', organisatorMail: me.email || '',
+            teilnehmer: teilnehmer
+        });
+    };
+
+    window.abApptMailFallback = function() {
+        const f = apptFormular();
+        const teilnehmer = [];
+        if (f.empfaenger) teilnehmer.push({ name: f.empfaenger, email: f.empfaenger });
+        f.kollegen.forEach(k => { if (k.email) teilnehmer.push({ name: k.name, email: k.email }); });
+        if (typeof window.oeffneEinladungsMail === 'function') {
+            window.oeffneEinladungsMail({
+                titel: f.titel, datum: f.datum, zeitVon: f.zeitVon, zeitBis: f.zeitBis,
+                notiz: f.notiz, ort: f.ort, teilnehmer: teilnehmer
+            });
+        }
+    };
+
     window.saveAddressAppointment = async function(ev) {
         if (ev) ev.preventDefault();
         const customerId = document.getElementById('ab-appt-customer-id').value;
@@ -4681,10 +5089,15 @@
         const desc = document.getElementById('ab-appt-desc').value.trim();
         if (!date || !title) return;
 
+        const timeFrom = (document.getElementById('ab-appt-time') || {}).value || '';
+        const timeTo = (document.getElementById('ab-appt-time-end') || {}).value || '';
+
         const payload = {
             title: title,
             event_date: date,
             start_date: date,
+            start_time: timeFrom || null,
+            end_time: timeTo || null,
             customer_id: customerId || null, // UUID — kein parseInt
             machine_id: machineId ? parseInt(machineId) : null,
             history_ref: historyRef || null,
@@ -4693,28 +5106,83 @@
         };
 
         try {
-            let error;
-            if (typeof window.insertMitErsteller === 'function') {
-                ({ error } = await window.insertMitErsteller('maintenance_events', payload));
-            } else {
-                ({ error } = await sb().from('maintenance_events').insert(payload));
-            }
-            // Spalten customer_id/history_ref evtl. noch nicht vorhanden -> ohne sie speichern.
-            if (error && /customer_id|history_ref/.test(error.message || '')) {
-                const reduced = { ...payload };
-                delete reduced.customer_id;
-                delete reduced.history_ref;
-                if (typeof window.insertMitErsteller === 'function') {
-                    ({ error } = await window.insertMitErsteller('maintenance_events', reduced));
-                } else {
-                    ({ error } = await sb().from('maintenance_events').insert(reduced));
+            // insertRobust (js/app-core.js) lässt nur das Feld weg, an dem es
+            // wirklich klemmt. Wichtig bei einem TYP-Konflikt: dort nennt
+            // Postgres den Spaltennamen nicht, sondern nur den Wert
+            // („invalid input syntax for type bigint: "976f0107-…"“) — die
+            // frühere Prüfung auf den Spaltennamen griff deshalb nie und der
+            // Termin ging gar nicht durch.
+            const bearbeitetId = (document.getElementById('ab-appt-id') || {}).value || '';
+            let error, data, weggelassen = [];
+
+            if (bearbeitetId) {
+                // Bearbeiten: dieselbe Ausweichlogik wie beim Anlegen, nur als
+                // UPDATE. Fehlt eine Spalte, wird ohne sie gespeichert.
+                const versuch = Object.assign({}, payload);
+                const optional = ['customer_id', 'history_ref', 'machine_id', 'start_time', 'end_time'];
+                for (let i = 0; i <= optional.length; i++) {
+                    ({ error, data } = await sb().from('maintenance_events')
+                        .update(versuch).eq('id', bearbeitetId).select('id').limit(1));
+                    if (!error) break;
+                    const msg = error.message || '';
+                    const stoerend = new Set();
+                    optional.forEach(k => { if (k in versuch && msg.includes(k)) stoerend.add(k); });
+                    const m = msg.match(/invalid input syntax for type \w+: "([^"]+)"/);
+                    if (m) optional.forEach(k => {
+                        if (k in versuch && versuch[k] != null && String(versuch[k]) === m[1]) stoerend.add(k);
+                    });
+                    if (!stoerend.size) break;
+                    stoerend.forEach(k => { delete versuch[k]; weggelassen.push(k); });
                 }
-                if (!error) window.showToast('Termin gespeichert, aber ohne Adressbezug.\n\nBitte supabase_add_event_customer.sql in Supabase ausführen.');
+            } else {
+                ({ error, data, weggelassen } = await window.insertRobust('maintenance_events', payload, {
+                    optional: ['customer_id', 'history_ref', 'machine_id', 'start_time', 'end_time'],
+                    select: 'id'
+                }));
             }
             if (error) throw error;
 
+            // Eingeladene Kollegen abgleichen: nur Neue eintragen, Entfernte
+            // löschen — sonst gingen bereits erteilte Zu-/Absagen verloren.
+            // Schlägt das fehl, ist der Termin trotzdem gespeichert.
+            const eventId = bearbeitetId || (data && data.length ? data[0].id : null);
+            if (eventId) {
+                const jetzt = new Set(gewaehlteKollegen().map(k => String(k.id)));
+                const vorher = bearbeitetId ? apptParticipantsBefore : new Set();
+                const neu = gewaehlteKollegen().filter(k => !vorher.has(String(k.id)));
+                const weg = [...vorher].filter(id => !jetzt.has(id));
+                try {
+                    if (neu.length) {
+                        const rows = neu.map(k => ({
+                            event_id: eventId,
+                            user_id: /^\d+$/.test(String(k.id)) ? parseInt(k.id) : null,
+                            user_name: k.name,
+                            status: 'offen',
+                            invited_by: (window.activeUser && window.activeUser.id) || null,
+                            invited_by_name: (window.activeUser && window.activeUser.name) || null
+                        }));
+                        const { error: pErr } = await sb().from('event_participants').insert(rows);
+                        if (pErr) throw pErr;
+                    }
+                    for (const id of weg) {
+                        await sb().from('event_participants').delete()
+                            .eq('event_id', eventId).eq('user_id', /^\d+$/.test(id) ? parseInt(id) : id);
+                    }
+                } catch (pErr) {
+                    console.warn('Teilnehmer nicht speicherbar:', pErr.message);
+                    window.showToast('Termin gespeichert, aber die Einladung der Kollegen nicht.\n\nDazu muss supabase/supabase_add_event_participants.sql in Supabase laufen.');
+                }
+            }
+
+            if (weggelassen.includes('customer_id')) {
+                window.showToast('Termin gespeichert, aber OHNE Adressbezug — er taucht deshalb nicht unter „Termine" bei der Adresse auf.\n\nIn Supabase fehlt die Spalte maintenance_events.customer_id als uuid. Bitte supabase/supabase_add_event_customer.sql im SQL-Editor ausführen, dann klappt auch die Zuordnung.');
+            } else if (weggelassen.length) {
+                window.showToast('Termin gespeichert, aber ohne: ' + weggelassen.join(', ') + '.\n\nDazu fehlt eine Spalte in der Datenbank.');
+            } else {
+                window.showToast(bearbeitetId ? 'Termin aktualisiert.' : 'Termin gespeichert.');
+            }
+
             window.closeAddressAppointmentModal();
-            window.showToast('Termin gespeichert.');
             state.detailTab = 'appointments';
             await refreshDetail();
             if (typeof window.renderEvents === 'function') window.renderEvents();
@@ -4725,6 +5193,9 @@
     };
 
     window.deleteAddressAppointment = async function(id) {
+        // Termine an einer Adresse liegen in derselben Tabelle wie die
+        // Kalendertermine (maintenance_events) — deshalb dieselbe Berechtigung.
+        if (typeof window.canDelete === 'function' && !window.canDelete('Terminen')) return;
         if (!id) return;
         if (!confirm('Diesen Termin wirklich löschen?')) return;
         try {

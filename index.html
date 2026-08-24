@@ -233,7 +233,7 @@
     <!-- Die Reihenfolge nach css/style.css muss erhalten bleiben. -->
     <!-- ========================================================= -->
     <link rel="stylesheet" href="css/views/login.css?v=2">
-    <link rel="stylesheet" href="css/views/history.css?v=2">
+    <link rel="stylesheet" href="css/views/history.css?v=3">
     <link rel="stylesheet" href="css/base/landscape.css?v=2">
     <link rel="stylesheet" href="css/components/voice-dictation.css?v=3">
     <link rel="stylesheet" href="css/views/machine-modal.css?v=4">
@@ -308,16 +308,24 @@
                 </div>
 
                 <div id="edit-permissions-section" class="form-group" style="margin-top: 1.5rem;">
-                    <label style="margin-bottom: 0.75rem; display: block; color: var(--color-primary-green); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.85rem;">Berechtigungen</label>
-
-                    <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 12px; backdrop-filter: blur(12px);">
-                        <div style="font-size: 0.78rem; font-weight: 800; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.75rem;">Hauptmenü — Ansichten</div>
-                        <div id="perm-sidebar-pages" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"></div>
-                    </div>
-
-                    <div id="perm-settings-subpages-box" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 12px; backdrop-filter: blur(12px);">
-                        <div style="font-size: 0.78rem; font-weight: 800; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.75rem;">Einstellungen — Unterseiten</div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <label class="perm-heading">Berechtigungen</label>
+    
+                    <!-- Einklappbar: die drei Blöcke sind lang geworden. <details> statt
+                         eigener JS-Logik — der Zustand ist nur fürs Auge. -->
+                    <details class="perm-group" open>
+                        <summary class="perm-group-head">
+                            <span>Hauptmenü — Ansichten</span>
+                            <span class="perm-group-count" id="perm-count-sidebar"></span>
+                        </summary>
+                        <div id="perm-sidebar-pages" class="perm-grid"></div>
+                    </details>
+    
+                    <details class="perm-group" id="perm-settings-subpages-box">
+                        <summary class="perm-group-head">
+                            <span>Einstellungen — Unterseiten</span>
+                            <span class="perm-group-count" id="perm-count-settings"></span>
+                        </summary>
+                        <div class="perm-grid">
                             <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-users"> Benutzerverwaltung</label>
                             <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-categories"> Kategorien</label>
                             <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-protocol-templates"> Protokollvorlagen</label>
@@ -327,13 +335,19 @@
                             <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-settings-uvv-wartungsplaene"> UVV &amp; Wartungspläne</label>
                             <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-settings-ai"> KI-Konfiguration</label>
                         </div>
-                    </div>
-
-                    <div style="background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.25); border-radius: 14px; padding: 1rem 1.25rem; backdrop-filter: blur(12px);">
-                        <div style="font-size: 0.78rem; font-weight: 800; color: rgba(248,113,113,0.7); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.75rem;">Aktionen</div>
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #f87171; font-weight: 700;"><input class="clickable" type="checkbox"
-                                id="perm-delete"> Einträge löschen</label>
-                    </div>
+                    </details>
+    
+                    <details class="perm-group perm-group-danger">
+                        <summary class="perm-group-head">
+                            <span>Löschen</span>
+                            <span class="perm-group-count" id="perm-count-delete"></span>
+                        </summary>
+                        <label class="perm-delete-master"><input class="clickable" type="checkbox" id="perm-delete"> Einträge löschen</label>
+                        <p class="perm-delete-hint">Ohne diesen Haken darf der Benutzer nichts löschen. Ist er gesetzt, lässt sich unten
+                            jeder Bereich einzeln sperren — abgehakt heißt „darf löschen".</p>
+                        <!-- Bereiche kommen aus window.DELETE_AREAS (js/permissions.js) -->
+                        <div id="perm-delete-areas" class="perm-grid"></div>
+                    </details>
                 </div>
 
                 <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
@@ -1143,6 +1157,18 @@
                                                         </ul>
                                                     </div>
                                                 </div>
+
+                                                <!-- Verlauf: zuletzt geöffnete/bearbeitete Adressen (js/address-history.js) -->
+                                                <button class="ab-history-btn" data-abh-action="history"
+                                                    title="Zuletzt geöffnete und bearbeitete Adressen">
+                                                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                        <path d="M3 3v5h5" />
+                                                        <path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" />
+                                                        <path d="M12 7v5l4 2" />
+                                                    </svg>
+                                                    Verlauf
+                                                </button>
 
                                                 <button class="ab-select-toggle" id="addressbook-select-btn"
                                                     data-ab-action="select-mode"
@@ -2353,60 +2379,57 @@
         <!-- /@partial:settings/textbausteine.html -->
 
         <!-- @partial:settings/ai.html -->
-                <!-- AI Settings View -->
-                <section id="settings-ai" class="view hidden">
-                    <div class="users-header-container">
-                        <h1>KI-Konfiguration</h1>
-                        <div class="users-header-actions">
-                            <button class="btn-back-custom" data-target="settings">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M19 12H5"></path>
-                                    <path d="M12 19l-7-7 7-7"></path>
-                                </svg>
-                                ZURÜCK
-                            </button>
-                        </div>
-                    </div>
+        <!-- AI Settings View -->
+        <section id="settings-ai" class="view hidden">
+            <div class="users-header-container">
+                <h1>KI-Konfiguration</h1>
+                <div class="users-header-actions">
+                    <button class="btn-back-custom" data-target="settings">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 12H5"></path>
+                            <path d="M12 19l-7-7 7-7"></path>
+                        </svg>
+                        ZURÜCK
+                    </button>
+                </div>
+            </div>
 
-                    <div class="glass-card" style="max-width: 600px; margin-top: 2rem; padding: 2rem;">
-                        <div class="form-group" style="margin-bottom: 1.5rem;">
-                            <label
-                                style="color: rgba(255,255,255,0.7); font-weight: 600; font-size: 0.9rem; margin-bottom: 0.5rem; display: block;">Groq
-                                API-Key (Kostenlose KI)</label>
-                            <div
-                                style="font-size: 0.8rem; color: rgba(255,255,255,0.5); margin-bottom: 15px; line-height: 1.4;">
-                                Wird verwendet für das extrem präzise und fehlerfreie Auslesen von Rechnungs-PDFs via
-                                KI. Der Key wird <strong style="color:white;">nur lokal in deinem Browser</strong>
-                                gespeichert.
-                            </div>
-                            <div style="position: relative;">
-                                <input type="password" id="settings-api-key-new" class="glass-input" placeholder="gsk_..."
-                                    autocomplete="off" style="font-family: monospace; letter-spacing: 1px; width: 100%;">
-                                <button type="button" onclick="toggleApiKeyVisibilityNew()"
-                                    style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: rgba(255,255,255,0.5); cursor: pointer; transition: color 0.2s;"
-                                    onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.5)'">
-                                    <svg id="eye-icon-api-new" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                                        <circle cx="12" cy="12" r="3"></circle>
-                                    </svg>
-                                </button>
-                            </div>
-                            <div style="margin-top: 12px; font-size: 0.85rem;">
-                                <a href="https://console.groq.com/keys" target="_blank"
-                                    style="color: #60a5fa; text-decoration: none; transition: color 0.2s;"
-                                    onmouseover="this.style.color='#93c5fd'" onmouseout="this.style.color='#60a5fa'">Hier kannst
-                                    du deinen API-Key erstellen
-                                    &rarr;</a>
-                            </div>
-                        </div>
+            <!-- Der Groq-Schlüssel wird hier NICHT mehr eingegeben. Er liegt als
+                 Supabase Secret auf dem Server; die Edge Function groq-proxy
+                 prüft die Anmeldung und hängt ihn dort an. Ein Eingabefeld an
+                 dieser Stelle würde den Schlüssel wieder in jeden Browser holen
+                 und damit genau das aufgeben, wofür der Umbau gemacht wurde. -->
+            <div class="glass-card" style="max-width: 640px; margin-top: 2rem; padding: 2rem;">
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 0.75rem;">
+                    <span style="font-size: 1.3rem;">🔒</span>
+                    <h3 style="margin: 0; color: #fff; font-size: 1.1rem;">Zugang liegt zentral</h3>
+                </div>
+                <p style="color: rgba(255,255,255,0.6); font-size: 0.9rem; line-height: 1.6; margin: 0 0 1.25rem 0;">
+                    Der Groq-Schlüssel ist auf dem Server hinterlegt und wird von dort angehängt.
+                    <strong style="color:#fff;">Niemand muss ihn mehr eintragen</strong>, und er
+                    lässt sich aus der App nicht auslesen. Die KI funktioniert für jeden, der
+                    angemeldet ist — ohne Anmeldung antwortet der Dienst gar nicht erst.
+                </p>
 
-                        <div style="margin-top: 2rem; display: flex; justify-content: flex-end;">
-                            <button class="btn-primary" onclick="saveSettingsNew()">Einstellungen speichern</button>
-                        </div>
+                <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                    <button class="btn-primary" onclick="window.pruefeKiVerbindung()">Verbindung prüfen</button>
+                    <div id="ai-connection-status" style="font-size: 0.88rem; color: rgba(255,255,255,0.6);"></div>
+                </div>
+
+                <div style="margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <div style="font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.4); margin-bottom: 8px;">
+                        Für die Verwaltung
                     </div>
-                </section>
+                    <p style="color: rgba(255,255,255,0.5); font-size: 0.84rem; line-height: 1.6; margin: 0;">
+                        Schlüssel wechseln oder Tagesgrenze ändern: als Supabase Secret setzen und die
+                        Edge Function neu ausrollen — die Schritte stehen in
+                        <code style="background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 5px;">supabase/SETUP_GROQ.txt</code>.
+                        In der App ist dafür nichts zu ändern.
+                    </p>
+                </div>
+            </div>
+        </section>
         <!-- /@partial:settings/ai.html -->
 
         <!-- @partial:settings/uvv-wartungsplaene.html -->
@@ -3826,7 +3849,7 @@
     <script src="js/ui-feedback.js?v=1"></script>
     <script src="js/auto-nachladen.js?v=2"></script>
     <!-- Berechtigungen: ausgelagert aus index.html -->
-    <script src="js/permissions.js?v=2"></script>
+    <script src="js/permissions.js?v=4"></script>
     <script src="lib/supabase.min.js"></script>
     <script>
         if (typeof supabase === 'undefined') {
@@ -3890,21 +3913,25 @@
         };
     </script>
     <script src="js/dashboard.js?v=1"></script>
-    <script src="js/app-core.js?v=3"></script>
-    <script src="js/app-init.js?v=12"></script>
+    <script src="js/app-core.js?v=5"></script>
+    <script src="js/app-init.js?v=13"></script>
     <script src="js/settings-uvv-plans.js?v=1"></script>
     <script src="js/machine-details-modal.js?v=1"></script>
     <script src="js/machine-modal.js?v=1"></script>
     <script src="js/service-report-form.js?v=7"></script>
     <script src="js/service-list.js?v=2"></script>
-    <script src="js/history-modal.js?v=2"></script>
+    <script src="js/history-modal.js?v=200"></script>
     <script src="js/calendar-events.js?v=4"></script>
-    <script src="js/processes-ui.js?v=16"></script>
+    <script src="js/processes-ui.js?v=21"></script>
+    <!-- Dokumente an Vorgaengen/Schritten. Nutzt window.FileUploadService
+         (js/file-upload-service-r2.js, weiter UNTEN geladen) — das ist in
+         Ordnung, weil der Dienst erst beim Hochladen angefasst wird. -->
+    <script src="js/process-attachments.js?v=2"></script>
     <script src="js/process-messages.js?v=1"></script>
     <script src="js/process-machine-select.js?v=1"></script>
     <script src="js/customer-matching.js?v=1"></script>
     <script src="js/ui-modals.js?v=1"></script>
-    <script src="js/processes.js?v=119"></script>
+    <script src="js/processes.js?v=120"></script>
     <script src="js/service-reports.js?v=1"></script>
     <script src="js/service-entries.js?v=5"></script>
     <script src="js/service-picker.js?v=1"></script>
@@ -5678,13 +5705,17 @@
     </main>
     </div><!-- End main-wrapper -->
 
-    <script src="js/tasks.js?v=15"></script>
+    <script src="js/tasks.js?v=18"></script>
     <script src="js/workshop-tasks.js?v=2"></script>
     <script src="js/task_templates.js?v=99"></script>
     <!-- Spracheingabe für die KI-Felder — muss vor den KI-Modulen stehen,
          die beim Aufbau ihrer Modals window.micButtonHtml() aufrufen. -->
     <script src="js/speech-input.js?v=3"></script>
-    <script src="js/ai-quick-capture.js?v=20"></script>
+    <!-- Alle KI-Anfragen laufen über die eigene Edge Function. Muss vor
+         ai-quick-capture.js, ai-address-task.js und accounting.js stehen —
+         die rufen window.groqFetch() auf. -->
+    <script src="js/groq-proxy.js?v=1"></script>
+    <script src="js/ai-quick-capture.js?v=21"></script>
     <script>
         window.addEventListener('load', () => {
             if (typeof window.initTaskTemplates === 'function') {
@@ -6111,7 +6142,7 @@
     </div>
 
     <script src="js/workshop-photos-modal.js?v=1"></script>
-    <script src="js/workshop-photos-helper.js?v=2"></script>
+    <script src="js/workshop-photos-helper.js?v=3"></script>
 
 
     <!-- Image Compression & Upload Service -->
@@ -6435,22 +6466,29 @@
         window.MSGReaderClass = MsgReader;
     </script>
     <script src="js/file-upload-service-r2.js"></script>
-    <script src="js/accounting.js?v=42"></script>
+    <script src="js/accounting.js?v=43"></script>
     <script src="js/documents-r2.js?v=6"></script>
     <script src="js/checklists.js?v=2"></script>
     <script src="js/customers.js?v=2"></script>
     <script src="js/autosave.js?v=1"></script>
     <script src="js/unsaved-guard.js?v=1"></script>
-    <script src="js/addressbook.js?v=39"></script>
+    <script src="js/address-history.js?v=2"></script>
+    <script src="js/addressbook.js?v=52"></script>
     <script src="js/addressbook-live.js?v=3"></script>
     <script src="js/process-autosave.js?v=2"></script>
+    <script src="js/task-autosave.js?v=1"></script>
     <script src="js/process-open-hints.js?v=2"></script>
-    <script src="js/ai-address-task.js?v=10"></script>
+    <script src="js/ai-address-task.js?v=11"></script>
     <!-- Termine mit Teilnehmern: liefert die Bausteine, die Benachrichtigungen,
          Kalender und Routenplanung darunter benutzen. -->
-    <script src="js/appointments.js?v=3"></script>
-    <script src="js/notifications.js?v=7"></script>
-    <script src="js/calendar-widget.js?v=5"></script>
+    <script src="js/appointment-invite.js?v=2"></script>
+    <script src="js/appointments.js?v=4"></script>
+    <script src="js/notifications.js?v=8"></script>
+    <!-- Minutengenauer Wecker fuer Erinnerungen mit Uhrzeit. Muss NACH
+         notifications.js stehen: nutzt window.notificationsPushEnabled. -->
+    <script src="js/reminder-alarm.js?v=3"></script>
+    <script src="js/assignment-handoff.js?v=2"></script>
+    <script src="js/calendar-widget.js?v=9"></script>
     <!-- tasks.js und processes.js werden bereits weiter oben geladen (vor ihren
          jeweiligen Folgemodulen). Ein zweites Einbinden ließ beide Module doppelt
          laufen — mit doppelt registrierten Event-Handlern. -->
@@ -7020,23 +7058,37 @@
                             <span class="proc-note-hint" id="edit-process-note-hint"></span>
                         </button>
                         <div class="proc-note-body" id="edit-process-note-body" hidden>
-                            <div class="form-group" style="margin-bottom: 0.75rem;">
+                            <div class="form-group" style="margin-bottom: 0;">
                                 <label class="form-label-caps">Bemerkung</label>
                                 <textarea id="edit-process-remark-input" class="glass-input" style="height: 80px; resize: vertical; padding-top: 15px;" placeholder="Interne Bemerkung..."></textarea>
                             </div>
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label class="form-label-caps">Stand</label>
-                                <div class="proc-note-stand-row">
-                                    <textarea id="edit-process-status-text" class="glass-input" style="height: 60px; resize: vertical; padding-top: 12px;" placeholder="Aktuellen Stand beschreiben..."></textarea>
-                                    <div class="proc-note-stand-actions">
-                                        <button type="button" class="mic-btn" data-mic-for="edit-process-status-text" title="Diktieren — Text wird direkt ins Feld geschrieben"><span class="mic-btn-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span></button>
-                                        <button type="button" class="proc-note-add" onclick="window.addProcessStatusFromEdit()">Eintragen</button>
-                                    </div>
-                                </div>
-                                <div class="mic-status" data-mic-status-for="edit-process-status-text"></div>
-                                <div id="edit-process-status-history" class="proc-note-history"></div>
+                        </div>
+                    </div>
+
+                    <!-- STAND: bewusst NICHT im Ausklapp oben. Das ist die
+                         Angabe, die im Alltag am haeufigsten gebraucht wird —
+                         sie soll ohne Klick sichtbar sein. Nur die Bemerkung
+                         bleibt hinter dem +. -->
+                    <div class="form-group proc-stand-block" style="margin-bottom: 0.75rem;">
+                        <label class="form-label-caps">Stand</label>
+                        <div class="proc-note-stand-row">
+                            <textarea id="edit-process-status-text" class="glass-input" style="height: 60px; resize: vertical; padding-top: 12px;" placeholder="Aktuellen Stand beschreiben..."></textarea>
+                            <div class="proc-note-stand-actions">
+                                <button type="button" class="mic-btn" data-mic-for="edit-process-status-text" title="Diktieren — Text wird direkt ins Feld geschrieben"><span class="mic-btn-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span></button>
+                                <button type="button" class="proc-note-add" onclick="window.addProcessStatusFromEdit()">Eintragen</button>
                             </div>
                         </div>
+                        <div class="mic-status" data-mic-status-for="edit-process-status-text"></div>
+                        <div id="edit-process-status-history" class="proc-note-history"></div>
+                    </div>
+
+                    <!-- Dokumente am Vorgang. Die Beschriftung samt Anzahl setzt
+                         window.updateProcessAttachButton (js/process-attachments.js). -->
+                    <div class="form-group" style="margin-bottom: 0.75rem;">
+                        <button type="button" id="edit-process-att-btn" class="proc-att-open-btn"
+                                onclick="window.openProcessAttachments(document.getElementById('edit-process-id').value, null, event)">
+                            📎 Dokument hinzufügen
+                        </button>
                     </div>
 
                     <div class="form-group" id="edit-process-body-group" style="margin-bottom: 0.75rem; display: none;">
@@ -7353,7 +7405,7 @@
     <!-- /@partial:modals/picker-modals.html -->
 
 <script src="js/auth.js"></script>
-<script src="js/users.js?v=2"></script>
+<script src="js/users.js?v=3"></script>
 <script src="js/machines-grouped.js?v=1"></script>
 <script src="js/voice-dictation.js?v=2"></script>
 </body>

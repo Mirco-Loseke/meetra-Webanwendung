@@ -364,6 +364,21 @@
         font-size: 16px !important;
         height: 42px !important;
     }
+
+    /* Datum: das Feld war so hoch wie alle anderen (42px) und durch das
+       inline gesetzte `width: 100%` so breit wie die halbe Karte — für
+       „01.01.2026" viel zu viel. Jetzt nur so breit wie der Inhalt und
+       flacher. Die Schriftgröße bleibt bewusst bei 16px: darunter zoomt
+       iOS beim Antippen hinein und zoomt nicht von allein zurück
+       (siehe HANDY-FEINSCHLIFF in css/base/responsive.css) — verkleinert
+       wird deshalb nur der Kasten, nicht die Schrift. */
+    .work-log-table tr.service-work-log-row td[data-label="Datum"] .wl-datum {
+        width: auto !important;
+        max-width: 100%;
+        height: 34px !important;
+        min-height: 0 !important;
+        padding: 2px 8px !important;
+    }
 }
 
 /* ── Servicebericht auf dem Handy ────────────────────────────────────

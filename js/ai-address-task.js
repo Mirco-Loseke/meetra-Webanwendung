@@ -144,8 +144,7 @@
         const input = document.getElementById('ab-ai-task-input').value.trim();
         if (!input) { window.showToast('Bitte einen Text eingeben oder diktieren.'); return; }
 
-        const apiKey = localStorage.getItem('groq_api_key');
-        if (!apiKey) { window.showToast('Kein Groq‑API‑Key hinterlegt (Einstellungen → KI).'); return; }
+        // Kein Schlüssel mehr im Browser — den hängt die Edge Function serverseitig an.
 
         const btn = document.getElementById('ab-ai-task-analyze');
         btn.disabled = true;
@@ -194,18 +193,16 @@ TERMIN und ERINNERUNG auseinanderhalten:
 - Beides darf gleichzeitig gesetzt sein. Ist nichts genannt: "appointment" auf null, Datum null. Nichts erfinden.`;
 
         try {
-            const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                method: 'POST',
-                headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    model: groqModel(),
-                    temperature: 0.1,
-                    response_format: { type: 'json_object' },
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: input }
-                    ]
-                })
+            // Über die eigene Edge Function, siehe js/groq-proxy.js
+            const resp = await window.groqFetch({
+                model: groqModel(),
+                temperature: 0.1,
+                max_tokens: 4096,
+                response_format: { type: 'json_object' },
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: input }
+                ]
             });
             if (!resp.ok) {
                 const errTxt = await resp.text();

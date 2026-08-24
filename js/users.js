@@ -300,8 +300,65 @@ window.editUser = function (id) {
     });
     document.getElementById('perm-delete').checked = perms.can_delete !== false;
 
+    // Lösch-Bereiche einzeln: Liste kommt aus js/permissions.js, damit sie nur
+    // an einer Stelle gepflegt wird. Fehlender Schlüssel = erlaubt.
+    const areaBox = document.getElementById('perm-delete-areas');
+    if (areaBox) {
+        const areas = window.DELETE_AREAS || [];
+        areaBox.innerHTML = areas.map(a => {
+            const checked = perms['del_' + a.key] !== false ? 'checked' : '';
+            return `<label class="row-clickable"><input class="clickable" type="checkbox" id="perm-del_${a.key}" ${checked}> ${a.label}</label>`;
+        }).join('');
+    }
+
+    syncDeletePermUi();
+    updatePermCounts();
+
     document.getElementById('user-edit-modal').style.display = 'flex';
 };
+
+// Ohne den Hauptschalter „Einträge löschen" sind die Bereichs-Haken wirkungslos —
+// dann werden sie ausgegraut, damit niemand dort vergeblich klickt.
+function syncDeletePermUi() {
+    const master = document.getElementById('perm-delete');
+    const box = document.getElementById('perm-delete-areas');
+    if (!master || !box) return;
+    box.classList.toggle('is-disabled', !master.checked);
+    box.querySelectorAll('input[type="checkbox"]').forEach(cb => { cb.disabled = !master.checked; });
+}
+
+// Kurzanzeige „5 / 12" neben den zugeklappten Überschriften.
+function updatePermCounts() {
+    const count = (el) => {
+        if (!el) return '';
+        const all = el.querySelectorAll('input[type="checkbox"]');
+        if (!all.length) return '';
+        let on = 0;
+        all.forEach(cb => { if (cb.checked) on++; });
+        return on + ' / ' + all.length;
+    };
+
+    const set = (id, txt) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = txt;
+    };
+
+    set('perm-count-sidebar', count(document.getElementById('perm-sidebar-pages')));
+    set('perm-count-settings', count(document.getElementById('perm-settings-subpages-box')));
+
+    const master = document.getElementById('perm-delete');
+    set('perm-count-delete', master && !master.checked
+        ? 'gesperrt'
+        : count(document.getElementById('perm-delete-areas')));
+}
+
+// Ein Listener für den ganzen Abschnitt — die Haken werden teils erst beim
+// Öffnen erzeugt, einzelne onchange-Handler würden dabei verloren gehen.
+document.addEventListener('change', (e) => {
+    if (!e.target.closest || !e.target.closest('#edit-permissions-section')) return;
+    if (e.target.id === 'perm-delete') syncDeletePermUi();
+    updatePermCounts();
+});
 
 window.closeEditUserModal = function () {
     document.getElementById('user-edit-modal').style.display = 'none';

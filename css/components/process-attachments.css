@@ -1,0 +1,155 @@
+/* ==========================================================
+   DOKUMENTE AN VORGAENGEN UND SCHRITTEN
+   ==========================================================
+   Gehoert zu js/process-attachments.js.
+   ========================================================== */
+
+.proc-att-open-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    border-radius: var(--radius-md, 12px);
+    background: rgba(56, 189, 248, 0.12);
+    color: #7dd3fc;
+    font-family: inherit;
+    font-size: var(--fs-sm, 0.88rem);
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .18s ease, border-color .18s ease;
+}
+.proc-att-open-btn:hover {
+    background: rgba(56, 189, 248, 0.22);
+    border-color: rgba(56, 189, 248, 0.7);
+}
+
+/* Kein max-height hier: .modal-content traegt overflow:visible !important,
+   eine Hoehenbegrenzung wuerde den Kasten optisch abschneiden. */
+.proc-att-box {
+    max-width: 620px;
+    width: 94%;
+    padding: 1.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.proc-att-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.proc-att-head h2 {
+    margin: 0;
+    color: #fff;
+    font-size: 1.4rem;
+    font-weight: 800;
+}
+.proc-att-sub {
+    margin-top: 4px;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.45);
+    word-break: break-word;
+}
+.proc-att-close {
+    flex: none;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 1.7rem;
+    line-height: 1;
+    cursor: pointer;
+}
+.proc-att-close:hover { color: #fff; }
+
+.proc-att-drop {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 22px 16px;
+    border: 2px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 14px;
+    cursor: pointer;
+    text-align: center;
+    transition: border-color .18s ease, background .18s ease;
+}
+.proc-att-drop:hover,
+.proc-att-drop.is-over {
+    border-color: rgba(56, 189, 248, 0.7);
+    background: rgba(56, 189, 248, 0.08);
+}
+.proc-att-drop-ic { font-size: 1.6rem; }
+.proc-att-drop-txt { color: rgba(255, 255, 255, 0.75); font-size: 0.92rem; font-weight: 600; }
+.proc-att-drop-hint { color: rgba(255, 255, 255, 0.4); font-size: 0.78rem; }
+
+.proc-att-status {
+    min-height: 1em;
+    margin-top: 10px;
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+.proc-att-status.is-error { color: #fca5a5; }
+
+.proc-att-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 14px;
+    max-height: 320px;
+    overflow-y: auto;
+}
+.proc-att-empty {
+    color: rgba(255, 255, 255, 0.35);
+    font-style: italic;
+    font-size: 0.86rem;
+    padding: 6px 2px;
+}
+
+.proc-att-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.04);
+}
+.proc-att-ic { flex: none; font-size: 1.15rem; }
+.proc-att-name {
+    flex: 1;
+    min-width: 0;
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.proc-att-name:hover { color: #7dd3fc; text-decoration: underline; }
+.proc-att-meta {
+    flex: none;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.4);
+    white-space: nowrap;
+}
+.proc-att-del {
+    flex: none;
+    width: 26px;
+    height: 26px;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    font-size: 1.05rem;
+    line-height: 1;
+    cursor: pointer;
+}
+.proc-att-del:hover { background: rgba(239, 68, 68, 0.22); }
+
+@media (max-width: 768px) {
+    .proc-att-item { flex-wrap: wrap; }
+    .proc-att-meta { flex-basis: 100%; padding-left: 26px; }
+}

@@ -1,0 +1,98 @@
+================================================================================
+  meetra Webapp — KI-Zugang zentral: Edge Function "groq-proxy" ausrollen
+================================================================================
+
+WAS SICH ÄNDERT
+---------------
+Vorher: jeder Nutzer trug seinen eigenen Groq-Key unter Einstellungen -> KI ein.
+        Der Key lag im Klartext in localStorage — auf jedem Gerät auslesbar.
+
+Nachher: der Key liegt EINMAL als Supabase Secret auf dem Server. Die App
+        schickt ihre KI-Anfragen an die Edge Function, die prüft die Anmeldung
+        und hängt den Key dort an. Im Browser gibt es ihn nicht mehr.
+        Wer nicht angemeldet ist, bekommt 401 — sonst nichts.
+
+Betroffen: KI-Erfassung, KI-Servicebericht, Vorgang an einer Adresse,
+           Rechnungs-PDFs in der Buchhaltung. Alle vier laufen über dieselbe
+           Function.
+
+Function:  supabase/functions/groq-proxy/index.ts
+Client:    js/groq-proxy.js  (window.groqFetch)
+Projekt:   rtnpyziwyaqrlfazxkyr
+
+
+================================================================================
+SCHRITT 1 — Supabase CLI
+================================================================================
+Falls noch nicht vorhanden (dieselbe CLI wie bei r2-sign, siehe SETUP.txt):
+
+  npm install -g supabase
+  supabase --version
+  supabase login
+  supabase link --project-ref rtnpyziwyaqrlfazxkyr
+
+
+================================================================================
+SCHRITT 2 — Groq-Key als Secret hinterlegen
+================================================================================
+Key holen bzw. neu erzeugen: https://console.groq.com/keys
+
+  supabase secrets set GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxx --project-ref rtnpyziwyaqrlfazxkyr
+
+Optional:
+
+  # Anderes Standardmodell (Vorgabe: llama-3.3-70b-versatile)
+  supabase secrets set GROQ_MODEL_DEFAULT=llama-3.3-70b-versatile --project-ref rtnpyziwyaqrlfazxkyr
+
+  # Tagesgrenze je Nutzer (0 oder weglassen = ohne Grenze).
+  # Braucht die Tabelle aus SCHRITT 4.
+  supabase secrets set AI_DAILY_LIMIT=100 --project-ref rtnpyziwyaqrlfazxkyr
+
+Hinweis: SUPABASE_URL, SUPABASE_ANON_KEY und SUPABASE_SERVICE_ROLE_KEY setzt
+Supabase in Edge Functions automatisch — die müssen NICHT gesetzt werden.
+
+
+================================================================================
+SCHRITT 3 — Function ausrollen
+================================================================================
+  supabase functions deploy groq-proxy --project-ref rtnpyziwyaqrlfazxkyr
+
+Prüfen (muss 401 liefern, weil kein Token mitgeschickt wird — genau richtig):
+
+  curl -i -X POST https://rtnpyziwyaqrlfazxkyr.supabase.co/functions/v1/groq-proxy
+
+
+================================================================================
+SCHRITT 4 — Tabelle für die Tagesgrenze (nur wenn AI_DAILY_LIMIT gesetzt)
+================================================================================
+Im Supabase SQL-Editor ausführen:
+
+  supabase/supabase_add_ai_usage.sql
+
+Ohne diese Tabelle läuft die KI weiter, es wird nur nicht mitgezählt.
+
+
+================================================================================
+SCHRITT 5 — In der App prüfen
+================================================================================
+  Einstellungen -> KI -> "Verbindung prüfen"
+
+  ✓ grün  = Key liegt, Anmeldung gilt, Groq antwortet.
+  ✗ 401   = nicht angemeldet oder Sitzung abgelaufen.
+  ✗ 500   = GROQ_API_KEY fehlt auf dem Server (SCHRITT 2).
+
+
+================================================================================
+SCHRITT 6 — ALTE KEYS UNGÜLTIG MACHEN (WICHTIG)
+================================================================================
+Die bisherigen Keys liegen noch in den Browsern aller Nutzer und in deren
+Sicherungen. Sie funktionieren weiter, bis sie gelöscht werden.
+
+  https://console.groq.com/keys -> alte Keys widerrufen (revoke)
+
+Erst danach ist der Umbau wirklich abgeschlossen. Der neue Key darf NICHT
+derselbe sein wie einer der alten.
+
+Aufräumen im Browser (optional, der Wert wird nicht mehr gelesen):
+
+  localStorage.removeItem('groq_api_key')

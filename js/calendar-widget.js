@@ -27,6 +27,9 @@
         vorgang: { label: 'Vorgänge', color: '#60a5fa', short: 'Vorgang' },
         aufgabe: { label: 'Aufgaben', color: '#fbbf24', short: 'Aufgabe' },
         angebot: { label: 'Angebote', color: '#f472b6', short: 'Angebot' },
+        // Termine, die an einer Adresse hängen — egal ob im Reiter „Termine"
+        // oder aus einem Historieneintrag heraus angelegt.
+        adresse: { label: 'Adressen', color: '#fb923c', short: 'Adresse' },
         sonstige: { label: 'Sonstige', color: '#a78bfa', short: 'Erinnerung' }
     };
     const TYPE_KEYS = Object.keys(TYPES);
@@ -48,7 +51,10 @@
         cursor: startOfMonth(new Date()),   // angezeigter Monat
         selectedDay: null,                  // 'YYYY-MM-DD' oder null = ganzer Monat
         types: new Set(TYPE_KEYS),
-        onlyMine: false,
+        // Vorgabe: nur die eigenen Einträge. Wer das umschaltet, dem wird die
+        // Wahl gemerkt (siehe saveFilters) — die Vorgabe greift nur, solange
+        // der Nutzer selbst noch nichts eingestellt hat.
+        onlyMine: true,
         range: 'month',                     // 'month' | 'upcoming'
         search: '',
         full: false                         // Vollansicht (großer Kalender)
@@ -146,9 +152,17 @@
     // ---------------------------------------------------------------
     // Filter merken
     // ---------------------------------------------------------------
+    // Filter gehören dem NUTZER, nicht dem Gerät. Auf dem Werkstatt-Rechner und
+    // am Fernseher melden sich mehrere Leute im selben Browser an — mit einem
+    // gemeinsamen Schlüssel hat jeder dem anderen die Einstellung überschrieben.
+    function storeKey() {
+        const uid = (window.activeUser && window.activeUser.id) || 'anon';
+        return STORE_KEY + '_' + uid;
+    }
+
     function saveFilters() {
         try {
-            localStorage.setItem(STORE_KEY, JSON.stringify({
+            localStorage.setItem(storeKey(), JSON.stringify({
                 types: [...state.types], known: TYPE_KEYS,
                 onlyMine: state.onlyMine, range: state.range, full: state.full
             }));
@@ -156,8 +170,19 @@
     }
 
     function loadFilters() {
+        // Erst auf die Vorgabe zurücksetzen: sonst behielte ein Nutzer, der
+        // selbst noch nichts eingestellt hat, die Filter dessen, der vorher am
+        // selben Browser angemeldet war.
+        state.types = new Set(TYPE_KEYS);
+        state.onlyMine = true;
+        state.range = 'month';
+        state.full = false;
         try {
-            const raw = JSON.parse(localStorage.getItem(STORE_KEY) || 'null');
+            // Altbestand unter dem gemeinsamen Schlüssel einmal übernehmen,
+            // damit die bisherige Einstellung nicht verloren geht.
+            let roh = localStorage.getItem(storeKey());
+            if (!roh) roh = localStorage.getItem(STORE_KEY);
+            const raw = JSON.parse(roh || 'null');
             if (!raw) return;
             if (Array.isArray(raw.types) && raw.types.length) {
                 state.types = new Set(raw.types.filter(t => TYPE_KEYS.includes(t)));
@@ -166,7 +191,10 @@
                 const known = Array.isArray(raw.known) ? raw.known : [];
                 TYPE_KEYS.forEach(t => { if (!known.includes(t)) state.types.add(t); });
             }
-            state.onlyMine = !!raw.onlyMine;
+            // Nur übernehmen, wenn der Nutzer das wirklich schon eingestellt
+            // hat — sonst würde ein alter Eintrag ohne dieses Feld die Vorgabe
+            // („nur meine") stillschweigend abschalten.
+            if ('onlyMine' in raw) state.onlyMine = !!raw.onlyMine;
             state.full = !!raw.full;
             if (raw.range === 'month' || raw.range === 'upcoming') state.range = raw.range;
         } catch (e) { /* kaputter Eintrag – Standardfilter behalten */ }
@@ -181,10 +209,21 @@
 
         // --- Manuelle Einträge / sonstige Erinnerungen (maintenance_events) ---
         try {
-            const { data, error } = await sb()
+            // Adressnamen gleich mitladen, damit ein Adress-Termin im Kalender
+            // zeigt, zu WEM er gehört. Der Einbau kann scheitern, solange
+            // maintenance_events.customer_id noch nicht als uuid existiert
+            // (supabase/supabase_add_event_customer.sql) — dann wird ohne ihn
+            // geladen, statt die ganze Kalenderliste leer zu lassen.
+            let { data, error } = await sb()
                 .from('maintenance_events')
-                .select('*, machines(name, manufacturer, serial)')
+                .select('*, machines(name, manufacturer, serial), customers(name, matchcode)')
                 .limit(500);
+            if (error) {
+                ({ data, error } = await sb()
+                    .from('maintenance_events')
+                    .select('*, machines(name, manufacturer, serial)')
+                    .limit(500));
+            }
             if (!error && data) {
                 // Teilnehmer der Termine dazuladen — daraus entstehen die
                 // Daumen-Knöpfe und die Zeile „Meier zugesagt · Schulz offen".
@@ -203,15 +242,21 @@
                         : (ev.manual_machine || '');
                     const participants = partsByEvent.get(String(ev.id)) || [];
                     const mineInvite = participants.find(p => String(p.user_id) === uid);
-                    // Ohne Maschinenbezug ist es eine sonstige Erinnerung, sonst eine Wartung.
-                    const type = (ev.machine_id || ev.manual_machine) ? 'wartung' : 'sonstige';
+                    // Einordnung: Maschine -> Wartung, sonst Adresse (Termin an
+                    // einer Adresse, aus dem Reiter „Termine" oder aus einem
+                    // Historieneintrag heraus), sonst sonstige Erinnerung.
+                    const k = ev.customers;
+                    const adressLabel = k ? (k.name || k.matchcode || '') : '';
+                    const type = (ev.machine_id || ev.manual_machine)
+                        ? 'wartung'
+                        : (ev.customer_id ? 'adresse' : 'sonstige');
                     out.push({
                         id: `event:${ev.id}`,
                         type,
                         day: key,
                         time: window.fmtAppointmentTime ? window.fmtAppointmentTime(ev.start_time) : '',
-                        title: ev.title || (machineLabel || 'Eintrag'),
-                        subject: machineLabel || ev.location_label || '',
+                        title: ev.title || (machineLabel || adressLabel || 'Eintrag'),
+                        subject: machineLabel || adressLabel || ev.location_label || '',
                         note: ev.description || '',
                         tag: ev.maintenance_types || '',
                         // Eingeladene sehen den Termin ebenfalls als „meinen".
@@ -608,10 +653,26 @@
                     <option value="Wartung">Wartung</option>
                 </select>
             </div>
+            <!-- Uhrzeit von/bis. Beides leer = ganztägig. -->
+            <div class="calw-form-row">
+                <input type="time" id="calw-f-time" title="Uhrzeit von" placeholder="von">
+                <input type="time" id="calw-f-time-end" title="Uhrzeit bis" placeholder="bis">
+            </div>
             <select id="calw-f-machine">
                 <option value="">Keine Maschine zugeordnet</option>
                 ${opts}
             </select>
+            <!-- Kollegen einladen — gleiche Menü-Bauart wie im Adressbuch. -->
+            <div class="custom-filter-dropdown filter-compact calw-users-dd" data-calw-users-toggle="1">
+                <span class="filter-label" id="calw-users-label">Niemand eingeladen</span>
+                <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+                <div class="custom-filter-menu" id="calw-users-menu">
+                    <ul id="calw-users-options"></ul>
+                </div>
+            </div>
             <textarea id="calw-f-note" rows="2" placeholder="Notiz (optional)"></textarea>
             <div class="calw-form-actions">
                 ${editingId ? '<button type="button" class="calw-btn danger" data-calw-delete="1">Löschen</button>' : ''}
@@ -709,6 +770,44 @@
     // ---------------------------------------------------------------
     let formPreset = null;
 
+    // Eingeladene Kollegen. Muss ausserhalb des DOM liegen: render() baut das
+    // Panel bei jedem Klick neu auf, im Markup gespeicherte Auswahl wäre weg.
+    let calwSelectedUsers = new Set();
+    // Beim Bearbeiten: wer war beim Öffnen schon eingeladen? Daraus ergibt sich
+    // beim Speichern, wen man hinzufügen und wen man entfernen muss — so
+    // bleiben bereits erteilte Zusagen erhalten.
+    let calwParticipantsBefore = new Set();
+
+    function calwUserList() {
+        const me = String(currentUserId() || '');
+        return (window.userList || []).filter(u => u && u.name && String(u.id) !== me);
+    }
+
+    // Nur die Liste im Menü neu zeichnen — nicht das ganze Panel, sonst
+    // klappt das Menü bei jedem Klick wieder zu.
+    function renderCalwUserList() {
+        const list = document.getElementById('calw-users-options');
+        const label = document.getElementById('calw-users-label');
+        if (!list || !label) return;
+        const users = calwUserList();
+        if (!users.length) {
+            list.innerHTML = '<li style="opacity:0.5; cursor:default;"><span>Keine weiteren Benutzer</span></li>';
+            label.textContent = 'Niemand eingeladen';
+            return;
+        }
+        list.innerHTML = users.map(u => {
+            const an = calwSelectedUsers.has(String(u.id));
+            return `<li data-calw-user="${esc(String(u.id))}"${an ? ' class="selected"' : ''}>
+                <span>${esc(u.name)}</span>
+                ${an ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+            </li>`;
+        }).join('');
+        const gewaehlt = users.filter(u => calwSelectedUsers.has(String(u.id)));
+        label.textContent = gewaehlt.length === 0 ? 'Niemand eingeladen'
+            : gewaehlt.length === 1 ? gewaehlt[0].name
+                : gewaehlt.length + ' Kollegen eingeladen';
+    }
+
     function captureForm() {
         const form = document.getElementById('calw-form');
         if (!form) return;
@@ -718,6 +817,8 @@
             date: val('calw-f-date'),
             kind: val('calw-f-kind'),
             machineId: val('calw-f-machine'),
+            timeFrom: val('calw-f-time'),
+            timeTo: val('calw-f-time-end'),
             note: val('calw-f-note')
         };
     }
@@ -734,9 +835,12 @@
             set('calw-f-title', formPreset.title);
             set('calw-f-kind', formPreset.kind);
             set('calw-f-machine', formPreset.machineId || '');
+            set('calw-f-time', formPreset.timeFrom || '');
+            set('calw-f-time-end', formPreset.timeTo || '');
             set('calw-f-note', formPreset.note);
             formPreset = null;
         }
+        renderCalwUserList();
         // Nur beim Öffnen in den Titel springen – nicht bei jedem Filter-Klick.
         if (focusForm) {
             focusForm = false;
@@ -744,6 +848,13 @@
             if (titleEl) titleEl.focus();
         }
     }
+
+    // Von aussen (z. B. aus der Erinnerungs-Meldung, js/reminder-alarm.js)
+    // direkt in das Bearbeiten-Formular eines Kalendereintrags springen.
+    window.openCalendarEntryEdit = async function (id) {
+        openPanel();
+        await openEditForm(id);
+    };
 
     async function openEditForm(id) {
         if (!sb()) return;
@@ -761,8 +872,26 @@
             date: dayKey(data.event_date || data.start_date) || todayKey(),
             kind: ['Erinnerung', 'Termin', 'Wartung'].find(k => kinds.includes(k)) || 'Erinnerung',
             machineId: data.machine_id ? String(data.machine_id) : '',
+            timeFrom: data.start_time || '',
+            timeTo: data.end_time || '',
             note: data.description || ''
         };
+
+        // Bereits eingeladene Kollegen vorbelegen.
+        calwSelectedUsers = new Set();
+        calwParticipantsBefore = new Set();
+        try {
+            if (typeof window.loadParticipantsForEvents === 'function') {
+                const map = await window.loadParticipantsForEvents([id]);
+                (map.get(String(id)) || []).forEach(p => {
+                    if (p.user_id == null) return;
+                    calwSelectedUsers.add(String(p.user_id));
+                    calwParticipantsBefore.add(String(p.user_id));
+                });
+            }
+        } catch (e) {
+            console.warn('Kalender: Teilnehmer konnten nicht geladen werden:', e);
+        }
         render();
     }
 
@@ -779,23 +908,38 @@
         }
         if (!sb()) return;
 
+        const timeFrom = (document.getElementById('calw-f-time') || {}).value || '';
+        const timeTo = (document.getElementById('calw-f-time-end') || {}).value || '';
+
         const payload = {
             title: title.trim(),
             event_date: date,
             start_date: date,
+            start_time: timeFrom || null,
+            end_time: timeTo || null,
             machine_id: machineId || null,
             maintenance_types: kind,
             description: note.trim() || null
         };
 
-        let error;
-        if (editingId) {
-            ({ error } = await sb().from('maintenance_events').update(payload).eq('id', editingId));
-        } else {
-            payload.status = 'geplant';
+        // start_time/end_time gibt es erst nach supabase_add_event_participants.sql.
+        // Fehlen sie, wird der Eintrag ohne Uhrzeit gespeichert statt gar nicht.
+        async function schreiben(daten) {
+            if (editingId) return sb().from('maintenance_events').update(daten).eq('id', editingId).select('id').limit(1);
+            const mit = Object.assign({ status: 'geplant' }, daten);
             const uid = currentUserId();
-            if (uid) payload.user_id = uid;
-            ({ error } = await sb().from('maintenance_events').insert([payload]));
+            if (uid) mit.user_id = uid;
+            return sb().from('maintenance_events').insert([mit]).select('id').limit(1);
+        }
+
+        let { data, error } = await schreiben(payload);
+        let ohneZeit = false;
+        if (error && /start_time|end_time/.test(error.message || '')) {
+            const reduziert = Object.assign({}, payload);
+            delete reduziert.start_time;
+            delete reduziert.end_time;
+            ({ data, error } = await schreiben(reduziert));
+            ohneZeit = !error;
         }
 
         if (error) {
@@ -804,10 +948,52 @@
             return;
         }
 
-        if (window.showToast) window.showToast(editingId ? 'Eintrag aktualisiert.' : 'Eintrag angelegt.');
+        // Teilnehmer abgleichen: nur Neue eintragen, Entfernte löschen. Ein
+        // pauschales Löschen-und-neu-Anlegen würde bereits erteilte Zusagen
+        // und Absagen mit wegwerfen.
+        const eventId = editingId || (data && data.length ? data[0].id : null);
+        if (eventId) {
+            const jetzt = calwSelectedUsers;
+            const vorher = editingId ? calwParticipantsBefore : new Set();
+            const neu = [...jetzt].filter(id => !vorher.has(id));
+            const weg = [...vorher].filter(id => !jetzt.has(id));
+            try {
+                if (neu.length) {
+                    const users = calwUserList();
+                    const rows = neu.map(id => {
+                        const u = users.find(x => String(x.id) === id);
+                        return {
+                            event_id: eventId,
+                            user_id: /^\d+$/.test(id) ? parseInt(id) : null,
+                            user_name: u ? u.name : null,
+                            status: 'offen',
+                            invited_by: currentUserId() || null,
+                            invited_by_name: (window.activeUser && window.activeUser.name) || null
+                        };
+                    });
+                    const { error: e1 } = await sb().from('event_participants').insert(rows);
+                    if (e1) throw e1;
+                }
+                for (const id of weg) {
+                    await sb().from('event_participants').delete()
+                        .eq('event_id', eventId).eq('user_id', /^\d+$/.test(id) ? parseInt(id) : id);
+                }
+            } catch (e) {
+                console.warn('Kalender: Teilnehmer nicht gespeichert:', e);
+                if (window.showToast) window.showToast('Eintrag gespeichert, die Einladung der Kollegen aber nicht.\n\nDazu muss supabase/supabase_add_event_participants.sql in Supabase laufen.');
+            }
+        }
+
+        if (window.showToast) {
+            window.showToast(ohneZeit
+                ? 'Gespeichert, aber ohne Uhrzeit — dazu muss supabase/supabase_add_event_participants.sql in Supabase laufen.'
+                : (editingId ? 'Eintrag aktualisiert.' : 'Eintrag angelegt.'));
+        }
         formOpen = false;
         editingId = null;
         formPreset = null;
+        calwSelectedUsers = new Set();
+        calwParticipantsBefore = new Set();
         state.selectedDay = date;
         state.cursor = startOfMonth(new Date(date));
         await refresh();
@@ -869,6 +1055,10 @@
     function openPanel() {
         const panel = document.getElementById('calw-panel');
         if (!panel) return;
+        // Die Filter beim Öffnen holen, nicht beim Laden der Datei: beim Laden
+        // steht window.activeUser noch nicht fest (die Anmeldung kommt später),
+        // und der Schlüssel hängt am Nutzer.
+        loadFilters();
         isOpen = true;
         panel.style.display = 'flex';
         render();
@@ -925,16 +1115,53 @@
 
         if (hit('data-calw-full')) { state.full = !state.full; saveFilters(); render(); return; }
 
+        // Kollegen-Menü: auf-/zuklappen und Namen an-/abwählen. Bewusst OHNE
+        // render() — das baut das ganze Panel neu auf und würde das Menü bei
+        // jedem Klick wieder schliessen. Deshalb nur die Liste neu zeichnen.
+        if ((el = hit('data-calw-user'))) {
+            e.stopPropagation();
+            const id = el.getAttribute('data-calw-user');
+            if (calwSelectedUsers.has(id)) calwSelectedUsers.delete(id); else calwSelectedUsers.add(id);
+            renderCalwUserList();
+            return;
+        }
+        if (hit('data-calw-users-toggle')) {
+            e.stopPropagation();
+            const dd = hit('data-calw-users-toggle');
+            const menu = document.getElementById('calw-users-menu');
+            if (menu) {
+                const offen = menu.classList.contains('show');
+                menu.classList.toggle('show', !offen);
+                if (dd) dd.classList.toggle('active', !offen);
+            }
+            return;
+        }
+        {
+            // Klick daneben schliesst das Menü wieder.
+            const menu = document.getElementById('calw-users-menu');
+            if (menu && menu.classList.contains('show')) {
+                menu.classList.remove('show');
+                const dd = menu.closest('.custom-filter-dropdown');
+                if (dd) dd.classList.remove('active');
+            }
+        }
+
         if ((el = hit('data-calw-new'))) {
             formOpen = !formOpen;
             editingId = null;
             focusForm = formOpen;
+            calwSelectedUsers = new Set();
+            calwParticipantsBefore = new Set();
             if (!formOpen) formPreset = null;
             render();
             return;
         }
 
-        if (hit('data-calw-cancel')) { formOpen = false; editingId = null; formPreset = null; render(); return; }
+        if (hit('data-calw-cancel')) {
+            formOpen = false; editingId = null; formPreset = null;
+            calwSelectedUsers = new Set(); calwParticipantsBefore = new Set();
+            render(); return;
+        }
         if (hit('data-calw-delete')) { deleteEntry(); return; }
 
         if ((el = hit('data-calw-month'))) {

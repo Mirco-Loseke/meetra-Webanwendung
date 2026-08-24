@@ -30,6 +30,54 @@
     }
 
     // =========================================================
+    // LÖSCH-BEREICHE (feingranular)
+    // =========================================================
+    // Jeder Eintrag: Schlüssel, Beschriftung im Benutzer-Modal und die exakten
+    // Texte, wie sie an window.canDelete(...) übergeben werden.
+    // Der Schlüssel landet als "del_<key>" in user.permissions.
+    // Fehlt der Schlüssel, ist Löschen erlaubt — Altbestände bleiben unverändert.
+    // Neue Löschstelle gebaut? Hier eintragen, sonst greift nur der Hauptschalter.
+    window.DELETE_AREAS = [
+        { key: 'adressen', label: 'Adressen', what: ['Adressen'] },
+        { key: 'ansprechpartner', label: 'Ansprechpartner', what: ['Ansprechpartnern'] },
+        { key: 'verknuepfungen', label: 'Verknüpfungen', what: ['Verknüpfungen'] },
+        { key: 'maschinen', label: 'Maschinen', what: ['Maschinen'] },
+        // Zwei getrennte Verläufe, die vorher beide „Historien-Einträge" hießen:
+        // die Historie einer MASCHINE (js/history-modal.js) und der Verlauf an
+        // einer ADRESSE (customer_notes, js/addressbook.js).
+        { key: 'historie', label: 'Historie einer Maschine', what: ['Historien-Einträgen'] },
+        { key: 'adress_historie', label: 'Historie einer Adresse', what: ['Adress-Einträgen'] },
+        { key: 'buchungen', label: 'Buchungen', what: ['Buchungen'] },
+        { key: 'kategorien', label: 'Kategorien', what: ['Kategorien'] },
+        // Kalendertermine und Termine an einer Adresse liegen beide in
+        // maintenance_events — ein Bereich für beides.
+        { key: 'termine', label: 'Termine (Kalender + Adresse)', what: ['Terminen'] },
+        { key: 'dokumente', label: 'Dokumente', what: ['Dokumenten'] },
+        { key: 'ordner', label: 'Ordner', what: ['Ordnern'] },
+        { key: 'notizen', label: 'Notizen', what: ['Notizen'] },
+        { key: 'angebote', label: 'Angebote', what: ['Angeboten'] },
+        { key: 'vorgaenge', label: 'Vorgänge', what: ['Vorgängen'] },
+        { key: 'schritte', label: 'Vorgangs-Schritte', what: ['Schritten'] },
+        { key: 'stand', label: 'Stand-Einträge', what: ['Stand-Einträgen'] },
+        { key: 'erinnerungen', label: 'Erinnerungen', what: ['Erinnerungen'] },
+        { key: 'pruefpunkte', label: 'Prüfpunkte', what: ['Prüfpunkten'] },
+        { key: 'fotos', label: 'Fotos', what: ['Fotos'] },
+        { key: 'wartungsplaene', label: 'Wartungspläne', what: ['Wartungsplänen'] },
+        { key: 'unteraufgaben', label: 'Unteraufgaben', what: ['Unteraufgaben'] },
+        { key: 'werkstatt', label: 'Werkstatt-Einträge', what: ['Werkstatt-Einträgen'] },
+        { key: 'benutzer', label: 'Benutzer', what: ['Benutzern'] }
+    ];
+
+    // Beschriftung -> Bereich (einmalig aufgebaut)
+    const AREA_BY_WHAT = (function () {
+        const map = new Map();
+        window.DELETE_AREAS.forEach(function (a) {
+            a.what.forEach(function (w) { map.set(w, a); });
+        });
+        return map;
+    })();
+
+    // =========================================================
     // ZENTRALE LÖSCHBERECHTIGUNG
     // =========================================================
     // Jede Löschfunktion in der App ruft das hier am Anfang auf:
@@ -55,6 +103,16 @@
         if (blockedByPerms || blockedByBody) {
             const msg = 'Keine Berechtigung zum Löschen' + (what ? ' von ' + what : '') +
                 '.\n\nDer Haken "Einträge löschen" ist für deinen Benutzer nicht gesetzt.';
+            if (typeof window.showToast === 'function') window.showToast(msg, 'error');
+            else window.alert(msg);
+            return false;
+        }
+
+        // Feingranular: ein einzelner Bereich kann trotz Hauptschalter gesperrt sein.
+        const area = AREA_BY_WHAT.get(what);
+        if (area && perms && perms['del_' + area.key] === false) {
+            const msg = 'Keine Berechtigung zum Löschen von ' + area.label +
+                '.\n\nDieser Bereich ist für deinen Benutzer gesperrt.';
             if (typeof window.showToast === 'function') window.showToast(msg, 'error');
             else window.alert(msg);
             return false;

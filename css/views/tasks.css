@@ -133,6 +133,9 @@ tr.completed-task td {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
+    /* Luft um das Maschinenbild in der Mitte. Ohne den Abstand klebten
+       Maschinentitel und Knopfreihe direkt am Bild. */
+    gap: 10px;
     margin-bottom: 1rem;
     line-height: 1.2;
 }
@@ -537,4 +540,46 @@ tr.completed-task td {
 
 .task-view-controls::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.2);
+}
+
+/* =========================================================
+   AUGE: EINZELNE AUFGABE AUS DEM KINO-MODUS NEHMEN
+   Knopf oben rechts auf der Karte. Durchgestrichenes Auge =
+   die Karte läuft auf dem Fernseher nicht mit; in der normalen
+   Ansicht bleibt sie sichtbar, nur blasser.
+   ========================================================= */
+.btn-cinema-hide {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1.5px solid rgba(255, 255, 255, 0.18);
+    color: var(--text-3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background var(--dur-base) ease, color var(--dur-base) ease, border-color var(--dur-base) ease;
+}
+
+.btn-cinema-hide:hover {
+    background: rgba(255, 255, 255, 0.16);
+    color: var(--text-1);
+}
+
+.btn-cinema-hide.is-hidden {
+    background: rgba(245, 158, 11, 0.18);
+    border-color: rgba(245, 158, 11, 0.5);
+    color: #fbbf24;
+}
+
+/* Außerhalb des Kino-Modus nur ein dezenter Hinweis, dass die Karte
+   auf dem Fernseher fehlt — verstecken würde man sie sonst nie wieder. */
+.task-card.cinema-hidden {
+    opacity: 0.6;
+}
+
+body.cinema-mode-active .task-card.cinema-hidden {
+    display: none !important;
 }

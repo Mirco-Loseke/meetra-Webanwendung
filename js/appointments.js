@@ -209,13 +209,30 @@
             location_label: o.locationLabel || null
         });
 
-        let res = await sb().from('maintenance_events').insert([full]).select('id').limit(1);
-        if (res.error) {
-            // Zusatzspalten fehlen (Migration nicht gelaufen) -> wenigstens den
-            // Termin selbst anlegen.
-            console.warn('Termin ohne Uhrzeit/Adresse gespeichert:', res.error.message);
-            res = await sb().from('maintenance_events').insert([base]).select('id').limit(1);
-            if (res.error) { console.error('Termin nicht speicherbar:', res.error.message); return null; }
+        // Feldweise ausweichen statt pauschal alle Zusatzspalten zu verwerfen:
+        // vorher ging bei einem Problem an EINER Spalte auch die Uhrzeit und
+        // der Adressbezug verloren, ohne dass jemand davon erfuhr.
+        // Bei einem Typkonflikt nennt Postgres nur den Wert, nicht die Spalte —
+        // deshalb erkennt insertRobust (js/app-core.js) sie über den Wert.
+        const versuch = Object.assign({}, full);
+        const weggelassen = [];
+        let res;
+        const optional = ['customer_id', 'location_label', 'start_time'];
+        for (let i = 0; i <= optional.length; i++) {
+            res = await sb().from('maintenance_events').insert([versuch]).select('id').limit(1);
+            if (!res.error) break;
+            const msg = res.error.message || '';
+            const stoerend = new Set();
+            optional.forEach(k => { if (k in versuch && msg.includes(k)) stoerend.add(k); });
+            const m = msg.match(/invalid input syntax for type \w+: "([^"]+)"/);
+            if (m) optional.forEach(k => {
+                if (k in versuch && versuch[k] != null && String(versuch[k]) === m[1]) stoerend.add(k);
+            });
+            if (!stoerend.size) { console.error('Termin nicht speicherbar:', msg); return null; }
+            stoerend.forEach(k => { delete versuch[k]; weggelassen.push(k); });
+        }
+        if (weggelassen.includes('customer_id') && typeof window.showToast === 'function') {
+            window.showToast('Termin angelegt, aber ohne Adressbezug — dazu muss supabase/supabase_add_event_customer.sql in Supabase laufen.');
         }
         const eventId = res.data && res.data.length ? res.data[0].id : null;
 

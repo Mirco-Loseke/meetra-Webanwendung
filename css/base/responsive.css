@@ -2040,17 +2040,41 @@ details.category-group-details[open] .group-chevron {
        seinen Abstand einzeln zurück, sonst klebt er am Rand.
        Oben/unten behalten die Karten ihren 3px-Rahmen — der trennt sie
        weiterhin sichtbar voneinander. */
-    #tasks #tasks-board {
-        margin-left: -10px !important;
-        margin-right: -10px !important;
+    /* Reihenfolge auf dem Handy: Offen -> Werkstatt -> Erledigt.
+       „Erledigt" steckt im Markup in #tasks-board, die Werkstatt-Liste
+       daneben in .tasks-with-workshop — untereinander gestapelt stand die
+       Werkstatt dadurch UNTER den erledigten Aufgaben. `display: contents`
+       löst den Kasten von #tasks-board auf, seine beiden Spalten werden
+       damit zu direkten Flex-Kindern von .tasks-with-workshop und lassen
+       sich zusammen mit dem Werkstatt-Panel per `order` sortieren.
+       Weil #tasks-board dann keinen eigenen Kasten mehr hat, wandern die
+       randlosen -10px an die Spalten selbst. */
+    #tasks .tasks-with-workshop {
+        display: flex !important;
+        flex-direction: column !important;
         gap: 1rem !important;
     }
+    #tasks #tasks-board {
+        display: contents !important;
+    }
+    #tasks .kanban-column[data-status="open"] { order: 1; }
+    #tasks #workshop-panel { order: 2; }
+    #tasks .kanban-column[data-status="completed"] { order: 3; }
     #tasks .kanban-column {
+        margin-left: -10px !important;
+        margin-right: -10px !important;
         padding-left: 0 !important;
         padding-right: 0 !important;
         border-left: none !important;
         border-right: none !important;
         border-radius: 0 !important;
+    }
+    /* Eingeklappt bleibt nur die Kopfzeile stehen — die soll dann nicht wie
+       eine leere Spalte wirken und muss gut treffbar sein. */
+    #tasks .kanban-column[data-status="completed"] > .column-title {
+        min-height: 48px;
+        display: flex;
+        align-items: center;
     }
     #tasks .kanban-column > .column-title {
         padding-left: 12px !important;

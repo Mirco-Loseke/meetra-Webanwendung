@@ -1658,11 +1658,8 @@ window.handleAccountingPDFUpload = async function (event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    const apiKey = localStorage.getItem('groq_api_key');
-    if (!apiKey) {
-        window.showToast('Bitte hinterlegen Sie einen Groq API-Key in den Einstellungen.');
-        return;
-    }
+    // Kein Schlüssel mehr im Browser — den hängt die Edge Function
+    // serverseitig an (siehe js/groq-proxy.js).
 
     window.hideAccAiBanner();
 
@@ -1815,14 +1812,8 @@ Setze Unbekanntes auf null.`;
         }
 
         updateStatus('KI verarbeitet Daten...');
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify(requestBody)
-        });
+        // Über die eigene Edge Function, siehe js/groq-proxy.js
+        const response = await window.groqFetch(requestBody);
 
         if (!response.ok) {
             const errData = await response.json();

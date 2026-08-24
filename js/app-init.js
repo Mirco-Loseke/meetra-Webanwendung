@@ -247,9 +247,9 @@
                         window.renderEvents();
                     }
                 } else if (targetId === 'settings-ai') {
-                    const input = document.getElementById('settings-api-key-new');
-                    const savedKey = localStorage.getItem('groq_api_key');
-                    if (input) input.value = savedKey || '';
+                    // Kein Schlüsselfeld mehr — der Zugang liegt serverseitig.
+                    // Beim Öffnen gleich zeigen, ob der Dienst antwortet.
+                    if (typeof window.pruefeKiVerbindung === 'function') window.pruefeKiVerbindung();
                 } else if (targetId === 'settings-uvv-wartungsplaene') {
                     if (typeof window.loadUvvWartungsplaene === 'function') {
                         window.loadUvvWartungsplaene();

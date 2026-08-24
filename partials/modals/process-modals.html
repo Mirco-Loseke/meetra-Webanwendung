@@ -342,23 +342,37 @@
                         <span class="proc-note-hint" id="edit-process-note-hint"></span>
                     </button>
                     <div class="proc-note-body" id="edit-process-note-body" hidden>
-                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                        <div class="form-group" style="margin-bottom: 0;">
                             <label class="form-label-caps">Bemerkung</label>
                             <textarea id="edit-process-remark-input" class="glass-input" style="height: 80px; resize: vertical; padding-top: 15px;" placeholder="Interne Bemerkung..."></textarea>
                         </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label class="form-label-caps">Stand</label>
-                            <div class="proc-note-stand-row">
-                                <textarea id="edit-process-status-text" class="glass-input" style="height: 60px; resize: vertical; padding-top: 12px;" placeholder="Aktuellen Stand beschreiben..."></textarea>
-                                <div class="proc-note-stand-actions">
-                                    <button type="button" class="mic-btn" data-mic-for="edit-process-status-text" title="Diktieren — Text wird direkt ins Feld geschrieben"><span class="mic-btn-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span></button>
-                                    <button type="button" class="proc-note-add" onclick="window.addProcessStatusFromEdit()">Eintragen</button>
-                                </div>
-                            </div>
-                            <div class="mic-status" data-mic-status-for="edit-process-status-text"></div>
-                            <div id="edit-process-status-history" class="proc-note-history"></div>
+                    </div>
+                </div>
+
+                <!-- STAND: bewusst NICHT im Ausklapp oben. Das ist die
+                     Angabe, die im Alltag am haeufigsten gebraucht wird —
+                     sie soll ohne Klick sichtbar sein. Nur die Bemerkung
+                     bleibt hinter dem +. -->
+                <div class="form-group proc-stand-block" style="margin-bottom: 0.75rem;">
+                    <label class="form-label-caps">Stand</label>
+                    <div class="proc-note-stand-row">
+                        <textarea id="edit-process-status-text" class="glass-input" style="height: 60px; resize: vertical; padding-top: 12px;" placeholder="Aktuellen Stand beschreiben..."></textarea>
+                        <div class="proc-note-stand-actions">
+                            <button type="button" class="mic-btn" data-mic-for="edit-process-status-text" title="Diktieren — Text wird direkt ins Feld geschrieben"><span class="mic-btn-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span></button>
+                            <button type="button" class="proc-note-add" onclick="window.addProcessStatusFromEdit()">Eintragen</button>
                         </div>
                     </div>
+                    <div class="mic-status" data-mic-status-for="edit-process-status-text"></div>
+                    <div id="edit-process-status-history" class="proc-note-history"></div>
+                </div>
+
+                <!-- Dokumente am Vorgang. Die Beschriftung samt Anzahl setzt
+                     window.updateProcessAttachButton (js/process-attachments.js). -->
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <button type="button" id="edit-process-att-btn" class="proc-att-open-btn"
+                            onclick="window.openProcessAttachments(document.getElementById('edit-process-id').value, null, event)">
+                        📎 Dokument hinzufügen
+                    </button>
                 </div>
 
                 <div class="form-group" id="edit-process-body-group" style="margin-bottom: 0.75rem; display: none;">

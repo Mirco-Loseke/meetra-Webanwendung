@@ -39,16 +39,24 @@
             </div>
 
             <div id="edit-permissions-section" class="form-group" style="margin-top: 1.5rem;">
-                <label style="margin-bottom: 0.75rem; display: block; color: var(--color-primary-green); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; font-size: 0.85rem;">Berechtigungen</label>
+                <label class="perm-heading">Berechtigungen</label>
 
-                <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 12px; backdrop-filter: blur(12px);">
-                    <div style="font-size: 0.78rem; font-weight: 800; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.75rem;">Hauptmenü — Ansichten</div>
-                    <div id="perm-sidebar-pages" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"></div>
-                </div>
+                <!-- Einklappbar: die drei Blöcke sind lang geworden. <details> statt
+                     eigener JS-Logik — der Zustand ist nur fürs Auge. -->
+                <details class="perm-group" open>
+                    <summary class="perm-group-head">
+                        <span>Hauptmenü — Ansichten</span>
+                        <span class="perm-group-count" id="perm-count-sidebar"></span>
+                    </summary>
+                    <div id="perm-sidebar-pages" class="perm-grid"></div>
+                </details>
 
-                <div id="perm-settings-subpages-box" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 12px; backdrop-filter: blur(12px);">
-                    <div style="font-size: 0.78rem; font-weight: 800; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.75rem;">Einstellungen — Unterseiten</div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <details class="perm-group" id="perm-settings-subpages-box">
+                    <summary class="perm-group-head">
+                        <span>Einstellungen — Unterseiten</span>
+                        <span class="perm-group-count" id="perm-count-settings"></span>
+                    </summary>
+                    <div class="perm-grid">
                         <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-users"> Benutzerverwaltung</label>
                         <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-categories"> Kategorien</label>
                         <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-protocol-templates"> Protokollvorlagen</label>
@@ -58,13 +66,19 @@
                         <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-settings-uvv-wartungsplaene"> UVV &amp; Wartungspläne</label>
                         <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-settings-ai"> KI-Konfiguration</label>
                     </div>
-                </div>
+                </details>
 
-                <div style="background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.25); border-radius: 14px; padding: 1rem 1.25rem; backdrop-filter: blur(12px);">
-                    <div style="font-size: 0.78rem; font-weight: 800; color: rgba(248,113,113,0.7); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 0.75rem;">Aktionen</div>
-                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #f87171; font-weight: 700;"><input class="clickable" type="checkbox"
-                            id="perm-delete"> Einträge löschen</label>
-                </div>
+                <details class="perm-group perm-group-danger">
+                    <summary class="perm-group-head">
+                        <span>Löschen</span>
+                        <span class="perm-group-count" id="perm-count-delete"></span>
+                    </summary>
+                    <label class="perm-delete-master"><input class="clickable" type="checkbox" id="perm-delete"> Einträge löschen</label>
+                    <p class="perm-delete-hint">Ohne diesen Haken darf der Benutzer nichts löschen. Ist er gesetzt, lässt sich unten
+                        jeder Bereich einzeln sperren — abgehakt heißt „darf löschen".</p>
+                    <!-- Bereiche kommen aus window.DELETE_AREAS (js/permissions.js) -->
+                    <div id="perm-delete-areas" class="perm-grid"></div>
+                </details>
             </div>
 
             <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">

@@ -469,3 +469,96 @@
         max-width: none;
     }
 }
+
+/* =========================================================
+   BENACHRICHTIGUNGEN: EINSTELLUNGEN (Zahnrad im Panel)
+   Eine Zeile je Sorte, zwei Spalten:
+   „Liste"  = erscheint unter der Glocke
+   „Fenster" = macht zusätzlich eine Systemmeldung auf
+   ========================================================= */
+.notif-pref-table {
+    display: grid;
+    grid-template-columns: 1fr 58px 58px;
+    align-items: center;
+    row-gap: 2px;
+}
+
+.notif-pref-head {
+    display: contents;
+}
+
+.notif-pref-head span {
+    padding: 0 0 6px;
+    font-size: var(--fs-2xs);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-3);
+    text-align: center;
+}
+
+.notif-pref-head span:first-child {
+    text-align: left;
+}
+
+.notif-pref-row {
+    display: contents;
+}
+
+.notif-pref-label {
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    color: var(--text-2);
+    padding: 5px 0;
+}
+
+.notif-pref-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 0;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+}
+
+.notif-pref-cell:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.notif-pref-cell input {
+    width: 15px;
+    height: 15px;
+    accent-color: #8b5cf6;
+    cursor: pointer;
+}
+
+.notif-pref-cell input:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.notif-settings-level {
+    margin-top: 12px;
+}
+
+.notif-settings-num select {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-sm);
+    color: #fff;
+    padding: 5px 8px;
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    font-family: var(--font-sans);
+}
+
+.notif-settings-warn {
+    margin-top: 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    font-size: var(--fs-xs);
+    line-height: 1.45;
+    color: #fbbf24;
+}

@@ -25,15 +25,37 @@
     //   before      = Vorlauf in Tagen (wie früh wird erinnert)
     //   after       = Rückblick in Tagen (wie lange bleibt Überfälliges stehen)
     //   maintBefore = eigener Vorlauf für Wartungen, die kündigen sich länger an
+    //   push_*      = darf diese Sorte ein Fenster aufmachen (Systemmeldung)?
+    //   pushLevel   = ab welcher Dringlichkeit überhaupt ein Fenster aufgeht:
+    //                 'overdue' nur Überfälliges, 'today' auch heute Fälliges,
+    //                 'all' jede Meldung. Termine gehen davon aus (siehe unten).
     const DEFAULT_PREFS = {
         processes: true,
         tasks: true,
         maintenance: true,
         offers: true,
         appointments: true,
+        push_processes: true,
+        push_tasks: true,
+        push_maintenance: true,
+        push_offers: true,
+        push_appointments: true,
+        pushLevel: 'today',
         before: 3,
         after: 14,
         maintBefore: 30
+    };
+
+    // Welche Meldungsart gehört zu welchem Schalter oben. Neue Art ergänzen,
+    // sonst greifen für sie weder Ein/Aus noch die Fenster-Einstellung.
+    const KIND_GROUP = {
+        reminder: 'processes',
+        steps: 'processes',
+        assigned: 'processes',
+        deadline: 'tasks',
+        maintenance: 'maintenance',
+        offer: 'offers',
+        appointment: 'appointments'
     };
 
     let items = [];
@@ -589,14 +611,42 @@
         const box = document.getElementById('notif-settings');
         if (!box) return;
         const P = prefs();
+        const pushOn = window.notificationsPushEnabled();
         box.innerHTML = `
-            <div class="notif-settings-group">
+            <!-- Eine Zeile je Sorte, zwei Spalten: taucht sie in der Liste auf,
+                 und darf sie zusätzlich ein Fenster aufmachen. -->
+            <div class="notif-pref-table">
+                <div class="notif-pref-head">
+                    <span></span>
+                    <span title="Erscheint unter der Glocke">Liste</span>
+                    <span title="Öffnet zusätzlich ein Fenster außerhalb der App">Fenster</span>
+                </div>
                 ${PREF_TOGGLES.map(t => `
-                    <label class="notif-settings-check">
-                        <input type="checkbox" data-notif-pref="${t.key}" ${P[t.key] ? 'checked' : ''}>
-                        <span>${t.label}</span>
-                    </label>`).join('')}
+                    <div class="notif-pref-row">
+                        <span class="notif-pref-label">${t.label}</span>
+                        <label class="notif-pref-cell">
+                            <input type="checkbox" data-notif-pref="${t.key}" ${P[t.key] ? 'checked' : ''}>
+                        </label>
+                        <label class="notif-pref-cell">
+                            <input type="checkbox" data-notif-pref="push_${t.key}"
+                                ${P['push_' + t.key] ? 'checked' : ''} ${P[t.key] ? '' : 'disabled'}>
+                        </label>
+                    </div>`).join('')}
             </div>
+
+            <div class="notif-settings-group notif-settings-level">
+                <label class="notif-settings-num">
+                    <span>Fenster ab</span>
+                    <select data-notif-pref-sel="pushLevel">
+                        <option value="overdue" ${P.pushLevel === 'overdue' ? 'selected' : ''}>nur Überfälligem</option>
+                        <option value="today" ${P.pushLevel === 'today' ? 'selected' : ''}>heute Fälligem</option>
+                        <option value="all" ${P.pushLevel === 'all' ? 'selected' : ''}>jeder Meldung</option>
+                    </select>
+                    <em>Termine melden sich immer sofort</em>
+                </label>
+            </div>
+
+            ${pushOn ? '' : `<div class="notif-settings-warn">Fenster sind im Browser noch nicht erlaubt — oben auf „🔕 Meldungen aus" tippen. Bis dahin bleibt es bei der Liste unter der Glocke.</div>`}
             <div class="notif-settings-group notif-settings-nums">
                 <label class="notif-settings-num">
                     <span>Vorlauf</span>
@@ -632,6 +682,11 @@
     function onPrefChange(el) {
         if (el.dataset.notifPref) {
             savePrefs({ [el.dataset.notifPref]: el.checked });
+            // Sorte ganz abgeschaltet -> die Fenster-Spalte daneben ergibt
+            // keinen Sinn mehr. Neu zeichnen erledigt das Ausgrauen mit.
+            if (!el.dataset.notifPref.startsWith('push_')) renderSettings();
+        } else if (el.dataset.notifPrefSel) {
+            savePrefs({ [el.dataset.notifPrefSel]: el.value });
         } else if (el.dataset.notifPrefNum) {
             const k = el.dataset.notifPrefNum;
             const v = clampDays(el.value, DEFAULT_PREFS[k]);
@@ -645,7 +700,7 @@
     }
 
     document.addEventListener('change', (e) => {
-        const el = e.target.closest('[data-notif-pref], [data-notif-pref-num]');
+        const el = e.target.closest('[data-notif-pref], [data-notif-pref-num], [data-notif-pref-sel]');
         if (el) { e.stopPropagation(); onPrefChange(el); }
     });
 
@@ -835,15 +890,33 @@
         btn.title = on
             ? 'Systemmeldungen bei fälligen Erinnerungen sind eingeschaltet'
             : 'Systemmeldungen einschalten (einmalige Erlaubnis nötig)';
+
+        // Der Warnhinweis in der Einstellungs-Klappe hängt daran.
+        const box = document.getElementById('notif-settings');
+        if (box && box.style.display === 'block') renderSettings();
+    }
+
+    // Darf diese eine Meldung ein Fenster aufmachen? Zwei Bedingungen:
+    // die Sorte muss dafür freigeschaltet sein, und die Dringlichkeit muss
+    // die eingestellte Schwelle erreichen.
+    function mayPush(n) {
+        const P = prefs();
+        const group = KIND_GROUP[n.kind];
+        if (group && P['push_' + group] === false) return false;
+
+        // Termine melden sich immer, auch wenn sie erst nächste Woche sind:
+        // eine Einladung oder eine Zu-/Absage will man sofort mitbekommen.
+        if (n.kind === 'appointment') return true;
+
+        if (P.pushLevel === 'all') return true;
+        if (P.pushLevel === 'overdue') return n.severity === 'overdue';
+        return n.severity === 'overdue' || n.severity === 'today';
     }
 
     function pushUrgent() {
         const pushed = pushedKeys();
 
-        // Termine melden sich immer, auch wenn sie erst nächste Woche sind:
-        // eine Einladung oder eine Zu-/Absage will man sofort mitbekommen.
-        const urgent = items.filter(n =>
-            (n.severity === 'overdue' || n.severity === 'today' || n.kind === 'appointment') && !pushed.has(n.key));
+        const urgent = items.filter(n => mayPush(n) && !pushed.has(n.key));
         if (!urgent.length) return;
 
         // Ohne erlaubte Systemmeldungen wenigstens im Fenster darauf hinweisen.

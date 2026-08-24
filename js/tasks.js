@@ -20,6 +20,14 @@
     function onTaskFieldChange() { taskIsDirty = true; }
     // Reload-Schutz: der Merker ist modul-lokal, deshalb als Prueffunktion anmelden.
     if (typeof window.registerUnsavedCheck === 'function') window.registerUnsavedCheck(() => taskIsDirty);
+
+    // Zugriff auf den Merker von außen — js/task-autosave.js braucht beides:
+    // „schmutzig" für Änderungen an den Unteraufgaben (die lösen kein input-
+    // Ereignis am Formular aus) und „sauber", sobald automatisch gespeichert
+    // wurde und die Rückfrage beim Schließen entfallen soll.
+    window.markTaskDirty = function () { taskIsDirty = true; };
+    window.markTaskClean = function () { taskIsDirty = false; };
+    window.isTaskDirty = function () { return taskIsDirty; };
     let filters = {
         machine: 'all',
         search: '',
@@ -344,6 +352,7 @@
         div.draggable = true;
         div.id = `task-${task.id}`;
         div.dataset.id = task.id;
+        if (window.isTaskCinemaHidden(task.id)) div.classList.add('cinema-hidden');
 
         const subtasksTotal = task.subtasks?.length || 0;
         const subtasksDone = task.subtasks?.filter(s => s.status === 'completed').length || 0;
@@ -351,7 +360,7 @@
 
         div.innerHTML = `
             <div class="task-card-header">
-                <div style="display:flex; align-items:flex-start; gap:8px; max-width:100%; word-break:break-word;">
+                <div style="display:flex; align-items:flex-start; gap:8px; max-width:100%; min-width:0; word-break:break-word;">
                     <div class="task-quick-complete ${task.status === 'completed' ? 'completed' : ''}" onclick="event.stopPropagation(); window.toggleTaskStatus('${task.id}', '${task.status}')" title="${task.status === 'completed' ? 'Wieder öffnen' : 'Als erledigt markieren'}" style="margin-top: 2px;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     </div>
@@ -361,6 +370,7 @@
                 </div>
                 ${task.machines && task.machines.image_url ? `<img src="${task.machines.image_url}" alt="" class="task-card-machine-thumb" onclick="event.stopPropagation(); window.openMachineDetails && window.openMachineDetails('${task.machine_id}')" style="width:121px; height:121px; border-radius:8px; object-fit:cover; flex-shrink:0; align-self:center; margin:0 auto; border:1px solid rgba(255,255,255,0.12); cursor:pointer;" onerror="this.remove()">` : ''}
                 <div class="task-card-actions" style="display: flex; gap: 6px; align-items: center;">
+                    ${window.cinemaHideButtonHtml(task.id)}
                     <button id="star-card-${task.id}" onclick="event.stopPropagation(); window.saveTaskAsQuickTemplate('${task.id}')" title="Als Schnellvorlage speichern"
                         class="btn-star-premium btn-premium-action">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -756,11 +766,13 @@
                 }
 
                 currentTask = task;
+                window.currentTaskId = String(task.id); // fuer js/task-autosave.js
                 document.getElementById('task-modal-title').textContent = 'Aufgabe bearbeiten';
                 fillModal(task);
                 document.getElementById('task-details-section').style.display = 'block';
             } else {
                 currentTask = null;
+                window.currentTaskId = null;
                 document.getElementById('task-modal-title').textContent = 'Neue Aufgabe';
                 resetModal();
                 document.getElementById('task-details-section').style.display = 'none';
@@ -791,6 +803,7 @@
             return;
         }
         taskIsDirty = false;
+        window.currentTaskId = null;
         const modal = document.getElementById('task-modal');
         if (modal) {
             modal.removeEventListener('input', onTaskFieldChange);
@@ -1729,6 +1742,68 @@
     window.setCinemaWorkshopVisible = function (visible) {
         localStorage.setItem('cinemaShowWorkshop', visible ? '1' : '0');
         window.applyCinemaWorkshopVisibility();
+    };
+
+    // ==========================================
+    // EINZELNE AUFGABEN AUS DEM KINO-MODUS NEHMEN
+    // ==========================================
+    // Auge oben rechts auf der Karte. Durchgestrichenes Auge = die Karte
+    // läuft im Kino-Modus nicht mit, überall sonst bleibt sie sichtbar.
+    // Bewusst gerätebezogen (localStorage, wie cinemaColumns und
+    // cinemaShowWorkshop): der Kino-Modus ist die Fernseher-Darstellung in
+    // der Werkstatt, was dort durchläuft, geht andere Geräte nichts an.
+    const CINEMA_HIDDEN_KEY = 'cinemaHiddenTasks';
+
+    function readCinemaHidden() {
+        try {
+            const raw = localStorage.getItem(CINEMA_HIDDEN_KEY);
+            const list = raw ? JSON.parse(raw) : [];
+            return new Set(Array.isArray(list) ? list.map(String) : []);
+        } catch (e) {
+            return new Set();
+        }
+    }
+
+    let cinemaHidden = readCinemaHidden();
+
+    window.isTaskCinemaHidden = function (id) {
+        return cinemaHidden.has(String(id));
+    };
+
+    window.cinemaHideButtonHtml = function (id) {
+        const hidden = window.isTaskCinemaHidden(id);
+        const eye = hidden
+            // Auge mit Strich — wird im Kino-Modus ausgeblendet
+            ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"></path><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path><line x1="2" y1="2" x2="22" y2="22"></line>'
+            : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+        const title = hidden ? 'Läuft im Kino-Modus nicht mit — klicken zum Einblenden' : 'Im Kino-Modus ausblenden';
+        return `<button class="btn-cinema-hide${hidden ? ' is-hidden' : ''}" id="cinema-hide-${id}"
+                    onclick="event.stopPropagation(); window.toggleTaskCinemaHidden('${id}')" title="${title}">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${eye}</svg>
+                </button>`;
+    };
+
+    window.toggleTaskCinemaHidden = function (id) {
+        const key = String(id);
+        if (cinemaHidden.has(key)) cinemaHidden.delete(key);
+        else cinemaHidden.add(key);
+
+        try { localStorage.setItem(CINEMA_HIDDEN_KEY, JSON.stringify(Array.from(cinemaHidden))); } catch (e) { }
+
+        // Nur die eine Karte anfassen — ein Neuaufbau des Boards würde im
+        // laufenden Kino-Modus mitten im Scrollen springen.
+        const card = document.getElementById('task-' + key);
+        if (card) {
+            card.classList.toggle('cinema-hidden', cinemaHidden.has(key));
+            const btn = document.getElementById('cinema-hide-' + key);
+            if (btn) btn.outerHTML = window.cinemaHideButtonHtml(key);
+        }
+
+        if (typeof window.showToast === 'function') {
+            window.showToast(cinemaHidden.has(key)
+                ? 'Aufgabe läuft im Kino-Modus nicht mehr mit.'
+                : 'Aufgabe läuft im Kino-Modus wieder mit.');
+        }
     };
 
     window.toggleCinemaMode = function () {

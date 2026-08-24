@@ -881,17 +881,37 @@ window.updateProcess = async function(event) {
 
 window.deleteProcess = async function(id) {
     if (typeof window.canDelete === 'function' && !window.canDelete('Vorgängen')) return;
-    if (!confirm("Diesen Vorgang wirklich unwiderruflich löschen?")) return;
+
+    // Anzahl der Dokumente in die Rückfrage aufnehmen — sie verschwinden mit.
+    const anzDateien = (typeof window.processAttachCount === 'function')
+        ? ((window.eventsState && window.eventsState.processes || [])
+            .find(p => String(p.id) === String(id))?.attachments || []).length
+        : 0;
+    const frage = anzDateien
+        ? `Diesen Vorgang wirklich unwiderruflich löschen?\n\nDabei werden auch ${anzDateien} hinterlegte Dokument(e) endgültig aus dem Speicher entfernt.`
+        : "Diesen Vorgang wirklich unwiderruflich löschen?";
+    if (!confirm(frage)) return;
     if (!window.supabaseClient) return;
-    
+
     try {
+        // ERST die Dateien, DANN der Datensatz: andersherum wäre die Liste der
+        // Pfade schon weg und die Dateien lägen für immer im Bucket, ohne dass
+        // noch jemand wüsste, wozu sie gehören.
+        if (typeof window.deleteProcessFiles === 'function') {
+            try {
+                await window.deleteProcessFiles(id);
+            } catch (e) {
+                console.warn('Dokumente des Vorgangs konnten nicht vollständig gelöscht werden:', e);
+            }
+        }
+
         const { error } = await window.supabaseClient
             .from('internal_processes')
             .delete()
             .eq('id', id);
-            
+
         if (error) throw error;
-        
+
         window.fetchProcesses();
     } catch (err) {
         console.error("Error deleting process:", err);

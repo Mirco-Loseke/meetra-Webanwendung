@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meetra-app-v230';
+const CACHE_NAME = 'meetra-app-v264';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
@@ -9,6 +9,10 @@ const PRECACHE = [
     'css/components/calendar-widget.css',
     'js/calendar-widget.js',
     'js/notifications.js',
+    'js/reminder-alarm.js',
+    'js/assignment-handoff.js',
+    'css/components/reminder-alarm.css',
+    'js/appointment-invite.js',
     'js/appointments.js',
     'css/base/variables.css',
     'css/base/tokens.css',
@@ -51,10 +55,12 @@ const PRECACHE = [
     // ausgeloest. Neue Eintraege deshalb immer gegen die Platte pruefen.
     'css/views/addressbook.css',
     'js/addressbook.js',
+    'js/address-history.js',
     'js/addressbook-live.js',
     'js/autosave.js',
     'js/unsaved-guard.js',
     'js/process-autosave.js',
+    'js/task-autosave.js',
     'js/process-open-hints.js',
     'css/views/routenplanung.css',
     'js/routenplanung.js',
@@ -96,6 +102,8 @@ const PRECACHE = [
     'js/history-modal.js',
     'js/calendar-events.js',
     'js/processes-ui.js',
+    'js/process-attachments.js',
+    'css/components/process-attachments.css',
     'js/process-messages.js',
     'js/process-machine-select.js',
     'js/customer-matching.js',
@@ -110,6 +118,7 @@ const PRECACHE = [
     'js/servicebericht-pdf.js',
     'js/modal-sections.js',
     'js/speech-input.js',
+    'js/groq-proxy.js',
     'js/ai-quick-capture.js',
     'js/photo-lightbox.js',
     'js/documents-modal.js',
@@ -267,5 +276,30 @@ self.addEventListener('fetch', event => {
                     });
                 });
             })
+    );
+});
+
+// ==========================================================
+// Klick auf eine Erinnerungs-Meldung (js/reminder-alarm.js)
+// ==========================================================
+// Ohne diesen Handler passiert beim Anklicken einer Windows-Meldung nichts.
+// Ist die App schon offen, wird das vorhandene Fenster nach vorn geholt,
+// statt einen zweiten Tab aufzumachen. Zusaetzlich wird der Seite gesagt,
+// welcher Eintrag gemeint war — js/reminder-alarm.js oeffnet ihn dann.
+self.addEventListener('notificationclick', (event) => {
+    const ziel = (event.notification && event.notification.data) || {};
+    event.notification.close();
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((liste) => {
+            for (const client of liste) {
+                if ('focus' in client) {
+                    if (ziel.zielId && client.postMessage) {
+                        client.postMessage({ type: 'alarm-open', zielTyp: ziel.zielTyp, zielId: ziel.zielId });
+                    }
+                    return client.focus();
+                }
+            }
+            if (self.clients.openWindow) return self.clients.openWindow('./index.html');
+        })
     );
 });

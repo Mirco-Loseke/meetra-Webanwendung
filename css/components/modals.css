@@ -244,3 +244,134 @@
     .proc-note-stand-actions { flex-direction: row; }
     .proc-note-stand-actions .proc-note-add { flex: 1; }
 }
+
+/* „Stand" steht bewusst ausserhalb des Ausklapps „Bemerkung / Notiz" —
+   es wird im Alltag am haeufigsten gebraucht. Leicht abgesetzt, damit die
+   Zugehoerigkeit zum Notiz-Bereich darueber erkennbar bleibt. */
+.proc-stand-block {
+    padding: var(--space-3) var(--space-3) var(--space-2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* =========================================================
+   BERECHTIGUNGEN im Benutzer-Fenster (#edit-permissions-section)
+   Drei einklappbare Blöcke: Hauptmenü, Einstellungen, Löschen.
+   ========================================================= */
+.perm-heading {
+    display: block;
+    margin-bottom: 0.75rem;
+    color: var(--color-primary-green);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: var(--fs-sm);
+}
+
+.perm-group {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    margin-bottom: 12px;
+    backdrop-filter: blur(12px);
+    overflow: hidden;
+}
+
+.perm-group-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0.9rem 1.25rem;
+    cursor: pointer;
+    list-style: none;
+    font-size: var(--fs-xs);
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.45);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    user-select: none;
+}
+
+.perm-group-head::-webkit-details-marker {
+    display: none;
+}
+
+.perm-group-head::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+    margin-left: auto;
+    margin-right: 2px;
+    transition: transform var(--dur-base) ease;
+}
+
+.perm-group[open] > .perm-group-head::after {
+    transform: rotate(-135deg);
+}
+
+.perm-group-head:hover {
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.perm-group-count {
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.perm-group > .perm-grid,
+.perm-group > .perm-delete-master,
+.perm-group > .perm-delete-hint {
+    margin: 0 1.25rem;
+}
+
+.perm-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding-bottom: 1.1rem;
+}
+
+.perm-group-danger {
+    background: rgba(239, 68, 68, 0.06);
+    border-color: rgba(239, 68, 68, 0.25);
+}
+
+.perm-group-danger .perm-group-head {
+    color: rgba(248, 113, 113, 0.75);
+}
+
+.perm-delete-master {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: #f87171;
+    font-weight: 700;
+}
+
+.perm-delete-hint {
+    margin-top: 6px !important;
+    margin-bottom: 10px !important;
+    font-size: var(--fs-xs);
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+#perm-delete-areas.is-disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+@media (max-width: 768px) {
+    .perm-grid {
+        grid-template-columns: 1fr;
+    }
+}

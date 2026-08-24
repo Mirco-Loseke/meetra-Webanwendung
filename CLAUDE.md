@@ -125,8 +125,19 @@ Reihenfolge der ausgelagerten Module:
   das eine, mal das andere enthalten.
 
 ## KI im Projekt
-Alle KI-Funktionen laufen über **Groq** (`llama-3.3-70b-versatile`), Schlüssel in
-`localStorage['groq_api_key']`, einzustellen unter Einstellungen → KI.
+Alle KI-Funktionen laufen über **Groq** (`llama-3.3-70b-versatile`).
+
+**Der Schlüssel liegt NICHT mehr im Browser.** Jede Anfrage geht über
+`window.groqFetch` (`js/groq-proxy.js`) an die Supabase Edge Function
+`groq-proxy` (`supabase/functions/groq-proxy/index.ts`). Die prüft das JWT des
+angemeldeten Nutzers und hängt den Schlüssel aus den Supabase Secrets an.
+`localStorage['groq_api_key']` gibt es nicht mehr — wer eine neue KI-Stelle
+baut, nimmt `window.groqFetch(payload)` und niemals `fetch('…api.groq.com…')`,
+sonst wandert der Schlüssel wieder in den Client zurück.
+Die Function gibt Statuscode, `retry-after` und den JSON-Text von Groq
+**unverändert** zurück; die vorhandene Fehlerbehandlung greift dadurch weiter.
+Ausrollen und Secrets: `supabase/SETUP_GROQ.txt`. Einstellungen → KI hat kein
+Eingabefeld mehr, nur noch „Verbindung prüfen".
 
 Beim Free Tier gilt: 30 Anfragen/Minute, **12.000 Token/Minute**, 100.000/Tag.
 Deshalb die feste Regel: **niemals Datenbestände an die KI schicken** — nur den

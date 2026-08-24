@@ -239,43 +239,38 @@ window.updateHistoryViewExternally = function (machineId) {
 /* ---- Settings & Mobile Sidebar Helpers ---- */
 window.openSettingsModal = function () {
     window.switchView('settings-ai');
-    const input = document.getElementById('settings-api-key');
-    const savedKey = localStorage.getItem('groq_api_key');
-    if (savedKey) {
-        input.value = savedKey;
-    } else {
-        input.value = '';
-    }
 };
 
 window.closeSettingsModal = function () {
     window.switchView('settings');
 };
 
+// Der Groq-Schlüssel wird nicht mehr im Browser gespeichert — es gibt kein
+// Eingabefeld mehr (siehe partials/settings/ai.html). Statt „speichern" prüft
+// die Seite jetzt nur noch, ob der Dienst antwortet.
+window.pruefeKiVerbindung = async function () {
+    const box = document.getElementById('ai-connection-status');
+    if (box) { box.style.color = 'rgba(255,255,255,0.6)'; box.textContent = 'Prüfe …'; }
+    if (typeof window.groqSelbsttest !== 'function') {
+        if (box) { box.style.color = '#fca5a5'; box.textContent = 'KI-Baustein nicht geladen.'; }
+        return;
+    }
+    const res = await window.groqSelbsttest();
+    if (!box) return;
+    if (res.ok) {
+        box.style.color = '#4ade80';
+        box.textContent = '✓ Verbindung steht — die KI ist einsatzbereit.';
+    } else {
+        box.style.color = '#fca5a5';
+        box.textContent = '✗ ' + res.message;
+    }
+};
+
+// Alte Namen bleiben belegt, damit ein übersehener Aufruf keinen Fehler wirft.
 window.saveSettingsNew = function () {
-    const key = document.getElementById('settings-api-key-new').value.trim();
-    if (key) {
-        localStorage.setItem('groq_api_key', key);
-        window.showToast('Einstellungen erfolgreich gespeichert.');
-    } else {
-        localStorage.removeItem('groq_api_key');
-        window.showToast('API-Key entfernt.');
-    }
+    window.showToast('Der KI-Zugang liegt jetzt zentral auf dem Server — hier ist nichts mehr einzutragen.');
 };
-
-window.toggleApiKeyVisibilityNew = function () {
-    const input = document.getElementById('settings-api-key-new');
-    const icon = document.getElementById('eye-icon-api-new');
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
-    } else {
-        input.type = 'password';
-        icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
-    }
-};
-
-// Redirection for compatibility
+window.toggleApiKeyVisibilityNew = function () { };
 window.saveSettings = window.saveSettingsNew;
 window.toggleApiKeyVisibility = window.toggleApiKeyVisibilityNew;
 
