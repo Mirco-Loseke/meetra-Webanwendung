@@ -191,10 +191,9 @@
                 const known = Array.isArray(raw.known) ? raw.known : [];
                 TYPE_KEYS.forEach(t => { if (!known.includes(t)) state.types.add(t); });
             }
-            // Nur übernehmen, wenn der Nutzer das wirklich schon eingestellt
-            // hat — sonst würde ein alter Eintrag ohne dieses Feld die Vorgabe
-            // („nur meine") stillschweigend abschalten.
-            if ('onlyMine' in raw) state.onlyMine = !!raw.onlyMine;
+            // „Nur meine" startet bewusst IMMER eingeschaltet — ein früher
+            // abgeschalteter Zustand wird absichtlich nicht wiederhergestellt.
+            // Das Umschalten gilt nur für die laufende Sitzung.
             state.full = !!raw.full;
             if (raw.range === 'month' || raw.range === 'upcoming') state.range = raw.range;
         } catch (e) { /* kaputter Eintrag – Standardfilter behalten */ }
