@@ -25,7 +25,8 @@
         wartung: { label: 'Wartungen', color: '#34d399', short: 'Wartung' },
         service: { label: 'Serviceberichte', color: '#22d3ee', short: 'Service' },
         vorgang: { label: 'Vorgänge', color: '#60a5fa', short: 'Vorgang' },
-        aufgabe: { label: 'Aufgaben', color: '#fbbf24', short: 'Aufgabe' },
+        // "aufgabe" gab es hier einmal — Aufgaben haben aber kein Datum und
+        // tauchten deshalb nie auf. Der Filter dafür ist mit entfernt.
         angebot: { label: 'Angebote', color: '#f472b6', short: 'Angebot' },
         // Termine, die an einer Adresse hängen — egal ob im Reiter „Termine"
         // oder aus einem Historieneintrag heraus angelegt.
@@ -200,6 +201,48 @@
     }
 
     // ---------------------------------------------------------------
+    // Kunden-Verknüpfung: einmal merken, ob es sie gibt
+    // ---------------------------------------------------------------
+    // Mehrere Abfragen holen den Adressnamen per Join mit (customers(...)).
+    // Fehlt die Verknüpfung in der Datenbank — z. B. weil
+    // supabase/supabase_add_event_customer.sql noch nicht gelaufen ist —
+    // antwortet Supabase mit 400 und die Abfrage wird ohne Join wiederholt.
+    // Das funktionierte, kostete aber bei JEDEM Laden eine vergebliche
+    // Anfrage samt roter Meldung in der Konsole. Das Ergebnis wird deshalb
+    // gemerkt und der Join beim nächsten Mal gleich weggelassen.
+    const JOIN_MERKER = 'meetra_customers_join';
+
+    function joinStand() {
+        try { return JSON.parse(localStorage.getItem(JOIN_MERKER) || '{}'); } catch (e) { return {}; }
+    }
+
+    function joinMoeglich(tabelle) {
+        return joinStand()[tabelle] !== false;
+    }
+
+    function joinMerken(tabelle, moeglich) {
+        try {
+            const s = joinStand();
+            s[tabelle] = !!moeglich;
+            localStorage.setItem(JOIN_MERKER, JSON.stringify(s));
+        } catch (e) { /* privater Modus: dann eben jedes Mal probieren */ }
+    }
+
+    // Lädt mit Join, bei Fehler ohne — und merkt sich das Ergebnis.
+    async function ladeMitKunden(tabelle, spaltenOhne, kundenTeil, aufbauen) {
+        const mitJoin = joinMoeglich(tabelle);
+        let { data, error } = await aufbauen(mitJoin ? `${spaltenOhne}, ${kundenTeil}` : spaltenOhne);
+
+        if (error && mitJoin) {
+            joinMerken(tabelle, false);
+            ({ data, error } = await aufbauen(spaltenOhne));
+        } else if (!error && mitJoin) {
+            joinMerken(tabelle, true);
+        }
+        return { data, error };
+    }
+
+    // ---------------------------------------------------------------
     // Daten sammeln
     // ---------------------------------------------------------------
     async function collect() {
@@ -213,16 +256,11 @@
             // maintenance_events.customer_id noch nicht als uuid existiert
             // (supabase/supabase_add_event_customer.sql) — dann wird ohne ihn
             // geladen, statt die ganze Kalenderliste leer zu lassen.
-            let { data, error } = await sb()
-                .from('maintenance_events')
-                .select('*, machines(name, manufacturer, serial), customers(name, matchcode)')
-                .limit(500);
-            if (error) {
-                ({ data, error } = await sb()
-                    .from('maintenance_events')
-                    .select('*, machines(name, manufacturer, serial)')
-                    .limit(500));
-            }
+            const { data, error } = await ladeMitKunden(
+                'maintenance_events',
+                '*, machines(name, manufacturer, serial)',
+                'customers(name, matchcode)',
+                (spalten) => sb().from('maintenance_events').select(spalten).limit(500));
             if (!error && data) {
                 // Teilnehmer der Termine dazuladen — daraus entstehen die
                 // Daumen-Knöpfe und die Zeile „Meier zugesagt · Schulz offen".
@@ -310,19 +348,13 @@
 
         // --- Servicebericht-Termine (service_entries.date) ---
         try {
-            let { data, error } = await sb()
-                .from('service_entries')
-                .select('id, title, date, datum_von, datum_bis, technicians, is_finalized, machines(name, manufacturer, serial), customers(name)')
-                .order('date', { ascending: false })
-                .limit(600);
-            if (error) {
-                // Ohne Kunden-Beziehung erneut versuchen (Join existiert evtl. nicht)
-                ({ data, error } = await sb()
-                    .from('service_entries')
-                    .select('id, title, date, datum_von, datum_bis, technicians, is_finalized, machines(name, manufacturer, serial)')
+            const { data, error } = await ladeMitKunden(
+                'service_entries',
+                'id, title, date, datum_von, datum_bis, technicians, is_finalized, machines(name, manufacturer, serial)',
+                'customers(name)',
+                (spalten) => sb().from('service_entries').select(spalten)
                     .order('date', { ascending: false })
                     .limit(600));
-            }
             if (!error && data) {
                 data.forEach(s => {
                     // Ein Bericht kann über mehrere Tage gehen (datum_von/datum_bis).
@@ -365,19 +397,13 @@
 
         // --- Erinnerungen an Vorgängen ---
         try {
-            let { data, error } = await sb()
-                .from('internal_processes')
-                .select('id, title, remind_at, status, assigned_users, user_id, machines(name, manufacturer, serial), customers(name)')
-                .not('remind_at', 'is', null)
-                .limit(400);
-            if (error) {
-                // customers-Join fehlt evtl. noch (Migration nicht gelaufen)
-                ({ data, error } = await sb()
-                    .from('internal_processes')
-                    .select('id, title, remind_at, status, assigned_users, user_id, machines(name, manufacturer, serial)')
+            const { data, error } = await ladeMitKunden(
+                'internal_processes',
+                'id, title, remind_at, status, assigned_users, user_id, machines(name, manufacturer, serial)',
+                'customers(name)',
+                (spalten) => sb().from('internal_processes').select(spalten)
                     .not('remind_at', 'is', null)
                     .limit(400));
-            }
             if (!error && data) {
                 data.forEach(p => {
                     const key = dayKey(p.remind_at);
@@ -405,35 +431,13 @@
             console.warn('Kalender: Vorgänge nicht ladbar:', err.message || err);
         }
 
-        // --- Aufgaben mit Fälligkeitsdatum ---
-        try {
-            const { data, error } = await sb()
-                .from('tasks')
-                .select('id, title, due_date, status, assigned_to, machines(name, manufacturer)')
-                .not('due_date', 'is', null)
-                .limit(400);
-            if (!error && data) {
-                data.forEach(t => {
-                    const key = dayKey(t.due_date);
-                    if (!key) return;
-                    out.push({
-                        id: `task:${t.id}`,
-                        type: 'aufgabe',
-                        day: key,
-                        title: t.title || 'Unbenannte Aufgabe',
-                        subject: t.machines ? `${t.machines.manufacturer || ''} ${t.machines.name || ''}`.trim() : '',
-                        note: '',
-                        tag: t.status === 'completed' ? 'erledigt' : '',
-                        done: t.status === 'completed',
-                        mine: isMine(t.assigned_to, null),
-                        targetType: 'task',
-                        targetId: t.id
-                    });
-                });
-            }
-        } catch (err) {
-            console.warn('Kalender: Aufgaben nicht ladbar:', err.message || err);
-        }
+        // --- Aufgaben ---
+        // Hier stand eine Abfrage auf tasks.due_date. Diese Spalte gibt es
+        // nicht: Aufgaben haben in dieser App bewusst KEIN Fälligkeitsdatum
+        // (sie hängen an der Werkstatt-Anzeigetafel, siehe CLAUDE.md).
+        // Die Abfrage schlug deshalb bei jedem Laden mit 400 fehl und hat nie
+        // etwas geliefert — entfernt statt sie weiter ins Leere laufen zu
+        // lassen. Bekommen Aufgaben eines Tages ein Datum, kommt sie zurück.
 
         // --- Angebots-Erinnerungen ---
         try {

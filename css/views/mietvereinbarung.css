@@ -1726,15 +1726,24 @@ textarea.miet-in {
         min-height: 0;
     }
 
-    /* Kein Verkleinern mehr — das Blatt fliesst. */
+    /* Kein Verkleinern mehr — das Blatt fliesst. Der Zoom kommt vom
+       Nutzer (Knöpfe unten): der Bogen wird als Ganzes vergrössert,
+       die Breite entsprechend gegengerechnet, damit bei 100 % nichts
+       quer laufen muss. */
     .miet-pages-wrap {
         overflow: visible;
-        height: auto !important;
     }
 
     .miet-pages {
-        width: 100%;
-        transform: none;
+        width: calc(100% / var(--miet-zoom, 1));
+        transform: scale(var(--miet-zoom, 1));
+        transform-origin: top left;
+    }
+
+    .miet-body {
+        overflow: auto;
+        /* Zwei-Finger-Zoom des Browsers zusätzlich erlauben. */
+        touch-action: pan-x pan-y pinch-zoom;
     }
 
     .miet-page {
@@ -1966,5 +1975,68 @@ textarea.miet-in {
 
     .miet-pad-canvas {
         height: 40vh;
+    }
+}
+
+/* =========================================================
+   ZOOM-KNOEPFE UND UMSCHALTER (Handy)
+   ========================================================= */
+/* Am Rechner wird der Bogen automatisch eingepasst — dort braucht es
+   keine Zoomknoepfe. */
+.miet-zoom {
+    display: none;
+}
+
+@media screen and (max-width: 768px) {
+    .miet-zoom {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-right: auto;
+    }
+
+    .miet-zoom button {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.06);
+        color: #fff;
+        font-size: 1.15rem;
+        font-weight: 800;
+        line-height: 1;
+        cursor: pointer;
+        flex: none;
+    }
+
+    .miet-zoom button:active {
+        background: rgba(16, 185, 129, 0.25);
+    }
+
+    #miet-zoom-wert {
+        min-width: 46px;
+        text-align: center;
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.6);
+    }
+
+    /* Leerer Hinweistext soll keinen Platz fressen. */
+    .miet-foot .miet-note:empty {
+        display: none;
+    }
+
+    /* Übergabe und Rückgabe nebeneinander. */
+    .miet-phase-btn {
+        flex: 1 1 0;
+        min-width: 0;
+        justify-content: center;
+        gap: 7px;
+        padding: 10px 8px;
+        font-size: 0.9rem;
+    }
+
+    .miet-phase-btn span {
+        white-space: nowrap;
     }
 }

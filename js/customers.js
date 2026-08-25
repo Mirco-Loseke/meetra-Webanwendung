@@ -96,11 +96,14 @@
                     .from('app_settings')
                     .select('value')
                     .eq('key', 'company_hq')
-                    .single();
+                    // limit(1) statt single(): single() antwortet mit 406, wenn
+                    // noch keine Zeile da ist — eine rote Meldung ohne Grund.
+                    .limit(1);
 
-                if (!error && data && data.value) {
-                    populateFirmUI(data.value);
-                    localStorage.setItem('meetra_company_hq', JSON.stringify(data.value));
+                const zeile = data && data[0];
+                if (!error && zeile && zeile.value) {
+                    populateFirmUI(zeile.value);
+                    localStorage.setItem('meetra_company_hq', JSON.stringify(zeile.value));
                 }
             } catch (err) {
                 console.error('Failed to load firmendaten from database:', err);
@@ -1104,9 +1107,9 @@
                             .from('app_settings')
                             .select('value')
                             .eq('key', 'company_hq')
-                            .single();
-                        if (hqData && hqData.value) {
-                            hq = hqData.value;
+                            .limit(1);   // siehe oben: single() gibt 406 ohne Zeile
+                        if (hqData && hqData[0] && hqData[0].value) {
+                            hq = hqData[0].value;
                         }
                     }
 

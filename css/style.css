@@ -1,46 +1,23 @@
-/* ========================================================= */
-/* ============= MEETRA WEBAPP MASTER STYLESHEET ============ */
-/* ========================================================= */
+/* =========================================================
+   DIESE DATEI WIRD NICHT MEHR GELADEN
+   ---------------------------------------------------------
+   Sie hat die CSS-Bausteine frueher per @import eingebunden. Das
+   hatte zwei Nachteile:
 
-/* Base & Core Layout */
-@import 'base/variables.css';   /* Farbpalette, Verlaeufe, Alt-Namen */
-@import 'base/tokens.css';      /* Schriften, Skalen (Groesse, Abstand, Radius, Tiefe) */
-@import 'base/reset.css';
-@import 'base/brand-accents.css'; /* VORSCHAU Markenakzente — diese Zeile loeschen = rueckgaengig */
+     1. Kette statt parallel: der Browser entdeckte die Dateien erst,
+        nachdem style.css geladen und geparst war.
+     2. Das ?v=N an style.css bustete die importierten Dateien NICHT —
+        deren URL blieb gleich, der Browser nahm die alte Fassung und
+        Aenderungen kamen ohne jede Fehlermeldung nie an.
 
-/* Shared Components */
-@import 'components/navigation.css';
-@import 'components/modals.css?v=5';
-@import 'components/process-attachments.css?v=1';
-@import 'components/buttons.css';
-@import 'components/forms.css?v=5';
-@import 'components/notifications.css?v=2';
-@import 'components/reminder-alarm.css?v=5';
-@import 'components/calendar.css';
-@import 'components/calendar-widget.css?v=5';
-@import 'components/dropdowns.css?v=2';
-@import 'components/focus-mode.css?v=2';
-@import 'components/elements.css';
-@import 'components/appointments.css';
+   Seit 25.08.2026 stehen die Bausteine als eigene <link>-Zeilen in
+   index.html, in derselben Reihenfolge wie vorher (die Reihenfolge
+   entscheidet ueber die Spezifitaet und ist bindend). Jede Datei hat
+   dort ihr eigenes ?v=N.
 
-/* Views & Modules */
-@import 'views/documents.css?v=2';
-@import 'views/protocols.css';
-@import 'views/tasks.css?v=3';
-@import 'views/service-reports.css?v=4';
-@import 'views/machines.css';
-@import 'views/procurement.css';
-@import 'views/settings.css?v=2';
-@import 'views/accounting.css';
-@import 'views/workshop.css';
-@import 'views/workshop-tasks.css?v=4';
-@import 'views/dashboard.css';
-@import 'views/listen.css';
-@import 'views/addressbook.css?v=12';
-@import 'views/routenplanung.css?v=2';
+   NEUE CSS-DATEI? -> <link> in index.html eintragen (an der richtigen
+   Stelle der Reihenfolge) und in die PRECACHE-Liste in sw.js.
 
-/* Responsive & Overrides */
-/* ?v=N hochzaehlen, wenn responsive.css geaendert wurde. Das ?v=68 an
-   style.css im index.html bustet die per @import geladenen Dateien NICHT —
-   deren URL bleibt sonst gleich und der Browser nimmt die alte Fassung. */
-@import 'base/responsive.css?v=15';
+   Die Datei bleibt leer bestehen, weil aeltere Service-Worker-Caches
+   und Lesezeichen sie noch anfragen koennen.
+   ========================================================= */

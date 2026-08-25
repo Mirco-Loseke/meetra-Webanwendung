@@ -290,13 +290,13 @@
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
                             <path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path>
                         </svg>
-                        <span>Übergabe an den Mieter<small>Abholung bzw. Auslieferung — Zustand bei Übernahme</small></span>
+                        <span>Übergabe</span>
                     </button>
                     <button type="button" id="miet-phase-r" class="miet-phase-btn miet-phase-back" onclick="window.setMietPhase('ruecknahme')">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
                             <path d="M19 12H5"></path><path d="M11 18l-6-6 6-6"></path>
                         </svg>
-                        <span>Rücknahme vom Mieter<small>Rückgabe an meetra — Zustand bei Rückgabe</small></span>
+                        <span>Rückgabe</span>
                     </button>
                 </div>
 
@@ -307,7 +307,14 @@
                 </div>
 
                 <div class="miet-foot">
-                    <span class="miet-note" id="miet-status">Speichern legt das PDF unter „Dokumente → Mietvereinbarung" ab.</span>
+                    <!-- Zoom: auf dem Handy zum Ausfüllen unverzichtbar, am
+                         Rechner ausgeblendet (siehe .miet-zoom in der CSS). -->
+                    <span class="miet-zoom">
+                        <button type="button" onclick="window.mietZoom(-1)" title="Kleiner">&minus;</button>
+                        <span id="miet-zoom-wert">100%</span>
+                        <button type="button" onclick="window.mietZoom(1)" title="Größer">+</button>
+                    </span>
+                    <span class="miet-note" id="miet-status"></span>
                     <span id="miet-seitenzahl" style="font-size:0.78rem; color:rgba(255,255,255,0.45);"></span>
                     <button class="btn-secondary" onclick="window.closeMietvereinbarung()">Schließen</button>
                     <button class="btn-secondary" onclick="window.mietDrucken()">Drucken / PDF</button>
@@ -372,6 +379,13 @@
         const pages = document.getElementById('miet-pages');
         if (!pages) return;
 
+        // Der Bogen wird bei jedem Kreuz komplett neu aufgebaut. Ohne das
+        // hier sprang die Ansicht dabei zurück nach ganz oben links —
+        // beim Ausfüllen auf dem Handy unbrauchbar.
+        const rollbereich = document.querySelector('.miet-body');
+        const vorherOben = rollbereich ? rollbereich.scrollTop : 0;
+        const vorherLinks = rollbereich ? rollbereich.scrollLeft : 0;
+
         document.getElementById('miet-phase-u').classList.toggle('active', phase === 'uebergabe');
         document.getElementById('miet-phase-r').classList.toggle('active', phase === 'ruecknahme');
 
@@ -388,6 +402,48 @@
         if (recht) rechtsSeite(pages, recht);
         seitenNummerieren(pages);
         skaliereSeiten();
+
+        if (rollbereich && (vorherOben || vorherLinks)) {
+            rollbereich.scrollTop = vorherOben;
+            rollbereich.scrollLeft = vorherLinks;
+        }
+
+        bilderAbwarten(pages);
+    }
+
+    // Die Seitenaufteilung misst die tatsächliche Höhe — ein Bild, das
+    // noch nicht fertig geladen ist, zählt dabei mit 0 mit. Danach wächst
+    // der Block, läuft über den Seitenrand und wird abgeschnitten
+    // (.miet-page-inner hat overflow:hidden). Genau deshalb fehlten Fotos
+    // und die Zeilen darunter in der Vorschau und im Ausdruck.
+    // Also: sobald ein Bild nachlädt, einmal neu verteilen.
+    let bilderTimer = null;
+    let bilderRunden = 0;
+
+    function bilderAbwarten(container) {
+        const offen = Array.from(container.querySelectorAll('img'))
+            .filter(i => !i.complete || !i.naturalWidth);
+        if (!offen.length) { bilderRunden = 0; return; }
+        if (bilderRunden > 3) return;   // Notbremse gegen Endlosschleifen
+
+        offen.forEach(i => i.addEventListener('load', () => {
+            clearTimeout(bilderTimer);
+            bilderTimer = setTimeout(() => { bilderRunden++; zeichneInhalt(); }, 60);
+        }, { once: true }));
+    }
+
+    // Vor dem Abfotografieren fürs PDF: alle Bilder wirklich fertig
+    // dekodiert, sonst landen leere Kacheln im PDF.
+    async function bilderFertig(container) {
+        const bilder = Array.from(container.querySelectorAll('img'));
+        await Promise.all(bilder.map(img => {
+            if (img.complete && img.naturalWidth) return Promise.resolve();
+            if (img.decode) return img.decode().catch(() => { });
+            return new Promise(r => {
+                img.addEventListener('load', r, { once: true });
+                img.addEventListener('error', r, { once: true });
+            });
+        }));
     }
 
     // ------------------------------------------------------
@@ -560,17 +616,47 @@
         return window.innerWidth <= 768;
     }
 
+    // Zoom im Fliessmodus (Handy/Tablet). Der Bogen wird als Ganzes
+    // vergrössert — Schrift, Ankreuzfelder und Fotos gleichermassen.
+    // Gemerkt wird der Wert, damit er beim nächsten Öffnen noch steht.
+    const ZOOM_STUFEN = [0.75, 0.9, 1, 1.15, 1.35, 1.6, 2];
+    let zoom = 1;
+
+    try {
+        const gemerkt = parseFloat(localStorage.getItem('miet_zoom'));
+        if (ZOOM_STUFEN.includes(gemerkt)) zoom = gemerkt;
+    } catch (e) { /* privater Modus */ }
+
+    window.mietZoom = function (richtung) {
+        const i = ZOOM_STUFEN.indexOf(zoom);
+        const neu = ZOOM_STUFEN[Math.min(ZOOM_STUFEN.length - 1, Math.max(0, (i === -1 ? 2 : i) + richtung))];
+        if (neu === zoom) return;
+        zoom = neu;
+        try { localStorage.setItem('miet_zoom', String(zoom)); } catch (e) { /* egal */ }
+        skaliereSeiten();
+    };
+
+    function zoomAnzeige() {
+        const el = document.getElementById('miet-zoom-wert');
+        if (el) el.textContent = Math.round(zoom * 100) + '%';
+    }
+
     function skaliereSeiten() {
         const wrap = document.getElementById('miet-pages-wrap');
         const pages = document.getElementById('miet-pages');
         if (!wrap || !pages) return;
 
-        // Im Fliessmodus wird nichts verkleinert und nichts gemessen.
+        // Im Fliessmodus wird nicht auf A4 gerechnet — dort gilt der Zoom.
         if (istHandy() && !a4Modus) {
-            pages.style.removeProperty('--miet-scale');
-            wrap.style.height = 'auto';
+            pages.style.setProperty('--miet-zoom', zoom);
+            // Beim Vergrössern wächst der Bogen über seine Layouthöhe
+            // hinaus (transform ändert die Höhe nicht) — sonst liesse sich
+            // der untere Teil nicht mehr erreichen.
+            wrap.style.height = zoom === 1 ? 'auto' : (pages.scrollHeight * zoom) + 'px';
+            zoomAnzeige();
             return;
         }
+        pages.style.removeProperty('--miet-zoom');
         const breite = 210 * 96 / 25.4; // A4-Breite in CSS-Pixeln
         const faktor = Math.min(1, (wrap.clientWidth - 4) / breite);
         pages.style.setProperty('--miet-scale', faktor);
@@ -596,12 +682,46 @@
         }
     }
 
-    window.mietDrucken = function () {
+    window.mietDrucken = async function () {
         window.mietSchliesseVorschlaege();
         // Ein noch offenes Feld kann die Seite gesprengt haben.
         if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
         window.mietSeitenPruefen();
-        mitA4(() => window.print());
+
+        // Am Rechner druckt der Browser den Bogen direkt — das Ergebnis
+        // stimmt und ist am schnellsten.
+        if (!istHandy()) {
+            mitA4(() => window.print());
+            return;
+        }
+
+        // Auf Handy und Tablet kam beim Browser-Druck etwas anderes heraus
+        // als am Rechner: die Geräte drucken die Seite nach eigenen Regeln
+        // (Geräteweite, eigene Ränder, kein Briefbogen). Deshalb wird hier
+        // dasselbe PDF erzeugt wie beim Speichern und zum Ansehen bzw.
+        // Weitergeben geöffnet — damit sieht es überall gleich aus.
+        try {
+            status('PDF wird erzeugt …');
+            const doc = await mitA4(() => pdfErzeugen());
+            const blob = doc.output('blob');
+            const url = URL.createObjectURL(blob);
+            const fenster = window.open(url, '_blank');
+            if (!fenster) {
+                // Pop-up blockiert: dann als Datei anbieten.
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = pdfDateiName();
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            }
+            setTimeout(() => URL.revokeObjectURL(url), 60000);
+            status('');
+        } catch (e) {
+            console.error('PDF für den Druck fehlgeschlagen:', e);
+            status('');
+            window.showToast('PDF konnte nicht erzeugt werden: ' + ((e && e.message) || 'unbekannter Fehler'));
+        }
     };
 
     // ------------------------------------------------------
@@ -662,6 +782,9 @@
         const pages = document.getElementById('miet-pages');
         const seiten = Array.from(pages.querySelectorAll('.miet-page'));
         if (!seiten.length) throw new Error('Der Bogen ist leer.');
+
+        // Erst wenn alle Fotos und Unterschriften wirklich da sind.
+        await bilderFertig(pages);
 
         // Verkleinerung und Bedienelemente für die Aufnahme abschalten.
         const altScale = pages.style.getPropertyValue('--miet-scale');
@@ -1440,8 +1563,76 @@
     window.mietSchliesseVorschlaege = menuSchliessen;
 
     // ------------------------------------------------------
-    // Fotos — vorerst nur im Arbeitsspeicher (kein Upload)
+    // Fotos
     // ------------------------------------------------------
+    // WICHTIG: Bilder werden beim Hinzufügen verkleinert.
+    // Vorher landete die Datei in voller Auflösung als Daten-URL im
+    // Arbeitsspeicher: ein 12-Megapixel-Foto sind rund 8 MB Text und
+    // beim Anzeigen ~48 MB entpackt. Bei jedem Kreuz wird der Bogen neu
+    // gezeichnet, also alle Bilder neu dekodiert — nach zwei, drei
+    // Fotos war der Speicher voll und der Tab stürzte ab. Ausserdem
+    // druckt Chrome so grosse Daten-URLs teilweise gar nicht erst.
+    // 1600px Kantenlänge reicht für den A4-Ausdruck (rund 200 dpi).
+    const FOTO_KANTE = 1600;
+    const FOTO_QUALITAET = 0.82;
+
+    function bildAusQuelle(quelle) {
+        return new Promise((fertig, fehler) => {
+            const img = new Image();
+            img.onload = () => fertig(img);
+            img.onerror = () => fehler(new Error('Bild konnte nicht gelesen werden.'));
+            img.src = quelle;
+        });
+    }
+
+    // Datei oder Daten-URL -> verkleinerte JPEG-Daten-URL
+    async function bildVerkleinern(datei) {
+        const quelle = typeof datei === 'string' ? datei : URL.createObjectURL(datei);
+        try {
+            const img = await bildAusQuelle(quelle);
+            const gross = Math.max(img.naturalWidth, img.naturalHeight) || 1;
+            const faktor = Math.min(1, FOTO_KANTE / gross);
+            const c = document.createElement('canvas');
+            c.width = Math.round(img.naturalWidth * faktor);
+            c.height = Math.round(img.naturalHeight * faktor);
+            const ctx = c.getContext('2d');
+            ctx.drawImage(img, 0, 0, c.width, c.height);
+            return c.toDataURL('image/jpeg', FOTO_QUALITAET);
+        } finally {
+            if (typeof datei !== 'string') URL.revokeObjectURL(quelle);
+        }
+    }
+
+    // Berührbildschirm? Dort ist die Kamera der schnellere Weg; am
+    // Rechner soll ein Klick den Dateidialog öffnen, damit man Bilder
+    // vom Rechner Stück für Stück einsetzen kann.
+    function istBeruehrung() {
+        return window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+    }
+
+    // Eine Position aus einer Datei füllen.
+    function dateiFuerPosition(welche, position) {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.style.display = 'none';
+        document.body.appendChild(input);
+
+        input.onchange = async () => {
+            const datei = input.files && input.files[0];
+            input.remove();
+            if (!datei) return;
+            try {
+                daten.fotos[welche][position] = await bildVerkleinern(datei);
+                zeichneInhalt();
+            } catch (e) {
+                console.error('Bild konnte nicht übernommen werden:', e);
+                window.showToast('Dieses Bild konnte nicht gelesen werden.');
+            }
+        };
+        input.click();
+    }
+
     window.mietFotoLoeschen = function (welche, position) {
         delete daten.fotos[welche][position];
         if (lbOffen) window.mietBildZu();
@@ -1451,13 +1642,15 @@
     // Auf eine leere Kachel tippen startet die Aufnahme ab genau dieser
     // Position, auf eine gefuellte oeffnet die Grossansicht.
     window.mietFotoKlick = function (welche, position) {
-        if (daten.fotos[welche][position]) window.mietBildAnsehen(welche, position);
-        else kameraStarten(welche, offenePositionen(welche, position));
+        if (daten.fotos[welche][position]) { window.mietBildAnsehen(welche, position); return; }
+        if (istBeruehrung()) kameraStarten(welche, offenePositionen(welche, position));
+        else dateiFuerPosition(welche, position);
     };
 
-    // Nur dieses eine Bild neu aufnehmen.
+    // Nur dieses eine Bild neu aufnehmen bzw. austauschen.
     window.mietFotoEinzeln = function (welche, position) {
-        kameraStarten(welche, [position]);
+        if (istBeruehrung()) kameraStarten(welche, [position]);
+        else dateiFuerPosition(welche, position);
     };
 
     // Ganze Serie: alle noch fehlenden Positionen der Reihe nach.
@@ -1548,11 +1741,14 @@
         const video = document.getElementById('miet-cam-video');
         if (!video || !video.videoWidth) return;
 
+        // Gleiche Obergrenze wie beim Einsetzen aus einer Datei — sonst
+        // liegen wieder Riesenbilder im Speicher (siehe FOTO_KANTE).
+        const faktor = Math.min(1, FOTO_KANTE / Math.max(video.videoWidth, video.videoHeight));
         const c = document.createElement('canvas');
-        c.width = video.videoWidth;
-        c.height = video.videoHeight;
-        c.getContext('2d').drawImage(video, 0, 0);
-        daten.fotos[camWelche][camListe[camIdx]] = c.toDataURL('image/jpeg', 0.85);
+        c.width = Math.round(video.videoWidth * faktor);
+        c.height = Math.round(video.videoHeight * faktor);
+        c.getContext('2d').drawImage(video, 0, 0, c.width, c.height);
+        daten.fotos[camWelche][camListe[camIdx]] = c.toDataURL('image/jpeg', FOTO_QUALITAET);
 
         // kurzes Aufblitzen als Rueckmeldung
         const blitz = document.getElementById('miet-cam-flash');
@@ -1617,14 +1813,16 @@
         input.onchange = () => {
             const datei = input.files && input.files[0];
             if (!datei) { camIdx++; dateiKette(); return; }
-            const leser = new FileReader();
-            leser.onload = () => {
-                daten.fotos[camWelche][pos] = leser.result;
+            bildVerkleinern(datei).then(bild => {
+                daten.fotos[camWelche][pos] = bild;
+            }).catch(e => {
+                console.error('Bild konnte nicht übernommen werden:', e);
+                window.showToast('Dieses Bild konnte nicht gelesen werden.');
+            }).then(() => {
                 camIdx++;
                 zeichneInhalt();
                 dateiKette();
-            };
-            leser.readAsDataURL(datei);
+            });
         };
         input.click();
     }

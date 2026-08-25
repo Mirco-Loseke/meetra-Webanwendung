@@ -428,7 +428,17 @@
     // Logo schwarz/weiß (Graustufen) aus dem eingebetteten Base64 (meetra_logo_base64.js) laden —
     // kein Datei-Fetch nötig, also keine Pfad-/Deploy-Abhängigkeit. Liefert auch das echte
     // Breite/Höhe-Verhältnis mit, damit das Logo beim Drucken nicht verzerrt wird.
-    function loadEmbeddedLogoGrayscale() {
+    // Die Logo-Daten haengen nicht mehr fest im index.html, sondern werden
+    // beim ersten Bedarf nachgeladen (js/assets-on-demand.js).
+    async function logoDatenBereit() {
+        if (window.MEETRA_LOGO_BASE64) return true;
+        if (typeof window.ladeLogoDaten !== 'function') return false;
+        try { await window.ladeLogoDaten(); } catch (e) { console.warn('Logo-Daten nicht ladbar:', e); }
+        return !!window.MEETRA_LOGO_BASE64;
+    }
+
+    async function loadEmbeddedLogoGrayscale() {
+        await logoDatenBereit();
         return new Promise((resolve, reject) => {
             if (!window.MEETRA_LOGO_BASE64) { reject(new Error('Logo-Daten nicht gefunden (meetra_logo_base64.js nicht geladen).')); return; }
             const img = new Image();
@@ -453,7 +463,8 @@
     }
 
     // Logo in Farbe (für die Beschriftung — auf den kleinen Etiketten bleibt es schwarz/weiß)
-    function loadEmbeddedLogoColor() {
+    async function loadEmbeddedLogoColor() {
+        await logoDatenBereit();
         return new Promise((resolve, reject) => {
             if (!window.MEETRA_LOGO_BASE64) { reject(new Error('Logo-Daten nicht gefunden (meetra_logo_base64.js nicht geladen).')); return; }
             const img = new Image();
@@ -1622,6 +1633,14 @@
         const page = getCurrentBeschriftungPage();
         const container = document.getElementById('beschriftung-preview-pages');
         if (!container) return;
+
+        // Logo-Daten fehlen noch (werden bei Bedarf nachgeladen): Vorschau
+        // erst einmal ohne Logo zeichnen und danach einmal wiederholen.
+        if (!window.MEETRA_LOGO_BASE64 && typeof window.ladeLogoDaten === 'function') {
+            window.ladeLogoDaten()
+                .then(() => window.renderBeschriftungPreview())
+                .catch(e => console.warn('Logo-Daten nicht ladbar:', e));
+        }
 
         const { w: pageW, h: pageH } = getPageDimensions(page.orientation);
         const scale = Math.min((container.clientWidth || 600) / pageW, 3.2); // px pro mm

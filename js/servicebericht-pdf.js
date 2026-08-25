@@ -15,8 +15,12 @@
                     try { await window.loadUnicodePdfFont(); } catch (e) { console.warn('Unicode-Schriftart fuer PDF konnte nicht geladen werden, Sonderzeichen koennten falsch dargestellt werden:', e); }
                 }
 
-                // Load background template
+                // Load background template — der Briefbogen wird erst hier
+                // nachgeladen (js/assets-on-demand.js), nicht beim Start.
                 let bgImage = null;
+                if (!window.VORLAGE_BASE64 && typeof window.ladeBriefbogen === 'function') {
+                    try { await window.ladeBriefbogen(); } catch (e) { console.warn('Briefbogen nicht ladbar:', e); }
+                }
                 if (window.VORLAGE_BASE64) {
                     bgImage = window.VORLAGE_BASE64;
                 } else {

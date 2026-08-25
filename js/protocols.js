@@ -1551,6 +1551,11 @@
     // PDF GENERATION
     // ==========================================
     async function getTemplateBackground() {
+        // Der Briefbogen haengt nicht mehr fest im index.html, sondern wird
+        // hier nachgeladen (js/assets-on-demand.js).
+        if (!window.VORLAGE_BASE64 && typeof window.ladeBriefbogen === 'function') {
+            try { await window.ladeBriefbogen(); } catch (e) { console.warn('Briefbogen nicht ladbar:', e); }
+        }
         if (window.VORLAGE_BASE64) {
             return window.VORLAGE_BASE64;
         }

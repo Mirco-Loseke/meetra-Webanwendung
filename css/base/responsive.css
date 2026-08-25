@@ -1889,6 +1889,14 @@ details.category-group-details[open] .group-chevron {
     #sidebar.mobile-open {
         transform: translateX(0);
         box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
+        /* Ausgeklappt liegt das Menü über dem Inhalt — mit der
+           Grundtransparenz (0.4 / 0.32 / 0.42) schimmert die Seite
+           dahinter durch und die Einträge sind schlecht zu lesen.
+           Deshalb hier 20 Prozentpunkte weniger durchsichtig. */
+        background: linear-gradient(180deg,
+                rgba(15, 23, 42, 0.6) 0%,
+                rgba(30, 27, 75, 0.52) 50%,
+                rgba(2, 6, 23, 0.62) 100%);
     }
 
     /* Auf Mobil immer die volle Beschriftung zeigen */

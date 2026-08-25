@@ -483,8 +483,13 @@
     async function loadCompanyHq() {
         let hq = null;
         try {
-            const { data } = await sb().from('app_settings').select('value').eq('key', 'company_hq').maybeSingle();
-            if (data && data.value) hq = data.value;
+            // Bewusst limit(1) statt maybeSingle(): maybeSingle fragt mit
+            // einem besonderen Accept-Kopf an, auf den Supabase mit 406
+            // antwortet, wenn gar keine Zeile da ist. Fachlich harmlos, aber
+            // es stand bei jedem Laden eine rote Meldung in der Konsole.
+            const { data } = await sb().from('app_settings').select('value').eq('key', 'company_hq').limit(1);
+            const zeile = data && data[0];
+            if (zeile && zeile.value) hq = zeile.value;
         } catch (e) { /* offline oder Tabelle fehlt – gleich der lokale Fallback */ }
 
         if (!hq) {

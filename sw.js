@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meetra-app-v307';
+const CACHE_NAME = 'meetra-app-v312';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
@@ -6,6 +6,7 @@ const PRECACHE = [
     // Die HTML-Bausteine aus partials/ stecken fest im index.html (node build.js)
     // und müssen deshalb nicht einzeln gecacht werden.
     'css/style.css',
+    'css/components/elements.css',
     'css/components/calendar-widget.css',
     'js/calendar-widget.js',
     'js/notifications.js',
@@ -73,6 +74,7 @@ const PRECACHE = [
     'js/mietvereinbarung.js',
     'js/mietvereinbarung-vorlagen.js',
     'js/mietvereinbarung-liste.js',
+    'js/assets-on-demand.js',
     'js/tasks.js',
     'js/task_templates.js',
     'js/protocol_templates.js',
@@ -243,7 +245,43 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Standard Asset Caching Strategy: Network First with Cache Fallback
+    // ------------------------------------------------------------------
+    // Versionierte Dateien: ZUERST aus dem Cache
+    // ------------------------------------------------------------------
+    // Alle JS- und CSS-Dateien werden mit ?v=N eingebunden. Ändert sich
+    // eine Datei, wird die Nummer hochgezählt — die URL ist dann eine
+    // andere und liegt garantiert nicht im Cache. Deshalb ist "zuerst
+    // Cache" hier gefahrlos und spart beim Start rund 120 Anfragen ans
+    // Netz (gemessen: 155 Anfragen, 4,7 MB).
+    //
+    // Bewusst NICHT für index.html: dort stehen die Versionsnummern, die
+    // Datei muss immer frisch kommen (weiter unten, Netz zuerst).
+    const url = new URL(event.request.url);
+    const istVersioniert = url.searchParams.has('v')
+        && url.origin === self.location.origin
+        && event.request.method === 'GET';
+
+    if (istVersioniert) {
+        event.respondWith(
+            caches.match(event.request).then(gecacht => {
+                if (gecacht) return gecacht;
+                return fetch(event.request).then(response => {
+                    if (response && response.status === 200 && response.type === 'basic') {
+                        const kopie = response.clone();
+                        caches.open(CACHE_NAME).then(cache => cache.put(event.request, kopie));
+                    }
+                    return response;
+                }).catch(() =>
+                    // Offline und noch nie geholt: notfalls die Fassung ohne
+                    // Versionsnummer aus dem Vorrat (PRECACHE).
+                    caches.match(event.request, { ignoreSearch: true })
+                );
+            })
+        );
+        return;
+    }
+
+    // Alles Übrige (index.html, Schriften, Bilder): Netz zuerst, Cache als Rückfall
     event.respondWith(
         fetch(event.request)
             .then(response => {

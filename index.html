@@ -130,7 +130,47 @@
             }
         })();
     </script>
-    <link rel="stylesheet" href="css/style.css?v=68">
+    <!-- ========================================================= -->
+    <!-- CSS-Bausteine — Reihenfolge ist bindend (Spezifitaet).    -->
+    <!-- Frueher liefen diese Dateien ueber @import in style.css.  -->
+    <!-- Das war eine Kette: der Browser sah sie erst, nachdem     -->
+    <!-- style.css geladen war, und ein ?v=N an style.css bustete  -->
+    <!-- sie NICHT. Als eigene <link> laden sie parallel und jede   -->
+    <!-- Datei hat ihr eigenes ?v=N. Neue CSS-Datei? Hier          -->
+    <!-- eintragen (und in die PRECACHE-Liste in sw.js).           -->
+    <!-- ========================================================= -->
+    <link rel="stylesheet" href="css/base/variables.css?v=1">
+    <link rel="stylesheet" href="css/base/tokens.css?v=1">
+    <link rel="stylesheet" href="css/base/reset.css?v=1">
+    <link rel="stylesheet" href="css/base/brand-accents.css?v=1">
+    <link rel="stylesheet" href="css/components/navigation.css?v=1">
+    <link rel="stylesheet" href="css/components/modals.css?v=5">
+    <link rel="stylesheet" href="css/components/process-attachments.css?v=1">
+    <link rel="stylesheet" href="css/components/buttons.css?v=1">
+    <link rel="stylesheet" href="css/components/forms.css?v=5">
+    <link rel="stylesheet" href="css/components/notifications.css?v=2">
+    <link rel="stylesheet" href="css/components/reminder-alarm.css?v=5">
+    <link rel="stylesheet" href="css/components/calendar.css?v=1">
+    <link rel="stylesheet" href="css/components/calendar-widget.css?v=5">
+    <link rel="stylesheet" href="css/components/dropdowns.css?v=2">
+    <link rel="stylesheet" href="css/components/focus-mode.css?v=2">
+    <link rel="stylesheet" href="css/components/elements.css?v=1">
+    <link rel="stylesheet" href="css/components/appointments.css?v=1">
+    <link rel="stylesheet" href="css/views/documents.css?v=2">
+    <link rel="stylesheet" href="css/views/protocols.css?v=1">
+    <link rel="stylesheet" href="css/views/tasks.css?v=3">
+    <link rel="stylesheet" href="css/views/service-reports.css?v=4">
+    <link rel="stylesheet" href="css/views/machines.css?v=1">
+    <link rel="stylesheet" href="css/views/procurement.css?v=1">
+    <link rel="stylesheet" href="css/views/settings.css?v=2">
+    <link rel="stylesheet" href="css/views/accounting.css?v=1">
+    <link rel="stylesheet" href="css/views/workshop.css?v=1">
+    <link rel="stylesheet" href="css/views/workshop-tasks.css?v=4">
+    <link rel="stylesheet" href="css/views/dashboard.css?v=1">
+    <link rel="stylesheet" href="css/views/listen.css?v=1">
+    <link rel="stylesheet" href="css/views/addressbook.css?v=12">
+    <link rel="stylesheet" href="css/views/routenplanung.css?v=2">
+    <link rel="stylesheet" href="css/base/responsive.css?v=16">
 
     <!-- ========================================================= -->
     <!-- ============ EINBINDUNG DER HTML-BAUSTEINE ============== -->
@@ -151,7 +191,9 @@
          Der Preload holt die Latin-Dateien parallel zum CSS. -->
     <link rel="preload" href="assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="assets/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
-    <script src="assets/data/vorlage_base64.js?v=38" defer></script>
+    <!-- Briefbogen und Logo (zusammen 413 KB) werden erst beim Erzeugen von
+         PDFs/Etiketten nachgeladen — siehe js/assets-on-demand.js. -->
+    <script src="js/assets-on-demand.js?v=1"></script>
 </head>
 
 <body>
@@ -230,7 +272,7 @@
 
     <!-- ========================================================= -->
     <!-- CSS: frueher inline an dieser Stelle, jetzt ausgelagert.  -->
-    <!-- Die Reihenfolge nach css/style.css muss erhalten bleiben. -->
+    <!-- Diese Dateien kommen NACH den Bausteinen oben — Reihenfolge bindend. -->
     <!-- ========================================================= -->
     <link rel="stylesheet" href="css/views/login.css?v=2">
     <link rel="stylesheet" href="css/views/history.css?v=3">
@@ -244,7 +286,7 @@
          gewinnt. Diese Zeile loeschen = alles wie vorher. -->
     <link rel="stylesheet" href="css/components/dropdown-look.css?v=5">
     <!-- MIETVEREINBARUNG (1/3) — eigenstaendig, diese Zeile loeschen = weg -->
-    <link rel="stylesheet" href="css/views/mietvereinbarung.css?v=16">
+    <link rel="stylesheet" href="css/views/mietvereinbarung.css?v=17">
 
     <!-- @partial:modals/pin-prompt-modal.html -->
         <!-- PIN Prompt Modal -->
@@ -3929,7 +3971,7 @@
     <script src="js/auto-nachladen.js?v=2"></script>
     <!-- Berechtigungen: ausgelagert aus index.html -->
     <script src="js/permissions.js?v=4"></script>
-    <script src="lib/supabase.min.js"></script>
+    <script src="lib/supabase.min.js?v=1"></script>
     <script>
         if (typeof supabase === 'undefined') {
             document.write('<script src="https://unpkg.com/@supabase/supabase-js@2"><\/script>');
@@ -5809,7 +5851,7 @@
     <script src="js/protocols.js?v=54"></script>
     <!-- MIETVEREINBARUNG (2/3) — eigenstaendig, diese Zeile loeschen = weg -->
     <script src="js/mietvereinbarung-vorlagen.js?v=8"></script>
-    <script src="js/mietvereinbarung.js?v=14"></script>
+    <script src="js/mietvereinbarung.js?v=16"></script>
     <script src="js/mietvereinbarung-liste.js?v=1"></script>
 
     </main>
@@ -5833,7 +5875,7 @@
             }
         });
     </script>
-    <script src="js/protocol_templates.js"></script>
+    <script src="js/protocol_templates.js?v=1"></script>
     </div><!-- End app-layout -->
     <!-- Lightbox UI -->
     <div id="photos-lightbox"
@@ -6575,15 +6617,15 @@
         import MsgReader from 'https://esm.sh/@kenjiuno/msgreader@1.28.0';
         window.MSGReaderClass = MsgReader;
     </script>
-    <script src="js/file-upload-service-r2.js"></script>
+    <script src="js/file-upload-service-r2.js?v=1"></script>
     <script src="js/accounting.js?v=43"></script>
     <script src="js/documents-r2.js?v=8"></script>
     <script src="js/checklists.js?v=2"></script>
-    <script src="js/customers.js?v=2"></script>
+    <script src="js/customers.js?v=3"></script>
     <script src="js/autosave.js?v=1"></script>
     <script src="js/unsaved-guard.js?v=1"></script>
     <script src="js/address-history.js?v=2"></script>
-    <script src="js/addressbook.js?v=54"></script>
+    <script src="js/addressbook.js?v=55"></script>
     <script src="js/addressbook-live.js?v=3"></script>
     <script src="js/process-autosave.js?v=3"></script>
     <script src="js/task-autosave.js?v=1"></script>
@@ -6598,14 +6640,14 @@
          notifications.js stehen: nutzt window.notificationsPushEnabled. -->
     <script src="js/reminder-alarm.js?v=4"></script>
     <script src="js/assignment-handoff.js?v=2"></script>
-    <script src="js/calendar-widget.js?v=12"></script>
+    <script src="js/calendar-widget.js?v=13"></script>
     <!-- tasks.js und processes.js werden bereits weiter oben geladen (vor ihren
          jeweiligen Folgemodulen). Ein zweites Einbinden ließ beide Module doppelt
          laufen — mit doppelt registrierten Event-Handlern. -->
-    <script src="js/routeplanner.js"></script>
+    <script src="js/routeplanner.js?v=1"></script>
     <script src="js/routenplanung.js?v=14"></script>
     <script src="js/listen.js?v=12"></script>
-    <script src="assets/data/meetra_logo_base64.js"></script>
+
     <script src="js/labels.js?v=2"></script>
     <script src="js/offline-service.js?v=1"></script>
     <script src="js/dropdown-position.js?v=6"></script>
@@ -7502,7 +7544,7 @@
         </div>
     <!-- /@partial:modals/picker-modals.html -->
 
-<script src="js/auth.js"></script>
+<script src="js/auth.js?v=1"></script>
 <script src="js/users.js?v=3"></script>
 <script src="js/machines-grouped.js?v=1"></script>
 <script src="js/voice-dictation.js?v=2"></script>
