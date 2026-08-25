@@ -145,6 +145,7 @@
         window.showToast(status === 'zugesagt' ? 'Termin zugesagt.' : 'Termin abgesagt.');
         if (typeof window.refreshNotifications === 'function') window.refreshNotifications({ force: true });
         if (typeof window.refreshCalendarWidget === 'function') window.refreshCalendarWidget();
+        if (typeof window.refreshAppointmentInviteBadge === 'function') window.refreshAppointmentInviteBadge();
         if (typeof window.rp2RefreshAppointments === 'function') window.rp2RefreshAppointments();
         return true;
     };
@@ -403,6 +404,94 @@
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && document.getElementById('appt-modal')?.classList.contains('show')) closeModal();
     });
+
+    // ---------------------------------------------------------------
+    // Offene Einladungen — Leuchtpunkt am Kalender in der Kopfleiste
+    // ---------------------------------------------------------------
+    // Wer eingeladen wurde und noch nicht geantwortet hat, soll das sehen,
+    // ohne erst irgendwo hineinzuklicken: der Kalenderknopf oben leuchtet
+    // und trägt die Anzahl. Termine, die länger als 14 Tage vorbei sind,
+    // zählen nicht mehr mit — darauf muss niemand mehr reagieren.
+    const VERGANGEN_TAGE = 14;
+
+    window.loadOpenAppointmentInvites = async function () {
+        const uid = myId();
+        if (!uid || !sb() || tableMissing) return [];
+
+        try {
+            const { data: parts, error } = await sb()
+                .from('event_participants')
+                .select('*')
+                .eq('user_id', uid)
+                .eq('status', 'offen')
+                .limit(200);
+            if (error) throw error;
+            if (!parts || !parts.length) return [];
+
+            const { data: evs } = await sb()
+                .from('maintenance_events')
+                .select('*')
+                .in('id', [...new Set(parts.map(p => p.event_id))]);
+            const byId = new Map((evs || []).map(e => [String(e.id), e]));
+
+            const heute = new Date(); heute.setHours(0, 0, 0, 0);
+            const offen = [];
+
+            parts.forEach(p => {
+                const ev = byId.get(String(p.event_id));
+                if (!ev) return;
+                const tag = String(ev.event_date || ev.start_date || '').slice(0, 10);
+                if (tag) {
+                    const d = new Date(tag + 'T00:00:00');
+                    if (!isNaN(d) && (heute - d) / 86400000 > VERGANGEN_TAGE) return;
+                }
+                offen.push({
+                    eventId: ev.id,
+                    title: ev.title || 'Termin',
+                    day: tag,
+                    time: fmtTime(ev.start_time),
+                    place: ev.location_label || '',
+                    from: p.invited_by_name || ''
+                });
+            });
+
+            offen.sort((a, b) => String(a.day).localeCompare(String(b.day)));
+            return offen;
+        } catch (err) {
+            tableMissing = true;
+            console.warn('Offene Termin-Einladungen nicht ladbar:', err.message || err);
+            return [];
+        }
+    };
+
+    window.refreshAppointmentInviteBadge = async function () {
+        const btn = document.getElementById('calw-btn');
+        const badge = document.getElementById('calw-badge');
+        if (!btn || !badge) return 0;
+
+        const offen = await window.loadOpenAppointmentInvites();
+        const n = offen.length;
+
+        badge.textContent = n > 9 ? '9+' : String(n);
+        badge.style.display = n ? 'flex' : 'none';
+        btn.classList.toggle('has-invites', n > 0);
+        btn.title = n
+            ? `${n} Termineinladung${n === 1 ? '' : 'en'} ohne Antwort`
+            : 'Kalender';
+        return n;
+    };
+
+    // Beim Start einmal und danach alle zwei Minuten nachsehen. Der Aufruf
+    // wartet bewusst kurz, bis der angemeldete Benutzer feststeht.
+    function badgeStarten() {
+        setTimeout(() => { window.refreshAppointmentInviteBadge(); }, 2500);
+        setInterval(() => { window.refreshAppointmentInviteBadge(); }, 120000);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', badgeStarten);
+    } else {
+        badgeStarten();
+    }
 
     // Für die Benachrichtigungen: Antwortzeitpunkt lesbar machen.
     window.appointmentResponseLabel = function (p) {

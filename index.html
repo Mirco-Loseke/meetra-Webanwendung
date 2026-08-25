@@ -244,7 +244,7 @@
          gewinnt. Diese Zeile loeschen = alles wie vorher. -->
     <link rel="stylesheet" href="css/components/dropdown-look.css?v=5">
     <!-- MIETVEREINBARUNG (1/3) — eigenstaendig, diese Zeile loeschen = weg -->
-    <link rel="stylesheet" href="css/views/mietvereinbarung.css?v=14">
+    <link rel="stylesheet" href="css/views/mietvereinbarung.css?v=16">
 
     <!-- @partial:modals/pin-prompt-modal.html -->
         <!-- PIN Prompt Modal -->
@@ -753,6 +753,9 @@
                                 <line x1="8" y1="2" x2="8" y2="6"></line>
                                 <line x1="3" y1="10" x2="21" y2="10"></line>
                             </svg>
+                            <!-- Offene Termineinladungen: js/appointments.js füllt die Zahl
+                                 und setzt am Knopf die Klasse "has-invites" (Leuchten). -->
+                            <span id="calw-badge" style="display:none;">0</span>
                         </button>
                         <div id="calw-panel"></div>
                     </div>
@@ -4031,6 +4034,11 @@
         <div class="modal-content" style="max-width: 450px; padding: 1.5rem;">
             <h2 style="margin-bottom: 1.25rem; font-size: 1.4rem;">Aktionen für Maschine</h2>
 
+            <!-- modal-scroll-area: auf dem Handy wird das Fenster Vollbild und
+                 der Inhalt passte nicht mehr aufs Display — ohne diesen
+                 Scrollbereich waren die unteren Knöpfe nicht erreichbar. -->
+            <div class="modal-scroll-area">
+
             <!-- Section 1: Create -->
             <div class="accordion-section" style="margin-bottom: 1rem;">
                 <h3 onclick="toggleAccordion('create-section')"
@@ -4109,6 +4117,8 @@
                     </button>
                 </div>
             </div>
+
+            </div><!-- /modal-scroll-area -->
 
             <div class="modal-actions" style="margin-top: 1.5rem; justify-content: center;">
                 <button class="btn-secondary" style="width: 100%; border-radius: 12px; font-size: 0.9rem;"
@@ -5799,7 +5809,7 @@
     <script src="js/protocols.js?v=54"></script>
     <!-- MIETVEREINBARUNG (2/3) — eigenstaendig, diese Zeile loeschen = weg -->
     <script src="js/mietvereinbarung-vorlagen.js?v=8"></script>
-    <script src="js/mietvereinbarung.js?v=13"></script>
+    <script src="js/mietvereinbarung.js?v=14"></script>
     <script src="js/mietvereinbarung-liste.js?v=1"></script>
 
     </main>
@@ -6582,13 +6592,13 @@
     <!-- Termine mit Teilnehmern: liefert die Bausteine, die Benachrichtigungen,
          Kalender und Routenplanung darunter benutzen. -->
     <script src="js/appointment-invite.js?v=2"></script>
-    <script src="js/appointments.js?v=5"></script>
+    <script src="js/appointments.js?v=6"></script>
     <script src="js/notifications.js?v=8"></script>
     <!-- Minutengenauer Wecker fuer Erinnerungen mit Uhrzeit. Muss NACH
          notifications.js stehen: nutzt window.notificationsPushEnabled. -->
     <script src="js/reminder-alarm.js?v=4"></script>
     <script src="js/assignment-handoff.js?v=2"></script>
-    <script src="js/calendar-widget.js?v=11"></script>
+    <script src="js/calendar-widget.js?v=12"></script>
     <!-- tasks.js und processes.js werden bereits weiter oben geladen (vor ihren
          jeweiligen Folgemodulen). Ein zweites Einbinden ließ beide Module doppelt
          laufen — mit doppelt registrierten Event-Handlern. -->

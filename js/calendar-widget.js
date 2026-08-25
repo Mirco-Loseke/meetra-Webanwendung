@@ -696,6 +696,42 @@
         if (target && panel.parentElement !== target) target.appendChild(panel);
     }
 
+    // Einladungen, auf die ich noch nicht geantwortet habe, stehen ganz
+    // oben im Fenster — sonst muss man sie zwischen allen Wartungen und
+    // Erinnerungen suchen. Die Daten stecken schon in "entries"
+    // (myStatus kommt aus event_participants), es wird nichts nachgeladen.
+    function renderEinladungen() {
+        const offen = entries.filter(e => e.myStatus === 'offen');
+        if (!offen.length) return '';
+
+        // Länger Vergangenes braucht keine Antwort mehr.
+        const heute = new Date(); heute.setHours(0, 0, 0, 0);
+        const aktuell = offen.filter(e => {
+            const d = new Date(e.day + 'T00:00:00');
+            return isNaN(d) || (heute - d) / 86400000 <= 14;
+        }).sort((a, b) => a.day.localeCompare(b.day));
+        if (!aktuell.length) return '';
+
+        return `
+        <div class="calw-invites">
+            <div class="calw-invites-head">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 9v4"></path><path d="M12 17h.01"></path>
+                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                </svg>
+                ${aktuell.length === 1 ? 'Hier wird eine Antwort erwartet' : `${aktuell.length} Termine warten auf deine Antwort`}
+            </div>
+            ${aktuell.map(e => `
+            <div class="calw-invite">
+                <div class="calw-invite-text">
+                    <strong>${esc(e.title)}</strong>
+                    <span>${esc(fmtDate(e.day))}${e.time ? ', ' + esc(e.time) + ' Uhr' : ''}${e.subject ? ' · ' + esc(e.subject) : ''}</span>
+                </div>
+                ${window.appointmentResponseButtons ? window.appointmentResponseButtons(e.eventId, 'offen') : ''}
+            </div>`).join('')}
+        </div>`;
+    }
+
     function render() {
         const panel = document.getElementById('calw-panel');
         if (!panel) return;
@@ -731,6 +767,7 @@
         </div>
 
         <div class="calw-scroll">
+            ${renderEinladungen()}
             ${renderForm()}
 
             <div class="calw-main">

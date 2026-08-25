@@ -26,6 +26,7 @@
     let vorlage = null;    // Aufbau des Bogens (Einstellungen → Mietvereinbarungen)
     let maschine = null;   // Maschine, an der die Vereinbarung haengt
     let phase = 'uebergabe'; // 'uebergabe' | 'ruecknahme'
+    let a4Modus = false;   // auf dem Handy kurz auf echtes A4 umschalten (Druck/PDF)
     let gespeicherteId = null; // Zeile in rental_agreements, sobald einmal gespeichert
     let gespeichertesDoc = null; // zugehoeriges Dokument unter "Dokumente"
     let padZiel = null;    // welches Unterschriftenfeld gerade gezeichnet wird
@@ -552,14 +553,47 @@
     // Am Bildschirm werden die Seiten verkleinert, wenn das Fenster
     // schmaler ist als ein A4-Blatt. Gedruckt wird immer 1:1 (siehe
     // @media print), deshalb aendert das am Ausdruck nichts.
+    // Handy/Tablet: der Bogen fliesst (siehe css/views/mietvereinbarung.css,
+    // Abschnitt "HANDY UND TABLET"). Gedruckt wird trotzdem A4 — dafuer
+    // schaltet mitA4() kurz zurueck.
+    function istHandy() {
+        return window.innerWidth <= 768;
+    }
+
     function skaliereSeiten() {
         const wrap = document.getElementById('miet-pages-wrap');
         const pages = document.getElementById('miet-pages');
         if (!wrap || !pages) return;
+
+        // Im Fliessmodus wird nichts verkleinert und nichts gemessen.
+        if (istHandy() && !a4Modus) {
+            pages.style.removeProperty('--miet-scale');
+            wrap.style.height = 'auto';
+            return;
+        }
         const breite = 210 * 96 / 25.4; // A4-Breite in CSS-Pixeln
         const faktor = Math.min(1, (wrap.clientWidth - 4) / breite);
         pages.style.setProperty('--miet-scale', faktor);
         wrap.style.height = (pages.scrollHeight * faktor) + 'px';
+    }
+
+    // Auf dem Handy steht der Bogen im Fliessmodus (eine lange Seite).
+    // Zum Drucken und fuer das PDF muss er kurz wieder echtes A4 sein,
+    // sonst stimmt der Seitenumbruch nicht und Inhalt ginge verloren.
+    async function mitA4(fn) {
+        const pages = document.getElementById('miet-pages');
+        if (!istHandy() || !pages) return await fn();
+
+        a4Modus = true;
+        pages.classList.add('miet-a4');
+        zeichneInhalt();
+        try {
+            return await fn();
+        } finally {
+            a4Modus = false;
+            pages.classList.remove('miet-a4');
+            zeichneInhalt();
+        }
     }
 
     window.mietDrucken = function () {
@@ -567,7 +601,7 @@
         // Ein noch offenes Feld kann die Seite gesprengt haben.
         if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
         window.mietSeitenPruefen();
-        window.print();
+        mitA4(() => window.print());
     };
 
     // ------------------------------------------------------
@@ -713,7 +747,8 @@
         window.mietSeitenPruefen();
 
         try {
-            const doc = await pdfErzeugen();
+            // Auf dem Handy vorher zurück auf A4 (siehe mitA4).
+            const doc = await mitA4(() => pdfErzeugen());
 
             const basis = `${ordnerName()}/mietvereinbarungen`;
             status('Fotos werden hochgeladen …');

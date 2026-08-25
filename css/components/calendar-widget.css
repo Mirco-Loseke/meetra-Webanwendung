@@ -886,3 +886,127 @@ body.calw-full-open::before {
     min-width: 0;
     max-height: 220px;
 }
+
+/* =========================================================
+   OFFENE TERMINEINLADUNGEN
+   ---------------------------------------------------------
+   Wer zu einem Termin eingeladen wurde und noch nicht geantwortet
+   hat, sieht das am Kalenderknopf oben: er leuchtet und traegt die
+   Anzahl. js/appointments.js setzt die Klasse und die Zahl.
+   ========================================================= */
+#calw-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 19px;
+    height: 19px;
+    padding: 0 5px;
+    border-radius: 10px;
+    background: #f59e0b;
+    color: #111827;
+    font-size: 0.68rem;
+    font-weight: 900;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid rgba(15, 23, 42, 1);
+    pointer-events: none;
+}
+
+#calw-btn.has-invites {
+    background: rgba(245, 158, 11, 0.16);
+    border-color: rgba(245, 158, 11, 0.55);
+    color: #fbbf24;
+    animation: calwPulse 2.2s ease-in-out infinite;
+}
+
+@keyframes calwPulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.45);
+    }
+
+    50% {
+        box-shadow: 0 0 14px 3px rgba(245, 158, 11, 0.35);
+    }
+}
+
+/* Ruhiger fuer alle, die Bewegung stoert bzw. abgeschaltet haben. */
+@media (prefers-reduced-motion: reduce) {
+    #calw-btn.has-invites {
+        animation: none;
+        box-shadow: 0 0 12px 2px rgba(245, 158, 11, 0.35);
+    }
+}
+
+/* Hinweisbox oben im Kalenderfenster: „hier wird eine Antwort erwartet" */
+.calw-invites {
+    margin: 0 0 12px;
+    padding: 12px 14px;
+    border-radius: var(--radius-lg);
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.calw-invites-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 0.82rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    color: #fbbf24;
+}
+
+.calw-invite {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 8px 0;
+    border-top: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.calw-invite:first-of-type {
+    border-top: none;
+}
+
+.calw-invite-text {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+
+.calw-invite-text strong {
+    color: #fff;
+    font-size: 0.9rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.calw-invite-text span {
+    font-size: var(--fs-xs);
+    color: rgba(255, 255, 255, 0.6);
+}
+
+@media (max-width: 560px) {
+    .calw-invite {
+        flex-wrap: wrap;
+    }
+
+    .calw-invite .appt-actions {
+        width: 100%;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
+    .calw-invite .appt-thumb {
+        min-width: 44px;
+        min-height: 40px;
+    }
+}

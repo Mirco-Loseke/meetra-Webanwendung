@@ -1540,6 +1540,22 @@ textarea.miet-in {
         width: 100%;
         justify-content: flex-end;
     }
+
+    /* Mit dem Finger bedienbar: 28px hohe Knöpfe trifft man nicht. */
+    .miet-liste-knoepfe button {
+        min-height: 42px;
+        padding: 9px 14px;
+        font-size: 0.85rem;
+    }
+
+    .miet-liste-knoepfe .btn-primary {
+        flex: 1;
+    }
+
+    .miet-liste-fuss button {
+        flex: 1;
+        min-height: 44px;
+    }
 }
 
 /* =========================================================
@@ -1648,4 +1664,307 @@ textarea.miet-in {
 
 .miet-pages.miet-pdf .miet-pick::after {
     display: none !important;
+}
+
+/* =========================================================
+   HANDY UND TABLET (nur Bildschirm)
+   ---------------------------------------------------------
+   Am Rechner ist der Bogen ein echtes A4-Blatt. Auf dem Handy wurde
+   dieses Blatt bisher per transform auf rund 45 % verkleinert — der
+   Text war dadurch etwa 5px gross, die Felder kaum zu treffen und
+   die Tabellen liefen aus dem Bild.
+
+   Deshalb hier ein Fliessmodus: kein Verkleinern, das Blatt nimmt die
+   Bildschirmbreite, waechst in der Hoehe und breite Tabellen bekommen
+   eine eigene Querlaufleiste. Ausgedruckt wird trotzdem A4 — dafuer
+   sorgt @media print und die Klasse .miet-a4, die js/mietvereinbarung.js
+   vor dem Drucken bzw. vor dem PDF setzt (dann wird neu umbrochen).
+
+   Bewusst @media SCREEN: sonst wuerde das hier auch beim Drucken vom
+   Handy gelten und der Bogen käme als ein endloses Blatt heraus.
+   ========================================================= */
+@media screen and (max-width: 768px) {
+
+    .miet-overlay {
+        padding: 0;
+        align-items: stretch;
+    }
+
+    .miet-modal {
+        max-width: none;
+        max-height: 100dvh;
+        height: 100dvh;
+        border-radius: 0;
+        border: none;
+    }
+
+    .miet-head {
+        padding: 12px 14px;
+        padding-top: calc(12px + env(safe-area-inset-top));
+    }
+
+    .miet-head h2 {
+        font-size: 1.05rem;
+    }
+
+    .miet-phase-switch {
+        padding: 10px 12px;
+        gap: 6px;
+    }
+
+    .miet-phase-btn {
+        min-width: 0;
+        flex: 1 1 100%;
+        padding: 9px 12px;
+    }
+
+    .miet-body {
+        padding: 10px;
+        /* Ohne min-height:0 waechst ein Flex-Kind ueber seinen Anteil hinaus:
+           der Bogen schob die Fusszeile mit den Knoepfen unter den
+           Bildschirmrand, statt selbst zu scrollen. */
+        min-height: 0;
+    }
+
+    /* Kein Verkleinern mehr — das Blatt fliesst. */
+    .miet-pages-wrap {
+        overflow: visible;
+        height: auto !important;
+    }
+
+    .miet-pages {
+        width: 100%;
+        transform: none;
+    }
+
+    .miet-page {
+        width: 100%;
+        height: auto;
+        min-height: 0;
+        padding: 14px 12px;
+        margin: 0 0 12px;
+        border-radius: 14px;
+        box-shadow: none;
+        background-image: none;
+        background-color: #fff;
+        font-size: 13px;
+    }
+
+    .miet-page-inner {
+        height: auto;
+        overflow: visible;
+    }
+
+    .miet-page-nr {
+        display: none;
+    }
+
+    /* Breite Tabellen laufen quer statt zu zerquetschen. */
+    .miet-block {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .miet-table {
+        min-width: 480px;
+        font-size: 13px;
+    }
+
+    .miet-table td.miet-label {
+        width: auto;
+        min-width: 96px;
+        white-space: normal;
+    }
+
+    /* 16px ist die Schwelle, unter der iOS beim Antippen hineinzoomt
+       und nicht wieder heraus. Nicht kleiner setzen. */
+    .miet-page .miet-in,
+    .miet-page input,
+    .miet-page textarea {
+        font-size: 16px;
+    }
+
+    .miet-table td.miet-zusatz .miet-in {
+        font-size: 16px;
+    }
+
+    .miet-photo-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .miet-sign-row {
+        grid-template-columns: 1fr;
+    }
+
+    .miet-foot {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 10px 12px;
+        padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    }
+
+    .miet-foot .miet-note,
+    .miet-foot #miet-seitenzahl {
+        flex: 1 1 100%;
+        font-size: 0.75rem;
+    }
+
+    .miet-foot button {
+        flex: 1;
+        min-width: 90px;
+    }
+}
+
+/* Vor dem Drucken bzw. vor dem PDF: auf dem Handy zurück auf echtes A4,
+   damit der Seitenumbruch stimmt. js/mietvereinbarung.js setzt die Klasse
+   und zeichnet den Bogen damit neu. */
+.miet-pages.miet-a4 {
+    width: 210mm !important;
+    transform: none !important;
+}
+
+.miet-pages.miet-a4 .miet-page {
+    width: 210mm !important;
+    height: 297mm !important;
+    min-height: 0 !important;
+    padding: 30mm 25mm 27mm !important;
+    margin: 0 auto 18px !important;
+    border-radius: 0 !important;
+    background-image: url('../../assets/images/vorlage_bg.jpg') !important;
+    font-size: 12px !important;
+}
+
+.miet-pages.miet-a4 .miet-page-inner {
+    height: 100% !important;
+    overflow: hidden !important;
+}
+
+.miet-pages.miet-a4 .miet-page-nr {
+    display: block !important;
+}
+
+.miet-pages.miet-a4 .miet-block {
+    overflow: visible !important;
+}
+
+.miet-pages.miet-a4 .miet-table {
+    min-width: 0 !important;
+    font-size: 12.5px !important;
+}
+
+.miet-pages.miet-a4 .miet-in,
+.miet-pages.miet-a4 input,
+.miet-pages.miet-a4 textarea {
+    font-size: inherit !important;
+}
+
+.miet-pages.miet-a4 .miet-table td.miet-zusatz .miet-in {
+    font-size: 10px !important;
+}
+
+/* =========================================================
+   HANDY: BEDIENFLAECHEN GROSS GENUG ZUM TIPPEN
+   ---------------------------------------------------------
+   Der Bogen ist ein Papierformular — am Rechner darf alles klein und
+   dicht stehen. Mit dem Finger ist das nichts: die Ankreuzpunkte waren
+   15px gross, Knoepfe wie "+ Zeile" oder "Rundgang starten" rund 20px
+   hoch. Hier bekommen alle anklickbaren Stellen mindestens ~40px
+   Hoehe. Gilt nur am Bildschirm — gedruckt bleibt das Formular
+   unveraendert kompakt (auch im PDF, siehe .miet-a4).
+   ========================================================= */
+@media screen and (max-width: 768px) {
+
+    .miet-page .miet-check {
+        font-size: 14px;
+        gap: 7px;
+        margin: 0 5px;
+        min-height: 40px;
+        padding: 2px 4px;
+    }
+
+    .miet-page .miet-dot {
+        width: 22px;
+        height: 22px;
+        border-width: 2px;
+    }
+
+    .miet-page .miet-check.on .miet-dot::after {
+        left: 6.5px;
+        top: 2.5px;
+        width: 6px;
+        height: 12px;
+        border-width: 0 2.5px 2.5px 0;
+    }
+
+    /* Prüfzellen: die beiden Punkte untereinander statt gequetscht
+       nebeneinander — auf 375px passen sie sonst nicht. */
+    .miet-page .miet-checkcell {
+        white-space: normal;
+    }
+
+    /* Knöpfe im Bogen (+ Zeile, Rundgang starten, Spalte …) */
+    .miet-page button,
+    .miet-page .miet-photo-start {
+        min-height: 40px;
+        padding: 8px 14px !important;
+        font-size: 14px !important;
+        border-radius: 10px !important;
+    }
+
+    /* Die kleinen Ecktasten an den Fotokacheln bleiben rund, werden
+       aber grösser, damit man sie trifft. */
+    .miet-page .miet-photo-del,
+    .miet-page .miet-photo-swap {
+        min-height: 0;
+        width: 32px;
+        height: 32px;
+        padding: 0 !important;
+        border-radius: 50% !important;
+        font-size: 16px !important;
+    }
+
+    .miet-page input[type="date"],
+    .miet-page input[type="time"] {
+        min-height: 40px;
+    }
+
+    /* Auswahlfelder (Einweiser, Ausführungen, Adresse) */
+    .miet-page .miet-pick {
+        min-height: 40px;
+    }
+
+    /* Freitextfelder brauchen Platz zum Antippen. */
+    .miet-page .miet-txt {
+        min-height: 34px;
+        padding: 4px 2px;
+    }
+
+    /* Unterschriftenfeld: hoch genug, um mit dem Finger zu zeichnen. */
+    .miet-sign-pad {
+        min-height: 150px;
+    }
+
+    /* Menüs am body (Einweiser, Ausführungen): breiter und mit
+       fingerfreundlichen Zeilen. */
+    .miet-menu {
+        left: 8px !important;
+        right: 8px !important;
+        min-width: 0 !important;
+        width: auto !important;
+    }
+
+    .miet-menu > div {
+        padding: 13px 14px;
+        font-size: 15px;
+    }
+
+    /* Unterschriften-Fenster und Bildbetrachter über die volle Breite. */
+    .miet-pad-card {
+        width: 96vw;
+        max-width: none;
+    }
+
+    .miet-pad-canvas {
+        height: 40vh;
+    }
 }
