@@ -56,3 +56,10 @@
 body.disable-delete .delete-permission-required {
     display: none !important;
 }
+
+/* Knöpfe mit zwei Beschriftungen (lang/kurz): am Schreibtisch gilt die
+   lange, auf dem Handy schaltet responsive.css auf die kurze um. Ohne
+   diese Regel standen beide nebeneinander ("KATEGORIE ANLEGEN ANLEGEN"). */
+.btn-label-short {
+    display: none;
+}

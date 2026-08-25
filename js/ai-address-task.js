@@ -362,7 +362,9 @@ TERMIN und ERINNERUNG auseinanderhalten:
                 title,
                 process_type: 'note',
                 process_date: nowIso,
-                remark: fullDesc,
+                // Freitext geht in description („E-Mail Inhalt") — ein
+                // Bemerkungsfeld gibt es bei Vorgaengen nicht mehr.
+                description: fullDesc,
                 status: 'offen',
                 steps: stepRows,
                 assigned_users: [],

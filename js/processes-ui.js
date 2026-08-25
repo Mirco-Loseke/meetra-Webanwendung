@@ -116,7 +116,7 @@
             document.getElementById('email-sender-input').value = '';
             document.getElementById('email-recipient-input').value = '';
             document.getElementById('email-body-input').value = '';
-            document.getElementById('email-remark-input').value = '';
+            // Bemerkungsfeld gibt es nicht mehr — nur noch „E-Mail Inhalt" (description).
             document.getElementById('email-type-select').value = 'email_incoming';
             document.getElementById('email-status-select').value = 'offen';
             window.syncProcessSelectDisplay('email', 'type');
@@ -293,7 +293,9 @@
 
             // Reset fields
             document.getElementById('process-add-title-input').value = '';
-            document.getElementById('process-add-remark-input').value = '';
+            // (Bemerkungsfeld entfernt)
+            const standFeld = document.getElementById('process-add-status-input');
+            if (standFeld) standFeld.value = '';
             document.getElementById('process-add-type-select').value = 'note';
             document.getElementById('process-add-status-select').value = 'offen';
             const addSender = document.getElementById('process-add-sender-input');
@@ -393,7 +395,10 @@
                 const machineId = document.getElementById('process-add-machine-select').value;
                 const workshopOrderNumber = document.getElementById('process-add-workshop-order-select').value;
                 const status = document.getElementById('process-add-status-select').value;
-                const remark = document.getElementById('process-add-remark-input').value;
+                // „Bemerkung / Notiz" gibt es bei Vorgängen nicht mehr. Der einzige
+                // Freitext ist „E-Mail Inhalt" (Spalte description), und der wird nur
+                // beim Import einer Mail gefüllt — von Hand ist er nicht anlegbar.
+                const standText = (document.getElementById('process-add-status-input')?.value || '').trim();
                 const sender = document.getElementById('process-add-sender-input')?.value || '';
                 const recipient = document.getElementById('process-add-recipient-input')?.value || '';
                 const description = document.getElementById('process-add-body-input')?.value || '';
@@ -411,12 +416,20 @@
                     machine_id: (!addr && machineId) ? parseInt(machineId) : null,
                     workshop_order_number: (!addr && workshopOrderNumber) ? workshopOrderNumber : null,
                     status: status,
-                    remark: remark || null,
                     sender: sender || null,
                     recipient: recipient || null,
                     description: description || null,
                     assigned_users: window.processAssignedUsers['process-add'],
-                    steps: (window.processSteps['process-add'] || []).filter(s => (s.text || '').trim())
+                    steps: (window.processSteps['process-add'] || []).filter(s => (s.text || '').trim()),
+                    // Gleich beim Anlegen eingetragener Stand — selbes Format
+                    // wie saveProcessStatusUpdate, damit Karte und Verlauf ihn
+                    // ohne Sonderfall anzeigen.
+                    status_updates: standText ? [{
+                        text: standText,
+                        by: (window.activeUser && window.activeUser.name) || 'Unbekannt',
+                        by_id: (window.activeUser && window.activeUser.id) || null,
+                        at: new Date().toISOString()
+                    }] : []
                     // Ersteller setzt window.insertMitErsteller (app-core.js): die
                     // App-Nutzer haben bigint-IDs, internal_processes.user_id ist
                     // aber uuid — deshalb geht die bigint-ID nach created_by_user.
@@ -442,7 +455,7 @@
                 // damit eine fehlende contact_name-Spalte nicht die gültige customer_id
                 // mit wegwirft.
                 const attempt = { ...payload };
-                const optionalCols = ['customer_id', 'contact_name', 'remind_at'];
+                const optionalCols = ['customer_id', 'contact_name', 'remind_at', 'status_updates'];
                 const dropped = [];
                 let error;
                 for (let i = 0; i < optionalCols.length + 1; i++) {
@@ -457,9 +470,11 @@
                 if (error) throw error;
 
                 if (dropped.length) {
-                    const labelMap = { customer_id: 'Adresse', contact_name: 'Ansprechpartner', remind_at: 'Erinnerung' };
+                    const labelMap = { customer_id: 'Adresse', contact_name: 'Ansprechpartner', remind_at: 'Erinnerung', status_updates: 'Aktueller Stand' };
                     const fehlend = dropped.map(c => labelMap[c] || c).join(', ');
                     window.showToast('Vorgang gespeichert, aber NICHT übernommen: ' + fehlend + '.\n\nDazu fehlt eine Spalte – bitte supabase_add_process_customer.sql in Supabase ausführen.');
+                } else {
+                    window.showToast('Vorgang gespeichert.', 'success');
                 }
 
                 const savedAddressId = addr ? addr.id : null;
@@ -504,20 +519,12 @@
             document.getElementById('edit-process-sender-input').value = proc.sender || '';
             document.getElementById('edit-process-recipient-input').value = proc.recipient || '';
             document.getElementById('edit-process-status-select').value = proc.status || 'offen';
-            document.getElementById('edit-process-remark-input').value = proc.remark || '';
             document.getElementById('edit-process-body-input').value = proc.description || '';
 
-            // Bemerkung / Notiz: Stand-Verlauf desselben Vorgangs anzeigen.
-            // Eingeklappt starten; nur wenn schon etwas hinterlegt ist, offen.
             window.statusUpdateProcessId = proc.id;
             const editStandText = document.getElementById('edit-process-status-text');
             if (editStandText) editStandText.value = '';
             window.renderProcessStatusHistory(proc);
-            window.updateProcessNoteHint(proc);
-            // Der Ausklapp betrifft nur noch die Bemerkung — „Stand" steht
-            // jetzt fest sichtbar darunter. Offen also nur, wenn wirklich
-            // eine Bemerkung hinterlegt ist.
-            window.setProcessNoteSectionOpen(!!(proc.remark && String(proc.remark).trim()));
             window.syncProcessSelectDisplay('edit-process', 'type');
             window.syncProcessSelectDisplay('edit-process', 'status');
             window.processSteps['edit-process'] = Array.isArray(proc.steps)
@@ -692,7 +699,10 @@
             const type = typeSelect ? typeSelect.value : '';
             const isEmailType = type === 'email_incoming' || type === 'email_outgoing';
             const hasContent = !!(bodyInput && bodyInput.value.trim().length > 0);
-            const show = isEmailType || hasContent;
+            // „E-Mail Inhalt" gibt es nur, wenn wirklich eine Mail importiert wurde.
+            // Im Import-Fenster selbst (prefix 'email') reicht der Vorgangstyp, sonst
+            // könnte man den mitgebrachten Text dort gar nicht mehr sehen.
+            const show = hasContent || (prefix === 'email' && isEmailType);
 
             const group = document.getElementById(`${prefix}-body-group`);
             if (group) group.style.display = show ? '' : 'none';
@@ -1428,6 +1438,91 @@
                 console.error('Fehler beim Setzen der Erinnerung:', e);
                 window.showToast('Fehler beim Speichern: ' + e.message);
             }
+        };
+
+        // Klick auf das Erinnerungs-Abzeichen der Karte: kleines Fenster mit
+        // denselben Möglichkeiten wie im Bearbeiten-Dialog — Schnellwahl UND
+        // ein sichtbares Feld, in das man Datum und Uhrzeit selbst schreibt.
+        // Vorher lag nur ein unsichtbares datetime-local über dem Abzeichen;
+        // damit gab es weder „morgen" noch eine erkennbare Eingabe.
+        window.openProcessRemindPicker = function(processId, ev) {
+            if (ev) ev.stopPropagation();
+            const proc = procById(processId);
+            const alt = document.getElementById('proc-remind-pop');
+            if (alt) alt.remove();
+
+            const gesetzt = proc && proc.remind_at;
+            const start = gesetzt ? window.isoToLocalInput(proc.remind_at) : window.defaultRemindInputValue();
+
+            const pop = document.createElement('div');
+            pop.id = 'proc-remind-pop';
+            pop.style.cssText = 'position: fixed; z-index: 100000; width: 290px; background: rgba(15,23,42,0.98); border: 1px solid rgba(251,191,36,0.35); border-radius: 14px; padding: 14px; box-shadow: 0 20px 60px rgba(0,0,0,0.65); color: #fff; font-family: inherit;';
+            pop.innerHTML = `
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;">
+                    <div style="flex:1; font-size:0.72rem; font-weight:800; color:#fbbf24; text-transform:uppercase; letter-spacing:0.6px;">Erinnerung</div>
+                    <button type="button" id="proc-remind-pop-cancel" title="Abbrechen" style="flex:0 0 auto; width:26px; height:26px; display:inline-flex; align-items:center; justify-content:center; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.16); color:rgba(255,255,255,0.7); border-radius:8px; cursor:pointer; padding:0;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;">
+                    <button type="button" data-tage="0" class="proc-remind-quick">Heute</button>
+                    <button type="button" data-tage="1" class="proc-remind-quick">Morgen</button>
+                    <button type="button" data-tage="3" class="proc-remind-quick">In 3 Tagen</button>
+                    <button type="button" data-tage="7" class="proc-remind-quick">In 1 Woche</button>
+                </div>
+                <input type="datetime-local" id="proc-remind-pop-input" value="${start}" style="width:100%; box-sizing:border-box; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.18); color:#fff; color-scheme:dark; border-radius:10px; padding:9px 10px; font-size:0.9rem;">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:12px;">
+                    ${gesetzt ? `<button type="button" id="proc-remind-pop-del" class="delete-permission-required" title="Erinnerung löschen" style="width:38px; height:38px; display:inline-flex; align-items:center; justify-content:center; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.4); color:#f87171; border-radius:10px; cursor:pointer; padding:0;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>` : '<span></span>'}
+                    <button type="button" id="proc-remind-pop-ok" title="Speichern" style="width:38px; height:38px; display:inline-flex; align-items:center; justify-content:center; background:rgba(251,191,36,0.2); border:1px solid rgba(251,191,36,0.6); color:#fde68a; border-radius:10px; cursor:pointer; padding:0;">
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </button>
+                </div>`;
+            document.body.appendChild(pop);
+
+            pop.querySelectorAll('.proc-remind-quick').forEach(b => {
+                b.style.cssText = 'flex:1 1 calc(50% - 3px); background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.16); color:rgba(255,255,255,0.8); border-radius:10px; padding:7px 8px; font-size:0.8rem; font-weight:700; cursor:pointer; white-space:nowrap;';
+                b.addEventListener('click', () => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + parseInt(b.dataset.tage, 10));
+                    d.setHours(8, 0, 0, 0);
+                    pop.querySelector('#proc-remind-pop-input').value = window.isoToLocalInput(d.toISOString());
+                });
+            });
+
+            // Am angeklickten Abzeichen ausrichten, aber im Fenster halten.
+            const anker = ev && ev.currentTarget && ev.currentTarget.getBoundingClientRect
+                ? ev.currentTarget.getBoundingClientRect()
+                : { left: (window.innerWidth / 2) - 145, bottom: window.innerHeight / 2, top: window.innerHeight / 2 };
+            const breite = pop.offsetWidth, hoehe = pop.offsetHeight;
+            let links = Math.min(Math.max(8, anker.left), window.innerWidth - breite - 8);
+            let oben = anker.bottom + 6;
+            if (oben + hoehe > window.innerHeight - 8) oben = Math.max(8, anker.top - hoehe - 6);
+            pop.style.left = links + 'px';
+            pop.style.top = oben + 'px';
+
+            const zu = () => {
+                pop.remove();
+                document.removeEventListener('mousedown', beiKlick, true);
+                document.removeEventListener('keydown', beiTaste, true);
+            };
+            const beiKlick = (e) => { if (!pop.contains(e.target)) zu(); };
+            const beiTaste = (e) => { if (e.key === 'Escape') zu(); };
+            setTimeout(() => {
+                document.addEventListener('mousedown', beiKlick, true);
+                document.addEventListener('keydown', beiTaste, true);
+            }, 0);
+
+            pop.querySelector('#proc-remind-pop-cancel').addEventListener('click', zu);
+            pop.querySelector('#proc-remind-pop-ok').addEventListener('click', () => {
+                const wert = pop.querySelector('#proc-remind-pop-input').value;
+                if (!wert) { window.showToast('Bitte Datum und Uhrzeit eintragen.'); return; }
+                zu();
+                window.setProcessRemind(processId, wert);
+            });
+            const del = pop.querySelector('#proc-remind-pop-del');
+            if (del) del.addEventListener('click', () => { zu(); window.clearProcessRemind(processId); });
         };
 
         window.clearProcessRemind = async function(processId) {

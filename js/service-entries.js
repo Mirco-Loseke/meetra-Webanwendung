@@ -669,10 +669,16 @@ window.renderServiceEntries = function () {
                         <div class="card-content" style="padding: 1.25rem 1.25rem 2px 1.25rem; flex: 1; display: flex; flex-direction: column; gap: 0.75rem;">
                             ${hasOrderTag ? `
                             <div style="display: flex; justify-content: center; margin-bottom: 0.25rem; width: 100%;">
-                                <div title="${isLinkedReport ? 'Teil einer verknüpften Berichtskette' : ''}" style="height: 32px; padding: 0 16px; background: ${orderTagColor.bg}; border: 1.5px solid ${orderTagColor.border}; border-radius: 16px; color: ${orderTagColor.text}; font-size: 0.85rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 4px; letter-spacing: 0.5px; backdrop-filter: blur(12px); text-transform: uppercase;">
+                                <div onclick="event.stopPropagation(); window.editServiceOrderNumber(${e.id})" title="${isLinkedReport ? 'Teil einer verknüpften Berichtskette — ' : ''}Auftragsnummer ändern" style="height: 32px; padding: 0 16px; background: ${orderTagColor.bg}; border: 1.5px solid ${orderTagColor.border}; border-radius: 16px; color: ${orderTagColor.text}; font-size: 0.85rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; letter-spacing: 0.5px; backdrop-filter: blur(12px); text-transform: uppercase; cursor: pointer;">
                                     Auftrag ${displayOrderNum}
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.75;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                                 </div>
-                            </div>` : ''}
+                            </div>` : `
+                            <div style="display: flex; justify-content: center; margin-bottom: 0.25rem; width: 100%;">
+                                <button onclick="event.stopPropagation(); window.editServiceOrderNumber(${e.id})" title="Auftragsnummer / Werkstattauftragsnummer nachtragen" style="height: 32px; padding: 0 16px; background: rgba(255,255,255,0.04); border: 1.5px dashed rgba(255,255,255,0.25); border-radius: 16px; color: rgba(255,255,255,0.5); font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px; letter-spacing: 0.5px; cursor: pointer; font-family: 'Inter', sans-serif; text-transform: uppercase;">
+                                    + Auftragsnummer
+                                </button>
+                            </div>`}
 
                             <div style="display: flex; align-items: center; gap: 8px; color: #ffffff; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px; text-align: left; width: 100%;">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.8;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
@@ -717,13 +723,13 @@ window.renderServiceEntries = function () {
                                 Abgeschlossen
                             </div>
                             `}
-                            ${(images.length > 0 || docs.length > 0) ? `
+                            ${(images.length > 0 || docs.length > 0 || e.is_finalized) ? `
                             <div style="position: relative; flex: none;">
-                                <button onclick="event.stopPropagation(); window.openServiceAttachments(window._sf${e.id})" title="Anhänge öffnen"
+                                <button onclick="event.stopPropagation(); window.openServiceAttachments(window._sf${e.id}, ${e.id}, ${e.machine_id || 'null'})" title="${e.is_finalized ? 'Anhänge öffnen / Fotos hinzufügen' : 'Anhänge öffnen'}"
                                     style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(139,92,246,0.85); border: 2.5px solid rgba(196,181,253,0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 18px rgba(139,92,246,0.6); backdrop-filter: blur(12px); padding: 0;">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
                                 </button>
-                                <span style="position: absolute; top: -4px; left: -4px; background: #ffffff; color: #7c3aed; font-size: 0.6rem; font-weight: 800; border-radius: 999px; min-width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; padding: 0 3px; line-height: 1; pointer-events: none;">${images.length + docs.length}</span>
+                                ${(images.length + docs.length) > 0 ? `<span style="position: absolute; top: -4px; left: -4px; background: #ffffff; color: #7c3aed; font-size: 0.6rem; font-weight: 800; border-radius: 999px; min-width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; padding: 0 3px; line-height: 1; pointer-events: none;">${images.length + docs.length}</span>` : ''}
                             </div>` : ''}
                             ${e.pdf_url ? `
                             <button onclick="event.stopPropagation(); window.previewDocument('${e.pdf_url}', 'Servicebericht', 'application/pdf')" title="PDF öffnen"
@@ -801,5 +807,175 @@ window.toggleServiceErledigtGroup = function() {
     if (group) {
         group.classList.toggle('hidden');
         if (chevron) chevron.style.transform = group.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+    }
+};
+
+// =========================================================
+// FOTOS NACHTRÄGLICH ANHÄNGEN (auch bei abgeschlossenen Berichten)
+// =========================================================
+// Ein abgeschlossener Bericht bleibt inhaltlich gesperrt — Fotos sind davon
+// ausgenommen: sie kommen oft erst nach dem Abschluss vom Kunden. Geschrieben
+// wird ausschließlich die Spalte `files`, alles andere bleibt unangetastet.
+// Das bereits erzeugte PDF wird NICHT neu gebaut; die Fotos hängen am Bericht.
+window.addPhotosToServiceEntry = function (entryId, machineId) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+    input.style.display = 'none';
+    document.body.appendChild(input);
+
+    input.onchange = async () => {
+        const files = Array.from(input.files || []);
+        input.remove();
+        if (!files.length) return;
+
+        if (!window.supabaseClient || !window.FileUploadService) {
+            window.showToast('Ohne Verbindung können keine Fotos hochgeladen werden.');
+            return;
+        }
+
+        const modal = document.getElementById('service-attachments-modal');
+        const status = modal && modal.querySelector('[data-sa-status]');
+        if (status) status.textContent = `${files.length} Foto(s) werden hochgeladen …`;
+
+        try {
+            const machine = (window.machineList || []).find(m => m.id == machineId);
+            const folderName = machine && typeof window.getMachineFolderName === 'function'
+                ? window.getMachineFolderName(machine.id, machine.manufacturer, machine.name, machine.serial || machine.serial_number, machine.year)
+                : `Maschinen/${machineId || 'ohne'}`;
+            const pathGenerator = (file, i) => {
+                const cleanName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+                return `${folderName}/Serviceberichte/${Date.now()}-${i}-${cleanName}`;
+            };
+
+            const uploadResults = await window.FileUploadService.uploadFiles(
+                files, pathGenerator,
+                { bucket: 'dateien', compress: true, concurrency: 5, provider: 'cloudflare-r2' }
+            );
+
+            // Aktuellen Stand frisch lesen: in der Zwischenzeit kann ein Kollege
+            // ebenfalls etwas angehängt haben — sonst würde das überschrieben.
+            const { data: aktuell } = await window.supabaseClient
+                .from('service_entries').select('files').eq('id', entryId).limit(1);
+            const bestehend = (aktuell && aktuell[0] && Array.isArray(aktuell[0].files)) ? aktuell[0].files : [];
+
+            const neu = bestehend.concat(uploadResults.map((r, i) => ({
+                name: files[i].name, type: files[i].type, url: r.url, path: r.path
+            })));
+
+            const { error } = await window.supabaseClient
+                .from('service_entries').update({ files: neu }).eq('id', entryId);
+            if (error) throw error;
+
+            // Dokument unter "Dokumente" nachziehen, damit dort der
+            // Anhänge-Knopf die neue Anzahl zeigt. Existiert (noch) kein
+            // Dokument, passiert schlicht nichts.
+            try {
+                await window.supabaseClient
+                    .from('documents')
+                    .update({ attachments: neu.filter(f => f && f.url).map(f => ({
+                        name: f.name || (f.url || '').split('/').pop(),
+                        url: f.url, path: f.path || null, type: f.type || ''
+                    })) })
+                    .eq('service_entry_id', entryId);
+            } catch (docErr) {
+                console.warn('Anhänge am Dokument nicht aktualisierbar:', docErr && docErr.message);
+            }
+
+            // Lokale Listen nachziehen, damit die Karte ohne Neuladen stimmt.
+            [window.allServiceEntries, window.serviceEntryList].forEach(list => {
+                const eintrag = (list || []).find(x => String(x.id) === String(entryId));
+                if (eintrag) eintrag.files = neu;
+            });
+            window[`_sf${entryId}`] = neu;
+
+            if (typeof window.renderServiceEntries === 'function') window.renderServiceEntries();
+            if (modal) modal.remove();
+            window.openServiceAttachments(neu, entryId, machineId);
+            window.showToast(`${files.length} Foto(s) hinzugefügt.`);
+        } catch (err) {
+            console.error('Fotos nicht anhängbar:', err);
+            if (status) status.textContent = '';
+            window.showToast('Hochladen fehlgeschlagen: ' + (err.message || err));
+        }
+    };
+
+    input.click();
+};
+
+// =========================================================
+// AUFTRAGS-/WERKSTATTAUFTRAGSNUMMER NACHTRAGEN
+// =========================================================
+// Wie beim nachtraeglichen Anhaengen von Fotos: ein abgeschlossener Bericht
+// bleibt inhaltlich gesperrt, diese eine Spalte ist davon ausgenommen — die
+// Nummer kommt oft erst aus der Werkstatt, wenn der Bericht schon zu ist.
+// Geschrieben wird ausschliesslich `workshop_order_number`; das bereits
+// erzeugte PDF wird NICHT neu gebaut.
+window.editServiceOrderNumber = function (entryId) {
+    const entry = (window.allServiceEntries || []).find(x => String(x.id) === String(entryId));
+    const aktuell = entry ? (entry.workshop_order_number || entry.auftragsnummer || '') : '';
+
+    const alt = document.getElementById('service-order-number-modal');
+    if (alt) alt.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'service-order-number-modal';
+    // Bewusst OHNE .modal-backdrop/.modal-new: .modal-backdrop startet mit
+    // opacity:0 und pointer-events:none und wird erst durch .show sichtbar —
+    // ohne die Klasse ist das Fenster unsichtbar und nicht anklickbar.
+    modal.style.cssText = 'position: fixed; inset: 0; z-index: 100000; background: rgba(0,0,0,0.85); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 1rem;';
+    modal.innerHTML = `
+        <div style="max-width: 420px; width: 100%; padding: 1.75rem; border-radius: 20px; background: rgba(15,23,42,0.97); border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 20px 60px rgba(0,0,0,0.6); color: #fff; font-family: 'Inter', sans-serif;">
+            <h3 style="margin: 0 0 0.35rem 0; font-family: 'Outfit', sans-serif; font-size: 1.15rem;">Auftragsnummer</h3>
+            <p class="text-muted-sm" style="margin: 0 0 1rem 0;">Werkstatt-/Auftragsnummer für diesen Servicebericht. Leer lassen entfernt sie.</p>
+            <input type="text" id="service-order-number-input" class="glass-form-input" placeholder="z.B. 2026-40123" style="width: 100%; box-sizing: border-box; height: 46px; padding: 0 14px; font-size: 16px; color: #fff; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18); border-radius: 12px;">
+            <div style="display: flex; gap: 10px; margin-top: 1.25rem;">
+                <button class="btn-secondary" style="flex: 1;" onclick="document.getElementById('service-order-number-modal').remove()">Abbrechen</button>
+                <button class="btn-primary" style="flex: 1;" onclick="window.saveServiceOrderNumber(${entryId})">Speichern</button>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+
+    const input = modal.querySelector('#service-order-number-input');
+    input.value = aktuell;
+    input.focus();
+    input.select();
+    input.onkeydown = (ev) => {
+        if (ev.key === 'Enter') { ev.preventDefault(); window.saveServiceOrderNumber(entryId); }
+        if (ev.key === 'Escape') modal.remove();
+    };
+    modal.onclick = (ev) => { if (ev.target === modal) modal.remove(); };
+};
+
+window.saveServiceOrderNumber = async function (entryId) {
+    const modal = document.getElementById('service-order-number-modal');
+    const input = modal && modal.querySelector('#service-order-number-input');
+    if (!input) return;
+    const wert = input.value.trim();
+
+    if (!window.supabaseClient || !navigator.onLine) {
+        window.showToast('Ohne Verbindung kann die Auftragsnummer nicht gespeichert werden.');
+        return;
+    }
+
+    try {
+        const { error } = await window.supabaseClient
+            .from('service_entries')
+            .update({ workshop_order_number: wert || null })
+            .eq('id', entryId);
+        if (error) throw error;
+
+        [window.allServiceEntries, window.serviceEntryList].forEach(list => {
+            const eintrag = (list || []).find(x => String(x.id) === String(entryId));
+            if (eintrag) eintrag.workshop_order_number = wert || null;
+        });
+
+        if (modal) modal.remove();
+        if (typeof window.renderServiceEntries === 'function') window.renderServiceEntries();
+        window.showToast(wert ? `Auftragsnummer ${wert} gespeichert.` : 'Auftragsnummer entfernt.');
+    } catch (err) {
+        console.error('Auftragsnummer nicht speicherbar:', err);
+        window.showToast('Speichern fehlgeschlagen: ' + (err.message || err));
     }
 };

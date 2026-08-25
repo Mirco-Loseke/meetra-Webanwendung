@@ -9,8 +9,13 @@
         let galleryImages = [];
         let currentGalleryIndex = 0;
 
-        window.openServiceAttachments = function(files) {
-            if (!files || files.length === 0) return;
+        // entryId/machineId sind optional: sind sie gesetzt, bietet das Fenster
+        // zusätzlich „Fotos hinzufügen" an — auch bei abgeschlossenen
+        // Serviceberichten, die sonst gesperrt sind. Dann wird das Fenster auch
+        // ohne vorhandene Anhänge geöffnet.
+        window.openServiceAttachments = function(files, entryId, machineId) {
+            files = files || [];
+            if (files.length === 0 && entryId == null) return;
 
             const existing = document.getElementById('service-attachments-modal');
             if (existing) existing.remove();
@@ -64,7 +69,15 @@
                             <button onclick="document.getElementById('service-attachments-modal').remove()" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.6);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;">✕</button>
                         </div>
                     </div>
-                    <div style="overflow-y:auto;display:flex;flex-direction:column;gap:4px;">${items}</div>
+                    <div style="overflow-y:auto;display:flex;flex-direction:column;gap:4px;">${items || '<div style="padding:14px;text-align:center;font-size:0.85rem;color:rgba(255,255,255,0.45);">Noch keine Anhänge.</div>'}</div>
+                    ${entryId != null ? `
+                    <div style="display:flex;align-items:center;gap:10px;border-top:1px solid rgba(255,255,255,0.08);padding-top:12px;">
+                        <button onclick="window.addPhotosToServiceEntry(${entryId}, ${machineId == null ? 'null' : machineId})" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.5);color:#a78bfa;border-radius:10px;padding:10px 14px;font-size:0.85rem;font-weight:700;cursor:pointer;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                            Fotos hinzufügen
+                        </button>
+                        <span data-sa-status style="font-size:0.75rem;color:rgba(255,255,255,0.5);"></span>
+                    </div>` : ''}
                 </div>`;
             modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
             document.body.appendChild(modal);

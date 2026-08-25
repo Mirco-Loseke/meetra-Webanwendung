@@ -28,12 +28,43 @@
 
     const PRUEF_INTERVALL = 20 * 1000;   // wie oft geprüft wird
     const NACHLAUF_MIN = 30;             // so lange gilt Verpasstes noch als „jetzt"
-    const SNOOZE_MIN = 10;               // „Später erinnern"
     const KEY_PREFIX = 'meetra_alarm_gezeigt_';
+    const SNOOZE_KEY = 'meetra_alarm_spaeter_';
+
+    // „Später erinnern": feste Auswahl statt stumm 10 Minuten.
+    const SPAETER = [
+        { label: '10 Min.', min: 10 },
+        { label: '30 Min.', min: 30 },
+        { label: '1 Std.', min: 60 },
+        { label: '1 Tag', min: 24 * 60 },
+        { label: '2 Tage', min: 48 * 60 }
+    ];
 
     let timer = null;
     let laeuft = false;
-    const snooze = new Map();            // key -> Zeitpunkt, ab dem wieder fällig
+
+    // Verschobene Erinnerungen liegen im localStorage, nicht nur im Speicher:
+    // faellige() findet einen Eintrag nur innerhalb von NACHLAUF_MIN und nur am
+    // Tag selbst — ein „1 Tag"/„2 Tage" käme sonst nie wieder. Deshalb wird die
+    // ganze Karte mitgesichert und zur gewählten Zeit von hier aus gezeigt.
+    function spaeterLaden() {
+        try {
+            const roh = JSON.parse(localStorage.getItem(SNOOZE_KEY + (uid() || 'anon')) || '[]');
+            return Array.isArray(roh) ? roh : [];
+        } catch (e) { return []; }
+    }
+
+    function spaeterSpeichern(liste) {
+        try {
+            localStorage.setItem(SNOOZE_KEY + (uid() || 'anon'), JSON.stringify(liste.slice(-100)));
+        } catch (e) { /* Speicher voll — dann eben nur bis zum Neuladen */ }
+    }
+
+    function spaeterMerken(eintrag, minuten) {
+        const liste = spaeterLaden().filter(x => x.eintrag && x.eintrag.key !== eintrag.key);
+        liste.push({ faellig: Date.now() + minuten * 60 * 1000, eintrag: eintrag });
+        spaeterSpeichern(liste);
+    }
 
     function sb() { return window.supabaseClient; }
     function user() { return window.activeUser || null; }
@@ -205,9 +236,12 @@
             ${eintrag.ort ? `<div class="alarm-sub">${esc(eintrag.ort)}</div>` : ''}
             ${eintrag.notiz ? `<div class="alarm-note">${esc(eintrag.notiz)}</div>` : ''}
             <div class="alarm-actions">
-                <button type="button" class="alarm-btn alarm-btn-snooze">In ${SNOOZE_MIN} Min.</button>
+                <button type="button" class="alarm-btn alarm-btn-snooze" aria-expanded="false">Später erinnern</button>
                 <button type="button" class="alarm-btn alarm-btn-edit">Bearbeiten</button>
                 <button type="button" class="alarm-btn alarm-btn-ok">Verstanden</button>
+            </div>
+            <div class="alarm-snooze-list" hidden>
+                ${SPAETER.map((s, i) => `<button type="button" class="alarm-btn alarm-snooze-pick" data-i="${i}">${esc(s.label)}</button>`).join('')}
             </div>`;
 
         karte.querySelector('.alarm-btn-ok').addEventListener('click', () => karte.remove());
@@ -215,12 +249,22 @@
             karte.remove();
             window.oeffneErinnerungsZiel(eintrag.zielTyp, eintrag.zielId);
         });
-        karte.querySelector('.alarm-btn-snooze').addEventListener('click', () => {
-            snooze.set(eintrag.key, Date.now() + SNOOZE_MIN * 60 * 1000);
-            const gezeigt = gezeigtLaden();
-            gezeigt.delete(eintrag.key);
-            gezeigtSpeichern(gezeigt);
-            karte.remove();
+        // Die Auswahl klappt erst auf Klick auf — fünf Knöpfe von Anfang an
+        // machen die Karte unruhig und man verklickt sich.
+        const spaeterBox = karte.querySelector('.alarm-snooze-list');
+        const spaeterKnopf = karte.querySelector('.alarm-btn-snooze');
+        spaeterKnopf.addEventListener('click', () => {
+            spaeterBox.hidden = !spaeterBox.hidden;
+            spaeterKnopf.setAttribute('aria-expanded', spaeterBox.hidden ? 'false' : 'true');
+        });
+        spaeterBox.querySelectorAll('.alarm-snooze-pick').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const wahl = SPAETER[parseInt(btn.dataset.i, 10)];
+                if (!wahl) return;
+                spaeterMerken(eintrag, wahl.min);
+                karte.remove();
+                if (window.showToast) window.showToast(`Erinnerung in ${wahl.label} noch einmal.`);
+            });
         });
 
         box.appendChild(karte);
@@ -306,13 +350,25 @@
         laeuft = true;
         try {
             const gezeigt = gezeigtLaden();
+
+            // 1) Verschobenes, dessen Zeit gekommen ist — unabhängig davon,
+            //    ob der Eintrag heute noch in faellige() auftauchen würde.
+            const verschoben = spaeterLaden();
+            const offen = [];
+            verschoben.forEach(x => {
+                if (!x || !x.eintrag) return;
+                if (Date.now() >= x.faellig) zeigen(x.eintrag);
+                else offen.push(x);
+            });
+            if (offen.length !== verschoben.length) spaeterSpeichern(offen);
+            const wartet = new Set(offen.map(x => x.eintrag.key));
+
+            // 2) Was jetzt regulär fällig ist.
             const liste = await faellige();
             let geaendert = false;
             liste.forEach(e => {
-                const bis = snooze.get(e.key);
-                if (bis && Date.now() < bis) return;
+                if (wartet.has(e.key)) return;      // liegt auf „Später"
                 if (gezeigt.has(e.key)) return;
-                snooze.delete(e.key);
                 zeigen(e);
                 gezeigt.add(e.key);
                 geaendert = true;

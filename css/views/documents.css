@@ -425,3 +425,21 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Anhänge-Knopf auf einer Dokumentkachel: erscheint nur, wenn Bilder am
+   Dokument hängen (Servicebericht bzw. Mietvereinbarung), und zeigt deren
+   Anzahl direkt neben der Büroklammer. */
+.btn-doc-attachments {
+    background: rgba(139, 92, 246, 0.2) !important;
+    border-color: rgba(139, 92, 246, 0.4) !important;
+    color: #a78bfa !important;
+    gap: 4px;
+    width: auto !important;
+    padding: 0 8px;
+}
+
+.btn-doc-attachments span {
+    font-size: var(--fs-2xs);
+    font-weight: 800;
+    line-height: 1;
+}

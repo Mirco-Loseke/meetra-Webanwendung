@@ -1016,6 +1016,7 @@
             taskIsDirty = false;
             closeTaskModal(true);
             fetchTasks();
+            window.showToast('Aufgabe gespeichert.', 'success');
         } catch (err) {
             console.error('Error in saveTask:', err);
             const msg = err.message || err.details || 'Unbekannter Fehler';

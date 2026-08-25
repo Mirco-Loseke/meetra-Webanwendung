@@ -16,7 +16,8 @@
     'use strict';
 
     const MAX_VISIBLE = 4;
-    const DURATION = { error: 8000, warn: 6000, success: 3500, info: 4500 };
+    // Erfolg ist bewusst kurz: „gespeichert" will man kurz sehen, nicht lesen.
+    const DURATION = { error: 8000, warn: 6000, success: 2400, info: 4500 };
 
     function container() {
         let el = document.getElementById('toast-container');

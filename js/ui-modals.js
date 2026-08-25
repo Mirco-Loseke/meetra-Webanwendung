@@ -2,26 +2,14 @@
 /* ==================== UI MODALS MODULE =================== */
 /* ========================================================= */
 
-window.showToast = function (message) {
-    const toast = document.getElementById('toast');
-    if (!toast) {
-        alert(message);
-        return;
-    }
-    toast.textContent = message;
-    toast.classList.remove('hidden');
-    toast.style.display = 'block';
-    
-    // Reset animation if active
-    toast.style.animation = 'none';
-    toast.offsetHeight; // trigger reflow
-    toast.style.animation = null;
-
-    setTimeout(() => {
-        toast.classList.add('hidden');
-        toast.style.display = 'none';
-    }, 4000);
-};
+// showToast steht in js/ui-feedback.js (Einblendung unten rechts).
+//
+// Hier stand frueher eine zweite Fassung, die ein Element #toast erwartete —
+// das es im Markup nirgends (mehr) gibt. Sie fiel deshalb immer auf das
+// blockierende alert() des Browsers zurueck. Und weil ui-modals.js NACH
+// ui-feedback.js geladen wird, hat diese Fassung die schoene ueberschrieben:
+// jede Meldung der ganzen App kam als Browser-Kasten mit „OK". Nicht
+// wieder einfuehren; wer etwas melden will, ruft window.showToast auf.
 
 window.openModal = function (modalId) {
     const modal = document.getElementById(modalId);

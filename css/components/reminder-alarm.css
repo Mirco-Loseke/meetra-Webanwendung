@@ -212,3 +212,56 @@
     font-size: 0.8rem !important;
     white-space: nowrap;
 }
+
+/* =========================================================
+   SPÄTER-AUSWAHL AM WECKER (js/reminder-alarm.js)
+   Gleiches Verhalten wie bei der Übergabe-Karte: der Knopf
+   klappt eine Reihe fertiger Zeiten auf, statt stumm 10 Min.
+   zu nehmen. Der Pfeil zeigt, dass es etwas zu wählen gibt.
+   ========================================================= */
+.alarm-btn-snooze {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.alarm-btn-snooze::after {
+    content: '';
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid currentColor;
+    opacity: 0.7;
+    transition: transform 0.15s ease;
+}
+
+.alarm-btn-snooze[aria-expanded="true"] {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.alarm-btn-snooze[aria-expanded="true"]::after {
+    transform: rotate(180deg);
+}
+
+.alarm-snooze-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.alarm-snooze-list[hidden] {
+    display: none;
+}
+
+.alarm-snooze-list .alarm-btn {
+    flex: 1 1 auto;
+    padding: 7px 10px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}

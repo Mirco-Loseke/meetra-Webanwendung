@@ -32,6 +32,11 @@
 
         const t = trigger.getBoundingClientRect();
 
+        // Wie weit ist der Nutzer im Menü schon gescrollt? Ohne max-height
+        // ist das Menü gleich nicht mehr scrollbar und der Browser wirft
+        // den Wert weg — deshalb hier merken und unten wiederherstellen.
+        const gescrollt = menu.scrollTop;
+
         // Zurücksetzen, damit die natürliche Höhe messbar ist
         menu.style.removeProperty('max-height');
         const hoehe = Math.min(menu.offsetHeight || 250, 250);
@@ -80,6 +85,8 @@
             versatzX += dx;
             versatzY += dy;
         }
+
+        if (gescrollt) menu.scrollTop = gescrollt;
     }
 
     function zuruecksetzen(menu) {
@@ -121,8 +128,17 @@
     }
 
     // Beim Scrollen/Größenändern mitführen (capture: auch innerhalb des Modals)
+    //
+    // Scrollt der Nutzer IM Menü selbst (lange Listen, z.B. alle
+    // Maschinenkategorien in den Protokollvorlagen), darf hier nichts
+    // passieren: positionieren() nimmt zum Messen kurz die max-height
+    // weg, das Menü ist in diesem Moment nicht mehr scrollbar und der
+    // Browser setzt scrollTop auf 0. Bei jedem Mausrad-Schritt sprang
+    // die Liste dadurch wieder an den Anfang — es sah aus, als hinge
+    // sie fest, obwohl unten noch Einträge stehen.
     let wartend = false;
-    function nachfuehren() {
+    function nachfuehren(e) {
+        if (e && e.target && e.target.closest && e.target.closest(MENU_SELECTOR)) return;
         if (wartend) return;
         wartend = true;
         requestAnimationFrame(() => {

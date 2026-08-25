@@ -258,8 +258,12 @@
                         subject: machineLabel || adressLabel || ev.location_label || '',
                         note: ev.description || '',
                         tag: ev.maintenance_types || '',
-                        // Eingeladene sehen den Termin ebenfalls als „meinen".
-                        mine: isMine(null, ev.user_id) || !!mineInvite,
+                        // „Meiner" ist ein Termin für den Ersteller UND für
+                        // jeden Eingeladenen. Der Ersteller steht bei den
+                        // App-Nutzern in created_by_user (bigint); user_id ist
+                        // eine uuid-Spalte und bleibt bei ihnen leer — wer nur
+                        // user_id prüft, sieht seine eigenen Termine nicht.
+                        mine: isMine(null, ev.created_by_user) || isMine(null, ev.user_id) || !!mineInvite,
                         editableId: ev.id,
                         eventId: ev.id,
                         participants,
@@ -925,10 +929,21 @@
         // Fehlen sie, wird der Eintrag ohne Uhrzeit gespeichert statt gar nicht.
         async function schreiben(daten) {
             if (editingId) return sb().from('maintenance_events').update(daten).eq('id', editingId).select('id').limit(1);
-            const mit = Object.assign({ status: 'geplant' }, daten);
-            const uid = currentUserId();
-            if (uid) mit.user_id = uid;
-            return sb().from('maintenance_events').insert([mit]).select('id').limit(1);
+            // Ersteller mitschreiben: user_id ist uuid (bleibt bei App-Nutzern
+            // mit bigint-ID leer), created_by_user ist die App-Nutzer-ID aus
+            // supabase_fix_process_user.sql. Fehlt die Spalte noch, wird ohne
+            // sie gespeichert statt gar nicht.
+            const mit = Object.assign({ status: 'geplant' }, daten, {
+                user_id: typeof window.uuidUserId === 'function' ? window.uuidUserId() : null,
+                created_by_user: (currentUser() && currentUser().id) || null
+            });
+            let res = await sb().from('maintenance_events').insert([mit]).select('id').limit(1);
+            if (res.error && /created_by_user/.test(res.error.message || '')) {
+                const ohne = Object.assign({}, mit);
+                delete ohne.created_by_user;
+                res = await sb().from('maintenance_events').insert([ohne]).select('id').limit(1);
+            }
+            return res;
         }
 
         let { data, error } = await schreiben(payload);

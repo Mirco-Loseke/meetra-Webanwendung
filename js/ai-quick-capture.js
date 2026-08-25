@@ -1175,7 +1175,9 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
                         const payload = {
                             title, process_type: type, process_date: new Date().toISOString(),
                             machine_id: machineId, workshop_order_number: null, status: 'offen',
-                            remark, sender, recipient, assigned_users: assignedArr, steps: editedSteps
+                            // Der Freitext ist bei Vorgaengen nur noch der Mail-Inhalt
+                            // (Spalte description) — ein Bemerkungsfeld gibt es nicht mehr.
+                            description: remark, sender, recipient, assigned_users: assignedArr, steps: editedSteps
                         };
                         if (remindRaw) payload.remind_at = new Date(remindRaw).toISOString();
 

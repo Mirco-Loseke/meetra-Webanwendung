@@ -52,6 +52,9 @@ Reihenfolge der ausgelagerten Module:
 | Dropdown-Positionierung in Modals | `js/dropdown-position.js` |
 | Automatisches Nachladen langer Listen | `js/auto-nachladen.js` |
 | Modal „Maschine anlegen/bearbeiten" (CSS) | `css/views/machine-modal.css` |
+| Mietvereinbarung: Bogen, Kamera, Speichern/Löschen | `js/mietvereinbarung.js` |
+| Mietvereinbarung: Vorlagen (Einstellungen) | `js/mietvereinbarung-vorlagen.js` |
+| Mietvereinbarung: Übersicht je Maschine | `js/mietvereinbarung-liste.js` |
 
 ## Zuerst hier nachschlagen (spart das Durchsuchen)
 - **`FUNKTIONEN.txt`** — Nachschlagewerk mit 1.500+ Funktionen: `name → datei:zeile`.
@@ -220,7 +223,18 @@ formfüllenden Feldern zusätzlich `.menu-block`. Ausgewählter Eintrag: `.selec
 einem Inline-`style` suchen.
 
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v190 (Stand 2026-08-15) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v300 (Stand 2026-08-25) — bei jeder Änderung hochzählen.
+
+**Mietvereinbarung (Stand 2026-08-25).** Der Bogen wird gespeichert: PDF per
+html2canvas je `.miet-page` + jsPDF, Ablage in R2 unter
+`<Maschinenordner>/mietvereinbarungen/` (Fotos in `.../fotos/`), Zeile in
+`rental_agreements`, Dokument im Ordner „Mietvereinbarung" unter Dokumente.
+Übersicht je Maschine: Maschine → Aktionen → **Ansehen → Mietvereinbarung**
+(`js/mietvereinbarung-liste.js`), von dort „Bearbeiten" →
+`openMietvereinbarung(machineId, agreementId)`. Löschen entfernt PDF und Fotos
+endgültig aus R2. **Nötige Migration: `supabase/supabase_mietvereinbarung_komplett.sql`.**
+Der Vertragstext steht immer allein auf dem letzten Blatt und wird per
+`--miet-recht-f` so weit verkleinert, bis er darauf passt.
 
 **Handy-Optimierung (2026-08-15).** In `css/base/responsive.css` unter
 „HANDY-FEINSCHLIFF": alle Eingabefelder sind ab ≤768px auf **16px** gesetzt —

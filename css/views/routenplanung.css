@@ -923,3 +923,23 @@ select.rp2-input option {
         gap: 6px;
     }
 }
+
+/* Auswahl im Speichern-Dialog: aktualisieren oder als neue Route ablegen */
+.rp2-radio-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    margin-top: 6px;
+    border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.04);
+    font-size: var(--fs-sm);
+    color: var(--text-1);
+    cursor: pointer;
+}
+
+.rp2-radio-row:has(input:checked) {
+    border-color: rgba(16, 185, 129, 0.55);
+    background: rgba(16, 185, 129, 0.14);
+}

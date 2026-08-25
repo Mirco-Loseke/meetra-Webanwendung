@@ -1,0 +1,1651 @@
+/* ==========================================================
+   MIETVEREINBARUNG
+   ----------------------------------------------------------
+   Eigenstaendiger Baustein. Wird nur von js/mietvereinbarung.js
+   benutzt. Faellt die Funktion wieder weg, kann diese Datei
+   samt <link> in index.html ersatzlos geloescht werden.
+
+   Besonderheit: Das Dokument selbst ist HELL (meetra-Briefbogen
+   als Hintergrund, wie beim Servicebericht-PDF). Deshalb stehen
+   hier bewusst eigene Farben statt der dunklen Tokens — sie
+   gelten ausschliesslich innerhalb von .miet-sheet.
+   ========================================================== */
+
+.miet-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.78);
+    backdrop-filter: blur(var(--blur-surface)) saturate(180%);
+    -webkit-backdrop-filter: blur(var(--blur-surface)) saturate(180%);
+    z-index: 10050;
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 2rem 1rem;
+    overflow-y: auto;
+}
+
+.miet-overlay.open {
+    display: flex;
+}
+
+.miet-modal {
+    width: 100%;
+    max-width: 1000px;
+    background: rgba(15, 23, 42, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    max-height: 94vh;
+    overflow: hidden;
+    animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ---------- Kopfleiste (dunkel) ---------- */
+.miet-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 18px 22px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+}
+
+.miet-head h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #fff;
+}
+
+.miet-head .miet-sub {
+    font-size: 0.82rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 2px;
+}
+
+.miet-head-spacer {
+    margin-left: auto;
+}
+
+.miet-close {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #fff;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.miet-close:hover {
+    background: rgba(239, 68, 68, 0.18);
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+/* ---------- Umschalter Uebergabe / Ruecknahme ---------- */
+.miet-phase-switch {
+    display: flex;
+    gap: 8px;
+    padding: 12px 22px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.miet-phase-btn {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(255, 255, 255, 0.6);
+    font-family: inherit;
+    font-size: 0.86rem;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.18s ease;
+}
+
+.miet-phase-btn small {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    opacity: 0.7;
+    margin-top: 1px;
+}
+
+.miet-phase-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+}
+
+.miet-phase-btn.active {
+    color: #fff;
+    background: rgba(16, 185, 129, 0.16);
+    border-color: rgba(16, 185, 129, 0.55);
+}
+
+.miet-phase-btn.active.miet-phase-back {
+    background: rgba(96, 165, 250, 0.16);
+    border-color: rgba(96, 165, 250, 0.55);
+}
+
+/* ---------- Scrollbereich mit dem Briefbogen ---------- */
+.miet-body {
+    overflow-y: auto;
+    padding: 22px;
+    background: rgba(0, 0, 0, 0.25);
+    flex: 1;
+}
+
+/* ---------- A4-Seiten ----------
+   Der Briefbogen (assets/images/vorlage_bg.jpg) ist ein A4-Blatt in
+   300 dpi. Gemessen daran liegt die rote Linie oben bei 23 mm und die
+   untere bei 283 mm, der Satzspiegel zwischen 25 mm und 186 mm. Die
+   Innenabstaende der Seite halten sich daran — deshalb hier feste
+   Millimeter statt Pixel: nur so kommt beim Ausdruck genau das heraus,
+   was am Bildschirm steht.
+
+   Der Seitenumbruch entsteht nicht im Browser, sondern in
+   js/mietvereinbarung.js: der Inhalt wird gemessen und auf so viele
+   .miet-page verteilt, wie noetig sind. Jede Seite traegt den
+   Briefbogen als Hintergrund. */
+.miet-pages-wrap {
+    /* nimmt die Hoehe der (auf schmalen Fenstern) verkleinerten Seiten auf */
+    overflow: hidden;
+}
+
+.miet-pages {
+    width: 210mm;
+    margin: 0 auto;
+    transform: scale(var(--miet-scale, 1));
+    transform-origin: top center;
+}
+
+.miet-page {
+    position: relative;
+    width: 210mm;
+    height: 297mm;
+    box-sizing: border-box;
+    /* Unten 27mm statt 22mm: der Umbruch kommt dadurch rund 5mm frueher
+       und es bleibt sichtbar Luft ueber der unteren Briefbogenlinie. */
+    padding: 30mm 25mm 27mm;
+    margin: 0 auto 18px;
+    background-color: #fff;
+    background-image: url('../../assets/images/vorlage_bg.jpg');
+    background-size: 210mm 297mm;
+    background-repeat: no-repeat;
+    background-position: center;
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.5);
+    color: #1a1a1a;
+    font-family: var(--font-body, system-ui, sans-serif);
+    font-size: 12px;
+    line-height: 1.4;
+    /* Ohne das druckt der Browser den Briefbogen nicht mit. */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.miet-page-inner {
+    height: 100%;
+    /* Ueberlauf kann es nach der Aufteilung nicht mehr geben; die Sperre
+       ist die Notbremse, damit nie etwas ueber den Briefbogenrand laeuft. */
+    overflow: hidden;
+}
+
+/* Notausgang: ein einzelnes Element (z. B. eine Tabellenzeile mit sehr
+   viel Text) passt nicht auf eine Seite. Dann waechst die Seite, statt
+   den Text abzuschneiden. */
+.miet-page.miet-page-frei {
+    height: auto;
+    min-height: 297mm;
+}
+
+.miet-page.miet-page-frei .miet-page-inner {
+    height: auto;
+    overflow: visible;
+}
+
+.miet-page-nr {
+    position: absolute;
+    right: 25mm;
+    bottom: 18mm;
+    font-size: 9px;
+    color: #6b7280;
+}
+
+/* Nichts darf quer ueber einen Umbruch reissen. */
+.miet-block,
+.miet-table tr,
+.miet-photo-slot,
+.miet-sign-row>div {
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+.miet-sheet-title {
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    margin: 0 0 14px;
+    color: #111;
+}
+
+.miet-block {
+    margin-bottom: 18px;
+}
+
+.miet-block-title {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #6b7280;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.miet-block-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e5e7eb;
+}
+
+/* ---------- Tabellen im Word-Look ---------- */
+.miet-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+}
+
+.miet-table th,
+.miet-table td {
+    border: 1px solid #9ca3af;
+    padding: 4px 7px;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.miet-table th {
+    background: #e5e7eb;
+    font-weight: 800;
+    font-size: 11.5px;
+    text-transform: none;
+}
+
+.miet-table td.miet-label {
+    background: #f3f4f6;
+    font-weight: 700;
+    width: 150px;
+    white-space: nowrap;
+}
+
+.miet-table tr.miet-group td {
+    background: #d9dde3;
+    font-weight: 800;
+    font-size: 12px;
+    letter-spacing: 0.3px;
+}
+
+.miet-table td.miet-num {
+    width: 34px;
+    text-align: center;
+    color: #6b7280;
+    font-weight: 700;
+}
+
+/* Eingabefelder liegen randlos in der Tabelle */
+.miet-in {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font: inherit;
+    color: #111;
+    padding: 2px 0;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.miet-in::placeholder {
+    color: #b6bcc6;
+    font-style: italic;
+}
+
+/* Freitextfelder sind umbrechende Bereiche statt <input>. Ein
+   Eingabefeld schneidet zu langen Text beim Drucken ab; hier waechst
+   die Zeile stattdessen in die Hoehe. */
+.miet-txt {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    min-height: 1.35em;
+    cursor: text;
+}
+
+.miet-txt:empty::before {
+    content: attr(data-ph);
+    color: #b6bcc6;
+    font-style: italic;
+}
+
+.miet-in:focus {
+    background: #fff9d9;
+    box-shadow: 0 0 0 2px #fde68a;
+    border-radius: 3px;
+}
+
+.miet-in[type="date"],
+.miet-in[type="time"] {
+    color-scheme: light;
+}
+
+textarea.miet-in {
+    resize: vertical;
+    min-height: 34px;
+    line-height: 1.4;
+}
+
+/* ---------- Runde Ankreuzfelder ---------- */
+.miet-checkcell {
+    width: 118px;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.miet-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+    margin: 0 3px;
+    color: #374151;
+}
+
+.miet-dot {
+    width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    border: 1.6px solid #6b7280;
+    background: #fff;
+    display: inline-block;
+    position: relative;
+    flex-shrink: 0;
+    transition: all 0.12s ease;
+}
+
+.miet-check:hover .miet-dot {
+    border-color: #111;
+}
+
+.miet-check.on .miet-dot {
+    border-color: #047857;
+    background: #047857;
+    box-shadow: 0 0 0 2px rgba(4, 120, 87, 0.18);
+}
+
+.miet-check.on.miet-no .miet-dot {
+    border-color: #b91c1c;
+    background: #b91c1c;
+    box-shadow: 0 0 0 2px rgba(185, 28, 28, 0.18);
+}
+
+.miet-check.on .miet-dot::after {
+    content: '';
+    position: absolute;
+    left: 4.5px;
+    top: 1.5px;
+    width: 4px;
+    height: 8px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.miet-check.on {
+    color: #111;
+}
+
+/* Die gerade nicht bearbeitete Spalte tritt zurueck. */
+.miet-dim {
+    opacity: 0.32;
+    filter: grayscale(0.6);
+}
+
+/* ---------- Fotos ---------- */
+.miet-photo-progress {
+    font-size: 12px;
+    font-weight: 700;
+    color: #374151;
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 999px;
+    padding: 3px 11px;
+    display: inline-block;
+    margin-bottom: 10px;
+}
+
+/* Zwei Bilder je Reihe — so gross, dass man auf dem Ausdruck auch
+   etwas erkennt. */
+.miet-photo-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.miet-photo-slot {
+    border: 1.5px dashed #b6bcc6;
+    border-radius: 8px;
+    background: #fafafa;
+    padding: 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    position: relative;
+}
+
+.miet-photo-slot:hover {
+    border-color: #047857;
+    background: #f0fdf4;
+}
+
+.miet-photo-slot.filled {
+    border-style: solid;
+    border-color: #047857;
+    background: #fff;
+}
+
+.miet-photo-slot .miet-photo-name {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #374151;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.miet-photo-slot.filled .miet-photo-name {
+    color: #047857;
+}
+
+.miet-photo-box {
+    height: 195px;
+    border-radius: 6px;
+    background: #eef0f3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: #9ca3af;
+    font-size: 11px;
+}
+
+.miet-photo-box img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.miet-photo-del,
+.miet-photo-swap {
+    position: absolute;
+    top: 6px;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    display: none;
+    z-index: 2;
+}
+
+.miet-photo-del {
+    right: 6px;
+    border: 1px solid #fca5a5;
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.miet-photo-swap {
+    right: 34px;
+    border: 1px solid #cbd5e1;
+    background: #f1f5f9;
+    color: #334155;
+}
+
+.miet-photo-slot.filled .miet-photo-del,
+.miet-photo-slot.filled .miet-photo-swap {
+    display: block;
+}
+
+/* Hinweis "zum Vergrössern tippen" auf gefuellten Kacheln */
+.miet-photo-zoom {
+    position: absolute;
+    left: 50%;
+    bottom: 12px;
+    transform: translateX(-50%);
+    background: rgba(17, 24, 39, 0.72);
+    color: #fff;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 999px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+}
+
+.miet-photo-slot.filled:hover .miet-photo-zoom {
+    opacity: 1;
+}
+
+/* Knopf "Kamera starten" neben dem Fortschritt */
+.miet-photo-start {
+    margin-left: 8px;
+    border: 1px solid #047857;
+    background: #047857;
+    color: #fff;
+    border-radius: 999px;
+    padding: 3px 11px;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.miet-photo-start:hover {
+    background: #065f46;
+}
+
+/* ---------- Geführte Kamera ---------- */
+.miet-cam {
+    position: fixed;
+    inset: 0;
+    z-index: 10075;
+    background: #05070d;
+    display: none;
+    flex-direction: column;
+    padding: env(safe-area-inset-top, 0) 0 env(safe-area-inset-bottom, 0);
+}
+
+.miet-cam.open {
+    display: flex;
+}
+
+.miet-cam-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px 10px;
+    flex-shrink: 0;
+}
+
+.miet-cam-title {
+    color: #fff;
+    font-size: 1.15rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.miet-cam-title span {
+    display: block;
+    color: #34d399;
+    font-size: 1.45rem;
+    font-weight: 900;
+    margin-top: 2px;
+}
+
+.miet-cam-step {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.82rem;
+    margin-top: 4px;
+}
+
+.miet-cam-stage {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+    background: #000;
+    overflow: hidden;
+}
+
+.miet-cam-stage video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.miet-cam-flash {
+    position: absolute;
+    inset: 0;
+    background: #fff;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.miet-cam-flash.on {
+    animation: mietBlitz 0.28s ease-out;
+}
+
+@keyframes mietBlitz {
+    0% {
+        opacity: 0.85;
+    }
+
+    100% {
+        opacity: 0;
+    }
+}
+
+.miet-cam-strip {
+    display: flex;
+    gap: 6px;
+    padding: 8px 12px 0;
+    overflow-x: auto;
+    flex-shrink: 0;
+}
+
+.miet-cam-thumb {
+    width: 46px;
+    height: 34px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    flex-shrink: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 0.8rem;
+    font-weight: 800;
+}
+
+.miet-cam-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.miet-cam-thumb.on {
+    border-color: #34d399;
+    box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.35);
+}
+
+.miet-cam-next {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 0.82rem;
+    text-align: center;
+    padding: 8px 12px 0;
+    flex-shrink: 0;
+}
+
+.miet-cam-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 22px 18px;
+    flex-shrink: 0;
+}
+
+.miet-cam-side {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #fff;
+    border-radius: 10px;
+    padding: 9px 14px;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    min-width: 104px;
+}
+
+.miet-cam-side:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.miet-cam-shot {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    border: 4px solid rgba(255, 255, 255, 0.85);
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 0;
+}
+
+.miet-cam-shot span {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: #fff;
+    display: block;
+    transition: transform 0.12s ease;
+}
+
+.miet-cam-shot:active span {
+    transform: scale(0.85);
+}
+
+/* ---------- Grossansicht mit Blättern ---------- */
+.miet-lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.94);
+    z-index: 10070;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    gap: 14px;
+}
+
+.miet-lightbox.open {
+    display: flex;
+}
+
+.miet-lb-title {
+    color: #fff;
+    font-size: 1.05rem;
+    font-weight: 800;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.miet-lb-title small {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.55);
+    margin-top: 3px;
+}
+
+.miet-lb-stage {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+}
+
+.miet-lb-stage img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 10px;
+    background: #fff;
+    touch-action: pan-y;
+}
+
+.miet-lb-nav {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.miet-lb-nav:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.miet-lb-nav:disabled {
+    opacity: 0.25;
+    cursor: default;
+}
+
+.miet-lb-dots {
+    display: flex;
+    gap: 7px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.miet-lb-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.25);
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+.miet-lb-dot.on {
+    background: #34d399;
+    transform: scale(1.25);
+}
+
+.miet-lb-close {
+    position: absolute;
+    top: 16px;
+    right: 18px;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+/* ---------- Unterschriften ---------- */
+.miet-sign-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+
+.miet-sign-pad {
+    border: 1px solid #9ca3af;
+    border-radius: 6px;
+    background: #fff;
+    height: 110px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    overflow: hidden;
+    position: relative;
+}
+
+.miet-sign-pad:hover {
+    border-color: #047857;
+    background: #f0fdf4;
+}
+
+.miet-sign-pad img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.miet-sign-pad .miet-sign-hint {
+    color: #9ca3af;
+    font-size: 11.5px;
+    font-style: italic;
+}
+
+.miet-sign-caption {
+    border-top: 1px solid #111;
+    margin-top: 4px;
+    padding-top: 3px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #374151;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.miet-sign-caption button {
+    border: none;
+    background: none;
+    color: #b91c1c;
+    font: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    padding: 0;
+}
+
+/* ---------- Vertragstext ----------
+   Kleiner gesetzt als das Formular, damit die Bedingungen nicht
+   mehr Seiten fuellen als noetig. */
+.miet-recht {
+    font-size: calc(10.5px * var(--miet-recht-f, 1));
+    line-height: 1.45;
+    text-align: justify;
+    hyphens: auto;
+}
+
+.miet-recht-h {
+    font-weight: 800;
+    font-size: calc(11.5px * var(--miet-recht-f, 1));
+    color: #111;
+    margin: calc(9px * var(--miet-recht-f, 1)) 0 calc(4px * var(--miet-recht-f, 1));
+    text-align: left;
+}
+
+.miet-recht-h:first-child {
+    margin-top: 0;
+}
+
+.miet-recht-p {
+    margin: 0 0 calc(5px * var(--miet-recht-f, 1));
+}
+
+/* Die Ueberschrift des Vertragsteils schrumpft mit, sonst wirkt sie bei
+   kleiner Schrift wie ein Fremdkoerper. --miet-recht-f setzt
+   js/mietvereinbarung.js auf dem Block, bis der Text auf ein Blatt passt. */
+.miet-recht > .miet-block-title {
+    font-size: calc(11px * var(--miet-recht-f, 1));
+    margin-bottom: calc(6px * var(--miet-recht-f, 1));
+}
+
+.miet-hinweis {
+    font-size: 11px;
+    color: #6b7280;
+    font-style: italic;
+    margin-top: 6px;
+}
+
+/* ---------- Auswahlmenues (Adressbuch, Einweiser) ----------
+   Die Menues haengen bewusst am <body> und nicht im Bogen:
+   1. .miet-page-inner schneidet ueberstehenden Inhalt ab — ein Menue
+      im Bogen waere unten angeschnitten.
+   2. Ein natives <select> zeichnet Chrome in einem per transform
+      skalierten Container als leeres, nicht scrollbares Feld.
+   Weil am <body> keine Transformation liegt, bezieht sich
+   position:fixed hier auf das Fenster und die per
+   getBoundingClientRect() gemessene Position stimmt. */
+.miet-menu {
+    position: fixed;
+    z-index: 10080;
+    background: #fff;
+    border: 1px solid #9ca3af;
+    border-radius: 8px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.3);
+    max-height: 260px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 4px;
+    color: #111;
+    font-family: var(--font-body, system-ui, sans-serif);
+}
+
+.miet-menu>div {
+    padding: 8px 10px;
+    cursor: pointer;
+    font-size: 13px;
+    border-radius: 6px;
+}
+
+.miet-menu>div:hover {
+    background: #ecfdf5;
+}
+
+.miet-menu>div.on {
+    background: rgba(4, 120, 87, 0.12);
+    font-weight: 700;
+}
+
+.miet-menu-sub {
+    color: #6b7280;
+    font-size: 11.5px;
+    font-weight: 400;
+    margin-top: 1px;
+}
+
+/* Feld, das ein Menue oeffnet — sieht aus wie die anderen Zellen,
+   zeigt aber ein kleines Dreieck. */
+.miet-pick {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    min-height: 19px;
+    padding: 2px 0;
+}
+
+.miet-pick::after {
+    content: '';
+    margin-left: auto;
+    border: 4px solid transparent;
+    border-top-color: #6b7280;
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+.miet-pick.leer {
+    color: #b6bcc6;
+    font-style: italic;
+}
+
+/* ---------- Fusszeile des Fensters ---------- */
+.miet-foot {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 22px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.miet-foot .miet-note {
+    font-size: 0.78rem;
+    color: rgba(251, 191, 36, 0.85);
+    margin-right: auto;
+}
+
+/* ---------- Unterschriften-Fenster ---------- */
+.miet-pad-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.8);
+    z-index: 10060;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.miet-pad-overlay.open {
+    display: flex;
+}
+
+.miet-pad-card {
+    background: rgba(15, 23, 42, 0.99);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-lg);
+    padding: 18px;
+    width: 100%;
+    max-width: 560px;
+}
+
+.miet-pad-card h3 {
+    margin: 0 0 12px;
+    font-size: 1rem;
+    color: #fff;
+}
+
+.miet-pad-card canvas {
+    width: 100%;
+    height: 200px;
+    background: #fff;
+    border-radius: 10px;
+    touch-action: none;
+    cursor: crosshair;
+    display: block;
+}
+
+.miet-pad-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    justify-content: flex-end;
+}
+
+/* ---------- Drucken ----------
+   Gedruckt wird ausschliesslich der Stapel .miet-page. Alles andere —
+   Fensterrahmen, Umschalter, Knopfleiste — wird ausgeblendet. Die
+   Seiten sind bereits A4 gross, deshalb bekommt @page keinen Rand:
+   sonst wuerde der Browser den Briefbogen ein zweites Mal einruecken
+   und alles verkleinert auf die Seite quetschen. */
+@page {
+    size: A4 portrait;
+    margin: 0;
+}
+
+@media print {
+
+    /* Nur das Mietvereinbarungs-Fenster ueberlebt. */
+    body>*:not(#miet-overlay) {
+        display: none !important;
+    }
+
+    html,
+    body {
+        background: #fff !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+
+    .miet-overlay {
+        position: static !important;
+        display: block !important;
+        padding: 0 !important;
+        background: none !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        overflow: visible !important;
+    }
+
+    .miet-modal {
+        max-width: none !important;
+        max-height: none !important;
+        height: auto !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        background: none !important;
+        overflow: visible !important;
+        animation: none !important;
+    }
+
+    .miet-head,
+    .miet-phase-switch,
+    .miet-foot,
+    .miet-pad-overlay,
+    .miet-lightbox,
+    .miet-cam,
+    .miet-photo-start,
+    .miet-menu,
+    .miet-pick::after,
+    .miet-photo-del,
+    .miet-photo-swap,
+    .miet-photo-zoom,
+    .miet-photo-progress,
+    .miet-sign-caption button {
+        display: none !important;
+    }
+
+    .miet-body {
+        padding: 0 !important;
+        background: none !important;
+        overflow: visible !important;
+    }
+
+    .miet-pages-wrap {
+        overflow: visible !important;
+        height: auto !important;
+    }
+
+    /* Am Bildschirm koennen die Seiten verkleinert sein — im Druck nie. */
+    .miet-pages {
+        width: auto !important;
+        transform: none !important;
+    }
+
+    .miet-page {
+        margin: 0 !important;
+        box-shadow: none !important;
+        break-after: page;
+        page-break-after: always;
+    }
+
+    .miet-page:last-child {
+        break-after: auto;
+        page-break-after: auto;
+    }
+
+    /* Eingabefelder sollen wie ausgefuellte Formularzeilen wirken. */
+    .miet-in {
+        background: none !important;
+        box-shadow: none !important;
+        -webkit-appearance: none;
+        appearance: none;
+    }
+
+    .miet-in::placeholder {
+        color: transparent !important;
+    }
+
+    /* Platzhalter und Bedienknoepfe gehoeren nicht auf das Papier. */
+    .miet-txt:empty::before {
+        content: '' !important;
+    }
+
+    [data-nurerste] {
+        display: none !important;
+    }
+
+    .miet-photo-slot {
+        border-style: solid !important;
+    }
+
+    .miet-dim {
+        opacity: 1 !important;
+        filter: none !important;
+    }
+}
+
+/* ---------- Handy ----------
+   Die Seiten behalten ihre A4-Masse und werden nur verkleinert
+   dargestellt (transform in .miet-pages, Faktor setzt das Modul).
+   Wichtig: die Schriftgroesse der Felder bleibt bei 16px, denn iOS
+   entscheidet anhand der berechneten Groesse, ob es beim Antippen
+   hineinzoomt — eine Verkleinerung per transform zaehlt dort nicht. */
+@media (max-width: 768px) {
+    .miet-overlay {
+        padding: 0;
+    }
+
+    .miet-modal {
+        max-height: 100vh;
+        height: 100vh;
+        border-radius: 0;
+        max-width: 100%;
+    }
+
+    .miet-body {
+        padding: 10px 4px;
+    }
+
+    .miet-table td.miet-label {
+        width: auto;
+        white-space: normal;
+    }
+
+    .miet-in {
+        font-size: 16px;
+    }
+
+    .miet-phase-btn {
+        min-width: 140px;
+    }
+}
+
+/* ---------- Aufnahme fuer das PDF ----------
+   Beim Speichern wird jede A4-Seite abfotografiert (html2canvas).
+   Dafuer muessen die Bedienelemente weg und der graue Schleier ueber
+   dem gerade nicht bearbeiteten Fotosatz verschwinden — im PDF soll
+   dasselbe stehen wie auf dem Ausdruck. */
+.miet-pages.miet-pdf .miet-photo-start,
+.miet-pages.miet-pdf .miet-photo-progress,
+.miet-pages.miet-pdf .miet-photo-del,
+.miet-pages.miet-pdf .miet-photo-swap,
+.miet-pages.miet-pdf .miet-photo-zoom,
+.miet-pages.miet-pdf .miet-pick::after,
+.miet-pages.miet-pdf [data-nurerste],
+.miet-pages.miet-pdf .miet-sign-caption button {
+    display: none !important;
+}
+
+.miet-pages.miet-pdf .miet-dim {
+    opacity: 1 !important;
+    filter: none !important;
+}
+
+.miet-pages.miet-pdf .miet-page {
+    box-shadow: none !important;
+    margin: 0 !important;
+}
+
+/* =========================================================
+   VORLAGEN-EDITOR (Einstellungen → Mietvereinbarungen)
+   ---------------------------------------------------------
+   Am Rechner stehen die Abschnitte in zwei Spalten — vorher lag
+   die rechte Bildschirmhaelfte brach und man musste weit scrollen.
+   Ab ≤1100px (Tablet, Handy) wird daraus wieder eine Spalte.
+   ========================================================= */
+.miet-editor-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-5, 20px);
+    align-items: start;
+}
+
+/* Breite Bildschirme: drei Spalten statt einer halbleeren Seite. */
+@media (min-width: 1650px) {
+    .miet-editor-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+/* Abschnitte, die die volle Breite brauchen (Grunddaten oben,
+   Vertragstext mit seinen langen Textfeldern). */
+.miet-editor-grid > .miet-editor-card.wide {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 1100px) {
+    .miet-editor-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.miet-editor-card {
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: var(--radius-lg, 16px);
+    padding: 0 0 18px;
+    overflow: hidden;
+    box-shadow: var(--shadow-1, 0 6px 20px rgba(0, 0, 0, 0.25));
+}
+
+.miet-editor-card > h3 {
+    margin: 0 0 16px;
+    padding: 14px 20px;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* farbiger Punkt vor der Ueberschrift */
+.miet-editor-card > h3::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-primary-green, #10b981);
+    box-shadow: 0 0 10px var(--color-primary-green, #10b981);
+    flex-shrink: 0;
+}
+
+.miet-editor-card > .miet-editor-body {
+    padding: 0 20px;
+}
+
+/* Beschriftung + Feld: am Rechner nebeneinander, schmal untereinander. */
+.miet-editor-row {
+    display: grid;
+    grid-template-columns: 190px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 9px;
+}
+
+.miet-editor-row > span {
+    font-size: var(--fs-xs, 0.82rem);
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.miet-editor-row.top {
+    align-items: start;
+}
+
+.miet-editor-row.top > span {
+    padding-top: 10px;
+}
+
+@media (max-width: 640px) {
+    .miet-editor-row {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+
+    .miet-editor-row.top > span {
+        padding-top: 0;
+    }
+}
+
+.miet-editor-hint {
+    font-size: var(--fs-2xs, 0.78rem);
+    color: rgba(255, 255, 255, 0.4);
+    margin: 0 0 14px;
+    line-height: 1.5;
+}
+
+/* =========================================================
+   ÜBERSICHT JE MASCHINE (js/mietvereinbarung-liste.js)
+   Maschine → Aktionen → Ansehen → Mietvereinbarung
+   ========================================================= */
+.miet-liste-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10060;
+    background: rgba(2, 6, 23, 0.78);
+    backdrop-filter: blur(var(--blur-surface));
+    -webkit-backdrop-filter: blur(var(--blur-surface));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.miet-liste-fenster {
+    width: 100%;
+    max-width: 680px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    background: rgba(15, 23, 42, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+}
+
+.miet-liste-kopf {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 18px 22px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.miet-liste-kopf h2 {
+    margin: 0;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.2rem;
+    color: #fff;
+}
+
+.miet-liste-kopf span {
+    display: block;
+    margin-top: 2px;
+    font-size: var(--fs-xs);
+    color: var(--color-primary-green);
+}
+
+.miet-liste-inhalt {
+    padding: 14px 22px;
+    overflow-y: auto;
+    display: grid;
+    gap: 10px;
+}
+
+.miet-liste-zeile {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.miet-liste-text {
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+}
+
+.miet-liste-text strong {
+    color: #fff;
+    font-size: 0.95rem;
+}
+
+.miet-liste-text span {
+    font-size: var(--fs-xs);
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.miet-liste-text small {
+    font-size: var(--fs-2xs);
+    color: rgba(255, 255, 255, 0.38);
+}
+
+.miet-liste-knoepfe {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.miet-liste-knoepfe button {
+    padding: 7px 14px;
+    font-size: var(--fs-xs);
+}
+
+.miet-liste-weg {
+    color: #ef4444 !important;
+    border-color: rgba(239, 68, 68, 0.35) !important;
+    font-size: 1.05rem !important;
+    line-height: 1;
+    padding: 6px 11px !important;
+}
+
+.miet-liste-leer {
+    margin: 8px 0 12px;
+    text-align: center;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.45);
+    line-height: 1.6;
+}
+
+.miet-liste-fuss {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 22px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+@media (max-width: 560px) {
+    .miet-liste-zeile {
+        align-items: stretch;
+    }
+
+    .miet-liste-knoepfe {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
+/* =========================================================
+   OPTIONALE PRÜFPUNKTE UND AUSFÜHRUNGEN ZUR AUSWAHL
+   ---------------------------------------------------------
+   In der Vorlage kann ein Prüfpunkt "optional" sein (Sonderausstattung)
+   und Ausführungen zur Auswahl haben (z. B. Siebkorb 12 mm / 25 mm).
+
+   Optional heisst auf dem Bogen: grau hinterlegt mit dem Vermerk
+   "Optional". Bleibt die Zeile leer — also weder in Ordnung noch nicht
+   in Ordnung angekreuzt — ist die Option nicht verbaut und die Zeile
+   wird NICHT gedruckt (weder auf Papier noch ins PDF). Sobald etwas
+   angekreuzt ist, steht sie ganz normal mit auf dem Ausdruck.
+   ========================================================= */
+.miet-table tr.miet-opt td {
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+.miet-opt-kennung {
+    display: inline-block;
+    margin-left: 7px;
+    padding: 0 6px;
+    border-radius: 8px;
+    background: #e5e7eb;
+    border: 1px solid #cbd5e1;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: #6b7280;
+    vertical-align: middle;
+}
+
+/* Gewählte Ausführung direkt neben der Bezeichnung. */
+.miet-pick-klein {
+    display: inline-flex;
+    width: auto;
+    min-width: 120px;
+    margin-left: 8px;
+    padding: 0 4px;
+    border-bottom: 1px solid #9ca3af;
+    font-weight: 700;
+}
+
+.miet-pick-klein::after {
+    margin-left: 6px;
+}
+
+/* Nicht angekreuzte optionale Zeilen: nur auf dem Bildschirm sichtbar. */
+@media print {
+
+    .miet-table tr.miet-opt-leer,
+    .miet-pages.miet-pdf .miet-table tr.miet-opt-leer {
+        display: none !important;
+    }
+
+    /* Gedruckt wird eine gesetzte Option wie jede andere Zeile — ohne
+       Graustufe und ohne den Vermerk, der nur beim Ausfüllen hilft. */
+    .miet-table tr.miet-opt td {
+        background: transparent;
+        color: inherit;
+    }
+
+    .miet-opt-kennung {
+        display: none !important;
+    }
+}
+
+.miet-pages.miet-pdf .miet-table tr.miet-opt-leer {
+    display: none !important;
+}
+
+.miet-pages.miet-pdf .miet-table tr.miet-opt td {
+    background: transparent;
+    color: inherit;
+}
+
+.miet-pages.miet-pdf .miet-opt-kennung {
+    display: none !important;
+}
+
+/* Zusatzinfo (Tagessatz-Hinweis): kleiner gesetzt, damit die Zeile
+   weniger Höhe frisst — der Text ist lang, aber nur ein Hinweis. */
+.miet-table td.miet-zusatz .miet-in {
+    font-size: 10px;
+    line-height: 1.25;
+}
+
+/* Auf Papier und im PDF ohne Ausfüll-Hilfslinie: die gewählte Ausführung
+   steht dort einfach als Text hinter der Bezeichnung. Am Bildschirm
+   bleibt der Unterstrich, damit man sieht, dass man darauf tippen kann. */
+@media print {
+    .miet-pick-klein {
+        border-bottom: none !important;
+        min-width: 0 !important;
+        padding: 0 !important;
+    }
+}
+
+.miet-pages.miet-pdf .miet-pick-klein {
+    border-bottom: none !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+}
+
+.miet-pages.miet-pdf .miet-pick::after {
+    display: none !important;
+}

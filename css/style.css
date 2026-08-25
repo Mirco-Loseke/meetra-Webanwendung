@@ -15,16 +15,16 @@
 @import 'components/buttons.css';
 @import 'components/forms.css?v=5';
 @import 'components/notifications.css?v=2';
-@import 'components/reminder-alarm.css?v=4';
+@import 'components/reminder-alarm.css?v=5';
 @import 'components/calendar.css';
 @import 'components/calendar-widget.css?v=4';
-@import 'components/dropdowns.css';
+@import 'components/dropdowns.css?v=2';
 @import 'components/focus-mode.css?v=2';
 @import 'components/elements.css';
 @import 'components/appointments.css';
 
 /* Views & Modules */
-@import 'views/documents.css';
+@import 'views/documents.css?v=2';
 @import 'views/protocols.css';
 @import 'views/tasks.css?v=3';
 @import 'views/service-reports.css?v=4';
@@ -37,7 +37,7 @@
 @import 'views/dashboard.css';
 @import 'views/listen.css';
 @import 'views/addressbook.css?v=12';
-@import 'views/routenplanung.css';
+@import 'views/routenplanung.css?v=2';
 
 /* Responsive & Overrides */
 /* ?v=N hochzaehlen, wenn responsive.css geaendert wurde. Das ?v=68 an

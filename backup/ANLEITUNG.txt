@@ -1,0 +1,136 @@
+meetra — Datensicherung per Doppelklick
+=======================================
+
+Was passiert
+------------
+backup.bat zieht die komplette Supabase-Datenbank (Schema public:
+Tabellen, Daten, Indizes, Trigger) in einen Ordner deiner Wahl.
+Auf Wunsch werden zusaetzlich die Dokumente aus Cloudflare R2
+heruntergeladen. Es entstehen pro Lauf zwei Dateien:
+
+  meetra_2026-08-25_1830.dump   <- fuer die Wiederherstellung
+  meetra_2026-08-25_1830.sql    <- lesbarer Text, zum Nachschauen
+
+
+EINRICHTUNG (einmalig, ca. 10 Minuten)
+======================================
+
+Schritt 1 — PostgreSQL-Clientwerkzeuge installieren
+---------------------------------------------------
+Download: https://www.postgresql.org/download/windows/
+-> "Download the installer" (EDB), Version 17 nehmen.
+
+Im Installationsprogramm bei der Komponentenauswahl reicht
+"Command Line Tools". Server, pgAdmin und Stack Builder kannst du
+abwaehlen. Das Installationspasswort wird dann nicht gebraucht.
+
+Wichtig: pg_dump muss MINDESTENS so neu sein wie der Server.
+Supabase laeuft auf PostgreSQL 15 oder 17 — Version 17 passt immer.
+Ein zu altes pg_dump bricht mit "server version mismatch" ab.
+
+backup.bat findet pg_dump von allein unter
+C:\Program Files\PostgreSQL\17\bin — du musst nichts am PATH aendern.
+
+
+Schritt 2 — Verbindungszeichenfolge holen
+-----------------------------------------
+1. https://supabase.com/dashboard oeffnen, Projekt waehlen
+   (Projekt-Kennung: rtnpyziwyaqrlfazxkyr)
+2. Oben auf "Connect" klicken.
+3. Reiter "Session pooler" waehlen  (NICHT "Transaction pooler" —
+   damit funktioniert pg_dump nicht zuverlaessig).
+4. Die URI kopieren, sie sieht so aus:
+   postgresql://postgres.rtnpyziwyaqrlfazxkyr:[YOUR-PASSWORD]@aws-0-eu-central-1.pooler.supabase.com:5432/postgres
+5. [YOUR-PASSWORD] durch das Datenbank-Passwort ersetzen.
+   Nicht mehr bekannt? Dashboard -> Settings -> Database ->
+   "Reset database password". Das Passwort ist NICHT der Login
+   fuer supabase.com und auch nicht der anon key.
+
+Sonderzeichen im Passwort muessen kodiert werden:
+   @ -> %40      : -> %3A      / -> %2F      ? -> %3F
+   # -> %23      & -> %26      Leerzeichen -> %20
+Ein Prozentzeichen im Passwort muss in der .cmd-Datei doppelt
+geschrieben werden (%%).
+Am einfachsten: beim Zuruecksetzen ein Passwort nur aus
+Buchstaben und Ziffern vergeben, dann entfaellt das alles.
+
+
+Schritt 3 — backup-config.cmd ausfuellen
+----------------------------------------
+Datei backup-config.cmd im Editor oeffnen und eintragen:
+
+  DB_URL          die URI aus Schritt 2
+  ZIEL            wohin gesichert wird
+                  (Vorgabe: C:\Users\<du>\meetra-Backups)
+  AUFHEBEN_TAGE   nach wie vielen Tagen alte Sicherungen
+                  automatisch geloescht werden (Vorgabe 90)
+  MIT_DOKUMENTEN  0 = nur Datenbank, 1 = Dokumente mitsichern
+
+
+Schritt 4 — Probelauf
+---------------------
+Doppelklick auf backup.bat. Das Fenster bleibt am Ende offen und
+zeigt, was passiert ist. Danach im Zielordner nachsehen, ob die
+.dump-Datei eine plausible Groesse hat (mehr als ein paar KB).
+
+
+DOKUMENTE MITSICHERN (optional)
+===============================
+Die Fotos, PDFs und Anhaenge liegen in Cloudflare R2, nicht in der
+Datenbank. Dafuer braucht es rclone:
+
+1. https://rclone.org/downloads/ -> "Windows AMD64 - 64 Bit" (ZIP)
+2. ZIP entpacken, rclone.exe z.B. nach C:\rclone legen
+3. Windows-Taste -> "Umgebungsvariablen fuer dieses Konto bearbeiten"
+   -> Path -> Neu -> C:\rclone -> OK
+4. Neues Eingabeaufforderungs-Fenster oeffnen, "rclone version"
+   muss eine Ausgabe liefern.
+5. In backup-config.cmd: MIT_DOKUMENTEN=1
+
+Die R2-Zugangsdaten stehen bereits in backup-config.cmd; ein
+"rclone config" ist nicht noetig. Es wird nur kopiert, was lokal
+noch fehlt — der erste Lauf dauert lange, jeder weitere ist kurz.
+Lokal wird nie etwas geloescht.
+
+
+WIEDERHERSTELLEN
+================
+In eine leere Datenbank (z.B. neues Supabase-Projekt oder lokales
+Postgres) einspielen:
+
+  pg_restore --no-owner --no-privileges --clean --if-exists ^
+             -d "postgresql://.../postgres" "meetra_2026-08-25_1830.dump"
+
+Nur eine einzelne Tabelle zurueckholen:
+
+  pg_restore --no-owner --data-only --table=machines ^
+             -d "postgresql://.../postgres" "meetra_....dump"
+
+Nur nachsehen, was drin ist, ohne etwas zu aendern:
+
+  pg_restore --list "meetra_....dump"
+
+Die .sql-Datei kann man mit jedem Editor oeffnen und einzelne
+INSERT-Zeilen herauskopieren.
+
+
+WAS NICHT GESICHERT WIRD
+========================
+- Benutzerkonten der Anmeldung (Schema auth) und Speicher-Metadaten
+  (Schema storage). Die gehoeren Supabase und lassen sich ueber die
+  Pooler-Verbindung nicht sichern. Die Anwendungsdaten im Schema
+  public sind vollstaendig dabei.
+- Edge Functions (groq-proxy) — die liegen im Projektordner unter
+  supabase/functions.
+- Der Supabase-Speicher-Bucket (falls dort noch Altdateien liegen);
+  gesichert wird der R2-Bucket "dateien".
+
+
+SPAETER AUTOMATISCH LAUFEN LASSEN
+=================================
+Wenn der Knopfdruck laestig wird: Aufgabenplanung oeffnen
+(taskschd.msc) -> "Einfache Aufgabe erstellen" -> Zeitplan
+"Woechentlich" -> Aktion "Programm starten" -> als Programm
+backup.bat auswaehlen -> als Ordner "Starten in" den backup-Ordner
+eintragen. Fuer den unbeaufsichtigten Lauf in backup.bat die
+letzten Zeilen "choice ..." und "pause" entfernen.

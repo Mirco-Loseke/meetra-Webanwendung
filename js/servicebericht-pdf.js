@@ -1377,6 +1377,14 @@
                 
                 const nowISO = new Date().toISOString();
 
+                // Fotos des Berichts als Anhänge am Dokument mitführen — die
+                // Kachel unter "Dokumente" zeigt dadurch die Anzahl an und
+                // öffnet die Bilder direkt.
+                const sbEntry = (window.allServiceEntries || []).find(e => String(e.id) === String(reportId));
+                const sbAnhaenge = ((sbEntry && Array.isArray(sbEntry.files)) ? sbEntry.files : [])
+                    .filter(f => f && f.url)
+                    .map(f => ({ name: f.name || (f.url || '').split('/').pop(), url: f.url, path: f.path || null, type: f.type || '' }));
+
                 // Erst das Dokument unter "Dokumente" anlegen/aktualisieren — der Bericht wird
                 // erst danach als abgeschlossen markiert (siehe unten). Würde man zuerst
                 // abschließen und das Dokument schlägt fehl, bliebe ein abgeschlossener, aber
@@ -1400,8 +1408,14 @@
                     existingDoc = legacyDoc;
                 }
 
+                // Solange die Migration supabase_add_rental_agreements.sql noch
+                // nicht gelaufen ist, gibt es die Spalte "attachments" nicht.
+                // Dann wird der Schreibvorgang ohne dieses Feld wiederholt,
+                // damit der Abschluss eines Berichts nicht daran scheitert.
+                const ohneAnhangSpalte = (err) => /attachments/.test((err && err.message) || '');
+
                 if (existingDoc) {
-                    const { error: docUpdateError } = await window.supabaseClient
+                    let { error: docUpdateError } = await window.supabaseClient
                         .from('documents')
                         .update({
                             name: fileName.replace('.pdf', ''),
@@ -1411,15 +1425,32 @@
                             size: pdfFile.size,
                             created_at: nowISO,
                             folder_id: wsTargetFolderId,
-                            service_entry_id: reportId
+                            service_entry_id: reportId,
+                            attachments: sbAnhaenge
                         })
                         .eq('id', existingDoc.id);
+                    if (docUpdateError && ohneAnhangSpalte(docUpdateError)) {
+                        const wiederholung = await window.supabaseClient
+                            .from('documents')
+                            .update({
+                                name: fileName.replace('.pdf', ''),
+                                category: categoryValue,
+                                url: uploadResult.url,
+                                file_path: uploadResult.path,
+                                size: pdfFile.size,
+                                created_at: nowISO,
+                                folder_id: wsTargetFolderId,
+                                service_entry_id: reportId
+                            })
+                            .eq('id', existingDoc.id);
+                        docUpdateError = wiederholung.error;
+                    }
                     if (docUpdateError) {
                         console.error('Error updating document entry:', docUpdateError);
                         throw new Error('PDF wurde erzeugt, aber das Dokument unter "Dokumente" konnte nicht aktualisiert werden: ' + docUpdateError.message);
                     }
                 } else {
-                    const { error: docInsertError } = await window.supabaseClient
+                    let { error: docInsertError } = await window.supabaseClient
                         .from('documents')
                         .insert([{
                             name: fileName.replace('.pdf', ''),
@@ -1430,8 +1461,25 @@
                             size: pdfFile.size,
                             mime_type: 'application/pdf',
                             folder_id: wsTargetFolderId,
-                            service_entry_id: reportId
+                            service_entry_id: reportId,
+                            attachments: sbAnhaenge
                         }]);
+                    if (docInsertError && ohneAnhangSpalte(docInsertError)) {
+                        const wiederholung = await window.supabaseClient
+                            .from('documents')
+                            .insert([{
+                                name: fileName.replace('.pdf', ''),
+                                category: categoryValue,
+                                machine_id: wsMachineIdInt,
+                                url: uploadResult.url,
+                                file_path: uploadResult.path,
+                                size: pdfFile.size,
+                                mime_type: 'application/pdf',
+                                folder_id: wsTargetFolderId,
+                                service_entry_id: reportId
+                            }]);
+                        docInsertError = wiederholung.error;
+                    }
                     if (docInsertError) {
                         console.error('Error inserting document entry:', docInsertError);
                         throw new Error('PDF wurde erzeugt, aber das Dokument unter "Dokumente" konnte nicht gespeichert werden: ' + docInsertError.message);

@@ -947,7 +947,11 @@ window.renderDocuments = function() {
         const machineName = doc.machines
             ? [doc.machines.manufacturer, doc.machines.name, (doc.machines.serial || doc.machines.serial_number) ? `#${doc.machines.serial || doc.machines.serial_number}` : null, doc.machines.year ? `(${doc.machines.year})` : null].filter(Boolean).join(' ')
             : null;
-        const isServicebericht = (doc.category || '').split(',').map(c => c.trim()).includes('Servicebericht');
+        const docCats = (doc.category || '').split(',').map(c => c.trim());
+        // Servicebericht und Mietvereinbarung hängen beide an einer Maschine —
+        // deren Name steht klein und grün unter dem Dokumentnamen.
+        const isServicebericht = docCats.includes('Servicebericht') || docCats.includes('Mietvereinbarung');
+        const anhaenge = Array.isArray(doc.attachments) ? doc.attachments.filter(a => a && a.url) : [];
         const dateStr = new Date(doc.created_at).toLocaleDateString('de-DE');
         const escapedName = doc.name.replace(/'/g, "\\'");
         const escapedCategory = (doc.category || '').replace(/'/g, "\\'");
@@ -985,6 +989,11 @@ window.renderDocuments = function() {
                 </div>
 
                 <div class="doc-actions">
+                    ${anhaenge.length ? `
+                    <button class="btn-doc-action btn-doc-attachments" onclick="event.stopPropagation(); window.openDocAttachments('${doc.id}')" title="${anhaenge.length} Anhang/Anhänge öffnen">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                        <span>${anhaenge.length}</span>
+                    </button>` : ''}
                     <button class="btn-doc-action" onclick="event.stopPropagation(); window.openRenameModal('${doc.id}', 'document', '${escapedName}', '${escapedCategory}', '${escapedMachineCategories}', '${escapedMachineSeries}')" title="Bearbeiten">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                     </button>
@@ -1193,6 +1202,7 @@ window.saveDocument = async function(event) {
         if (dbError) throw dbError;
 
         window.closeDocumentUploadModal();
+        window.showToast(dbEntries.length > 1 ? `${dbEntries.length} Dokumente gespeichert.` : "Dokument gespeichert.", "success");
         window.fetchDocuments();
     } catch (err) {
         console.error('Upload process error:', err);
@@ -1548,6 +1558,38 @@ window.downloadCurrentDoc = function() {
     }
 };
 
+// Anhänge einer Dokumentkachel (Fotos eines Serviceberichts bzw. einer
+// Mietvereinbarung). Angezeigt wird dasselbe Fenster wie in der
+// Serviceberichte-Liste — von dort aus lassen sich die Bilder öffnen.
+// Ältere Anhänge kennen nur ihre öffentliche URL. Der Schlüssel in R2 ist
+// der Teil hinter der öffentlichen Adresse — damit lässt sich auch bei
+// diesen Dateien endgültig löschen.
+function attachmentPath(a) {
+    if (!a) return null;
+    if (a.path) return a.path;
+    const basis = window.R2_PUBLIC_URL || 'https://pub-28aab7dd73f540f38b6358d78f889a27.r2.dev';
+    if (a.url && a.url.startsWith(basis + '/')) return decodeURIComponent(a.url.slice(basis.length + 1));
+    return null;
+}
+
+window.openDocAttachments = function(docId) {
+    const doc = (allDocuments || []).find(d => String(d.id) === String(docId));
+    const files = doc && Array.isArray(doc.attachments) ? doc.attachments.filter(a => a && a.url) : [];
+    if (!files.length) {
+        window.showToast('Zu diesem Dokument sind keine Anhänge hinterlegt.');
+        return;
+    }
+    if (typeof window.openServiceAttachments !== 'function') {
+        window.open(files[0].url, '_blank');
+        return;
+    }
+    window.openServiceAttachments(files.map(f => ({
+        name: f.name || (f.url || '').split('/').pop(),
+        url: f.url,
+        type: f.type || 'image/jpeg'
+    })));
+};
+
 window.downloadDoc = function(url, name) {
     const link = document.createElement('a');
     link.href = url;
@@ -1566,6 +1608,8 @@ window.deleteDocument = async function(id, filePath) {
     }
     if (!confirm('Möchtest du dieses Dokument wirklich löschen?')) return;
 
+    const doc = (allDocuments || []).find(d => String(d.id) === String(id));
+
     try {
         // 1. Delete from Storage
         if (filePath) {
@@ -1573,6 +1617,27 @@ window.deleteDocument = async function(id, filePath) {
                 bucket: 'accounting-documents',
                 provider: 'cloudflare-r2'
             });
+        }
+
+        // 1b. Anhänge (Fotos) mit entfernen — sonst bleiben sie für immer
+        // in Cloudflare liegen, ohne dass sie noch irgendwo auftauchen.
+        const anhaenge = doc && Array.isArray(doc.attachments) ? doc.attachments : [];
+        for (const a of anhaenge) {
+            const aPfad = attachmentPath(a);
+            if (!aPfad) continue;
+            try {
+                await window.FileUploadService.deleteFile(aPfad, {
+                    bucket: 'dateien', provider: 'cloudflare-r2'
+                });
+            } catch (r2Err) {
+                console.error('Anhang konnte nicht aus R2 gelöscht werden:', aPfad, r2Err);
+            }
+        }
+
+        // 1c. Gehört das Dokument zu einer Mietvereinbarung, verschwindet
+        // auch diese — samt Fotos, die nicht am Dokument hängen.
+        if (doc && doc.rental_agreement_id && typeof window.deleteRentalAgreement === 'function') {
+            await window.deleteRentalAgreement(doc.rental_agreement_id, { ohneDokument: true });
         }
 
         // 2. Delete from DB
@@ -1596,7 +1661,7 @@ async function getFolderDocumentsRecursive(folderId) {
     // 1. Fetch documents in the current folder
     const { data: docs, error: docError } = await window.supabaseClient
         .from('documents')
-        .select('id, file_path')
+        .select('id, file_path, attachments, rental_agreement_id')
         .eq('folder_id', folderId);
 
     if (!docError && docs) {
@@ -1642,6 +1707,24 @@ window.deleteFolder = async function(id) {
                     });
                 } catch (r2Err) {
                     console.error('Failed to delete document from Cloudflare R2:', doc.file_path, r2Err);
+                }
+            }
+
+            // Anhänge und ggf. die Mietvereinbarung dahinter mit entfernen.
+            for (const a of (Array.isArray(doc.attachments) ? doc.attachments : [])) {
+                const aPfad = attachmentPath(a);
+                if (!aPfad) continue;
+                try {
+                    await window.FileUploadService.deleteFile(aPfad, { bucket: 'dateien', provider: 'cloudflare-r2' });
+                } catch (r2Err) {
+                    console.error('Anhang konnte nicht aus R2 gelöscht werden:', aPfad, r2Err);
+                }
+            }
+            if (doc.rental_agreement_id && typeof window.deleteRentalAgreement === 'function') {
+                try {
+                    await window.deleteRentalAgreement(doc.rental_agreement_id, { ohneDokument: true });
+                } catch (e) {
+                    console.error('Mietvereinbarung konnte nicht gelöscht werden:', e);
                 }
             }
         }
@@ -1749,6 +1832,7 @@ window.saveFolder = async function(event) {
         if (error) throw error;
         
         window.closeFolderModal();
+        window.showToast('Ordner angelegt.', 'success');
         window.fetchDocuments();
     } catch (err) {
         console.error('Error creating folder:', err);
@@ -1806,6 +1890,7 @@ window.handleDrop = async function(event, targetFolderId) {
         }
         
         if (error) throw error;
+        window.showToast('Verschoben.', 'success');
         window.fetchDocuments();
     } catch (err) {
         console.error('Error moving item:', err);
@@ -1961,6 +2046,7 @@ window.saveRename = async function(event) {
         }
 
         window.closeRenameModal();
+        window.showToast('Umbenannt.', 'success');
         window.fetchDocuments();
     } catch (err) {
         console.error('Error renaming item:', err);

@@ -41,6 +41,16 @@
     let lastGeocodeAt = 0;
     let savedRoutesTableOk = true;
 
+    // Geladene Route: damit „Speichern" fragen kann, ob sie überschrieben oder
+    // als neue Tour abgelegt wird. routeDirty merkt sich, ob seit dem letzten
+    // Speichern etwas verändert wurde — daran hängt die Rückfrage beim
+    // Neuladen/Schließen der Seite (registerUnsavedCheck, js/app-core.js).
+    let currentRouteId = null;
+    let currentRouteName = '';
+    let currentRouteLocal = false;
+    let routeDirty = false;
+    let suppressDirty = false;
+
     // Filter für die Umkreis-/Korridorsuche
     let nearbyOnlyCustomers = false;
     let nearbyOnlyWithMachines = false;
@@ -1085,6 +1095,11 @@
     function renderStops() {
         const list = document.getElementById('rp2-stops-list');
         if (!list) return;
+        // Jede Änderung an der Route läuft durch renderStops — deshalb hier der
+        // eine Ort für den Ungespeichert-Merker. Das Laden einer gespeicherten
+        // Route setzt suppressDirty, sonst gälte sie sofort als verändert.
+        if (suppressDirty) suppressDirty = false;
+        else if (stops.length) routeDirty = true;
         renderRouteSummary();
 
         const optimizeBtn = document.getElementById('rp2-optimize-btn');
@@ -1930,45 +1945,85 @@
 
     function saveRouteDialog() {
         if (!stops.length) return;
-        const suggestion = `Tour ${new Date().toLocaleDateString('de-DE')}`;
+        const suggestion = currentRouteName || `Tour ${new Date().toLocaleDateString('de-DE')}`;
+        const autor = currentAuthor();
+
+        // Eine geladene Route wird nicht stillschweigend überschrieben und auch
+        // nicht stillschweigend verdoppelt — der Nutzer entscheidet.
+        const modusHtml = currentRouteId ? `
+            <div class="rp2-section">
+                <div class="rp2-label">Diese Route wurde geladen — was soll passieren?</div>
+                <label class="rp2-radio-row"><input type="radio" name="rp2-save-mode" value="update" checked> „${esc(currentRouteName)}" aktualisieren</label>
+                <label class="rp2-radio-row"><input type="radio" name="rp2-save-mode" value="new"> Als neue Route speichern</label>
+            </div>` : '';
+
         openDialog('Route speichern', `
+            ${modusHtml}
             <div class="rp2-section">
                 <label class="rp2-label" for="rp2-route-name">Name der Tour</label>
                 <input type="text" id="rp2-route-name" class="rp2-input" value="${esc(suggestion)}">
-                <div class="rp2-status">${stops.length} ${stops.length === 1 ? 'Stopp' : 'Stopps'}${typeof routeMetrics.km === 'number' ? ' · ' + fmtKm(routeMetrics.km) : ''}</div>
+                <div class="rp2-status">${stops.length} ${stops.length === 1 ? 'Stopp' : 'Stopps'}${typeof routeMetrics.km === 'number' ? ' · ' + fmtKm(routeMetrics.km) : ''}${autor ? ' · gespeichert von ' + esc(autor) : ''}</div>
             </div>`, 'Speichern', async () => {
             const name = document.getElementById('rp2-route-name').value.trim();
             if (!name) { window.showToast('Bitte einen Namen angeben.'); return; }
+
+            const modusEl = document.querySelector('input[name="rp2-save-mode"]:checked');
+            const alsNeu = !currentRouteId || !modusEl || modusEl.value === 'new';
 
             const payload = {
                 name,
                 stops: stops.map(s => ({ customerId: s.customerId, label: s.label, address: s.address, lat: s.lat, lng: s.lng, isCustomer: !!s.isCustomer })),
                 total_km: typeof routeMetrics.km === 'number' ? Number(routeMetrics.km.toFixed(2)) : null,
                 total_min: typeof routeMetrics.min === 'number' ? Math.round(routeMetrics.min) : null,
-                author: currentAuthor()
+                author: autor
             };
 
             let savedToCloud = false;
-            if (savedRoutesTableOk && window.supabaseClient) {
-                const { error } = await sb().from('saved_routes').insert([payload]);
-                if (error) {
-                    console.warn('saved_routes nicht verfügbar, speichere lokal:', error.message);
+            let neueId = null;
+
+            if (savedRoutesTableOk && window.supabaseClient && !(currentRouteLocal && !alsNeu)) {
+                let res;
+                if (alsNeu) {
+                    res = await sb().from('saved_routes').insert([payload]).select('id').limit(1);
+                } else {
+                    res = await sb().from('saved_routes')
+                        .update(Object.assign({}, payload, { updated_at: new Date().toISOString() }))
+                        .eq('id', currentRouteId).select('id').limit(1);
+                }
+                if (res.error) {
+                    console.warn('saved_routes nicht verfügbar, speichere lokal:', res.error.message);
                     savedRoutesTableOk = false;
                 } else {
                     savedToCloud = true;
+                    neueId = res.data && res.data.length ? res.data[0].id : currentRouteId;
                 }
             }
 
             if (!savedToCloud) {
                 const list = localRoutes();
-                list.unshift({ ...payload, id: 'local-' + Date.now(), created_at: new Date().toISOString(), local: true });
+                if (!alsNeu && currentRouteLocal) {
+                    const i = list.findIndex(x => String(x.id) === String(currentRouteId));
+                    if (i >= 0) {
+                        list[i] = Object.assign({}, list[i], payload, { updated_at: new Date().toISOString() });
+                        neueId = list[i].id;
+                    }
+                }
+                if (neueId == null) {
+                    neueId = 'local-' + Date.now();
+                    list.unshift(Object.assign({}, payload, { id: neueId, created_at: new Date().toISOString(), local: true }));
+                }
                 setLocalRoutes(list);
             }
 
+            currentRouteId = neueId;
+            currentRouteName = name;
+            currentRouteLocal = !savedToCloud;
+            routeDirty = false;
+
             closeDialog();
             setStatus(savedToCloud
-                ? 'Route gespeichert.'
-                : 'Route nur lokal auf diesem Gerät gespeichert — für geräteübergreifend supabase_add_saved_routes.sql ausführen.');
+                ? (alsNeu ? 'Route gespeichert — für alle Geräte und Kollegen sichtbar.' : `Route „${name}" aktualisiert.`)
+                : 'Route nur lokal auf diesem Gerät gespeichert — für geräteübergreifend supabase/supabase_add_saved_routes.sql ausführen.');
             setTimeout(() => setStatus(''), 7000);
         });
     }
@@ -2017,6 +2072,11 @@
             lng: s.lng,
             isCustomer: !!s.isCustomer
         }));
+        currentRouteId = r.id;
+        currentRouteName = r.name || '';
+        currentRouteLocal = !!r.local;
+        suppressDirty = true;
+        routeDirty = false;
         closeDialog();
         renderStops();
         scheduleMarkerRender();
@@ -2036,6 +2096,11 @@
         } else {
             const { error } = await sb().from('saved_routes').delete().eq('id', id);
             if (error) { window.showToast('Löschen fehlgeschlagen: ' + error.message); return; }
+        }
+        // Die gelöschte Route darf nicht weiter als „geladen" gelten, sonst
+        // würde das nächste Speichern versuchen, sie zu aktualisieren.
+        if (String(currentRouteId) === String(id)) {
+            currentRouteId = null; currentRouteName = ''; currentRouteLocal = false;
         }
         loadRouteDialog();
     }
@@ -2287,6 +2352,13 @@
         });
         return rp2InitPromise;
     };
+
+    // Ungespeicherte Route: Rückfrage beim Neuladen (F5), Zurück oder
+    // Tab-Schließen. Den Text bestimmt der Browser; „Verwerfen" ist dort das
+    // Verlassen der Seite. Innerhalb der App bleibt die Route erhalten.
+    if (typeof window.registerUnsavedCheck === 'function') {
+        window.registerUnsavedCheck(() => routeDirty && stops.length > 0);
+    }
 
     async function rp2InitInternal() {
         await ensureMap();

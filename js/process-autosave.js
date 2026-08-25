@@ -47,7 +47,9 @@
             machine_id: machineId ? parseInt(machineId) : null,
             workshop_order_number: v(PREFIX + '-workshop-order-select') || null,
             status: v(PREFIX + '-status-select'),
-            remark: v(PREFIX + '-remark-input') || null,
+            // `remark` steht hier bewusst NICHT mehr drin: das Bemerkungsfeld ist
+            // entfernt, v() liefert für ein fehlendes Feld '' — und das hätte bei
+            // jedem Autospeichern eine vorhandene alte Bemerkung geleert.
             description: v(PREFIX + '-body-input') || null,
             assigned_users: (window.processAssignedUsers && window.processAssignedUsers[PREFIX]) || [],
             steps: ((window.processSteps && window.processSteps[PREFIX]) || []).filter(s => (s.text || '').trim()),

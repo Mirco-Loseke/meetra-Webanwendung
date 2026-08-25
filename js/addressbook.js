@@ -3228,7 +3228,7 @@
                         phone: p.phone || null,
                         mobile: p.mobile || null,
                         email: p.email || null,
-                        notes: p.note || 'Aus Kontaktimport ergänzt'
+                        notes: p.note || null
                     };
                     await sb().from('customer_contacts').insert([newC]);
                     state.contactCount.set(String(a.id), (state.contactCount.get(String(a.id)) || 0) + 1);
@@ -3663,14 +3663,14 @@
         if (p.note) set('ab-f-notes', p.note);
         if (hasOrg && p.name && normCompany(p.name) !== normCompany(p.org)) {
             // Firma = Adresse, Person = Ansprechpartner. Notiz zusätzlich an der Person.
-            importPendingContact = { name: p.name, salutation: null, position: p.title || null, department: p.department || null, phone: p.phone || null, mobile: p.mobile || null, email: p.email || null, notes: p.note || 'Aus Kontaktimport' };
+            importPendingContact = { name: p.name, salutation: null, position: p.title || null, department: p.department || null, phone: p.phone || null, mobile: p.mobile || null, email: p.email || null, notes: p.note || null };
             set('ab-f-c-name', p.name);
             set('ab-f-c-position', p.title);
             set('ab-f-c-department', p.department);
             set('ab-f-c-phone', p.phone);
             set('ab-f-c-mobile', p.mobile);
             set('ab-f-c-email', p.email);
-            set('ab-f-c-notes', p.note || 'Aus Kontaktimport');
+            set('ab-f-c-notes', p.note || '');
             const detailsEl = document.getElementById('ab-c-details');
             if (detailsEl) detailsEl.open = true;
         } else {
@@ -3680,7 +3680,7 @@
 
     async function attachContactToCompany(customerId, p) {
         try {
-            await sb().from('customer_contacts').insert([{ customer_id: customerId, name: p.name || p.org, salutation: null, position: p.title || null, department: p.department || null, phone: p.phone || null, mobile: p.mobile || null, email: p.email || null, notes: p.note || 'Aus Kontaktimport' }]);
+            await sb().from('customer_contacts').insert([{ customer_id: customerId, name: p.name || p.org, salutation: null, position: p.title || null, department: p.department || null, phone: p.phone || null, mobile: p.mobile || null, email: p.email || null, notes: p.note || null }]);
             await addHistoryEntry(String(customerId), 'system', `Ansprechpartner „${p.name || ''}“ aus Kontaktimport angelegt`, null, true);
             state.contactCount.set(String(customerId), (state.contactCount.get(String(customerId)) || 0) + 1);
             closeAbOverlay();
@@ -5102,7 +5102,12 @@
             machine_id: machineId ? parseInt(machineId) : null,
             history_ref: historyRef || null,
             description: desc || null,
-            status: 'geplant'
+            status: 'geplant',
+            // Ersteller: nur so taucht der Termin beim Anleger im Kalender
+            // unter „Nur meine" auf. user_id ist uuid (bei App-Nutzern leer),
+            // created_by_user die bigint-ID aus supabase_fix_process_user.sql.
+            user_id: typeof window.uuidUserId === 'function' ? window.uuidUserId() : null,
+            created_by_user: (window.activeUser && window.activeUser.id) || null
         };
 
         try {
@@ -5118,7 +5123,11 @@
             if (bearbeitetId) {
                 // Bearbeiten: dieselbe Ausweichlogik wie beim Anlegen, nur als
                 // UPDATE. Fehlt eine Spalte, wird ohne sie gespeichert.
+                // Beim Bearbeiten bleibt der ursprüngliche Ersteller stehen —
+                // sonst würde der Termin dem zuletzt Bearbeitenden gehören.
                 const versuch = Object.assign({}, payload);
+                delete versuch.user_id;
+                delete versuch.created_by_user;
                 const optional = ['customer_id', 'history_ref', 'machine_id', 'start_time', 'end_time'];
                 for (let i = 0; i <= optional.length; i++) {
                     ({ error, data } = await sb().from('maintenance_events')
@@ -5136,7 +5145,7 @@
                 }
             } else {
                 ({ error, data, weggelassen } = await window.insertRobust('maintenance_events', payload, {
-                    optional: ['customer_id', 'history_ref', 'machine_id', 'start_time', 'end_time'],
+                    optional: ['customer_id', 'history_ref', 'machine_id', 'start_time', 'end_time', 'created_by_user'],
                     select: 'id'
                 }));
             }

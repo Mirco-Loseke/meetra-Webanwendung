@@ -470,6 +470,9 @@ window.renderProcesses = function(targetId, opts) {
         const procSteps = Array.isArray(p.steps) ? p.steps : [];
         const stepsDone = procSteps.filter(s => s.done).length;
         const escStep = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        // Fuer Werte, die in einem onclick-Attribut in einfachen Anfuehrungszeichen
+        // stehen (Dateinamen mit ' oder " zerlegen sonst das Attribut).
+        const escAttr = (s) => escStep(s).replace(/'/g, '&#39;').replace(/"/g, '&quot;');
         const fmtDay = (d) => { try { return new Date(d).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch (e) { return ''; } };
         // Erinnerung: direkt auf der Karte änderbar. Das unsichtbare
         // datetime-local-Feld liegt über dem Abzeichen, ein Klick öffnet den
@@ -480,14 +483,13 @@ window.renderProcesses = function(targetId, opts) {
         if (p.status !== 'erledigt') {
             const rd = p.remind_at ? new Date(p.remind_at) : null;
             const gesetzt = rd && !isNaN(rd);
-            const remindInput = (val) => `<input type="datetime-local" value="${val}" onclick="event.stopPropagation(); try{this.showPicker()}catch(e){}" onchange="window.setProcessRemind('${p.id}', this.value)" title="Erinnerung setzen" style="position:absolute; inset:0; width:100%; height:100%; opacity:0; cursor:pointer; border:0; padding:0; margin:0;">`;
+            const remindOpen = `onclick="window.openProcessRemindPicker('${p.id}', event)"`;
             if (gesetzt) {
                 const diffDays = Math.round((new Date(rd).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 86400000);
                 const rc = diffDays < 0 ? '#f87171' : '#fbbf24';
                 const rlabel = diffDays < 0 ? 'Erinnerung überfällig' : (diffDays === 0 ? 'Erinnerung heute' : 'Erinnerung');
                 remindBadge = `<div style="margin-bottom: 8px; display:flex; align-items:center; gap:6px;">
-                    <span style="position:relative; display:inline-flex; align-items:center; gap:5px; color:${rc}; border:1px solid ${rc}55; background:${rc}18; padding:3px 9px; border-radius:999px; font-size:0.75rem; font-weight:700; cursor:pointer;" title="Klicken, um den Zeitpunkt zu ändern">
-                        ${remindInput(window.isoToLocalInput(p.remind_at))}
+                    <span ${remindOpen} style="position:relative; display:inline-flex; align-items:center; gap:5px; color:${rc}; border:1px solid ${rc}55; background:${rc}18; padding:3px 9px; border-radius:999px; font-size:0.75rem; font-weight:700; cursor:pointer;" title="Klicken, um den Zeitpunkt zu ändern">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
                         ${rlabel} ${rd.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}, ${rd.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
                     </span>
@@ -497,8 +499,7 @@ window.renderProcesses = function(targetId, opts) {
                 </div>`;
             } else {
                 remindBadge = `<div style="margin-bottom: 8px;">
-                    <span style="position:relative; display:inline-flex; align-items:center; gap:5px; color:rgba(251,191,36,0.75); border:1px dashed rgba(251,191,36,0.4); background:rgba(251,191,36,0.06); padding:3px 9px; border-radius:999px; font-size:0.75rem; font-weight:700; cursor:pointer;" title="Erinnerung setzen">
-                        ${remindInput(window.defaultRemindInputValue())}
+                    <span ${remindOpen} style="position:relative; display:inline-flex; align-items:center; gap:5px; color:rgba(251,191,36,0.75); border:1px dashed rgba(251,191,36,0.4); background:rgba(251,191,36,0.06); padding:3px 9px; border-radius:999px; font-size:0.75rem; font-weight:700; cursor:pointer;" title="Erinnerung setzen">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
                         Erinnerung setzen
                     </span>
@@ -512,7 +513,7 @@ window.renderProcesses = function(targetId, opts) {
         const lastUpd = statusUpdates[0] || null;
         const fmtStamp = (iso) => { try { const d = new Date(iso); if (isNaN(d)) return ''; return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ', ' + d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr'; } catch (e) { return ''; } };
         const standCardHtml = `
-            <div class="proc-card-stand" onmouseenter="const _p=this.querySelector('.proc-stand-pop'); if(_p) _p.style.display='block';" onmouseleave="const _p=this.querySelector('.proc-stand-pop'); if(_p) _p.style.display='none';" style="position:relative; display:block; margin-bottom:8px;">
+            <div class="proc-card-stand" onmouseenter="window.procPopShow(this, '.proc-stand-pop')" onmouseleave="window.procPopHide(this, '.proc-stand-pop')" style="position:relative; display:block; margin-bottom:8px;">
                 <div onclick="event.stopPropagation(); window.openProcessStatusUpdateModal('${p.id}', event)" title="Stand melden / ändern" style="cursor:pointer; display:flex; align-items:flex-start; gap:7px; padding:7px 10px; border-radius:10px; background:${lastUpd ? 'rgba(96,165,250,0.12)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${lastUpd ? 'rgba(96,165,250,0.4)' : 'rgba(255,255,255,0.1)'};">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:2px;"><circle cx="12" cy="12" r="9"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                     <div style="flex:1; min-width:0;">
@@ -539,7 +540,7 @@ window.renderProcesses = function(targetId, opts) {
             </div>`;
 
         const stepsCardHtml = `
-            <div class="proc-card-steps" onmousemove="const _pop=this.querySelector('.proc-steps-pop'); if(_pop){ const _r=this.getBoundingClientRect(); _pop.style.display = ((event.clientX - _r.left) < _r.width/2) ? 'block' : 'none'; }" onmouseleave="const _pop=this.querySelector('.proc-steps-pop'); if(_pop) _pop.style.display='none';" style="position:relative; display:block; margin-bottom:8px;">
+            <div class="proc-card-steps" onmouseenter="window.procPopShow(this, '.proc-steps-pop')" onmouseleave="window.procPopHide(this, '.proc-steps-pop')" style="position:relative; display:block; margin-bottom:8px;">
                 <div class="proc-steps-trigger" style="display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:800; color:#34d399; text-transform:uppercase; letter-spacing:0.5px; cursor:default; padding:2px 0;">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
                     Schritte <span class="proc-steps-trigger-count" style="opacity:0.7;">${stepsDone}/${procSteps.length}</span>
@@ -622,29 +623,53 @@ window.renderProcesses = function(targetId, opts) {
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
                             ${n ? `<span style="position: absolute; top: -6px; right: -6px; background: #10b981; color: #fff; font-size: 0.62rem; font-weight: 800; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #1e293b; box-shadow: 0 2px 6px rgba(0,0,0,0.4);">${n}</span>` : ''}
                         </button>`; })()}
+                        ${(() => {
+                            // Dokumente am Vorgang (auch die an einzelnen Schritten):
+                            // auf der Karte sofort sichtbar, Klick oeffnet die Verwaltung,
+                            // Hover zeigt die Namen und oeffnet eine Datei direkt.
+                            const atts = Array.isArray(p.attachments) ? p.attachments : [];
+                            if (!atts.length) return '';
+                            const oeffnen = (f) => `window.previewDocument ? window.previewDocument('${escAttr(f.url)}', '${escAttr(f.name)}', '${escAttr(f.type || '')}') : window.open('${escAttr(f.url)}', '_blank')`;
+                            return `
+                        <div style="position:relative; display:inline-flex;" onmouseenter="window.procPopShow(this, '.proc-att-pop')" onmouseleave="window.procPopHide(this, '.proc-att-pop')">
+                            <button onclick="event.stopPropagation(); window.openProcessAttachments('${p.id}', null, event)" class="btn-icon-soft" title="${atts.length} Dokument(e)" style="position: relative; background: rgba(139,92,246,0.16); color: #a78bfa; border: 1px solid rgba(139,92,246,0.65); box-shadow: 0 0 12px rgba(139,92,246,0.45); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(139,92,246,0.3)'" onmouseout="this.style.background='rgba(139,92,246,0.16)'">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                                <span style="position: absolute; top: -6px; right: -6px; background: #8b5cf6; color: #fff; font-size: 0.62rem; font-weight: 800; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #1e293b; box-shadow: 0 2px 8px rgba(139,92,246,0.7);">${atts.length}</span>
+                            </button>
+                            <div class="proc-att-pop" style="display:none; position:absolute; bottom:calc(100% + 8px); right:0; z-index:60; width:320px; max-width:80vw; background:rgba(15,23,42,0.98); border:1px solid rgba(139,92,246,0.35); border-radius:12px; padding:8px; box-shadow:0 12px 40px rgba(0,0,0,0.6); text-align:left; max-height:260px; overflow-y:auto;">
+                                ${atts.map(f => `
+                                <div onclick="event.stopPropagation(); ${oeffnen(f)}" title="Öffnen" style="display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; cursor:pointer; color:#fff; font-size:0.82rem;" onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background='transparent'">
+                                    <span style="flex-shrink:0;">${/pdf/i.test((f.type || '') + ' ' + (f.name || '')) ? '📕' : (/image|png|jpe?g|webp|gif|heic/i.test((f.type || '') + ' ' + (f.name || '')) ? '🖼️' : '📄')}</span>
+                                    <span style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escStep(f.name || 'Datei')}</span>
+                                </div>`).join('')}
+                            </div>
+                        </div>`;
+                        })()}
                         ${(() => { const su = statusUpdates.length; return `
                         <button onclick="event.stopPropagation(); window.openProcessStatusUpdateModal('${p.id}', event)" class="btn-icon-soft" title="Aktueller Stand" style="position: relative; background: ${su ? 'rgba(96,165,250,0.14)' : 'rgba(255,255,255,0.05)'}; color: #60a5fa; border: 1px solid ${su ? 'rgba(96,165,250,0.65)' : 'rgba(255,255,255,0.1)'}; box-shadow: ${su ? '0 0 12px rgba(96,165,250,0.55)' : 'none'}; width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(96,165,250,0.28)'" onmouseout="this.style.background='${su ? 'rgba(96,165,250,0.14)' : 'rgba(255,255,255,0.05)'}'">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
                             ${su ? `<span style="position: absolute; top: -6px; right: -6px; background: #60a5fa; color: #fff; font-size: 0.62rem; font-weight: 800; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #1e293b; box-shadow: 0 2px 8px rgba(96,165,250,0.7);">${su}</span>` : ''}
                         </button>`; })()}
                         ${(() => {
-                            const hasRemark = !!(p.remark && p.remark.trim());
-                            const remarkEsc = escStep((p.remark || '').trim());
+                            // Statt der frueheren Notiz: der importierte Mail-Text.
+                            // Der Knopf erscheint nur, wenn wirklich etwas da ist —
+                            // sonst stehen hier zu viele Symbole nebeneinander.
+                            const mailText = (p.description || '').trim();
+                            if (!mailText) return '';
                             return `
-                        <div style="position:relative; display:inline-flex;" onmouseenter="this.querySelector('.proc-remark-pop').style.display='block'" onmouseleave="this.querySelector('.proc-remark-pop').style.display='none'">
-                            <button type="button" class="btn-icon-soft" title="Notiz" style="position: relative; background: ${hasRemark ? 'rgba(167,139,250,0.3)' : 'rgba(167,139,250,0.1)'}; color: #a78bfa; border: 1px solid ${hasRemark ? 'rgba(167,139,250,0.9)' : 'rgba(167,139,250,0.3)'}; box-shadow: ${hasRemark ? '0 0 14px rgba(167,139,250,0.75)' : 'none'}; width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(167,139,250,0.4)'" onmouseout="this.style.background='${hasRemark ? 'rgba(167,139,250,0.3)' : 'rgba(167,139,250,0.1)'}'">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                                ${hasRemark ? `<span style="position: absolute; top: -6px; right: -6px; background: #a78bfa; color: #fff; font-size: 0.62rem; font-weight: 800; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #1e293b; box-shadow: 0 2px 6px rgba(0,0,0,0.4);">1</span>` : ''}
+                        <div style="position:relative; display:inline-flex;" onmouseenter="window.procPopShow(this, '.proc-remark-pop')" onmouseleave="window.procPopHide(this, '.proc-remark-pop')">
+                            <button type="button" class="btn-icon-soft" title="E-Mail Inhalt" style="position: relative; background: rgba(167,139,250,0.3); color: #a78bfa; border: 1px solid rgba(167,139,250,0.9); box-shadow: 0 0 14px rgba(167,139,250,0.75); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(167,139,250,0.4)'" onmouseout="this.style.background='rgba(167,139,250,0.3)'">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
                             </button>
-                            <div class="proc-remark-pop" style="display:none; position:absolute; bottom:calc(100% + 8px); right:0; z-index:60; width:420px; max-width:85vw; background:rgba(15,23,42,0.98); border:1px solid rgba(167,139,250,0.3); border-radius:12px; padding:12px 14px; box-shadow:0 12px 40px rgba(0,0,0,0.6); color:#fff; font-size:0.85rem; line-height:1.5; white-space:pre-wrap; word-break:break-word; text-align:left;">
-                                ${hasRemark ? remarkEsc : '<span style="color:rgba(255,255,255,0.4); font-style:italic;">Keine Notiz hinterlegt</span>'}
+                            <div class="proc-remark-pop" style="display:none; position:absolute; bottom:calc(100% + 8px); right:0; z-index:60; width:420px; max-width:85vw; max-height:320px; overflow-y:auto; background:rgba(15,23,42,0.98); border:1px solid rgba(167,139,250,0.3); border-radius:12px; padding:12px 14px; box-shadow:0 12px 40px rgba(0,0,0,0.6); color:#fff; font-size:0.85rem; line-height:1.5; white-space:pre-wrap; word-break:break-word; text-align:left;">
+                                ${escStep(mailText)}
                             </div>
                         </div>`; })()}
                         ${(() => {
                             const addrCustomerId = p.customer_id || (p.machines && p.machines.customer_id) || null;
                             if (!addrCustomerId) return '';
                             return `
-                        <button onclick="event.stopPropagation(); window.openAddressbookDetail('${addrCustomerId}', 'tasks')" class="btn-icon-soft" title="Adresse öffnen" style="background: rgba(167,139,250,0.1); color: #a78bfa; border: 1px solid rgba(167,139,250,0.3); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(167,139,250,0.25)'" onmouseout="this.style.background='rgba(167,139,250,0.1)'">
+                        <button onclick="event.stopPropagation(); window.openAddressbookDetail('${addrCustomerId}', 'tasks')" class="btn-icon-soft" title="Adresse öffnen" style="background: rgba(251,191,36,0.14); color: #fbbf24; border: 1px solid rgba(251,191,36,0.5); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(251,191,36,0.3)'" onmouseout="this.style.background='rgba(251,191,36,0.14)'">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                         </button>`;
                         })()}
@@ -772,7 +797,6 @@ window.saveImportedEmail = async function(event) {
         const workshopOrderNumber = document.getElementById('email-workshop-order-select').value;
         const status = document.getElementById('email-status-select').value;
         const description = document.getElementById('email-body-input').value;
-        const remark = document.getElementById('email-remark-input').value;
 
         const processDate = date ? new Date(date).toISOString() : new Date().toISOString();
 
@@ -788,7 +812,6 @@ window.saveImportedEmail = async function(event) {
                 workshop_order_number: workshopOrderNumber || null,
                 status: status,
                 description: description || null,
-                remark: remark || null,
                 assigned_users: window.processAssignedUsers['email']
             });
 
@@ -816,7 +839,6 @@ window.updateProcess = async function(event) {
         const machineId = document.getElementById('edit-process-machine-select').value;
         const workshopOrderNumber = document.getElementById('edit-process-workshop-order-select').value;
         const status = document.getElementById('edit-process-status-select').value;
-        const remark = document.getElementById('edit-process-remark-input').value;
         const description = document.getElementById('edit-process-body-input').value;
         const serviceReportId = document.getElementById('edit-process-service-report-select').value;
         const customerId = document.getElementById('edit-process-customer-id')?.value;
@@ -834,7 +856,6 @@ window.updateProcess = async function(event) {
             machine_id: machineId ? parseInt(machineId) : null,
             workshop_order_number: workshopOrderNumber || null,
             status: status,
-            remark: remark || null,
             description: description || null,
             assigned_users: window.processAssignedUsers['edit-process'],
             steps: (window.processSteps['edit-process'] || []).filter(s => (s.text || '').trim()),
@@ -866,6 +887,8 @@ window.updateProcess = async function(event) {
             const labelMap = { customer_id: 'Adresse', contact_name: 'Ansprechpartner', remind_at: 'Erinnerung', linked_service_report_id: 'Servicebericht-Link' };
             const fehlend = dropped.map(c => labelMap[c] || c).join(', ');
             window.showToast('Gespeichert, aber NICHT übernommen: ' + fehlend + '.\n\nDazu fehlt eine Spalte in der Datenbank – bitte supabase_add_process_customer.sql in Supabase ausführen.');
+        } else {
+            window.showToast('Vorgang gespeichert.', 'success');
         }
 
         window.closeEditProcessModal();
@@ -941,3 +964,41 @@ window.toggleMyProcessesFilter = function () {
     window.filterProcessesByUser(window.isMyProcessesFilterActive ? 'all' : 'me');
 };
 
+
+// =========================================================
+// HOVER-VORSCHAU MIT VERZOEGERUNG (Karten „Aktueller Stand" / „Schritte")
+// =========================================================
+// Vorher klappte die Vorschau in dem Moment auf, in dem der Zeiger die Karte
+// streifte — beim blossen Ueberfahren der Liste ging staendig etwas auf und
+// verdeckte die Karte darunter. Jetzt muss der Zeiger erst kurz stehen bleiben.
+window.PROC_POP_DELAY = 1200;
+
+window.procPopShow = function (host, sel) {
+    if (!host) return;
+    const pop = host.querySelector(sel);
+    if (!pop) return;
+    if (pop.style.display === 'block') return;      // steht schon offen
+    if (host._procPopTimer) return;                 // wartet schon
+    host._procPopTimer = setTimeout(() => {
+        host._procPopTimer = null;
+        if (host.isConnected) pop.style.display = 'block';
+    }, window.PROC_POP_DELAY);
+};
+
+window.procPopHide = function (host, sel) {
+    if (!host) return;
+    clearTimeout(host._procPopTimer);
+    host._procPopTimer = null;
+    const pop = host.querySelector(sel);
+    if (pop) pop.style.display = 'none';
+};
+
+// Frueher lief die Schritte-Vorschau ueber `onmousemove` und oeffnete nur in
+// der linken Haelfte der Karte. Das war fehleranfaellig (Zeigerposition,
+// Kartenbreite, staendig feuernde Ereignisse) und oeffnete am Ende gar nicht
+// mehr. Die Schritte-Zeile ist eine eigene Zeile ohne Knoepfe daneben — die
+// Haelften-Regel bringt dort nichts. Deshalb jetzt dasselbe Verhalten wie
+// beim „Aktuellen Stand": mouseenter/mouseleave mit Verzoegerung.
+window.procPopMove = function (host, sel) {
+    window.procPopShow(host, sel);
+};

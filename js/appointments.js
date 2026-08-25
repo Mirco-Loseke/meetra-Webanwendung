@@ -217,7 +217,7 @@
         const versuch = Object.assign({}, full);
         const weggelassen = [];
         let res;
-        const optional = ['customer_id', 'location_label', 'start_time'];
+        const optional = ['customer_id', 'location_label', 'start_time', 'created_by_user'];
         for (let i = 0; i <= optional.length; i++) {
             res = await sb().from('maintenance_events').insert([versuch]).select('id').limit(1);
             if (!res.error) break;

@@ -238,11 +238,13 @@
     <link rel="stylesheet" href="css/components/voice-dictation.css?v=3">
     <link rel="stylesheet" href="css/views/machine-modal.css?v=4">
     <!-- Zuletzt: ersetzt frueher inline gesetzte Stile, muss deshalb zuletzt greifen -->
-    <link rel="stylesheet" href="css/base/utilities.css?v=4">
+    <link rel="stylesheet" href="css/base/utilities.css?v=5">
     <!-- Einheitlicher Dropdown-Look (Vorbild: Hersteller-Feld in "Maschine
          bearbeiten"). Bewusst zuletzt geladen, damit er ohne !important
          gewinnt. Diese Zeile loeschen = alles wie vorher. -->
     <link rel="stylesheet" href="css/components/dropdown-look.css?v=5">
+    <!-- MIETVEREINBARUNG (1/3) — eigenstaendig, diese Zeile loeschen = weg -->
+    <link rel="stylesheet" href="css/views/mietvereinbarung.css?v=14">
 
     <!-- @partial:modals/pin-prompt-modal.html -->
         <!-- PIN Prompt Modal -->
@@ -1832,6 +1834,25 @@
                                             </div>
                                         </div>
 
+                        <!-- MIETVEREINBARUNG — Karte loeschen = Punkt verschwindet -->
+                        <div class="settings-card" data-target="miet-vorlagen">
+                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
+                                <div class="settings-icon-container"
+                                    style="background: rgba(52, 211, 153, 0.12); color: #34d399; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0;">
+                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                                    </svg>
+                                </div>
+                                <h2 style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">Mietverein&shy;barungen</h2>
+                            </div>
+                            <div class="settings-content">
+                                <p class="settings-card-desc">Aufbau und Texte je Maschinentyp anpassen</p>
+                            </div>
+                        </div>
+
                                         <!-- Groq API Key Card -->
                                         <div class="settings-card" data-target="settings-ai">
                                             <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
@@ -2836,6 +2857,62 @@
         </section>
 
         <!-- Protocol Templates List View -->
+        <!-- MIETVEREINBARUNG (4/4) — beide Sektionen loeschen = weg -->
+        <section id="miet-vorlagen" class="view hidden">
+            <div class="users-header-container">
+                <h1>Mietvereinbarungen</h1>
+                <div class="users-header-actions">
+                    <button class="btn-primary" onclick="window.mietVorlageNeu()" style="margin-right: 0.75rem;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        ANLEGEN
+                    </button>
+                    <button class="btn-back-custom" data-target="settings">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 12H5"></path>
+                            <path d="M12 19l-7-7 7-7"></path>
+                        </svg>
+                        ZURÜCK
+                    </button>
+                </div>
+            </div>
+            <p style="color: rgba(255,255,255,0.45); font-size: 0.9rem; margin-top: 1rem;">
+                Jede Vorlage legt einen eigenen Bogen fest — Beschriftungen, Prüfspalten, Baugruppen,
+                Fotopositionen und Vertragstext. Über den Maschinentyp wird sie automatisch gezogen,
+                wenn an einer solchen Maschine eine Mietvereinbarung angelegt wird.
+            </p>
+            <div id="miet-vorlagen-liste" class="card-grid" style="margin-top: 1.5rem;">
+                <div class="empty-state" style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: rgba(255,255,255,0.4);">
+                    Lade Vorlagen …
+                </div>
+            </div>
+        </section>
+
+        <section id="miet-vorlage-editor" class="view hidden">
+            <div class="users-header-container">
+                <h1 id="miet-vorlage-titel">Vorlage bearbeiten</h1>
+                <div class="users-header-actions" style="display: flex; align-items: center; gap: 0.75rem;">
+                    <button class="btn-back-custom" data-target="miet-vorlagen">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 12H5"></path>
+                            <path d="M12 19l-7-7 7-7"></path>
+                        </svg>
+                        ZURÜCK
+                    </button>
+                    <button class="btn-secondary" onclick="window.mietVorlageZuruecksetzen()">Standard laden</button>
+                    <button class="btn-secondary" onclick="window.mietVorlageVorschau()">Vorschau</button>
+                    <button class="btn-primary" onclick="window.mietVorlageSpeichern()">SPEICHERN</button>
+                </div>
+            </div>
+            <div id="miet-vorlage-editor-inhalt" style="margin-top: 2rem;"></div>
+        </section>
+
+
         <section id="protocol-templates" class="view hidden">
             <div class="users-header-container">
                 <h1>Protokollvorlagen</h1>
@@ -2858,17 +2935,16 @@
         <!-- Protocol Template Editor View -->
         <section id="protocol-template-editor" class="view hidden">
             <div class="users-header-container">
-                <div style="display: flex; align-items: center; gap: 1rem;">
+                <h1 id="editor-template-name">Vorlage bearbeiten</h1>
+                <div class="users-header-actions" style="display: flex; align-items: center; gap: 1rem;">
                     <button class="btn-back-custom" data-target="protocol-templates">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                             stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M19 12H5"></path>
                             <path d="M12 19l-7-7 7-7"></path>
                         </svg>
+                        ZURÜCK
                     </button>
-                    <h1 id="editor-template-name">Vorlage bearbeiten</h1>
-                </div>
-                <div class="users-header-actions" style="display: flex; align-items: center; gap: 1rem;">
                     <div class="category-select-wrapper"
                         style="display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.05); padding: 5px 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1);">
                         <span
@@ -3846,7 +3922,7 @@
     <!-- Supabase JS — lokal gehostet (kein Abhängen von externer CDN-Erreichbarkeit), mit
          CDN-Fallback nur für den unwahrscheinlichen Fall, dass die lokale Datei fehlt. -->
     <!-- Toasts: früh laden, damit showToast überall verfügbar ist -->
-    <script src="js/ui-feedback.js?v=1"></script>
+    <script src="js/ui-feedback.js?v=2"></script>
     <script src="js/auto-nachladen.js?v=2"></script>
     <!-- Berechtigungen: ausgelagert aus index.html -->
     <script src="js/permissions.js?v=4"></script>
@@ -3920,9 +3996,9 @@
     <script src="js/machine-modal.js?v=1"></script>
     <script src="js/service-report-form.js?v=7"></script>
     <script src="js/service-list.js?v=2"></script>
-    <script src="js/history-modal.js?v=200"></script>
+    <script src="js/history-modal.js?v=201"></script>
     <script src="js/calendar-events.js?v=4"></script>
-    <script src="js/processes-ui.js?v=21"></script>
+    <script src="js/processes-ui.js?v=26"></script>
     <!-- Dokumente an Vorgaengen/Schritten. Nutzt window.FileUploadService
          (js/file-upload-service-r2.js, weiter UNTEN geladen) — das ist in
          Ordnung, weil der Dienst erst beim Hochladen angefasst wird. -->
@@ -3930,14 +4006,14 @@
     <script src="js/process-messages.js?v=1"></script>
     <script src="js/process-machine-select.js?v=1"></script>
     <script src="js/customer-matching.js?v=1"></script>
-    <script src="js/ui-modals.js?v=1"></script>
-    <script src="js/processes.js?v=120"></script>
+    <script src="js/ui-modals.js?v=2"></script>
+    <script src="js/processes.js?v=127"></script>
     <script src="js/service-reports.js?v=1"></script>
-    <script src="js/service-entries.js?v=5"></script>
+    <script src="js/service-entries.js?v=9"></script>
     <script src="js/service-picker.js?v=1"></script>
     <script src="js/worklog-tables.js?v=3"></script>
     <script src="js/signature-pads.js?v=1"></script>
-    <script src="js/servicebericht-pdf.js?v=1"></script>
+    <script src="js/servicebericht-pdf.js?v=3"></script>
     <!-- Modal: Service Action Choice (View or Create) - Moved to root for better centering -->
     <div id="work-log-summary-modal" class="modal-backdrop hidden" style="z-index: 10001;">
         <div class="modal-content" style="max-width: 700px; width: 90%; padding: 1.5rem;">
@@ -3985,6 +4061,12 @@
                         <div class="icon-small">✅</div>
                         <div class="text"><strong>Abnahmeprotokoll</strong></div>
                     </button>
+                    <!-- MIETVEREINBARUNG (3/3a) — diesen Knopf loeschen = weg -->
+                    <button id="action-btn-rental" class="report-type-btn compact"
+                        onclick="startReportCreation('mietvereinbarung')">
+                        <div class="icon-small">🔑</div>
+                        <div class="text"><strong>Mietvereinbarung</strong></div>
+                    </button>
                 </div>
             </div>
 
@@ -4018,6 +4100,12 @@
                         onclick="showServiceReportsForCurrentMachine('Abnahmeprotokoll')">
                         <div class="icon-small">✅</div>
                         <div class="text"><strong>Abnahmeprotokoll</strong></div>
+                    </button>
+                    <!-- MIETVEREINBARUNG (3/3c) — diesen Knopf loeschen = weg -->
+                    <button class="report-type-btn compact secondary"
+                        onclick="showMietvereinbarungenForMachine()">
+                        <div class="icon-small">🔑</div>
+                        <div class="text"><strong>Mietvereinbarung</strong></div>
                     </button>
                 </div>
             </div>
@@ -4073,6 +4161,14 @@
                     <div class="text">
                         <strong>Abnahmeprotokoll</strong>
                         <span>Übergabe an den Kunden</span>
+                    </div>
+                </button>
+                <!-- MIETVEREINBARUNG (3/3b) — diesen Knopf loeschen = weg -->
+                <button class="report-type-btn" onclick="startReportCreation('mietvereinbarung')">
+                    <div class="icon">🔑</div>
+                    <div class="text">
+                        <strong>Mietvereinbarung</strong>
+                        <span>Vermietung: Übergabe und Rücknahme</span>
                     </div>
                 </button>
             </div>
@@ -5701,11 +5797,15 @@
     <!-- Load scripts -->
     <script src="js/machines-grouped.js?v=51"></script>
     <script src="js/protocols.js?v=54"></script>
+    <!-- MIETVEREINBARUNG (2/3) — eigenstaendig, diese Zeile loeschen = weg -->
+    <script src="js/mietvereinbarung-vorlagen.js?v=8"></script>
+    <script src="js/mietvereinbarung.js?v=13"></script>
+    <script src="js/mietvereinbarung-liste.js?v=1"></script>
 
     </main>
     </div><!-- End main-wrapper -->
 
-    <script src="js/tasks.js?v=18"></script>
+    <script src="js/tasks.js?v=19"></script>
     <script src="js/workshop-tasks.js?v=2"></script>
     <script src="js/task_templates.js?v=99"></script>
     <!-- Spracheingabe für die KI-Felder — muss vor den KI-Modulen stehen,
@@ -5715,7 +5815,7 @@
          ai-quick-capture.js, ai-address-task.js und accounting.js stehen —
          die rufen window.groqFetch() auf. -->
     <script src="js/groq-proxy.js?v=1"></script>
-    <script src="js/ai-quick-capture.js?v=21"></script>
+    <script src="js/ai-quick-capture.js?v=22"></script>
     <script>
         window.addEventListener('load', () => {
             if (typeof window.initTaskTemplates === 'function') {
@@ -5757,7 +5857,7 @@
         <img id="lightbox-img" src="" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 92vw; max-height: 92vh; object-fit: contain; border-radius: 8px; will-change: transform; cursor: grab;">
     </div>
 
-    <script src="js/photo-lightbox.js?v=1"></script>
+    <script src="js/photo-lightbox.js?v=2"></script>
 
     <!-- Modal: History Timeline -->
     <div id="machine-history-modal" class="modal-backdrop hidden"
@@ -6467,38 +6567,38 @@
     </script>
     <script src="js/file-upload-service-r2.js"></script>
     <script src="js/accounting.js?v=43"></script>
-    <script src="js/documents-r2.js?v=6"></script>
+    <script src="js/documents-r2.js?v=8"></script>
     <script src="js/checklists.js?v=2"></script>
     <script src="js/customers.js?v=2"></script>
     <script src="js/autosave.js?v=1"></script>
     <script src="js/unsaved-guard.js?v=1"></script>
     <script src="js/address-history.js?v=2"></script>
-    <script src="js/addressbook.js?v=52"></script>
+    <script src="js/addressbook.js?v=54"></script>
     <script src="js/addressbook-live.js?v=3"></script>
-    <script src="js/process-autosave.js?v=2"></script>
+    <script src="js/process-autosave.js?v=3"></script>
     <script src="js/task-autosave.js?v=1"></script>
     <script src="js/process-open-hints.js?v=2"></script>
-    <script src="js/ai-address-task.js?v=11"></script>
+    <script src="js/ai-address-task.js?v=12"></script>
     <!-- Termine mit Teilnehmern: liefert die Bausteine, die Benachrichtigungen,
          Kalender und Routenplanung darunter benutzen. -->
     <script src="js/appointment-invite.js?v=2"></script>
-    <script src="js/appointments.js?v=4"></script>
+    <script src="js/appointments.js?v=5"></script>
     <script src="js/notifications.js?v=8"></script>
     <!-- Minutengenauer Wecker fuer Erinnerungen mit Uhrzeit. Muss NACH
          notifications.js stehen: nutzt window.notificationsPushEnabled. -->
-    <script src="js/reminder-alarm.js?v=3"></script>
+    <script src="js/reminder-alarm.js?v=4"></script>
     <script src="js/assignment-handoff.js?v=2"></script>
-    <script src="js/calendar-widget.js?v=10"></script>
+    <script src="js/calendar-widget.js?v=11"></script>
     <!-- tasks.js und processes.js werden bereits weiter oben geladen (vor ihren
          jeweiligen Folgemodulen). Ein zweites Einbinden ließ beide Module doppelt
          laufen — mit doppelt registrierten Event-Handlern. -->
     <script src="js/routeplanner.js"></script>
-    <script src="js/routenplanung.js?v=13"></script>
+    <script src="js/routenplanung.js?v=14"></script>
     <script src="js/listen.js?v=12"></script>
     <script src="assets/data/meetra_logo_base64.js"></script>
     <script src="js/labels.js?v=2"></script>
     <script src="js/offline-service.js?v=1"></script>
-    <script src="js/dropdown-position.js?v=5"></script>
+    <script src="js/dropdown-position.js?v=6"></script>
     <!-- Wandelt native <select> in das einheitliche Dropdown um.
          Muss nach dropdown-position.js kommen, damit die erzeugten
          Menues von dessen Beobachter erfasst werden. -->
@@ -6636,13 +6736,8 @@
                         <input type="text" id="email-title-input" class="glass-input" required placeholder="Betreff der E-Mail...">
                     </div>
 
-                    <div class="form-group" style="margin-bottom: 0.75rem;">
-                        <label class="form-label-caps">Bemerkung / Beschreibung</label>
-                        <textarea id="email-remark-input" class="glass-input" style="height: 80px; resize: vertical; padding-top: 15px;" placeholder="Interne Bemerkung..."></textarea>
-                    </div>
-
                     <div class="form-group" id="email-body-group" style="margin-bottom: 0.75rem; display: none;">
-                        <label class="form-label-caps">E-Mail-Text</label>
+                        <label class="form-label-caps">E-Mail Inhalt</label>
                         <textarea id="email-body-input" class="glass-input" style="height: 100px; resize: vertical; padding-top: 15px;" placeholder="Textinhalt der E-Mail..."></textarea>
                     </div>
 
@@ -6786,13 +6881,21 @@
                         <input type="text" id="process-add-title-input" class="glass-input" required placeholder="Titel des Vorgangs...">
                     </div>
 
+
+                    <!-- Aktueller Stand: gleich beim Anlegen eintragbar. Der Text
+                         wird als erster Eintrag in status_updates gespeichert und
+                         erscheint danach auf der Karte unter „Aktueller Stand". -->
                     <div class="form-group" style="margin-bottom: 0.75rem;">
-                        <label class="form-label-caps">Bemerkung / Beschreibung</label>
-                        <textarea id="process-add-remark-input" class="glass-input" style="height: 100px; resize: vertical; padding-top: 15px;" placeholder="Details zum Vorgang..."></textarea>
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px;">
+                            <label class="form-label-caps" style="margin: 0;">Aktueller Stand <span style="opacity: 0.5; font-weight: 600; text-transform: none; letter-spacing: 0;">(optional)</span></label>
+                            <button type="button" class="mic-btn" data-mic-for="process-add-status-input" title="Diktieren — Text wird direkt ins Feld geschrieben"><span class="mic-btn-icon"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></span><span class="mic-btn-label">Diktieren</span></button>
+                        </div>
+                        <textarea id="process-add-status-input" class="glass-input" style="height: 70px; resize: vertical; padding-top: 15px;" placeholder="z. B. Ersatzteil bestellt, Liefertermin KW 34"></textarea>
+                        <div class="mic-status" data-mic-status-for="process-add-status-input"></div>
                     </div>
 
                     <div class="form-group" id="process-add-body-group" style="margin-bottom: 0.75rem; display: none;">
-                        <label class="form-label-caps">E-Mail-Text</label>
+                        <label class="form-label-caps">E-Mail Inhalt</label>
                         <textarea id="process-add-body-input" class="glass-input" style="height: 100px; resize: vertical; padding-top: 15px;" placeholder="Textinhalt der E-Mail..."></textarea>
                     </div>
 
@@ -7050,21 +7153,6 @@
                         <input type="text" id="edit-process-title-input" class="glass-input" required placeholder="Betreff der E-Mail...">
                     </div>
 
-                    <!-- Bemerkung / Notiz: standardmaessig eingeklappt, oeffnet per + -->
-                    <div class="proc-note-section" id="edit-process-note-section" style="margin-bottom: 0.75rem;">
-                        <button type="button" class="proc-note-toggle" id="edit-process-note-toggle" onclick="window.toggleProcessNoteSection()" aria-expanded="false">
-                            <svg class="proc-note-plus" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                            <span>Bemerkung / Notiz</span>
-                            <span class="proc-note-hint" id="edit-process-note-hint"></span>
-                        </button>
-                        <div class="proc-note-body" id="edit-process-note-body" hidden>
-                            <div class="form-group" style="margin-bottom: 0;">
-                                <label class="form-label-caps">Bemerkung</label>
-                                <textarea id="edit-process-remark-input" class="glass-input" style="height: 80px; resize: vertical; padding-top: 15px;" placeholder="Interne Bemerkung..."></textarea>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- STAND: bewusst NICHT im Ausklapp oben. Das ist die
                          Angabe, die im Alltag am haeufigsten gebraucht wird —
                          sie soll ohne Klick sichtbar sein. Nur die Bemerkung
@@ -7092,7 +7180,7 @@
                     </div>
 
                     <div class="form-group" id="edit-process-body-group" style="margin-bottom: 0.75rem; display: none;">
-                        <label class="form-label-caps">E-Mail-Text</label>
+                        <label class="form-label-caps">E-Mail Inhalt</label>
                         <textarea id="edit-process-body-input" class="glass-input" style="height: 100px; resize: vertical; padding-top: 15px;" placeholder="Textinhalt der E-Mail..."></textarea>
                     </div>
 

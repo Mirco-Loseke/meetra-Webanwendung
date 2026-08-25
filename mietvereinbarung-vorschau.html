@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mietvereinbarung — Vorschau</title>
+    <!-- ======================================================
+         NUR ZUM ANSCHAUEN. Diese Datei gehoert nicht zur App und
+         kann jederzeit geloescht werden. Sie oeffnet das Fenster
+         "Mietvereinbarung" mit erfundenen Beispieldaten, ohne
+         Anmeldung und ohne Datenbank.
+         ====================================================== -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/views/mietvereinbarung.css">
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: #0b1220;
+            font-family: system-ui, sans-serif;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .start {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .start button {
+            margin-top: 1rem;
+            padding: 12px 22px;
+            font-size: 1rem;
+            font-weight: 700;
+            border-radius: 12px;
+            border: 1px solid rgba(16, 185, 129, .6);
+            background: rgba(16, 185, 129, .18);
+            color: #fff;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="start">
+        <h1 style="margin:0; font-size:1.4rem;">Vorschau: Mietvereinbarung</h1>
+        <p style="opacity:.6; font-size:.9rem;">Beispieldaten, nichts wird gespeichert.</p>
+        <button onclick="window.openMietvereinbarung('demo-1')">Fenster öffnen</button>
+    </div>
+
+    <script>
+        // --- Stellvertreter fuer die Teile der App, die hier fehlen ---
+        window.machineList = [{
+            id: 'demo-1', manufacturer: 'HIPPO', name: 'MTS620', serial: 'EYS609001',
+            year: 2023, category_id: 'cat-1',
+            location_street: 'Musterweg 3', location_zip: '26203', location_city: 'Wardenburg'
+        }];
+        window.categoryList = [{ id: 'cat-1', name: 'Trommelsiebmaschine' }];
+        window.userList = [
+            { id: 'u1', name: 'Mirco Loseke', saved_signature: null },
+            { id: 'u2', name: 'Dietmar Meenken', saved_signature: null }
+        ];
+        window.activeUser = { id: 'u1', name: 'Mirco Loseke' };
+        window.showToast = (t) => console.log("TOAST:", t);
+        window.switchView = (id) => console.log("switchView:", id);
+        // Adressbuch-Suche mit erfundenen Treffern
+        window.supabaseClient = {
+            from: () => ({
+                select: () => ({
+                    or: () => ({
+                        limit: async () => ({
+                            data: [
+                                { id: 'a1', name: 'Bauunternehmen Meyer GmbH', street: 'Industriestr. 12', zip_code: '26123', city: 'Oldenburg' },
+                                { id: 'a2', name: 'Recycling Nord KG', street: 'Hafenstr. 4', zip_code: '28195', city: 'Bremen' }
+                            ], error: null
+                        })
+                    })
+                })
+            })
+        };
+    </script>
+    <script src="js/mietvereinbarung-vorlagen.js"></script>
+    <script src="js/mietvereinbarung.js"></script>
+</body>
+
+</html>

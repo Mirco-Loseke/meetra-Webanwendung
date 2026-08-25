@@ -1592,6 +1592,12 @@
                 return;
             }
 
+            // MIETVEREINBARUNG — diesen Block loeschen = weg (js/mietvereinbarung.js)
+            if (type === 'mietvereinbarung' && typeof window.openMietvereinbarung === 'function') {
+                window.openMietvereinbarung(currentSelectedMachineForService);
+                return;
+            }
+
             // fallback to default service report modal
             if (typeof openServiceberichtModal === 'function') {
                 openServiceberichtModal();

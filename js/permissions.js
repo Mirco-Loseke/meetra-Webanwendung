@@ -65,6 +65,7 @@
         { key: 'wartungsplaene', label: 'Wartungspläne', what: ['Wartungsplänen'] },
         { key: 'unteraufgaben', label: 'Unteraufgaben', what: ['Unteraufgaben'] },
         { key: 'werkstatt', label: 'Werkstatt-Einträge', what: ['Werkstatt-Einträgen'] },
+        { key: 'mietvereinbarungen', label: 'Mietvereinbarungen', what: ['Mietvereinbarungen'] },
         { key: 'benutzer', label: 'Benutzer', what: ['Benutzern'] }
     ];
 
