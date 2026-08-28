@@ -445,7 +445,7 @@ window.showServiceQuickInfo = async function (id) {
         try {
             const { data, error } = await window.supabaseClient
                 .from('service_entries')
-                .select('work_log, travel_distance_km, travel_time_minutes')
+                .select('work_log, travel_distance_km, travel_time_minutes, hotel_company, hotel_street, hotel_zip, hotel_city, hotel_country')
                 .eq('id', id)
                 .single();
             if (!error) full = data;
@@ -467,8 +467,32 @@ window.showServiceQuickInfo = async function (id) {
         const zeit = `00:00 - ${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
         workLog = [{ datum: '', typ: 'Anfahrt', zeit, pause: '', kilometer: full.travel_distance_km || '' }];
     }
-    content.innerHTML = window.buildWorkLogSummaryHtml(workLog);
+    content.innerHTML = hotelHinweisHtml(full) + window.buildWorkLogSummaryHtml(workLog);
 };
+
+// Ist am Bericht ein Hotel hinterlegt, gehören Übernachtung und Spesen mit auf
+// die Rechnung — beim Abrechnen nach der Stundenübersicht ging das unter.
+function hotelHinweisHtml(entry) {
+    if (!entry) return '';
+    const teile = [entry.hotel_company, entry.hotel_street,
+        [entry.hotel_zip, entry.hotel_city].filter(Boolean).join(' '), entry.hotel_country]
+        .map(v => (v || '').trim()).filter(Boolean);
+    if (!teile.length) return '';
+
+    const esc = (s) => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    return `
+    <div style="display:flex; gap:12px; align-items:flex-start; margin-bottom:1rem; padding:14px 16px; border-radius:12px;
+                background:rgba(251,191,36,0.14); border:1px solid rgba(251,191,36,0.55); color:#fbbf24;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-top:1px;">
+            <path d="M2 20v-8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v8"></path><path d="M2 16h20"></path>
+            <path d="M6 10V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v4"></path><circle cx="9" cy="7.5" r="1.5"></circle>
+        </svg>
+        <div>
+            <div style="font-weight:800; font-size:1rem; letter-spacing:0.2px;">Übernachtungskosten und Spesen nicht vergessen!</div>
+            <div style="margin-top:4px; font-size:0.85rem; color:rgba(255,255,255,0.75);">Hotel hinterlegt: ${esc(teile.join(', '))}</div>
+        </div>
+    </div>`;
+}
 
 window.openWorkLogSummaryModal = function(html) {
     const content = document.getElementById('work-log-summary-content');

@@ -88,6 +88,121 @@
         texte: {
             titel: 'Mietbedingungen und Vereinbarungen',
             abschnitte: [
+                // ---- Zweite Rechtsseite: allgemeine Mietbedingungen ----
+                // Wortlaut aus der bisherigen Papiervorlage übernommen.
+                {
+                    titel: 'Allgemeines',
+                    absaetze: [
+                        'Die nachstehenden Bedingungen gelten für sämtliche Rechte und Pflichten aus dem Mietvertrag. Abweichungen davon sind nur gültig, wenn sie zwischen den Vertragsparteien schriftlich vereinbart worden sind.'
+                    ]
+                },
+                {
+                    titel: '2. Mietobjekt',
+                    absaetze: [
+                        'a) Umfang',
+                        'Der Vermieter überläßt dem Mieter die in den Lieferungsunterlagen näher bezeichneten Geräte zur Benutzung. Maßgebend ist der Mietvertrag des Vermieters.',
+                        'b) Eigentum',
+                        'Das Mietobjekt samt Bestandteilen und Zubehör bleibt während der ganzen Mietdauer ausschließliches Eigentum des Vermieters. Wird das Mietobjekt vom Mieter auf Grundstücke oder in Räume gebracht, die Dritten gehören, so hat der Mieter diese Dritten unverzüglich über das Eigentum des Vermieters am Mietobjekt zu unterrichten. Bei Verschiebung des Mietobjektes von einem Bauobjekt zum anderen ist der Vermieter sofort schriftlich zu verständigen. Das Gerät könnte GPS-überwacht sein.',
+                        'c) Verwendung',
+                        'Ohne vorherige schriftliche Zustimmung des Vermieters dürfen keine Änderungen (insbesondere zusätzliche Einbauten) am Mietobjekt vorgenommen werden. Betriebs- und Wartungsvorschriften des Vermieters sowie Weisungen betr. sachgemäße Verwendung und zusätzliche Belastung sind strikt einzuhalten. Der Mieter ist nicht befugt, Dritten Rechte am Mietobjekt einzuräumen oder ihnen Rechte aus dem Mietvertrag abzutreten; insbesondere sind Untermiete oder Weiterverleihen des Mietobjektes untersagt.'
+                    ]
+                },
+                {
+                    titel: '3. Mietzins',
+                    absaetze: [
+                        'a) Grundlage',
+                        'Der vereinbarte Mietzins gilt für die vereinbarte Zeitdauer bei einem einschichtigen Betrieb von max. 8 Stunden pro Tag (Wochenmiete), ohne Samstag und Sonntag oder für die vereinbarte Anzahl von Einsätzen. Bei mehrschichtigem Betrieb oder einer größeren Anzahl von Einsätzen ist ein Zuschlag zum vereinbarten Mietzins zu entrichten. Der Mietzins ist auch dann für die ganze Mietdauer geschuldet, wenn die normale Betriebszeit nicht voll ausgenützt oder das Mietobjekt vor Ablauf der Mietdauer zurückgegeben wird. Im vereinbarten Mietzins sind die Verlade-, Transport-, Montage-, Demontage-, Verpackungs- und Versicherungskosten nicht inbegriffen; diese werden extra berechnet.',
+                        'b) Fälligkeit',
+                        'Der Mietzins ist im Voraus zu entrichten, erstmals bei Versandbereitschaft.',
+                        'c) Verzug',
+                        'Befindet sich der Mieter mit seiner Zahlung im Rückstand, so kann ihm der Vermieter bei Mieten, die für ein halbes Jahr oder länger abgeschlossen sind, eine Frist von 30 Tagen, bei Mieten von kürzerer Dauer eine solche von 6 Tagen mit der Androhung ansetzen, daß, sofern nicht innerhalb dieser Frist der rückständige Mietzins bezahlt werde, der Mietvertrag mit deren Ablauf aufgelöst sei. Spricht der Vermieter den Rücktritt vom Vertrag aus, so hat der Mieter das Mietobjekt unverzüglich dem Vermieter zurückzusenden, wobei die Transport- und Versicherungskosten für die Rücksendung sowie anfällige weitere damit verbundene Spesen zu seinen Lasten gehen. Der Mieter bleibt zur Bezahlung des Mietzinses bis zum Ende der vereinbarten Mietdauer verpflichtet; der Vermieter muß sich jedoch anrechnen lassen, was er durch anderweitige Verwendung des Mietobjektes während der Mietdauer erlangt.'
+                    ]
+                },
+                {
+                    titel: '4. Mietbeginn',
+                    absaetze: [
+                        'a) Zeitpunkt',
+                        'Die Miete beginnt mit dem Tag der Versandbereitschaft beim Vermieter bzw. der Abholung des Mietobjektes durch den Mieter. Der Vermieter hat das Mietobjekt zum vereinbarten Zeitpunkt auf dem vorgesehenen Beförderungsweg zu versenden bzw. zur Abholung durch den Mieter bereitzuhalten. Der Mieter ist von der Versandbereitschaft unverzüglich in Kenntnis zu setzen.',
+                        'b) Gefahrenübereignung',
+                        'Die Gefahr geht auf den Mieter über, sobald die Sendung dem Frachtführer, Spediteur oder Mieter zur Verfügung gestellt wird, je nachdem, ob Versand oder Abholung durch den Mieter vorliegt.'
+                    ]
+                },
+                {
+                    titel: '5. Montage und Demontage',
+                    absaetze: [
+                        'Nur wenn ausdrücklich vereinbart, übernimmt der Vermieter die Montage und Demontage des Mietobjektes. In anderen Fällen stellt er dem Mieter auf Verlangen Monteure zur Verfügung gegen Berechnung der Reise-, Arbeits- und Wartezeit, der Reisespesen und Unterhaltskosten (auch für Sonn- und Feiertage während der Montagedauer). Können die Monteure ohne ihr Verschulden und ohne Verschulden des Vermieters eine Arbeit nicht beginnen oder weiterführen, so gehen alle daraus entstehenden Mehrkosten zu Lasten des Mieters, auch wenn für die Montage- und Demontagearbeiten eine Pauschalsumme vereinbart wurde. Der Mieter hat auch die notwendigen Hilfskräfte und Montageeinrichtungen gemäß Vereinbarung rechtzeitig zur Verfügung zu stellen. Insofern der Mieter verpflichtet ist, dem Vermieter Monteure oder Hilfskräfte zu stellen, sind Löhne, Sozialleistungen, Versicherungsprämien usw. vom Mieter zu tragen. Das vom Vermieter gestellte Personal wird von ihm entlohnt und gegen Krankheit und Unfälle versichert. Die vom Vermieter angegebenen Montage- und Demontagezeiten sind nicht verbindlich. Unverschuldete Hindernisse, höhere Gewalt, schlechte Witterung usw. können eine Terminverlängerung zur Folge haben. Nichteinhalten der Montage- und Demontagezeiten infolge oben genannter Gründe gibt dem Mieter weder ein Recht auf Rückzug des Auftrages noch auf Schadenersatz.'
+                    ]
+                },
+                {
+                    titel: '6. Pflichten des Vermieters',
+                    absaetze: [
+                        'a) Haftung',
+                        'Der Vermieter hat das Mietobjekt in der Beschaffenheit und Leistungsfähigkeit zu übergeben, wie sie im Mietvertrag festgelegt wurden. Mängel in der vertragsgemäßen Gebrauchsbereitschaft hat der Vermieter so rasch wie möglich auf seine Kosten zu beheben. Alle weitergehenden Ansprüche und jede weitere Haftung des Vermieters für direkte oder indirekte Schäden des Mieters (wie solche aus der Unbenutzbarkeit des Mietobjektes und der Belangung des Mieters wegen Drittschaden, die mit der Lieferung, Rückgabe und dem Betrieb des Mietobjektes im Zusammenhang stehen) sind ausdrücklich ausgeschlossen. Vorbehalten bleiben Schäden, die vom Vermieter persönlich nachweislich grobfahrlässig oder in rechtswidriger Absicht verursacht werden.',
+                        'b) Wird der Vermieter von einem Dritten aus einem Schadenereignis in Anspruch genommen und liegt solidarische Haftung vor, so kann er für sämtliche Anforderungen auf den Mieter Regreß nehmen, sofern ihn persönlich nachweislich kein grobes Verschulden trifft.'
+                    ]
+                },
+                {
+                    titel: '7. Prüfungspflicht des Mieters',
+                    absaetze: [
+                        'Der Mieter hat das Mietobjekt sofort nach Erhalt zu prüfen und anfällige Mängel dem Vermieter unverzüglich schriftlich anzuzeigen. Sofern bei diesem innerhalb von 8 Arbeitstagen seit Eintreffen des Mietobjektes am Empfangsort bzw. seit Abholung desselben keine Mängelrüge eintrifft, gilt das Mietobjekt als vom Mieter genehmigt. Spätere Beanstandungen werden nur entgegengenommen, wenn die Mängel bei Eintreffen bzw. Abholung trotz ordentlicher Prüfung nicht erkennbar waren und der Mieter innerhalb einer Woche seit Entdeckung des Mangels schriftlich reklamiert. Beanstandungen des Mietobjektes entheben den Mieter nicht von der Pflicht zur termingemäßen Bezahlung des Mietzinses.'
+                    ]
+                },
+                {
+                    titel: '8. Unterhalt des Mietobjektes',
+                    absaetze: [
+                        'a) Unterhalts- und Meldepflicht',
+                        'Der Mieter hat das Mietobjekt mit aller Sorgfalt zu behandeln, es unter Beachtung der vom Vermieter erlassenen Betriebsvorschriften und Weisungen sachgemäß zu verwenden, zu bedienen und zu warten. Funktioniert das Mietobjekt nach Ansicht des Mieters nicht ordnungsgemäß, hat er den Vermieter sofort zu benachrichtigen. Die Benutzung des Mietobjektes ist durch den Mieter so lange einzustellen, bis die Störung durch den Vermieter überprüft und ggf. die notwendige Reparatur vorgenommen ist. Der schuldige Teil trägt die Kosten für die Instandhaltung. Eine Haftung seitens des Vermieters für irgendwelche Ansprüche anderer Art ist ausgeschlossen.',
+                        'b) Untersuchung des Mietobjektes',
+                        'Der Vermieter ist berechtigt, das Mietobjekt jederzeit nach vorheriger Vereinbarung mit dem Mieter auf seinen Zustand zu untersuchen oder untersuchen zu lassen. Weisungen des Vermieters oder seiner Gruppe für Bedienung, Überwachung, Unterhalt und Wartung des Mietobjektes hat der Mieter strikt zu befolgen.',
+                        'c) Reparaturen',
+                        'Während der Mietdauer notwendig werdende Reparaturen hat der Mieter unverzüglich durch den Vermieter vornehmen zu lassen. Nur mit dessen schriftlicher Zustimmung darf der Mieter Reparaturen selbst vornehmen oder durch einen Dritten ausführen lassen, ansonsten er die Kosten und die Verantwortung selbst zu tragen hat.',
+                        'd) Kosten',
+                        'Verschleißteile und Kraftstoff gehen zu Lasten des Mieters. Die Kosten für Reparaturen und Ersatzteile hat der Mieter zu tragen, sofern es sich nicht um Kosten für die Behebung eines vom Vermieter zu vertretenden Mangels handelt, der vom Mieter rechtzeitig und ordnungsgemäß gerügt worden ist. Die durch normale Abnützung des Mietobjektes bewirkten Reparaturen sowie die durch vertragsgemäßen Gebrauch entstandene Wertminderung gehen zu Lasten des Vermieters.',
+                        'e) Haftung des Mieters für das Mietobjekt',
+                        'Der Mieter haftet vom Zeitpunkt des Gefahrenüberganges bis zum Eintreffen des Mietobjektes beim Vermieter oder dem von ihm bezeichneten Ort anläßlich der Rückgabe für jeden Verlust und/oder jede Beschädigung des Mietobjektes und die im Zusammenhang damit stehenden Kosten ohne Rücksicht darauf, ob sie durch sein Verschulden oder das seiner Hilfsperson, durch Verschulden Dritter, durch Zufall oder höhere Gewalt verursacht wurde.'
+                    ]
+                },
+                {
+                    titel: '9. Versicherung',
+                    absaetze: [
+                        'Der Mieter ist verpflichtet, mit Wirkung ab Gefahrenübergang bis und mit der Rückgabe des Mietobjektes zugunsten des Vermieters sämtliche notwendigen Versicherungen abzuschließen, wie beispielsweise Diebstahl-, Feuer-, Explosions- (inkl. Motorenexplosion), Elementarschaden-, Transport-, Maschinenbruch-, Montage- und Demontageversicherung. Ist der Mieter nicht in der Lage, den Abschluß der notwendigen Versicherung nachzuweisen, so ist der Vermieter berechtigt, diese zu Lasten des Mieters selbst abzuschließen. In diesem Fall erklärt sich der Mieter mit den geltenden allgemeinen Versicherungsbedingungen des Vermieters einverstanden. Der Mieter hat jeden Schadenfall dem Vermieter unverzüglich zu melden. Im Schadensfall ist eine Selbstbeteiligung von 1.500 € zu leisten.'
+                    ]
+                },
+                {
+                    titel: '10. Beendigung der Miete',
+                    absaetze: [
+                        'a) Kündigung',
+                        'Ist keine feste Dauer der Miete vereinbart worden, so ist jede Partei berechtigt, das Mietverhältnis unter Beachtung der vereinbarten Kündigungsfrist aufzulösen.',
+                        'b) Rücktritt',
+                        'Der Vermieter kann mit sofortiger Wirkung ohne vorherige Mahnung oder Fristansetzung den Rücktritt vom Vertrag erklären, wenn',
+                        '- dem Mietobjekt wegen übermäßiger Beanspruchung oder mangelhaften Unterhalts Gefahr droht und der Mieter trotz Aufforderung des Vermieters innerhalb angemessener Frist keine Abhilfe schafft.',
+                        '- das Mietobjekt untervermietet wird oder Dritten andere Rechte daran eingeräumt oder ihnen Rechte aus dem Mietvertrag abgetreten worden sind.',
+                        '- Verletzungen anderer vertraglicher Abmachungen vorliegen.',
+                        'Verletzt der Mieter andere vertragliche Verpflichtungen, kann der Vermieter vorzeitig vom Vertrag zurücktreten, wenn der Mieter trotz schriftlicher Mahnung sich Pflichtverletzungen zuschulden kommen läßt. Erklärt der Vermieter den Rücktritt vom Vertrag, kann er das Mietobjekt auf Kosten des Mieters zurücknehmen. Der Mieter bleibt überdies zur Leistung von Schadenersatz verpflichtet.',
+                        'c) Rückgabe des Mietobjektes',
+                        'Der Mieter hat das gleiche vom Vermieter erhaltene Mietobjekt in gereinigtem und gebrauchsfähigem Zustand am Domizil des Vermieters oder an einen anderen von diesem bezeichneten, nicht weiter entfernten Ort zurückzuliefern. Der Mieter hat die Rücksendung vorher schriftlich dem Vermieter anzuzeigen. Die Rücksendung hat entsprechend der Anlieferung zu erfolgen und ist mit Lieferschein zu versehen. Entspricht das Mietobjekt bei der Rückgabe diesen Anforderungen nicht oder weist es andere Mängel auf, wird die Miete verlängert, bis die Gebrauchsfähigkeit bzw. Betriebsbereitschaft wieder hergestellt oder die Mängel behoben sind. Die Instandstellung erfolgt auf Kosten des Mieters. Dem Vermieter bleibt die Geltendmachung weiterer Schadenersatzansprüche vorbehalten. Der Vermieter hat das Mietobjekt nach Erhalt sofort zu prüfen und anfällige Mängel dem Mieter unverzüglich schriftlich mitzuteilen. Für die Mängelrüge gilt Art. 7 hiervon sinngemäß. Der Mieter haftet für das Mietobjekt bis zum Zeitpunkt, in dem dieses beim Vermieter eintrifft. Wird die Maschine im nicht gereinigten Zustand zurückgegeben, wird eine Reinigungspauschale von 80 € erhoben.'
+                    ]
+                },
+                {
+                    titel: '11. Fracht- und Verladekosten',
+                    absaetze: [
+                        'Die Fracht- und Verladekosten für den Versand des Mietobjektes bei Beginn der Miete wie auch bei der Rücksendung nach deren Beendigung hat der Mieter zu tragen. Wird das Mietobjekt nicht ab Domizil des Vermieters geliefert, muß sich der Mieter höchstens die Frachtkosten anrechnen lassen, die sich bei Lieferung ab Domizil ergeben würden. Das gleiche gilt, wenn das Mietobjekt nicht an das Domizil des Vermieters zurückzuliefern ist.'
+                    ]
+                },
+                {
+                    titel: '12. Anwendbares Recht',
+                    absaetze: [
+                        'Die abgeschlossenen Verträge unterstehen dem deutschen Recht.'
+                    ]
+                },
+                {
+                    titel: '13. Erfüllungsort und Gerichtsstand',
+                    absaetze: [
+                        'Für sämtliche Verpflichtungen aus diesem Vertrag gilt als Erfüllungsort der Ort des Sitzes des Vermieters. Gerichtsstand für die Beurteilung von Streitigkeiten aus diesem Vertrag ist der Sitz des Vermieters (Oldenburg).'
+                    ]
+                },
+
+                // ---- Ergänzende Vereinbarungen zum Bogen (stehen bewusst HINTEN) ----
                 {
                     titel: 'Geltungsbereich und ergänzende Vereinbarungen',
                     absaetze: [

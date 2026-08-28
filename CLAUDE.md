@@ -18,6 +18,13 @@ Die App muss auch per Doppelklick über `file://` laufen — deshalb klassische
 - `assets/data/` — Base64-Blobs. **Nie lesen**, riesig.
 - `lib/` — Vendor-Minified. **Nie lesen.**
 - `sw.js` — Service Worker: `CACHE_NAME` + `PRECACHE`-Liste
+- `supabase/` — **alle** `.sql`-Migrationen und die Edge Functions.
+  Was wofür da ist und was ausgeführt werden muss, steht in
+  `supabase/MIGRATIONEN.md` — neue SQL-Datei ⇒ dort eintragen.
+- `tools/` — Werkzeuge, die **nicht** zur App gehören: `karte.js` (erzeugt
+  `ARCHITEKTUR.md`/`FUNKTIONEN.txt`) und `mietvereinbarung-vorschau.html`
+  (öffnet den Mietbogen mit Beispieldaten, ohne Anmeldung und Datenbank).
+- `_backups/`, `backup/` — Altstände bzw. das DB-Backup-Skript, kein App-Code.
 
 ## Ladereihenfolge (wichtig)
 `index.html` lädt die Module in einer festgelegten Reihenfolge, die der früheren
@@ -55,6 +62,9 @@ Reihenfolge der ausgelagerten Module:
 | Mietvereinbarung: Bogen, Kamera, Speichern/Löschen | `js/mietvereinbarung.js` |
 | Mietvereinbarung: Vorlagen (Einstellungen) | `js/mietvereinbarung-vorlagen.js` |
 | Mietvereinbarung: Übersicht je Maschine | `js/mietvereinbarung-liste.js` |
+| Mietvereinbarung: Vorlagen-Ansicht (Markup) | `partials/settings/mietvereinbarung-vorlagen.html` |
+| UVV- & Wartungsprotokoll (ohne Servicebericht) | `js/uvv-protokoll.js` |
+| Protokolle → Ansehen: Übersicht je Beleg-Art | `js/protokoll-liste.js` |
 
 ## Zuerst hier nachschlagen (spart das Durchsuchen)
 - **`FUNKTIONEN.txt`** — Nachschlagewerk mit 1.500+ Funktionen: `name → datei:zeile`.
@@ -233,8 +243,13 @@ html2canvas je `.miet-page` + jsPDF, Ablage in R2 unter
 (`js/mietvereinbarung-liste.js`), von dort „Bearbeiten" →
 `openMietvereinbarung(machineId, agreementId)`. Löschen entfernt PDF und Fotos
 endgültig aus R2. **Nötige Migration: `supabase/supabase_mietvereinbarung_komplett.sql`.**
-Der Vertragstext steht immer allein auf dem letzten Blatt und wird per
-`--miet-recht-f` so weit verkleinert, bis er darauf passt.
+Der Vertragstext bildet den **Schluss** des Bogens: zweispaltig, umbricht an seinen
+eigenen Absätzen auf mehrere Blätter und wird per `--miet-recht-f` nur so weit
+verkleinert, bis **zwei** Blätter reichen (`verteileRechtstext`, Untergrenze 0,62 ≈ 7 px
+wie im gedruckten Original). Unterschrieben wird **unter den Fotos** — je zwei Felder
+plus Datum für Übergabe und Rücknahme (`fotoUnterschriften`); die Felder der nicht
+gewählten Phase sind grau (`.miet-dim`). Eine eigene Bestätigungsseite am Ende gibt es
+nicht mehr.
 
 **Handy-Optimierung (2026-08-15).** In `css/base/responsive.css` unter
 „HANDY-FEINSCHLIFF": alle Eingabefelder sind ab ≤768px auf **16px** gesetzt —

@@ -148,17 +148,17 @@
     <link rel="stylesheet" href="css/components/process-attachments.css?v=1">
     <link rel="stylesheet" href="css/components/buttons.css?v=1">
     <link rel="stylesheet" href="css/components/forms.css?v=5">
-    <link rel="stylesheet" href="css/components/notifications.css?v=2">
+    <link rel="stylesheet" href="css/components/notifications.css?v=3">
     <link rel="stylesheet" href="css/components/reminder-alarm.css?v=5">
     <link rel="stylesheet" href="css/components/calendar.css?v=1">
     <link rel="stylesheet" href="css/components/calendar-widget.css?v=5">
     <link rel="stylesheet" href="css/components/dropdowns.css?v=2">
-    <link rel="stylesheet" href="css/components/focus-mode.css?v=2">
+    <link rel="stylesheet" href="css/components/focus-mode.css?v=3">
     <link rel="stylesheet" href="css/components/elements.css?v=1">
     <link rel="stylesheet" href="css/components/appointments.css?v=1">
     <link rel="stylesheet" href="css/views/documents.css?v=2">
     <link rel="stylesheet" href="css/views/protocols.css?v=1">
-    <link rel="stylesheet" href="css/views/tasks.css?v=3">
+    <link rel="stylesheet" href="css/views/tasks.css?v=4">
     <link rel="stylesheet" href="css/views/service-reports.css?v=4">
     <link rel="stylesheet" href="css/views/machines.css?v=1">
     <link rel="stylesheet" href="css/views/procurement.css?v=1">
@@ -166,10 +166,11 @@
     <link rel="stylesheet" href="css/views/accounting.css?v=1">
     <link rel="stylesheet" href="css/views/workshop.css?v=1">
     <link rel="stylesheet" href="css/views/workshop-tasks.css?v=4">
+    <link rel="stylesheet" href="css/views/tasks-print.css?v=3">
     <link rel="stylesheet" href="css/views/dashboard.css?v=1">
     <link rel="stylesheet" href="css/views/listen.css?v=1">
     <link rel="stylesheet" href="css/views/addressbook.css?v=12">
-    <link rel="stylesheet" href="css/views/routenplanung.css?v=2">
+    <link rel="stylesheet" href="css/views/routenplanung.css?v=5">
     <link rel="stylesheet" href="css/base/responsive.css?v=16">
 
     <!-- ========================================================= -->
@@ -279,6 +280,7 @@
     <link rel="stylesheet" href="css/base/landscape.css?v=2">
     <link rel="stylesheet" href="css/components/voice-dictation.css?v=3">
     <link rel="stylesheet" href="css/views/machine-modal.css?v=4">
+    <link rel="stylesheet" href="css/views/uvv-protokoll.css?v=2">
     <!-- Zuletzt: ersetzt frueher inline gesetzte Stile, muss deshalb zuletzt greifen -->
     <link rel="stylesheet" href="css/base/utilities.css?v=5">
     <!-- Einheitlicher Dropdown-Look (Vorbild: Hersteller-Feld in "Maschine
@@ -286,7 +288,7 @@
          gewinnt. Diese Zeile loeschen = alles wie vorher. -->
     <link rel="stylesheet" href="css/components/dropdown-look.css?v=5">
     <!-- MIETVEREINBARUNG (1/3) — eigenstaendig, diese Zeile loeschen = weg -->
-    <link rel="stylesheet" href="css/views/mietvereinbarung.css?v=17">
+    <link rel="stylesheet" href="css/views/mietvereinbarung.css?v=21">
 
     <!-- @partial:modals/pin-prompt-modal.html -->
         <!-- PIN Prompt Modal -->
@@ -1619,6 +1621,16 @@
                                                         <button type="button" class="cinema-col-btn" data-cols="3" onclick="window.setCinemaColumns(3)">3</button>
                                                     </div>
                                                 </div>
+                                                <button class="btn-add-bg" onclick="window.openTaskPrintModal()" title="Offene Aufgaben auswählen und auf A4 drucken"
+                                                    style="background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.85);">
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                        stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                                        <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                                        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                                        <rect x="6" y="14" width="12" height="8"></rect>
+                                                    </svg>
+                                                    Drucken
+                                                </button>
                                                 <button class="btn-add-bg" onclick="window.openAiCaptureModal('aufgaben')" title="Aus Freitext automatisch Aufgaben erzeugen"
                                                     style="background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.4); color: #a78bfa;">
                                                     <span style="font-size:1.05rem;">✨</span>
@@ -2902,6 +2914,7 @@
         </section>
 
         <!-- Protocol Templates List View -->
+        <!-- @partial:settings/mietvereinbarung-vorlagen.html -->
         <!-- MIETVEREINBARUNG (4/4) — beide Sektionen loeschen = weg -->
         <section id="miet-vorlagen" class="view hidden">
             <div class="users-header-container">
@@ -2956,6 +2969,7 @@
             </div>
             <div id="miet-vorlage-editor-inhalt" style="margin-top: 2rem;"></div>
         </section>
+        <!-- /@partial:settings/mietvereinbarung-vorlagen.html -->
 
 
         <section id="protocol-templates" class="view hidden">
@@ -3116,10 +3130,10 @@
                         </label>
                         <div style="display:flex; gap:8px; align-items:center;">
                             <div style="position:relative; display:inline-flex; align-items:center;">
-                                <input type="number" id="rp2-radius" class="rp2-input radius-active" value="50" min="1" max="1000"
+                                <input type="number" id="rp2-radius" class="rp2-input" value="50" min="1" max="1000"
                                     style="width:96px; padding-right:26px;" aria-label="Radius in Kilometern" oninput="window.rp2OnRadiusInput()">
                                 <button type="button" id="rp2-radius-clear-btn" onclick="window.rp2ToggleRadiusActive()" title="Radius-Filter ausschalten (alle anzeigen)"
-                                    style="position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; color:rgba(255,255,255,0.6); cursor:pointer; font-size:14px; font-weight:bold; padding:2px 4px; display:flex; align-items:center; justify-content:center; transition:color 0.2s;">✕</button>
+                                    style="position:absolute; right:6px; top:50%; transform:translateY(-50%); background:none; border:none; color:rgba(255,255,255,0.4); cursor:pointer; font-size:14px; font-weight:bold; padding:2px 4px; display:flex; align-items:center; justify-content:center; transition:color 0.2s;">✕</button>
                             </div>
                             <span class="rp2-status" style="white-space:nowrap;">km</span>
                             <button class="rp2-btn rp2-btn-sm" data-rp2-action="nearby" style="flex:1;">Suchen</button>
@@ -4035,14 +4049,14 @@
     </script>
     <script src="js/dashboard.js?v=1"></script>
     <script src="js/app-core.js?v=5"></script>
-    <script src="js/app-init.js?v=13"></script>
+    <script src="js/app-init.js?v=14"></script>
     <script src="js/settings-uvv-plans.js?v=1"></script>
     <script src="js/machine-details-modal.js?v=1"></script>
     <script src="js/machine-modal.js?v=1"></script>
     <script src="js/service-report-form.js?v=7"></script>
     <script src="js/service-list.js?v=2"></script>
-    <script src="js/history-modal.js?v=201"></script>
-    <script src="js/calendar-events.js?v=4"></script>
+    <script src="js/history-modal.js?v=202"></script>
+    <script src="js/calendar-events.js?v=5"></script>
     <script src="js/processes-ui.js?v=26"></script>
     <!-- Dokumente an Vorgaengen/Schritten. Nutzt window.FileUploadService
          (js/file-upload-service-r2.js, weiter UNTEN geladen) — das ist in
@@ -4053,12 +4067,12 @@
     <script src="js/customer-matching.js?v=1"></script>
     <script src="js/ui-modals.js?v=2"></script>
     <script src="js/processes.js?v=127"></script>
-    <script src="js/service-reports.js?v=1"></script>
+    <script src="js/service-reports.js?v=2"></script>
     <script src="js/service-entries.js?v=9"></script>
     <script src="js/service-picker.js?v=1"></script>
     <script src="js/worklog-tables.js?v=3"></script>
     <script src="js/signature-pads.js?v=1"></script>
-    <script src="js/servicebericht-pdf.js?v=3"></script>
+    <script src="js/servicebericht-pdf.js?v=4"></script>
     <!-- Modal: Service Action Choice (View or Create) - Moved to root for better centering -->
     <div id="work-log-summary-modal" class="modal-backdrop hidden" style="z-index: 10001;">
         <div class="modal-content" style="max-width: 700px; width: 90%; padding: 1.5rem;">
@@ -4117,6 +4131,12 @@
                         <div class="icon-small">🔑</div>
                         <div class="text"><strong>Mietvereinbarung</strong></div>
                     </button>
+                    <!-- UVV- & WARTUNGSPROTOKOLL (js/uvv-protokoll.js) -->
+                    <button id="action-btn-uvv" class="report-type-btn compact"
+                        onclick="startReportCreation('uvv-protokoll')">
+                        <div class="icon-small">🛡️</div>
+                        <div class="text"><strong>UVV- &amp; Wartungsprotokoll</strong></div>
+                    </button>
                 </div>
             </div>
 
@@ -4130,24 +4150,26 @@
                     </span>
                     <svg id="view-section-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-                        style="transition: transform 0.3s; transform: rotate(0deg);">
+                        style="transition: transform 0.3s; transform: rotate(-90deg);">
                         <polyline points="6 9 12 15 18 9"></polyline>
                     </svg>
                 </h3>
+                <!-- Startet eingeklappt (max-height: 0) — aufgeklappt wird über den Kopf
+                     darüber, siehe window.toggleAccordion. -->
                 <div id="view-section" class="accordion-content"
-                    style="display: grid; gap: 0.6rem; max-height: 600px; overflow: hidden; transition: max-height 0.3s ease, opacity 0.3s ease; opacity: 1;">
+                    style="display: grid; gap: 0.6rem; max-height: 0px; overflow: hidden; transition: max-height 0.3s ease, opacity 0.3s ease; opacity: 0;">
                     <button class="report-type-btn compact secondary"
-                        onclick="showServiceReportsForCurrentMachine('Servicebericht')">
+                        onclick="showMachineDocuments('servicebericht')">
                         <div class="icon-small">📄</div>
                         <div class="text"><strong>Servicebericht</strong></div>
                     </button>
                     <button class="report-type-btn compact secondary"
-                        onclick="showServiceReportsForCurrentMachine('Eingangsprotokoll')">
+                        onclick="showMachineDocuments('eingangsprotokoll')">
                         <div class="icon-small">📥</div>
                         <div class="text"><strong>Eingangsprotokoll</strong></div>
                     </button>
                     <button class="report-type-btn compact secondary"
-                        onclick="showServiceReportsForCurrentMachine('Abnahmeprotokoll')">
+                        onclick="showMachineDocuments('abnahmeprotokoll')">
                         <div class="icon-small">✅</div>
                         <div class="text"><strong>Abnahmeprotokoll</strong></div>
                     </button>
@@ -4156,6 +4178,12 @@
                         onclick="showMietvereinbarungenForMachine()">
                         <div class="icon-small">🔑</div>
                         <div class="text"><strong>Mietvereinbarung</strong></div>
+                    </button>
+                    <!-- UVV- & WARTUNGSPROTOKOLL (js/uvv-protokoll.js) -->
+                    <button class="report-type-btn compact secondary"
+                        onclick="showUvvProtokolleForMachine()">
+                        <div class="icon-small">🛡️</div>
+                        <div class="text"><strong>UVV- &amp; Wartungsprotokoll</strong></div>
                     </button>
                 </div>
             </div>
@@ -4807,6 +4835,13 @@
                         <button type="button" class="btn-modal-base" id="btn-servicebericht-preview" onclick="window.previewServiceberichtPDF()" style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.35); color: #a78bfa; gap: 8px; flex: 1;" onmouseover="this.style.background='rgba(139,92,246,0.28)'" onmouseout="this.style.background='rgba(139,92,246,0.15)'">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                             Vorschau
+                        </button>
+
+                        <!-- Handbericht: gleiche Vorschau, aber in den Prüfprotokollen
+                             bleiben Bemerkungs-/Notizfelder leer (zum Ausfüllen vor Ort). -->
+                        <button type="button" class="btn-modal-base" id="btn-servicebericht-handbericht" onclick="window.handberichtServiceberichtPDF()" title="Ausdruck zum Ausfüllen von Hand — Bemerkungs- und Notizfelder der Prüfprotokolle bleiben leer" style="background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.35); color: #38bdf8; gap: 8px; flex: 1;" onmouseover="this.style.background='rgba(56,189,248,0.28)'" onmouseout="this.style.background='rgba(56,189,248,0.15)'">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                            Handbericht
                         </button>
 
                         <button type="button" class="btn-modal-base btn-modal-save" onclick="submitServicebericht()" style="flex: 1;">
@@ -5850,15 +5885,16 @@
     <script src="js/machines-grouped.js?v=51"></script>
     <script src="js/protocols.js?v=54"></script>
     <!-- MIETVEREINBARUNG (2/3) — eigenstaendig, diese Zeile loeschen = weg -->
-    <script src="js/mietvereinbarung-vorlagen.js?v=8"></script>
-    <script src="js/mietvereinbarung.js?v=16"></script>
+    <script src="js/mietvereinbarung-vorlagen.js?v=10"></script>
+    <script src="js/mietvereinbarung.js?v=21"></script>
     <script src="js/mietvereinbarung-liste.js?v=1"></script>
 
     </main>
     </div><!-- End main-wrapper -->
 
-    <script src="js/tasks.js?v=19"></script>
-    <script src="js/workshop-tasks.js?v=2"></script>
+    <script src="js/tasks.js?v=22"></script>
+    <script src="js/workshop-tasks.js?v=3"></script>
+    <script src="js/tasks-print.js?v=10"></script>
     <script src="js/task_templates.js?v=99"></script>
     <!-- Spracheingabe für die KI-Felder — muss vor den KI-Modulen stehen,
          die beim Aufbau ihrer Modals window.micButtonHtml() aufrufen. -->
@@ -6294,7 +6330,7 @@
     </div>
 
     <script src="js/workshop-photos-modal.js?v=1"></script>
-    <script src="js/workshop-photos-helper.js?v=3"></script>
+    <script src="js/workshop-photos-helper.js?v=4"></script>
 
 
     <!-- Image Compression & Upload Service -->
@@ -6620,12 +6656,14 @@
     <script src="js/file-upload-service-r2.js?v=1"></script>
     <script src="js/accounting.js?v=43"></script>
     <script src="js/documents-r2.js?v=8"></script>
-    <script src="js/checklists.js?v=2"></script>
+    <script src="js/checklists.js?v=3"></script>
+    <script src="js/uvv-protokoll.js?v=2"></script>
+    <script src="js/protokoll-liste.js?v=1"></script>
     <script src="js/customers.js?v=3"></script>
     <script src="js/autosave.js?v=1"></script>
     <script src="js/unsaved-guard.js?v=1"></script>
     <script src="js/address-history.js?v=2"></script>
-    <script src="js/addressbook.js?v=55"></script>
+    <script src="js/addressbook.js?v=56"></script>
     <script src="js/addressbook-live.js?v=3"></script>
     <script src="js/process-autosave.js?v=3"></script>
     <script src="js/task-autosave.js?v=1"></script>
@@ -6635,7 +6673,7 @@
          Kalender und Routenplanung darunter benutzen. -->
     <script src="js/appointment-invite.js?v=2"></script>
     <script src="js/appointments.js?v=6"></script>
-    <script src="js/notifications.js?v=8"></script>
+    <script src="js/notifications.js?v=9"></script>
     <!-- Minutengenauer Wecker fuer Erinnerungen mit Uhrzeit. Muss NACH
          notifications.js stehen: nutzt window.notificationsPushEnabled. -->
     <script src="js/reminder-alarm.js?v=4"></script>
@@ -6644,8 +6682,8 @@
     <!-- tasks.js und processes.js werden bereits weiter oben geladen (vor ihren
          jeweiligen Folgemodulen). Ein zweites Einbinden ließ beide Module doppelt
          laufen — mit doppelt registrierten Event-Handlern. -->
-    <script src="js/routeplanner.js?v=1"></script>
-    <script src="js/routenplanung.js?v=14"></script>
+    <script src="js/routeplanner.js?v=2"></script>
+    <script src="js/routenplanung.js?v=19"></script>
     <script src="js/listen.js?v=12"></script>
 
     <script src="js/labels.js?v=2"></script>

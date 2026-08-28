@@ -28,6 +28,10 @@
     window.markTaskDirty = function () { taskIsDirty = true; };
     window.markTaskClean = function () { taskIsDirty = false; };
     window.isTaskDirty = function () { return taskIsDirty; };
+    // Für den Aufgaben-Druck (js/tasks-print.js): die geladenen Aufgaben samt
+    // Maschine und Unteraufgaben, ohne sie erneut abzufragen.
+    window.getAllTasks = function () { return allTasks; };
+    window.getTaskMachineLabel = function (m) { return getMachineLabel(m); };
     let filters = {
         machine: 'all',
         search: '',
@@ -144,6 +148,49 @@
         } catch (err) {
             console.error('Error fetching tasks:', err);
         }
+    };
+
+    // ------------------------------------------------------------------
+    // Live-Aktualisierung (Realtime, siehe supabase_add_tasks_realtime.sql)
+    // ------------------------------------------------------------------
+    // Der Realtime-Payload bringt weder die Maschine noch die Unteraufgaben
+    // mit — deshalb wird komplett neu geladen, aber gebündelt: ein Schwall
+    // Änderungen löst nur einen Ladevorgang aus.
+    //
+    // Zwei Rücksichtnahmen:
+    //   * Ist gerade ein Aufgaben-Fenster offen, wird nicht neu gebaut —
+    //     das würde dem Bearbeiter die Eingabe unter den Händen wegziehen.
+    //     Der Nachlauf holt es nach dem Schließen nach.
+    //   * Die Scrollposition bleibt erhalten (Fernseher/Kinomodus).
+    let _tasksRefetchTimer = null;
+    let _tasksRefetchPending = false;
+
+    function taskModalOpen() {
+        const m = document.getElementById('task-modal');
+        if (m && !m.classList.contains('hidden')) return true;
+        // Auch beim direkten Schreiben in eine Unteraufgabe auf der Tafel nicht
+        // neu aufbauen — der Cursor wäre sonst mitten im Wort weg.
+        const a = document.activeElement;
+        return !!(a && a.classList && a.classList.contains('ghost-input'));
+    }
+
+    window.scheduleTasksRefetch = function () {
+        clearTimeout(_tasksRefetchTimer);
+        _tasksRefetchTimer = setTimeout(async () => {
+            if (taskModalOpen()) { _tasksRefetchPending = true; return; }
+            _tasksRefetchPending = false;
+            const y = window.pageYOffset;
+            await window.fetchTasks();
+            if (!cinemaActive && Math.abs(window.pageYOffset - y) > 1) window.scrollTo(0, y);
+        }, 500);
+    };
+
+    // Wurde während eines offenen Fensters etwas geändert, nach dem Schließen
+    // nachziehen — sonst steht die Tafel bis zum nächsten Ereignis auf altem Stand.
+    window.tasksRefetchIfPending = function () {
+        if (!_tasksRefetchPending) return;
+        _tasksRefetchPending = false;
+        window.scheduleTasksRefetch();
     };
 
     window.fetchMachinesForTasks = async function () {
@@ -440,7 +487,9 @@
                                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                     </div>
                                     <div class="ghost-input" contenteditable="true"
-                                        onblur="window.updateSubtaskTitle('${task.id}', ${sub.idx}, this.textContent.trim())"
+                                        data-subtask-input="${sub.id}"
+                                        oninput="window.scheduleSubtaskSave(this, '${sub.id}')"
+                                        onblur="window.saveSubtaskNow(this, '${sub.id}')"
                                         onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }"
                                         onclick="event.stopPropagation()"
                                         style="color: rgba(255,255,255,${sub.status === 'completed' ? '0.4' : '0.9'}); ${sub.status === 'completed' ? 'text-decoration: line-through;' : ''}">${sub.title}</div>
@@ -813,6 +862,8 @@
             setTimeout(() => {
                 modal.classList.add('hidden');
                 modal.style.display = 'none';
+                // Während des Bearbeitens zurückgehaltene Live-Änderungen nachziehen.
+                window.tasksRefetchIfPending();
             }, 300);
         }
     };
@@ -1985,29 +2036,72 @@
             }
         }
     };
-    window.updateSubtaskTitle = async function(taskId, subtaskIndex, newTitle) {
-        const task = allTasks.find(t => String(t.id).trim().toLowerCase() === String(taskId).trim().toLowerCase());
-        if (!task || !task.subtasks) return;
+    // ------------------------------------------------------------------
+    // Direktes Schreiben in eine Unteraufgabe auf der Tafel
+    // ------------------------------------------------------------------
+    // Gespeichert wird beim Tippen (kurz gebündelt), nicht erst beim Verlassen
+    // des Feldes — und mit Rückmeldung, damit man sieht, dass es drin ist.
+    //
+    // Wichtig: die Unteraufgaben stehen in der Tabelle `subtasks` (fetchTasks
+    // holt sie per Join). Die frühere Fassung schrieb in eine Spalte
+    // `tasks.subtasks` — das lief ohne Fehler durch, war beim nächsten Laden
+    // aber wieder weg.
+    const subtaskSaveTimer = new Map();
+    let subtaskSaveToast = 0;
 
-        if (task.subtasks[subtaskIndex].title === newTitle) return;
+    // Nach dem Schreiben zurückgehaltene Live-Änderungen nachziehen.
+    document.addEventListener('focusout', (e) => {
+        if (e.target && e.target.classList && e.target.classList.contains('ghost-input')) {
+            setTimeout(() => window.tasksRefetchIfPending(), 100);
+        }
+    });
+
+    window.scheduleSubtaskSave = function (el, subtaskId) {
+        clearTimeout(subtaskSaveTimer.get(subtaskId));
+        subtaskSaveTimer.set(subtaskId, setTimeout(() => saveSubtaskTitle(el, subtaskId), 700));
+    };
+
+    window.saveSubtaskNow = function (el, subtaskId) {
+        clearTimeout(subtaskSaveTimer.get(subtaskId));
+        subtaskSaveTimer.delete(subtaskId);
+        saveSubtaskTitle(el, subtaskId);
+    };
+
+    async function saveSubtaskTitle(el, subtaskId) {
+        if (!el || !subtaskId) return;
+        const neu = el.textContent.trim();
+
+        // Bestand im Speicher finden, damit unnötige Schreibvorgänge entfallen
+        // und die Tafel nach dem Speichern nicht springt.
+        let treffer = null;
+        for (const t of allTasks) {
+            const s = (t.subtasks || []).find(x => String(x.id) === String(subtaskId));
+            if (s) { treffer = s; break; }
+        }
+        if (treffer && treffer.title === neu) return;
 
         try {
-            const updatedSubtasks = [...task.subtasks];
-            updatedSubtasks[subtaskIndex].title = newTitle;
-
             const { error } = await window.supabaseClient
-                .from('tasks')
-                .update({ subtasks: updatedSubtasks })
-                .eq('id', taskId);
-
+                .from('subtasks')
+                .update({ title: neu })
+                .eq('id', subtaskId);
             if (error) throw error;
-            task.subtasks = updatedSubtasks;
-            // No full re-render needed to avoid focus loss, but good for consistency
-            // renderTasks(); 
+
+            if (treffer) treffer.title = neu;
+            el.dataset.saved = '1';
+            setTimeout(() => { delete el.dataset.saved; }, 1200);
+
+            // Beim Tippen nicht bei jedem Halbsatz eine Meldung — höchstens
+            // alle drei Sekunden eine.
+            if (Date.now() - subtaskSaveToast > 3000) {
+                subtaskSaveToast = Date.now();
+                window.showToast && window.showToast('Gespeichert');
+            }
         } catch (err) {
-            console.error('Error updating subtask title:', err);
+            console.error('Unteraufgabe konnte nicht gespeichert werden:', err);
+            window.showToast && window.showToast('Nicht gespeichert: ' + (err.message || err), 'error');
         }
-    };
+    }
 
     window.toggleTaskStatus = async function (taskId, currentStatus) {
         const newStatus = currentStatus === 'completed' ? 'open' : 'completed';

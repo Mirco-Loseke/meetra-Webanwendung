@@ -583,3 +583,10 @@ tr.completed-task td {
 body.cinema-mode-active .task-card.cinema-hidden {
     display: none !important;
 }
+
+/* Direktes Schreiben in eine Unteraufgabe auf der Tafel: kurzes grünes
+   Aufleuchten, sobald die Zeile gespeichert ist (js/tasks.js). */
+.ghost-input[data-saved] {
+    box-shadow: inset 0 -2px 0 0 var(--color-primary-green, #10a068);
+    transition: box-shadow 0.25s ease;
+}

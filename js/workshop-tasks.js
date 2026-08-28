@@ -80,6 +80,8 @@
         }
     }
     window.fetchWorkshopTasks = fetchItems;
+    // Für den Aufgaben-Druck (js/tasks-print.js): Zugriff auf die geladene Liste.
+    window.getWorkshopTasks = function () { return sortItems(state.items); };
 
     window.workshopAddSubmit = async function (text) {
         const value = (text || '').trim();

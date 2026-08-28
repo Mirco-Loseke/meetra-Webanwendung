@@ -2105,6 +2105,18 @@
                     })
                     .subscribe();
 
+                // Aufgaben und Unteraufgaben live bei allen Clients — die
+                // Aufgaben-Ansicht läuft als Anzeigetafel auf dem Fernseher in
+                // der Werkstatt und darf dafür nicht neu geladen werden müssen.
+                ['tasks', 'subtasks'].forEach(tabelle => {
+                    window.supabaseClient
+                        .channel(tabelle + '_live')
+                        .on('postgres_changes', { event: '*', schema: 'public', table: tabelle }, () => {
+                            try { window.scheduleTasksRefetch(); } catch (e) { console.error('Realtime ' + tabelle + ' Fehler:', e); }
+                        })
+                        .subscribe();
+                });
+
                 // Adressbuch live halten (eigene Kanäle in addressbook-live.js)
                 if (typeof window.initAddressbookLive === 'function') {
                     try { window.initAddressbookLive(); } catch (e) { console.error('Adressbuch-Live init Fehler:', e); }

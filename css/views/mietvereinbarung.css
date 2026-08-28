@@ -217,6 +217,32 @@
     overflow: visible;
 }
 
+/* Mieter + Geraet + Abnahme gehoeren zusammen auf das erste Blatt.
+   Passt der Stapel nicht, verkleinert ihn js/mietvereinbarung.js als
+   Ganzes (Faktor --miet-fit-f, Breite wird dort gegengerechnet). */
+.miet-fit {
+    transform: scale(var(--miet-fit-f, 1));
+    transform-origin: top left;
+}
+
+/* Blatt, das nur zum Ausfuellen am Bildschirm steht (leere
+   Schadenstabelle). Es traegt keine Seitenzahl und faellt beim Drucken
+   und im PDF weg. */
+.miet-page.miet-page-leer {
+    opacity: 0.75;
+    box-shadow: 0 0 0 2px rgba(148, 163, 184, 0.45), 0 18px 60px rgba(0, 0, 0, 0.5);
+}
+
+.miet-pages.miet-pdf .miet-page.miet-page-leer {
+    display: none;
+}
+
+@media print {
+    .miet-page.miet-page-leer {
+        display: none !important;
+    }
+}
+
 .miet-page-nr {
     position: absolute;
     right: 25mm;
@@ -441,12 +467,12 @@ textarea.miet-in {
     margin-bottom: 10px;
 }
 
-/* Zwei Bilder je Reihe — so gross, dass man auf dem Ausdruck auch
-   etwas erkennt. */
+/* Drei Bilder je Reihe — dadurch passen mehr Positionen auf ein Blatt.
+   Die Kachelhoehe ist entsprechend flacher (siehe .miet-photo-box). */
 .miet-photo-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
 }
 
 .miet-photo-slot {
@@ -472,7 +498,7 @@ textarea.miet-in {
 }
 
 .miet-photo-slot .miet-photo-name {
-    font-size: 11.5px;
+    font-size: 10.5px;
     font-weight: 700;
     color: #374151;
     margin-bottom: 6px;
@@ -487,7 +513,7 @@ textarea.miet-in {
 }
 
 .miet-photo-box {
-    height: 195px;
+    height: 130px;
     border-radius: 6px;
     background: #eef0f3;
     display: flex;
@@ -934,6 +960,27 @@ textarea.miet-in {
     line-height: 1.45;
     text-align: justify;
     hyphens: auto;
+}
+
+/* Zweispaltig wie im Original-Vertragsbogen. Nur so passt der ganze
+   Rechtsteil auf ein einziges Blatt, ohne die Schrift unlesbar klein zu
+   setzen. Die Trennlinie entspricht dem gedruckten Vorbild. */
+.miet-recht > [data-splitbox] {
+    column-count: 2;
+    column-gap: 7mm;
+    column-rule: 1px solid #d1d5db;
+}
+
+/* Eine Überschrift darf nicht als letzte Zeile einer Spalte stehen. */
+.miet-recht-h {
+    break-after: avoid;
+    page-break-after: avoid;
+    break-inside: avoid;
+}
+
+.miet-recht-p {
+    break-inside: avoid;
+    page-break-inside: avoid;
 }
 
 .miet-recht-h {
@@ -2039,4 +2086,60 @@ textarea.miet-in {
     .miet-phase-btn span {
         white-space: nowrap;
     }
+}
+
+/* Unterschriften direkt unter den Fotos (Übergabe bzw. Rücknahme).
+   Der Rahmen setzt sie sichtbar vom Fotoraster ab; grau hinterlegt wird
+   der ganze Block über .miet-dim, wenn die andere Phase gewählt ist. */
+.miet-foto-sign {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #d1d5db;
+    break-inside: avoid;
+    page-break-inside: avoid;
+}
+
+.miet-foto-sign .miet-sign-pad {
+    height: 80px;
+}
+
+.miet-foto-sign-date {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #374151;
+}
+
+.miet-foto-sign-date input {
+    max-width: 170px;
+}
+
+/* Datum steht direkt hinter der Beschriftung, mit Komma abgetrennt
+   („Unterschrift Vermieter, 28.08.2026") — wie auf dem Papierbogen.
+   Die Beschriftung darf dafür nicht mehr auseinandergezogen werden. */
+.miet-sign-caption {
+    justify-content: flex-start;
+    align-items: baseline;
+    gap: 5px;
+}
+
+.miet-sign-caption .miet-sign-name {
+    white-space: nowrap;
+}
+
+.miet-sign-caption .miet-sign-date {
+    border: none;
+    background: transparent;
+    padding: 0;
+    font: inherit;
+    color: #111;
+    min-width: 0;
+    width: auto;
+}
+
+.miet-sign-caption button {
+    margin-left: auto;
 }

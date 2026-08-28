@@ -178,6 +178,49 @@ const MOCK_CHECKLIST_TEMPLATES = window.MOCK_CHECKLIST_TEMPLATES = [
 
 let activeChecklists = {}; // templateId -> { template_id, title, type, answers }
 
+// ---------------------------------------------------------------
+// Kontext: Servicebericht ODER eigenständiges UVV-/Wartungsprotokoll
+// ---------------------------------------------------------------
+// Die Prüftabellen hängen sonst fest an den IDs des Servicebericht-Formulars
+// (service-checklist-selector-container, checklist-questions-container,
+// service-category-text, selected-machine-id, preview-name). Das Fenster
+// „UVV- & Wartungsprotokoll" (js/uvv-protokoll.js) benutzt dieselben Tabellen,
+// darf diese IDs aber nicht ein zweites Mal vergeben — doppelte IDs würden
+// beide Formulare unbrauchbar machen. Deshalb kann es hier eigene Container
+// und einen eigenen „Kategorietext" hinterlegen. Ohne gesetzten Kontext
+// verhält sich alles exakt wie vorher.
+let checklistCtx = null;
+
+window.setChecklistContext = function (ctx) {
+    checklistCtx = ctx || null;
+};
+
+function clSelectorEl() {
+    if (checklistCtx) return document.getElementById(checklistCtx.selectorId);
+    return document.getElementById('service-checklist-selector-container');
+}
+
+function clQuestionsEl() {
+    if (checklistCtx) return document.getElementById(checklistCtx.questionsId);
+    return document.getElementById('checklist-questions-container');
+}
+
+// Steuert, welche Plan-Arten angeboten werden ('wartung', 'uvv', 'einweisung').
+function clCategoryText() {
+    if (checklistCtx) return String(checklistCtx.categoryText || '').toLowerCase();
+    return document.getElementById('service-category-text')?.textContent.toLowerCase() || '';
+}
+
+function clMachineId() {
+    if (checklistCtx) return checklistCtx.machineId ? String(checklistCtx.machineId) : '';
+    return document.getElementById('selected-machine-id')?.value;
+}
+
+function clMachineName() {
+    if (checklistCtx) return String(checklistCtx.machineName || '');
+    return document.getElementById('preview-name')?.textContent || '';
+}
+
 window.initChecklists = function() {
     console.log("Checklists Module Initialized");
     
@@ -219,14 +262,14 @@ window.evaluateChecklistVisibility = function() {
 };
 
 window.populateChecklistSelector = function() {
-    const container = document.getElementById('service-checklist-selector-container');
+    const container = clSelectorEl();
     if (!container) return;
 
-    const machineName = document.getElementById('preview-name')?.textContent || '';
-    const categoryText = document.getElementById('service-category-text')?.textContent.toLowerCase() || '';
+    const machineName = clMachineName();
+    const categoryText = clCategoryText();
 
     // Aktuell ausgewählte Maschine ermitteln, um Wartungspläne nach Maschinentyp zu filtern
-    const selectedMachineId = document.getElementById('selected-machine-id')?.value;
+    const selectedMachineId = clMachineId();
     const selectedMachine = selectedMachineId ? (window.machineList || []).find(m => String(m.id) === String(selectedMachineId)) : null;
     const machineCategoryId = selectedMachine ? String(selectedMachine.category_id) : null;
     const planAssignments = window.uvvPlanAssignments || {};
@@ -383,7 +426,7 @@ window.onChecklistToggle = function(templateId, checked) {
 };
 
 window.renderActiveChecklists = function() {
-    const container = document.getElementById('checklist-questions-container');
+    const container = clQuestionsEl();
     if (!container) return;
     
     const activeList = Object.values(activeChecklists);
@@ -835,7 +878,7 @@ window.loadChecklistPayload = function(payload) {
     }
     
     // Re-render UI selector and tables
-    const categoryText = document.getElementById('service-category-text')?.textContent.toLowerCase() || '';
+    const categoryText = clCategoryText();
     if (categoryText.includes('wartung') || categoryText.includes('uvv') || categoryText.includes('einweisung')) {
         window.populateChecklistSelector();
     }

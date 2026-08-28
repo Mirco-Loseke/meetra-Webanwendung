@@ -308,7 +308,15 @@ document.addEventListener('DOMContentLoaded', function () {
 /* Mobiler Menü-Button: beim Scrollen ausblenden, nach dem Scrollen wieder einblenden. */
 (function () {
     let scrollHideTimer = null;
-    function onAnyScroll() {
+    function onAnyScroll(e) {
+        // Scrollen INNERHALB der Topbar-Panels (Glocke, Benutzer-Wechsler) darf
+        // die Topbar nicht abdunkeln — das Panel hängt in .topbar-right und
+        // wurde dabei selbst durchsichtig, während man darin gescrollt hat.
+        const t = e && e.target;
+        if (t && t.nodeType === 1 && t.closest && t.closest('#topbar')) return;
+        const notif = document.getElementById('notif-panel');
+        if (notif && notif.style.display !== 'none' && notif.style.display !== '') return;
+
         if (window.innerWidth > 768) {
             // Desktop / iPad: Topbar-Elemente beim Scrollen abdunkeln,
             // nach dem Scrollen wieder voll einblenden.

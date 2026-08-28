@@ -943,3 +943,87 @@ select.rp2-input option {
     border-color: rgba(16, 185, 129, 0.55);
     background: rgba(16, 185, 129, 0.14);
 }
+
+/* Adressbuch-Sprung: gleiches Symbol/Farbe wie bei den Vorgängen */
+.rp2-addr-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    background: rgba(251, 191, 36, 0.14);
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.5);
+    transition: background var(--motion-fast, 0.15s) ease;
+}
+
+.rp2-addr-btn:hover {
+    background: rgba(251, 191, 36, 0.3);
+}
+
+/* Stopp-Werkzeuge: Adresse gelb, Termin blau */
+.rp2-btn.rp2-btn-address {
+    background: rgba(251, 191, 36, 0.14);
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.5);
+}
+
+.rp2-btn.rp2-btn-address:hover {
+    background: rgba(251, 191, 36, 0.3);
+}
+
+.rp2-btn.rp2-btn-appointment {
+    background: rgba(59, 130, 246, 0.14);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.5);
+}
+
+.rp2-btn.rp2-btn-appointment:hover {
+    background: rgba(59, 130, 246, 0.3);
+}
+
+/* Popup: Adresse + Ansprechpartner nebeneinander */
+.rp2-popup-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.rp2-popup-actions .rp2-btn {
+    flex: 1;
+    margin-top: 0;
+    justify-content: center;
+    gap: 5px;
+}
+
+.rp2-btn.rp2-btn-contacts {
+    position: relative;
+    overflow: visible;
+    background: rgba(59, 130, 246, 0.14);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.5);
+}
+
+.rp2-btn.rp2-btn-contacts:hover {
+    background: rgba(59, 130, 246, 0.3);
+}
+
+.rp2-count-badge {
+    position: absolute;
+    top: -7px;
+    right: -6px;
+    min-width: 17px;
+    height: 17px;
+    padding: 0 4px;
+    border-radius: 9px;
+    background: #60a5fa;
+    color: #0f172a;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 17px;
+    text-align: center;
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.9);
+}

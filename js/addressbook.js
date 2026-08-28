@@ -2340,6 +2340,7 @@
             const noteAddrName = noteAddr ? noteAddr.name : (n.customer_id == state.currentId ? addrName : `Adresse #${n.customer_id}`);
             return {
                 type: 'address',
+                kind: 'note',
                 timestamp: new Date(n.entry_date || n.created_at).getTime(),
                 dateStr: formatDate(n.entry_date) || formatDateTime(n.created_at),
                 sourceLabel: `📍 ${noteAddrName}`,
@@ -2369,6 +2370,7 @@
 
             return {
                 type: 'machine',
+                kind: 'entry',
                 timestamp: new Date(mh.created_at || mh.entry_date).getTime(),
                 dateStr: formatDateTime(mh.created_at || mh.entry_date),
                 sourceLabel: mFullTitle,
@@ -2391,16 +2393,29 @@
                 label = `📍 ${procAddr ? procAddr.name : addrName}`;
             }
 
+            // Ein Vorgang ist KEIN Adress-Eintrag, auch wenn er an der Adresse
+            // statt an einer Maschine hängt: `type` steuert nur die Farbe der
+            // Kopfzeile und den Filter, `kind: 'entry'` sorgt dafür, dass er
+            // als Vorgang gezeichnet wird (eigenes Kennzeichen, Text, Status)
+            // und nicht als Adress-Notiz mit falschem Löschknopf.
+            const schritte = Array.isArray(p.steps) ? p.steps : [];
+            const teile = [];
+            if (p.remark) teile.push(String(p.remark));
+            if (schritte.length) teile.push(`Schritte: ${schritte.filter(s => s && s.done).length} von ${schritte.length} erledigt`);
+
             return {
                 type: isMachine ? 'machine' : 'address',
+                kind: 'entry',
                 timestamp: new Date(p.process_date || p.created_at).getTime(),
                 dateStr: formatDate(p.process_date) || formatDateTime(p.created_at),
-                sourceLabel: isMachine ? label : label,
+                sourceLabel: label,
                 raw: {
                     id: p.id,
                     type: 'process',
-                    title: p.title || 'Vorgang',
-                    content: p.remark || (Array.isArray(p.steps) ? `Schritte: ${p.steps.filter(s => s.done).length}/${p.steps.length} erledigt` : ''),
+                    title: p.title || 'Vorgang ohne Titel',
+                    content: teile.join('\n'),
+                    statusLabel: (PROC_STATUS[p.status] || {}).label || '',
+                    processId: p.id,
                     created_at: p.process_date || p.created_at
                 }
             };
@@ -2419,6 +2434,7 @@
 
             return {
                 type: m ? 'machine' : 'address',
+                kind: 'entry',
                 timestamp: new Date(t.created_at).getTime(),
                 dateStr: formatDateTime(t.created_at),
                 sourceLabel: label,
@@ -2490,7 +2506,12 @@
     };
 
     function unifiedHistoryItemHtml(item) {
-        if (item.type === 'address') {
+        // Entscheidend ist die Herkunft (kind), nicht ob der Eintrag an einer
+        // Adresse oder an einer Maschine hängt: nur echte Adress-Notizen
+        // werden als Notiz gezeichnet. Vorgänge und Aufgaben an einer Adresse
+        // landeten früher hier und bekamen dadurch das falsche Kennzeichen,
+        // keinen Text und einen Löschknopf für Adress-Notizen.
+        if (item.kind === 'note' || (!item.kind && item.type === 'address')) {
             const n = item.raw;
             const meta = entryTypeMeta(n.entry_type);
             return `
@@ -2572,6 +2593,19 @@
             }
 
             const headerColor = item.type === 'machine' ? '#22c55e' : '#38bdf8';
+
+            // Vorgang: Stand und ein Knopf, der ihn direkt öffnet.
+            const statusHtml = mh.statusLabel
+                ? `<span class="ab-pill" style="border-color:${config.color}55; color:${config.color}; opacity:0.85;">${esc(mh.statusLabel)}</span>`
+                : '';
+            const processBtnHtml = (mh.type === 'process' && mh.processId)
+                ? `<button onclick="event.stopPropagation(); window.openEditProcessModal && window.openEditProcessModal('${esc(mh.processId)}')"
+                            title="Vorgang öffnen"
+                            style="padding: 4px 10px; font-size: 0.78rem; font-weight: 700; background: rgba(129,140,248,0.2); color: #a5b4fc; border: 1px solid rgba(129,140,248,0.45); border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; margin-left: auto;">
+                        Vorgang öffnen
+                    </button>`
+                : '';
+
             return `
             <div class="ab-timeline-item" style="--ab-entry-color:${config.color}">
                 <div class="ab-timeline-dot">${config.icon}</div>
@@ -2582,9 +2616,11 @@
                     <div class="ab-timeline-head" style="align-items: center;">
                         <span class="ab-pill" style="border-color:${config.color}55; color:${config.color}">${esc(config.label)}</span>
                         ${mh.title ? `<strong>${esc(mh.title)}</strong>` : ''}
+                        ${statusHtml}
                         <span class="ab-muted ab-small">${esc(item.dateStr)}</span>
                         ${appointmentIconBtn(`${config.label}${mh.title ? ': ' + mh.title : ''} (${item.dateStr})`, item.machineId || null)}
                         ${pdfBtnHtml}
+                        ${processBtnHtml}
                     </div>
                     ${mh.content ? `<div class="ab-timeline-text" style="white-space: pre-wrap;">${esc(mh.content)}</div>` : ''}
                     ${filesHtml}

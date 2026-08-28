@@ -16,6 +16,8 @@
     let coordsPersistable = true; // false, wenn die SQL-Migration noch nicht gelaufen ist
     let plannerBaseMachine = null;
     let plannerCandidates = []; // [{ machine, distanceKm, address, label }]
+    let plannerStart = null;    // { mode:'hq'|'geo'|'custom', label, address, lat, lng }
+    let radiusActive = false;   // true, sobald wirklich gesucht wurde
 
     function esc(s) {
         return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -122,10 +124,24 @@
                 <h2 style="margin:0 0 0.35rem 0; font-family:'Outfit',sans-serif; font-size:1.35rem; color:#fff;">Routenplaner — Umkreissuche</h2>
                 <div id="rp-base-info" style="font-size:0.88rem; color:rgba(255,255,255,0.55); margin-bottom:1.25rem;"></div>
 
+                <div style="border:1px solid rgba(255,255,255,0.08); border-radius:14px; padding:12px 14px; margin-bottom:1rem; background:rgba(255,255,255,0.03);">
+                    <label style="font-size:0.78rem; color:rgba(255,255,255,0.5); font-weight:700; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:8px;">Start der Route</label>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+                        <button type="button" class="rp-start-btn" data-mode="hq" onclick="window.rpSetStartMode('hq')">Firmenadresse</button>
+                        <button type="button" class="rp-start-btn" data-mode="geo" onclick="window.rpSetStartMode('geo')">Aktuelle Position</button>
+                        <button type="button" class="rp-start-btn" data-mode="custom" onclick="window.rpSetStartMode('custom')">Andere Adresse</button>
+                    </div>
+                    <div id="rp-start-custom" style="display:none; gap:8px; margin-bottom:8px;">
+                        <input type="text" id="rp-start-address" class="glass-input" placeholder="Straße, PLZ Ort" style="flex:1; height:38px;">
+                        <button class="btn-secondary" style="padding:0 16px; height:38px;" onclick="window.rpUseCustomStart()">Übernehmen</button>
+                    </div>
+                    <div id="rp-start-info" style="font-size:0.82rem; color:rgba(255,255,255,0.55);"></div>
+                </div>
+
                 <div style="display:flex; align-items:flex-end; gap:12px; flex-wrap:wrap; margin-bottom:1rem;">
                     <div>
-                        <label style="font-size:0.78rem; color:rgba(255,255,255,0.5); font-weight:700; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">Umkreis (km)</label>
-                        <input type="number" id="rp-radius" class="glass-input" value="50" min="1" max="1000" style="width:110px; height:42px;">
+                        <label id="rp-radius-label" style="font-size:0.78rem; color:rgba(255,255,255,0.5); font-weight:700; text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:6px;">Umkreis (km)</label>
+                        <input type="number" id="rp-radius" class="glass-input rp-radius-idle" value="50" min="1" max="1000" style="width:110px; height:42px;">
                     </div>
                     <button class="btn-primary" style="height:42px; padding:0 22px; font-weight:700;" onclick="window.rpApplyRadius()">Suchen</button>
                     <div id="rp-status" style="font-size:0.82rem; color:rgba(255,255,255,0.45); flex:1;"></div>
@@ -142,7 +158,95 @@
                 </div>
             </div>`;
         document.body.appendChild(wrap);
+
+        if (!document.getElementById('rp-inline-styles')) {
+            const st = document.createElement('style');
+            st.id = 'rp-inline-styles';
+            st.textContent = `
+                .rp-start-btn { padding:7px 14px; border-radius:10px; font-size:0.83rem; font-weight:700; cursor:pointer;
+                    background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); color:rgba(255,255,255,0.7); transition:all 0.15s; }
+                .rp-start-btn:hover { background:rgba(255,255,255,0.09); color:#fff; }
+                .rp-start-btn.active { background:rgba(16,160,104,0.18); border-color:var(--color-primary-green,#10a068); color:#fff; }
+                /* Umkreis leuchtet erst, wenn wirklich gefiltert wurde */
+                #rp-radius.rp-radius-idle { box-shadow:none; border-color:rgba(255,255,255,0.12); }
+                #rp-radius.rp-radius-active { border-color:var(--color-primary-green,#10a068);
+                    box-shadow:0 0 0 3px rgba(16,160,104,0.18); }
+                #rp-radius-label.rp-radius-active { color:var(--color-primary-green,#10a068); }`;
+            document.head.appendChild(st);
+        }
     }
+
+    function setRadiusActive(on) {
+        radiusActive = !!on;
+        const inp = document.getElementById('rp-radius');
+        const lab = document.getElementById('rp-radius-label');
+        if (inp) {
+            inp.classList.toggle('rp-radius-active', radiusActive);
+            inp.classList.toggle('rp-radius-idle', !radiusActive);
+        }
+        if (lab) lab.classList.toggle('rp-radius-active', radiusActive);
+    }
+
+    function hqStart() {
+        return { mode: 'hq', label: 'Firmenadresse', address: hqAddress(), lat: null, lng: null };
+    }
+
+    function renderStartInfo() {
+        const el = document.getElementById('rp-start-info');
+        if (!el) return;
+        document.querySelectorAll('.rp-start-btn').forEach(b => {
+            b.classList.toggle('active', !!plannerStart && b.dataset.mode === plannerStart.mode);
+        });
+        const cust = document.getElementById('rp-start-custom');
+        if (cust) cust.style.display = (plannerStart && plannerStart.mode === 'custom') ? 'flex' : 'none';
+        if (!plannerStart) { el.textContent = ''; return; }
+        el.innerHTML = `Start: <strong style="color:#fff;">${esc(plannerStart.label)}</strong>` +
+            (plannerStart.address ? ` — ${esc(plannerStart.address)}` : '');
+    }
+
+    window.rpSetStartMode = function (mode) {
+        if (mode === 'hq') {
+            plannerStart = hqStart();
+            renderStartInfo();
+            return;
+        }
+        if (mode === 'custom') {
+            const field = document.getElementById('rp-start-address');
+            plannerStart = { mode: 'custom', label: 'Eigene Adresse', address: (field.value || '').trim(), lat: null, lng: null };
+            renderStartInfo();
+            field.focus();
+            return;
+        }
+        // Aktuelle Position
+        if (!navigator.geolocation) {
+            window.showToast('Dieses Gerät liefert keine Standortdaten.');
+            return;
+        }
+        const el = document.getElementById('rp-start-info');
+        if (el) el.textContent = 'Standort wird ermittelt…';
+        navigator.geolocation.getCurrentPosition(pos => {
+            plannerStart = {
+                mode: 'geo',
+                label: 'Aktuelle Position',
+                address: '',
+                lat: pos.coords.latitude,
+                lng: pos.coords.longitude
+            };
+            renderStartInfo();
+        }, err => {
+            console.warn('Geolocation fehlgeschlagen:', err && err.message);
+            window.showToast('Standort konnte nicht ermittelt werden. Bitte Standortfreigabe im Browser erlauben.');
+            if (!plannerStart || plannerStart.mode === 'geo') plannerStart = hqStart();
+            renderStartInfo();
+        }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+    };
+
+    window.rpUseCustomStart = function () {
+        const val = (document.getElementById('rp-start-address').value || '').trim();
+        if (!val) { window.showToast('Bitte eine Adresse eingeben.'); return; }
+        plannerStart = { mode: 'custom', label: 'Eigene Adresse', address: val, lat: null, lng: null };
+        renderStartInfo();
+    };
 
     window.closeRoutePlanner = function () {
         const modal = document.getElementById('route-planner-modal');
@@ -165,8 +269,12 @@
         modal.style.display = 'flex';
         document.getElementById('rp-base-info').innerHTML =
             `Ausgangspunkt: <strong style="color:#fff;">${esc(machineLabel(base))}</strong> — ${esc(machineAddress(base))}`;
-        document.getElementById('rp-results').innerHTML = '';
+        document.getElementById('rp-results').innerHTML =
+            '<div style="color:rgba(255,255,255,0.45); font-size:0.86rem;">Umkreis festlegen und auf „Suchen“ klicken.</div>';
         document.getElementById('rp-selected-count').textContent = '';
+        if (!plannerStart) plannerStart = hqStart();
+        renderStartInfo();
+        setRadiusActive(false);
 
         const statusEl = document.getElementById('rp-status');
         statusEl.textContent = 'Adressen werden geortet…';
@@ -182,7 +290,6 @@
 
         statusEl.textContent = coordsPersistable ? '' :
             'Hinweis: Koordinaten werden nur temporär gehalten — bitte supabase_add_machine_coords.sql in Supabase ausführen.';
-        window.rpApplyRadius();
     };
 
     window.rpApplyRadius = function () {
@@ -190,6 +297,7 @@
         if (!base || typeof base.lat !== 'number') return;
 
         const radius = Math.max(1, parseFloat(document.getElementById('rp-radius').value) || 50);
+        setRadiusActive(true);
         const seenAddresses = new Set([machineAddress(base)]);
 
         plannerCandidates = (window.machineList || [])
@@ -272,7 +380,12 @@
         const destination = ordered[ordered.length - 1];
         const waypoints = ordered.slice(0, -1);
 
-        let url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(hqAddress())}` +
+        const start = plannerStart || hqStart();
+        const origin = (typeof start.lat === 'number' && typeof start.lng === 'number')
+            ? `${start.lat},${start.lng}`
+            : (start.address || hqAddress());
+
+        let url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}` +
             `&destination=${encodeURIComponent(toQuery(destination))}`;
         if (waypoints.length > 0) {
             url += `&waypoints=${waypoints.map(s => encodeURIComponent(toQuery(s))).join('%7C')}`;

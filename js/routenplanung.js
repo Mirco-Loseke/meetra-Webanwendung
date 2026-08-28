@@ -406,6 +406,8 @@
     // Startpunkt: Firmenadresse oder aktueller Standort
     // ---------------------------------------------------------------
     let startIsCurrentLocation = false;
+    let startMode = 'hq';        // 'hq' | 'geo' | 'address' | 'map'
+    let mapPickActive = false;   // wartet auf den Kartenklick für den Startpunkt
 
     function renderHqInfo() {
         const el = document.getElementById('rp2-hq-info');
@@ -417,7 +419,7 @@
         el.setAttribute('title', 'Startpunkt ändern');
         el.setAttribute('data-rp2-action', 'pick-start');
         el.innerHTML = `
-            <div class="rp2-hq-icon">${ic(startIsCurrentLocation ? 'pin' : 'home', 17)}</div>
+            <div class="rp2-hq-icon">${ic(startMode === 'hq' ? 'home' : 'pin', 17)}</div>
             <div class="rp2-hq-text">
                 <div class="rp2-hq-title">Start der Tour <span class="rp2-hq-change">ändern</span></div>
                 <div class="rp2-hq-name">${esc(hqInfo.name)}</div>
@@ -428,22 +430,139 @@
     function pickStartDialog() {
         openDialog('Startpunkt der Tour', `
             <div class="rp2-start-choice">
-                <button class="rp2-btn rp2-start-option${startIsCurrentLocation ? '' : ' rp2-btn-primary'}" data-rp2-action="start-hq">
+                <button class="rp2-btn rp2-start-option${startMode === 'hq' ? ' rp2-btn-primary' : ''}" data-rp2-action="start-hq">
                     ${ic('home', 18)}
                     <span>
                         <strong>Firmenadresse</strong>
                         <small>${esc(companyHqAddress())}</small>
                     </span>
                 </button>
-                <button class="rp2-btn rp2-start-option${startIsCurrentLocation ? ' rp2-btn-primary' : ''}" data-rp2-action="start-current">
+                <button class="rp2-btn rp2-start-option${startMode === 'geo' ? ' rp2-btn-primary' : ''}" data-rp2-action="start-current">
                     ${ic('pin', 18)}
                     <span>
                         <strong>Aktueller Standort</strong>
                         <small>Position des Geräts abfragen</small>
                     </span>
                 </button>
+                <button class="rp2-btn rp2-start-option${startMode === 'map' ? ' rp2-btn-primary' : ''}" data-rp2-action="start-map">
+                    ${ic('pin', 18)}
+                    <span>
+                        <strong>Punkt auf der Karte</strong>
+                        <small>Start frei auf der Karte anklicken</small>
+                    </span>
+                </button>
+            </div>
+            <div style="margin-top:1rem;">
+                <label class="rp2-label" for="rp2-start-search-input">Hinterlegte Adresse als Start</label>
+                <div class="rp2-search-wrap">
+                    <input type="text" id="rp2-start-search-input" class="rp2-input" autocomplete="off"
+                        placeholder="Name, Matchcode, Straße, PLZ oder Ort" oninput="window.rp2StartSearch()">
+                    <div id="rp2-start-search-results" class="rp2-search-results"></div>
+                </div>
             </div>`, null, null);
+        setTimeout(() => {
+            const f = document.getElementById('rp2-start-search-input');
+            if (f) f.focus();
+        }, 60);
     }
+
+    // Adresssuche im Startpunkt-Dialog — dieselbe Quelle wie die Stopp-Suche,
+    // nur wird der Treffer zum Start statt zum Stopp.
+    let startSearchTimer = null;
+    let startSearchResults = [];
+
+    window.rp2StartSearch = function () {
+        clearTimeout(startSearchTimer);
+        startSearchTimer = setTimeout(runStartSearch, 280);
+    };
+
+    async function runStartSearch() {
+        const input = document.getElementById('rp2-start-search-input');
+        const box = document.getElementById('rp2-start-search-results');
+        if (!input || !box) return;
+        const query = input.value.trim();
+
+        if (query.length < 2) { box.classList.remove('open'); box.innerHTML = ''; return; }
+        if (!window.supabaseClient) {
+            box.classList.add('open');
+            box.innerHTML = '<div class="rp2-hint">Keine Verbindung zur Datenbank.</div>';
+            return;
+        }
+
+        box.classList.add('open');
+        box.innerHTML = '<div class="rp2-hint">Suche…</div>';
+        try {
+            const { data, error } = await sb().from('customers')
+                .select('id, name, matchcode, customer_number, address_number, street, zip_code, city, country, lat, lng, geocoded_address')
+                .or(`name.ilike.%${query}%,matchcode.ilike.%${query}%,street.ilike.%${query}%,zip_code.ilike.%${query}%,city.ilike.%${query}%,customer_number.ilike.%${query}%`)
+                .limit(15);
+            if (error) throw error;
+
+            startSearchResults = (data || []).filter(c => customerAddress(c));
+            if (!startSearchResults.length) { box.innerHTML = '<div class="rp2-hint">Keine Treffer gefunden</div>'; return; }
+
+            box.innerHTML = startSearchResults.map(c => `
+                <button type="button" class="rp2-search-item" data-rp2-action="start-address" data-rp2-id="${esc(String(c.id))}">
+                    <div class="rp2-avatar" style="--rp2-hue:${avatarHue(customerLabel(c))}">${esc(initials(customerLabel(c)))}</div>
+                    <div class="rp2-search-body">
+                        <div class="rp2-search-name">${esc(customerLabel(c))}</div>
+                        <div class="rp2-search-sub">${esc(customerAddress(c))}</div>
+                    </div>
+                </button>`).join('');
+        } catch (err) {
+            console.error('Startpunkt-Suche fehlgeschlagen:', err);
+            box.innerHTML = '<div class="rp2-hint" style="color:#f87171;">Fehler bei der Suche</div>';
+        }
+    }
+
+    async function useAddressAsStart(customerId) {
+        const rec = startSearchResults.find(c => String(c.id) === String(customerId));
+        if (!rec) return;
+        closeDialog();
+        setStatus(`Adresse wird geortet: ${customerLabel(rec)}…`);
+        const coords = await resolveCoords(rec);
+        setStatus('');
+        if (!coords) { window.showToast('Diese Adresse konnte nicht geortet werden.'); return; }
+        startMode = 'address';
+        startIsCurrentLocation = false;
+        hqInfo = { name: customerLabel(rec), address: customerAddress(rec), lat: coords.lat, lng: coords.lng };
+        afterStartPointChanged();
+    }
+
+    // Freier Punkt: der nächste Klick auf die Karte setzt den Start.
+    function startMapPick() {
+        closeDialog();
+        if (!map) { window.showToast('Die Karte ist noch nicht geladen.'); return; }
+        mapPickActive = true;
+        const c = document.getElementById('rp2-map');
+        if (c) c.style.cursor = 'crosshair';
+        setStatus('Startpunkt auf der Karte anklicken (Esc bricht ab).');
+        map.once('click', async (ev) => {
+            endMapPick();
+            const lat = ev.latlng.lat, lng = ev.latlng.lng;
+            setStatus('Punkt wird benannt…');
+            const address = await reverseGeocode(lat, lng) || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+            setStatus('');
+            startMode = 'map';
+            startIsCurrentLocation = false;
+            hqInfo = { name: 'Eigener Startpunkt', address, lat, lng };
+            afterStartPointChanged();
+        });
+    }
+
+    function endMapPick() {
+        mapPickActive = false;
+        const c = document.getElementById('rp2-map');
+        if (c) c.style.cursor = '';
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && mapPickActive) {
+            if (map) map.off('click');
+            endMapPick();
+            setStatus('');
+        }
+    });
 
     function companyHqDefaults() {
         let hq = null;
@@ -495,6 +614,7 @@
                 || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
 
             startIsCurrentLocation = true;
+            startMode = 'geo';
             hqInfo = { name: 'Aktueller Standort', address, lat, lng };
             setStatus('');
             afterStartPointChanged();
@@ -509,8 +629,9 @@
 
     async function useCompanyAsStart() {
         closeDialog();
-        if (!startIsCurrentLocation && hqInfo && typeof hqInfo.lat === 'number') return;
+        if (startMode === 'hq' && hqInfo && typeof hqInfo.lat === 'number') return;
         startIsCurrentLocation = false;
+        startMode = 'hq';
         hqInfo = null;
         setStatus('Firmenadresse wird geortet…');
         await getHqInfo();
@@ -633,6 +754,7 @@
             const p = marker._rp2Point;
             if (!p || !p.customerId) return;
             window.rp2ShowMachines(p.customerId, `rp2-mach-${p.id}`);
+            fillContactCount(p.customerId, `rp2-cnt-${p.id}`);
         });
         return marker;
     }
@@ -688,11 +810,74 @@
         markerFrame = requestAnimationFrame(() => { markerFrame = null; renderMarkers(); });
     }
 
+    // Adressbuch-Knöpfe im Marker-Popup — „Adresse" wie bei den Vorgängen,
+    // daneben „Ansprechpartner" mit der Anzahl als Zähler oben rechts. Der
+    // Zähler wird beim Öffnen des Popups nachgetragen (siehe fillPopup).
+    function popupActionsHtml(point) {
+        const customerId = point && point.customerId;
+        if (!customerId) return '';
+        const cid = esc(String(customerId));
+        return `<div class="rp2-popup-actions">
+            <button class="rp2-btn rp2-btn-sm rp2-popup-btn rp2-btn-address" onclick="window.rp2OpenAddress('${cid}')" title="Adresse öffnen">${ic('user', 13)} Adresse</button>
+            <button class="rp2-btn rp2-btn-sm rp2-popup-btn rp2-btn-contacts" onclick="window.rp2OpenContacts('${cid}')" title="Ansprechpartner öffnen">${ic('user', 13)} Ansprechpartner<span class="rp2-count-badge" id="rp2-cnt-${esc(String(point.id))}">0</span></button>
+        </div>`;
+    }
+
+    // Anzahl der Ansprechpartner je Adresse — einmal ermittelt, danach aus dem
+    // Cache. Steht die Adresse als Stopp in der Route, liegt die Liste schon vor.
+    const contactCountCache = new Map();
+    const popupLoadSeq = new Map();   // containerId -> laufende Nummer des Ladevorgangs
+    async function fillContactCount(customerId, elId) {
+        const key = String(customerId);
+        const paint = (n) => {
+            const el = document.getElementById(elId);
+            if (el) el.textContent = String(n);
+        };
+
+        if (contactsByCustomer.has(key)) {
+            const n = contactsByCustomer.get(key).length;
+            contactCountCache.set(key, n);
+            paint(n);
+            return;
+        }
+        if (contactCountCache.has(key)) { paint(contactCountCache.get(key)); return; }
+
+        try {
+            const { count, error } = await sb()
+                .from('customer_contacts')
+                .select('id', { count: 'exact', head: true })
+                .eq('customer_id', customerId);
+            if (error) throw error;
+            contactCountCache.set(key, count || 0);
+            paint(count || 0);
+        } catch (err) {
+            console.warn('Ansprechpartner konnten nicht gezählt werden:', err.message || err);
+            paint(0);
+        }
+    }
+
+    window.rp2OpenContacts = function (customerId) {
+        if (typeof window.switchView === 'function') window.switchView('addressbook');
+        const open = () => {
+            if (typeof window.openAddressContactsById === 'function') window.openAddressContactsById(customerId);
+            else openAddressInAddressbook(customerId);
+        };
+        if (window.addressbookState && window.addressbookState.loaded) open();
+        else setTimeout(open, 1200);
+    };
+
     function markerFor(key, lat, lng, color, content, popupFn) {
         let marker = markerCache.get(key);
+        // Der Popup-Inhalt entsteht bei jedem Öffnen neu, über eine Funktion,
+        // die immer die aktuelle Fassung liest. `setPopupContent` nimmt keine
+        // Funktion entgegen (nur String/Element) — der frühere Aufruf hat das
+        // Popup nach einem Re-Render deshalb stillschweigend zerlegt: beim
+        // zweiten Klick standen dann keine Maschinen mehr da.
+        if (marker) marker._rp2PopupFn = popupFn;
         if (!marker) {
             marker = L.marker([lat, lng], { icon: glowIcon(color, content) });
-            marker.bindPopup(popupFn, { minWidth: 220 });
+            marker._rp2PopupFn = popupFn;
+            marker.bindPopup(() => marker._rp2PopupFn(), { minWidth: 220 });
             marker._rp2Color = color;
             marker._rp2Content = content;
             markerCache.set(key, marker);
@@ -704,7 +889,6 @@
                 marker._rp2Color = color;
                 marker._rp2Content = content;
             }
-            marker.setPopupContent(popupFn);
         }
         return marker;
     }
@@ -738,6 +922,7 @@
             const marker = markerFor(key, s.lat, s.lng, '#10b981', i + 1, () =>
                 `<div class="rp2-popup-title">${esc(s.label)}</div>` +
                 `<div class="rp2-popup-address">${esc(s.address)}</div>` +
+                popupActionsHtml(s) +
                 `<button class="rp2-btn rp2-btn-sm rp2-popup-btn" onclick="window.rp2RemoveStop('${s.id}')">Aus Route entfernen</button>` +
                 machinesButtonHtml(s));
             attachPopupLoader(marker, s);
@@ -758,6 +943,7 @@
                 `<div class="rp2-popup-title">${esc(c.label)}</div>` +
                 `<div class="rp2-popup-address">${esc(c.address)}</div>` +
                 `<div class="rp2-distance">${(c.distanceKm || 0).toFixed(1).replace('.', ',')} km entfernt</div>` +
+                popupActionsHtml(c) +
                 `<button class="rp2-btn rp2-btn-sm rp2-btn-primary rp2-popup-btn" onclick="window.rp2AddCandidate('${c.id}')">Zur Route hinzufügen</button>` +
                 machinesButtonHtml(c));
             attachPopupLoader(marker, c);
@@ -788,9 +974,16 @@
     // Manuell im Adressbuch erfasste Maschinen stehen nur im localStorage und
     // waren auf der Karte deshalb früher nirgends zu sehen.
     window.rp2ShowMachines = async function (customerId, containerId) {
-        const el = document.getElementById(containerId);
-        if (!el) return;
-        el.innerHTML = '<div class="rp2-hint">Maschinen werden geladen…</div>';
+        // Das Popup wird bei jedem Öffnen neu aufgebaut — das Element von
+        // vorhin hängt dann nicht mehr im Dokument. Deshalb wird es nach jedem
+        // await frisch geholt und ein älterer Lauf verwirft sein Ergebnis.
+        const token = (popupLoadSeq.get(containerId) || 0) + 1;
+        popupLoadSeq.set(containerId, token);
+        const target = () => (popupLoadSeq.get(containerId) === token ? document.getElementById(containerId) : null);
+
+        const start = target();
+        if (!start) return;
+        start.innerHTML = '<div class="rp2-hint">Maschinen werden geladen…</div>';
         try {
             // Popup kann geöffnet werden, bevor die Verknüpfungen vorgeladen
             // sind — dann kurz nachladen statt die Gruppe zu unterschlagen.
@@ -798,26 +991,62 @@
             const group = collectLinkedGroup(customerId);
             const ids = [String(customerId), ...group.map(g => g.id)];
 
-            const [machRes, custRes] = await Promise.all([
-                sb().from('machines')
-                    .select('id, name, manufacturer, serial, year, customer_id')
-                    .in('customer_id', ids),
-                group.length
-                    ? sb().from('customers').select('id, name, zip_code, city').in('id', group.map(g => g.id))
-                    : Promise.resolve({ data: [] })
-            ]);
-            if (machRes.error) throw machRes.error;
-            if (custRes.error) console.warn('Verknüpfte Adressen nicht ladbar:', custRes.error.message);
+            // Maschinen kommen aus derselben Zuordnung wie im Adressbuch
+            // (Standort schlägt Betreiber, dazu Kundennummer und Freitext) —
+            // die frühere Abfrage nur über `customer_id` hat alle Maschinen
+            // unterschlagen, die über den Standort an der Adresse hängen.
+            let abMap = null;
+            try {
+                if (typeof window.loadAddressbook === 'function') await window.loadAddressbook();
+                if (window.addressbookState && window.addressbookState.machinesByCustomer &&
+                    window.addressbookState.machinesByCustomer.size) {
+                    abMap = window.addressbookState.machinesByCustomer;
+                }
+            } catch (e) {
+                console.warn('Adressbuch-Zuordnung nicht verfügbar, fallback auf customer_id:', e.message || e);
+            }
 
             const machinesBy = new Map();
-            (machRes.data || []).forEach(m => {
-                const k = String(m.customer_id);
-                if (!machinesBy.has(k)) machinesBy.set(k, []);
-                machinesBy.get(k).push(m);
-            });
+            let custRes = { data: [] };
+
+            if (abMap) {
+                ids.forEach(id => {
+                    const list = abMap.get(String(id)) || [];
+                    if (list.length) machinesBy.set(String(id), list.slice());
+                });
+                if (group.length && window.addressbookState.byId) {
+                    custRes = {
+                        data: group.map(g => window.addressbookState.byId.get(String(g.id))).filter(Boolean)
+                    };
+                }
+            }
+
+            if (!abMap || !custRes.data.length) {
+                const [machRes, cRes] = await Promise.all([
+                    abMap ? Promise.resolve({ data: [] }) : sb().from('machines')
+                        .select('id, name, manufacturer, serial, year, customer_id')
+                        .in('customer_id', ids).limit(2000),
+                    (group.length && !custRes.data.length)
+                        ? sb().from('customers').select('id, name, zip_code, city').in('id', group.map(g => g.id))
+                        : Promise.resolve({ data: custRes.data })
+                ]);
+                if (machRes.error) throw machRes.error;
+                if (cRes.error) console.warn('Verknüpfte Adressen nicht ladbar:', cRes.error.message);
+                else custRes = cRes;
+
+                (machRes.data || []).forEach(m => {
+                    const k = String(m.customer_id);
+                    if (!machinesBy.has(k)) machinesBy.set(k, []);
+                    machinesBy.get(k).push(m);
+                });
+            }
+
             const machinesOf = (id) => {
                 const list = [...customMachinesOf(id), ...(machinesBy.get(String(id)) || [])];
-                return list.sort((a, b) => machineTitle(a).localeCompare(machineTitle(b), 'de'));
+                const seen = new Set();
+                return list
+                    .filter(m => { const k = String(m.id); if (seen.has(k)) return false; seen.add(k); return true; })
+                    .sort((a, b) => machineTitle(a).localeCompare(machineTitle(b), 'de'));
             };
 
             const rowHtml = (m) => {
@@ -862,10 +1091,12 @@
                     + `(${own.length} an dieser Adresse)</div>` + html;
             }
 
-            el.innerHTML = html;
+            const out = target();
+            if (out) out.innerHTML = html;
         } catch (err) {
             console.error('Maschinen konnten nicht geladen werden:', err);
-            el.innerHTML = '<div class="rp2-hint" style="color:#f87171;">Fehler beim Laden der Maschinen.</div>';
+            const fail = target();
+            if (fail) fail.innerHTML = '<div class="rp2-hint" style="color:#f87171;">Fehler beim Laden der Maschinen.</div>';
         }
     };
 
@@ -1137,8 +1368,8 @@
                     ${contactHtml}
                     ${meta.length ? `<div class="rp2-stop-meta">${meta.join('')}</div>` : ''}
                     ${s.customerId ? `<div class="rp2-stop-tools">
-                        <button class="rp2-btn rp2-btn-sm" data-rp2-action="open-address" data-rp2-id="${esc(String(s.customerId))}">${ic('book', 13)} Adresse</button>
-                        <button class="rp2-btn rp2-btn-sm" data-rp2-action="add-appointment" data-rp2-id="${esc(String(s.customerId))}">${ic('note', 13)} Termin anlegen</button>
+                        <button class="rp2-btn rp2-btn-sm rp2-btn-address" data-rp2-action="open-address" data-rp2-id="${esc(String(s.customerId))}">${ic('user', 13)} Adresse</button>
+                        <button class="rp2-btn rp2-btn-sm rp2-btn-appointment" data-rp2-action="add-appointment" data-rp2-id="${esc(String(s.customerId))}">${ic('note', 13)} Termin anlegen</button>
                     </div>` : ''}
                     ${appointmentsHtml(s.customerId)}
                 </div>
@@ -1170,6 +1401,7 @@
                     <div class="rp2-suggest-name">${esc(s.label)}${s.isCustomer ? '<span class="rp2-badge customer">Kunde</span>' : ''}</div>
                     <div class="rp2-suggest-sub">${esc(LINK_TYPE_LABEL[s.linkType] || 'Verknüpft')}${s.via ? ' von ' + esc(s.via) : ''} · ${esc(s.address)}</div>
                 </div>
+                ${s.customerId ? `<button class="rp2-addr-btn" data-rp2-action="open-address" data-rp2-id="${esc(String(s.customerId))}" title="Adresse öffnen">${ic('user', 15)}</button>` : ''}
                 <button class="rp2-add-btn" data-rp2-action="add-linked" data-rp2-id="${esc(s.id)}" title="Zur Route hinzufügen">${ic('plus', 17)}</button>
             </div>`).join('');
     }
@@ -1210,6 +1442,7 @@
                     <div class="rp2-suggest-sub">${esc(c.address)}</div>
                 </div>
                 <span class="rp2-distance">${(c.distanceKm || 0).toFixed(1).replace('.', ',')} km</span>
+                ${c.customerId ? `<button class="rp2-addr-btn" data-rp2-action="open-address" data-rp2-id="${esc(String(c.customerId))}" title="Adresse öffnen">${ic('user', 15)}</button>` : ''}
                 <button class="rp2-add-btn" data-rp2-action="add-candidate" data-rp2-id="${esc(c.id)}" title="Zur Route hinzufügen">${ic('plus', 17)}</button>
             </div>`).join('')
             + (rest > 0 ? `<div class="rp2-hint">… ${rest} weitere Adressen im Umkreis. Radius verkleinern oder filtern, um sie einzugrenzen.</div>` : '');
@@ -1663,7 +1896,9 @@
         }
     }
 
-    let isRadiusFilterEnabled = true;
+    // Beim Öffnen der Seite ist noch nichts gefiltert — das Feld leuchtet erst
+    // nach einer Suche bzw. sobald der Nutzer eine Zahl eintippt.
+    let isRadiusFilterEnabled = false;
 
     window.rp2ToggleRadiusActive = function () {
         isRadiusFilterEnabled = !isRadiusFilterEnabled;
@@ -1767,6 +2002,9 @@
         }
         if (clearBtn) {
             clearBtn.style.color = isRadiusFilterEnabled ? '#4ade80' : 'rgba(255,255,255,0.4)';
+            clearBtn.title = isRadiusFilterEnabled
+                ? 'Radius-Filter ausschalten (alle anzeigen)'
+                : 'Radius-Filter einschalten';
         }
     }
 
@@ -1861,6 +2099,8 @@
     // ---------------------------------------------------------------
     // Adressbuch öffnen / Besuch notieren
     // ---------------------------------------------------------------
+    window.rp2OpenAddress = function (customerId) { openAddressInAddressbook(customerId); };
+
     function openAddressInAddressbook(customerId) {
         if (typeof window.switchView === 'function') window.switchView('addressbook');
         const open = () => {
@@ -2023,7 +2263,7 @@
             closeDialog();
             setStatus(savedToCloud
                 ? (alsNeu ? 'Route gespeichert — für alle Geräte und Kollegen sichtbar.' : `Route „${name}" aktualisiert.`)
-                : 'Route nur lokal auf diesem Gerät gespeichert — für geräteübergreifend supabase/supabase_add_saved_routes.sql ausführen.');
+                : 'Route gespeichert (Notfall-Ablage auf diesem Gerät — Datenbank nicht erreichbar).');
             setTimeout(() => setStatus(''), 7000);
         });
     }
@@ -2051,7 +2291,7 @@
         body.innerHTML = `<div class="rp2-saved-list">${all.map(r => `
             <div class="rp2-saved-row">
                 <div class="rp2-saved-body">
-                    <div class="rp2-saved-name">${esc(r.name)}${r.local ? ' <span class="rp2-badge">nur lokal</span>' : ''}</div>
+                    <div class="rp2-saved-name">${esc(r.name)}</div>
                     <div class="rp2-saved-sub">${(r.stops || []).length} Stopps${r.total_km ? ' · ' + fmtKm(Number(r.total_km)) : ''}${r.created_at ? ' · ' + new Date(r.created_at).toLocaleDateString('de-DE') : ''}${r.author ? ' · ' + esc(r.author) : ''}</div>
                 </div>
                 <button class="rp2-btn rp2-btn-sm rp2-btn-primary" data-rp2-action="load-route" data-rp2-id="${esc(String(r.id))}">Laden</button>
@@ -2297,6 +2537,8 @@
             case 'pick-start': pickStartDialog(); break;
             case 'start-hq': useCompanyAsStart(); break;
             case 'start-current': useCurrentLocationAsStart(); break;
+            case 'start-map': startMapPick(); break;
+            case 'start-address': useAddressAsStart(id); break;
             case 'optimize': window.rp2Optimize(); break;
             case 'nearby': window.rp2RunNearbySearch(); break;
             case 'filter-customers': window.rp2ToggleNearbyFilter('customers'); break;

@@ -30,6 +30,7 @@
     let gespeicherteId = null; // Zeile in rental_agreements, sobald einmal gespeichert
     let gespeichertesDoc = null; // zugehoeriges Dokument unter "Dokumente"
     let padZiel = null;    // welches Unterschriftenfeld gerade gezeichnet wird
+    let schadenLeer = true; // Stand beim letzten Zeichnen: Schadenstabelle ohne Eintrag
 
     // Fotopositionen der aktuellen Vorlage. Die Reihenfolge ist zugleich
     // die Nummer auf dem Ausdruck und die Reihenfolge, in der die Kamera
@@ -65,8 +66,8 @@
             schaeden: [{ nr: '', position: '', beschreibung: '' }],
             fotos: { uebergabe: {}, ruecknahme: {} },
             unterschriften: {
-                u_vermieter: null, u_mieter: null,   // Übergabe
-                r_vermieter: null, r_mieter: null    // Rücknahme
+                u_vermieter: null, u_mieter: null, u_datum: heute(),   // Übergabe
+                r_vermieter: null, r_mieter: null, r_datum: ''       // Rücknahme
             }
         };
         let nr = 1;
@@ -390,16 +391,39 @@
         document.getElementById('miet-phase-r').classList.toggle('active', phase === 'ruecknahme');
 
         const recht = rechtsBlock();
-        verteileAufSeiten(pages, [
-            kopfBlock(),
-            geraetBlock(),
-            abnahmeBlock(),
-            schadenBlock(),
-            fotoBlock('uebergabe'),
-            fotoBlock('ruecknahme'),
-            unterschriftBlock(),
-        ].filter(Boolean));
-        if (recht) rechtsSeite(pages, recht);
+        pages.innerHTML = '';
+
+        // Mieter, Gerät und Abnahme gehören zusammen auf das erste Blatt.
+        // Reicht der Platz nicht, wird der Teil so weit verkleinert, bis er
+        // passt (siehe ersteSeite) — statt ihn auf zwei Blätter zu reissen.
+        ersteSeite(pages, [kopfBlock(), geraetBlock(), abnahmeBlock()]);
+
+        // Die Schadenstabelle steht immer allein auf einem Blatt. Ist keine
+        // Zeile ausgefüllt, bleibt das Blatt nur zum Eintragen am Bildschirm
+        // stehen und wird weder gedruckt noch ins PDF übernommen.
+        schadenLeer = !schadenHatInhalt();
+        eigeneSeite(pages, schadenBlock(), schadenLeer);
+
+        // Fotos zuerst, dann der Vertragstext auf seinem eigenen Blatt, und
+        // die Unterschriften ganz zum Schluss: der Vertragstext steht damit
+        // immer auf der VORLETZTEN Seite und wird direkt danach
+        // unterschrieben. (Vorher lag er ganz hinten, hinter den
+        // Unterschriften.)
+        const fotos = [fotoBlock('uebergabe'), fotoBlock('ruecknahme')].filter(Boolean);
+        if (fotos.length) {
+            verteileAufSeiten(pages, fotos, true);
+            // verteileAufSeiten legt immer ein Blatt an; blieb es leer, muss es
+            // wieder weg — sonst stünde vor dem Vertragstext ein leeres Blatt.
+            pages.querySelectorAll('.miet-page').forEach(s => {
+                if (!innen(s).children.length) s.remove();
+            });
+        }
+        // Der Vertragstext bildet den Schluss und darf über MEHRERE Blätter
+        // laufen (der Wortlaut umfasst inzwischen zwei volle Seiten). Früher
+        // wurde er auf ein einziges Blatt zusammengeschrumpft — bei diesem
+        // Umfang wäre er unlesbar klein. Unterschrieben wird unter den Fotos,
+        // eine eigene Bestätigungsseite gibt es deshalb nicht mehr.
+        if (recht) verteileRechtstext(pages, recht);
         seitenNummerieren(pages);
         skaliereSeiten();
 
@@ -522,8 +546,45 @@
         return rest;
     }
 
-    function verteileAufSeiten(container, bloecke) {
-        container.innerHTML = '';
+    // Legt mehrere Blöcke zwingend auf EIN Blatt. Passt der Stapel nicht,
+    // wird er als Ganzes verkleinert (--miet-fit-f). Gemessen wird die
+    // ungeskalierte Höhe, denn transform ändert die Layouthöhe nicht.
+    function ersteSeite(container, htmls) {
+        const seite = neueSeite(container);
+        const box = document.createElement('div');
+        box.className = 'miet-fit';
+        innen(seite).appendChild(box);
+        htmls.filter(Boolean).forEach(h => {
+            const b = ausHtml(h);
+            if (b) box.appendChild(b);
+        });
+
+        const platz = innen(seite).clientHeight;
+        const hoehe = innen(seite).scrollHeight;
+        let f = 1;
+        if (hoehe > platz && platz > 0) {
+            f = Math.max(0.55, Math.floor((platz / hoehe) * 100) / 100);
+        }
+        box.style.setProperty('--miet-fit-f', f);
+        // Breite gegenrechnen, damit der verkleinerte Stapel den Satzspiegel
+        // weiter voll ausfüllt statt rechts Luft zu lassen.
+        box.style.width = (100 / f) + '%';
+        return seite;
+    }
+
+    // Ein Block allein auf einem Blatt. `nurSchirm` markiert ein Blatt, das
+    // nur zum Ausfüllen da ist und beim Drucken/PDF wegfällt.
+    function eigeneSeite(container, html, nurSchirm) {
+        const block = ausHtml(html);
+        if (!block) return null;
+        const seite = neueSeite(container);
+        if (nurSchirm) seite.classList.add('miet-page-leer');
+        innen(seite).appendChild(block);
+        return seite;
+    }
+
+    function verteileAufSeiten(container, bloecke, anhaengen) {
+        if (!anhaengen) container.innerHTML = '';
         let seite = neueSeite(container);
 
         // Nach einer gewachsenen Seite muss zwingend eine neue begonnen
@@ -575,32 +636,45 @@
 
     }
 
-    // Der Vertragstext bekommt ein eigenes Blatt und soll komplett darauf
-    // stehen. Passt er nicht, wird die Schrift schrittweise kleiner —
-    // abschneiden oder auf zwei Seiten verteilen waere schlechter, denn
-    // rechtlich gehoert der Text zusammen auf die Rueckseite.
-    function rechtsSeite(container, html) {
-        const seite = neueSeite(container);
-        const block = ausHtml(html);
-        if (!block) return;
-        innen(seite).appendChild(block);
+    // Der Vertragstext lief früher zwingend auf EIN Blatt und wurde dafür
+    // beliebig klein gesetzt. Der Wortlaut umfasst inzwischen zwei volle
+    // Seiten — deshalb: zweispaltig setzen, an den eigenen Absätzen
+    // (data-split) auf mehrere Blätter umbrechen und die Schrift nur so weit
+    // verkleinern, bis ZWEI Blätter reichen. Untergrenze 0,7 (≈ 7,5 px, so
+    // klein wie der gedruckte Originalbogen) — darunter wird nicht weiter
+    // geschrumpft, dann bekommt der Text lieber ein drittes Blatt.
+    const RECHT_ZIEL_SEITEN = 2;
+    const RECHT_MIN_F = 0.62;
 
+    function verteileRechtstext(container, html) {
+        const vorher = container.querySelectorAll('.miet-page').length;
         let f = 1;
-        block.style.setProperty('--miet-recht-f', f);
-        while (laeuftUeber(seite) && f > 0.6) {
-            f = Math.round((f - 0.02) * 100) / 100;
-            block.style.setProperty('--miet-recht-f', f);
-        }
+        for (let versuch = 0; versuch < 20; versuch++) {
+            const markup = html.replace(
+                'class="miet-block miet-recht"',
+                `class="miet-block miet-recht" style="--miet-recht-f:${f}"`);
+            verteileAufSeiten(container, [markup], true);
 
-        // Selbst bei der kleinsten Stufe zu lang (sehr langer eigener
-        // Text): dann darf die Seite wachsen, damit nichts verschwindet.
-        if (laeuftUeber(seite)) seite.classList.add('miet-page-frei');
+            const seiten = container.querySelectorAll('.miet-page').length - vorher;
+            if (seiten <= RECHT_ZIEL_SEITEN || f <= RECHT_MIN_F) return;
+
+            // Zu viele Blätter: Versuch verwerfen und eine Stufe kleiner.
+            Array.from(container.querySelectorAll('.miet-page')).slice(vorher)
+                .forEach(s => s.remove());
+            f = Math.round((f - 0.03) * 100) / 100;
+        }
     }
 
     function seitenNummerieren(container) {
-        const seiten = container.querySelectorAll('.miet-page');
+        // Blätter, die nur am Bildschirm zum Ausfüllen stehen (leere
+        // Schadenstabelle), zählen nicht mit — sonst stimmt die
+        // Seitenangabe im Ausdruck nicht.
+        const seiten = Array.from(container.querySelectorAll('.miet-page:not(.miet-page-leer)'));
         seiten.forEach((s, i) => {
             s.querySelector('.miet-page-nr').textContent = `Seite ${i + 1} von ${seiten.length}`;
+        });
+        container.querySelectorAll('.miet-page.miet-page-leer .miet-page-nr').forEach(n => {
+            n.textContent = 'Leer — wird nicht gedruckt';
         });
         const anzeige = document.getElementById('miet-seitenzahl');
         if (anzeige) anzeige.textContent = `${seiten.length} Seite${seiten.length === 1 ? '' : 'n'} A4`;
@@ -780,7 +854,8 @@
         if (!window.jspdf) throw new Error('jsPDF steht nicht zur Verfügung.');
 
         const pages = document.getElementById('miet-pages');
-        const seiten = Array.from(pages.querySelectorAll('.miet-page'));
+        // Ein leeres Schadenstabellen-Blatt gehört nicht ins PDF.
+        const seiten = Array.from(pages.querySelectorAll('.miet-page:not(.miet-page-leer)'));
         if (!seiten.length) throw new Error('Der Bogen ist leer.');
 
         // Erst wenn alle Fotos und Unterschriften wirklich da sind.
@@ -1041,6 +1116,9 @@
     // auf die Seiten verteilt. Waehrend des Tippens bleibt die
     // Aufteilung stehen — sonst springt der Schreibcursor weg.
     window.mietSeitenPruefen = function () {
+        // Wurde die erste Zeile der Schadenstabelle gefüllt (oder wieder
+        // geleert), ändert sich die Seitenzahl — dann neu aufteilen.
+        if (schadenHatInhalt() === schadenLeer) { zeichneInhalt(); return true; }
         const seiten = document.querySelectorAll('.miet-page');
         for (let i = 0; i < seiten.length; i++) {
             if (laeuftUeber(seiten[i])) { zeichneInhalt(); return true; }
@@ -1237,6 +1315,13 @@
     }
 
     // ---------- 4. Vorschaeden ----------
+    // Steht in keiner Zeile etwas, ist die Tabelle leer und das Blatt
+    // faellt beim Drucken und im PDF weg.
+    function schadenHatInhalt() {
+        return (daten.schaeden || []).some(s =>
+            String(s.nr || '').trim() || String(s.position || '').trim() || String(s.beschreibung || '').trim());
+    }
+
     function schadenBlock() {
         const b = vorlage.bloecke || {};
         const zeilen = daten.schaeden.map((s, i) => `
@@ -1294,11 +1379,44 @@
                 ? ` <button type="button" class="miet-photo-start" onclick="window.mietFotoserie('${esc(welche)}')">Rundgang starten</button>`
                 : ''}</div>
             <div class="miet-photo-grid" data-splitbox>${kacheln}</div>
+            ${fotoUnterschriften(welche)}
         </div>`;
     }
 
+    // Direkt unter den Fotos wird der Zustand bestätigt: zwei Unterschriften
+    // plus Datum — bei Übergabe und bei Rücknahme getrennt. Die Felder der
+    // gerade NICHT gewählten Phase sind grau hinterlegt (.miet-dim am Block
+    // oben), lassen sich aber weiter ausfüllen.
+    function fotoUnterschriften(welche) {
+        const u = welche === 'uebergabe';
+        const f = vorlage.felder || {};
+        const pfad = u ? 'unterschriften.u_datum' : 'unterschriften.r_datum';
+        const wert = daten.unterschriften[u ? 'u_datum' : 'r_datum'] || '';
+        return `
+        <div class="miet-foto-sign" data-nurerste>
+            <div class="miet-sign-row">
+                ${feldUnterschrift(u ? 'u_vermieter' : 'r_vermieter', f.unterschrift_vermieter || 'Unterschrift Vermieter', pfad, wert)}
+                ${feldUnterschrift(u ? 'u_mieter' : 'r_mieter', f.unterschrift_mieter || 'Unterschrift Mieter', pfad, wert)}
+            </div>
+        </div>`;
+    }
+
+    // Beide Unterschriften einer Phase teilen sich EIN Datum. Damit die
+    // zweite Beschriftung sofort mitzieht, ohne dass der Bogen neu gezeichnet
+    // wird (der Schreibcursor spränge sonst weg), werden die Felder hier
+    // direkt abgeglichen.
+    window.mietSignDatum = function (pfad, wert) {
+        window.mietFeld(pfad, wert);
+        document.querySelectorAll(`input[data-signdate="${pfad}"]`).forEach(el => {
+            if (el.value !== wert) el.value = wert;
+        });
+    };
+
     // ---------- 6. Unterschriften ----------
-    function feldUnterschrift(schluessel, beschriftung) {
+    // datumPfad/datumWert optional: dann steht hinter der Beschriftung, mit
+    // Komma abgetrennt, das Datumsfeld — wie auf dem gedruckten Bogen
+    // („Unterschrift Vermieter, 28.08.2026").
+    function feldUnterschrift(schluessel, beschriftung, datumPfad, datumWert) {
         const bild = daten.unterschriften[schluessel];
         return `
         <div>
@@ -1306,29 +1424,19 @@
                 ${bild ? `<img src="${bild}" alt="">` : '<span class="miet-sign-hint">Hier unterschreiben</span>'}
             </div>
             <div class="miet-sign-caption">
-                <span>${esc(beschriftung)}</span>
+                <span class="miet-sign-name">${esc(beschriftung)}${datumPfad ? ',' : ''}</span>
+                ${datumPfad ? `<input type="date" class="miet-in miet-sign-date" data-signdate="${esc(datumPfad)}"
+                       value="${esc(datumWert || '')}" onclick="event.stopPropagation();"
+                       oninput="window.mietSignDatum('${datumPfad}', this.value)">` : ''}
                 ${bild ? `<button type="button" onclick="event.stopPropagation(); window.mietSignLoeschen('${schluessel}')">löschen</button>` : ''}
             </div>
         </div>`;
     }
 
-    function unterschriftBlock() {
-        const u = phase === 'uebergabe';
-        const b = vorlage.bloecke || {};
-        const f = vorlage.felder || {};
-        const kopf = u
-            ? (b.bestaetigung_uebergabe || 'o. g. Angaben bei Übergabe bestätigt')
-            : (b.bestaetigung_ruecknahme || 'o. g. Angaben bei Rücknahme bestätigt');
-        return `
-        <div class="miet-block">
-            <div class="miet-block-title">${esc(kopf)}</div>
-            <div class="miet-sign-row">
-                ${feldUnterschrift(u ? 'u_vermieter' : 'r_vermieter', f.unterschrift_vermieter || 'Unterschrift Vermieter')}
-                ${feldUnterschrift(u ? 'u_mieter' : 'r_mieter', f.unterschrift_mieter || 'Unterschrift Mieter')}
-            </div>
-            ${vorlage.schlusssatz ? `<div class="miet-hinweis">${esc(vorlage.schlusssatz)}</div>` : ''}
-        </div>`;
-    }
+    // Die frühere eigene Bestätigungsseite (unterschriftBlock) ist entfallen:
+    // unterschrieben wird jetzt direkt unter den Fotos, getrennt nach Übergabe
+    // und Rücknahme (siehe fotoUnterschriften). Zwei Sätze Unterschriften
+    // derselben Felder im Bogen wären eine Doppelung gewesen.
 
     // ---------- 7. Vertragstext ----------
     // Wortlaut steht in der Vorlage. Ist keiner hinterlegt, faellt der

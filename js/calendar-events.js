@@ -332,6 +332,10 @@
 
                     const actionsHtml = m ? `
                         <div class="maint-card-actions">
+                            <button class="maint-action-btn" onclick="window.openMaintErledigtModal(${m.id})" title="Wartung für diesen Turnus abhaken" style="background: rgba(34,197,94,0.3); border-color: rgba(34,197,94,0.6); color: #4ade80;">
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                Erledigt
+                            </button>
                             <button class="maint-action-btn" onclick="window.openHistoryModal(${m.id})" title="Historie öffnen und Wartung erfassen" style="background: rgba(59,130,246,0.18); border-color: rgba(59,130,246,0.5); color: #60a5fa;">
                                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
                                 Historie
@@ -650,6 +654,116 @@
                 if (typeof window.renderEvents === 'function') window.renderEvents();
             } catch (e) {
                 console.error('saveMaintTermin Fehler:', e);
+                window.showToast('Fehler beim Speichern: ' + (e.message || e));
+            }
+        };
+
+        // ─────────────────────────────────────────────────────────────────────
+        // "Erledigt": Wartung für diesen Turnus abhaken. Zwei Fälle — die Wartung
+        // wurde durchgeführt, oder der Kunde gibt keine Auskunft. Beide setzen
+        // "Letzte Wartung" auf heute und rollen den nächsten Termin um das
+        // Intervall weiter, damit die Maschine erst im nächsten Turnus wieder
+        // auftaucht. Der Grund wird als Wartungsart (meta in files) hinterlegt.
+        // ─────────────────────────────────────────────────────────────────────
+        window.ensureMaintErledigtModal = function () {
+            let modal = document.getElementById('maint-erledigt-modal');
+            if (modal) return modal;
+            modal = document.createElement('div');
+            modal.id = 'maint-erledigt-modal';
+            modal.style.cssText = 'position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); padding: 20px;';
+            modal.innerHTML = `
+                <div class="glass-card" style="width: 100%; max-width: 460px; padding: 0; border-radius: 20px; background: rgba(20,24,34,0.98); border: 1px solid rgba(255,255,255,0.12);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                        <h2 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.15rem; color: #fff;">Wartung erledigt</h2>
+                        <button type="button" onclick="window.closeMaintErledigtModal()" style="border: none; background: rgba(255,255,255,0.08); color: #fff; width: 34px; height: 34px; border-radius: 10px; cursor: pointer; font-size: 1.1rem;">✕</button>
+                    </div>
+                    <div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 12px;">
+                        <div id="me-machine" style="font-size: 0.95rem; color: #fff; font-weight: 700;"></div>
+                        <div id="me-hint" style="font-size: 0.85rem; color: rgba(255,255,255,0.7); line-height: 1.45;"></div>
+                        <button type="button" onclick="window.markMaintErledigt('gemacht')" style="display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(34,197,94,0.5); background: rgba(34,197,94,0.18); color: #fff; font-weight: 800; cursor: pointer; font-size: 0.95rem;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Wurde gemacht
+                        </button>
+                        <button type="button" onclick="window.markMaintErledigt('keine-auskunft')" style="display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.06); color: #fff; font-weight: 800; cursor: pointer; font-size: 0.95rem;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.75)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                            Keine Auskunft
+                        </button>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; padding: 14px 20px; border-top: 1px solid rgba(255,255,255,0.08);">
+                        <button type="button" onclick="window.closeMaintErledigtModal()" style="padding: 10px 18px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.15); background: transparent; color: #fff; font-weight: 700; cursor: pointer;">Abbrechen</button>
+                    </div>
+                </div>
+            `;
+            modal.addEventListener('click', (e) => { if (e.target === modal) window.closeMaintErledigtModal(); });
+            document.body.appendChild(modal);
+            return modal;
+        };
+
+        window.closeMaintErledigtModal = function () {
+            const modal = document.getElementById('maint-erledigt-modal');
+            if (modal) modal.style.display = 'none';
+        };
+
+        window._meMachineId = null;
+
+        // Intervall einer Maschine: eigener Wert, sonst Kategorie-Vorgabe, sonst 12 Monate.
+        window.getMaintIntervalMonths = function (m) {
+            const cat = (window.categoryList || []).find(c => c.id === m.category_id);
+            return m.maintenance_interval_months || (cat && cat.default_maintenance_interval_months) || 12;
+        };
+
+        window._maintHeuteStr = function () {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        };
+
+        window.openMaintErledigtModal = function (machineId) {
+            const m = (window.machineList || []).find(x => x.id === machineId);
+            if (!m) { window.showToast('Maschine nicht gefunden.'); return; }
+            window.ensureMaintErledigtModal();
+            window._meMachineId = machineId;
+
+            const machineLabel = [m.manufacturer, m.name, (m.serial || m.serial_number) ? `#${m.serial || m.serial_number}` : null, m.year ? `(${m.year})` : null].filter(Boolean).join(' ');
+            const interval = window.getMaintIntervalMonths(m);
+            const next = window.computeRolledNextMaintenance(window._maintHeuteStr(), interval);
+            const nextLabel = new Date(next).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+            document.getElementById('me-machine').textContent = machineLabel;
+            document.getElementById('me-hint').textContent = `Letzte Wartung wird auf heute gesetzt, nächste Wartung automatisch auf ${nextLabel} (Intervall ${interval} Monate).`;
+            document.getElementById('maint-erledigt-modal').style.display = 'flex';
+        };
+
+        window.markMaintErledigt = async function (grund) {
+            const machineId = window._meMachineId;
+            const m = (window.machineList || []).find(x => x.id === machineId);
+            if (!m) { window.showToast('Maschine nicht gefunden.'); return; }
+
+            const art = grund === 'keine-auskunft' ? 'Keine Auskunft' : 'Wurde gemacht';
+            const interval = window.getMaintIntervalMonths(m);
+            const heuteStr = window._maintHeuteStr();
+            const next = window.computeRolledNextMaintenance(heuteStr, interval);
+
+            const files = Array.isArray(m.files) ? m.files.filter(f => !(f.type === 'meta' && f.key === 'last_maintenance_type')) : [];
+            files.push({ type: 'meta', key: 'last_maintenance_type', property: art });
+
+            const payload = {
+                last_maintenance: heuteStr,
+                next_maintenance: next,
+                maintenance_interval_months: interval,
+                files
+            };
+
+            try {
+                const { error } = await window.supabaseClient.from('machines').update(payload).eq('id', machineId);
+                if (error) throw error;
+                // Lokalen Stand aktualisieren, damit die Kachel sofort stimmt.
+                Object.assign(m, payload);
+                window.closeMaintErledigtModal();
+                const nextLabel = new Date(next).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                if (window.showSyncToast) window.showSyncToast(`${art} — nächste Wartung am ${nextLabel}.`, 'success');
+                if (typeof window.renderEvents === 'function') window.renderEvents();
+            } catch (e) {
+                console.error('markMaintErledigt Fehler:', e);
                 window.showToast('Fehler beim Speichern: ' + (e.message || e));
             }
         };

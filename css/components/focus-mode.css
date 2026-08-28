@@ -186,19 +186,36 @@ body.focus-mode-active #topbar {
     display: none !important;
 }
 
-/* ---- Aufgaben nebeneinander (gilt in Normal-, Fokus- und Kino-Modus) ---- */
+/* ---- Aufgaben nebeneinander (gilt in Normal-, Fokus- und Kino-Modus) ----
+   Bewusst Mehrspalten-Satz (column-count) statt Grid: im Grid bildet jede
+   Reihe eine Einheit, alle Karten einer Reihe sind so hoch wie die höchste —
+   neben einer Karte mit neun Unterpunkten stand daneben eine große Leerfläche.
+   Beim Mehrspalten-Satz rutscht die nächste Karte direkt nach oben nach.
+   Preis dafür: die Reihenfolge läuft spaltenweise (erst Spalte 1 von oben nach
+   unten, dann Spalte 2) statt zeilenweise. */
+#tasks-board.cinema-cols-2 .task-list,
+#tasks-board.cinema-cols-3 .task-list {
+    display: block;
+    column-gap: 1rem;
+}
+
 #tasks-board.cinema-cols-2 .task-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem;
-    align-content: start;
+    column-count: 2;
 }
 
 #tasks-board.cinema-cols-3 .task-list {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 1rem;
-    align-content: start;
+    column-count: 3;
+}
+
+#tasks-board.cinema-cols-2 .task-list > *,
+#tasks-board.cinema-cols-3 .task-list > * {
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 1rem;
+    /* Ohne diese Zeile schneidet Safari Karten am Spaltenende auf. */
+    display: inline-block;
+    width: 100%;
 }
 
 @media (max-width: 768px) {

@@ -6,7 +6,13 @@
 // die Reihenfolge der Skripte entspricht der fruaeheren Reihenfolge im
 // Inline-Block und darf nicht vertauscht werden.
 // ==========================================================
-        window.generateServiceberichtPDFDoc = async function() {
+        // opts.handbericht = true -> Ausdruck zum Ausfüllen von Hand: in den
+        // Prüfprotokollen (Wartung / UVV / Einweisung) bleiben die Bemerkungs-
+        // und Notizfelder leer, auch die Platzhalter „keine Beanstandung" und
+        // „/" entfallen. Der Servicetechniker trägt vor Ort selbst ein — steht
+        // dort schon etwas, ist der Ausdruck dafür unbrauchbar.
+        window.generateServiceberichtPDFDoc = async function(opts) {
+            const handbericht = !!(opts && opts.handbericht);
             try {
                 if (typeof window.loadPDFGenerators === 'function') {
                     await window.loadPDFGenerators();
@@ -839,7 +845,7 @@
                                     }
                                     const isRemarkAns = ans.answerType === 'remark';
                                     const cellText = isRemarkAns
-                                        ? ((ans.comment && ans.comment.trim()) ? ans.comment : '')
+                                        ? ((!handbericht && ans.comment && ans.comment.trim()) ? ans.comment : '')
                                         : (ans.io === 'x' ? 'x' : (ans.io === 'dash' ? '-' : ''));
                                     checklistBody.push([ans.description || '', cellText]);
                                     isRemarkRowByIdx[checklistBody.length - 1] = isRemarkAns;
@@ -968,7 +974,7 @@
                                     ans.pos || '',
                                     ans.description || '',
                                     ioText,
-                                    (ans.comment && ans.comment.trim()) ? ans.comment : 'keine Beanstandung'
+                                    handbericht ? '' : ((ans.comment && ans.comment.trim()) ? ans.comment : 'keine Beanstandung')
                                 ]);
                             });
 
@@ -1051,7 +1057,7 @@
                             doc.setDrawColor(180, 180, 180);
                             doc.setLineWidth(0.3);
                             doc.rect(20, uvvY, 170, 22);
-                            if (checklist.generalRemark && checklist.generalRemark.trim()) {
+                            if (!handbericht && checklist.generalRemark && checklist.generalRemark.trim()) {
                                 doc.setFont('helvetica', 'normal');
                                 doc.setFontSize(9);
                                 doc.setTextColor(50, 50, 50);
@@ -1152,7 +1158,7 @@
                                     ans.description || '',
                                     ans.interval || '',
                                     ans.checked === 'na' ? 'na' : (ans.checked ? 'checked' : 'unchecked'),
-                                    (ans.comment && ans.comment.trim()) ? ans.comment : '/'
+                                    handbericht ? '' : ((ans.comment && ans.comment.trim()) ? ans.comment : '/')
                                 ]);
                             });
                             
@@ -1265,17 +1271,19 @@
             }
         };
 
-        window.previewServiceberichtPDF = async function() {
+        window.previewServiceberichtPDF = async function(opts) {
+            const handbericht = !!(opts && opts.handbericht);
             try {
-                const doc = await window.generateServiceberichtPDFDoc();
+                const doc = await window.generateServiceberichtPDFDoc({ handbericht: handbericht });
                 if (doc) {
                     const blobUrl = doc.output('bloburl');
                     const machineId = document.getElementById('selected-machine-id').value;
                     const machine = (window.machineList || []).find(m => m.id == machineId);
                     const machineTitle = machine ? `${machine.manufacturer || ''} ${machine.name || ''}`.trim() : 'Servicebericht';
-                    
+                    const titel = handbericht ? 'Handbericht' : 'Vorschau Servicebericht';
+
                     if (typeof window.previewDocument === 'function') {
-                        window.previewDocument(blobUrl, `Vorschau Servicebericht - ${machineTitle}`, 'application/pdf');
+                        window.previewDocument(blobUrl, `${titel} - ${machineTitle}`, 'application/pdf');
                     } else {
                         window.open(blobUrl, '_blank');
                     }
@@ -1284,6 +1292,12 @@
                 console.error(err);
                 window.showToast('Fehler beim Generieren der PDF-Vorschau: ' + err.message);
             }
+        };
+
+        // Ausdruck zum Ausfüllen von Hand — gleiche Vorschau, nur ohne Text in
+        // den Bemerkungs-/Notizfeldern der Prüfprotokolle.
+        window.handberichtServiceberichtPDF = function() {
+            return window.previewServiceberichtPDF({ handbericht: true });
         };
 
         window.saveServiceberichtPDFToR2 = async function() {

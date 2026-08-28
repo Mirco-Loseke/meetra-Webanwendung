@@ -142,6 +142,76 @@
     };
 
     // ---------------------------------------------------------------
+    // Abwesenheit erkennen (Wochenende, Urlaub, freier Tag)
+    // ---------------------------------------------------------------
+    // Die Liste wird ohnehin bei jedem Login neu berechnet — verpasst wird
+    // also nichts, solange die Meldung im Rückblick-Fenster liegt. Genau das
+    // ist die Lücke: nach mehreren Tagen ohne Anmeldung schnitt der feste
+    // Rückblick still ab. Deshalb merken wir uns den letzten Besuch, dehnen
+    // den Rückblick auf die Abwesenheit aus und weisen oben darauf hin.
+    const LASTSEEN_PREFIX = 'meetra_notif_lastseen_';
+    const ABSENCE_SEEN_PREFIX = 'meetra_notif_absence_seen_';
+
+    // Einmal je Sitzung ermittelt — der Heartbeat unten überschreibt den
+    // gespeicherten Zeitpunkt sofort, die Lücke wäre danach nicht mehr lesbar.
+    // Beim Benutzerwechsel neu bestimmen — sonst gälte die Lücke des Vorgängers.
+    let absence = null;      // { days, sinceTs } oder { days: 0 }
+    let absenceUid = null;
+
+    function detectAbsence() {
+        const uid = currentUserId();
+        if (!uid) return { days: 0 };
+        const raw = parseInt(localStorage.getItem(LASTSEEN_PREFIX + uid) || '0', 10);
+        if (!raw) return { days: 0 };
+        const days = Math.floor((Date.now() - raw) / 86400000);
+        return days >= 1 ? { days, sinceTs: raw } : { days: 0 };
+    }
+
+    function touchLastSeen() {
+        const uid = currentUserId();
+        if (uid) localStorage.setItem(LASTSEEN_PREFIX + uid, String(Date.now()));
+    }
+
+    function currentAbsence() {
+        const uid = currentUserId();
+        if (!absence || absenceUid !== uid) {
+            absence = detectAbsence();
+            absenceUid = uid;
+        }
+        return absence;
+    }
+
+    // Rückblick: mindestens die eingestellten Tage, bei längerer Abwesenheit
+    // aber so weit zurück, dass nichts aus der Abwesenheit verlorengeht.
+    function lookbackDays(P) {
+        const a = currentAbsence();
+        return Math.max(P.after, a.days ? a.days + 1 : 0);
+    }
+
+    function absenceNoticeDismissed() {
+        const uid = currentUserId();
+        const a = currentAbsence();
+        if (!uid || !a.days) return true;
+        return localStorage.getItem(ABSENCE_SEEN_PREFIX + uid) === String(a.sinceTs);
+    }
+
+    window.dismissAbsenceNotice = function (event) {
+        if (event) event.stopPropagation();
+        const uid = currentUserId();
+        const a = currentAbsence();
+        if (uid && a.days) localStorage.setItem(ABSENCE_SEEN_PREFIX + uid, String(a.sinceTs));
+        render();
+    };
+
+    // Wie viele Meldungen sind während der Abwesenheit fällig geworden?
+    function absenceItemCount() {
+        const a = currentAbsence();
+        if (!a.days) return 0;
+        const now = Date.now();
+        return items.filter(n => typeof n.sortAt === 'number' && n.sortAt >= a.sinceTs && n.sortAt <= now).length;
+    }
+
+    // ---------------------------------------------------------------
     // Hilfen
     // ---------------------------------------------------------------
     function dayDiff(dateLike) {
@@ -187,7 +257,8 @@
 
         // Alles, was länger überfällig ist als der eingestellte Rückblick,
         // taucht gar nicht erst auf.
-        const inRange = (diff, before) => diff !== null && diff <= before && diff >= -P.after;
+        const back = lookbackDays(P);
+        const inRange = (diff, before) => diff !== null && diff <= before && diff >= -back;
 
         // --- Vorgänge (internal_processes) ---
         let processes = [];
@@ -423,7 +494,7 @@
 
                 // 1) Einladung an mich, noch unbeantwortet
                 if (String(p.user_id) === uid && p.status === 'offen') {
-                    if (diff !== null && diff < -P.after) return;   // längst vorbei
+                    if (diff !== null && diff < -back) return;   // längst vorbei
                     out.push({
                         key: `appt:${p.event_id}:invite`,
                         kind: 'appointment',
@@ -445,7 +516,7 @@
                 // 2) Antwort auf einen Termin, zu dem ich eingeladen habe
                 if (String(p.invited_by) === uid && p.status !== 'offen' && String(p.user_id) !== uid) {
                     const respDiff = p.responded_at ? dayDiff(p.responded_at) : null;
-                    if (respDiff !== null && respDiff < -P.after) return;
+                    if (respDiff !== null && respDiff < -back) return;
                     out.push({
                         key: `appt:${p.event_id}:resp:${p.user_id}:${p.status}:${p.responded_at || ''}`,
                         kind: 'appointment',
@@ -558,6 +629,27 @@
         </${tag}>`;
     }
 
+    // Hinweisbalken beim ersten Öffnen nach mehreren Tagen ohne Anmeldung.
+    // Ohne ihn sähe der Rückkehrer nur eine lange rote Liste und wüsste nicht,
+    // was davon während seiner Abwesenheit aufgelaufen ist.
+    function absenceNoticeHtml() {
+        if (absenceNoticeDismissed()) return '';
+        const a = currentAbsence();
+        const count = absenceItemCount();
+        if (!count) return '';
+        const seit = new Date(a.sinceTs).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' });
+        return `
+        <div class="notif-absence">
+            <div class="notif-absence-body">
+                <strong>Willkommen zurück</strong>
+                <span>Seit ${esc(seit)} (${a.days} ${a.days === 1 ? 'Tag' : 'Tage'} ohne Anmeldung) ${count === 1 ? 'ist 1 Meldung' : `sind ${count} Meldungen`} aufgelaufen — nichts davon wurde abgeschnitten.</span>
+            </div>
+            <button type="button" class="notif-absence-close" onclick="window.dismissAbsenceNotice(event)" title="Hinweis ausblenden">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+        </div>`;
+    }
+
     function render() {
         const list = document.getElementById('notif-list');
         if (!list) return;
@@ -572,8 +664,11 @@
             return;
         }
 
+        const notice = absenceNoticeHtml();
+
         if (!items.length) {
-            list.innerHTML = '<div class="notif-empty"><strong>Alles erledigt</strong><span>Keine offenen Erinnerungen, Fristen oder Zuweisungen für dich.</span></div>';
+            list.innerHTML = notice +
+                '<div class="notif-empty"><strong>Alles erledigt</strong><span>Keine offenen Erinnerungen, Fristen oder Zuweisungen für dich.</span></div>';
             return;
         }
 
@@ -585,7 +680,7 @@
             { sev: 'info', title: 'Deine Vorgänge' }
         ];
 
-        let html = '';
+        let html = notice;
         groups.forEach(g => {
             const rows = items.filter(n => n.severity === g.sev);
             if (!rows.length) return;
@@ -711,6 +806,7 @@
     // Öffnen des Panels: wer gerade hinschaut, braucht keine Meldung obendrauf.
     async function refresh(opts) {
         if (!currentUserId()) { items = []; render(); updateBadge(); return; }
+        currentAbsence(); // Lücke feststellen, BEVOR der Heartbeat sie überschreibt
         isLoading = true;
         if (isOpen) render();
         try {
@@ -725,6 +821,7 @@
         render();
         updateBadge();
         if (!opts || opts.push !== false) pushUrgent();
+        touchLastSeen(); // „zuletzt am Rechner" fortschreiben
     }
     window.refreshNotifications = refresh;
 
@@ -750,6 +847,8 @@
         isOpen = !isOpen;
         panel.style.display = isOpen ? 'flex' : 'none';
         if (isOpen) {
+            // Ein noch stehender Scroll-Zustand würde das Panel abdunkeln.
+            document.body.classList.remove('topbar-scrolling');
             render();
             refresh({ push: false });
         }
