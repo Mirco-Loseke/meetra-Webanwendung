@@ -6,6 +6,51 @@
 // die Reihenfolge der Skripte entspricht der fruaeheren Reihenfolge im
 // Inline-Block und darf nicht vertauscht werden.
 // ==========================================================
+        // Feste Beschriftungen in der gewählten Sprache (js/pdf-i18n.js).
+        // Ohne gesetzte Sprache — und für alles, was nicht im Wörterbuch steht —
+        // kommt der deutsche Text unverändert zurück. Eingetippter Text und die
+        // Prüfpunkte aus den Wartungsplänen laufen NICHT hier durch.
+        function T(text) {
+            return typeof window.pdfT === 'function' ? window.pdfT(text) : text;
+        }
+
+        // Kopfzeile der Prüfprotokoll-Seiten (UVV / Wartung / Einweisung).
+        // „Maschine … | Seriennummer … | Betriebsstunden …" bleibt oben; alles
+        // zum Motor kommt grundsätzlich in die zweite Zeile, zwei Schriftgrößen
+        // kleiner. Vorher hing es hinten an der ersten Zeile und lief rechts aus
+        // dem Blatt heraus; ein Umbruch nach Platz zerriss die Motorangabe
+        // mitten im Typ. Die Tabelle rutscht dadurch nicht nach unten — der
+        // Platz zwischen Kopfzeile und Tabelle ist ohnehin da.
+        // (Die erste Seite des Serviceberichts hat ihren eigenen Kopf und bleibt
+        // davon unberührt.)
+        function zeichneProtokollKopfzeile(doc, maschineZeile, motorZeile, x, y, maxBreite) {
+            const groesse = doc.getFontSize();
+
+            doc.splitTextToSize(String(maschineZeile), maxBreite)
+                .forEach((z, i) => doc.text(z, x, y + i * 4));
+
+            if (!motorZeile) return;
+            doc.setFontSize(groesse - 2);
+            doc.splitTextToSize(String(motorZeile), maxBreite)
+                .forEach((z, i) => doc.text(z, x, y + 3.8 + i * 3.4));
+            doc.setFontSize(groesse);
+        }
+
+        // Die beiden Zeilen aus den Maschinendaten bauen.
+        function protokollKopfzeilen(machineTitle, serialNumber, operatingHoursVal, machine) {
+            const motorTeile = machine
+                ? [machine.motor_type, machine.motor_serial ? `#${machine.motor_serial}` : null, machine.power].filter(Boolean)
+                : [];
+            // Die leere Schreiblinie für die Betriebsstunden kürzen: in voller
+            // Länge lief sie auf den Prüfprotokoll-Seiten in die Legende rechts
+            // oben hinein. Zum Eintragen von Hand reicht das aus.
+            const stunden = String(operatingHoursVal || '').replace(/_{6,}/, '__________');
+            return {
+                maschine: `${T('Maschine: ')}${machineTitle} | ${T('Seriennummer: ')}${serialNumber} | ${T('Betriebsstunden: ')}${stunden}`,
+                motor: motorTeile.length ? `${T('Motor: ')}${motorTeile.join(' - ')}` : ''
+            };
+        }
+
         // opts.handbericht = true -> Ausdruck zum Ausfüllen von Hand: in den
         // Prüfprotokollen (Wartung / UVV / Einweisung) bleiben die Bemerkungs-
         // und Notizfelder leer, auch die Platzhalter „keine Beanstandung" und
@@ -199,7 +244,7 @@
                 doc.setFontSize(10);
                 doc.setTextColor(0, 0, 0);
                 const dateW = doc.getTextWidth('Datum: ');
-                doc.text('Datum: ', 160, 36);
+                doc.text(T('Datum: '), 160, 36);
                 doc.setFont('helvetica', 'normal');
                 const formattedDateStart = dateStart ? new Date(dateStart).toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'}) : new Date().toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'});
                 const formattedDateEnd = dateEnd ? new Date(dateEnd).toLocaleDateString('de-DE', {day: '2-digit', month: '2-digit', year: 'numeric'}) : '';
@@ -207,7 +252,7 @@
 
                 if (formattedDateEnd && formattedDateEnd !== formattedDateStart) {
                     doc.setFont('helvetica', 'bold');
-                    doc.text('Bis: ', 160, 43);
+                    doc.text(T('Bis: '), 160, 43);
                     doc.setFont('helvetica', 'normal');
                     doc.text(formattedDateEnd, 160 + dateW, 43);
                 }
@@ -221,7 +266,7 @@
                 // Draw Betreiber/Rechnungsadresse
                 doc.setFontSize(10);
                 doc.setFont('helvetica', 'bold');
-                doc.text('Betreiber / Rechnungsadresse:', 20, currentY);
+                doc.text(T('Betreiber / Rechnungsadresse:'), 20, currentY);
                 doc.setFont('helvetica', 'normal');
                 
                 let leftY = currentY + 6;
@@ -233,7 +278,7 @@
                 if (contactPersonsArr.length > 0) {
                     leftY += 2;
                     doc.setFont('helvetica', 'bold');
-                    doc.text('Ansprechpartner:', 20, leftY);
+                    doc.text(T('Ansprechpartner:'), 20, leftY);
                     leftY += 5;
                     doc.setFont('helvetica', 'normal');
                     contactPersonsArr.forEach(cp => {
@@ -253,7 +298,7 @@
                     leftY += 2;
                     maschinenstandortY = leftY;
                     doc.setFont('helvetica', 'bold');
-                    doc.text('Maschinenstandort:', 20, leftY);
+                    doc.text(T('Maschinenstandort:'), 20, leftY);
                     doc.setFont('helvetica', 'normal');
                     leftY += 6;
                     locationLines.forEach(line => {
@@ -265,7 +310,7 @@
                 if (hasHotel && !hotelOnRight) {
                     leftY += 2;
                     doc.setFont('helvetica', 'bold');
-                    doc.text('Hotel / Unterkunft:', 20, leftY);
+                    doc.text(T('Hotel / Unterkunft:'), 20, leftY);
                     doc.setFont('helvetica', 'normal');
                     leftY += 6;
                     hotelLines.forEach(line => {
@@ -277,28 +322,28 @@
                 // Draw Machine Details on the right
                 let rightY = currentY;
                 doc.setFont('helvetica', 'bold');
-                doc.text('Maschine: ', 120, rightY);
+                doc.text(T('Maschine: '), 120, rightY);
                 const maschineW = doc.getTextWidth('Maschine: ');
                 doc.setFont('helvetica', 'normal');
                 doc.text(String(machineTitle), 120 + maschineW, rightY);
                 
                 rightY += 6;
                 doc.setFont('helvetica', 'bold');
-                doc.text('Seriennummer: ', 120, rightY);
+                doc.text(T('Seriennummer: '), 120, rightY);
                 const snW = doc.getTextWidth('Seriennummer: ');
                 doc.setFont('helvetica', 'normal');
                 doc.text(String(serialNumber), 120 + snW, rightY);
                 
                 rightY += 6;
                 doc.setFont('helvetica', 'bold');
-                doc.text('Baujahr: ', 120, rightY);
+                doc.text(T('Baujahr: '), 120, rightY);
                 const bjW = doc.getTextWidth('Baujahr: ');
                 doc.setFont('helvetica', 'normal');
                 doc.text(String(machineYear), 120 + bjW, rightY);
                 
                 rightY += 6;
                 doc.setFont('helvetica', 'bold');
-                doc.text('Betriebsstunden: ', 120, rightY);
+                doc.text(T('Betriebsstunden: '), 120, rightY);
                 const bhW = doc.getTextWidth('Betriebsstunden: ');
                 doc.setFont('helvetica', 'normal');
                 let operatingHoursVal = document.getElementById('service-operating-hours')?.value.trim() || '';
@@ -312,7 +357,7 @@
                 if (machine && (machine.motor_type || machine.motor_serial || machine.power)) {
                     rightY += 6;
                     doc.setFont('helvetica', 'bold');
-                    doc.text('Motor: ', 120, rightY);
+                    doc.text(T('Motor: '), 120, rightY);
                     const motorW = doc.getTextWidth('Motor: ');
                     doc.setFont('helvetica', 'normal');
                     doc.text(String(machine.motor_type || '-'), 120 + motorW, rightY);
@@ -329,7 +374,7 @@
                 if (hotelOnRight) {
                     let hotelY = maschinenstandortY;
                     doc.setFont('helvetica', 'bold');
-                    doc.text('Hotel / Unterkunft:', 120, hotelY);
+                    doc.text(T('Hotel / Unterkunft:'), 120, hotelY);
                     doc.setFont('helvetica', 'normal');
                     hotelY += 6;
                     hotelLines.forEach(line => {
@@ -350,7 +395,7 @@
                     doc.setFont('helvetica', 'bold');
                     doc.setFontSize(12);
                     doc.setTextColor(30, 41, 59);
-                    doc.text('Fehlerbeschreibung / Kurzbeschreibung Einsatz', 20, currentY);
+                    doc.text(T('Fehlerbeschreibung / Kurzbeschreibung Einsatz'), 20, currentY);
                     currentY += 8;
                     
                     doc.setFont('helvetica', 'normal');
@@ -492,7 +537,7 @@
                     doc.setFont('helvetica', 'bold');
                     doc.setFontSize(12);
                     doc.setTextColor(8, 47, 73);
-                    doc.text('Ausgeführte Arbeiten', 20, currentY);
+                    doc.text(T('Ausgeführte Arbeiten'), 20, currentY);
                     currentY += 6;
                     
                     const taskHeaders = [['Aufgabe', 'Erledigt']];
@@ -561,7 +606,7 @@
                     doc.setFont('helvetica', 'bold');
                     doc.setFontSize(12);
                     doc.setTextColor(8, 47, 73);
-                    doc.text('Eingesetztes Material', 20, currentY);
+                    doc.text(T('Eingesetztes Material'), 20, currentY);
                     currentY += 6;
                     
                     const matHeaders = [['Art.-Nr.', 'Beschreibung', 'Menge']];
@@ -625,7 +670,7 @@
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(12);
                 doc.setTextColor(8, 47, 73);
-                doc.text('Bemerkungen', 20, currentY);
+                doc.text(T('Bemerkungen'), 20, currentY);
                 currentY += 8;
 
                 if (remarksHasText) {
@@ -669,7 +714,7 @@
                 doc.setFont('helvetica', 'normal');
                 doc.setFontSize(9);
                 doc.setTextColor(30, 41, 59);
-                doc.text('O. g. gemeldete Störung ist behoben und die Reparatur in vollem Umfang ausgeführt.', 28, currentY + 3.2);
+                doc.text(T('O. g. gemeldete Störung ist behoben und die Reparatur in vollem Umfang ausgeführt.'), 28, currentY + 3.2);
                 
                 currentY += 7;
                 
@@ -727,8 +772,8 @@
                 const _techSigDateRaw = document.getElementById('service-tech-sig-date')?.value || dateStart;
                 const _custSigDateRaw = document.getElementById('service-customer-sig-date')?.value || dateStart;
                 const _fmtSigDate = d => { if (!d) return ''; const p = d.split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : d; };
-                doc.text(`Unterschrift Techniker, ${_fmtSigDate(_techSigDateRaw)}`, 20, currentY + 27);
-                doc.text(`Unterschrift Kunde, ${_fmtSigDate(_custSigDateRaw)}`, 110, currentY + 27);
+                doc.text(T('Unterschrift Techniker, ') + _fmtSigDate(_techSigDateRaw), 20, currentY + 27);
+                doc.text(T('Unterschrift Kunde, ') + _fmtSigDate(_custSigDateRaw), 110, currentY + 27);
                 if (signatureName) {
                     doc.text(signatureName, 110, currentY + 31);
                 }
@@ -765,7 +810,11 @@
                         doc.addPage();
                         
                         // Clean title from emojis
-                        const cleanTitle = (checklist.title || 'Zusatzprotokoll').replace(/[^\w\s\/\-äöüÄÖÜß()]/g, '').trim();
+                        // Buchstaben über \p{L}: die frühere Liste kannte nur
+                        // deutsche Umlaute und hätte é, ñ oder ç aus einem
+                        // übersetzten Titel entfernt.
+                        const cleanTitle = T(checklist.title || 'Zusatzprotokoll')
+                            .replace(/[^\p{L}\p{N}\s/\-()&.,]/gu, '').trim();
 
                         // Jeder Protokoll-Typ bekommt einen eigenen, aber durchgehend dunklen Blauton
                         // (auf der Tabellen-Kopfzeile UND der Seitenüberschrift), damit man sofort
@@ -784,7 +833,12 @@
                         doc.setFont('helvetica', 'normal');
                         doc.setFontSize(10);
                         doc.setTextColor(100, 100, 100);
-                        doc.text(`Maschine: ${machineTitle} | Seriennummer: ${serialNumber} | Betriebsstunden: ${operatingHoursVal}${machine && (machine.motor_type || machine.motor_serial || machine.power) ? ` | Motor: ${[machine.motor_type, machine.motor_serial ? `#${machine.motor_serial}` : null, machine.power].filter(Boolean).join(' - ')}` : ''}`, 20, 37);
+                        const kopf = protokollKopfzeilen(machineTitle, serialNumber, operatingHoursVal, machine);
+                        // Bei der Einweisung steht rechts oben die Legende
+                        // (x/-/leer) — dann bleibt die Kopfzeile schmaler,
+                        // sonst schiebt sie sich darunter.
+                        zeichneProtokollKopfzeile(doc, kopf.maschine, kopf.motor, 20, 37,
+                            checklist.type === 'einweisung' ? 132 : 170);
 
                         // Ausfüllhinweise nur bei der Einweisungserklärung, nur auf dem Ausdruck (nicht
                         // im Formular) und nur auf dieser ersten Seite (steht NICHT im didDrawPage-Callback,
@@ -792,7 +846,9 @@
                         // Jede Zeile zeigt einen echten kleinen Kasten mit dem jeweiligen Symbol, statt
                         // es nur in Worten zu beschreiben — so sieht es genauso aus wie in der Tabelle.
                         if (checklist.type === 'einweisung') {
-                            const legendX = 145;
+                            // Weiter nach rechts: bei 145 stieß die Kopfzeile darunter
+                            // (Betriebsstunden-Linie) in die Legende hinein.
+                            const legendX = 160;
                             let legendY = 22;
 
                             const boxSize = 5.5;
@@ -813,9 +869,9 @@
                                 legendY += boxSize + 2;
                             };
 
-                            drawLegendRow('x', [5, 150, 105], '= O.k.');
-                            drawLegendRow('-', [217, 119, 6], '= nicht gegeben');
-                            drawLegendRow('', [0, 0, 0], '= noch offen');
+                            drawLegendRow('x', [5, 150, 105], T('= O.k.'));
+                            drawLegendRow('-', [217, 119, 6], T('= nicht gegeben'));
+                            drawLegendRow('', [0, 0, 0], T('= noch offen'));
                         }
 
                         let currentCatCL = "";
@@ -838,7 +894,7 @@
                                 checklist.answers.forEach((ans) => {
                                     if (ans.category !== currentCatCL) {
                                         currentCatCL = ans.category;
-                                        checklistBody.push([currentCatCL.toUpperCase(), '']);
+                                        checklistBody.push([T(currentCatCL).toUpperCase(), '']);
                                         const rowIdx = checklistBody.length - 1;
                                         categoryRowsCL.push(rowIdx);
                                         categoryStatusByRow[rowIdx] = (checklist.categoryStatus && checklist.categoryStatus[currentCatCL]) || '';
@@ -847,7 +903,7 @@
                                     const cellText = isRemarkAns
                                         ? ((!handbericht && ans.comment && ans.comment.trim()) ? ans.comment : '')
                                         : (ans.io === 'x' ? 'x' : (ans.io === 'dash' ? '-' : ''));
-                                    checklistBody.push([ans.description || '', cellText]);
+                                    checklistBody.push([T(ans.description || ''), cellText]);
                                     isRemarkRowByIdx[checklistBody.length - 1] = isRemarkAns;
                                 });
 
@@ -856,7 +912,7 @@
                                     // Pos. wird im Ausdruck der Einweisungserklärung nicht mehr gebraucht
                                     // (bleibt aber als Datenfeld im Plan-Editor/Servicebericht bestehen,
                                     // u.a. damit Punkte ohne Pos. weiterhin vom Druck ausgeschlossen werden).
-                                    head: [['Einweisungspunkt', 'Erledigt / Bemerkung']],
+                                    head: [[T('Einweisungspunkt'), T('Erledigt / Bemerkung')]],
                                     // Wichtig: eine Zeile (insb. die Kategorie-Zeile mit dem davorgezeichneten
                                     // Ankreuzfeld) darf nie über eine Seitengrenze hinweg aufgeteilt werden —
                                     // sonst landet z.B. nur der Kasten am Seitenende und der Text auf der
@@ -957,7 +1013,8 @@
                                             doc.setFont('helvetica', 'normal');
                                             doc.setFontSize(10);
                                             doc.setTextColor(100, 100, 100);
-                                            doc.text(`Maschine: ${machineTitle} | Seriennummer: ${serialNumber} | Betriebsstunden: ${operatingHoursVal}${machine && (machine.motor_type || machine.motor_serial || machine.power) ? ` | Motor: ${[machine.motor_type, machine.motor_serial ? `#${machine.motor_serial}` : null, machine.power].filter(Boolean).join(' - ')}` : ''}`, 20, 37);
+                                            const kopf = protokollKopfzeilen(machineTitle, serialNumber, operatingHoursVal, machine);
+                                            zeichneProtokollKopfzeile(doc, kopf.maschine, kopf.motor, 20, 37, 170);
                                         }
                                     }
                                 });
@@ -966,13 +1023,13 @@
                             checklist.answers.forEach((ans) => {
                                 if (ans.category !== currentCatCL) {
                                     currentCatCL = ans.category;
-                                    checklistBody.push([currentCatCL.toUpperCase(), '', '', '']);
+                                    checklistBody.push([T(currentCatCL).toUpperCase(), '', '', '']);
                                     categoryRowsCL.push(checklistBody.length - 1);
                                 }
                                 const ioText = ans.io === 'ja' ? 'Ja' : (ans.io === 'nein' ? 'Nein' : '');
                                 checklistBody.push([
                                     ans.pos || '',
-                                    ans.description || '',
+                                    T(ans.description || ''),
                                     ioText,
                                     handbericht ? '' : ((ans.comment && ans.comment.trim()) ? ans.comment : 'keine Beanstandung')
                                 ]);
@@ -980,7 +1037,7 @@
 
                             doc.autoTable({
                                 startY: 44,
-                                head: [['Pos', 'Prüfpunkt', 'i.O.', 'Bemerkung / Beanstandung']],
+                                head: [[T('Pos'), T('Prüfpunkt'), T('i.O.'), T('Bemerkung / Beanstandung')]],
                                 body: checklistBody,
                                 rowPageBreak: 'avoid',
                                 margin: { top: 44, bottom: 297 - PAGE_CONTENT_BOTTOM, left: 20, right: 20 },
@@ -1038,7 +1095,8 @@
                                         doc.setFont('helvetica', 'normal');
                                         doc.setFontSize(10);
                                         doc.setTextColor(100, 100, 100);
-                                        doc.text(`Maschine: ${machineTitle} | Seriennummer: ${serialNumber} | Betriebsstunden: ${operatingHoursVal}${machine && (machine.motor_type || machine.motor_serial || machine.power) ? ` | Motor: ${[machine.motor_type, machine.motor_serial ? `#${machine.motor_serial}` : null, machine.power].filter(Boolean).join(' - ')}` : ''}`, 20, 37);
+                                        const kopf = protokollKopfzeilen(machineTitle, serialNumber, operatingHoursVal, machine);
+                                            zeichneProtokollKopfzeile(doc, kopf.maschine, kopf.motor, 20, 37, 170);
                                     }
                                 }
                             });
@@ -1052,7 +1110,7 @@
                             doc.setFont('helvetica', 'bold');
                             doc.setFontSize(10);
                             doc.setTextColor(30, 41, 59);
-                            doc.text('Bemerkungen:', 20, uvvY);
+                            doc.text(T('Bemerkungen:'), 20, uvvY);
                             uvvY += 5;
                             doc.setDrawColor(180, 180, 180);
                             doc.setLineWidth(0.3);
@@ -1076,7 +1134,7 @@
                                 doc.setFont('helvetica', 'bold');
                                 doc.setFontSize(10);
                                 doc.setTextColor(checklistThemeColor[0], checklistThemeColor[1], checklistThemeColor[2]);
-                                doc.text('Unterschriften eingewiesende Personen', 20, uvvY);
+                                doc.text(T('Unterschriften eingewiesende Personen'), 20, uvvY);
                                 uvvY += 8;
                                 for (let dsi = 0; dsi < checklist.driverSignatures.length; dsi += 2) {
                                     if (uvvY + 31 > PAGE_CONTENT_BOTTOM) { doc.addPage(); uvvY = PAGE_CONTENT_TOP; }
@@ -1093,7 +1151,7 @@
                                         doc.setFont('helvetica', 'normal');
                                         doc.setFontSize(8);
                                         doc.setTextColor(100, 100, 100);
-                                        doc.text(`Unterschrift Fahrer/Mechaniker, ${_uvvFmt(sig.date)}`, xPos, uvvY + 27);
+                                        doc.text(T('Unterschrift Fahrer/Mechaniker, ') + _uvvFmt(sig.date), xPos, uvvY + 27);
                                     });
                                     uvvY += 35;
                                 }
@@ -1136,8 +1194,8 @@
                             doc.setTextColor(100, 100, 100);
                             const _uvvTechDate = document.getElementById('service-tech-sig-date')?.value || dateStart;
                             const _uvvCustDate = document.getElementById('service-customer-sig-date')?.value || dateStart;
-                            doc.text(`Unterschrift Techniker, ${_uvvFmt(_uvvTechDate)}`, 20, uvvY + 27);
-                            doc.text(`Unterschrift Kunde, ${_uvvFmt(_uvvCustDate)}`, 110, uvvY + 27);
+                            doc.text(T('Unterschrift Techniker, ') + _uvvFmt(_uvvTechDate), 20, uvvY + 27);
+                            doc.text(T('Unterschrift Kunde, ') + _uvvFmt(_uvvCustDate), 110, uvvY + 27);
 
                         } else {
                             // Wartung Layout: Pos | Wartungsarbeit | Intervall | Erledigt | Bemerkung
@@ -1150,13 +1208,13 @@
                             printableAnswers.forEach((ans) => {
                                 if (ans.category !== currentCatCL) {
                                     currentCatCL = ans.category;
-                                    checklistBody.push([currentCatCL.toUpperCase(), '', '', '', '']);
+                                    checklistBody.push([T(currentCatCL).toUpperCase(), '', '', '', '']);
                                     categoryRowsCL.push(checklistBody.length - 1);
                                 }
                                 checklistBody.push([
                                     ans.pos || '',
-                                    ans.description || '',
-                                    ans.interval || '',
+                                    T(ans.description || ''),
+                                    T(ans.interval || ''),
                                     ans.checked === 'na' ? 'na' : (ans.checked ? 'checked' : 'unchecked'),
                                     handbericht ? '' : ((ans.comment && ans.comment.trim()) ? ans.comment : '/')
                                 ]);
@@ -1164,7 +1222,7 @@
                             
                             doc.autoTable({
                                 startY: 44,
-                                head: [['Pos', 'Wartungsarbeit / Prüfpunkt', 'Intervall / Frist', 'Erledigt', 'Bemerkung']],
+                                head: [[T('Pos'), T('Wartungsarbeit / Prüfpunkt'), T('Intervall / Frist'), T('Erledigt'), T('Bemerkung')]],
                                 body: checklistBody,
                                 rowPageBreak: 'avoid',
                                 margin: { top: 44, bottom: 297 - PAGE_CONTENT_BOTTOM, left: 20, right: 20 },
@@ -1216,7 +1274,8 @@
                                         doc.setFont('helvetica', 'normal');
                                         doc.setFontSize(10);
                                         doc.setTextColor(100, 100, 100);
-                                        doc.text(`Maschine: ${machineTitle} | Seriennummer: ${serialNumber} | Betriebsstunden: ${operatingHoursVal}${machine && (machine.motor_type || machine.motor_serial || machine.power) ? ` | Motor: ${[machine.motor_type, machine.motor_serial ? `#${machine.motor_serial}` : null, machine.power].filter(Boolean).join(' - ')}` : ''}`, 20, 37);
+                                        const kopf = protokollKopfzeilen(machineTitle, serialNumber, operatingHoursVal, machine);
+                                            zeichneProtokollKopfzeile(doc, kopf.maschine, kopf.motor, 20, 37, 170);
                                     }
                                 },
                                 didDrawCell: function(data) {
@@ -1273,26 +1332,173 @@
 
         window.previewServiceberichtPDF = async function(opts) {
             const handbericht = !!(opts && opts.handbericht);
+            // opts.sprache = 'en' | 'fr' | 'es' -> Vorschau mit fremdsprachigen
+            // Beschriftungen. Gilt nur für diesen einen Ausdruck; die Sprache
+            // wird danach wieder auf Deutsch zurückgesetzt, damit ein
+            // gespeichertes PDF nie versehentlich fremdsprachig wird.
+            const sprache = (opts && opts.sprache) || 'de';
             try {
+                window.pdfSprache = sprache;
                 const doc = await window.generateServiceberichtPDFDoc({ handbericht: handbericht });
+                window.pdfSprache = 'de';
                 if (doc) {
                     const blobUrl = doc.output('bloburl');
                     const machineId = document.getElementById('selected-machine-id').value;
                     const machine = (window.machineList || []).find(m => m.id == machineId);
                     const machineTitle = machine ? `${machine.manufacturer || ''} ${machine.name || ''}`.trim() : 'Servicebericht';
                     const titel = handbericht ? 'Handbericht' : 'Vorschau Servicebericht';
+                    const sprachZusatz = sprache !== 'de' && typeof window.pdfSprachLabel === 'function'
+                        ? ` (${window.pdfSprachLabel(sprache)})` : '';
 
                     if (typeof window.previewDocument === 'function') {
-                        window.previewDocument(blobUrl, `${titel} - ${machineTitle}`, 'application/pdf');
+                        window.previewDocument(blobUrl, `${titel}${sprachZusatz} - ${machineTitle}`, 'application/pdf');
                     } else {
                         window.open(blobUrl, '_blank');
                     }
                 }
             } catch (err) {
+                window.pdfSprache = 'de';
                 console.error(err);
                 window.showToast('Fehler beim Generieren der PDF-Vorschau: ' + err.message);
             }
         };
+
+        // Sprachauswahl: ein eigenes kleines Fenster statt eines Klappmenüs.
+        // Das Menü hing am Knopf ganz unten im Formular, klappte deshalb nach
+        // oben auf, war schwer zu treffen und gab keine Rückmeldung, was
+        // gewählt wurde. Hier steht jede Sprache als eigene Fläche, der Zustand
+        // („wird übersetzt …") ist sichtbar, und Escape schließt.
+        const FLAGGEN = { de: '🇩🇪', en: '🇬🇧', fr: '🇫🇷', es: '🇪🇸' };
+
+        window.previewServiceberichtSprache = function (event) {
+            if (event) event.stopPropagation();
+            document.getElementById('sb-sprach-fenster')?.remove();
+
+            const overlay = document.createElement('div');
+            overlay.id = 'sb-sprach-fenster';
+            overlay.className = 'sprachwahl-overlay';
+            overlay.innerHTML = `
+                <div class="sprachwahl-karte">
+                    <div class="sprachwahl-kopf">
+                        <div>
+                            <h3>Vorschau in anderer Sprache</h3>
+                            <p>Für den zweiten Ausdruck zum Mitgeben oder zum Zeigen vor Ort.</p>
+                        </div>
+                        <button type="button" class="sprachwahl-zu" data-sprachwahl-schliessen="1" title="Schließen">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                        </button>
+                    </div>
+                    <div class="sprachwahl-liste">
+                        ${(window.PDF_SPRACHEN || []).map(s => `
+                            <button type="button" class="sprachwahl-knopf" data-sprache="${s.code}">
+                                <span class="sprachwahl-flagge">${FLAGGEN[s.code] || '🌐'}</span>
+                                <span class="sprachwahl-text">
+                                    <strong>${s.label}</strong>
+                                    <small>${s.code === 'de' ? 'Original, ohne Übersetzung' : 'Beschriftungen und Prüfpunkte'}</small>
+                                </span>
+                            </button>`).join('')}
+                    </div>
+                    <div class="sprachwahl-fuss" id="sprachwahl-status">
+                        Eingetippter Text (Fehlerbeschreibung, Arbeitsschritte, Bemerkungen) bleibt unverändert deutsch.
+                        Das gespeicherte PDF ebenfalls.
+                    </div>
+                </div>`;
+            document.body.appendChild(overlay);
+            requestAnimationFrame(() => overlay.classList.add('is-open'));
+
+            const schliessen = () => {
+                overlay.classList.remove('is-open');
+                setTimeout(() => overlay.remove(), 180);
+                document.removeEventListener('keydown', beiTaste);
+            };
+            function beiTaste(e) { if (e.key === 'Escape') schliessen(); }
+            document.addEventListener('keydown', beiTaste);
+
+            overlay.addEventListener('click', async (e) => {
+                if (e.target === overlay || e.target.closest('[data-sprachwahl-schliessen]')) { schliessen(); return; }
+                const knopf = e.target.closest('[data-sprache]');
+                if (!knopf) return;
+
+                const code = knopf.dataset.sprache;
+                if (code === 'de') { schliessen(); window.previewServiceberichtPDF(); return; }
+
+                // Rückmeldung: die gewählte Fläche markieren, Zustand anzeigen.
+                overlay.querySelectorAll('.sprachwahl-knopf').forEach(k => k.classList.remove('is-active'));
+                knopf.classList.add('is-active');
+                const status = document.getElementById('sprachwahl-status');
+                const setzeStatus = (txt) => { if (status) status.textContent = txt; };
+
+                setzeStatus('Prüfpunkte werden übersetzt …');
+                let fehler = null;
+                try {
+                    const neu = await uebersetzePruefpunkte(code);
+                    setzeStatus(neu > 0
+                        ? `${neu} neue Begriffe übersetzt und gemerkt — Vorschau wird erstellt …`
+                        : 'Vorschau wird erstellt …');
+                } catch (err) {
+                    fehler = err;
+                    setzeStatus('Prüfpunkte bleiben deutsch. ' + sprachFehlerHinweis(err));
+                }
+
+                await window.previewServiceberichtPDF({ sprache: code });
+                // Bei einem Fehler das Fenster offen lassen, damit der Grund
+                // lesbar bleibt — sonst verschwindet er ungesehen.
+                if (fehler) {
+                    knopf.classList.remove('is-active');
+                    return;
+                }
+                schliessen();
+            });
+        };
+
+        // „Der KI-Dienst ist nicht erreichbar" sagt für sich genommen nichts.
+        // Die Anfrage geht an die Supabase Edge Function `groq-proxy`; scheitert
+        // schon der Verbindungsaufbau, liegt es fast immer an einem dieser
+        // drei Punkte — und der erste betrifft genau diese App, weil sie auch
+        // per Doppelklick über file:// laufen soll.
+        function sprachFehlerHinweis(err) {
+            const txt = String((err && err.message) || err || '');
+            if (!navigator.onLine) {
+                return 'Keine Internetverbindung — die Übersetzung braucht einmalig Netz.';
+            }
+            if (location.protocol === 'file:') {
+                return 'Die App läuft gerade direkt aus dem Dateisystem (file://). '
+                    + 'Der KI-Dienst nimmt von dort keine Anfragen an. Über die normale '
+                    + 'Adresse im Browser öffnen, dann klappt es.';
+            }
+            if (/nicht erreichbar|502|Failed to fetch|NetworkError/i.test(txt)) {
+                return 'Der KI-Dienst antwortet nicht. Unter Einstellungen → KI auf '
+                    + '„Verbindung prüfen" tippen — meist ist die Edge Function '
+                    + 'groq-proxy noch nicht ausgerollt (siehe supabase/SETUP_GROQ.txt).';
+            }
+            if (/abgelaufen|401|angemeldet/i.test(txt)) {
+                return 'Die Anmeldung ist abgelaufen — einmal ab- und wieder anmelden.';
+            }
+            if (/429|limit|rate/i.test(txt)) {
+                return 'Das KI-Kontingent ist für den Moment aufgebraucht. In ein paar '
+                    + 'Minuten noch einmal versuchen.';
+            }
+            return txt;
+        }
+
+        // Sammelt alle Texte der aktiven Prüfpläne und lässt sie übersetzen.
+        // Beim zweiten Mal ist nichts mehr zu tun — sie liegen im Gedächtnis
+        // (siehe js/pdf-i18n.js).
+        async function uebersetzePruefpunkte(sprache) {
+            if (typeof window.pdfUebersetzeTexte !== 'function') return 0;
+            const payload = typeof window.getChecklistPayload === 'function' ? window.getChecklistPayload() : null;
+            const texte = [];
+            (payload && Array.isArray(payload.checklists) ? payload.checklists : []).forEach(cl => {
+                if (cl.title) texte.push(cl.title);
+                (cl.answers || []).forEach(a => {
+                    if (a.category) texte.push(a.category);
+                    if (a.description) texte.push(a.description);
+                    if (a.interval) texte.push(a.interval);
+                });
+            });
+            if (!texte.length) return 0;
+            return await window.pdfUebersetzeTexte(texte, sprache);
+        }
 
         // Ausdruck zum Ausfüllen von Hand — gleiche Vorschau, nur ohne Text in
         // den Bemerkungs-/Notizfeldern der Prüfprotokolle.

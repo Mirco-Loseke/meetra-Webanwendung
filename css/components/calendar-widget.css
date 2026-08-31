@@ -517,6 +517,69 @@
     background: rgba(16, 185, 129, 0.14);
 }
 
+/* Erledigt-Haken in der Tagesliste. Gleiche Größe wie der Bearbeiten-Knopf,
+   damit die Zeile ruhig bleibt. Grün gefüllt = erledigt. */
+.calw-entry-check {
+    align-self: flex-start;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.calw-entry-check:hover {
+    color: #34d399;
+    border-color: rgba(16, 185, 129, 0.45);
+    background: rgba(16, 185, 129, 0.14);
+}
+
+.calw-entry-check.is-done {
+    color: #fff;
+    background: #10b981;
+    border-color: #10b981;
+}
+
+/* Kennzeichen oben rechts im Tagesfeld: Haken = alles erledigt,
+   Zahl = so viele noch offen. Die Farben der Arten bleiben unberührt. */
+.calw-cell-state {
+    position: absolute;
+    top: 3px;
+    right: 4px;
+    min-width: 13px;
+    height: 13px;
+    padding: 0 3px;
+    border-radius: 7px;
+    font-size: 0.58rem;
+    font-weight: 800;
+    line-height: 13px;
+    text-align: center;
+}
+
+.calw-cell-state.is-done {
+    background: rgba(16, 185, 129, 0.22);
+    color: #34d399;
+}
+
+.calw-cell-state.is-open {
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.65);
+}
+
+/* Erledigter Eintrag in der Monatsansicht: durchgestrichen und blasser,
+   Farbe der Art bleibt. */
+.calw-cell-item.is-done {
+    opacity: 0.5;
+    text-decoration: line-through;
+}
+
 .calw-empty {
     display: flex;
     flex-direction: column;

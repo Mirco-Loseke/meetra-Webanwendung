@@ -224,6 +224,20 @@
 
         const p = proc(aktuelleId);
         const neu = liste(p).slice();
+
+        // Nichts doppelt: was am Vorgang schon haengt, wird uebersprungen
+        // (Inhaltsvergleich bzw. Dateiname + Groesse, js/photo-dedupe.js).
+        if (window.PhotoDedupe) {
+            const geprueft = await window.PhotoDedupe.pruefeAuswahl(dateien, neu);
+            if (geprueft.doppelt.length) {
+                status(geprueft.doppelt.length === 1
+                    ? '„' + geprueft.doppelt[0] + '" hängt bereits am Vorgang — übersprungen.'
+                    : geprueft.doppelt.length + ' Dateien hängen bereits am Vorgang — übersprungen.');
+            }
+            dateien = geprueft.neu.map(e => e.file);
+            if (!dateien.length) return;
+        }
+
         let fehler = 0;
 
         for (let i = 0; i < dateien.length; i++) {

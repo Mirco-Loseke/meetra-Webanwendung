@@ -178,46 +178,67 @@ const MOCK_CHECKLIST_TEMPLATES = window.MOCK_CHECKLIST_TEMPLATES = [
 
 let activeChecklists = {}; // templateId -> { template_id, title, type, answers }
 
-// ---------------------------------------------------------------
-// Kontext: Servicebericht ODER eigenständiges UVV-/Wartungsprotokoll
-// ---------------------------------------------------------------
-// Die Prüftabellen hängen sonst fest an den IDs des Servicebericht-Formulars
-// (service-checklist-selector-container, checklist-questions-container,
-// service-category-text, selected-machine-id, preview-name). Das Fenster
-// „UVV- & Wartungsprotokoll" (js/uvv-protokoll.js) benutzt dieselben Tabellen,
-// darf diese IDs aber nicht ein zweites Mal vergeben — doppelte IDs würden
-// beide Formulare unbrauchbar machen. Deshalb kann es hier eigene Container
-// und einen eigenen „Kategorietext" hinterlegen. Ohne gesetzten Kontext
-// verhält sich alles exakt wie vorher.
-let checklistCtx = null;
+// Abgehakte, aber schon ausgefüllte Protokolle. Wer den Haken herausnimmt,
+// verliert seine Eingaben NICHT mehr — sie wandern hierher und kommen beim
+// erneuten Anhaken unverändert zurück. Gilt für beide Kontexte (Servicebericht
+// und eigenständiges UVV-/Wartungsprotokoll), weil beide dieselben Tabellen
+// benutzen. Gespeichert wird der Zwischenspeicher als checklist_payload.stashed
+// mit, damit er auch ein Neuladen und späteres Bearbeiten übersteht; die
+// Auswertungen und das PDF lesen nur payload.checklists und sehen ihn nicht.
+let stashedChecklists = {};
 
-window.setChecklistContext = function (ctx) {
-    checklistCtx = ctx || null;
-};
+// Hat das Protokoll überhaupt Eingaben? Nur dann lohnt das Merken.
+function checklistHasData(cl) {
+    if (!cl || !Array.isArray(cl.answers)) return false;
+    if (cl.generalRemark && String(cl.generalRemark).trim() !== '') return true;
+    if (Array.isArray(cl.driverSignatures) && cl.driverSignatures.length) return true;
+    if (cl.categoryStatus && Object.keys(cl.categoryStatus).length) return true;
+    return cl.answers.some(ans =>
+        ans && (ans.checked || ans.io || (ans.comment && String(ans.comment).trim() !== ''))
+    );
+}
+
+// Aus dem Zwischenspeicher zurückholen. Gibt es nichts, kommt null.
+function unstashChecklist(templateId) {
+    const cl = stashedChecklists[templateId];
+    if (!cl) return null;
+    delete stashedChecklists[templateId];
+    return cl;
+}
+
+// Alle gerade aktiven Protokolle merken statt wegzuwerfen.
+function stashAllActive() {
+    Object.keys(activeChecklists).forEach(id => {
+        if (checklistHasData(activeChecklists[id])) stashedChecklists[id] = activeChecklists[id];
+    });
+}
+
+// ---------------------------------------------------------------
+// Die Felder des Servicebericht-Formulars
+// ---------------------------------------------------------------
+// Hier stand bis 31.08.2026 ein Kontext-Umschalter (setChecklistContext),
+// weil das eigenständige Fenster „UVV- & Wartungsprotokoll" dieselben
+// Prüftabellen mit eigenen Container-IDs nutzte. Dieses Fenster ist entfernt;
+// die Prüftabellen gibt es nur noch im Servicebericht.
 
 function clSelectorEl() {
-    if (checklistCtx) return document.getElementById(checklistCtx.selectorId);
     return document.getElementById('service-checklist-selector-container');
 }
 
 function clQuestionsEl() {
-    if (checklistCtx) return document.getElementById(checklistCtx.questionsId);
     return document.getElementById('checklist-questions-container');
 }
 
 // Steuert, welche Plan-Arten angeboten werden ('wartung', 'uvv', 'einweisung').
 function clCategoryText() {
-    if (checklistCtx) return String(checklistCtx.categoryText || '').toLowerCase();
     return document.getElementById('service-category-text')?.textContent.toLowerCase() || '';
 }
 
 function clMachineId() {
-    if (checklistCtx) return checklistCtx.machineId ? String(checklistCtx.machineId) : '';
     return document.getElementById('selected-machine-id')?.value;
 }
 
 function clMachineName() {
-    if (checklistCtx) return String(checklistCtx.machineName || '');
     return document.getElementById('preview-name')?.textContent || '';
 }
 
@@ -256,6 +277,9 @@ window.evaluateChecklistVisibility = function() {
         window.populateChecklistSelector();
     } else {
         container.style.display = 'none';
+        // Kategorie gewechselt: ausgefüllte Protokolle merken statt wegwerfen.
+        // Wird wieder auf Wartung/UVV/Einweisung gestellt, sind sie noch da.
+        stashAllActive();
         activeChecklists = {};
         window.renderActiveChecklists();
     }
@@ -317,13 +341,18 @@ window.populateChecklistSelector = function() {
 
     // Check if there are active checklists already loaded or entered.
     // If it's a completely new servicebericht or we haven't selected anything yet, we auto-enable the recommended ones.
-    const isNew = Object.keys(activeChecklists).length === 0;
+    // Gibt es gemerkte Eingaben, ist das Formular NICHT frisch — sonst würde die
+    // Auto-Aktivierung einen bewusst abgehakten Plan wieder anhaken.
+    const isNew = Object.keys(activeChecklists).length === 0 &&
+                  Object.keys(stashedChecklists).length === 0;
 
     let html = '';
     templates.forEach(t => {
         const matchesMachine = matchesMachineSeries(t);
-        const suffix = matchesMachine ? ' (Empfohlen)' : '';
-        
+        let suffix = matchesMachine ? ' (Empfohlen)' : '';
+        // Sichtbar machen, dass hinter dem leeren Haken noch Eingaben liegen.
+        if (stashedChecklists[t.id]) suffix += ' — Eingaben gemerkt';
+
         let isChecked = activeChecklists[t.id] ? 'checked' : '';
         if (isNew) {
             // Auto-Aktivierung: der Plan-Typ passt bereits (siehe Filter oben), hier reicht die
@@ -385,26 +414,35 @@ window.handleChecklistMachineChange = function() {
 
 window.onChecklistToggle = function(templateId, checked) {
     if (!checked) {
-        // Unchecking: ask for confirmation if data exists
+        // Haken raus: nichts geht verloren. Was ausgefüllt war, wandert in den
+        // Zwischenspeicher und steht beim erneuten Anhaken wieder da. Die frühere
+        // Rückfrage („Alle eingegebenen Antworten gehen verloren") entfällt damit.
         const active = activeChecklists[templateId];
-        if (active) {
-            const hasData = active.answers.some(ans => ans.checked || (ans.comment && ans.comment.trim() !== ''));
-            if (hasData) {
-                if (!confirm(`Möchten Sie das Protokoll "${active.title}" wirklich deaktivieren? Alle eingegebenen Antworten gehen verloren.`)) {
-                    // Re-check the UI box
-                    const checkbox = document.querySelector(`input[data-template-id="${templateId}"]`);
-                    if (checkbox) checkbox.checked = true;
-                    return;
-                }
-            }
-        }
+        const gemerkt = !!(active && checklistHasData(active));
+        if (gemerkt) stashedChecklists[templateId] = active;
         delete activeChecklists[templateId];
+        // Auswahlliste neu zeichnen, damit der Hinweis „Eingaben gemerkt" erscheint.
+        if (gemerkt) window.populateChecklistSelector();
         window.renderActiveChecklists();
+        if (gemerkt && window.showToast) {
+            window.showToast('Eingaben bleiben gemerkt — Haken wieder setzen holt sie zurück.');
+        }
     } else {
+        // Haken rein: zuerst im Zwischenspeicher nachsehen — ein zuvor
+        // ausgefülltes Protokoll kommt unverändert zurück.
+        const remembered = unstashChecklist(templateId);
+        if (remembered) {
+            activeChecklists[templateId] = remembered;
+            window.populateChecklistSelector(); // Hinweis „Eingaben gemerkt" entfernen
+            window.renderActiveChecklists();
+            if (window.showToast) window.showToast('Frühere Eingaben wiederhergestellt.');
+            return;
+        }
+
         // Checking on: create template layout structure
         const template = (window.ACTIVE_CHECKLIST_TEMPLATES || MOCK_CHECKLIST_TEMPLATES).find(t => t.id === templateId);
         if (!template) return;
-        
+
         const answers = template.items.map(item => ({
             pos: item.pos,
             category: item.category,
@@ -849,17 +887,27 @@ window.getMaintenanceScopeLabel = function(checklistPayload) {
 
 window.getChecklistPayload = function() {
     const activeList = Object.values(activeChecklists);
-    if (activeList.length === 0) return null;
-    
-    return {
-        checklists: activeList
-    };
+    const stashedList = Object.values(stashedChecklists).filter(checklistHasData);
+    if (activeList.length === 0 && stashedList.length === 0) return null;
+
+    const payload = { checklists: activeList };
+    // Abgehakte, aber ausgefüllte Protokolle reisen getrennt mit. PDF, Historie
+    // und die Auswertungen lesen ausschließlich payload.checklists und bleiben
+    // dadurch unberührt — nur das Formular selbst holt sie wieder hervor.
+    if (stashedList.length) payload.stashed = stashedList;
+    return payload;
 };
 
 window.loadChecklistPayload = function(payload) {
     activeChecklists = {};
-    
+    stashedChecklists = {};
+
     if (payload) {
+        if (Array.isArray(payload.stashed)) {
+            payload.stashed.forEach(cl => {
+                if (cl && cl.template_id) stashedChecklists[cl.template_id] = cl;
+            });
+        }
         // Support backward compatibility (old payload format with template_id and answers array)
         if (payload.template_id && payload.answers) {
             activeChecklists[payload.template_id] = {

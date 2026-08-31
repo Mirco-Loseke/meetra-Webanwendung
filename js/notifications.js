@@ -29,17 +29,32 @@
     //   pushLevel   = ab welcher Dringlichkeit überhaupt ein Fenster aufgeht:
     //                 'overdue' nur Überfälliges, 'today' auch heute Fälliges,
     //                 'all' jede Meldung. Termine gehen davon aus (siehe unten).
+    //   repeat_*    = Abstand in Stunden, nach dem sich derselbe Eintrag erneut
+    //                 melden darf. 0 = nur einmal (das war früher das feste
+    //                 Verhalten). Je Sorte einstellbar, weil ein überfälliger
+    //                 Termin anders drängt als ein Angebot.
     const DEFAULT_PREFS = {
         processes: true,
         tasks: true,
         maintenance: true,
         offers: true,
         appointments: true,
+        service: true,
+        addresses: true,
         push_processes: true,
         push_tasks: true,
         push_maintenance: true,
         push_offers: true,
         push_appointments: true,
+        push_service: false,
+        push_addresses: false,
+        repeat_processes: 24,
+        repeat_tasks: 24,
+        repeat_maintenance: 72,
+        repeat_offers: 72,
+        repeat_appointments: 12,
+        repeat_service: 0,
+        repeat_addresses: 0,
         pushLevel: 'today',
         before: 3,
         after: 14,
@@ -55,7 +70,9 @@
         deadline: 'tasks',
         maintenance: 'maintenance',
         offer: 'offers',
-        appointment: 'appointments'
+        appointment: 'appointments',
+        service: 'service',
+        address: 'addresses'
     };
 
     let items = [];
@@ -96,8 +113,79 @@
         const uid = currentUserId();
         const next = Object.assign({}, prefs(), patch);
         localStorage.setItem(PREFS_KEY_PREFIX + (uid || 'anon'), JSON.stringify(next));
+        schreibeInDatenbank(next);
         return next;
     }
+
+    // ---------------------------------------------------------------
+    // Einstellungen geräteübergreifend (Tabelle notification_preferences)
+    // ---------------------------------------------------------------
+    // localStorage bleibt der schnelle Zwischenspeicher: prefs() liest immer
+    // von dort, damit nichts auf eine Abfrage warten muss. Die Datenbank ist
+    // die gemeinsame Ablage — beim Start wird von dort geholt, bei jeder
+    // Änderung dorthin geschrieben (verzögert, damit das Tippen in einem
+    // Zahlenfeld nicht jede Ziffer einzeln schickt).
+    // Migration: supabase/supabase_add_notification_prefs.sql
+    const PREFS_TABLE = 'notification_preferences';
+    let schreibTimer = null;
+    let prefsTabelleFehlt = false;
+
+    function schreibeInDatenbank(next) {
+        const uid = currentUserId();
+        if (!uid || !sb() || prefsTabelleFehlt) return;
+        clearTimeout(schreibTimer);
+        schreibTimer = setTimeout(async () => {
+            try {
+                const { error } = await sb().from(PREFS_TABLE)
+                    .upsert({ user_id: uid, prefs: next, updated_at: new Date().toISOString() },
+                            { onConflict: 'user_id' });
+                if (error) throw error;
+            } catch (err) {
+                // Tabelle fehlt (Migration nicht gelaufen) -> still bei
+                // localStorage bleiben, aber nur einmal warnen.
+                if (!prefsTabelleFehlt) {
+                    prefsTabelleFehlt = true;
+                    console.warn('Benachrichtigungs-Einstellungen bleiben lokal — Migration '
+                        + 'supabase_add_notification_prefs.sql noch nicht ausgeführt.', err.message || err);
+                }
+            }
+        }, 600);
+    }
+
+    async function ladeAusDatenbank() {
+        const uid = currentUserId();
+        if (!uid || !sb()) return;
+        try {
+            const { data, error } = await sb().from(PREFS_TABLE)
+                .select('prefs').eq('user_id', uid).maybeSingle();
+            if (error) throw error;
+            if (data && data.prefs && typeof data.prefs === 'object') {
+                localStorage.setItem(PREFS_KEY_PREFIX + uid, JSON.stringify(data.prefs));
+                if (typeof window.renderNotificationSettingsPage === 'function') {
+                    window.renderNotificationSettingsPage();
+                }
+            } else {
+                // Erster Start auf diesem Konto: den lokalen Stand hochschieben,
+                // damit bereits Eingestelltes nicht verloren geht.
+                schreibeInDatenbank(prefs());
+            }
+        } catch (err) {
+            prefsTabelleFehlt = true;
+            console.warn('Benachrichtigungs-Einstellungen konnten nicht geladen werden '
+                + '(Migration supabase_add_notification_prefs.sql?):', err.message || err);
+        }
+    }
+    window.reloadNotificationPrefs = ladeAusDatenbank;
+    // Die Einstellungsseite (js/notification-settings.js) schreibt hierüber.
+    window.saveNotificationPrefs = savePrefs;
+
+    window.resetNotificationPrefs = function () {
+        const uid = currentUserId();
+        localStorage.removeItem(PREFS_KEY_PREFIX + (uid || 'anon'));
+        schreibeInDatenbank(Object.assign({}, DEFAULT_PREFS));
+        cache = { at: 0, data: null };
+        refresh({ push: false });
+    };
 
     // Zahl aus einem Eingabefeld in einen sinnvollen Bereich zwingen
     function clampDays(v, fallback) {
@@ -432,14 +520,21 @@
         // --- Angebots-Erinnerungen (angebote.erinnerung) ---
         if (P.offers) try {
             const { data, error } = await sb()
+                // '*' statt fester Spaltenliste: erinnerung_by gibt es erst nach
+                // der Migration, eine fest verdrahtete Spalte ließe sonst die
+                // ganze Abfrage scheitern.
                 .from('angebote')
-                .select('id, belegnummer, erinnerung, status, kundenmatchcode, customers(name)')
+                .select('*, customers(name)')
                 .not('erinnerung', 'is', null)
                 .limit(300);
             if (!error && data) {
                 data.forEach(a => {
                     const diff = dayDiff(a.erinnerung);
                     if (!inRange(diff, P.before)) return;
+                    // Eine Erinnerung gehört dem, der sie gesetzt hat. Steht dort
+                    // niemand (Altbestand vor der Migration), sieht sie weiterhin
+                    // jeder — sie soll nicht still verschwinden.
+                    if (a.erinnerung_by && String(a.erinnerung_by) !== String(uid)) return;
                     // Abgeschlossene Angebote nicht mehr melden
                     const s = (a.status || '').toLowerCase();
                     if (/gewonnen|auftrag|bestellt|verkauft|angenommen|zusage|verloren|abgelehnt|absage|abgesagt|storniert|kein interesse/.test(s)) return;
@@ -537,6 +632,140 @@
             console.warn('Benachrichtigungen: Termine nicht ladbar:', err.message || err);
         }
 
+        // --- Meine eigenen Termine (auch ohne eingeladene Kollegen) ---
+        // Der Block oben geht über event_participants und erreicht damit nur
+        // Termine MIT Teilnehmern. Ein Termin, den ich mir an einer Adresse
+        // selbst eintrage, hat keine Teilnehmerzeile — und tauchte deshalb
+        // nirgends auf. Genau der gehört mir und sonst niemandem.
+        if (P.appointments) try {
+            const { data, error } = await sb()
+                .from('maintenance_events')
+                .select('*, customers(name)')
+                .limit(400);
+            if (!error && data) {
+                data.forEach(ev => {
+                    // Termin, nicht Wartung: maintenance_events enthält beides,
+                    // ein Typkennzeichen gibt es in den Daten nicht (CLAUDE.md).
+                    // Ein Termin hat weder Maschine noch Wartungsart.
+                    if (ev.machine_id || ev.manual_machine || ev.maintenance_types) return;
+
+                    // Nur meine eigenen. user_id ODER created_by_user, weil
+                    // js/appointments.js beides schreibt.
+                    const meiner = String(ev.created_by_user || '') === String(uid)
+                        || String(ev.user_id || '') === String(uid);
+                    if (!meiner) return;
+
+                    // Steht der Termin schon als Einladung an mich in der Liste,
+                    // nicht zweimal melden.
+                    if (out.some(o => o.key === `appt:${ev.id}:invite`)) return;
+
+                    const day = ev.event_date || ev.start_date;
+                    const diff = dayDiff(day);
+                    if (!inRange(diff, P.before)) return;
+
+                    const time = window.fmtAppointmentTime ? window.fmtAppointmentTime(ev.start_time) : '';
+                    const wo = ev.location_label || (ev.customers && ev.customers.name) || '';
+                    out.push({
+                        key: `appt-own:${ev.id}:${day}`,
+                        kind: 'appointment',
+                        severity: diff < 0 ? 'overdue' : (diff === 0 ? 'today' : 'soon'),
+                        title: ev.title || 'Termin',
+                        subject: wo,
+                        meta: `Dein Termin · ${fmtDate(day)}${time ? ', ' + time + ' Uhr' : ''}`,
+                        sortAt: new Date(day || 0).getTime(),
+                        targetType: 'appointment',
+                        targetId: ev.id
+                    });
+                });
+            }
+        } catch (err) {
+            console.warn('Benachrichtigungen: eigene Termine nicht ladbar:', err.message || err);
+        }
+
+        // --- Serviceberichte ohne Kundenunterschrift ---
+        // Ein Bericht, unter dem die Unterschrift des Kunden fehlt, ist nicht
+        // abgeschlossen — und fällt sonst niemandem auf. Gemeldet wird nur, was
+        // mir gehört: in dieser App heißt das ID ODER Name in `technicians`,
+        // weil dort mal das eine, mal das andere steht (siehe CLAUDE.md).
+        if (P.service) try {
+            const { data, error } = await sb()
+                .from('service_entries')
+                .select('id, title, date, created_at, technicians, customer_signature, machine_id, machines(name, manufacturer, serial)')
+                .order('date', { ascending: false })
+                .limit(300);
+            if (!error && data) {
+                const me = String(uid);
+                const meName = (currentUser() && currentUser().name) ? String(currentUser().name) : null;
+                data.forEach(s => {
+                    if (s.customer_signature) return; // unterschrieben, alles gut
+                    const techs = Array.isArray(s.technicians) ? s.technicians.map(String) : [];
+                    if (techs.length && !techs.includes(me) && !(meName && techs.includes(meName))) return;
+                    if (!techs.length) return; // niemand zuständig -> nicht meine Baustelle
+
+                    // Der Bericht ist ab dem Tag danach "offen"; älter als der
+                    // Vorlauf gilt als überfällig.
+                    const diff = dayDiff(s.date);
+                    if (diff === null || diff < -lookbackDays(P) || diff > 0) return;
+                    const tage = Math.abs(diff);
+                    const m = s.machines || {};
+                    out.push({
+                        key: `service:${s.id}:unsigned`,
+                        kind: 'service',
+                        severity: tage > P.before ? 'overdue' : (tage > 0 ? 'today' : 'info'),
+                        title: 'Unterschrift fehlt',
+                        subject: `${m.manufacturer || ''} ${m.name || ''}`.trim() + (m.serial ? ` #${m.serial}` : ''),
+                        meta: `Servicebericht · ${s.title || ''} · ${fmtDate(s.date)}`.replace(' ·  ·', ' ·'),
+                        sortAt: new Date(s.date || s.created_at || 0).getTime(),
+                        targetType: 'service',
+                        targetId: s.id
+                    });
+                });
+            }
+        } catch (err) {
+            console.warn('Benachrichtigungen: Serviceberichte nicht ladbar:', err.message || err);
+        }
+
+        // --- Adressen: Wiedervorlagen aus der Historie einer Adresse ---
+        // Ein Eintrag an einer Adresse gehört DEM, DER IHN ANGELEGT HAT.
+        // Zuerst war es umgekehrt (jeder sah die Einträge der Kollegen) — das
+        // war falsch: wer sich unter einer Adresse etwas notiert, will selbst
+        // daran erinnert werden, nicht die halbe Firma benachrichtigen.
+        // Wer andere beteiligen will, legt einen Termin an und lädt sie ein.
+        if (P.addresses) try {
+            const seit = new Date(Date.now() - lookbackDays(P) * 86400000).toISOString();
+            const { data, error } = await sb()
+                .from('customer_notes')
+                .select('id, customer_id, entry_type, title, body, author, created_at, customers(name)')
+                .gte('created_at', seit)
+                .order('created_at', { ascending: false })
+                .limit(200);
+            if (!error && data) {
+                const meName = (currentUser() && currentUser().name) ? String(currentUser().name) : null;
+                const ARTEN = { note: 'Notiz', call: 'Anruf', email: 'E-Mail', visit: 'Besuch', meeting: 'Termin', system: 'System' };
+                data.forEach(n => {
+                    if (n.entry_type === 'system') return;
+                    // Nur eigene Einträge. Ohne Namen am Eintrag (Altbestand)
+                    // gehört er niemandem und wird nicht gemeldet.
+                    const autor = String(n.author || '');
+                    if (!autor || !meName || autor !== meName) return;
+                    const diff = dayDiff(n.created_at);
+                    out.push({
+                        key: `note:${n.id}`,
+                        kind: 'address',
+                        severity: diff === 0 ? 'today' : 'info',
+                        title: `${ARTEN[n.entry_type] || 'Eintrag'}: ${n.title || (n.body || '').slice(0, 60) || 'ohne Titel'}`,
+                        subject: (n.customers && n.customers.name) || 'Adresse',
+                        meta: `Adresse · dein Eintrag · ${fmtDate(n.created_at)}`,
+                        sortAt: new Date(n.created_at || 0).getTime(),
+                        targetType: 'customer',
+                        targetId: n.customer_id
+                    });
+                });
+            }
+        } catch (err) {
+            console.warn('Benachrichtigungen: Adress-Einträge nicht ladbar:', err.message || err);
+        }
+
         // Wichtigstes zuerst: überfällig -> heute -> demnächst -> Rest
         const rank = { overdue: 0, today: 1, soon: 2, info: 3 };
         out.sort((a, b) => (rank[a.severity] - rank[b.severity]) || (a.sortAt - b.sortAt));
@@ -545,9 +774,10 @@
         // Dringlichkeit sortiert ist, gewinnt automatisch der wichtigste.
         const seen = new Set();
         return out.filter(n => {
-            // Termine sind ausgenommen: Einladung und die Antworten mehrerer
-            // Kollegen betreffen denselben Termin, sollen aber einzeln stehen.
-            const id = n.kind === 'appointment' ? n.key : `${n.targetType}:${n.targetId}`;
+            // Termine und Adress-Einträge sind ausgenommen: mehrere Antworten
+            // zu einem Termin bzw. mehrere Notizen zu einer Adresse gehören
+            // zwar zusammen, sollen aber einzeln stehen.
+            const id = (n.kind === 'appointment' || n.kind === 'address') ? n.key : `${n.targetType}:${n.targetId}`;
             if (seen.has(id)) return false;
             seen.add(id);
             return true;
@@ -583,7 +813,64 @@
         steps: '<line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line>',
         maintenance: '<circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>',
         offer: '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>',
-        appointment: '<rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>'
+        appointment: '<rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>',
+        service: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="17" x2="8" y2="17"></line>',
+        address: '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle>'
+    };
+
+    // Was für eine Sorte ist das? Name und Farbe je Gruppe — beides steht jetzt
+    // an jedem Eintrag, damit auf einen Blick erkennbar ist, worum es geht.
+    // Vorher unterschieden sich die Einträge nur in der Dringlichkeitsfarbe;
+    // ob eine Zeile ein Termin oder ein Angebot war, stand allein im Kleingedruckten.
+    const GROUP_META = {
+        processes:    { label: 'Vorgang',        color: '#a78bfa' },
+        tasks:        { label: 'Aufgabe',        color: '#38bdf8' },
+        appointments: { label: 'Termin',         color: '#34d399' },
+        maintenance:  { label: 'Wartung',        color: '#fbbf24' },
+        offers:       { label: 'Angebot',        color: '#f472b6' },
+        service:      { label: 'Servicebericht', color: '#fb923c' },
+        addresses:    { label: 'Adresse',        color: '#22d3ee' }
+    };
+
+    function groupMeta(n) {
+        return GROUP_META[KIND_GROUP[n.kind]] || { label: 'Hinweis', color: '#94a3b8' };
+    }
+
+    // Welche Sorte ist gerade ausgewählt? null = alle.
+    let kindFilter = null;
+
+    // ---------------------------------------------------------------
+    // Vollansicht (wie beim Kalender-Widget)
+    // ---------------------------------------------------------------
+    // Das Panel ist mit 460px schnell zu klein, wenn zwanzig Einträge offen
+    // sind. Derselbe Aufbau wie in js/calendar-widget.js: eine Klasse am Panel,
+    // eine am body für die Abdunklung dahinter.
+    let isFull = false;
+
+    const SYM_AUF = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>';
+    const SYM_ZU = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>';
+
+    function applyFull() {
+        const panel = document.getElementById('notif-panel');
+        if (panel) panel.classList.toggle('is-full', isFull);
+        document.body.classList.toggle('notif-full-open', isFull);
+        const btn = document.getElementById('notif-full-btn');
+        if (btn) {
+            btn.innerHTML = isFull ? SYM_ZU : SYM_AUF;
+            btn.title = isFull ? 'Vollansicht beenden' : 'Vollansicht';
+        }
+    }
+
+    window.toggleNotificationFull = function (event) {
+        if (event) event.stopPropagation();
+        isFull = !isFull;
+        applyFull();
+    };
+
+    window.filterNotificationsByKind = function (group, event) {
+        if (event) event.stopPropagation();
+        kindFilter = (group === 'all' || kindFilter === group) ? null : group;
+        render();
     };
 
     function unreadCount() {
@@ -613,13 +900,19 @@
         // zieht sie aus dem Element heraus. Der Klick-Handler hängt ohnehin
         // an [data-notif-key], nicht am Elementtyp.
         const tag = n.actionsHtml ? 'div' : 'button';
+        const g = groupMeta(n);
         return `
         <${tag} ${tag === 'button' ? 'type="button"' : 'role="button" tabindex="0"'} class="notif-item${isRead ? ' is-read' : ''}" data-notif-key="${esc(n.key)}"
-                data-notif-target-type="${esc(n.targetType)}" data-notif-target-id="${esc(n.targetId)}">
-            <span class="notif-item-icon" style="color:${sev.color}; background:${sev.bg}; border-color:${sev.border};">
+                data-notif-target-type="${esc(n.targetType)}" data-notif-target-id="${esc(n.targetId)}"
+                style="--notif-kind:${g.color}; --notif-sev:${sev.color};">
+            <span class="notif-item-icon" style="color:${g.color}; background:${g.color}1f; border-color:${g.color}59;">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${KIND_ICON[n.kind] || KIND_ICON.assigned}</svg>
             </span>
             <span class="notif-item-body">
+                <span class="notif-item-tags">
+                    <span class="notif-kind-badge" style="color:${g.color}; background:${g.color}1f; border-color:${g.color}59;">${esc(g.label)}</span>
+                    <span class="notif-sev-badge" style="color:${sev.color}; background:${sev.bg}; border-color:${sev.border};">${esc(sev.label)}</span>
+                </span>
                 <span class="notif-item-title">${esc(n.title)}</span>
                 ${n.subject ? `<span class="notif-item-subject">${esc(n.subject)}</span>` : ''}
                 <span class="notif-item-meta" style="color:${sev.color};">${esc(n.meta)}</span>
@@ -674,20 +967,48 @@
 
         const read = readKeys();
         const groups = [
-            { sev: 'overdue', title: 'Überfällig' },
+            { sev: 'overdue', title: 'Überfällig — sofort erledigen' },
             { sev: 'today', title: 'Heute' },
-            { sev: 'soon', title: 'Demnächst' },
-            { sev: 'info', title: 'Deine Vorgänge' }
+            { sev: 'soon', title: 'Demnächst — darauf vorbereiten' },
+            { sev: 'info', title: 'Zur Kenntnis' }
         ];
 
-        let html = notice;
+        // Leiste zum Filtern nach Sorte, mit Anzahl je Sorte. So ist auf einen
+        // Blick zu sehen, wie viel wovon offen ist — und mit einem Klick nur
+        // noch die eine Sorte.
+        const zaehler = {};
+        items.forEach(n => {
+            const key = KIND_GROUP[n.kind] || 'sonstiges';
+            zaehler[key] = (zaehler[key] || 0) + 1;
+        });
+        let leiste = `<div class="notif-filterbar">
+            <button type="button" class="notif-chip${kindFilter ? '' : ' is-active'}"
+                onclick="window.filterNotificationsByKind('all', event)">Alles <b>${items.length}</b></button>`;
+        Object.keys(GROUP_META).forEach(g => {
+            if (!zaehler[g]) return;
+            const m = GROUP_META[g];
+            const aktiv = kindFilter === g;
+            leiste += `<button type="button" class="notif-chip${aktiv ? ' is-active' : ''}"
+                style="--notif-kind:${m.color};" onclick="window.filterNotificationsByKind('${g}', event)">
+                ${m.label} <b>${zaehler[g]}</b></button>`;
+        });
+        leiste += '</div>';
+
+        const sichtbar = kindFilter
+            ? items.filter(n => KIND_GROUP[n.kind] === kindFilter)
+            : items;
+
+        let html = notice + leiste;
         groups.forEach(g => {
-            const rows = items.filter(n => n.severity === g.sev);
+            const rows = sichtbar.filter(n => n.severity === g.sev);
             if (!rows.length) return;
             const sev = SEVERITY[g.sev];
             html += `<div class="notif-group-title" style="color:${sev.color};">${g.title} <span>${rows.length}</span></div>`;
             html += rows.map(n => itemHtml(n, read.has(n.key))).join('');
         });
+        if (!sichtbar.length) {
+            html += '<div class="notif-empty"><strong>Nichts in dieser Sorte</strong><span>Oben auf „Alles" tippen, um wieder alle zu sehen.</span></div>';
+        }
         list.innerHTML = html;
     }
 
@@ -762,15 +1083,21 @@
             <div class="notif-settings-hint">Überfälliges verschwindet nach dem Rückblick-Zeitraum von selbst.</div>`;
     }
 
+    // Das Zahnrad öffnet die eigene Seite (js/notification-settings.js) statt
+    // der früheren engen Klappe im Panel — dort war der Zusammenhang zwischen
+    // Glocke und Fenster nicht zu erkennen.
     window.toggleNotificationSettings = function (event) {
         if (event) event.stopPropagation();
+        if (typeof window.openNotificationSettings === 'function') {
+            window.openNotificationSettings(event);
+            return;
+        }
+        // Rückfall, falls die Seite nicht geladen ist.
         const box = document.getElementById('notif-settings');
         if (!box) return;
         const show = box.style.display === 'none' || !box.style.display;
         if (show) renderSettings();
         box.style.display = show ? 'block' : 'none';
-        const btn = document.getElementById('notif-settings-btn');
-        if (btn) btn.classList.toggle('active', show);
     };
 
     // Änderung an einer Einstellung -> speichern und neu einsammeln
@@ -787,15 +1114,28 @@
             const v = clampDays(el.value, DEFAULT_PREFS[k]);
             el.value = v;
             savePrefs({ [k]: v });
+        } else if (el.dataset.notifPrefHours) {
+            // Wiedererinnerung je Sorte, in Stunden. 0 = nur einmal melden.
+            const k = el.dataset.notifPrefHours;
+            let v = parseInt(el.value, 10);
+            if (isNaN(v) || v < 0) v = 0;
+            v = Math.min(720, v); // 30 Tage sind reichlich
+            el.value = v;
+            savePrefs({ [k]: v });
         } else {
             return;
+        }
+        // Die Einstellungsseite spiegelt den neuen Zustand (ausgegraute
+        // Fenster-Schalter, wenn eine Sorte abgeschaltet wurde).
+        if (typeof window.renderNotificationSettingsPage === 'function') {
+            window.renderNotificationSettingsPage();
         }
         cache = { at: 0, data: null };
         refresh({ push: false });
     }
 
     document.addEventListener('change', (e) => {
-        const el = e.target.closest('[data-notif-pref], [data-notif-pref-num], [data-notif-pref-sel]');
+        const el = e.target.closest('[data-notif-pref], [data-notif-pref-num], [data-notif-pref-sel], [data-notif-pref-hours]');
         if (el) { e.stopPropagation(); onPrefChange(el); }
     });
 
@@ -846,6 +1186,8 @@
         if (!panel) return;
         isOpen = !isOpen;
         panel.style.display = isOpen ? 'flex' : 'none';
+        if (!isOpen) isFull = false;
+        applyFull();
         if (isOpen) {
             // Ein noch stehender Scroll-Zustand würde das Panel abdunkeln.
             document.body.classList.remove('topbar-scrolling');
@@ -857,6 +1199,9 @@
     function closePanel() {
         const panel = document.getElementById('notif-panel');
         if (panel) panel.style.display = 'none';
+        // Vollansicht mit schließen — sonst bliebe die Abdunklung am body stehen.
+        isFull = false;
+        applyFull();
         const box = document.getElementById('notif-settings');
         if (box) box.style.display = 'none';
         const btn = document.getElementById('notif-settings-btn');
@@ -897,6 +1242,15 @@
             setTimeout(() => {
                 if (typeof window.switchEventsSubView === 'function') window.switchEventsSubView('calendar');
             }, 120);
+        } else if (targetType === 'service') {
+            // Servicebericht direkt zum Bearbeiten öffnen
+            if (typeof window.openEditServicebericht === 'function') {
+                window.openEditServicebericht(targetId);
+            }
+        } else if (targetType === 'customer') {
+            // Adresse aufschlagen — gleiche Weiche wie im Adress-Verlauf
+            if (typeof window.openAddressbookDetail === 'function') window.openAddressbookDetail(targetId);
+            else if (typeof window.openAddressDetail === 'function') window.openAddressDetail(targetId);
         } else if (targetType === 'angebot') {
             go('listen');
             setTimeout(() => {
@@ -938,16 +1292,47 @@
     // höchstens einmal — sonst wird man zugespammt.
     const PUSHED_KEY = 'meetra_notif_pushed_';
 
-    function pushedKeys() {
+    // Gemerkt wird jetzt der ZEITPUNKT je Eintrag, nicht nur "schon gemeldet".
+    // Nur so lässt sich "erinnere mich alle x Stunden erneut" umsetzen.
+    // Altbestand (eine reine Liste von Schlüsseln) wird übernommen und gilt
+    // als "gerade eben gemeldet".
+    function pushedMap() {
         const uid = currentUserId();
-        if (!uid) return new Set();
-        try { return new Set(JSON.parse(localStorage.getItem(PUSHED_KEY + uid) || '[]')); }
-        catch (e) { return new Set(); }
+        if (!uid) return {};
+        try {
+            const roh = JSON.parse(localStorage.getItem(PUSHED_KEY + uid) || '{}');
+            if (Array.isArray(roh)) {
+                const jetzt = Date.now();
+                const map = {};
+                roh.forEach(k => { map[k] = jetzt; });
+                return map;
+            }
+            return roh && typeof roh === 'object' ? roh : {};
+        } catch (e) { return {}; }
     }
 
-    function savePushed(set) {
+    function savePushed(map) {
         const uid = currentUserId();
-        if (uid) localStorage.setItem(PUSHED_KEY + uid, JSON.stringify([...set].slice(-300)));
+        if (!uid) return;
+        // Nur die 300 jüngsten behalten, sonst wächst der Eintrag endlos.
+        const paare = Object.keys(map).map(k => [k, map[k]])
+            .sort((a, b) => b[1] - a[1]).slice(0, 300);
+        const schlank = {};
+        paare.forEach(([k, t]) => { schlank[k] = t; });
+        localStorage.setItem(PUSHED_KEY + uid, JSON.stringify(schlank));
+    }
+
+    // Darf sich dieser Eintrag (wieder) melden?
+    //   noch nie gemeldet            -> ja
+    //   Abstand der Sorte ist 0      -> nein (einmal und gut)
+    //   letzte Meldung länger her    -> ja
+    function darfErneut(n, map, P) {
+        const zuletzt = map[n.key];
+        if (!zuletzt) return true;
+        const group = KIND_GROUP[n.kind];
+        const stunden = group ? Number(P['repeat_' + group]) : 0;
+        if (!stunden || stunden <= 0) return false;
+        return (Date.now() - zuletzt) >= stunden * 3600000;
     }
 
     window.notificationsPushEnabled = function () {
@@ -1013,9 +1398,14 @@
     }
 
     function pushUrgent() {
-        const pushed = pushedKeys();
+        const pushed = pushedMap();
+        const P = prefs();
+        // Glocke und Fenster arbeiten zusammen: was unter der Glocke schon
+        // gelesen wurde, macht kein Fenster mehr auf. Vorher meldete sich ein
+        // Eintrag noch einmal von aussen, obwohl man ihn längst gesehen hatte.
+        const read = readKeys();
 
-        const urgent = items.filter(n => mayPush(n) && !pushed.has(n.key));
+        const urgent = items.filter(n => mayPush(n) && !read.has(n.key) && darfErneut(n, pushed, P));
         if (!urgent.length) return;
 
         // Ohne erlaubte Systemmeldungen wenigstens im Fenster darauf hinweisen.
@@ -1023,7 +1413,7 @@
             const appts = urgent.filter(n => n.kind === 'appointment');
             appts.forEach(n => {
                 if (typeof window.showToast === 'function') window.showToast(`${n.title} — ${n.meta}`);
-                pushed.add(n.key);
+                pushed[n.key] = Date.now();
             });
             if (appts.length) savePushed(pushed);
             return;
@@ -1045,7 +1435,7 @@
             } catch (e) {
                 console.warn('Benachrichtigung konnte nicht angezeigt werden:', e);
             }
-            pushed.add(n.key);
+            pushed[n.key] = Date.now();
         });
         if (urgent.length > 3) {
             try {
@@ -1055,7 +1445,7 @@
                     icon: 'assets/icons/meetra_arrows_icon.png'
                 });
             } catch (e) { /* ignorieren */ }
-            urgent.slice(3).forEach(n => pushed.add(n.key));
+            urgent.slice(3).forEach(n => { pushed[n.key] = Date.now(); });
         }
         savePushed(pushed);
     }
@@ -1088,9 +1478,12 @@
         }
     }
 
-    function init() {
+    async function init() {
         if (!document.getElementById('notif-bell-btn')) return;
         renderPushToggle();
+        // Erst den geräteübergreifenden Stand holen, dann einsammeln — sonst
+        // liefe der erste Durchlauf noch mit den Voreinstellungen dieses Geräts.
+        await ladeAusDatenbank();
         refresh();
         setupRealtimeSubscriptions();
         // Regelmäßig aktualisieren, damit Fristen von selbst hochkommen.

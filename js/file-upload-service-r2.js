@@ -4,6 +4,65 @@
  */
 
 window.FileUploadService = {
+    // Kleinbilder gar nicht erst neu berechnen: unter dieser Grenze kostet das
+    // Umwandeln mehr Zeit, als es an Übertragung spart.
+    COMPRESS_MIN_BYTES: 300 * 1024,
+
+    // Der S3-Client wurde bisher für JEDE Datei neu gebaut — samt Prüfung, ob
+    // das SDK schon geladen ist. Einmal reicht; er ist zustandslos.
+    _r2: null,
+    async _r2Client() {
+        if (this._r2) return this._r2;
+        await window.loadAWSSDK();
+        this._r2 = new AWS.S3({
+            endpoint: 'https://855feaccf4d0215922275100e91c4656.r2.cloudflarestorage.com',
+            accessKeyId: '49a3cbad28594d9d5a90e46f3965133b',
+            secretAccessKey: '0642e23714ce5c9f805d0c2f8f59e7c9df01ba8ba7a728b9640b0db5341de797',
+            region: 'auto',
+            signatureVersion: 'v4',
+            // Wartet nicht endlos an einem hängenden Sockel, sondern versucht es neu.
+            httpOptions: { timeout: 120000, connectTimeout: 10000 },
+            maxRetries: 3
+        });
+        return this._r2;
+    },
+
+    // Zielmaße wie bisher — nur der Weg dorthin ist ein anderer.
+    MAX_EDGE: 1600,
+    WEBP_QUALITY: 0.75,
+
+    /**
+     * Ein Bild in einem Durchgang verkleinern und als WebP kodieren.
+     * Der bisherige Weg über imageCompression() suchte die Dateigröße iterativ
+     * (bis zu 12 Kodierdurchläufe je Bild) — das war der mit Abstand größte
+     * Zeitfresser beim Hochladen. createImageBitmap dekodiert außerhalb des
+     * Hauptstrangs, OffscreenCanvas kodiert einmal. Gibt null zurück, wenn der
+     * Browser das nicht kann; dann greift der alte Weg als Rückfall.
+     * imageOrientation:'from-image' ist Pflicht — sonst liegen Handyfotos quer.
+     */
+    async _schnellKomprimieren(file) {
+        if (typeof createImageBitmap !== 'function' || typeof OffscreenCanvas === 'undefined') return null;
+        let bitmap = null;
+        try {
+            bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+            const scale = Math.min(1, this.MAX_EDGE / Math.max(bitmap.width, bitmap.height));
+            const w = Math.max(1, Math.round(bitmap.width * scale));
+            const h = Math.max(1, Math.round(bitmap.height * scale));
+
+            const canvas = new OffscreenCanvas(w, h);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(bitmap, 0, 0, w, h);
+
+            const blob = await canvas.convertToBlob({ type: 'image/webp', quality: this.WEBP_QUALITY });
+            if (!blob || !blob.type || blob.type.indexOf('webp') === -1) return null; // WebP nicht unterstützt
+            return blob;
+        } catch (e) {
+            return null;
+        } finally {
+            if (bitmap && bitmap.close) bitmap.close();
+        }
+    },
+
     /**
      * Compresses an image file and converts it to WebP.
      * @param {File} file
@@ -11,19 +70,25 @@ window.FileUploadService = {
      */
     async compressImage(file) {
         if (!file.type.startsWith('image/')) return file;
+        // Schon klein genug — unverändert lassen.
+        if (file.size <= this.COMPRESS_MIN_BYTES) return file;
 
         const options = {
-            maxSizeMB: 1,
-            maxWidthOrHeight: 1600,
+            // Die Größenvorgabe absichtlich hoch: browser-image-compression
+            // kodiert sonst mehrfach, bis der Wert unterschritten ist. Maß und
+            // Qualität unten drücken die Datei ohnehin weit unter 1 MB.
+            maxSizeMB: 100,
+            maxWidthOrHeight: this.MAX_EDGE,
             useWebWorker: true,
             fileType: 'image/webp',
-            initialQuality: 0.75,
-            maxIteration: 12
+            initialQuality: this.WEBP_QUALITY,
+            maxIteration: 1
         };
 
         try {
             console.log(`Compressing ${file.name}...`);
-            const compressedBlob = await imageCompression(file, options);
+            const compressedBlob = (await this._schnellKomprimieren(file))
+                || await imageCompression(file, options);
 
             // iPhone-Fotos liegen oft als HEIC vor, das deutlich effizienter komprimiert als WebP —
             // nach der Umwandlung kann die Datei dadurch trotz "Komprimierung" größer werden.
@@ -51,6 +116,32 @@ window.FileUploadService = {
      */
     async generateThumbnail(file, maxSize = 400) {
         if (!file || !file.type || !file.type.startsWith('image/')) return null;
+
+        // Schneller Weg: createImageBitmap dekodiert außerhalb des Hauptstrangs
+        // und kann dabei gleich verkleinern — das Bild muss nicht erst über ein
+        // <img>-Element und die Objekt-URL laufen. Klappt das nicht, greift der
+        // bisherige Weg darunter unverändert.
+        if (typeof createImageBitmap === 'function' && typeof OffscreenCanvas !== 'undefined') {
+            let bitmap = null;
+            try {
+                bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+                const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
+                const w = Math.max(1, Math.round(bitmap.width * scale));
+                const h = Math.max(1, Math.round(bitmap.height * scale));
+                const canvas = new OffscreenCanvas(w, h);
+                canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h);
+                const blob = await canvas.convertToBlob({ type: 'image/webp', quality: 0.7 });
+                if (blob && blob.type && blob.type.indexOf('webp') !== -1) {
+                    return new File([blob], file.name.replace(/\.[^/.]+$/, '') + '_thumb.webp', {
+                        type: 'image/webp', lastModified: Date.now()
+                    });
+                }
+            } catch (e) {
+                // weiter mit dem Weg darunter
+            } finally {
+                if (bitmap && bitmap.close) bitmap.close();
+            }
+        }
 
         return new Promise((resolve, reject) => {
             const img = new Image();
@@ -123,15 +214,7 @@ window.FileUploadService = {
         // --- CLOUDFLARE R2 PROVIDER ---
         if (provider === 'cloudflare-r2') {
             try {
-                await window.loadAWSSDK();
-                // Initialize AWS S3 Client for Cloudflare R2
-                const s3 = new AWS.S3({
-                    endpoint: 'https://855feaccf4d0215922275100e91c4656.r2.cloudflarestorage.com',
-                    accessKeyId: '49a3cbad28594d9d5a90e46f3965133b',
-                    secretAccessKey: '0642e23714ce5c9f805d0c2f8f59e7c9df01ba8ba7a728b9640b0db5341de797',
-                    region: 'auto',
-                    signatureVersion: 'v4'
-                });
+                const s3 = await this._r2Client();
 
                 const R2_BUCKET_NAME = window.R2_BUCKET_NAME || 'dateien';
                 const R2_PUBLIC_URL = window.R2_PUBLIC_URL || 'https://pub-28aab7dd73f540f38b6358d78f889a27.r2.dev';
@@ -197,20 +280,59 @@ window.FileUploadService = {
      * @param {Function} pathGenerator (file, index) => string
      * @param {Object} options { bucket, compress, concurrency }
      */
-    async uploadFiles(files, pathGenerator, { bucket, compress = true, concurrency = 5, provider = 'supabase' }) {
+    async uploadFiles(files, pathGenerator, { bucket, compress = true, concurrency = 8, provider = 'supabase', onUploaded = null }) {
+        const list = Array.from(files || []);
+        if (!list.length) return [];
         const results = [];
-        const queue = [...files.entries()];
 
-        const workers = Array(Math.min(concurrency, files.length)).fill(null).map(async () => {
-            while (queue.length > 0) {
-                const [index, file] = queue.shift();
-                const path = pathGenerator(file, index);
-                const result = await this.uploadFile(file, { bucket, path, compress, provider });
-                results[index] = result;
+        // Zweistufig statt nacheinander: Rechnen und Übertragen sind
+        // verschiedene Engpässe. Vorher machte jeder Arbeiter
+        // komprimieren → hochladen → komprimieren → …, wodurch die Leitung
+        // während des Rechnens brachlag und umgekehrt. Jetzt läuft die
+        // Komprimierung mit eigener Begrenzung voraus (so viele gleichzeitig,
+        // wie der Rechner Kerne hat), die Übertragung holt sie einzeln ab.
+        const cpu = Math.max(2, Math.min(4, (navigator.hardwareConcurrency || 4) - 1));
+        const vorbereitet = new Array(list.length);
+        let naechsterZumRechnen = 0;
+
+        function rechnerFrei(service) {
+            if (naechsterZumRechnen >= list.length) return null;
+            const i = naechsterZumRechnen++;
+            const file = list[i];
+            const p = (compress && file.type && file.type.startsWith('image/'))
+                ? service.compressImage(file).catch(() => file)
+                : Promise.resolve(file);
+            vorbereitet[i] = p;
+            // Sobald einer fertig ist, den nächsten anstoßen — so sind nie mehr
+            // als `cpu` Bilder gleichzeitig im Speicher entpackt.
+            p.then(() => rechnerFrei(service), () => rechnerFrei(service));
+            return p;
+        }
+        for (let k = 0; k < Math.min(cpu, list.length); k++) rechnerFrei(this);
+
+        let naechsterZumSenden = 0;
+        const sender = Array(Math.min(concurrency, list.length)).fill(null).map(async () => {
+            while (naechsterZumSenden < list.length) {
+                const index = naechsterZumSenden++;
+                // Pfad weiterhin aus der Originaldatei — die Module leiten die
+                // Dateiendung daraus ab.
+                const path = pathGenerator(list[index], index);
+                // Wurde dieser Eintrag noch nicht angestoßen (mehr Sender als
+                // Rechner), dann jetzt.
+                while (!vorbereitet[index]) rechnerFrei(this);
+                const fertig = await vorbereitet[index];
+                vorbereitet[index] = null; // Speicher freigeben
+                results[index] = await this.uploadFile(fertig, {
+                    bucket, path, compress: false, provider
+                });
+                // Nacharbeit (z. B. Vorschaubild) gleich hier statt in einem
+                // zweiten Durchgang — sie läuft dann neben den übrigen
+                // Übertragungen und bekommt die bereits verkleinerte Datei.
+                if (onUploaded) await onUploaded(index, results[index], fertig);
             }
         });
 
-        await Promise.all(workers);
+        await Promise.all(sender);
         return results;
     },
 
@@ -224,14 +346,7 @@ window.FileUploadService = {
 
         if (provider === 'cloudflare-r2') {
             try {
-                await window.loadAWSSDK();
-                const s3 = new AWS.S3({
-                    endpoint: 'https://855feaccf4d0215922275100e91c4656.r2.cloudflarestorage.com',
-                    accessKeyId: '49a3cbad28594d9d5a90e46f3965133b',
-                    secretAccessKey: '0642e23714ce5c9f805d0c2f8f59e7c9df01ba8ba7a728b9640b0db5341de797',
-                    region: 'auto',
-                    signatureVersion: 'v4'
-                });
+                const s3 = await this._r2Client();
 
                 const R2_BUCKET_NAME = window.R2_BUCKET_NAME || 'dateien';
 
@@ -270,14 +385,7 @@ window.FileUploadService = {
 
         if (provider === 'cloudflare-r2') {
             try {
-                await window.loadAWSSDK();
-                const s3 = new AWS.S3({
-                    endpoint: 'https://855feaccf4d0215922275100e91c4656.r2.cloudflarestorage.com',
-                    accessKeyId: '49a3cbad28594d9d5a90e46f3965133b',
-                    secretAccessKey: '0642e23714ce5c9f805d0c2f8f59e7c9df01ba8ba7a728b9640b0db5341de797',
-                    region: 'auto',
-                    signatureVersion: 'v4'
-                });
+                const s3 = await this._r2Client();
 
                 const R2_BUCKET_NAME = window.R2_BUCKET_NAME || 'dateien';
 

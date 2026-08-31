@@ -420,12 +420,114 @@
                 window.machineEquipmentCatalogIds.push(id);
             }
             populateMachineEquipmentCatalogDropdown();
+            // Die Liste wurde neu gebaut, die Höhe kann sich geändert haben.
+            if (typeof katalogPositionieren === 'function') katalogPositionieren();
+        };
+
+        // ---------------------------------------------------------------
+        // Auf- und Zuklappen des Katalog-Menüs
+        // ---------------------------------------------------------------
+        // Das Menü liegt per position:absolute im Formularbereich des Modals.
+        // Der scrollt (overflow-y:auto) und schnitt das aufgeklappte Menü ab —
+        // je weiter unten das Feld steht, desto mehr; ganz unten war davon fast
+        // nichts mehr zu sehen. Gleiche Lösung wie in js/dropdown-position.js:
+        // beim Öffnen auf position:fixed umstellen und am Feld ausrichten,
+        // beim Schließen zurücksetzen.
+        //
+        // Dazu fehlten zwei Selbstverständlichkeiten: ein Klick daneben schloss
+        // es nicht, und ein Klick INS Menü (Rand, Bildlaufleiste) landete am
+        // onclick des Rahmens und klappte es wieder zu.
+        const KATALOG_ABSTAND = 8;
+        const KATALOG_RAND = 12;
+
+        function katalogMenu() {
+            const dd = document.getElementById('machine-equipment-catalog-dropdown');
+            return dd ? dd.querySelector('.custom-filter-menu') : null;
+        }
+
+        function katalogPositionieren() {
+            const dd = document.getElementById('machine-equipment-catalog-dropdown');
+            const menu = katalogMenu();
+            if (!dd || !menu) return;
+
+            const gescrollt = menu.scrollTop;
+            const setz = (p, v) => menu.style.setProperty(p, v, 'important');
+
+            // Zurücksetzen, damit die natürliche Höhe messbar ist
+            menu.style.removeProperty('max-height');
+            const hoehe = Math.min(menu.offsetHeight || 250, 250);
+
+            const t0 = dd.getBoundingClientRect();
+            const platzUnten = window.innerHeight - t0.bottom - KATALOG_ABSTAND - KATALOG_RAND;
+            const platzOben = t0.top - KATALOG_ABSTAND - KATALOG_RAND;
+            const nachOben = platzUnten < hoehe && platzOben > platzUnten;
+            const maxHoehe = Math.min(250, Math.max(120, nachOben ? platzOben : platzUnten));
+
+            setz('position', 'fixed');
+            setz('min-width', '0');
+            setz('right', 'auto');
+            setz('bottom', 'auto');
+            setz('margin', '0');
+            setz('max-height', maxHoehe + 'px');
+
+            // Das Modal hat backdrop-filter und ist dadurch SELBST der
+            // Bezugsrahmen für position:fixed — Bildschirmkoordinaten landen
+            // deshalb versetzt (das Menü stand oben rechts statt unter dem Feld).
+            // Wie in js/dropdown-position.js wird der Versatz gemessen und
+            // ausgeglichen, statt den Bezugsrahmen zu suchen. Zwei Durchläufe,
+            // weil das Setzen der Breite einen Scrollbalken auslösen kann und
+            // sich das Feld dadurch nochmals verschiebt.
+            let versatzX = 0, versatzY = 0;
+            for (let i = 0; i < 2; i++) {
+                const feld = dd.getBoundingClientRect();
+                setz('width', feld.width + 'px');
+
+                const zielLinks = feld.left;
+                const zielOben = nachOben
+                    ? feld.top - menu.offsetHeight - KATALOG_ABSTAND
+                    : feld.bottom + KATALOG_ABSTAND;
+
+                setz('left', (zielLinks + versatzX) + 'px');
+                setz('top', (zielOben + versatzY) + 'px');
+
+                const ist = menu.getBoundingClientRect();
+                const dx = zielLinks - ist.left;
+                const dy = zielOben - ist.top;
+                if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) break;
+                versatzX += dx;
+                versatzY += dy;
+            }
+
+            if (gescrollt) menu.scrollTop = gescrollt;
+        }
+
+        window.closeMachineEquipmentCatalogDropdown = function () {
+            const dd = document.getElementById('machine-equipment-catalog-dropdown');
+            if (!dd || !dd.classList.contains('active')) return;
+            dd.classList.remove('active');
+            dd.closest('.form-group')?.classList.remove('has-active-dropdown');
+            const menu = katalogMenu();
+            if (menu) {
+                // Alles zurücknehmen, sonst hängt das Menü beim nächsten Öffnen
+                // noch an der alten Stelle, bevor neu gerechnet wird.
+                ['position', 'left', 'top', 'bottom', 'width', 'min-width', 'right', 'margin', 'max-height']
+                    .forEach(p => menu.style.removeProperty(p));
+            }
         };
 
         window.toggleMachineEquipmentCatalogDropdown = function (event) {
-            if (event) event.stopPropagation();
             const dropdown = document.getElementById('machine-equipment-catalog-dropdown');
             if (!dropdown) return;
+
+            // Klick innerhalb des offenen Menüs: nichts tun. Die Einträge haben
+            // ihren eigenen Handler; alles andere (Rand, Bildlaufleiste) darf
+            // das Menü nicht zuklappen.
+            if (event && event.target.closest('.custom-filter-menu')) {
+                event.stopPropagation();
+                return;
+            }
+            if (event) event.stopPropagation();
+
             const isOpen = dropdown.classList.contains('active');
 
             document.querySelectorAll('.custom-filter-dropdown.active').forEach(d => {
@@ -433,11 +535,40 @@
                 d.closest('.form-group')?.classList.remove('has-active-dropdown');
             });
 
-            if (!isOpen) {
-                dropdown.classList.add('active');
-                dropdown.closest('.form-group')?.classList.add('has-active-dropdown');
+            if (isOpen) {
+                window.closeMachineEquipmentCatalogDropdown();
+                return;
             }
+
+            dropdown.classList.add('active');
+            dropdown.closest('.form-group')?.classList.add('has-active-dropdown');
+            katalogPositionieren();
         };
+
+        // Klick daneben, Escape, Scrollen und Größenänderung schließen bzw.
+        // richten das Menü neu aus.
+        document.addEventListener('click', (e) => {
+            const dd = document.getElementById('machine-equipment-catalog-dropdown');
+            if (!dd || !dd.classList.contains('active')) return;
+            if (e.target.closest('#machine-equipment-catalog-dropdown')) return;
+            window.closeMachineEquipmentCatalogDropdown();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') window.closeMachineEquipmentCatalogDropdown();
+        });
+
+        window.addEventListener('resize', () => {
+            const dd = document.getElementById('machine-equipment-catalog-dropdown');
+            if (dd && dd.classList.contains('active')) katalogPositionieren();
+        });
+
+        // Beim Scrollen im Modal mitwandern (capture, weil der Formularbereich
+        // scrollt, nicht das Fenster).
+        document.addEventListener('scroll', () => {
+            const dd = document.getElementById('machine-equipment-catalog-dropdown');
+            if (dd && dd.classList.contains('active')) katalogPositionieren();
+        }, true);
 
         async function deleteR2FileHelper(url) {
             if (!url) return;
@@ -498,10 +629,17 @@
             return imageUrl; // Fallback: use original
         };
 
-        function handleMachineFiles(files) {
-            Array.from(files).forEach(file => {
-                machineFiles.push(file);
-            });
+        async function handleMachineFiles(files) {
+            // Schon ausgewaehlte oder bereits gespeicherte Dateien nicht erneut
+            // aufnehmen — sonst landen sie ein zweites Mal in R2 und in der Liste.
+            const vorhanden = machineFiles.concat(
+                (existingMachineFiles || [])
+                    .filter(f => f && f.type !== 'meta')
+                    .map(f => (typeof f === 'string' ? { url: f } : f))
+            );
+            const { neu, doppelt } = await window.PhotoDedupe.pruefeAuswahl(files, vorhanden);
+            window.PhotoDedupe.meldeDoppelte(doppelt);
+            neu.forEach(eintrag => machineFiles.push(eintrag.file));
             renderMachineFilePreviews();
         }
 
@@ -687,46 +825,50 @@
                     return `${folderName}/${subfolder}/${cleanName}_${Date.now()}-${i}.${fileExt}`;
                 };
 
+                // Vorschaubild direkt nach jeder Datei erzeugen (onUploaded) statt
+                // in einem zweiten Durchgang danach. Zwei Gewinne: es läuft neben
+                // den übrigen Übertragungen, und es entsteht aus der bereits
+                // verkleinerten Fassung — das Original musste vorher ein zweites
+                // Mal vollständig dekodiert werden (bei Handyfotos der teuerste
+                // Einzelschritt).
+                const thumbResultsOrdered = new Array(machineFiles.length);
                 const uploadResults = await window.FileUploadService.uploadFiles(
                     machineFiles,
                     pathGenerator,
-                    { bucket: 'dateien', compress: true, concurrency: 5, provider: 'cloudflare-r2' }
-                );
+                    {
+                        bucket: 'dateien', compress: true, provider: 'cloudflare-r2',
+                        onUploaded: async (i, res, fertigeDatei) => {
+                            const originalFile = machineFiles[i];
+                            const fileEntry = { name: res.name, type: res.type, url: res.url };
 
-                // For each uploaded file, generate thumbnail if it's an image
-                // (parallelized with a small concurrency pool — sequential was the main bottleneck for many photos)
-                const thumbConcurrency = 5;
-                const thumbQueue = [...uploadResults.entries()];
-                const thumbResultsOrdered = new Array(uploadResults.length);
-                const thumbWorkers = Array(Math.min(thumbConcurrency, uploadResults.length)).fill(null).map(async () => {
-                    while (thumbQueue.length > 0) {
-                        const [i, res] = thumbQueue.shift();
-                        const originalFile = machineFiles[i];
-                        const fileEntry = { name: res.name, type: res.type, url: res.url };
-
-                        if (originalFile.type && originalFile.type.startsWith('image/') && res.path) {
-                            try {
-                                const thumbFile = await window.FileUploadService.generateThumbnail(originalFile);
-                                if (thumbFile) {
-                                    const thumbPath = res.path.replace('/Vorschaubilder/', '/Vorschaubilder/thumbs/');
-                                    const thumbResult = await window.FileUploadService.uploadFile(thumbFile, {
-                                        bucket: 'dateien',
-                                        path: thumbPath,
-                                        compress: false,
-                                        provider: 'cloudflare-r2'
-                                    });
-                                    fileEntry.thumbnail_url = thumbResult.url;
-                                    console.log(`Thumbnail uploaded: ${thumbResult.url}`);
+                            if (originalFile.type && originalFile.type.startsWith('image/') && res.path) {
+                                try {
+                                    const thumbFile = await window.FileUploadService.generateThumbnail(fertigeDatei || originalFile);
+                                    if (thumbFile) {
+                                        const thumbPath = res.path.replace('/Vorschaubilder/', '/Vorschaubilder/thumbs/');
+                                        const thumbResult = await window.FileUploadService.uploadFile(thumbFile, {
+                                            bucket: 'dateien',
+                                            path: thumbPath,
+                                            compress: false,
+                                            provider: 'cloudflare-r2'
+                                        });
+                                        fileEntry.thumbnail_url = thumbResult.url;
+                                    }
+                                } catch (thumbErr) {
+                                    console.warn('Thumbnail generation failed for', originalFile.name, thumbErr);
                                 }
-                            } catch (thumbErr) {
-                                console.warn('Thumbnail generation failed for', originalFile.name, thumbErr);
                             }
-                        }
 
-                        thumbResultsOrdered[i] = fileEntry;
+                            thumbResultsOrdered[i] = fileEntry;
+                        }
+                    }
+                );
+                // Sicherheitsnetz, falls onUploaded für einen Eintrag ausfiel.
+                uploadResults.forEach((res, i) => {
+                    if (!thumbResultsOrdered[i]) {
+                        thumbResultsOrdered[i] = { name: res.name, type: res.type, url: res.url };
                     }
                 });
-                await Promise.all(thumbWorkers);
                 uploadedFiles.push(...thumbResultsOrdered);
             }
             return uploadedFiles;

@@ -11,9 +11,9 @@
 // ansicht und trugen den Maschinennamen ins Suchfeld ein —
 // gesucht wurde also quer über alle Maschinen.
 //
-// Mietvereinbarung und UVV- & Wartungsprotokoll haben ihre
-// eigenen Fenster (js/mietvereinbarung-liste.js,
-// js/uvv-protokoll.js) und werden von hier nur weitergereicht.
+// Die Mietvereinbarung hat ihr eigenes Fenster
+// (js/mietvereinbarung-liste.js) und wird von hier nur
+// weitergereicht.
 //
 // Stile: css/views/uvv-protokoll.css (.uvvp-*).
 // ==========================================================
@@ -27,11 +27,12 @@
 
     function sb() { return window.supabaseClient; }
 
-    function uvvTitel() { return window.UVV_PROTOKOLL_TITEL || 'UVV- & Wartungsprotokoll'; }
-
     // Titel, die in service_entries liegen, aber KEIN Servicebericht sind.
+    // 'UVV- & Wartungsprotokoll' stand hier, solange es das eigenständige
+    // Fenster gab. Dessen Altbestände sind jetzt normale Serviceberichte und
+    // sollen in der Liste auch auftauchen.
     function keineBerichte() {
-        return ['Werkstattaufenthalt Beginn', 'Werkstattaufenthalt Ende', uvvTitel()];
+        return ['Werkstattaufenthalt Beginn', 'Werkstattaufenthalt Ende'];
     }
 
     const ARTEN = {
@@ -46,8 +47,17 @@
         abnahmeprotokoll: {
             label: 'Abnahmeprotokolle',
             neu: () => window.startReportCreation && window.startReportCreation('abnahmeprotokoll')
+        },
+        // Interne Berichte: liegen in derselben Tabelle wie die übrigen
+        // Serviceberichte, erkennbar allein am Titel (siehe INTERN_TITEL).
+        intern: {
+            label: 'Interne UVV & Wartungsprotokolle',
+            neu: () => window.startReportCreation && window.startReportCreation('uvv-protokoll')
         }
     };
+
+    // Titel, den startReportCreation('uvv-protokoll') setzt (js/history-modal.js).
+    const INTERN_TITEL = 'Servicebericht (Intern)';
 
     let art = 'servicebericht';
     let maschinenId = null;
@@ -69,13 +79,9 @@
     // Öffnen
     // ------------------------------------------------------
     window.showMachineDocuments = async function (artKey, machineId) {
-        // Die beiden eigenständigen Bausteine haben ihre eigene Übersicht.
+        // Die Mietvereinbarung hat ihre eigene Übersicht.
         if (artKey === 'mietvereinbarung' && typeof window.showMietvereinbarungenForMachine === 'function') {
             window.showMietvereinbarungenForMachine(machineId);
-            return;
-        }
-        if (artKey === 'uvv' && typeof window.showUvvProtokolleForMachine === 'function') {
-            window.showUvvProtokolleForMachine(machineId);
             return;
         }
 
@@ -98,7 +104,7 @@
     };
 
     async function lade() {
-        if (art === 'servicebericht') {
+        if (art === 'servicebericht' || art === 'intern') {
             const { data, error } = await sb()
                 .from('service_entries')
                 .select('id, title, date, created_at, description, pdf_url, technicians, operating_hours, is_finalized')
@@ -106,7 +112,12 @@
                 .order('date', { ascending: false });
             if (error) throw error;
             const aus = keineBerichte();
-            return (data || []).filter(z => !aus.includes(z.title));
+            const alle = (data || []).filter(z => !aus.includes(z.title));
+            // Interne Berichte stehen in ihrer eigenen Liste — und tauchen
+            // dadurch nicht doppelt unter „Serviceberichte" auf.
+            return art === 'intern'
+                ? alle.filter(z => z.title === INTERN_TITEL)
+                : alle.filter(z => z.title !== INTERN_TITEL);
         }
 
         const tabelle = art === 'eingangsprotokoll' ? 'intake_protocols' : 'acceptance_protocols';
@@ -128,7 +139,7 @@
         const mid = maschinenId;
         const a = art;
         window.protokollListeSchliessen();
-        if (a === 'servicebericht') {
+        if (a === 'servicebericht' || a === 'intern') {
             if (typeof window.openEditServicebericht === 'function') window.openEditServicebericht(id);
         } else if (a === 'eingangsprotokoll') {
             if (typeof window.openIntakeProtocol === 'function') window.openIntakeProtocol(mid, id);

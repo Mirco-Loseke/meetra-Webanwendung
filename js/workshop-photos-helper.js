@@ -2,13 +2,15 @@
    Workshop Photos & Mobile Navigation Helper Functions
    ========================================================================== */
 
-window.handleWorkshopPhotoSelect = function (event) {
+window.handleWorkshopPhotoSelect = async function (event) {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
-    for (let i = 0; i < files.length; i++) {
-        window.workshopPhotosToUpload.push(files[i]);
-    }
+    // Nichts doppelt: dasselbe Bild ein zweites Mal ausgewaehlt wird
+    // uebersprungen (js/photo-dedupe.js).
+    const { neu, doppelt } = await window.PhotoDedupe.pruefeAuswahl(files, window.workshopPhotosToUpload);
+    window.PhotoDedupe.meldeDoppelte(doppelt);
+    neu.forEach(eintrag => window.workshopPhotosToUpload.push(eintrag.file));
 
     event.target.value = ''; // Reset input
     window.renderWorkshopPhotoPreview();
@@ -167,8 +169,18 @@ window.handleAppendPhotoSelect = async function (event) {
             const ext = file.name.split('.').pop();
             return `${appFolderName}/Werkstatt/${Date.now()}-append-${i}.${ext}`;
         };
+        // Innerhalb der Auswahl doppelt Angetippte nur einmal hochladen.
+        const appAuswahl = await window.PhotoDedupe.pruefeAuswahl(files, []);
+        window.PhotoDedupe.meldeDoppelte(appAuswahl.doppelt);
+        const appDateien = appAuswahl.neu.map(e => e.file);
+        if (!appDateien.length) {
+            listContainer.style.opacity = '';
+            listContainer.style.pointerEvents = '';
+            return;
+        }
+
         const appUploadResults = await window.FileUploadService.uploadFiles(
-            Array.from(files),
+            appDateien,
             appPathGenerator,
             { bucket: 'dateien', compress: true, concurrency: 5, provider: 'cloudflare-r2' }
         );

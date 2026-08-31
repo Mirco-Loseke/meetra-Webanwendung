@@ -302,6 +302,10 @@
                         // eine uuid-Spalte und bleibt bei ihnen leer — wer nur
                         // user_id prüft, sieht seine eigenen Termine nicht.
                         mine: isMine(null, ev.created_by_user) || isMine(null, ev.user_id) || !!mineInvite,
+                        // Termine und Wartungen können abgehakt werden — der
+                        // Stand liegt in maintenance_events.status.
+                        done: ev.status === 'erledigt',
+                        erledigbarId: ev.id,
                         editableId: ev.id,
                         eventId: ev.id,
                         participants,
@@ -537,6 +541,19 @@
             const dots = types.slice(0, 5)
                 .map(t => `<i style="background:${TYPES[t].color}"></i>`).join('');
 
+            // Zusätzliches Kennzeichen, ob an diesem Tag noch etwas offen ist.
+            // Die Farben der Arten bleiben unverändert — nur ein kleiner Haken
+            // (alles erledigt) bzw. ein Punkt (noch offen) oben rechts im Feld.
+            const tagesZeilen = rowsByDay[key] || [];
+            const abhakbar = tagesZeilen.filter(r => r.erledigbarId);
+            let stand = '';
+            if (abhakbar.length) {
+                const offen = abhakbar.filter(r => !r.done).length;
+                stand = offen === 0
+                    ? '<span class="calw-cell-state is-done" title="Alles erledigt">✓</span>'
+                    : `<span class="calw-cell-state is-open" title="${offen} noch offen">${offen}</span>`;
+            }
+
             // In der Vollansicht ist Platz für die Titel selbst statt nur Punkte.
             let body = `<span class="calw-dots">${dots}</span>`;
             if (state.full) {
@@ -550,7 +567,9 @@
                     const tip = r.title + (r.subject ? ' – ' + r.subject : '')
                         + (span ? ` (${fmtDate(r.spanStart)} – ${fmtDate(r.spanEnd)}, Tag ${r.spanIndex} von ${r.spanTotal})` : '');
                     const label = (span && r.spanPos !== 'start') ? '' : esc(r.title);
-                    return `<span class="${cls}" style="--calw-type:${TYPES[r.type].color};" title="${esc(tip)}">
+                    // Erledigtes wird durchgestrichen und blasser — die Farbe
+                    // der Art bleibt, damit die Zuordnung erhalten bleibt.
+                    return `<span class="${cls}${r.done ? ' is-done' : ''}" style="--calw-type:${TYPES[r.type].color};" title="${esc(tip)}${r.done ? ' — erledigt' : ''}">
                         <i></i>${label}
                     </span>`;
                 }).join('');
@@ -559,10 +578,33 @@
 
             html += `<button type="button" class="${cls}" data-calw-day="${key}">
                 <span class="calw-cell-num">${d}</span>
+                ${stand}
                 ${body}
             </button>`;
         }
         return html;
+    }
+
+    // Termin/Wartung abhaken. Geschrieben wird maintenance_events.status;
+    // die Farben der Arten bleiben unangetastet — „erledigt" ist ein
+    // zusätzliches Kennzeichen, keine andere Farbe.
+    async function erledigtUmschalten(id, erledigt) {
+        const eintrag = entries.find(x => String(x.erledigbarId) === String(id));
+        if (eintrag) { eintrag.done = erledigt; render(); } // sofort sichtbar
+
+        try {
+            const { error } = await sb().from('maintenance_events')
+                .update({ status: erledigt ? 'erledigt' : 'geplant' })
+                .eq('id', id);
+            if (error) throw error;
+            if (window.showToast) {
+                window.showToast(erledigt ? 'Als erledigt markiert.' : 'Wieder als offen markiert.');
+            }
+        } catch (err) {
+            if (eintrag) { eintrag.done = !erledigt; render(); } // zurücknehmen
+            console.warn('Erledigt-Kennzeichen konnte nicht gespeichert werden:', err.message || err);
+            if (window.showToast) window.showToast('Konnte nicht gespeichert werden.', 'error');
+        }
     }
 
     function entryHtml(e) {
@@ -591,6 +633,11 @@
             </div>
             ${e.myStatus && window.appointmentResponseButtons
                 ? window.appointmentResponseButtons(e.eventId, e.myStatus) : ''}
+            ${e.erledigbarId ? `<button type="button" class="calw-entry-check${e.done ? ' is-done' : ''}"
+                data-calw-done="${esc(e.erledigbarId)}" data-calw-done-state="${e.done ? '1' : '0'}"
+                title="${e.done ? 'Wieder als offen markieren' : 'Als erledigt markieren'}">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </button>` : ''}
             ${e.editableId ? `<button type="button" class="calw-entry-edit" data-calw-edit="${esc(e.editableId)}" title="Eintrag bearbeiten">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg>
             </button>` : ''}
@@ -1259,6 +1306,14 @@
             state.selectedDay = null;
             saveFilters();
             render();
+            return;
+        }
+
+        if ((el = hit('data-calw-done'))) {
+            e.stopPropagation();
+            const id = el.getAttribute('data-calw-done');
+            const warErledigt = el.getAttribute('data-calw-done-state') === '1';
+            erledigtUmschalten(id, !warErledigt);
             return;
         }
 

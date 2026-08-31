@@ -8,6 +8,38 @@
 // lokal zu dieser Funktion geworden.
 // ==========================================================
 
+// Betriebsstunden stehen mal als Zahl, mal als Text in der Datenbank
+// ("1234", "1.234", "1234,5", "1234 Std."). Für den Vergleich zweier
+// Ablesungen braucht es eine echte Zahl — ohne diese Umwandlung würde
+// "900" als größer gelten als "1.200" (Textvergleich).
+window.stundenZahl = function (roh) {
+    if (roh == null) return null;
+    if (typeof roh === 'number') return isFinite(roh) ? roh : null;
+
+    let s = String(roh).trim().replace(/[^\d.,-]/g, ''); // Einheiten weg
+    if (!s) return null;
+
+    const hatPunkt = s.indexOf('.') !== -1;
+    const hatKomma = s.indexOf(',') !== -1;
+    if (hatPunkt && hatKomma) {
+        // Beides: das hintere Zeichen ist das Dezimaltrennzeichen.
+        s = s.lastIndexOf(',') > s.lastIndexOf('.')
+            ? s.replace(/\./g, '').replace(',', '.')
+            : s.replace(/,/g, '');
+    } else if (hatKomma) {
+        s = s.replace(',', '.');
+    } else if (hatPunkt) {
+        // Nur Punkte: "1.234" ist der Tausenderpunkt, "1234.5" die Nachkommastelle.
+        const teile = s.split('.');
+        const letzter = teile[teile.length - 1];
+        if (teile.length > 2 || letzter.length === 3) s = teile.join('');
+    }
+
+    const n = parseFloat(s);
+    return isFinite(n) ? n : null;
+};
+const stundenZahl = window.stundenZahl;
+
 window.initMachineDetailsModal = function () {
             // Baut eine Google-Maps-Routenplanung (Start: meetra-Firmenadresse) statt nur einer Orts-Suche.
             window.buildGoogleRouteUrl = function (destinationQuery) {
@@ -555,6 +587,12 @@ window.initMachineDetailsModal = function () {
                 }
 
                 try {
+                    // Nicht nur die letzte Ablesung holen, sondern alle: bei
+                    // älteren Maschinen mit analogem Zähler kommt es vor, dass
+                    // der Zähler stehenbleibt und getauscht wird — danach zählt
+                    // er wieder bei null. Die neueste Ablesung allein sieht dann
+                    // so aus, als hätte die Maschine kaum gelaufen. Deshalb wird
+                    // zusätzlich der höchste je abgelesene Stand gesucht.
                     const [opRes, manualHoursRes] = await Promise.all([
                         window.supabaseClient
                             .from('service_entries')
@@ -563,29 +601,53 @@ window.initMachineDetailsModal = function () {
                             .not('operating_hours', 'is', null)
                             .neq('operating_hours', '')
                             .order('date', { ascending: false })
-                            .limit(1),
+                            .limit(500),
                         window.supabaseClient
                             .from('manual_history_entries')
                             .select('content, created_at')
                             .eq('machine_id', id)
                             .eq('type', 'hours')
                             .order('created_at', { ascending: false })
-                            .limit(1)
+                            .limit(500)
                     ]);
 
-                    const opCandidate = (opRes.data && opRes.data[0]) ? { hours: opRes.data[0].operating_hours, date: new Date(opRes.data[0].date) } : null;
-                    const manualCandidate = (manualHoursRes.data && manualHoursRes.data[0]) ? { hours: manualHoursRes.data[0].content, date: new Date(manualHoursRes.data[0].created_at) } : null;
+                    const ablesungen = []
+                        .concat((opRes.data || []).map(r => ({ roh: r.operating_hours, date: new Date(r.date) })))
+                        .concat((manualHoursRes.data || []).map(r => ({ roh: r.content, date: new Date(r.created_at) })))
+                        .map(a => ({ roh: a.roh, date: a.date, zahl: stundenZahl(a.roh) }))
+                        .filter(a => a.zahl !== null && !isNaN(a.date.getTime()))
+                        .sort((a, b) => b.date - a.date); // neueste zuerst
 
-                    let latestHours = null;
-                    if (opCandidate && manualCandidate) {
-                        latestHours = opCandidate.date >= manualCandidate.date ? opCandidate : manualCandidate;
-                    } else {
-                        latestHours = opCandidate || manualCandidate;
-                    }
+                    const latestHours = ablesungen[0] || null;
 
                     if (latestHours) {
-                        hoursEl.textContent = `${latestHours.hours} Std.`;
-                        hoursDateEl.textContent = `Letzte Ablesung: ${latestHours.date.toLocaleDateString('de-DE')}`;
+                        // Höchster Stand vor der letzten Ablesung. Nur wenn der
+                        // größer ist, hat der Zähler tatsächlich neu angefangen.
+                        let hoechsterFrueher = null;
+                        ablesungen.slice(1).forEach(a => {
+                            if (!hoechsterFrueher || a.zahl > hoechsterFrueher.zahl) hoechsterFrueher = a;
+                        });
+
+                        const zaehlertausch = hoechsterFrueher && hoechsterFrueher.zahl > latestHours.zahl;
+
+                        if (zaehlertausch) {
+                            // Groß steht die Gesamtleistung der Maschine, in
+                            // Klammern der Stand des heutigen Zählers — sonst
+                            // wirkt die Maschine jünger, als sie ist.
+                            const summe = hoechsterFrueher.zahl + latestHours.zahl;
+                            hoursEl.innerHTML =
+                                `${summe.toLocaleString('de-DE')} Std. ` +
+                                `<span style="font-size:0.95rem; font-weight:700; color:rgba(255,255,255,0.5);">` +
+                                `(${latestHours.roh} Std.)</span>`;
+                            hoursDateEl.innerHTML =
+                                `Letzte Ablesung: ${latestHours.date.toLocaleDateString('de-DE')}` +
+                                `<div style="margin-top:4px; color:#fbbf24; font-weight:700;">` +
+                                `Zähler neu ab 0 — vorher ${hoechsterFrueher.roh} Std. ` +
+                                `(${hoechsterFrueher.date.toLocaleDateString('de-DE')})</div>`;
+                        } else {
+                            hoursEl.textContent = `${latestHours.roh} Std.`;
+                            hoursDateEl.textContent = `Letzte Ablesung: ${latestHours.date.toLocaleDateString('de-DE')}`;
+                        }
                     } else {
                         hoursEl.textContent = '0 Std.';
                         hoursDateEl.textContent = 'Keine Betriebsstunden erfasst';

@@ -306,6 +306,12 @@
         window.openServiceActionsModal = function (event, machineId) {
             if (event) event.stopPropagation();
             currentSelectedMachineForService = machineId;
+            // Auch nach außen: js/history-modal.js (startReportCreation) und
+            // js/protokoll-liste.js lesen window.currentSelectedMachineForService.
+            // Die Variable oben ist modul-lokal — ohne diese Zeile war die
+            // globale schlicht leer und die Maschine wurde im neuen
+            // Servicebericht nicht vorausgewählt.
+            window.currentSelectedMachineForService = machineId;
             const modal = document.getElementById('service-action-modal');
             if (modal) {
                 modal.classList.remove('hidden');

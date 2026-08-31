@@ -78,14 +78,24 @@
     overflow: hidden;
 }
 
+/* Die Kopfzeile lief über: Titel und vier Knöpfe standen alle auf
+   flex-shrink: 0, zusammen breiter als das Panel — Zahnrad und Schließen
+   wurden rechts abgeschnitten und waren schlicht nicht erreichbar.
+   Jetzt darf der Titel schrumpfen und die Knopfreihe notfalls umbrechen. */
 .notif-header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 10px 12px;
     padding: 18px 20px 14px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     flex-shrink: 0;
+}
+
+.notif-header > div:first-child {
+    flex: 1 1 180px;
+    min-width: 0;
 }
 
 .notif-header h3 {
@@ -105,8 +115,10 @@
 .notif-header-actions {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
     gap: 6px;
-    flex-shrink: 0;
+    margin-left: auto;
 }
 
 .notif-header-actions button {
@@ -135,7 +147,76 @@
     justify-content: center;
 }
 
+/* Das Zahnrad führt zur Einstellungsseite und wurde bislang übersehen —
+   deshalb farbig abgesetzt statt grau wie die übrigen Knöpfe. */
 .notif-header-actions .notif-icon-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(139, 92, 246, 0.16);
+    border-color: rgba(139, 92, 246, 0.4);
+    color: #c4b5fd;
+}
+
+.notif-header-actions .notif-icon-btn:hover {
+    background: rgba(139, 92, 246, 0.3);
+    color: #fff;
+}
+
+.notif-header-actions .notif-icon-btn.active {
+    background: rgba(139, 92, 246, 0.22);
+    border-color: rgba(139, 92, 246, 0.45);
+    color: #c4b5fd;
+}
+
+/* ---------------------------------------------------------------
+   Vollansicht — gleicher Aufbau wie beim Kalender-Widget
+   (#calw-panel.is-full in calendar-widget.css)
+   --------------------------------------------------------------- */
+#notif-panel.is-full {
+    position: fixed;
+    top: 3vh;
+    left: 3vw;
+    right: 3vw;
+    bottom: 3vh;
+    width: auto;
+    max-width: none;
+    max-height: none;
+    border-radius: var(--radius-lg);
+    z-index: 10060;
+}
+
+/* Abdunkeln hinter der Vollansicht */
+body.notif-full-open::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: rgba(3, 7, 18, 0.7);
+    z-index: 10055;
+}
+
+/* In der Breite lohnen mehrere Spalten: die Einträge stehen dann
+   nebeneinander statt in einer endlosen Schlange. */
+#notif-panel.is-full #notif-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    align-content: start;
+    gap: 4px 10px;
+    padding: 10px 14px 16px;
+}
+
+/* Filterleiste und Gruppenüberschriften laufen über die ganze Breite */
+#notif-panel.is-full .notif-filterbar,
+#notif-panel.is-full .notif-group-title,
+#notif-panel.is-full .notif-empty,
+#notif-panel.is-full .notif-absence {
+    grid-column: 1 / -1;
+}
+
+.notif-plain-btn {
     width: 32px;
     height: 32px;
     padding: 0;
@@ -144,10 +225,20 @@
     justify-content: center;
 }
 
-.notif-header-actions .notif-icon-btn.active {
-    background: rgba(139, 92, 246, 0.22);
-    border-color: rgba(139, 92, 246, 0.45);
-    color: #c4b5fd;
+/* Auf dem Handy ist das Panel ohnehin fast bildschirmfüllend —
+   die Vollansicht nutzt dann einfach den ganzen Platz. */
+@media (max-width: 640px) {
+    #notif-panel.is-full {
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border-radius: 0;
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    #notif-panel.is-full #notif-list { grid-template-columns: 1fr; }
 }
 
 /* Einstellungs-Klappe unter der Kopfzeile (Zahnrad) */
@@ -248,6 +339,60 @@
     font-size: var(--fs-2xs);
 }
 
+/* Filterleiste: eine Schaltfläche je Sorte mit Anzahl.
+   --notif-kind trägt die Farbe der Sorte, gesetzt im Markup. */
+.notif-filterbar {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 4px 10px;
+    margin-bottom: 4px;
+    background: #0c1222;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.notif-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.62);
+    font-family: inherit;
+    font-size: 0.74rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s, border-color 0.18s;
+}
+
+.notif-chip b {
+    font-size: 0.7rem;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.notif-chip:hover {
+    color: #fff;
+    border-color: var(--notif-kind, rgba(255, 255, 255, 0.3));
+}
+
+.notif-chip.is-active {
+    color: var(--notif-kind, #fff);
+    border-color: var(--notif-kind, rgba(255, 255, 255, 0.45));
+    background: color-mix(in srgb, var(--notif-kind, #fff) 16%, transparent);
+}
+
+/* Kein color-mix im Browser? Dann bleibt wenigstens die Umrandung. */
+@supports not (background: color-mix(in srgb, red 10%, transparent)) {
+    .notif-chip.is-active { background: rgba(255, 255, 255, 0.12); }
+}
+
 .notif-item {
     display: flex;
     align-items: flex-start;
@@ -255,17 +400,47 @@
     width: 100%;
     text-align: left;
     padding: 12px;
+    /* Links ein Streifen in der Farbe der SORTE — dadurch sind Vorgang,
+       Termin, Adresse usw. schon beim Überfliegen zu unterscheiden. */
+    border-left: 3px solid var(--notif-kind, transparent);
     border-radius: var(--radius-md);
     background: transparent;
-    border: 1px solid transparent;
+    border-top: 1px solid transparent;
+    border-right: 1px solid transparent;
+    border-bottom: 1px solid transparent;
     cursor: pointer;
     transition: background 0.18s, border-color 0.18s;
     position: relative;
 }
 
+/* Sorte und Dringlichkeit als Schildchen über dem Titel */
+.notif-item-tags {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 5px;
+}
+
+.notif-kind-badge,
+.notif-sev-badge {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 5px;
+    border: 1px solid transparent;
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
 .notif-item:hover {
     background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.1);
+    /* Nur die drei grauen Kanten, der farbige Sorten-Streifen links bleibt. */
+    border-top-color: rgba(255, 255, 255, 0.1);
+    border-right-color: rgba(255, 255, 255, 0.1);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
 }
 
 .notif-item.is-read {

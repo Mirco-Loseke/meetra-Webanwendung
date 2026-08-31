@@ -1149,6 +1149,22 @@ window.saveDocument = async function(event) {
         return;
     }
 
+    // Nichts doppelt: was in diesem Ordner schon liegt, wird uebersprungen.
+    // Verglichen wird ueber Dateiinhalt bzw. Dateiname + Groesse
+    // (js/photo-dedupe.js).
+    if (window.PhotoDedupe) {
+        const imOrdner = (allDocuments || []).filter(d =>
+            String(d.folder_id || '') === String(currentFolderId || '')
+        );
+        const { neu, doppelt } = await window.PhotoDedupe.pruefeAuswahl(selectedDocFiles, imOrdner);
+        window.PhotoDedupe.meldeDoppelte(doppelt);
+        selectedDocFiles = neu.map(e => e.file);
+        if (selectedDocFiles.length === 0) {
+            window.showToast('Alle gewählten Dateien liegen in diesem Ordner bereits.');
+            return;
+        }
+    }
+
     const btn = document.getElementById('btn-save-doc');
     btn.disabled = true;
     btn.textContent = 'Lädt hoch...';

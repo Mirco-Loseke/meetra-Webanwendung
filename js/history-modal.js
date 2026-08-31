@@ -284,9 +284,6 @@
 
                     serviceRes.data.forEach(s => {
                         const isWorkshopStatus = s.title === 'Werkstattaufenthalt Beginn' || s.title === 'Werkstattaufenthalt Ende';
-                        // Eigenständiges UVV-/Wartungsprotokoll (js/uvv-protokoll.js): liegt in
-                        // derselben Tabelle, wird aber in seinem eigenen Fenster geöffnet.
-                        const isUvvProtokoll = s.title === (window.UVV_PROTOKOLL_TITEL || 'UVV- & Wartungsprotokoll');
 
                         // Find category color
                         const cat = (window.categoryList || []).find(c => c.id === s.category_id);
@@ -296,13 +293,12 @@
                             id: s.id,
                             machineId: machineId,
                             date: new Date(s.date || s.created_at),
-                            type: isWorkshopStatus ? 'Werkstatt-Status' : (isUvvProtokoll ? 'UVV / Wartung' : 'Servicebericht'),
+                            type: isWorkshopStatus ? 'Werkstatt-Status' : 'Servicebericht',
                             title: s.title || 'Servicebericht',
                             description: s.description || '',
                             color: catColor,
-                            icon: isWorkshopStatus ? '🔧' : (isUvvProtokoll ? '🛡️' : '📄'),
+                            icon: isWorkshopStatus ? '🔧' : '📄',
                             itemType: isWorkshopStatus ? 'workshop' : 'service',
-                            isUvvProtokoll: isUvvProtokoll,
                             pdf_url: s.pdf_url,
                             files: s.files || [],
                             maintenanceScope: typeof window.getMaintenanceScopeLabel === 'function' ? window.getMaintenanceScopeLabel(s.checklist_payload) : null,
@@ -557,11 +553,10 @@
                                 </button>
                             ` : '';
 
-                        // Das eigenständige UVV-/Wartungsprotokoll gehört in sein eigenes
-                        // Fenster — der Servicebericht-Editor kennt seine Felder nicht.
-                        const openCall = item.isUvvProtokoll
-                            ? `window.openUvvProtokoll(${item.machineId}, '${item.id}')`
-                            : `window.openEditServicebericht(${item.id})`;
+                        // Alle Einträge aus service_entries sind Serviceberichte —
+                        // das eigenständige UVV-Fenster gibt es nicht mehr, auch
+                        // seine Altbestände öffnen im Servicebericht-Editor.
+                        const openCall = `window.openEditServicebericht(${item.id})`;
 
                         actionButtons += `
                                 <button onclick="${openCall}" class="btn-icon-circular edit" title="Öffnen">
@@ -1316,8 +1311,12 @@
                     const machine = (window.machineList || []).find(m => m.id == machineId);
                     const mFolder = machine ? window.getMachineFolderName(machine.id, machine.manufacturer, machine.name, machine.serial || machine.serial_number, machine.year) : `Maschinen/${machineId}`;
                     const pathGenerator = (file, i) => `${mFolder}/Verlauf/${Date.now()}-${i}.${file.name.split('.').pop()}`;
+                    // Nichts doppelt: dieselbe Aufnahme mehrfach ausgewaehlt
+                    // wird nur einmal hochgeladen (js/photo-dedupe.js).
+                    const auswahl = await window.PhotoDedupe.pruefeAuswahl(photoInput.files, []);
+                    window.PhotoDedupe.meldeDoppelte(auswahl.doppelt);
                     const uploadResults = await window.FileUploadService.uploadFiles(
-                        Array.from(photoInput.files),
+                        auswahl.neu.map(e => e.file),
                         pathGenerator,
                         { bucket: 'dateien', compress: true, concurrency: 5, provider: 'cloudflare-r2' }
                     );
@@ -1587,7 +1586,14 @@
             const titles = {
                 'servicebericht': 'Servicebericht',
                 'eingangsprotokoll': 'Eingangsprotokoll',
-                'abnahmeprotokoll': 'Abnahmeprotokoll'
+                'abnahmeprotokoll': 'Abnahmeprotokoll',
+                // Das eigenständige Fenster (js/uvv-protokoll.js) ist entfernt.
+                // Der Knopf öffnet jetzt einen ganz normalen Servicebericht,
+                // nur mit vorbelegten Kategorien und angehakten Prüfplänen —
+                // siehe window.applyUvvWartungPreset() weiter unten.
+                // Der Titel trägt den Zusatz „(Intern)", damit im Ausdruck und
+                // in der Historie erkennbar bleibt, wie der Bericht entstanden ist.
+                'uvv-protokoll': 'Servicebericht (Intern)'
             };
 
             const title = titles[type] || 'Servicebericht';
@@ -1608,12 +1614,6 @@
                 return;
             }
 
-            // UVV- & WARTUNGSPROTOKOLL (js/uvv-protokoll.js) — Prüfliste ohne Servicebericht
-            if (type === 'uvv-protokoll' && typeof window.openUvvProtokoll === 'function') {
-                window.openUvvProtokoll(currentSelectedMachineForService);
-                return;
-            }
-
             // fallback to default service report modal
             if (typeof openServiceberichtModal === 'function') {
                 openServiceberichtModal();
@@ -1625,7 +1625,10 @@
                 // --- Auto-select machine when opened from machine card ---
                 if (currentSelectedMachineForService) {
                     const machines = window.machineList || [];
-                    const m = machines.find(x => x.id === currentSelectedMachineForService);
+                    // Vergleich über String: die ID kommt mal als Zahl aus der
+                    // Maschinenliste, mal als Text aus einem onclick-Attribut.
+                    // Mit === blieb die Maschine dann unerkannt.
+                    const m = machines.find(x => String(x.id) === String(currentSelectedMachineForService));
                     if (m) {
                         const cat = (window.categoryList || []).find(c => c.id === m.category_id);
                         const catName = cat ? cat.name : '';
@@ -1654,5 +1657,77 @@
                         }
                     }
                 }
+
+                if (type === 'uvv-protokoll') window.applyUvvWartungPreset();
             }
+        };
+
+        // ---------------------------------------------------------------
+        // „Internes UVV & Wartungsprotokoll" vorbelegen
+        // ---------------------------------------------------------------
+        // Setzt im frisch geöffneten Servicebericht die Kategorien UVV,
+        // Wartung und Einweisung und hakt anschließend ALLE angebotenen
+        // Prüfpläne an. Damit ersetzt der Servicebericht das frühere
+        // eigenständige Fenster vollständig — samt PDF, Vorschau, Ablage und
+        // Übersicht, die es dort alle noch einmal geben musste.
+        //
+        // In Schritten, weil beides nacheinander aufgebaut wird: erst muss die
+        // Kategorienliste stehen, dann baut evaluateChecklistVisibility() die
+        // Prüfplan-Auswahl, und erst danach gibt es Kästchen zum Anhaken.
+        window.applyUvvWartungPreset = function () {
+            const GESUCHT = ['uvv', 'wartung', 'einweisung'];
+
+            const setzeKategorien = () => {
+                const cats = window.categoryList || [];
+                if (!cats.length || typeof window.selectServiceCategory !== 'function') return false;
+
+                // Erst leeren, dann die drei setzen — selectServiceCategory
+                // schaltet um, ein zweiter Aufruf würde sonst wieder abwählen.
+                window.selectServiceCategory(null);
+                let getroffen = 0;
+                GESUCHT.forEach(schlagwort => {
+                    const name = (c) => String(c.name || '').toLowerCase().trim();
+                    // Genauer Name hat Vorrang, sonst der erste, der ihn enthält
+                    // („Wartung" soll nicht die „Wartungsvorbereitung" treffen,
+                    // solange es die Kategorie „Wartung" selbst gibt).
+                    const treffer = cats.find(c => name(c) === schlagwort)
+                        || cats.find(c => name(c).includes(schlagwort));
+                    if (treffer) { window.selectServiceCategory(treffer.id, treffer.name); getroffen++; }
+                });
+                return getroffen > 0;
+            };
+
+            const hakeAllePlaeneAn = () => {
+                const container = document.getElementById('service-checklist-selector-container');
+                if (!container) return false;
+                const kaesten = container.querySelectorAll('input[type="checkbox"][data-template-id]');
+                if (!kaesten.length) return false;
+                kaesten.forEach(cb => {
+                    if (cb.checked) return;
+                    cb.checked = true;
+                    if (typeof window.onChecklistToggle === 'function') {
+                        window.onChecklistToggle(cb.dataset.templateId, true);
+                    }
+                });
+                return true;
+            };
+
+            // Bis zu zwei Sekunden auf die Listen warten, dann aufgeben.
+            let versuche = 0;
+            const lauf = () => {
+                versuche++;
+                if (setzeKategorien()) {
+                    // Die Prüfpläne entstehen erst durch die Kategoriewahl.
+                    let versuche2 = 0;
+                    const lauf2 = () => {
+                        versuche2++;
+                        if (hakeAllePlaeneAn() || versuche2 > 20) return;
+                        setTimeout(lauf2, 100);
+                    };
+                    setTimeout(lauf2, 120);
+                    return;
+                }
+                if (versuche <= 20) setTimeout(lauf, 100);
+            };
+            setTimeout(lauf, 150);
         };

@@ -182,6 +182,47 @@ window.addEventListener('pagehide', () => {
     }
 });
 
+// Übernimmt aus dem Vorgängerbericht, was gleich bleibt: Maschine,
+// Kategorien, Techniker und die Werkstattauftragsnummer. Alles andere
+// (Beschreibung, Arbeitsschritte, Material, Prüflisten) bleibt leer — es ist
+// ein neuer Einsatz, kein Abzug des alten.
+function uebernehmeAusVorgaenger(quelle) {
+    try {
+        if (quelle.machineId && typeof window.selectServiceMachine === 'function') {
+            const m = (window.machineList || []).find(x => String(x.id) === String(quelle.machineId));
+            if (m) {
+                const cat = (window.categoryList || []).find(c => c.id === m.category_id);
+                window.selectServiceMachine(m.id, m.manufacturer, m.name, m.serial,
+                    m.image_url, cat ? cat.name : '', m.year);
+            }
+        }
+
+        if (Array.isArray(quelle.categoryIds) && quelle.categoryIds.length
+            && typeof window.selectServiceCategory === 'function') {
+            window.selectServiceCategory(null);
+            const cats = window.categoryList || [];
+            quelle.categoryIds.forEach(id => {
+                const c = cats.find(x => String(x.id) === String(id));
+                if (c) window.selectServiceCategory(c.id, c.name);
+            });
+        }
+
+        if (Array.isArray(quelle.technicians) && quelle.technicians.length
+            && typeof window.toggleTechnician === 'function') {
+            quelle.technicians.forEach(id => window.toggleTechnician(id));
+        }
+
+        const jahr = document.getElementById('service-workshop-year-digit');
+        const suffix = document.getElementById('service-workshop-order-suffix');
+        if (jahr && quelle.workshopYearDigit) jahr.value = quelle.workshopYearDigit;
+        if (suffix && quelle.workshopOrderSuffix) suffix.value = quelle.workshopOrderSuffix;
+
+        if (window.showToast) window.showToast('Folgebericht — mit dem vorherigen Bericht verknüpft.');
+    } catch (e) {
+        console.warn('Übernahme aus dem Vorgängerbericht fehlgeschlagen:', e);
+    }
+}
+
 window.createFolgebericht = function () {
     if (!window.currentEditingServiceId) return;
     if (typeof window.serviceberichtIsDirty !== 'undefined' && window.serviceberichtIsDirty) {
@@ -193,7 +234,16 @@ window.createFolgebericht = function () {
         previousId: window.currentEditingServiceId,
         machineId: machineId,
         categoryIds: (typeof window.selectedServiceCategories !== 'undefined' && Array.isArray(window.selectedServiceCategories)) ? [...window.selectedServiceCategories] : [],
-        technicians: Array.isArray(window.selectedTechs) ? [...window.selectedTechs] : [],
+        // Techniker aus dem versteckten Feld lesen, nicht aus window.selectedTechs:
+        // toggleTechnician (js/service-report-form.js) pflegt eine modul-lokale
+        // Liste und schreibt sie nur dorthin — window.selectedTechs blieb leer.
+        technicians: (function () {
+            try {
+                const roh = document.getElementById('selected-technician-ids')?.value || '[]';
+                const arr = JSON.parse(roh);
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) { return []; }
+        })(),
         workshopYearDigit: document.getElementById('service-workshop-year-digit')?.value.trim() || '',
         workshopOrderSuffix: document.getElementById('service-workshop-order-suffix')?.value.trim() || ''
     };
@@ -446,6 +496,19 @@ window.openServiceberichtModal = function (editData = null) {
             window.selectedTechs = [];
 
             const rescueBtn = document.getElementById('btn-servicebericht-rescue');
+            // „Folgebericht anlegen" gibt es nur beim Bearbeiten — ein neuer
+            // Bericht hat noch keinen Vorgänger, mit dem er verknüpft werden
+            // könnte. Der Knopf stand im Markup dauerhaft auf `hidden` und
+            // wurde nirgends eingeblendet; die Verknüpfung war dadurch
+            // unerreichbar.
+            const followUpBtn = document.getElementById('btn-servicebericht-follow-up');
+            if (followUpBtn) followUpBtn.classList.toggle('hidden', !editData);
+
+            // Verknüpfungsfeld: nur beim Bearbeiten. Beim Anlegen gibt es noch
+            // keinen gespeicherten Bericht, an den etwas gehängt werden könnte.
+            const linkBox = document.getElementById('service-link-field');
+            if (linkBox && !editData) linkBox.style.display = 'none';
+
             if (editData) {
                 window.currentEditingServiceId = editData.id;
                 window._serviceReportBaseline = Object.assign({}, editData);
@@ -459,8 +522,29 @@ window.openServiceberichtModal = function (editData = null) {
             } else {
                 window.currentEditingServiceId = null;
                 window._serviceReportBaseline = null;
+                window._servicePreviousReportId = null;
                 if (titleEl) titleEl.textContent = 'Neuer Servicebericht';
                 if (rescueBtn) rescueBtn.classList.add('hidden');
+
+                // Prüflisten leeren. Sie wurden hier bisher NICHT zurückgesetzt:
+                // loadChecklistPayload läuft nur beim Bearbeiten. Wer vorher
+                // einen Bericht mit UVV-/Wartungsplan offen hatte, sah dessen
+                // Haken und Antworten im neuen Bericht wieder — samt der
+                // gemerkten Eingaben aus dem Zwischenspeicher.
+                if (typeof window.loadChecklistPayload === 'function') {
+                    try { window.loadChecklistPayload(null); } catch (e) { /* ohne Prüflisten weiter */ }
+                }
+
+                // Folgebericht: window.createFolgebericht legt hier die Daten
+                // des Vorgängers ab und öffnet dann dieses Fenster. Ausgewertet
+                // wurden sie bisher NIRGENDS — der neue Bericht startete leer
+                // und ohne previous_report_id, die Verknüpfung entstand also nie.
+                const quelle = window._pendingFolgeberichtSource;
+                window._pendingFolgeberichtSource = null;
+                if (quelle) {
+                    window._servicePreviousReportId = quelle.previousId || null;
+                    setTimeout(() => uebernehmeAusVorgaenger(quelle), 60);
+                }
             }
         }
     } catch (err) {

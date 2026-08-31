@@ -1037,9 +1037,15 @@
     // ==========================================
     // PHOTO FUNCTIONS
     // ==========================================
+    // Läuft schon ein Hochladen? Auf dem Handy feuert das Dateifeld sonst
+    // gelegentlich zweimal — und lud dasselbe Bild zweimal hoch.
+    let photoUploadLaeuft = false;
+
     async function handlePhotoUpload(event) {
         const files = event.target.files;
         if (!files || files.length === 0) return;
+        if (photoUploadLaeuft) { event.target.value = ''; return; }
+        photoUploadLaeuft = true;
 
         const uploadBtn = event.target.nextElementSibling;
         const originalText = uploadBtn.textContent;
@@ -1047,7 +1053,12 @@
         uploadBtn.disabled = true;
 
         try {
-            for (let file of files) {
+            // Schon vorhandene Bilder gar nicht erst erneut hochladen.
+            const { neu, doppelt } = await window.PhotoDedupe.pruefeAuswahl(files, protocolPhotos);
+            window.PhotoDedupe.meldeDoppelte(doppelt);
+
+            for (const eintrag of neu) {
+                const file = eintrag.file;
                 const cleanName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
                 const filePath = `Protokolle/Fotos/${openedMachineId || 'allgemein'}/${Date.now()}_${cleanName}`;
 
@@ -1062,7 +1073,8 @@
                     id: Date.now() + Math.random(),
                     file_name: uploadResult.path,
                     file_url: uploadResult.url,
-                    file_size: file.size
+                    file_size: file.size,
+                    _hash: eintrag.hash // nur im Speicher, die Tabelle hat keine Spalte dafür
                 });
                 sessionUploadedPhotos.push(uploadResult.path);
             }
@@ -1074,6 +1086,7 @@
             console.error('Photo upload error:', err);
             window.showToast('Fehler beim Hochladen: ' + err.message);
         } finally {
+            photoUploadLaeuft = false;
             uploadBtn.textContent = originalText;
             uploadBtn.disabled = false;
         }
@@ -1082,6 +1095,9 @@
     function renderPhotos() {
         const container = document.getElementById('protocol-photos-grid');
         if (!container) return;
+        // Letzte Sicherung: was doppelt in der Liste steht, wird hier still
+        // entfernt — auch Altbestand, der schon doppelt gespeichert wurde.
+        protocolPhotos = window.PhotoDedupe.bereinigeListe(protocolPhotos);
         container.innerHTML = '';
 
         // Prepare an array of string URLs for the lightbox
@@ -1138,7 +1154,23 @@
     // ==========================================
     // SAVE & COMPLETE
     // ==========================================
+    // Zwei gleichzeitig laufende Speichervorgänge (Doppelklick, „Speichern und
+    // schließen" direkt nach „Speichern") schrieben die Fotos zweimal: der zweite
+    // Durchlauf löschte, während der erste noch am Einfügen war — danach standen
+    // alle Bilder doppelt in protocol_photos.
+    let protokollSpeichertGerade = false;
+
     window.saveProtocol = async function () {
+        if (protokollSpeichertGerade) return;
+        protokollSpeichertGerade = true;
+        try {
+            return await saveProtocolIntern();
+        } finally {
+            protokollSpeichertGerade = false;
+        }
+    };
+
+    async function saveProtocolIntern() {
         // Validate required comments for red (false) Tri-State checkpoints
         let missingComments = [];
         if (Array.isArray(currentProtocol.predefined_checkpoints)) {
@@ -1336,7 +1368,7 @@
             console.error('Save protocol error:', err);
             window.showToast('Fehler beim Speichern: ' + err.message);
         }
-    };
+    }
 
     window.completeProtocol = async function () {
         // Mandatory Field Check: Ensure all checkboxes are answered
@@ -1413,6 +1445,9 @@
     async function saveProtocolPhotos() {
         if (!currentProtocol.id) return;
 
+        // Vor dem Schreiben aufräumen: sonst landen Doppelte in der Tabelle.
+        protocolPhotos = window.PhotoDedupe.bereinigeListe(protocolPhotos);
+
         // Delete existing photos for this protocol
         await window.supabaseClient
             .from('protocol_photos')
@@ -1471,7 +1506,9 @@
             .eq('protocol_id', protocolId)
             .eq('protocol_type', type);
 
-        protocolPhotos = photosData || [];
+        // Bereits doppelt gespeicherter Altbestand wird beim Laden zusammengefasst
+        // und beim nächsten Speichern auch in der Tabelle bereinigt.
+        protocolPhotos = window.PhotoDedupe.bereinigeListe(photosData || []);
     }
 
     // ==========================================

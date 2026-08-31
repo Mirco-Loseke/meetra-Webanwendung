@@ -663,10 +663,13 @@
             };
         });
 
-        function handleServiceFiles(files) {
-            Array.from(files).forEach(file => {
-                serviceFiles.push(file);
-            });
+        async function handleServiceFiles(files) {
+            // Bereits ausgewaehlte und bereits gespeicherte Anhaenge nicht erneut
+            // aufnehmen — sonst laedt der Bericht dieselbe Aufnahme zweimal hoch.
+            const vorhanden = serviceFiles.concat(existingServiceFiles || []);
+            const { neu, doppelt } = await window.PhotoDedupe.pruefeAuswahl(files, vorhanden);
+            window.PhotoDedupe.meldeDoppelte(doppelt);
+            neu.forEach(eintrag => serviceFiles.push(eintrag.file));
             renderServiceFilePreviews();
         }
 
@@ -957,6 +960,71 @@
             } catch (e) {}
 
             window._servicePreviousReportId = d.previous_report_id || null;
+            if (typeof window.renderServiceLinkField === 'function') window.renderServiceLinkField();
+        };
+
+        // ---------------------------------------------------------------
+        // Bestehende Berichte nachträglich verknüpfen
+        // ---------------------------------------------------------------
+        // Bisher entstand eine Verknüpfung ausschließlich beim Anlegen über
+        // „Folgebericht". Zwei bereits gespeicherte Berichte ließen sich gar
+        // nicht verbinden — dafür ist dieses Feld da. Geschrieben wird
+        // dieselbe Spalte (previous_report_id), die Anzeige mit Ketten-Symbol
+        // in Historie und Liste greift dadurch automatisch.
+        window.renderServiceLinkField = function () {
+            const box = document.getElementById('service-link-field');
+            if (!box) return;
+
+            // Nur beim Bearbeiten sinnvoll: ein noch nicht gespeicherter
+            // Bericht kann nicht Ziel einer Verknüpfung sein.
+            if (!window.currentEditingServiceId) { box.style.display = 'none'; return; }
+            box.style.display = 'block';
+
+            const machineId = document.getElementById('selected-machine-id')?.value;
+            const eigene = String(window.currentEditingServiceId);
+            const kandidaten = (window.allServiceEntries || [])
+                .filter(e => String(e.id) !== eigene)
+                .filter(e => !machineId || String(e.machine_id) === String(machineId))
+                .sort((a, b) => new Date(b.date || b.created_at || 0) - new Date(a.date || a.created_at || 0))
+                .slice(0, 200);
+
+            const gewaehlt = window._servicePreviousReportId ? String(window._servicePreviousReportId) : '';
+            const fmt = (e) => {
+                const d = e.date || e.created_at;
+                const datum = d ? new Date(d).toLocaleDateString('de-DE') : 'ohne Datum';
+                return `${datum} — ${e.title || 'Servicebericht'}`;
+            };
+
+            box.innerHTML = `
+                <label class="form-label-caps" style="display:block; margin-bottom:0.4rem;">Gehört zu Bericht</label>
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <select id="service-link-select" class="glass-form-input" style="flex:1; min-width:220px;">
+                        <option value="">— keine Verknüpfung —</option>
+                        ${kandidaten.map(e => `<option value="${e.id}"${String(e.id) === gewaehlt ? ' selected' : ''}>${
+                            String(fmt(e)).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                        }</option>`).join('')}
+                    </select>
+                    ${gewaehlt ? `<button type="button" class="btn-secondary" style="padding:8px 12px; font-size:0.82rem;"
+                        onclick="window.jumpToServicebericht(${gewaehlt})">Ansehen</button>` : ''}
+                </div>
+                <small style="display:block; margin-top:5px; color:rgba(255,255,255,0.45); font-size:0.75rem;">
+                    Dieser Bericht wird als Folgebericht des gewählten geführt. Wirksam nach dem Speichern.
+                    ${kandidaten.length ? '' : 'Für diese Maschine gibt es keinen weiteren Bericht.'}
+                </small>`;
+
+            const sel = document.getElementById('service-link-select');
+            if (sel) {
+                sel.addEventListener('change', () => {
+                    window._servicePreviousReportId = sel.value || null;
+                    // Neu zeichnen, damit der „Ansehen"-Knopf mitkommt.
+                    window.renderServiceLinkField();
+                    if (window.showToast) {
+                        window.showToast(sel.value
+                            ? 'Verknüpfung gesetzt — mit dem Speichern wird sie übernommen.'
+                            : 'Verknüpfung gelöst — mit dem Speichern wird sie übernommen.');
+                    }
+                });
+            }
         };
 
         // Standort-Snapshot: nur wenn die Standort-Felder sichtbar sind, wird ein abweichender

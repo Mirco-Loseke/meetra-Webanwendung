@@ -1,0 +1,387 @@
+/* ==========================================================
+   BENACHRICHTIGUNGEN EINSTELLEN — eigene Seite (js/notification-settings.js)
+   Werte aus css/base/tokens.css, keine Rohwerte.
+   ========================================================== */
+
+.notifset-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4);
+    background: rgba(0, 0, 0, 0.62);
+    backdrop-filter: var(--blur-overlay, blur(10px));
+    opacity: 0;
+    transition: opacity var(--motion-2, 0.2s) ease;
+}
+
+.notifset-overlay.is-open { opacity: 1; }
+
+.notifset-card {
+    width: 100%;
+    max-width: 640px;
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-lg, 20px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.99));
+    box-shadow: var(--shadow-3, 0 30px 80px rgba(0, 0, 0, 0.6));
+    transform: translateY(8px) scale(0.99);
+    transition: transform var(--motion-2, 0.2s) ease;
+}
+
+.notifset-overlay.is-open .notifset-card { transform: none; }
+
+/* ---------- Kopf ---------- */
+.notifset-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-5) var(--space-5) var(--space-4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.notifset-head h2 {
+    margin: 0;
+    font-size: var(--fs-4, 1.15rem);
+    font-weight: 800;
+    color: var(--text-1, #fff);
+}
+
+.notifset-head p {
+    margin: var(--space-1) 0 0;
+    font-size: var(--fs-1, 0.82rem);
+    color: var(--text-3, rgba(255, 255, 255, 0.5));
+}
+
+.notifset-close {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm, 10px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-2, rgba(255, 255, 255, 0.7));
+    cursor: pointer;
+    transition: background var(--motion-1, 0.15s) ease;
+}
+
+.notifset-close:hover { background: rgba(255, 255, 255, 0.12); }
+
+/* ---------- Rumpf ---------- */
+.notifset-body {
+    overflow-y: auto;
+    padding: var(--space-4) var(--space-5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+}
+
+.notifset-block h3 {
+    margin: 0 0 var(--space-3);
+    font-size: var(--fs-1, 0.82rem);
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-3, rgba(255, 255, 255, 0.5));
+}
+
+.notifset-note {
+    margin: var(--space-3) 0 0;
+    font-size: var(--fs-1, 0.8rem);
+    line-height: 1.5;
+    color: var(--text-3, rgba(255, 255, 255, 0.45));
+}
+
+/* ---------- Zustand der Systemmeldungen ---------- */
+.notifset-push {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    border-radius: var(--radius-md, 14px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.notifset-push-text { display: flex; flex-direction: column; gap: 4px; }
+
+.notifset-push-text strong {
+    font-size: var(--fs-2, 0.9rem);
+    font-weight: 700;
+    color: var(--text-1, #fff);
+}
+
+.notifset-push-text span {
+    font-size: var(--fs-1, 0.8rem);
+    line-height: 1.5;
+    color: var(--text-3, rgba(255, 255, 255, 0.5));
+}
+
+.notifset-push-an        { border-color: rgba(16, 185, 129, 0.35); background: rgba(16, 185, 129, 0.08); }
+.notifset-push-gesperrt  { border-color: rgba(248, 113, 113, 0.35); background: rgba(248, 113, 113, 0.08); }
+.notifset-push-ungefragt,
+.notifset-push-aus       { border-color: rgba(245, 158, 11, 0.32); background: rgba(245, 158, 11, 0.08); }
+
+/* ---------- Sorten-Tabelle ---------- */
+.notifset-table {
+    border-radius: var(--radius-md, 14px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+
+.notifset-row {
+    display: grid;
+    grid-template-columns: 1fr 62px 62px 78px;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Wiedererinnerung: Stundenfeld je Sorte */
+.notifset-repeat {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    justify-self: center;
+}
+
+.notifset-repeat input {
+    width: 46px;
+    padding: 5px 6px;
+    text-align: center;
+    border-radius: var(--radius-sm, 8px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-1, #fff);
+    font-family: inherit;
+    font-size: var(--fs-1, 0.82rem);
+}
+
+.notifset-repeat input:disabled { opacity: 0.32; cursor: not-allowed; }
+
+.notifset-repeat em {
+    font-style: normal;
+    font-size: 0.68rem;
+    color: var(--text-3, rgba(255, 255, 255, 0.4));
+}
+
+.notifset-row:first-child { border-top: none; }
+
+.notifset-row-head {
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.notifset-row-head span {
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: center;
+    color: var(--text-3, rgba(255, 255, 255, 0.45));
+}
+
+.notifset-row.is-off .notifset-label strong { color: var(--text-3, rgba(255, 255, 255, 0.4)); }
+.notifset-row.is-off .notifset-label span { opacity: 0.55; }
+
+.notifset-label { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+
+.notifset-label strong {
+    font-size: var(--fs-2, 0.9rem);
+    font-weight: 700;
+    color: var(--text-1, #fff);
+}
+
+.notifset-label span {
+    font-size: var(--fs-1, 0.78rem);
+    line-height: 1.45;
+    color: var(--text-3, rgba(255, 255, 255, 0.45));
+}
+
+/* ---------- Schiebeschalter ---------- */
+.notifset-switch {
+    justify-self: center;
+    position: relative;
+    width: 42px;
+    height: 24px;
+    cursor: pointer;
+}
+
+.notifset-switch input {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    cursor: pointer;
+}
+
+.notifset-switch span {
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    transition: background var(--motion-1, 0.15s) ease;
+    pointer-events: none;
+}
+
+.notifset-switch span::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform var(--motion-1, 0.15s) ease;
+}
+
+.notifset-switch input:checked + span {
+    background: var(--success, #10b981);
+    border-color: transparent;
+}
+
+.notifset-switch input:checked + span::after { transform: translateX(18px); }
+
+.notifset-switch input:disabled + span { opacity: 0.32; }
+.notifset-switch input:disabled { cursor: not-allowed; }
+
+/* ---------- Auswahl und Zahlen ---------- */
+.notifset-select select,
+.notifset-nums input {
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-sm, 10px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-1, #fff);
+    font-family: inherit;
+    font-size: var(--fs-2, 0.88rem);
+}
+
+.notifset-select select:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.notifset-nums {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-3);
+}
+
+.notifset-nums label { display: flex; flex-direction: column; gap: 6px; }
+
+.notifset-nums span {
+    font-size: var(--fs-1, 0.8rem);
+    font-weight: 700;
+    color: var(--text-2, rgba(255, 255, 255, 0.7));
+}
+
+.notifset-nums em {
+    font-style: normal;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    color: var(--text-3, rgba(255, 255, 255, 0.4));
+}
+
+/* ---------- Fuß ---------- */
+.notifset-foot {
+    display: flex;
+    gap: var(--space-2);
+    justify-content: flex-end;
+    padding: var(--space-4) var(--space-5);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.notifset-btn {
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-sm, 12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-2, rgba(255, 255, 255, 0.75));
+    font-family: inherit;
+    font-size: var(--fs-2, 0.86rem);
+    font-weight: 700;
+    cursor: pointer;
+    transition: background var(--motion-1, 0.15s) ease;
+}
+
+.notifset-btn:hover { background: rgba(255, 255, 255, 0.14); }
+
+.notifset-btn.is-on {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: #34d399;
+}
+
+.notifset-btn.is-off {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.16);
+}
+
+/* ---------- Handy ---------- */
+@media (max-width: 768px) {
+    .notifset-overlay { padding: 0; }
+
+    .notifset-card {
+        max-width: none;
+        max-height: none;
+        height: 100%;
+        border: none;
+        border-radius: 0;
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .notifset-nums { grid-template-columns: 1fr; }
+
+    .notifset-push { flex-direction: column; align-items: stretch; }
+
+    /* Vier Spalten sind auf 375px zu eng: Beschriftung nach oben, die drei
+       Bedienelemente darunter nebeneinander. */
+    .notifset-row {
+        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-areas:
+            'label label label'
+            'bell  win   rep';
+        row-gap: var(--space-3);
+    }
+
+    .notifset-row > .notifset-label { grid-area: label; }
+    .notifset-row > .notifset-switch:nth-of-type(1) { grid-area: bell; }
+    .notifset-row > .notifset-switch:nth-of-type(2) { grid-area: win; }
+    .notifset-row > .notifset-repeat { grid-area: rep; }
+
+    /* Die Kopfzeile passt in diesem Aufbau nicht mehr — die Titel stehen
+       stattdessen als Beschriftung an den Schaltern selbst. */
+    .notifset-row-head { display: none; }
+
+    .notifset-switch::after {
+        content: attr(data-mobil);
+        position: absolute;
+        top: 28px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 0.66rem;
+        white-space: nowrap;
+        color: var(--text-3, rgba(255, 255, 255, 0.4));
+    }
+
+    .notifset-row { padding-bottom: var(--space-5); }
+
+    /* 16px, sonst zoomt iOS beim Antippen hinein (siehe responsive.css) */
+    .notifset-select select,
+    .notifset-nums input,
+    .notifset-repeat input { font-size: 16px; }
+}

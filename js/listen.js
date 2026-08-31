@@ -1538,12 +1538,31 @@
         if (!window.supabaseClient) return;
         const date = value || null;
         try {
-            const { data, error } = await window.supabaseClient
+            // Wer die Erinnerung setzt, bekommt sie auch — und nur der.
+            // Ohne diesen Vermerk landete sie bei jedem in der Glocke.
+            // Migration: supabase/supabase_add_erinnerung_owner.sql
+            const feld = { erinnerung: date };
+            if (date && window.activeUser) {
+                feld.erinnerung_by = window.activeUser.id || null;
+                feld.erinnerung_by_name = window.activeUser.name || null;
+            } else if (!date) {
+                feld.erinnerung_by = null;
+                feld.erinnerung_by_name = null;
+            }
+
+            const schreibe = (nutzlast) => window.supabaseClient
                 .from('angebote')
-                .update({ erinnerung: date })
+                .update(nutzlast)
                 .eq('id', angebotId)
                 .select('*, customers(name), angebot_notizen(id, content, created_at)')
                 .single();
+
+            let { data, error } = await schreibe(feld);
+            // Migration noch nicht gelaufen -> ohne die neuen Spalten speichern,
+            // statt die Erinnerung ganz scheitern zu lassen.
+            if (error && /erinnerung_by/.test(error.message || '')) {
+                ({ data, error } = await schreibe({ erinnerung: date }));
+            }
             if (error) throw error;
             const idx = angeboteList.findIndex(x => x.id === angebotId);
             if (idx !== -1) angeboteList[idx] = data;

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meetra-app-v354';
+const CACHE_NAME = 'meetra-app-v382';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
@@ -10,6 +10,7 @@ const PRECACHE = [
     'css/components/calendar-widget.css',
     'js/calendar-widget.js',
     'js/notifications.js',
+    'js/notification-settings.js',
     'js/reminder-alarm.js',
     'js/assignment-handoff.js',
     'css/components/reminder-alarm.css',
@@ -38,6 +39,8 @@ const PRECACHE = [
     'css/components/dropdown-look.css',
     'css/components/focus-mode.css',
     'css/components/appointments.css',
+    'css/components/notification-settings.css',
+    'css/components/sprachwahl.css',
     'css/views/documents.css',
     'css/views/protocols.css',
     'css/views/mietvereinbarung.css',
@@ -65,6 +68,8 @@ const PRECACHE = [
     'js/process-autosave.js',
     'js/task-autosave.js',
     'js/task-drafts.js',
+    'js/photo-dedupe.js',
+    'js/pdf-i18n.js',
     'js/process-open-hints.js',
     'css/views/routenplanung.css',
     'js/routenplanung.js',
@@ -84,7 +89,6 @@ const PRECACHE = [
     'js/accounting.js',
     'js/documents-r2.js',
     'js/checklists.js',
-    'js/uvv-protokoll.js',
     'js/protokoll-liste.js',
     'js/customers.js',
     'js/routeplanner.js',

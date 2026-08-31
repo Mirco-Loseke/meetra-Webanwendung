@@ -1429,15 +1429,37 @@
     };
 
     // Dynamically load AWS-SDK (for Cloudflare R2 file uploads)
+    //
+    // Das Versprechen wird gemerkt: Starten mehrere Uploads gleichzeitig, hing
+    // vorher jeder ein eigenes <script> in den Kopf und alle warteten auf ihren
+    // eigenen Download derselben Bibliothek.
+    let awsSdkPromise = null;
     window.loadAWSSDK = async function () {
         if (window.AWS) return;
+        if (awsSdkPromise) return awsSdkPromise;
 
-        return new Promise((resolve, reject) => {
+        awsSdkPromise = new Promise((resolve, reject) => {
             const script = document.createElement('script');
             script.src = 'https://cdnjs.cloudflare.com/ajax/libs/aws-sdk/2.1390.0/aws-sdk.min.js';
             script.onload = () => resolve();
-            script.onerror = (err) => reject(new Error('AWS-SDK-Bibliothek konnte nicht geladen werden. Bitte Internetverbindung prüfen.'));
+            script.onerror = () => {
+                awsSdkPromise = null; // beim nächsten Versuch neu laden
+                reject(new Error('AWS-SDK-Bibliothek konnte nicht geladen werden. Bitte Internetverbindung prüfen.'));
+            };
             document.head.appendChild(script);
         });
+        return awsSdkPromise;
     };
+
+    // Im Leerlauf schon vorladen. Der erste Upload wartete sonst jedes Mal
+    // zuerst auf rund ein Megabyte Bibliothek, bevor überhaupt etwas hochging.
+    function sdkVorwaermen() {
+        if (!navigator.onLine) return;
+        window.loadAWSSDK().catch(() => { /* beim ersten echten Upload erneut */ });
+    }
+    if (window.requestIdleCallback) {
+        window.requestIdleCallback(sdkVorwaermen, { timeout: 8000 });
+    } else {
+        setTimeout(sdkVorwaermen, 4000);
+    }
 })();

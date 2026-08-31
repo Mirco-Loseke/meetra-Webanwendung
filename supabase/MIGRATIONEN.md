@@ -57,6 +57,8 @@ lassen als eine Migration auszulassen.
 | `supabase_add_task_due_dates.sql` | Erinnerungen/Fälligkeiten an Vorgängen und Schritten |
 | `supabase_add_tasks_realtime.sql` | Live-Aktualisierung von `tasks`/`subtasks` (Anzeigetafel in der Werkstatt) |
 | `supabase_add_workshop_tasks.sql` | Werkstatt-Liste (schnelle kleine Aufgaben) |
+| `supabase_add_notification_prefs.sql` | Benachrichtigungs-Einstellungen je Benutzer, geräteübergreifend |
+| `supabase_add_erinnerung_owner.sql` | Angebots-Erinnerung gehört dem, der sie gesetzt hat (`erinnerung_by`) |
 
 ## Vorgänge
 
