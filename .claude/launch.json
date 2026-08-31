@@ -4,8 +4,8 @@
   "configurations": [
     {
       "name": "static",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["-y", "serve", "."],
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-ExecutionPolicy", "Bypass", "-File", "tools/vorschau-server.ps1"],
       "port": 5187
     }
   ]

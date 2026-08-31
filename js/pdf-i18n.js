@@ -197,55 +197,102 @@
 
         // In Häppchen, damit eine Anfrage klein bleibt (Freies Kontingent:
         // 12.000 Token je Minute, siehe CLAUDE.md).
-        const HAPPEN = 40;
+        // Nummerierte Zeilen statt JSON-Array. Ein JSON-Array muss vollständig
+        // und fehlerfrei sein, sonst ist die GANZE Portion verloren — genau das
+        // führte dazu, dass am Ende fast nichts übersetzt war. Zeilen lassen
+        // sich einzeln zuordnen: was ankommt, wird übernommen, der Rest bleibt
+        // deutsch und wird beim nächsten Versuch erneut angefragt.
+        const HAPPEN = 25;
         let neu = 0;
         let letzterFehler = null;
+
+        async function frage(teil) {
+            const antwort = await window.groqFetch({
+                model: 'llama-3.3-70b-versatile',
+                temperature: 0,
+                max_tokens: 2048,
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'Du übersetzt kurze Fachbegriffe aus Wartungs-, UVV- und '
+                            + 'Einweisungsplänen für Recyclingmaschinen. Du bekommst nummerierte '
+                            + 'Zeilen. Gib GENAU dieselben Nummern in derselben Reihenfolge zurück, '
+                            + 'je Zeile "Nummer|Übersetzung". Keine Einleitung, keine Erklärung, '
+                            + 'keine leeren Zeilen. Übersetze auch Abkürzungen und Einheiten sinnvoll.'
+                    },
+                    {
+                        role: 'user',
+                        content: `Zielsprache: ${SPRACHNAME[sprache] || sprache}\n\n`
+                            + teil.map((t, i) => `${i + 1}|${t}`).join('\n')
+                    }
+                ]
+            });
+            const roh = await antwort.json().catch(() => null);
+            // Fehler NICHT verschlucken: vorher blieb alles still deutsch und
+            // niemand erfuhr, woran es lag (Anmeldung, Tageslimit, kein Netz).
+            if (!antwort.ok) {
+                throw new Error((roh && roh.error && roh.error.message)
+                    || ('Der KI-Dienst antwortete mit Status ' + antwort.status));
+            }
+            const inhalt = roh?.choices?.[0]?.message?.content || '';
+            if (!inhalt.trim()) throw new Error('Die KI hat nichts zurückgegeben.');
+
+            let getroffen = 0;
+            const uebernimm = (idx, text) => {
+                if (idx < 0 || idx >= teil.length) return;
+                const sauber = String(text || '').trim();
+                if (!sauber || m[sprache][teil[idx]]) return;
+                m[sprache][teil[idx]] = sauber;
+                getroffen++;
+            };
+
+            // Erwartet: nummerierte Zeilen.
+            inhalt.split('\n').forEach(zeile => {
+                const treffer = zeile.match(/^\s*(\d+)\s*[|.):\-]\s*(.+?)\s*$/);
+                if (treffer) uebernimm(parseInt(treffer[1], 10) - 1, treffer[2]);
+            });
+
+            // Rückfall: manche Antworten kommen trotz Anweisung als JSON-Liste.
+            // Ohne diesen Zweig wäre so eine Antwort komplett verloren — genau
+            // daran scheiterte die erste Fassung.
+            if (!getroffen) {
+                const start = inhalt.indexOf('[');
+                const ende = inhalt.lastIndexOf(']');
+                if (start !== -1 && ende > start) {
+                    try {
+                        const liste = JSON.parse(inhalt.slice(start, ende + 1));
+                        if (Array.isArray(liste)) {
+                            liste.forEach((wert, idx) => {
+                                if (typeof wert === 'string') uebernimm(idx, wert);
+                            });
+                        }
+                    } catch (e) { /* dann eben nicht */ }
+                }
+            }
+
+            // Letzter Rückfall: genauso viele nicht leere Zeilen wie Begriffe,
+            // nur ohne Nummern davor.
+            if (!getroffen) {
+                const zeilen = inhalt.split('\n').map(z => z.trim()).filter(Boolean);
+                if (zeilen.length === teil.length) zeilen.forEach((z, idx) => uebernimm(idx, z));
+            }
+
+            return getroffen;
+        }
+
         for (let i = 0; i < offen.length; i += HAPPEN) {
             const teil = offen.slice(i, i + HAPPEN);
             try {
-                const antwort = await window.groqFetch({
-                    model: 'llama-3.3-70b-versatile',
-                    temperature: 0,
-                    messages: [
-                        {
-                            role: 'system',
-                            content: 'Du übersetzt kurze Fachbegriffe aus Wartungs- und Prüfplänen für '
-                                + 'Recyclingmaschinen. Antworte AUSSCHLIESSLICH mit einem JSON-Array von '
-                                + 'Zeichenketten, gleiche Anzahl und Reihenfolge wie die Eingabe. '
-                                + 'Keine Erklärungen, keine Nummerierung.'
-                        },
-                        {
-                            role: 'user',
-                            content: `Übersetze nach ${SPRACHNAME[sprache] || sprache}:\n`
-                                + JSON.stringify(teil)
-                        }
-                    ]
-                });
-                const roh = await antwort.json().catch(() => null);
-                // Fehler NICHT verschlucken: vorher blieb alles still deutsch
-                // und niemand erfuhr, woran es lag (abgelaufene Anmeldung,
-                // Tageslimit, kein Netz).
-                if (!antwort.ok) {
-                    throw new Error((roh && roh.error && roh.error.message)
-                        || ('Der KI-Dienst antwortete mit Status ' + antwort.status));
-                }
-                const inhalt = roh?.choices?.[0]?.message?.content || '';
-                const start = inhalt.indexOf('[');
-                const ende = inhalt.lastIndexOf(']');
-                if (start === -1 || ende === -1) {
-                    throw new Error('Die Antwort der KI war nicht lesbar.');
-                }
-                const liste = JSON.parse(inhalt.slice(start, ende + 1));
-                if (!Array.isArray(liste)) {
-                    throw new Error('Die Antwort der KI hatte das falsche Format.');
-                }
-                teil.forEach((deutsch, idx) => {
-                    const uebersetzt = liste[idx];
-                    if (typeof uebersetzt === 'string' && uebersetzt.trim()) {
-                        m[sprache][deutsch] = uebersetzt.trim();
-                        neu++;
+                let getroffen = await frage(teil);
+                // Kam nur ein Bruchteil an (abgeschnittene Antwort), einmal
+                // nachfassen — aber nur mit dem, was noch fehlt.
+                if (getroffen < teil.length) {
+                    const rest = teil.filter(t => !m[sprache][t]);
+                    if (rest.length) {
+                        try { getroffen += await frage(rest); } catch (e) { /* Rest bleibt deutsch */ }
                     }
-                });
+                }
+                neu += getroffen;
             } catch (err) {
                 letzterFehler = err;
                 console.warn('Übersetzung fehlgeschlagen, Text bleibt deutsch:', err.message || err);
@@ -256,7 +303,21 @@
         // Wurde gar nichts übersetzt und es gab einen Fehler, muss der Aufrufer
         // das sagen können — sonst steht der Ausdruck kommentarlos auf Deutsch.
         if (!neu && letzterFehler) throw letzterFehler;
+        window.pdfLetzteUebersetzung = { angefragt: offen.length, uebernommen: neu };
         return neu;
+    };
+
+    // Wie viel liegt für diese Sprache schon im Gedächtnis? Für die Anzeige
+    // im Sprachfenster — und um bei Bedarf neu übersetzen zu lassen.
+    window.pdfGedaechtnisStand = function (sprache) {
+        const m = ladeMerk();
+        return m[sprache] ? Object.keys(m[sprache]).length : 0;
+    };
+
+    window.pdfGedaechtnisLeeren = function (sprache) {
+        const m = ladeMerk();
+        if (sprache) delete m[sprache]; else merk = {};
+        schreibeMerk();
     };
 
     window.pdfT = function (text) {

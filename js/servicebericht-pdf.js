@@ -1432,18 +1432,32 @@
                 let fehler = null;
                 try {
                     const neu = await uebersetzePruefpunkte(code);
-                    setzeStatus(neu > 0
-                        ? `${neu} neue Begriffe übersetzt und gemerkt — Vorschau wird erstellt …`
-                        : 'Vorschau wird erstellt …');
+                    const stand = window.pdfLetzteUebersetzung || null;
+                    if (stand && stand.angefragt) {
+                        // Ehrlich sagen, wie viel ankam — „ein paar Begriffe"
+                        // ohne Zahl half beim Nachvollziehen nicht weiter.
+                        const fehlt = stand.angefragt - stand.uebernommen;
+                        setzeStatus(fehlt > 0
+                            ? `${stand.uebernommen} von ${stand.angefragt} Begriffen übersetzt — `
+                              + `${fehlt} bleiben deutsch. Nochmal wählen versucht die fehlenden erneut.`
+                            : `${stand.uebernommen} Begriffe übersetzt und gemerkt — Vorschau wird erstellt …`);
+                    } else {
+                        setzeStatus(neu > 0
+                            ? `${neu} neue Begriffe übersetzt und gemerkt — Vorschau wird erstellt …`
+                            : 'Alles schon übersetzt — Vorschau wird erstellt …');
+                    }
                 } catch (err) {
                     fehler = err;
                     setzeStatus('Prüfpunkte bleiben deutsch. ' + sprachFehlerHinweis(err));
                 }
 
                 await window.previewServiceberichtPDF({ sprache: code });
-                // Bei einem Fehler das Fenster offen lassen, damit der Grund
-                // lesbar bleibt — sonst verschwindet er ungesehen.
-                if (fehler) {
+                // Fenster offen lassen, wenn etwas schiefging ODER Begriffe
+                // fehlen — dann ist die Meldung lesbar und ein zweiter Klick
+                // holt die fehlenden nach.
+                const stand2 = window.pdfLetzteUebersetzung;
+                const unvollstaendig = stand2 && stand2.angefragt > stand2.uebernommen;
+                if (fehler || unvollstaendig) {
                     knopf.classList.remove('is-active');
                     return;
                 }
@@ -1496,7 +1510,8 @@
                     if (a.interval) texte.push(a.interval);
                 });
             });
-            if (!texte.length) return 0;
+            if (!texte.length) { window.pdfLetzteUebersetzung = null; return 0; }
+            window.pdfLetzteUebersetzung = null;
             return await window.pdfUebersetzeTexte(texte, sprache);
         }
 
