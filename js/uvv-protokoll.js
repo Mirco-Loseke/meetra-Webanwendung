@@ -102,6 +102,11 @@
                     </div>
 
                     <div class="form-group">
+                        <label>Unterschrift Prüfer</label>
+                        <div id="uvvp-sign"></div>
+                    </div>
+
+                    <div class="form-group">
                         <label>Was wird protokolliert?</label>
                         <div id="uvvp-types" class="uvvp-chips"></div>
                     </div>
@@ -121,6 +126,10 @@
 
                 <div class="uvvp-foot">
                     <button type="button" class="btn-secondary" onclick="window.closeUvvProtokoll()">Abbrechen</button>
+                    <button type="button" class="btn-secondary uvvp-preview" onclick="window.previewUvvProtokoll()"
+                            title="PDF-Vorschau mit den eingetragenen Werten">Vorschau</button>
+                    <button type="button" class="btn-secondary uvvp-hand" onclick="window.handberichtUvvProtokoll()"
+                            title="Ausdruck zum Ausfüllen von Hand — Haken und Bemerkungen bleiben leer">Handbericht</button>
                     <button type="button" class="btn-primary" id="uvvp-save" onclick="window.saveUvvProtokoll()">Speichern</button>
                 </div>
             </div>`;
@@ -144,8 +153,9 @@
             ['Standort', [maschine.location_company || maschine.company,
                           maschine.location_city || maschine.operator_city].filter(Boolean).join(', ') || '—']
         ];
+        const titelbild = titelbildUrl(maschine);
         el.innerHTML = `
-            ${maschine.image_url ? `<img src="${esc(maschine.image_url)}" alt="" class="uvvp-machine-img">` : ''}
+            ${titelbild ? `<img src="${esc(titelbild)}" alt="" class="uvvp-machine-img">` : ''}
             <div class="uvvp-machine-facts">
                 ${felder.map(([k, v]) => `<div><span>${esc(k)}</span><strong>${esc(v)}</strong></div>`).join('')}
             </div>`;
@@ -163,6 +173,125 @@
             <button type="button" class="uvvp-chip${gewaehlteTechniker.includes(u.id) ? ' active' : ''}"
                     onclick="window.uvvToggleTechniker('${esc(String(u.id))}')">${esc(u.name || 'Unbenannt')}</button>`).join('');
     }
+
+    // ------------------------------------------------------
+    // Unterschrift des Prüfers
+    // ------------------------------------------------------
+    // Eigene kleine Zeichenfläche (wie in der Mietvereinbarung) — die Pads des
+    // Serviceberichts hängen fest an dessen Formularfeldern. Gespeichert wird
+    // in service_entries.tech_signature, also derselben Spalte, in der auch der
+    // Servicebericht die Technikerunterschrift ablegt.
+    let unterschrift = null;
+    let unterschriftAuto = false;  // stammt aus dem Benutzerprofil, nicht selbst gezeichnet
+    let padCtx = null;
+    let padLeer = true;
+
+    // Ist beim ersten gewählten Prüfer eine Unterschrift im Benutzerprofil
+    // hinterlegt (Einstellungen → Benutzer), wird sie automatisch übernommen —
+    // genau wie im Servicebericht. Eine selbst gezeichnete Unterschrift wird
+    // dabei nie überschrieben.
+    function unterschriftAusProfil() {
+        if (unterschrift && !unterschriftAuto) return;
+        const ersterId = gewaehlteTechniker.length ? gewaehlteTechniker[0] : null;
+        const user = ersterId != null
+            ? (window.userList || []).find(u => String(u.id) === String(ersterId)) : null;
+        const hinterlegt = user && user.saved_signature ? user.saved_signature : null;
+        unterschrift = hinterlegt;
+        unterschriftAuto = !!hinterlegt;
+    }
+
+    function renderUnterschrift() {
+        const el = document.getElementById('uvvp-sign');
+        if (!el) return;
+        el.innerHTML = unterschrift
+            ? `<div class="uvvp-sign-box filled" onclick="window.uvvPadOpen()">
+                   <img src="${unterschrift}" alt="Unterschrift">
+               </div>
+               <button type="button" class="uvvp-sign-clear" onclick="window.uvvSignLoeschen()">löschen</button>`
+            : `<div class="uvvp-sign-box" onclick="window.uvvPadOpen()">
+                   <span>Hier unterschreiben</span>
+               </div>`;
+    }
+
+    window.uvvSignLoeschen = function () {
+        // Bewusst OHNE erneutes Ziehen aus dem Profil — sonst ließe sich eine
+        // hinterlegte Unterschrift nie entfernen.
+        unterschrift = null;
+        unterschriftAuto = false;
+        renderUnterschrift();
+    };
+
+    function ensurePad() {
+        if (document.getElementById('uvvp-pad-overlay')) return;
+        const ov = document.createElement('div');
+        ov.id = 'uvvp-pad-overlay';
+        ov.className = 'uvvp-backdrop';
+        ov.innerHTML = `
+            <div class="uvvp-window uvvp-window-sm">
+                <div class="uvvp-head">
+                    <div><h2>Unterschrift Prüfer</h2></div>
+                    <button type="button" class="btn-close-modal" onclick="window.uvvPadAbbrechen()">&times;</button>
+                </div>
+                <div class="uvvp-body">
+                    <canvas id="uvvp-pad-canvas" class="uvvp-pad-canvas"></canvas>
+                </div>
+                <div class="uvvp-foot">
+                    <button type="button" class="btn-secondary" onclick="window.uvvPadLeeren()">Leeren</button>
+                    <button type="button" class="btn-secondary" onclick="window.uvvPadAbbrechen()">Abbrechen</button>
+                    <button type="button" class="btn-primary" onclick="window.uvvPadSpeichern()">Übernehmen</button>
+                </div>
+            </div>`;
+        document.body.appendChild(ov);
+    }
+
+    window.uvvPadOpen = function () {
+        ensurePad();
+        const ov = document.getElementById('uvvp-pad-overlay');
+        const cv = document.getElementById('uvvp-pad-canvas');
+        ov.classList.add('show');
+
+        // Auflösung an die Anzeigegröße anpassen, sonst wird der Strich verzerrt.
+        const rect = cv.getBoundingClientRect();
+        cv.width = rect.width * 2;
+        cv.height = rect.height * 2;
+        padCtx = cv.getContext('2d');
+        padCtx.scale(2, 2);
+        padCtx.lineWidth = 2.2;
+        padCtx.lineCap = 'round';
+        padCtx.lineJoin = 'round';
+        padCtx.strokeStyle = '#111';
+        padLeer = true;
+
+        let zeichnet = false;
+        const pos = (e) => {
+            const r = cv.getBoundingClientRect();
+            const p = e.touches ? e.touches[0] : e;
+            return { x: p.clientX - r.left, y: p.clientY - r.top };
+        };
+        const start = (e) => { e.preventDefault(); zeichnet = true; padLeer = false; const q = pos(e); padCtx.beginPath(); padCtx.moveTo(q.x, q.y); };
+        const move = (e) => { if (!zeichnet) return; e.preventDefault(); const q = pos(e); padCtx.lineTo(q.x, q.y); padCtx.stroke(); };
+        const stop = () => { zeichnet = false; };
+        cv.onmousedown = start; cv.onmousemove = move; cv.onmouseup = stop; cv.onmouseleave = stop;
+        cv.ontouchstart = start; cv.ontouchmove = move; cv.ontouchend = stop;
+    };
+
+    window.uvvPadLeeren = function () {
+        const cv = document.getElementById('uvvp-pad-canvas');
+        if (cv && padCtx) padCtx.clearRect(0, 0, cv.width, cv.height);
+        padLeer = true;
+    };
+
+    window.uvvPadAbbrechen = function () {
+        const ov = document.getElementById('uvvp-pad-overlay');
+        if (ov) ov.classList.remove('show');
+    };
+
+    window.uvvPadSpeichern = function () {
+        const cv = document.getElementById('uvvp-pad-canvas');
+        if (cv && !padLeer) { unterschrift = cv.toDataURL("image/png"); unterschriftAuto = false; }
+        window.uvvPadAbbrechen();
+        renderUnterschrift();
+    };
 
     function renderTypen() {
         const el = document.getElementById('uvvp-types');
@@ -226,7 +355,9 @@
         const i = gewaehlteTechniker.findIndex(x => String(x) === String(realId));
         if (i > -1) gewaehlteTechniker.splice(i, 1);
         else gewaehlteTechniker.push(realId);
+        unterschriftAusProfil();
         renderTechniker();
+        renderUnterschrift();
     };
 
     // ------------------------------------------------------
@@ -245,6 +376,9 @@
         gewaehlteTypen = ['wartung', 'uvv'];
         const aktiv = window.activeUser;
         gewaehlteTechniker = aktiv && aktiv.id ? [aktiv.id] : [];
+        unterschrift = null;
+        unterschriftAuto = false;
+        unterschriftAusProfil();
 
         document.getElementById('uvvp-title').textContent =
             eintragId ? UVV_TITEL + ' bearbeiten' : UVV_TITEL;
@@ -258,6 +392,7 @@
 
         renderMaschine();
         renderTechniker();
+        renderUnterschrift();
         renderTypen();
 
         // Leerer Start: eine noch offene Prüfliste aus dem Servicebericht darf
@@ -330,6 +465,7 @@
             document.getElementById('uvvp-hours').value = data.operating_hours || '';
             document.getElementById('uvvp-remark').value = data.description || '';
             if (Array.isArray(data.technicians)) gewaehlteTechniker = [...data.technicians];
+            unterschrift = data.tech_signature || null;
 
             const payload = data.checklist_payload;
             const typen = (payload && Array.isArray(payload.checklists))
@@ -388,6 +524,7 @@
             category_id: catIds.length ? catIds[0] : null,
             category_ids: catIds,
             technicians: gewaehlteTechniker,
+            tech_signature: unterschrift,
             operating_hours: document.getElementById('uvvp-hours').value.trim() || null,
             description: document.getElementById('uvvp-remark').value.trim() || null,
             checklist_payload: payload
@@ -445,6 +582,468 @@
             console.warn('Wartungsdatum konnte nicht fortgeschrieben werden:', e.message || e);
         }
     }
+
+    // ------------------------------------------------------
+    // PDF: Vorschau und Handbericht
+    // ------------------------------------------------------
+    // Eigener, kleiner Erzeuger — die PDF-Erzeugung des Serviceberichts
+    // (js/servicebericht-pdf.js) liest ihre Werte direkt aus dem Formular des
+    // Serviceberichts und ist deshalb hier nicht verwendbar.
+    //
+    // handbericht = true: Bemerkungs-/Notizfelder bleiben leer (keine
+    // Platzhalter), damit der Prüfer sie vor Ort von Hand ausfüllen kann.
+    // Maschinenbild für das PDF: jsPDF braucht die Bilddaten selbst, eine URL
+    // reicht nicht. Klappt das Laden nicht (fremde Domain ohne CORS, offline),
+    // wird das Bild einfach weggelassen.
+    // Weg 1 ist derselbe wie in js/protocols.js (dort seit jeher zuverlässig für
+    // die Fotos aus Cloudflare R2): über ein <img> mit crossOrigin laden und auf
+    // ein Canvas zeichnen. Erst wenn das scheitert, wird heruntergeladen.
+    let letzterBildFehler = null;
+
+    async function ladeBildDataUrl(url) {
+        if (!url) return null;
+        if (String(url).startsWith('data:')) return { dataUrl: url };
+
+        // Weg 1: mit crossOrigin laden und aufs Canvas zeichnen (wie in
+        // js/protocols.js).
+        //
+        // WICHTIG: mit Zusatz in der Adresse (?pdf=1). Das Bild hängt schon
+        // OHNE crossOrigin im Fenster — der Browser hat es damit ohne
+        // CORS-Kopfzeilen im Zwischenspeicher. Ein anschließender Aufruf MIT
+        // crossOrigin bekommt genau diese gespeicherte Antwort zurück und
+        // scheitert, obwohl der Speicher CORS längst erlaubt. Der Zusatz
+        // erzwingt einen eigenen Eintrag im Zwischenspeicher — R2 ignoriert
+        // unbekannte Parameter.
+        const ueberCanvas = await bildUeberImg(mitCorsParam(url), true);
+        if (ueberCanvas) return ueberCanvas;
+
+        // Weg 2: herunterladen und in Base64 wandeln (ebenfalls an der
+        // gespeicherten Antwort ohne CORS vorbei).
+        try {
+            const res = await fetch(mitCorsParam(url), { mode: 'cors', cache: 'reload' });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const blob = await res.blob();
+            const dataUrl = await new Promise((resolve, reject) => {
+                const r = new FileReader();
+                r.onloadend = () => resolve(r.result);
+                r.onerror = reject;
+                r.readAsDataURL(blob);
+            });
+            const mass = await bildMasse(dataUrl);
+            return { dataUrl: dataUrl, w: mass && mass.w, h: mass && mass.h };
+        } catch (e) {
+            letzterBildFehler = 'Download blockiert (' + (e.message || e) + ')';
+            console.warn('Titelbild: Download nicht möglich —', e.message || e);
+        }
+
+        // Weg 3: ohne crossOrigin laden. Das Bild erscheint dann zwar, das
+        // Canvas gilt aber als „verunreinigt" und toDataURL wirft — je nach
+        // Browser und Speicher klappt genau das trotzdem, also probieren.
+        const ohneCors = await bildUeberImg(url, false);
+        if (ohneCors) return ohneCors;
+
+        console.warn('Titelbild: keine Ladeart hat funktioniert. URL:', url);
+        return null;
+    }
+
+    // Eigener Eintrag im Browser-Zwischenspeicher für den CORS-Abruf.
+    function mitCorsParam(url) {
+        if (!url || String(url).startsWith('data:')) return url;
+        return url + (url.includes('?') ? '&' : '?') + 'pdf=1';
+    }
+
+    function bildUeberImg(url, mitCors) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            if (mitCors) img.crossOrigin = 'Anonymous';
+            img.onload = () => {
+                try {
+                    const cv = document.createElement('canvas');
+                    cv.width = img.naturalWidth || img.width;
+                    cv.height = img.naturalHeight || img.height;
+                    cv.getContext('2d').drawImage(img, 0, 0);
+                    resolve({ dataUrl: cv.toDataURL('image/jpeg', 0.85), w: cv.width, h: cv.height });
+                } catch (e) {
+                    letzterBildFehler = mitCors ? 'Canvas gesperrt (CORS)' : 'Canvas verunreinigt (kein CORS)';
+                    console.warn(`Titelbild: Canvas-Weg ${mitCors ? 'mit' : 'ohne'} CORS fehlgeschlagen —`, e.message || e);
+                    resolve(null);
+                }
+            };
+            img.onerror = () => {
+                letzterBildFehler = mitCors ? 'Bild lädt nicht mit CORS' : 'Bild nicht erreichbar (404 / offline)';
+                console.warn(`Titelbild: Laden ${mitCors ? 'mit' : 'ohne'} CORS fehlgeschlagen.`);
+                resolve(null);
+            };
+            img.src = url;
+        });
+    }
+
+    // Titelbild der Maschine: das Hauptbild, ersatzweise das erste Foto aus
+    // der Dateiliste der Maschine.
+    function titelbildUrl(m) {
+        return titelbildKandidaten(m)[0] || null;
+    }
+
+    // Mehrere mögliche Quellen, in dieser Reihenfolge: Hauptbild, dessen
+    // Vorschau-Fassung und schließlich die Fotos aus der Dateiliste. Ist eine
+    // davon nicht ladbar, wird die nächste genommen.
+    function titelbildKandidaten(m) {
+        if (!m) return [];
+        const raus = [];
+        const dazu = (u) => { if (u && !raus.includes(u)) raus.push(u); };
+
+        if (m.image_url) {
+            const voll = String(m.image_url).trim();
+            dazu(voll);
+            if (typeof window.getMachineThumbnailUrl === 'function') {
+                dazu(window.getMachineThumbnailUrl(voll));
+            }
+        }
+        (Array.isArray(m.files) ? m.files : []).forEach(f => {
+            const u = typeof f === 'string' ? f : (f && f.url) || '';
+            const typ = (f && f.type) || '';
+            if (!u) return;
+            if (/\.(jpe?g|png|webp|gif)(\?|$)/i.test(u) || String(typ).startsWith('image/')) dazu(u);
+        });
+        return raus;
+    }
+
+    // Erste Quelle nehmen, die sich wirklich einbetten lässt.
+    async function ladeTitelbild(m) {
+        const kandidaten = titelbildKandidaten(m);
+        letzterBildFehler = null;
+
+        for (const u of kandidaten) {
+            const bild = await ladeBildDataUrl(u);
+            if (bild && bild.dataUrl) return bild;
+        }
+
+        // Nur melden, wenn es überhaupt ein Bild gäbe, aber keines nutzbar war —
+        // eine Maschine ganz ohne Bild ist kein Fehler. Die Meldung nennt den
+        // Grund und die URL, sonst ist der Hinweis für die Fehlersuche wertlos.
+        const diagnose = {
+            maschine: maschinenTitel(m),
+            kandidaten: kandidaten,
+            grund: letzterBildFehler || 'keine Bildquelle hinterlegt'
+        };
+        window.__uvvTitelbildDiagnose = diagnose;
+        console.warn('Titelbild-Diagnose:', diagnose);
+
+        if (kandidaten.length && typeof window.showToast === 'function') {
+            const kurz = String(kandidaten[0]).replace(/^https?:\/\//, '').slice(0, 60);
+            window.showToast(`Titelbild nicht ins PDF übernommen — ${diagnose.grund}. Quelle: ${kurz}…`);
+        }
+        return null;
+    }
+
+    function bildMasse(dataUrl) {
+        return new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+            img.onerror = () => resolve(null);
+            img.src = dataUrl;
+        });
+    }
+
+    // Unterschriftsfeld: Unterschrift über der Linie, darunter „Prüfer: Name".
+    // Bewusst ohne Datum — das steht oben in den Angaben.
+    function pruefUnterschrift(doc, y, name, bild) {
+        if (bild && String(bild).startsWith('data:image')) {
+            try { doc.addImage(bild, 'PNG', 20, y - 24, 70, 22); } catch (e) { }
+        }
+        doc.setDrawColor(100, 100, 100);
+        doc.setLineWidth(0.5);
+        doc.line(20, y, 95, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(60, 60, 60);
+        doc.text(`Prüfer: ${name || ''}`.trim(), 20, y + 5);
+    }
+
+    async function baueProtokollPdf(handbericht) {
+        if (typeof window.loadPDFGenerators === 'function') await window.loadPDFGenerators();
+        if (typeof window.loadUnicodePdfFont === 'function') {
+            try { await window.loadUnicodePdfFont(); } catch (e) { }
+        }
+
+        // Briefbogen wie beim Servicebericht erst hier nachladen.
+        let bg = null;
+        if (!window.VORLAGE_BASE64 && typeof window.ladeBriefbogen === 'function') {
+            try { await window.ladeBriefbogen(); } catch (e) { }
+        }
+        if (window.VORLAGE_BASE64) bg = window.VORLAGE_BASE64;
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        if (typeof window.registerUnicodeFont === 'function' && window.registerUnicodeFont(doc)) {
+            doc.setFont('helvetica', 'normal');
+        }
+        const hintergrund = () => { if (bg) doc.addImage(bg, 'JPEG', -5, -5, 220, 307, undefined, 'FAST'); };
+        const addPage = doc.addPage.bind(doc);
+        doc.addPage = function () { addPage(); hintergrund(); return doc; };
+        hintergrund();
+
+        const payload = typeof window.getChecklistPayload === 'function' ? window.getChecklistPayload() : null;
+        const listen = (payload && Array.isArray(payload.checklists)) ? payload.checklists : [];
+
+        const stunden = document.getElementById('uvvp-hours').value.trim();
+        const datum = document.getElementById('uvvp-date').value || heute();
+        const bemerkung = document.getElementById('uvvp-remark').value.trim();
+        const pruefer = gewaehlteTechniker
+            .map(id => (window.userList || []).find(u => String(u.id) === String(id)))
+            .filter(Boolean).map(u => u.name).join(', ');
+        const kopfzeile = `Maschine: ${maschinenTitel(maschine)} | Seriennummer: ${maschine.serial || maschine.serial_number || '—'}`
+            + ` | Baujahr: ${maschine.year || '—'} | Betriebsstunden: ${stunden || '—'}`;
+
+        // ---- Deckblatt ----
+        // Ruhiger Aufbau: schmale Akzentlinie, großer Titel, rechts das
+        // Titelbild der Maschine, darunter die Angaben als zweispaltige
+        // Liste mit feinen Trennlinien — bewusst ohne Kästen, die den
+        // Briefbogen zerschneiden.
+        const AKZENT = [23, 37, 84];
+        const kat = (window.categoryList || []).find(c => String(c.id) === String(maschine.category_id));
+
+        // Titelbild oben rechts, seitenverhältnistreu in den Rahmen gesetzt.
+        let bildBreite = 0;
+        const bild = await ladeTitelbild(maschine);
+        if (bild && bild.dataUrl) {
+            try {
+                const kasten = { x: 132, y: 42, b: 58, h: 44 };
+                let b = kasten.b, h = kasten.h;
+                if (bild.w && bild.h) {
+                    const f = Math.min(kasten.b / bild.w, kasten.h / bild.h);
+                    b = bild.w * f;
+                    h = bild.h * f;
+                }
+                doc.addImage(bild.dataUrl, kasten.x + (kasten.b - b) / 2, kasten.y + (kasten.h - h) / 2, b, h,
+                    undefined, 'FAST');
+                bildBreite = 62;
+            } catch (e) {
+                console.warn('Titelbild konnte nicht gezeichnet werden:', e.message || e);
+            }
+        }
+
+        // Kopf
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(21);
+        doc.setTextColor(17, 24, 39);
+        doc.text('UVV- & Wartungsprotokoll', 20, 52);
+
+        doc.setDrawColor(AKZENT[0], AKZENT[1], AKZENT[2]);
+        doc.setLineWidth(1.2);
+        doc.line(20, 56, 48, 56);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        doc.setTextColor(120, 120, 120);
+        doc.text(handbericht
+            ? 'Ausdruck zum Ausfüllen von Hand'
+            : `Prüfung vom ${datum.split('-').reverse().join('.')}`, 20, 63);
+
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(13);
+        doc.setTextColor(17, 24, 39);
+        doc.text(maschinenTitel(maschine), 20, 74);
+
+        // Angaben, zweispaltig mit feinen Trennlinien
+        let y = 88;
+        const paare = [
+            ['Seriennummer', maschine.serial || maschine.serial_number || '—'],
+            ['Baujahr', String(maschine.year || '—')],
+            ['Maschinenserie', maschine.machine_series || '—'],
+            ['Kategorie', kat ? kat.name : '—'],
+            ['Betriebsstunden', stunden || '—'],
+            ['Datum', datum.split('-').reverse().join('.')]
+        ];
+        const spalteX = [20, 108];
+        const spalteBreite = 72;
+        paare.forEach(([k, v], i) => {
+            const sp = i % 2;
+            const zeile = Math.floor(i / 2);
+            const px = spalteX[sp];
+            const py = y + zeile * 14;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7.5);
+            doc.setTextColor(140, 140, 140);
+            doc.text(String(k).toUpperCase(), px, py);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10.5);
+            doc.setTextColor(17, 24, 39);
+            doc.text(doc.splitTextToSize(String(v), spalteBreite)[0] || '—', px, py + 5.5);
+            doc.setDrawColor(232, 232, 232);
+            doc.setLineWidth(0.2);
+            doc.line(px, py + 8.5, px + spalteBreite, py + 8.5);
+        });
+        y += Math.ceil(paare.length / 2) * 14 + 4;
+        void bildBreite;
+
+        // Geprüft wird / Bemerkung
+        const arten = [...new Set(listen.map(cl => cl.type).filter(Boolean))]
+            .map(t => (TYPEN.find(x => x.key === t) || {}).label || t);
+        if (arten.length) {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7.5);
+            doc.setTextColor(140, 140, 140);
+            doc.text('PROTOKOLLIERT', 20, y);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10.5);
+            doc.setTextColor(17, 24, 39);
+            doc.text(arten.join('   ·   '), 20, y + 5.5);
+            y += 18;
+        }
+
+        if (!handbericht && bemerkung) {
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7.5);
+            doc.setTextColor(140, 140, 140);
+            doc.text('BEMERKUNG', 20, y);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            doc.setTextColor(40, 40, 40);
+            const zeilen = doc.splitTextToSize(bemerkung, 170);
+            doc.text(zeilen, 20, y + 5.5);
+            y += 5.5 + zeilen.length * 5 + 10;
+        }
+
+        // Unterschrift steht nur einmal ganz am Ende des Protokolls (siehe unten).
+        // ---- Je Prüfplan eine eigene Seite ----
+        let letzteBemerkungY = 0;
+        listen.forEach(cl => {
+            if (!Array.isArray(cl.answers) || !cl.answers.length) return;
+            const istWartung = cl.type === 'wartung';
+            const farbe = istWartung ? [5, 102, 54] : [23, 37, 84];
+            const titel = (cl.title || 'Prüfprotokoll').replace(/[^\w\s\/\-äöüÄÖÜß()]/g, '').trim();
+
+            doc.addPage();
+            const kopf = (seite) => {
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(16);
+                doc.setTextColor(farbe[0], farbe[1], farbe[2]);
+                doc.text(titel, 20, 30);
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(10);
+                doc.setTextColor(100, 100, 100);
+                doc.text(kopfzeile, 20, 37);
+                void seite;
+            };
+            kopf(1);
+
+            const body = [];
+            const katZeilen = [];
+            let kat = '';
+            cl.answers.forEach(ans => {
+                if (ans.category !== kat) {
+                    kat = ans.category;
+                    body.push(istWartung
+                        ? [String(kat || '').toUpperCase(), '', '', '', '']
+                        : [String(kat || '').toUpperCase(), '', '', '']);
+                    katZeilen.push(body.length - 1);
+                }
+                const kommentar = handbericht ? '' : ((ans.comment && ans.comment.trim()) ? ans.comment : '');
+                if (istWartung) {
+                    body.push([
+                        ans.pos || '', ans.description || '', ans.interval || '',
+                        handbericht ? '' : (ans.checked === 'na' ? 'n. z.' : (ans.checked ? 'x' : '')),
+                        kommentar
+                    ]);
+                } else {
+                    body.push([
+                        ans.pos || '', ans.description || '',
+                        handbericht ? '' : (ans.io === 'ja' ? 'Ja' : (ans.io === 'nein' ? 'Nein' : '')),
+                        kommentar
+                    ]);
+                }
+            });
+
+            doc.autoTable({
+                startY: 44,
+                head: [istWartung
+                    ? ['Pos', 'Wartungsarbeit / Prüfpunkt', 'Intervall / Frist', 'Erledigt', 'Bemerkung']
+                    : ['Pos', 'Prüfpunkt', 'i.O.', 'Bemerkung / Beanstandung']],
+                body: body,
+                rowPageBreak: 'avoid',
+                margin: { top: 44, bottom: 20, left: 20, right: 20 },
+                theme: 'grid',
+                styles: { font: 'helvetica', fontSize: 7.5, cellPadding: 2, valign: 'middle' },
+                headStyles: { fillColor: farbe, textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
+                columnStyles: istWartung
+                    ? { 0: { cellWidth: 15 }, 1: { cellWidth: 75 }, 2: { cellWidth: 33, halign: 'center' }, 3: { cellWidth: 22, halign: 'center' }, 4: { cellWidth: 25 } }
+                    : { 0: { cellWidth: 15 }, 1: { cellWidth: 95 }, 2: { cellWidth: 18, halign: 'center' }, 3: { cellWidth: 42 } },
+                didParseCell: function (data) {
+                    if (katZeilen.includes(data.row.index) && data.cell.section === 'body') {
+                        data.cell.styles.fillColor = [241, 245, 249];
+                        data.cell.styles.fontStyle = 'bold';
+                        data.cell.styles.textColor = [15, 23, 42];
+                        if (data.column.index === 0) data.cell.colSpan = istWartung ? 5 : 4;
+                    }
+                },
+                didDrawPage: function (data) { if (data.pageNumber > 1) kopf(data.pageNumber); }
+            });
+
+            // Bemerkungsfeld unter der Tabelle — im Handbericht bewusst leer.
+            let by = doc.lastAutoTable.finalY + 10;
+            if (by + 30 > 270) { doc.addPage(); by = 40; }
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.setTextColor(30, 41, 59);
+            doc.text('Bemerkungen:', 20, by);
+            by += 5;
+            doc.setDrawColor(180, 180, 180);
+            doc.setLineWidth(0.3);
+            doc.rect(20, by, 170, 22);
+            if (!handbericht && cl.generalRemark && cl.generalRemark.trim()) {
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.setTextColor(50, 50, 50);
+                doc.text(doc.splitTextToSize(cl.generalRemark, 165), 23, by + 5);
+            }
+
+            // Unterschrieben wird EINMAL, ganz am Schluss (siehe unten) — nicht
+            // unter jedem einzelnen Prüfplan.
+            letzteBemerkungY = by + 22;
+        });
+
+        // ---- Unterschrift: einmal, ganz unten, deutlich unter dem
+        //      Bemerkungsfeld des letzten Protokolls ----
+        let sigY = (letzteBemerkungY || 60) + 34;
+        if (sigY + 14 > 275) { doc.addPage(); sigY = 70; }
+        pruefUnterschrift(doc, sigY, pruefer, handbericht ? null : unterschrift);
+
+        const gesamt = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= gesamt; i++) {
+            doc.setPage(i);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Seite ${i} von ${gesamt}`, 190, 285, { align: 'right' });
+        }
+        return doc;
+    }
+
+    async function zeigePdf(handbericht) {
+        if (!maschine) return;
+        const payload = typeof window.getChecklistPayload === 'function' ? window.getChecklistPayload() : null;
+        if (!payload || !Array.isArray(payload.checklists) || !payload.checklists.length) {
+            window.showToast('Bitte zuerst einen Prüfplan aktivieren.');
+            return;
+        }
+        try {
+            const doc = await baueProtokollPdf(handbericht);
+            const url = doc.output('bloburl');
+            const titel = (handbericht ? 'Handbericht' : 'Vorschau') + ' — ' + UVV_TITEL;
+            if (typeof window.previewDocument === 'function') {
+                window.previewDocument(url, `${titel} (${maschinenTitel(maschine)})`, 'application/pdf');
+            } else {
+                window.open(url, '_blank');
+            }
+        } catch (e) {
+            console.error('PDF konnte nicht erzeugt werden:', e);
+            window.showToast('PDF konnte nicht erzeugt werden: ' + ((e && e.message) || 'unbekannter Fehler'));
+        }
+    }
+
+    window.previewUvvProtokoll = function () { return zeigePdf(false); };
+    window.handberichtUvvProtokoll = function () { return zeigePdf(true); };
 
     // ------------------------------------------------------
     // Übersicht je Maschine (Aktionen → Ansehen)

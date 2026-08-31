@@ -1275,6 +1275,8 @@
     // ==========================================
     // ASSIGNMENTS
     // ==========================================
+    // Auch nach aussen: js/task-drafts.js stellt damit einen Entwurf wieder her.
+    window.renderAssignedUsers = renderAssignedUsers;
     function renderAssignedUsers(assignedIds) {
         const container = document.getElementById('task-user-options');
         const labelContainer = document.getElementById('task-assigned-users-label');
