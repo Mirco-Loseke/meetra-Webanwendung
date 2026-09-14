@@ -1953,7 +1953,7 @@
             const idx = angeboteList.findIndex(x => x.id === angebotId);
             if (idx !== -1) angeboteList[idx] = data;
 
-            await window.syncAngebotMachineHistory(data); // kein machine_id -> löscht ggf. alten Historie-Eintrag
+            await window.syncAngebotMachineHistory(data); // kein machine_id -> haengt ggf. noch am Kunden, sonst geloescht
             window.renderAngeboteList();
         } catch (err) {
             console.error('Error saving machine label for Angebot:', err);
@@ -1979,19 +1979,23 @@
             const idx = angeboteList.findIndex(x => x.id === angebotId);
             if (idx !== -1) angeboteList[idx] = data;
 
-            if (data.machine_id) await window.syncAngebotMachineHistory(data);
+            if (data.machine_id || data.customer_id) await window.syncAngebotMachineHistory(data);
         } catch (err) {
             console.error('Error updating Bemerkung:', err);
             window.showToast('Fehler beim Speichern der Bemerkung: ' + err.message);
         }
     };
 
-    // Pflegt den passenden Historie-Eintrag bei der Maschine synchron zur Zuordnung im
-    // Angebot: anlegen/aktualisieren, wenn eine Maschine gesetzt ist, sonst löschen.
+    // Pflegt den passenden Historie-Eintrag synchron zur Zuordnung im Angebot:
+    // anlegen/aktualisieren, sobald Kunde ODER Maschine bekannt ist, sonst
+    // löschen. Der Eintrag haengt bevorzugt an der Maschine (dort ist er auch
+    // in der Maschinen-Historie sichtbar) — ist keine eindeutige Maschine
+    // bekannt, haengt er direkt am Kunden (customer_id), damit er trotzdem in
+    // der Adress-Historie auftaucht (supabase_add_manual_history_customer_id.sql).
     window.syncAngebotMachineHistory = async function (angebot) {
         if (!window.supabaseClient || !angebot) return;
 
-        if (!angebot.machine_id) {
+        if (!angebot.machine_id && !angebot.customer_id) {
             await window.supabaseClient.from('manual_history_entries').delete().eq('angebot_id', angebot.id);
             return;
         }
@@ -2007,7 +2011,8 @@
 
         const payload = {
             angebot_id: angebot.id,
-            machine_id: angebot.machine_id,
+            machine_id: angebot.machine_id || null,
+            customer_id: angebot.customer_id || null,
             type: 'angebot',
             title: `Angebot ${angebot.belegnummer}`,
             content: parts.join(' · '),
@@ -2031,9 +2036,12 @@
         if (!window.supabaseClient) return;
         try {
             // --- Phase 1: Kunde anhand des Kundenmatchcodes ermitteln ---
+            // Die zusaetzlichen Felder werden nur gebraucht, um direkt im Anschluss den
+            // Historie-Eintrag anzulegen (syncAngebotMachineHistory) — sonst haette ein
+            // Angebot ohne (spaeter noch aufloesbare) Maschine bis dahin keinen Eintrag.
             const { data: unresolvedCustomers, error: custFetchError } = await window.supabaseClient
                 .from('angebote')
-                .select('id, kundenmatchcode')
+                .select('id, kundenmatchcode, belegnummer, belegdatum, machine_id, nettobetrag, bruttobetrag, bemerkung')
                 .is('customer_id', null)
                 .not('kundenmatchcode', 'is', null);
 
@@ -2074,7 +2082,10 @@
                                 .update({ customer_id: customerIds[0] })
                                 .eq('id', angebot.id);
 
-                            if (updError) console.error('Error auto-assigning customer to Angebot:', updError);
+                            if (updError) { console.error('Error auto-assigning customer to Angebot:', updError); continue; }
+                            // Kunde steht jetzt fest -> Historie-Eintrag sofort anlegen, auch
+                            // wenn Phase 2 gleich keine eindeutige Maschine findet.
+                            await window.syncAngebotMachineHistory({ ...angebot, customer_id: customerIds[0] });
                         }
                     }
                 }

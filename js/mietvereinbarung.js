@@ -29,6 +29,8 @@
     let a4Modus = false;   // auf dem Handy kurz auf echtes A4 umschalten (Druck/PDF)
     let gespeicherteId = null; // Zeile in rental_agreements, sobald einmal gespeichert
     let gespeichertesDoc = null; // zugehoeriges Dokument unter "Dokumente"
+    // Was in dieser Sitzung schon in R2 liegt: "phase|position" -> { bild, eintrag }
+    let hochgeladeneFotos = {};
     let padZiel = null;    // welches Unterschriftenfeld gerade gezeichnet wird
     let schadenLeer = true; // Stand beim letzten Zeichnen: Schadenstabelle ohne Eintrag
 
@@ -93,6 +95,71 @@
         .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
     // ------------------------------------------------------
+    // Entwurf: nichts geht mehr verloren
+    // ------------------------------------------------------
+    // Ohne das hier war bei einem Abbruch (kein Empfang, Tab abgestürzt,
+    // Handy gesperrt) die ganze Aufnahme weg — Bogen und Fotos lebten nur
+    // im Arbeitsspeicher. Jetzt wandert der Stand bei jeder Änderung in
+    // IndexedDB (localStorage wäre mit den Fotos sofort voll) und wird
+    // beim nächsten Öffnen angeboten. Gelöscht wird er erst, wenn das
+    // Speichern in die Datenbank wirklich durch ist.
+    const ENTWURF_DB = 'miet-entwuerfe';
+    const ENTWURF_STORE = 'entwuerfe';
+    let entwurfKey = null;
+    let entwurfUhr = null;
+
+    function entwurfDb() {
+        return new Promise((fertig, fehler) => {
+            if (!window.indexedDB) { fehler(new Error('IndexedDB fehlt')); return; }
+            const anfrage = window.indexedDB.open(ENTWURF_DB, 1);
+            anfrage.onupgradeneeded = () => {
+                const db = anfrage.result;
+                if (!db.objectStoreNames.contains(ENTWURF_STORE)) db.createObjectStore(ENTWURF_STORE);
+            };
+            anfrage.onsuccess = () => fertig(anfrage.result);
+            anfrage.onerror = () => fehler(anfrage.error);
+        });
+    }
+
+    async function entwurfArbeit(modus, fn) {
+        const db = await entwurfDb();
+        try {
+            return await new Promise((fertig, fehler) => {
+                const t = db.transaction(ENTWURF_STORE, modus);
+                const anfrage = fn(t.objectStore(ENTWURF_STORE));
+                anfrage.onsuccess = () => fertig(anfrage.result);
+                anfrage.onerror = () => fehler(anfrage.error);
+            });
+        } finally {
+            db.close();
+        }
+    }
+
+    // Bei jeder Änderung aufgerufen, aber höchstens alle 800 ms geschrieben.
+    function entwurfMerken() {
+        if (!entwurfKey || !daten) return;
+        clearTimeout(entwurfUhr);
+        entwurfUhr = setTimeout(() => {
+            const stand = { gespeichertAm: Date.now(), phase: phase, daten: daten,
+                            gespeicherteId: gespeicherteId, gespeichertesDoc: gespeichertesDoc };
+            entwurfArbeit('readwrite', s => s.put(stand, entwurfKey))
+                .catch(e => console.warn('Entwurf konnte nicht gesichert werden:', e));
+        }, 800);
+    }
+
+    async function entwurfLesen(key) {
+        try { return await entwurfArbeit('readonly', s => s.get(key)); }
+        catch (e) { console.warn('Entwurf konnte nicht gelesen werden:', e); return null; }
+    }
+
+    async function entwurfLoeschen() {
+        clearTimeout(entwurfUhr);
+        if (!entwurfKey) return;
+        try { await entwurfArbeit('readwrite', s => s.delete(entwurfKey)); }
+        catch (e) { console.warn('Entwurf konnte nicht gelöscht werden:', e); }
+    }
+
+    // ------------------------------------------------------
     // Oeffnen
     // ------------------------------------------------------
     // agreementId gesetzt = eine gespeicherte Mietvereinbarung wird zum
@@ -123,6 +190,7 @@
         daten = leereDaten();
         phase = 'uebergabe';
         gespeicherteId = null;
+        hochgeladeneFotos = {};
         gespeichertesDoc = null;
 
         // Angaben zum Mietgeraet aus der Maschine uebernehmen.
@@ -147,7 +215,31 @@
         // kurz ein leerer Bogen auf.
         const geladen = agreementId ? await ladeVereinbarung(agreementId) : false;
 
+        // Liegt ein ungespeicherter Stand vor, wird er angeboten statt
+        // stillschweigend verworfen.
+        entwurfKey = `${machineId || 'ohne'}|${agreementId || 'neu'}`;
+        const entwurf = await entwurfLesen(entwurfKey);
+        if (entwurf && entwurf.daten) {
+            const wann = new Date(entwurf.gespeichertAm || Date.now());
+            const text = `Es gibt einen ungespeicherten Stand vom ${wann.toLocaleDateString('de-DE')}, `
+                + `${wann.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr `
+                + `(inklusive Fotos).\n\nDiesen Stand fortsetzen?`;
+            if (window.confirm(text)) {
+                daten = entwurf.daten;
+                if (entwurf.phase) phase = entwurf.phase;
+                if (entwurf.gespeicherteId) gespeicherteId = entwurf.gespeicherteId;
+                if (entwurf.gespeichertesDoc) gespeichertesDoc = entwurf.gespeichertesDoc;
+            } else {
+                await entwurfLoeschen();
+            }
+        }
+
         zeichneFenster();
+        // html2canvas und jsPDF schon jetzt im Hintergrund holen. Beim
+        // Speichern waren das bisher die ersten Sekunden Wartezeit —
+        // ausgerechnet dann, wenn der Empfang schlecht ist.
+        ladeHtml2Canvas().catch(() => { });
+        if (typeof window.loadPDFGenerators === 'function') { try { window.loadPDFGenerators(); } catch (e) { } }
         uebernehmeEinweiserUnterschrift();
         if (!geladen) ladeBetriebsstunden();
     };
@@ -250,8 +342,15 @@
         if (ov) ov.classList.remove('open');
         document.body.style.overflow = '';
         window.removeEventListener('resize', skaliereSeiten);
+        // Beim Schliessen den letzten Stand noch sichern (Entwurf).
+        entwurfSofort(null);
+        document.removeEventListener('visibilitychange', entwurfSofort);
+        window.removeEventListener('pagehide', entwurfSofort);
         window.mietBildZu();
         menuSchliessen();
+        // Zwischengespeicherte Bilddaten freigeben — sie sind nur innerhalb
+        // eines Bogens etwas wert und belegen sonst dauerhaft Speicher.
+        if (typeof datenUrlCache !== 'undefined') datenUrlCache.clear();
     };
 
     window.setMietPhase = function (p) {
@@ -370,7 +469,27 @@
         ov.classList.add('open');
         document.body.style.overflow = 'hidden';
         zeichneInhalt();
+        dropZuhoerer(document.getElementById('miet-pages'));
+        // Daneben fallen gelassene Bilder würde der Browser sonst statt der
+        // App anzeigen — der ausgefüllte Bogen wäre damit weg.
+        ov.addEventListener('dragover', (e) => e.preventDefault());
+        ov.addEventListener('drop', (e) => e.preventDefault());
         window.addEventListener('resize', skaliereSeiten);
+        // Handy gesperrt, App weggewischt: dann sofort schreiben statt
+        // auf das Ende der Wartezeit zu hoffen.
+        document.addEventListener('visibilitychange', entwurfSofort);
+        window.addEventListener('pagehide', entwurfSofort);
+    }
+
+    function entwurfSofort(e) {
+        if (e && e.type === 'visibilitychange' && document.visibilityState === 'visible') return;
+        clearTimeout(entwurfUhr);
+        entwurfUhr = null;
+        if (!entwurfKey || !daten) return;
+        const stand = { gespeichertAm: Date.now(), phase: phase, daten: daten,
+                        gespeicherteId: gespeicherteId, gespeichertesDoc: gespeichertesDoc };
+        entwurfArbeit('readwrite', s => s.put(stand, entwurfKey))
+            .catch(e => console.warn('Entwurf konnte nicht gesichert werden:', e));
     }
 
     // ------------------------------------------------------
@@ -379,6 +498,9 @@
     function zeichneInhalt() {
         const pages = document.getElementById('miet-pages');
         if (!pages) return;
+
+        // Jeder Neuaufbau heisst: es hat sich etwas geändert.
+        entwurfMerken();
 
         // Der Bogen wird bei jedem Kreuz komplett neu aufgebaut. Ohne das
         // hier sprang die Ansicht dabei zurück nach ganz oben links —
@@ -424,6 +546,7 @@
         // Umfang wäre er unlesbar klein. Unterschrieben wird unter den Fotos,
         // eine eigene Bestätigungsseite gibt es deshalb nicht mehr.
         if (recht) verteileRechtstext(pages, recht);
+        leereFelderMarkieren(pages);
         seitenNummerieren(pages);
         skaliereSeiten();
 
@@ -514,7 +637,7 @@
         Array.from(restBox.children).forEach(n => n.remove());
         // Zeilen, die nur auf dem ersten Teil stehen sollen (Fortschritt,
         // Kamera-Knopf), im Fortsetzungsteil entfernen.
-        rest.querySelectorAll("[data-nurerste]").forEach(n => n.remove());
+        rest.querySelectorAll("[data-nurerste],[data-ersteseite]").forEach(n => n.remove());
         const titel = rest.querySelector('.miet-block-title');
         // Der Titel bleibt unveraendert — auf dem Papier soll nicht
         // "(Fortsetzung)" stehen, die Tabelle laeuft schlicht weiter.
@@ -646,9 +769,18 @@
     const RECHT_ZIEL_SEITEN = 2;
     const RECHT_MIN_F = 0.62;
 
+    /* Der gefundene Verkleinerungsfaktor haengt NUR am Wortlaut und an der
+       Darstellungsart (A4 oder Fliessmodus) — nicht am Rest des Bogens.
+       Ohne diesen Merker suchte jeder Neuaufbau (jedes Kreuz, jedes Foto)
+       ihn von 1,0 abwaerts erneut, und jeder Versuch ist ein kompletter
+       Seitenumbruch mit Messen. Gemerkt wird deshalb der zuletzt passende
+       Wert und beim naechsten Mal sofort dort angefangen. */
+    let rechtMerker = { schluessel: null, f: 1 };
+
     function verteileRechtstext(container, html) {
         const vorher = container.querySelectorAll('.miet-page').length;
-        let f = 1;
+        const schluessel = html.length + '|' + (a4Modus ? 'a4' : istHandy() ? 'fluss' : 'schirm');
+        let f = rechtMerker.schluessel === schluessel ? rechtMerker.f : 1;
         for (let versuch = 0; versuch < 20; versuch++) {
             const markup = html.replace(
                 'class="miet-block miet-recht"',
@@ -656,13 +788,27 @@
             verteileAufSeiten(container, [markup], true);
 
             const seiten = container.querySelectorAll('.miet-page').length - vorher;
-            if (seiten <= RECHT_ZIEL_SEITEN || f <= RECHT_MIN_F) return;
+            if (seiten <= RECHT_ZIEL_SEITEN || f <= RECHT_MIN_F) {
+                rechtMerker = { schluessel: schluessel, f: f };
+                return;
+            }
 
             // Zu viele Blätter: Versuch verwerfen und eine Stufe kleiner.
             Array.from(container.querySelectorAll('.miet-page')).slice(vorher)
                 .forEach(s => s.remove());
             f = Math.round((f - 0.03) * 100) / 100;
         }
+    }
+
+    // Ein leeres <input type="date"> zeigt im Browser "tt.mm.jjjj", ein
+    // leeres Zeitfeld "--:--". Auf dem Papier und im PDF soll dort NICHTS
+    // stehen — man soll von Hand eintragen können. Ein CSS-Platzhalter ist
+    // das nicht (::placeholder greift dort nicht), deshalb wird hier
+    // markiert und die Schrift im Druck/PDF durchsichtig geschaltet.
+    function leereFelderMarkieren(container) {
+        container.querySelectorAll('input.miet-in').forEach(f => {
+            f.classList.toggle('miet-feld-leer', !f.value);
+        });
     }
 
     function seitenNummerieren(container) {
@@ -761,6 +907,9 @@
         // Ein noch offenes Feld kann die Seite gesprengt haben.
         if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
         window.mietSeitenPruefen();
+        // Leere Datums-/Zeitfelder sollen auf dem Papier leer bleiben.
+        const seitenBox = document.getElementById('miet-pages');
+        if (seitenBox) leereFelderMarkieren(seitenBox);
 
         // Am Rechner druckt der Browser den Bogen direkt — das Ergebnis
         // stimmt und ist am schnellsten.
@@ -776,7 +925,7 @@
         // Weitergeben geöffnet — damit sieht es überall gleich aus.
         try {
             status('PDF wird erzeugt …');
-            const doc = await mitA4(() => pdfErzeugen());
+            const doc = await mitEingebettetenFotos(() => mitA4(() => pdfErzeugen()));
             const blob = doc.output('blob');
             const url = URL.createObjectURL(blob);
             const fenster = window.open(url, '_blank');
@@ -794,7 +943,7 @@
         } catch (e) {
             console.error('PDF für den Druck fehlgeschlagen:', e);
             status('');
-            window.showToast('PDF konnte nicht erzeugt werden: ' + ((e && e.message) || 'unbekannter Fehler'));
+            window.showToast('PDF konnte nicht erzeugt werden: ' + fehlerText(e));
         }
     };
 
@@ -812,6 +961,31 @@
     function status(text) {
         const el = document.getElementById('miet-status');
         if (el) el.textContent = text;
+    }
+
+    /* Zeitmessung beim Speichern. Ohne sie ist nicht zu sagen, WO die
+       Sekunden hingehen (Fotos, PDF-Aufnahme, Upload, Datenbank) — und ohne
+       das lässt sich nichts gezielt beschleunigen. Die Aufstellung landet in
+       der Konsole und die grössten Brocken in der Fusszeile. */
+    let messAnfang = 0, messLetzte = 0, messListe = [];
+
+    function messStarten() {
+        messAnfang = messLetzte = performance.now();
+        messListe = [];
+    }
+    function messPunkt(name) {
+        const jetzt = performance.now();
+        messListe.push({ schritt: name, s: +((jetzt - messLetzte) / 1000).toFixed(1) });
+        messLetzte = jetzt;
+    }
+    function messText() {
+        if (!messAnfang) return '';
+        const gesamt = +((performance.now() - messAnfang) / 1000).toFixed(1);
+        console.table(messListe);
+        console.log('Mietvereinbarung speichern — gesamt', gesamt, 's');
+        const gross = messListe.slice().sort((a, b) => b.s - a.s).slice(0, 3)
+            .filter(x => x.s >= 0.5).map(x => `${x.schritt} ${x.s} s`).join(', ');
+        return ` — ${gesamt} s${gross ? ' (' + gross + ')' : ''}`;
     }
 
     function sauber(s) {
@@ -839,15 +1013,343 @@
         await new Promise((resolve, reject) => {
             const s = document.createElement('script');
             s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-            s.onload = resolve;
-            s.onerror = () => reject(new Error('html2canvas konnte nicht geladen werden. Bitte Internetverbindung prüfen.'));
+            // Bei schlechtem Empfang blieb das Laden ohne Fehler stehen und
+            // damit das ganze Speichern — deshalb eine harte Obergrenze.
+            const uhr = setTimeout(() => reject(new Error('html2canvas lädt zu langsam. Bitte Verbindung prüfen.')), 20000);
+            s.onload = () => { clearTimeout(uhr); resolve(); };
+            s.onerror = () => { clearTimeout(uhr); reject(new Error('html2canvas konnte nicht geladen werden. Bitte Internetverbindung prüfen.')); };
             document.head.appendChild(s);
         });
     }
 
-    // Der Bogen ist bereits auf A4-Seiten verteilt — jede Seite wird
-    // einmal abfotografiert und als ganzseitiges Bild ins PDF gelegt.
-    // Dadurch sieht das PDF exakt aus wie der Ausdruck.
+    // Netzsachen laufen bei schlechtem Empfang gern ins Leere. Deshalb
+    // jeder Upload mit Zeitgrenze und zwei Wiederholungen — ein einzelner
+    // Aussetzer wirft dann nicht die ganze Arbeit weg.
+    function mitZeitgrenze(versprechen, ms, was) {
+        return new Promise((fertig, fehler) => {
+            const uhr = setTimeout(() => fehler(new Error(was + ' dauert zu lange (Verbindung).')), ms);
+            versprechen.then(w => { clearTimeout(uhr); fertig(w); },
+                             e => { clearTimeout(uhr); fehler(e); });
+        });
+    }
+
+    /* Aus IRGENDEINEM Fehlerwert einen lesbaren Text machen. Vorher stand in
+       der Meldung „unbekannter Fehler“, sobald der Wert kein Error mit
+       .message war (AWS-Objekte, DOMException, abgelehnte Zeichenketten) —
+       damit war nicht herauszufinden, woran es lag. */
+    function fehlerText(e) {
+        if (!e) return 'kein Grund angegeben';
+        if (typeof e === 'string') return e;
+        const teile = [];
+        if (e.message) teile.push(e.message);
+        if (e.code && String(e.code) !== e.message) teile.push('Code ' + e.code);
+        if (e.statusCode) teile.push('HTTP ' + e.statusCode);
+        if (!teile.length && e.name) teile.push(e.name);
+        if (!teile.length) {
+            try { teile.push(JSON.stringify(e).slice(0, 160)); }
+            catch (x) { teile.push(String(e)); }
+        }
+        return teile.join(' · ');
+    }
+
+    /* Zwei Versuche statt drei und kürzere Fristen. Vorher konnte ein
+       hoffnungsloser Upload 3 × 90 s laufen — viereinhalb Minuten bis zur
+       Fehlermeldung. Wer im Funkloch steht, will das nach einer Minute
+       wissen und nicht nach fünf. */
+    async function mitWiederholung(fn, was, ms) {
+        let letzter = null;
+        for (let versuch = 1; versuch <= 2; versuch++) {
+            try {
+                return await mitZeitgrenze(Promise.resolve(fn()), ms || 45000, was);
+            } catch (e) {
+                letzter = e;
+                console.warn(`${was}: Versuch ${versuch} fehlgeschlagen`, e);
+                if (versuch < 2) {
+                    status(`${was}: neuer Versuch …`);
+                    await new Promise(r => setTimeout(r, 1500));
+                }
+            }
+        }
+        const f = new Error(`${was} fehlgeschlagen: ${fehlerText(letzter)}`);
+        f.ursprung = letzter;
+        throw f;
+    }
+
+    // Bilder, die schon in R2 liegen (geladene Vereinbarung), haengen als
+    // fremde Adresse im Bogen. html2canvas zeichnet sie mit, und damit ist
+    // die Zeichenflaeche "tainted" — toDataURL wirft dann
+    // "Tainted canvases may not be exported" und das Speichern bricht ab.
+    // Deshalb vor dem PDF jedes fremde Bild einmal holen und als Daten-URL
+    // einsetzen; danach wird der Originalstand wiederhergestellt, damit
+    // fotosHochladen die Bilder nicht erneut hochlaedt.
+    /* Einmal geholte Bilder bleiben für die Sitzung liegen. Beim zweiten
+       Speichern (typisch: Rücknahme nachtragen) sind die Übergabe-Fotos
+       sonst erneut aus R2 zu holen — bei neun Bildern ist das die längste
+       Wartezeit im ganzen Ablauf. */
+    const datenUrlCache = new Map();
+
+    /* Mehrere Aufgaben gleichzeitig, aber nicht alle auf einmal: mehr als
+       eine Handvoll paralleler Downloads bringt auf Mobilfunk nichts und
+       lässt einzelne in die Zeitgrenze laufen. */
+    async function parallel(liste, gleichzeitig, arbeit) {
+        const rest = liste.slice();
+        const laeufer = [];
+        for (let i = 0; i < Math.min(gleichzeitig, rest.length); i++) {
+            laeufer.push((async () => {
+                let a;
+                while ((a = rest.shift()) !== undefined) await arbeit(a);
+            })());
+        }
+        await Promise.all(laeufer);
+    }
+
+    async function alsDatenUrl(url) {
+        const gemerkt = datenUrlCache.get(url);
+        if (gemerkt) return gemerkt;
+        // Ein zweiter Anlauf nach kurzer Pause: bei wackeligem Empfang
+        // scheitert der erste Griff oft, der zweite klappt.
+        let frisch;
+        try {
+            frisch = await alsDatenUrlHolen(url);
+        } catch (e) {
+            await new Promise(r => setTimeout(r, 800));
+            frisch = await alsDatenUrlHolen(url);
+        }
+        datenUrlCache.set(url, frisch);
+        return frisch;
+    }
+
+    function blobAlsDatenUrl(blob) {
+        return new Promise((fertig, fehler) => {
+            const leser = new FileReader();
+            leser.onloadend = () => fertig(leser.result);
+            leser.onerror = fehler;
+            leser.readAsDataURL(blob);
+        });
+    }
+
+    async function alsDatenUrlHolen(url) {
+        /* ERSTER WEG: über den signierten S3-Zugang, über den die Datei auch
+           hochgeladen wurde. Genau hier lag der Fehler „ohne CORS am Speicher“:
+           die öffentliche Adresse pub-….r2.dev ist ein anderer Host und
+           schickt keine CORS-Kopfzeilen — ein `fetch` darauf muss scheitern,
+           egal wie oft man es versucht. Der S3-Endpunkt antwortet dagegen,
+           sonst könnte diese App dorthin nicht einmal hochladen. */
+        const pfad = window.FileUploadService && window.FileUploadService.r2PfadAusUrl
+            ? window.FileUploadService.r2PfadAusUrl(url) : null;
+        if (pfad) {
+            try {
+                const blob = await window.FileUploadService.downloadFile(pfad, { bucket: 'dateien' });
+                return await blobAlsDatenUrl(blob);
+            } catch (e) {
+                console.warn('Bild über den S3-Zugang nicht ladbar, zweiter Versuch über die öffentliche Adresse:', e && e.message);
+            }
+        }
+
+        // Zweiter Weg: holen und umwandeln (klappt nur mit CORS am Bucket).
+        try {
+            const res = await fetch(url, { mode: 'cors', cache: 'force-cache' });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const blob = await res.blob();
+            return await new Promise((fertig, fehler) => {
+                const leser = new FileReader();
+                leser.onloadend = () => fertig(leser.result);
+                leser.onerror = fehler;
+                leser.readAsDataURL(blob);
+            });
+        } catch (e) {
+            console.warn('Bild konnte nicht geholt werden, zweiter Versuch über <img>:', e);
+        }
+        // Dritter Weg: als Bild mit crossOrigin laden und neu zeichnen.
+        return await new Promise((fertig, fehler) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+                try {
+                    const c = document.createElement('canvas');
+                    c.width = img.naturalWidth; c.height = img.naturalHeight;
+                    c.getContext('2d').drawImage(img, 0, 0);
+                    fertig(c.toDataURL('image/jpeg', FOTO_QUALITAET));
+                } catch (e) { fehler(e); }
+            };
+            img.onerror = () => fehler(new Error('Bild nicht ladbar: ' + url));
+            img.src = url;
+        });
+    }
+
+    async function mitEingebettetenFotos(fn) {
+        const merker = [];
+        for (const p of ['uebergabe', 'ruecknahme']) {
+            const satz = daten.fotos[p] || {};
+            for (const pos of Object.keys(satz)) {
+                const bild = satz[pos];
+                if (bild && !/^data:/.test(bild)) merker.push({ behaelter: daten.fotos[p], schluessel: pos, url: bild });
+            }
+        }
+        // Unterschriften können ebenso als Adresse hinterlegt sein
+        // (hinterlegte Unterschrift des Benutzers) — sie färben die
+        // Zeichenfläche genauso ein.
+        Object.keys(daten.unterschriften || {}).forEach(k => {
+            const w = daten.unterschriften[k];
+            if (typeof w === 'string' && /^https?:\/\//.test(w)) {
+                merker.push({ behaelter: daten.unterschriften, schluessel: k, url: w });
+            }
+        });
+        if (!merker.length) return await fn();
+
+        // Nebeneinander statt nacheinander: bei neun nachzuladenden Fotos
+        // war das vorher die grösste Einzelwartezeit beim zweiten Speichern.
+        let fertigeBilder = 0;
+        const gescheitert = [];
+        status(`Bilder werden vorbereitet … (0 von ${merker.length})`);
+        /* Ein einzelnes Bild darf das PDF nicht mehr verhindern. Vorher warf
+           der erste Fehlschlag alles um — der Bogen liess sich dann NIE mehr
+           als PDF sichern, auch wenn nur ein Foto fehlte. Jetzt wird das
+           Bild ausgelassen und hinterher benannt; alles andere kommt ins PDF. */
+        await parallel(merker, 4, async (m) => {
+            try {
+                m.behaelter[m.schluessel] = await alsDatenUrl(m.url);
+            } catch (e) {
+                console.error('Foto konnte nicht gelesen werden:', m.schluessel, m.url, e);
+                gescheitert.push(m.schluessel);
+                m.fehlt = true;
+                m.behaelter[m.schluessel] = '';
+            }
+            fertigeBilder++;
+            status(`Bilder werden vorbereitet … (${fertigeBilder} von ${merker.length})`);
+        });
+        if (gescheitert.length) {
+            window.showToast('Diese Fotos liessen sich nicht vom Speicher lesen und fehlen im PDF: '
+                + gescheitert.join(', ') + '. In der Datenbank bleiben sie erhalten.');
+        }
+        zeichneInhalt();
+        try {
+            return await fn();
+        } finally {
+            merker.forEach(m => { m.behaelter[m.schluessel] = m.url; });
+            zeichneInhalt();
+        }
+    }
+
+    // Sicherheitsnetz direkt am Bogen: was auch immer noch als fremde
+    // Adresse im Markup steht (Foto, Unterschrift, Logo einer Vorlage),
+    // wird kurz vor der Aufnahme durch eine Daten-URL ersetzt und danach
+    // zurückgesetzt. Über die Daten allein war das nicht sicher zu fassen —
+    // die Meldung "Tainted canvas" kam trotzdem.
+    async function domBilderEinbetten(pages) {
+        const gleicheHerkunft = (src) => {
+            try { return new URL(src, location.href).origin === location.origin; }
+            catch (e) { return false; }
+        };
+        const offen = Array.from(pages.querySelectorAll('img')).filter(img => {
+            const src = img.getAttribute('src') || '';
+            return src && !/^data:/.test(src) && !gleicheHerkunft(src);
+        });
+        if (!offen.length) return () => { };
+
+        status('Bilder werden vorbereitet …');
+        const merker = [];
+        // Auch hier nebeneinander; dank Cache sind die meisten Bilder
+        // nach mitEingebettetenFotos ohnehin schon geholt.
+        // Ein Bild, das sich nicht einbetten lässt, wird für die Aufnahme
+        // ENTFERNT statt stehen zu lassen: bliebe die fremde Adresse im
+        // Markup, färbte sie die Zeichenfläche ein ("Tainted canvas") und
+        // das ganze PDF wäre verloren — wegen eines Bildes.
+        await parallel(offen, 4, async (img) => {
+            const alt = img.getAttribute('src');
+            let neu = '';
+            try {
+                neu = await alsDatenUrl(alt);
+            } catch (e) {
+                console.error('Fremdes Bild konnte nicht eingebettet werden:', alt, e);
+            }
+            img.setAttribute('src', neu);
+            merker.push({ img, alt });
+        });
+        await bilderFertig(pages);
+        return () => merker.forEach(m => m.img.setAttribute('src', m.alt));
+    }
+
+    // Der Briefbogen liegt als CSS-Hintergrund auf jedem Blatt
+    // (vorlage_bg.jpg). Genau der hat die Zeichenflaeche eingefaerbt:
+    // in der Bilderliste taucht er nicht auf, weil er kein <img> ist —
+    // die Meldung "Tainted canvas" kam trotzdem. Per file:// gilt selbst
+    // ein Bild aus dem eigenen Ordner als fremd.
+    //
+    // Deshalb: einmal holen, als Daten-URL auf die Blaetter legen, nach
+    // der Aufnahme zuruecksetzen. Klappt das Holen nicht, wird der
+    // Hintergrund fuer die Aufnahme abgeschaltet — ein PDF ohne
+    // Briefbogen ist besser als gar keins.
+    let bgDatenUrl = null;   // einmal je Sitzung
+    let bgUnmoeglich = false;
+
+    async function hintergrundEinbetten(pages) {
+        const blaetter = Array.from(pages.querySelectorAll('.miet-page'));
+        if (!blaetter.length) return () => { };
+
+        const quelle = getComputedStyle(blaetter[0]).backgroundImage || '';
+        const treffer = quelle.match(/url\(["']?(.*?)["']?\)/);
+        if (!treffer || /^data:/.test(treffer[1])) return () => { };
+
+        if (!bgDatenUrl && !bgUnmoeglich) {
+            try {
+                bgDatenUrl = await alsDatenUrl(treffer[1]);
+            } catch (e) {
+                console.warn('Briefbogen-Hintergrund konnte nicht eingebettet werden:', e);
+                bgUnmoeglich = true;
+            }
+        }
+
+        const wert = bgDatenUrl ? `url("${bgDatenUrl}")` : 'none';
+        blaetter.forEach(b => b.style.setProperty('background-image', wert, 'important'));
+        return () => blaetter.forEach(b => b.style.removeProperty('background-image'));
+    }
+
+    // Ein Blatt aus der Gesamtaufnahme herausschneiden. Gemessen wird die
+    // Lage des Blattes im Bogen; dieselbe Verschiebung gilt in der Aufnahme,
+    // nur mit dem Maßstab multipliziert.
+    function seitenAusschnitt(gesamt, seite, rahmen, skala) {
+        const r = seite.getBoundingClientRect();
+        const x = Math.round((r.left - rahmen.left) * skala);
+        const y = Math.round((r.top - rahmen.top) * skala);
+        const b = Math.max(1, Math.round(r.width * skala));
+        const h = Math.max(1, Math.round(r.height * skala));
+
+        const cv = document.createElement('canvas');
+        cv.width = b;
+        cv.height = h;
+        const ctx = cv.getContext('2d');
+        // Weißer Grund: sonst wären Ränder außerhalb der Aufnahme durchsichtig
+        // und würden im JPEG schwarz.
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, b, h);
+        ctx.drawImage(gesamt, x, y, b, h, 0, 0, b, h);
+        return cv;
+    }
+
+    // Ist auf dem Blatt ausser Weiss nichts zu sehen? Geprüft werden drei
+    // waagerechte Streifen; das reicht, um ein versehentlich leeres Blatt zu
+    // erkennen, und kostet kaum Zeit.
+    function istLeeresBild(cv) {
+        if (!cv.width || !cv.height) return true;
+        try {
+            const ctx = cv.getContext('2d');
+            for (const anteil of [0.25, 0.5, 0.75]) {
+                const y = Math.floor(cv.height * anteil);
+                const d = ctx.getImageData(0, y, cv.width, 1).data;
+                for (let i = 0; i < d.length; i += 4) {
+                    if (d[i] < 245 || d[i + 1] < 245 || d[i + 2] < 245) return false;
+                }
+            }
+            return true;
+        } catch (e) {
+            return false;   // im Zweifel als „hat Inhalt" behandeln
+        }
+    }
+
+    // Der Bogen ist bereits auf A4-Seiten verteilt — er wird EINMAL
+    // abfotografiert, und jedes Blatt wird daraus als ganzseitiges Bild ins
+    // PDF gelegt. Dadurch sieht das PDF exakt aus wie der Ausdruck.
     async function pdfErzeugen() {
         await ladeHtml2Canvas();
         if (typeof window.loadPDFGenerators === 'function') await window.loadPDFGenerators();
@@ -858,8 +1360,16 @@
         const seiten = Array.from(pages.querySelectorAll('.miet-page:not(.miet-page-leer)'));
         if (!seiten.length) throw new Error('Der Bogen ist leer.');
 
+        // Frisch getippte Datums-/Zeitfelder: Markierung nachziehen, damit
+        // leere Felder im PDF wirklich leer bleiben.
+        leereFelderMarkieren(pages);
+
         // Erst wenn alle Fotos und Unterschriften wirklich da sind.
         await bilderFertig(pages);
+        // Fremde Adressen im Markup einbetten (sonst "Tainted canvas").
+        const bilderZurueck = await domBilderEinbetten(pages);
+        const hintergrundZurueck = await hintergrundEinbetten(pages);
+        messPunkt('  … Bilder einbetten');
 
         // Verkleinerung und Bedienelemente für die Aufnahme abschalten.
         const altScale = pages.style.getPropertyValue('--miet-scale');
@@ -870,16 +1380,94 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
+            // Massstab 1,15 (frueher 2, dann 1,35): jede Stufe weniger heisst
+            // weniger Bildpunkte zu zeichnen, zu kodieren und hochzuladen —
+            // und die Seiten sind wegen des Briefbogen-Hintergrunds volle
+            // JPEGs, das PDF haengt also direkt daran. ~123 dpi bleiben fuer
+            // Bildschirm und Ausdruck lesbar. Wer es feiner braucht, dreht
+            // hier hoch — es kostet unmittelbar Wartezeit beim Speichern.
+            const skala = 1.15;
+
+            // EIN Aufruf für den GANZEN Bogen statt einer je Seite.
+            // Grund: html2canvas klont für jeden Aufruf das komplette
+            // Dokument samt aller Stilangaben — das kostet auf diesem
+            // index.html rund 2,5 bis 3 Sekunden, VÖLLIG unabhängig davon,
+            // wie viel auf der Seite steht (gemessen: ein Blatt mit 19
+            // Elementen brauchte genauso lange wie eines mit 300). Bei
+            // sechs Blättern ging so eine halbe Minute allein für dieses
+            // Klonen drauf. Jetzt fällt diese Grundzeit nur noch einmal an;
+            // die einzelnen Blätter werden anschließend aus der fertigen
+            // Aufnahme herausgeschnitten (Millisekunden).
+            status('PDF wird erzeugt …');
+            await new Promise(r => setTimeout(r, 0));
+
+            // Sehr lange Bögen: ein Canvas hat eine Höhengrenze (browserabhängig
+            // ab etwa 32.000 Bildpunkten). Dann doch blattweise — lieber langsam
+            // als abgeschnitten.
+            const gesamtHoehe = pages.getBoundingClientRect().height * skala;
+            const amStueck = gesamtHoehe < 30000;
+
+            const gesamt = amStueck
+                ? await window.html2canvas(pages, {
+                    scale: skala, backgroundColor: '#ffffff', useCORS: true, logging: false
+                })
+                : null;
+            const rahmen = pages.getBoundingClientRect();
+            messPunkt('  … Aufnahme');
+
             for (let i = 0; i < seiten.length; i++) {
                 status(`PDF wird erzeugt (Seite ${i + 1} von ${seiten.length}) …`);
-                const canvas = await window.html2canvas(seiten[i], {
-                    scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false
-                });
+                await new Promise(r => setTimeout(r, 0));
+                let canvas = gesamt
+                    ? seitenAusschnitt(gesamt, seiten[i], rahmen, skala)
+                    : await window.html2canvas(seiten[i], {
+                        scale: skala, backgroundColor: '#ffffff', useCORS: true, logging: false
+                    });
+
+                // Sicherheitsnetz für den Ausschnitt: käme durch einen
+                // Rechenfehler ein leeres Blatt heraus, wäre das im PDF eine
+                // weisse Seite — und das fiele erst beim Kunden auf. Ein Blatt
+                // mit Text muss Farbe enthalten; sonst dieses eine Blatt doch
+                // einzeln aufnehmen.
+                if (gesamt && istLeeresBild(canvas) && seiten[i].innerText.trim().length > 20) {
+                    console.warn('Seitenausschnitt war leer — Blatt', i + 1, 'wird einzeln aufgenommen.');
+                    canvas.width = canvas.height = 0;
+                    canvas = await window.html2canvas(seiten[i], {
+                        scale: skala, backgroundColor: '#ffffff', useCORS: true, logging: false
+                    });
+                }
+                let seitenBild;
+                try {
+                    seitenBild = canvas.toDataURL('image/jpeg', 0.74);
+                } catch (e) {
+                    // "Tainted canvas": es hing doch noch ein fremdes Bild im
+                    // Bogen. Zur Eingrenzung alle nicht-eingebetteten Quellen
+                    // in die Konsole schreiben — sonst ist nicht zu sehen,
+                    // welches Bild es war.
+                    const fremd = Array.from(pages.querySelectorAll('img'))
+                        .map(im => im.getAttribute('src') || '')
+                        .filter(s => s && !/^data:/.test(s));
+                    console.error('Tainted canvas — diese Bilder sind nicht eingebettet:', fremd, e);
+                    // Beim nächsten Anlauf ohne Briefbogen-Hintergrund: der
+                    // ist der übliche Verursacher, wenn kein <img> übrig ist.
+                    bgUnmoeglich = true;
+                    bgDatenUrl = null;
+                    const fehler = new Error(fremd.length
+                        ? `Ein Bild lässt sich nicht ins PDF übernehmen: ${fremd[0].slice(0, 80)}`
+                        : 'Das PDF liess sich nicht erzeugen (Tainted canvas).');
+                    fehler.taint = true;
+                    throw fehler;
+                }
                 if (i > 0) doc.addPage();
-                doc.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 210, 297);
+                doc.addImage(seitenBild, 'JPEG', 0, 0, 210, 297);
+                // Speicher der Seite sofort freigeben (Handy).
+                canvas.width = canvas.height = 0;
             }
+            if (gesamt) gesamt.width = gesamt.height = 0;
             return doc;
         } finally {
+            hintergrundZurueck();
+            bilderZurueck();
             pages.classList.remove('miet-pdf');
             if (altScale) pages.style.setProperty('--miet-scale', altScale);
             else pages.style.removeProperty('--miet-scale');
@@ -890,27 +1478,58 @@
     // Fotos liegen als Daten-URL im Arbeitsspeicher. Beim Speichern
     // wandern sie einzeln nach R2; im Bogen bleiben sie unverändert,
     // damit ein erneutes Speichern dasselbe PDF ergibt.
+    // Früher lief das streng nacheinander: bei zehn Bildern und schwachem
+    // Netz summierten sich die Wartezeiten zu Minuten. Jetzt laufen drei
+    // Bilder gleichzeitig, jedes mit Zeitgrenze und Wiederholung.
     async function fotosHochladen(basis) {
         const ergebnis = [];
-        const phasen = ['uebergabe', 'ruecknahme'];
-        for (const p of phasen) {
+        const offen = [];
+        ['uebergabe', 'ruecknahme'].forEach(p => {
             const satz = daten.fotos[p] || {};
-            for (const pos of Object.keys(satz)) {
+            Object.keys(satz).forEach(pos => {
                 const bild = satz[pos];
-                if (!bild || !/^data:/.test(bild)) {
-                    if (bild) ergebnis.push({ phase: p, position: pos, url: bild, path: null, name: pos });
-                    continue;
-                }
+                if (!bild) return;
+                // Schon in R2 (geladene Vereinbarung) — nicht noch einmal hoch.
+                if (!/^data:/.test(bild)) { ergebnis.push({ phase: p, position: pos, url: bild, path: null, name: pos }); return; }
+                // In dieser Sitzung bereits hochgeladen (z. B. weil beim
+                // ersten Mal nur das PDF scheiterte) — Eintrag wiederverwenden,
+                // sonst liegt dasselbe Bild mehrfach im Speicher.
+                const bekannt = hochgeladeneFotos[`${p}|${pos}`];
+                if (bekannt && bekannt.bild === bild) { ergebnis.push(bekannt.eintrag); return; }
+                offen.push({ p, pos, bild });
+            });
+        });
+        if (!offen.length) return ergebnis;
+
+        let fertig = 0;
+        const melde = () => status(`Fotos werden hochgeladen … (${fertig} von ${offen.length})`);
+        melde();
+
+        const naechstes = () => offen.shift();
+        const arbeiter = async () => {
+            let auftrag;
+            while ((auftrag = naechstes())) {
+                const { p, pos, bild } = auftrag;
                 const blob = await (await fetch(bild)).blob();
-                const name = `${p}-${sauber(pos)}-${Date.now()}.jpg`;
-                const pfad = `${basis}/fotos/${name}`;
-                const res = await window.FileUploadService.uploadFile(
-                    new File([blob], name, { type: 'image/jpeg' }),
-                    { bucket: 'dateien', path: pfad, compress: false, provider: 'cloudflare-r2' }
-                );
-                ergebnis.push({ phase: p, position: pos, url: res.url, path: res.path, name: `${pos} (${p === 'uebergabe' ? 'Übergabe' : 'Rücknahme'})` });
+                const name = `${p}-${sauber(pos)}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.jpg`;
+                const res = await mitWiederholung(
+                    () => window.FileUploadService.uploadFile(
+                        new File([blob], name, { type: 'image/jpeg' }),
+                        { bucket: 'dateien', path: `${basis}/fotos/${name}`, compress: false, provider: 'cloudflare-r2' }
+                    ), `Foto „${pos}"`, 45000);
+                const eintrag = { phase: p, position: pos, url: res.url, path: res.path, name: `${pos} (${p === 'uebergabe' ? 'Übergabe' : 'Rücknahme'})` };
+                hochgeladeneFotos[`${p}|${pos}`] = { bild, eintrag };
+                ergebnis.push(eintrag);
+                fertig++;
+                melde();
             }
-        }
+        };
+        // Sechs gleichzeitig: bei achtzehn Fotos (Übergabe + Rücknahme) ist
+        // das der Punkt, ab dem die Leitung und nicht mehr das Warten auf
+        // die Antwort begrenzt. Mehr bringt nichts und lässt einzelne
+        // Uploads in die Zeitgrenze laufen.
+        await Promise.all([arbeiter(), arbeiter(), arbeiter(),
+                           arbeiter(), arbeiter(), arbeiter()]);
         return ergebnis;
     }
 
@@ -940,25 +1559,34 @@
 
         const btn = document.getElementById('miet-save-btn');
         if (btn) { btn.disabled = true; btn.style.opacity = '0.7'; }
+        messStarten();
         window.mietSchliesseVorschlaege();
         if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
         window.mietSeitenPruefen();
 
+        // REIHENFOLGE IST ABSICHT: erst Fotos und Eingaben in die
+        // Datenbank, danach das PDF. Vorher stand das PDF am Anfang —
+        // scheiterte es (fremdes Bild, kein Empfang, html2canvas), war
+        // die ganze Aufnahme nicht gespeichert. Jetzt ist die Arbeit
+        // sicher, und ein fehlgeschlagenes PDF ist nur noch ein Hinweis.
         try {
-            // Auf dem Handy vorher zurück auf A4 (siehe mitA4).
-            const doc = await mitA4(() => pdfErzeugen());
-
             const basis = `${ordnerName()}/mietvereinbarungen`;
-            status('Fotos werden hochgeladen …');
-            const fotos = await fotosHochladen(basis);
+            // Beides gleichzeitig: der Foto-Upload wartet auf das Netz, die
+            // PDF-Erzeugung auf den Rechner. Nacheinander addierten sich die
+            // Wartezeiten, nebeneinander zählt nur die längere von beiden.
+            // Reihenfolge wichtig: fotosHochladen stellt seine Liste sofort
+            // zusammen, bevor mitEingebettetenFotos an den Bildern dreht.
+            const fotoLauf = fotosHochladen(basis);
+            // Zeitgrenze auch um die Erzeugung selbst: haengt html2canvas
+            // (oder ein Bild, das nie fertig laedt), wartete man vorher
+            // endlos ohne jede Rueckmeldung.
+            const pdfLauf = mitZeitgrenze(
+                mitEingebettetenFotos(() => mitA4(() => pdfErzeugen())),
+                180000, 'Das Erzeugen des PDFs')
+                .catch(e => ({ fehler: e }));
 
-            status('PDF wird hochgeladen …');
-            const dateiName = pdfDateiName();
-            const pdfBlob = doc.output('blob');
-            const pdfDatei = new File([pdfBlob], dateiName, { type: 'application/pdf' });
-            const upload = await window.FileUploadService.uploadFile(pdfDatei, {
-                bucket: 'dateien', path: `${basis}/${dateiName}`, compress: false, provider: 'cloudflare-r2'
-            });
+            const fotos = await fotoLauf;
+            messPunkt('Fotos');
 
             status('Wird gespeichert …');
             const zeile = {
@@ -970,8 +1598,6 @@
                         sauberkeit: daten.sauberkeit, einweisung: daten.einweisung,
                         schaeden: daten.schaeden, unterschriften: daten.unterschriften },
                 photos: fotos,
-                pdf_url: upload.url,
-                pdf_path: upload.path,
                 folder_path: basis,
                 user_id: window.activeUser ? String(window.activeUser.id || '') : null
             };
@@ -987,7 +1613,50 @@
                 gespeicherteId = neu.id;
             }
 
+            // Ab hier das PDF. Ein Fehler darf das Gespeicherte nicht mehr
+            // umwerfen — deshalb eigener try-Block mit eigener Meldung.
+            messPunkt('Datenbank');
+            const dateiName = pdfDateiName();
+            let upload = null;
+            let pdfGroesse = 0;
+            try {
+                let doc = await pdfLauf;
+                if (doc && doc.fehler && doc.fehler.taint) {
+                    // Verursacher war der Briefbogen-Hintergrund (siehe
+                    // hintergrundEinbetten). bgUnmoeglich steht jetzt —
+                    // zweiter Anlauf ohne ihn, lieber schlicht als gar nicht.
+                    console.warn('Zweiter Anlauf ohne Briefbogen-Hintergrund.');
+                    status('PDF wird ohne Briefbogen erzeugt …');
+                    doc = await mitEingebettetenFotos(() => mitA4(() => pdfErzeugen()));
+                    window.showToast('Das PDF wurde ohne den Briefbogen-Hintergrund erzeugt.');
+                }
+                if (!doc || doc.fehler) throw (doc && doc.fehler) || new Error('PDF fehlt.');
+                const pdfDatei = new File([doc.output('blob')], dateiName, { type: 'application/pdf' });
+                messPunkt('PDF erzeugen');
+                pdfGroesse = pdfDatei.size;
+                status(`PDF wird hochgeladen … (${Math.round(pdfGroesse / 1024)} KB)`);
+                upload = await mitWiederholung(() => window.FileUploadService.uploadFile(pdfDatei, {
+                    bucket: 'dateien', path: `${basis}/${dateiName}`, compress: false, provider: 'cloudflare-r2'
+                }), 'PDF-Upload', 60000);
+
+                const { error } = await window.supabaseClient.from('rental_agreements')
+                    .update({ pdf_url: upload.url, pdf_path: upload.path }).eq('id', gespeicherteId);
+                if (error) throw error;
+                messPunkt('PDF-Upload');
+            } catch (pdfFehler) {
+                console.error('PDF konnte nicht erzeugt/hochgeladen werden:', pdfFehler,
+                    'Ursprung:', pdfFehler && pdfFehler.ursprung);
+                await entwurfLoeschen();   // Eingaben und Fotos sind gesichert
+                // Die Ursache bleibt in der Fusszeile stehen — der Toast ist
+                // nach ein paar Sekunden weg, und ohne den Grund lässt sich
+                // nichts nachsehen.
+                status('Gespeichert, PDF fehlt: ' + fehlerText(pdfFehler));
+                window.showToast('Gespeichert, aber ohne PDF: ' + fehlerText(pdfFehler)
+                    + ' — erneut auf Speichern tippen erzeugt es nach.');
+                return;
+            }
             // Dokument unter "Dokumente" anlegen bzw. aktualisieren.
+                messPunkt('PDF-Upload');
             const folderId = await ordnerId();
             const anhaenge = fotos.map(f => ({ name: f.name, url: f.url, path: f.path, type: 'image/jpeg' }));
             const dokument = {
@@ -996,7 +1665,7 @@
                 machine_id: maschine ? parseInt(maschine.id, 10) : null,
                 url: upload.url,
                 file_path: upload.path,
-                size: pdfDatei.size,
+                size: pdfGroesse,
                 mime_type: 'application/pdf',
                 folder_id: folderId,
                 rental_agreement_id: gespeicherteId,
@@ -1024,16 +1693,27 @@
                 try { window.fetchDocuments(); } catch (e) { /* Ansicht evtl. nicht offen */ }
             }
 
+            // Erst jetzt ist alles in der Datenbank — der Entwurf darf weg.
+            await entwurfLoeschen();
+
             const jetzt = new Date();
-            status(`Gespeichert: ${jetzt.toLocaleDateString('de-DE')}, ${jetzt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr — Dokumente → ${MIET_ORDNER}`);
+            messPunkt('Dokument');
+            status(`Gespeichert: ${jetzt.toLocaleDateString('de-DE')}, ${jetzt.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr — Dokumente → ${MIET_ORDNER}`
+                + messText());
             window.showToast(`Mietvereinbarung gespeichert und unter „Dokumente → ${MIET_ORDNER}" abgelegt.`);
         } catch (e) {
             console.error('Mietvereinbarung speichern fehlgeschlagen:', e);
-            status('Speichern fehlgeschlagen.');
+            // Wichtig: der Entwurf bleibt stehen — beim nächsten Öffnen
+            // wird genau dieser Stand wieder angeboten.
+            status('Speichern fehlgeschlagen — der Stand bleibt als Entwurf erhalten.');
             if (/rental_agreements|rental_agreement_id|attachments/.test((e && e.message) || '')) {
                 window.showToast('Migration fehlt: supabase/supabase_add_rental_agreements.sql in Supabase ausführen.');
             } else {
-                window.showToast('Speichern fehlgeschlagen: ' + ((e && e.message) || 'unbekannter Fehler'));
+                // Supabase liefert die eigentliche Ursache oft erst in
+                // details/hint/code — ohne die tappt man im Dunkeln.
+                const teile = [e && e.message, e && e.details, e && e.hint, e && e.code]
+                    .filter(Boolean).join(' · ');
+                window.showToast('Speichern fehlgeschlagen: ' + (teile || 'unbekannter Fehler'));
             }
         } finally {
             if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
@@ -1220,15 +1900,15 @@
         const wert = eintrag[spalteId] || null;
         const dim = spalteId !== aktiveSpalteId();
         return `<td class="miet-checkcell${dim ? ' miet-dim' : ''}">
-            <span class="miet-check${wert === 'io' ? ' on' : ''}" onclick="window.mietPruef(${nr}, '${esc(spalteId)}', 'io')"><span class="miet-dot"></span>i.O.</span>
-            <span class="miet-check miet-no${wert === 'nio' ? ' on' : ''}" onclick="window.mietPruef(${nr}, '${esc(spalteId)}', 'nio')"><span class="miet-dot"></span>n.i.O.</span>
+            <span class="miet-check${wert === 'io' ? ' on' : ''}" data-wert="io" onclick="window.mietPruef(${nr}, '${esc(spalteId)}', 'io', this)"><span class="miet-dot"></span>i.O.</span>
+            <span class="miet-check miet-no${wert === 'nio' ? ' on' : ''}" data-wert="nio" onclick="window.mietPruef(${nr}, '${esc(spalteId)}', 'nio', this)"><span class="miet-dot"></span>n.i.O.</span>
         </td>`;
     }
 
     function jaNein(pfad, wert) {
         return `<span>
-            <span class="miet-check${wert === 'ja' ? ' on' : ''}" onclick="window.mietFeld('${pfad}', '${wert === 'ja' ? '' : 'ja'}', true)"><span class="miet-dot"></span>Ja</span>
-            <span class="miet-check miet-no${wert === 'nein' ? ' on' : ''}" onclick="window.mietFeld('${pfad}', '${wert === 'nein' ? '' : 'nein'}', true)"><span class="miet-dot"></span>Nein</span>
+            <span class="miet-check${wert === 'ja' ? ' on' : ''}" data-wert="ja" onclick="window.mietJaNein('${pfad}', 'ja', this)"><span class="miet-dot"></span>Ja</span>
+            <span class="miet-check miet-no${wert === 'nein' ? ' on' : ''}" data-wert="nein" onclick="window.mietJaNein('${pfad}', 'nein', this)"><span class="miet-dot"></span>Nein</span>
         </span>`;
     }
 
@@ -1358,7 +2038,9 @@
         const kacheln = pos_liste.map((pos, i) => {
             const bild = satz[pos];
             return `
-            <div class="miet-photo-slot${bild ? ' filled' : ''}" data-split onclick="window.mietFotoKlick('${esc(welche)}', '${esc(pos)}')">
+            <div class="miet-photo-slot${bild ? ' filled' : ''}" data-split
+                 data-welche="${esc(welche)}" data-pos="${esc(pos)}"
+                 onclick="window.mietFotoKlick('${esc(welche)}', '${esc(pos)}')">
                 <button type="button" class="miet-photo-swap" onclick="event.stopPropagation(); window.mietFotoEinzeln('${esc(welche)}', '${esc(pos)}')" title="Foto neu aufnehmen">&#8635;</button>
                 <button type="button" class="miet-photo-del" onclick="event.stopPropagation(); window.mietFotoLoeschen('${esc(welche)}', '${esc(pos)}')" title="Foto entfernen">&times;</button>
                 <div class="miet-photo-name">
@@ -1378,7 +2060,7 @@
             <div class="miet-photo-progress" data-nurerste>${fertig} von ${pos_liste.length} Positionen erfasst${fertig < pos_liste.length
                 ? ` <button type="button" class="miet-photo-start" onclick="window.mietFotoserie('${esc(welche)}')">Rundgang starten</button>`
                 : ''}</div>
-            <div class="miet-photo-grid" data-splitbox>${kacheln}</div>
+            <div class="miet-photo-grid" data-splitbox data-drop-welche="${esc(welche)}">${kacheln}</div>
             ${fotoUnterschriften(welche)}
         </div>`;
     }
@@ -1393,7 +2075,11 @@
         const pfad = u ? 'unterschriften.u_datum' : 'unterschriften.r_datum';
         const wert = daten.unterschriften[u ? 'u_datum' : 'r_datum'] || '';
         return `
-        <div class="miet-foto-sign" data-nurerste>
+        <!-- data-ersteseite statt data-nurerste: beim Umbruch soll der Block
+             nur auf dem ersten Teil stehen — aber im PDF und auf dem Papier
+             MUSS er erscheinen. data-nurerste blendet dort alles aus (das ist
+             für Bedienknöpfe gedacht), damit fehlten die Unterschriften. -->
+        <div class="miet-foto-sign" data-ersteseite>
             <div class="miet-sign-row">
                 ${feldUnterschrift(u ? 'u_vermieter' : 'r_vermieter', f.unterschrift_vermieter || 'Unterschrift Vermieter', pfad, wert)}
                 ${feldUnterschrift(u ? 'u_mieter' : 'r_mieter', f.unterschrift_mieter || 'Unterschrift Mieter', pfad, wert)}
@@ -1471,12 +2157,50 @@
         for (let i = 0; i < teile.length - 1; i++) ziel = ziel[teile[i]];
         ziel[teile[teile.length - 1]] = wert === '' && neuZeichnen ? null : wert;
         if (neuZeichnen) zeichneInhalt();
+        else entwurfMerken();   // Tippen im Feld zeichnet nicht neu
     };
 
-    window.mietPruef = function (nr, spalte, wert) {
+    /* Ja/Nein: genau wie die Pruefhaken nur zwei Klassen umschalten statt
+       den ganzen Bogen neu aufzubauen. */
+    window.mietJaNein = function (pfad, wert, el) {
+        const teile = pfad.split('.');
+        let ziel = daten;
+        for (let i = 0; i < teile.length - 1; i++) ziel = ziel[teile[i]];
+        const letzte = teile[teile.length - 1];
+        const neu = ziel[letzte] === wert ? null : wert;
+        ziel[letzte] = neu;
+        const box = el && el.parentElement;
+        if (!box) { zeichneInhalt(); return; }
+        box.querySelectorAll('.miet-check').forEach(s => {
+            s.classList.toggle('on', s.dataset.wert === neu);
+        });
+        entwurfMerken();
+    };
+
+    /* Ein Haken aendert nur zwei Klassen — der komplette Neuaufbau des
+       Bogens (zeichneInhalt: Seitenumbruch messen, Vertragstext einpassen)
+       ist dafuer viel zu teuer und machte das Abhaken traege. Deshalb wird
+       hier nur die angetippte Zelle umgeschaltet; die Hoehe des Bogens
+       aendert sich dabei nicht, der Umbruch bleibt also gueltig. */
+    window.mietPruef = function (nr, spalte, wert, el) {
         if (!daten.pruefpunkte[nr]) daten.pruefpunkte[nr] = {};
-        daten.pruefpunkte[nr][spalte] = daten.pruefpunkte[nr][spalte] === wert ? null : wert;
-        zeichneInhalt();
+        const neu = daten.pruefpunkte[nr][spalte] === wert ? null : wert;
+        daten.pruefpunkte[nr][spalte] = neu;
+        const zelle = el && el.parentElement;
+        if (!zelle) { zeichneInhalt(); return; }
+        zelle.querySelectorAll('.miet-check').forEach(s => {
+            s.classList.toggle('on', s.dataset.wert === neu);
+        });
+        // Optionale Zeile: sobald irgendeine Spalte gesetzt ist, gilt die
+        // Option als verbaut und wird gedruckt (.miet-opt-leer wirkt nur im
+        // Druck/PDF, am Bildschirm aendert sich die Hoehe also nicht).
+        const zeile = zelle.closest('tr');
+        if (zeile && zeile.classList.contains('miet-opt')) {
+            const eintrag = daten.pruefpunkte[nr] || {};
+            zeile.classList.toggle('miet-opt-leer',
+                !Object.keys(eintrag).some(k => eintrag[k]));
+        }
+        entwurfMerken();
     };
 
     window.mietSchadenZeile = function () {
@@ -1711,19 +2435,14 @@
         }
     }
 
-    // Berührbildschirm? Dort ist die Kamera der schnellere Weg; am
-    // Rechner soll ein Klick den Dateidialog öffnen, damit man Bilder
-    // vom Rechner Stück für Stück einsetzen kann.
-    function istBeruehrung() {
-        return window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-    }
-
     // Eine Position aus einer Datei füllen.
     function dateiFuerPosition(welche, position) {
         const input = document.createElement('input');
         input.type = 'file';
         input.accept = 'image/*';
-        input.style.display = 'none';
+        // Unsichtbar, aber nicht display:none — sonst verweigern manche
+        // Browser den Dateidialog.
+        input.style.cssText = 'position:fixed;left:-9999px;opacity:0';
         document.body.appendChild(input);
 
         input.onchange = async () => {
@@ -1747,25 +2466,163 @@
         zeichneInhalt();
     };
 
-    // Auf eine leere Kachel tippen startet die Aufnahme ab genau dieser
-    // Position, auf eine gefuellte oeffnet die Grossansicht.
+    // ------------------------------------------------------
+    // Bilder hereinziehen (nur Rechner)
+    // ------------------------------------------------------
+    // Auf eine Kachel gezogen: genau dieses Feld. Auf die Fläche daneben
+    // gezogen: die Bilder füllen die offenen Positionen der Reihe nach.
+    // Die Zuhörer hängen an #miet-pages, nicht an den Kacheln — der Bogen
+    // wird bei jeder Änderung komplett neu aufgebaut, einzeln gesetzte
+    // Zuhörer wären danach weg.
+    function dateienUebernehmen(welche, positionen, dateien) {
+        const bilder = Array.from(dateien).filter(d => /^image\//.test(d.type));
+        if (!bilder.length) { window.showToast('Nur Bilddateien können hier abgelegt werden.'); return; }
+        (async () => {
+            let i = 0;
+            for (const datei of bilder) {
+                if (i >= positionen.length) break;
+                try {
+                    daten.fotos[welche][positionen[i]] = await bildVerkleinern(datei);
+                } catch (e) {
+                    console.error('Bild konnte nicht übernommen werden:', e);
+                    window.showToast('Ein Bild konnte nicht gelesen werden.');
+                }
+                i++;
+                zeichneInhalt();
+            }
+            if (bilder.length > positionen.length) {
+                window.showToast(`Es passten nur ${positionen.length} Bilder — die übrigen wurden nicht übernommen.`);
+            }
+        })();
+    }
+
+    function dropZiel(el) {
+        if (!el || !el.closest) return null;
+        const kachel = el.closest('.miet-photo-slot');
+        if (kachel && kachel.dataset.welche) {
+            return { el: kachel, welche: kachel.dataset.welche, positionen: [kachel.dataset.pos] };
+        }
+        const gitter = el.closest('[data-drop-welche]');
+        if (gitter) {
+            const welche = gitter.dataset.dropWelche;
+            const offen = offenePositionen(welche);
+            return { el: gitter, welche: welche, positionen: offen.length ? offen : fotoPositionen() };
+        }
+        return null;
+    }
+
+    function dropZuhoerer(pages) {
+        let markiert = null;
+        const markiere = (el) => {
+            if (markiert === el) return;
+            if (markiert) markiert.classList.remove('miet-drop-on');
+            markiert = el;
+            if (markiert) markiert.classList.add('miet-drop-on');
+        };
+
+        pages.addEventListener('dragover', (e) => {
+            const ziel = dropZiel(e.target);
+            if (!ziel) { markiere(null); return; }
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+            markiere(ziel.el);
+        });
+        pages.addEventListener('dragleave', (e) => {
+            if (e.target === markiert) markiere(null);
+        });
+        pages.addEventListener('drop', (e) => {
+            const ziel = dropZiel(e.target);
+            markiere(null);
+            if (!ziel) return;
+            e.preventDefault();
+            const dateien = e.dataTransfer && e.dataTransfer.files;
+            if (dateien && dateien.length) dateienUebernehmen(ziel.welche, ziel.positionen, dateien);
+        });
+    }
+
+    // Mehrere Bilder auf einmal aus der Galerie: sie füllen die noch
+    // offenen Positionen der Reihe nach auf.
+    function galerieMehrfach(welche, positionen) {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.multiple = true;
+        // Unsichtbar, aber nicht display:none — sonst verweigern manche
+        // Browser den Dateidialog.
+        input.style.cssText = 'position:fixed;left:-9999px;opacity:0';
+        document.body.appendChild(input);
+
+        input.onchange = () => {
+            const dateien = Array.from(input.files || []);
+            input.remove();
+            if (dateien.length) dateienUebernehmen(welche, positionen, dateien);
+        };
+        input.click();
+    }
+
+    // Vor jeder Aufnahme wird gefragt: geführter Rundgang mit der Kamera
+    // oder Bilder aus der Galerie. Vorher entschied das Gerät allein
+    // (Touch = Kamera), bereits vorhandene Bilder liessen sich damit auf
+    // dem Handy gar nicht einsetzen.
+    //
+    // WICHTIG: Die Wahl wird als Rückruf **synchron** im Klick abgearbeitet.
+    // Über ein Promise (await) ging der Dateidialog am Rechner nicht mehr
+    // auf: `input.click()` verlangt eine frische Nutzeraktion, und die war
+    // nach dem Umweg über das Promise verbraucht — es passierte schlicht
+    // nichts. Deshalb hier kein async zwischen Klick und Dateidialog.
+    function fotoQuelleFragen(titel, untertitel, beiWahl) {
+        const box = document.createElement('div');
+        box.className = 'miet-quelle';
+        box.innerHTML = `
+            <div class="miet-quelle-card">
+                <h3>${esc(titel)}</h3>
+                <p>${esc(untertitel || '')}</p>
+                <button type="button" data-wahl="kamera" class="btn-primary">Rundgang mit Kamera</button>
+                <button type="button" data-wahl="galerie" class="btn-secondary">Bilder aus Galerie</button>
+                <button type="button" data-wahl="" class="miet-quelle-abbruch">Abbrechen</button>
+            </div>`;
+        // Die Knöpfe hören direkt zu. Ein stopPropagation auf der Karte
+        // (wie sonst im Modul üblich) verschluckte sonst genau diese Klicks.
+        box.querySelectorAll('button').forEach(b => {
+            b.addEventListener('click', () => {
+                const wahl = b.dataset.wahl;
+                box.remove();
+                if (wahl) beiWahl(wahl);
+            });
+        });
+        // Klick auf den dunklen Rand schliesst.
+        box.addEventListener('click', (e) => { if (e.target === box) box.remove(); });
+        document.body.appendChild(box);
+    }
+
+    function fotosHolen(welche, positionen, titel) {
+        if (!positionen || !positionen.length) return;
+        fotoQuelleFragen(titel,
+            positionen.length === 1 ? positionen[0] : `${positionen.length} offene Ansichten`,
+            (wahl) => {
+                if (wahl === 'kamera') kameraStarten(welche, positionen);
+                else if (positionen.length === 1) dateiFuerPosition(welche, positionen[0]);
+                else galerieMehrfach(welche, positionen);
+            });
+    }
+
+    // Auf eine leere Kachel tippen fragt nach der Quelle und füllt dann
+    // ab genau dieser Position, auf eine gefuellte oeffnet die Grossansicht.
     window.mietFotoKlick = function (welche, position) {
         if (daten.fotos[welche][position]) { window.mietBildAnsehen(welche, position); return; }
-        if (istBeruehrung()) kameraStarten(welche, offenePositionen(welche, position));
-        else dateiFuerPosition(welche, position);
+        fotosHolen(welche, offenePositionen(welche, position), 'Bilder hinzufügen');
     };
 
     // Nur dieses eine Bild neu aufnehmen bzw. austauschen.
     window.mietFotoEinzeln = function (welche, position) {
-        if (istBeruehrung()) kameraStarten(welche, [position]);
-        else dateiFuerPosition(welche, position);
+        fotosHolen(welche, [position], 'Bild ersetzen');
     };
 
     // Ganze Serie: alle noch fehlenden Positionen der Reihe nach.
     window.mietFotoserie = function (welche) {
         const offen = offenePositionen(welche);
         if (!offen.length) { window.showToast('Für diesen Satz sind bereits alle Bilder vorhanden.'); return; }
-        kameraStarten(welche, offen);
+        fotosHolen(welche, offen, 'Rundgang starten');
     };
 
     // Alle Positionen ab "start" (oder ab Anfang), die noch kein Bild haben.

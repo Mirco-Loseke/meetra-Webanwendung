@@ -835,8 +835,31 @@
     // Panel über der Adressliste: welche Maschinen hängen an keiner Adresse?
     // Aufklappbar, damit es im Normalfall (alles zugeordnet) nicht stört – und
     // ganz verschwindet, sobald nichts mehr offen ist.
+    // Der gelbe Kasten steht bei jedem Öffnen der Adressliste im Weg, obwohl
+    // er nur eine Erinnerung ist. Deshalb abschaltbar — der Merker liegt im
+    // Browser, gilt also je Gerät und überlebt das Neuladen.
+    const ZUORDNUNG_AUS = 'ab_zuordnung_hinweis_aus';
+    function zuordnungHinweisAus() {
+        try { return localStorage.getItem(ZUORDNUNG_AUS) === '1'; } catch (e) { return false; }
+    }
+    window.abZuordnungHinweis = function (an) {
+        try { localStorage.setItem(ZUORDNUNG_AUS, an ? '0' : '1'); } catch (e) { /* privater Modus */ }
+        renderAddressList();
+    };
+
     function unassignedMachinesPanelHtml() {
         const list = state.unassignedMachines || [];
+
+        if (zuordnungHinweisAus()) {
+            const offen = list.length + (!state.workshopAddressId ? (state.workshopMachineCount || 0) : 0);
+            if (!offen) return '';
+            // Ausgeblendet: nur noch eine unauffällige Zeile, damit der
+            // Hinweis nicht endgültig verloren ist.
+            return `<div class="ab-zuordnung-aus">
+                ${offen} Maschine${offen === 1 ? '' : 'n'} ohne Adresszuordnung
+                <button type="button" data-ab-action="zuordnung-ein">einblenden</button>
+            </div>`;
+        }
 
         // Werkstattmaschinen können nur dann bei uns einsortiert werden, wenn
         // der Firmensitz aus den Einstellungen auch als Adresse existiert.
@@ -891,6 +914,8 @@
             <summary>
                 <strong>${list.length} von ${state.machineCount} Maschinen ohne Adresszuordnung</strong>
                 <span class="ab-muted ab-small">— antippen für die Liste</span>
+                <button type="button" class="ab-zuordnung-zu" data-ab-action="zuordnung-aus"
+                        title="Hinweis ausblenden">Ausblenden</button>
             </summary>
             <div class="ab-unassigned-list">${rows}</div>
             <div class="ab-muted ab-small" style="margin-top:8px;">
@@ -1454,31 +1479,39 @@
                 state.detail.allClusterMachines = allClusterMachines;
 
                 // Lade zusätzlich Maschinen-Historie (manual_history_entries & service_entries) für ALLE Maschinen im Cluster
-                if (allClusterMachines.length > 0) {
-                    const mIds = allClusterMachines.map(m => m.id);
-                    const [mHistRes, sEntriesRes] = await Promise.all([
-                        sb().from('manual_history_entries').select('*').in('machine_id', mIds).order('created_at', { ascending: false }),
-                        sb().from('service_entries').select('*').in('machine_id', mIds).order('date', { ascending: false })
-                    ]);
-
-                    const manualEntries = (mHistRes.data || []).map(e => ({ ...e, _sourceTable: 'manual' }));
-                    const serviceEntries = (sEntriesRes.data || []).map(s => ({
-                        id: s.id,
-                        machine_id: s.machine_id,
-                        type: 'service',
-                        title: s.title || 'Servicebericht',
-                        content: s.description || '',
-                        files: s.files || (s.pdf_url ? [s.pdf_url] : []),
-                        created_at: s.date || s.created_at,
-                        entry_date: s.date || s.created_at,
-                        rawService: s,
-                        _sourceTable: 'service_entries'
-                    }));
-
-                    state.detail.machineHistoryEntries = [...manualEntries, ...serviceEntries];
-                } else {
-                    state.detail.machineHistoryEntries = [];
+                const mIds = allClusterMachines.map(m => m.id);
+                const abfragen = [
+                    // Direkt an der Adresse hängende Einträge (z. B. importierte Angebote ohne
+                    // eindeutig zuordenbare Maschine, supabase_add_manual_history_customer_id.sql) —
+                    // unabhängig davon, ob überhaupt eine Maschine erfasst ist.
+                    sb().from('manual_history_entries').select('*').in('customer_id', allClusterCustomerIds).order('created_at', { ascending: false })
+                ];
+                if (mIds.length > 0) {
+                    abfragen.push(sb().from('manual_history_entries').select('*').in('machine_id', mIds).order('created_at', { ascending: false }));
+                    abfragen.push(sb().from('service_entries').select('*').in('machine_id', mIds).order('date', { ascending: false }));
                 }
+                const [custHistRes, mHistRes, sEntriesRes] = await Promise.all(abfragen);
+
+                // Ein Eintrag kann ueber BEIDE Abfragen kommen (Angebot mit Maschine UND
+                // customer_id gesetzt) — per id de-duplizieren, nicht einfach aneinanderhaengen.
+                const manualById = new Map();
+                [...(custHistRes.data || []), ...((mHistRes && mHistRes.data) || [])]
+                    .forEach(e => manualById.set(e.id, e));
+                const manualEntries = Array.from(manualById.values()).map(e => ({ ...e, _sourceTable: 'manual' }));
+                const serviceEntries = ((sEntriesRes && sEntriesRes.data) || []).map(s => ({
+                    id: s.id,
+                    machine_id: s.machine_id,
+                    type: 'service',
+                    title: s.title || 'Servicebericht',
+                    content: s.description || '',
+                    files: s.files || (s.pdf_url ? [s.pdf_url] : []),
+                    created_at: s.date || s.created_at,
+                    entry_date: s.date || s.created_at,
+                    rawService: s,
+                    _sourceTable: 'service_entries'
+                }));
+
+                state.detail.machineHistoryEntries = [...manualEntries, ...serviceEntries];
             } catch (err) {
                 console.warn('Maschinen konnten nicht geladen werden', err);
                 state.detail.machines = [];
@@ -2352,8 +2385,8 @@
         // 2) Maschinen-Historie (Servicereporte, Werkstatt-Einträge aller Cluster-Maschinen)
         const machinesMap = new Map((state.detail.allClusterMachines || state.detail.machines || []).map(m => [String(m.id), m]));
         const machineEntries = (state.detail.machineHistoryEntries || []).map(mh => {
-            const m = machinesMap.get(String(mh.machine_id));
-            
+            const m = mh.machine_id ? machinesMap.get(String(mh.machine_id)) : null;
+
             // Maschinentitel vollständig zusammensetzen: Hersteller + Kategorie/Typ + Name + SN + Baujahr
             let mFullTitle = '';
             if (m) {
@@ -2366,14 +2399,20 @@
                 ].filter(Boolean);
                 mFullTitle = parts.join(' ');
             }
-            if (!mFullTitle) mFullTitle = `Maschine #${mh.machine_id}`;
+            if (!mFullTitle && mh.machine_id) mFullTitle = `Maschine #${mh.machine_id}`;
+
+            // Ohne Maschine (z. B. ein importiertes Angebot, dem noch keine
+            // eindeutige Maschine zugeordnet werden konnte) hängt der Eintrag
+            // direkt an der Adresse — blauer Adress-Header statt grünem
+            // Maschinen-Header, siehe supabase_add_manual_history_customer_id.sql.
+            const entryAddr = mh.customer_id ? state.byId.get(String(mh.customer_id)) : null;
 
             return {
-                type: 'machine',
+                type: m ? 'machine' : 'address',
                 kind: 'entry',
                 timestamp: new Date(mh.created_at || mh.entry_date).getTime(),
                 dateStr: formatDateTime(mh.created_at || mh.entry_date),
-                sourceLabel: mFullTitle,
+                sourceLabel: m ? mFullTitle : `📍 ${entryAddr ? entryAddr.name : addrName}`,
                 machineId: mh.machine_id,
                 raw: mh
             };
@@ -5348,6 +5387,16 @@
                 break;
             case 'machine-open':
                 openMachine(id);
+                break;
+            case 'zuordnung-aus':
+                // im <summary>: sonst klappt der Kasten beim Klick nur auf
+                e.preventDefault();
+                e.stopPropagation();
+                window.abZuordnungHinweis(false);
+                break;
+            case 'zuordnung-ein':
+                e.preventDefault();
+                window.abZuordnungHinweis(true);
                 break;
             case 'machine-history':
                 e.preventDefault();

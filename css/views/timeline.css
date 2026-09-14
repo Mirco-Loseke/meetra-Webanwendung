@@ -1,0 +1,1329 @@
+/* =========================================================
+   TIMELINE — Werkstatt / Service / Vermietung
+   Markup: partials/views/timeline.html
+   Logik:  js/timeline-view.js
+   Alle Werte aus tokens.css. Praefix tlv- damit nichts
+   mit bestehenden Regeln kollidiert.
+   ========================================================= */
+#timeline {
+    --tlv-day-w: 44px;
+    --tlv-row-h: 44px;
+    --tlv-label-w: 240px;
+    --tlv-summe-w: 0px;
+
+    --tlv-miete: var(--success, #22c55e);
+    --tlv-service: #38bdf8;
+    --tlv-aufgabe: #2dd4bf;
+
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+}
+
+#timeline.tlv-kompakt { --tlv-row-h: 28px; }
+#timeline.tlv-mit-summe { --tlv-summe-w: 132px; }
+
+/* ---------------- Kopfbereich ----------------
+   EINE Zeile. Alles Seltene (Achse, Darstellung, Schreibschalter, Sorten,
+   Person) steckt in den Klappmenues „Filter“ und „Ansicht“ — vorher standen
+   drei Reihen Bedienelemente über der Timeline und haben sie erschlagen. */
+.tlv-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    padding: 0 0 var(--space-3);
+    margin-bottom: var(--space-3);
+    border-bottom: 1px solid var(--glass-border);
+}
+.tlv-topbar-left,
+.tlv-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+    flex-wrap: wrap;
+}
+.tlv-titel {
+    font-family: var(--font-heading);
+    font-size: var(--fs-xl);
+    font-weight: var(--fw-bold);
+    color: var(--text-1);
+    margin: 0 var(--space-2) 0 0;
+    letter-spacing: -.01em;
+}
+
+/* Segmentierte Datumsnavigation statt drei einzelner Knöpfe */
+.tlv-nav {
+    display: inline-flex;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+    background: rgba(255, 255, 255, .04);
+}
+.tlv-nav button {
+    border: 0;
+    background: transparent;
+    color: var(--text-2);
+    font: inherit;
+    font-size: var(--fs-xs);
+    line-height: 1;
+    padding: 7px 12px;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+.tlv-nav button + button { border-left: 1px solid var(--glass-border); }
+.tlv-nav button:hover { background: rgba(255, 255, 255, .1); color: var(--text-1); }
+
+.tlv-range {
+    font-family: var(--font-heading);
+    font-size: var(--fs-md);
+    font-weight: var(--fw-semibold);
+    color: var(--text-1);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* „Nur ansehen“ — knapper Merker statt breiter Warnleiste */
+.tlv-hinweisleiste {
+    font-size: var(--fs-2xs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-caps);
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    background: rgba(250, 204, 21, .12);
+    border: 1px solid rgba(250, 204, 21, .28);
+    color: var(--warning, #fbbf24);
+    white-space: nowrap;
+    cursor: help;
+}
+#timeline.tlv-schreibt .tlv-hinweisleiste { display: none; }
+
+/* Einheitliche Feldhöhe für Suche, Auswahl und Knöpfe */
+.tlv-input,
+.tlv-tool,
+.tlv-icon-btn {
+    height: 32px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, .05);
+    color: var(--text-1);
+    font: inherit;
+    font-size: var(--fs-sm);
+    transition: background .15s, border-color .15s, color .15s;
+}
+.tlv-input { padding: 0 10px; }
+.tlv-input:focus-visible,
+.tlv-tool:focus-visible,
+.tlv-icon-btn:focus-visible { outline: 2px solid rgba(56, 189, 248, .6); outline-offset: 1px; }
+.tlv-select {
+    appearance: none;
+    -webkit-appearance: none;
+    padding-right: 26px;
+    cursor: pointer;
+    background-image: linear-gradient(45deg, transparent 50%, var(--text-3) 50%),
+                      linear-gradient(135deg, var(--text-3) 50%, transparent 50%);
+    background-position: calc(100% - 14px) 14px, calc(100% - 9px) 14px;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+}
+.tlv-select:hover { background-color: rgba(255, 255, 255, .1); }
+.tlv-select option { background: #0f172a; color: #e2e8f0; }
+
+.tlv-suchfeld { position: relative; display: inline-flex; align-items: center; }
+.tlv-suchfeld svg {
+    position: absolute; left: 9px; width: 14px; height: 14px;
+    fill: none; stroke: var(--text-3); stroke-width: 2; stroke-linecap: round;
+    pointer-events: none;
+}
+.tlv-suchfeld .tlv-input { width: 180px; padding-left: 28px; }
+.tlv-suchfeld .tlv-input:focus { width: 240px; }
+.tlv-suchfeld .tlv-input { transition: width .18s, background .15s, border-color .15s; }
+
+.tlv-tool {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 0 11px; cursor: pointer; white-space: nowrap;
+}
+.tlv-tool:hover { background: rgba(255, 255, 255, .11); }
+.tlv-tool.aktiv, .tlv-pop-wrap.offen > .tlv-tool {
+    background: rgba(56, 189, 248, .16);
+    border-color: rgba(56, 189, 248, .45);
+    color: #fff;
+}
+.tlv-caret { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; opacity: .6; }
+.tlv-pop-wrap.offen .tlv-caret { transform: rotate(180deg); }
+
+.tlv-zaehlchip {
+    font-size: 10px; font-variant-numeric: tabular-nums;
+    padding: 1px 6px; border-radius: var(--radius-pill);
+    background: rgba(56, 189, 248, .28); color: #e0f2fe;
+}
+
+.tlv-icon-btn {
+    width: 32px; display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; padding: 0;
+}
+.tlv-icon-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tlv-icon-btn:hover { background: rgba(255, 255, 255, .11); }
+
+/* Klappmenues */
+.tlv-pop-wrap { position: relative; }
+.tlv-pop {
+    display: none;
+    position: absolute; top: calc(100% + 6px); right: 0; z-index: 60;
+    min-width: 236px;
+    padding: var(--space-3);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--glass-border);
+    background: rgba(15, 23, 42, .98);
+    box-shadow: var(--shadow-3, 0 18px 48px rgba(0, 0, 0, .5));
+}
+.tlv-pop-wrap.offen .tlv-pop { display: block; }
+.tlv-pop-kopf {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: var(--fs-2xs); text-transform: uppercase;
+    letter-spacing: var(--ls-caps); color: var(--text-3);
+    margin-bottom: var(--space-2);
+}
+.tlv-pop-kopf-2 { margin-top: var(--space-3); }
+.tlv-pop-trenner { height: 1px; background: var(--glass-border); margin: var(--space-3) 0; }
+.tlv-pop-hinweis { margin: 6px 0 0; font-size: var(--fs-2xs); color: var(--text-3); line-height: var(--lh-snug); }
+.tlv-pop-schmal { min-width: 200px; }
+
+/* Der Knopf traegt den Namen der Voreinstellung — deshalb breiter und
+   linksbuendig, damit er auch bei „Serviceeinsätze“ nicht abschneidet. */
+.tlv-tool-preset { min-width: 158px; justify-content: space-between; font-weight: var(--fw-semibold); }
+.tlv-tool-preset span { overflow: hidden; text-overflow: ellipsis; }
+
+/* Eintraege im Klappmenue. Bewusst eigene Knoepfe statt <option>: das
+   Systemmenue eines <select> laesst sich nicht gestalten. */
+#tlv-presets { display: flex; flex-direction: column; gap: 2px; }
+.tlv-wahl {
+    display: flex; align-items: center; width: 100%;
+    border: 0; background: transparent; color: var(--text-1);
+    font: inherit; font-size: var(--fs-sm);
+    padding: 8px 10px; border-radius: var(--radius-sm);
+    cursor: pointer; text-align: left; white-space: nowrap;
+}
+.tlv-wahl:hover { background: rgba(255, 255, 255, .1); }
+.tlv-wahl.aktiv {
+    background: rgba(56, 189, 248, .18);
+    color: #fff; font-weight: var(--fw-semibold);
+}
+.tlv-wahl.aktiv::after { content: '✓'; margin-left: auto; padding-left: 12px; color: var(--info, #38bdf8); }
+
+.tlv-block { width: 100%; }
+.tlv-link {
+    border: 0; background: none; color: var(--info, #38bdf8);
+    font: inherit; font-size: var(--fs-2xs); cursor: pointer; padding: 0;
+    text-transform: none; letter-spacing: 0;
+}
+.tlv-link:hover { text-decoration: underline; }
+
+.tlv-schalter {
+    display: flex; align-items: center; gap: var(--space-2);
+    font-size: var(--fs-sm); color: var(--text-2);
+    padding: 5px 0; cursor: pointer;
+}
+.tlv-schalter input { accent-color: var(--info, #38bdf8); width: 15px; height: 15px; }
+.tlv-schalter:hover span { color: var(--text-1); }
+.tlv-speichern-schalter span { color: var(--warning, #fbbf24); font-weight: var(--fw-semibold); }
+
+.tlv-chips { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.tlv-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--fs-xs);
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, .05);
+    color: var(--text-3);
+    cursor: pointer;
+    user-select: none;
+    transition: background .18s, color .18s;
+}
+.tlv-chip i {
+    width: 8px; height: 8px;
+    border-radius: var(--radius-circle);
+    background: var(--c);
+    flex: none;
+    opacity: .3;
+}
+.tlv-chip.aktiv {
+    color: #fff;
+    background: color-mix(in srgb, var(--c) 22%, transparent);
+    border-color: color-mix(in srgb, var(--c) 55%, transparent);
+}
+.tlv-chip.aktiv i { opacity: 1; }
+
+/* ---------------- Buehne ---------------- */
+.tlv-buehne {
+    flex: 1;
+    min-height: 240px;
+    /* Ohne min-width/max-width wächst die Bühne im Flex-Layout mit ihrem
+       Inhalt, statt ihn waagerecht zu rollen — dann misst die
+       Spaltenverteilung eine viel zu große Breite und rechnet falsch. */
+    min-width: 0;
+    max-width: 100%;
+    overflow: auto;
+    position: relative;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    background: rgba(15, 23, 42, .35);
+    backdrop-filter: blur(var(--blur-surface));
+    -webkit-backdrop-filter: blur(var(--blur-surface));
+}
+.tlv-laedt, .tlv-leer {
+    padding: var(--space-10, 40px) var(--space-4);
+    text-align: center;
+    color: var(--text-3);
+    font-size: var(--fs-sm);
+}
+
+.tlv { position: relative; min-width: max-content; }
+
+.tlv-head {
+    position: sticky; top: 0; z-index: 30;
+    display: flex;
+    background: rgba(15, 23, 42, .95);
+    backdrop-filter: blur(var(--blur-raised));
+    border-bottom: 1px solid var(--glass-border);
+}
+.tlv-corner {
+    width: var(--tlv-label-w); flex: none;
+    position: sticky; left: 0; z-index: 31;
+    background: rgba(15, 23, 42, .97);
+    border-right: 1px solid var(--glass-border);
+    display: flex; align-items: center;
+    padding: 0 var(--space-3);
+    font-size: var(--fs-2xs);
+    text-transform: uppercase;
+    letter-spacing: var(--ls-caps);
+    color: var(--text-3);
+}
+.tlv-days { display: flex; }
+.tlv-day {
+    width: var(--tlv-day-w); flex: none;
+    text-align: center; padding: 5px 0;
+    font-size: var(--fs-2xs); line-height: 1.25;
+    border-left: 1px solid rgba(255, 255, 255, .05);
+    color: var(--text-3);
+}
+.tlv-day b { display: block; font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--text-1); }
+.tlv-day.we { background: rgba(255, 255, 255, .035); }
+.tlv-day.feier { background: rgba(239, 68, 68, .1); }
+.tlv-day.feier b { color: #fca5a5; }
+.tlv-day.heute b { color: var(--info, #38bdf8); }
+.tlv-day.mstart { border-left: 1px solid rgba(255, 255, 255, .22); }
+
+.tlv-summe-kopf {
+    width: var(--tlv-summe-w); flex: none;
+    position: sticky; right: 0; z-index: 31;
+    background: rgba(15, 23, 42, .97);
+    border-left: 1px solid var(--glass-border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: var(--fs-2xs); text-transform: uppercase;
+    letter-spacing: var(--ls-caps); color: var(--text-3);
+    overflow: hidden;
+}
+#timeline:not(.tlv-mit-summe) .tlv-summe-kopf,
+#timeline:not(.tlv-mit-summe) .tlv-summe { display: none; }
+
+.tlv-row {
+    display: flex;
+    border-bottom: 1px solid rgba(255, 255, 255, .055);
+    min-height: var(--tlv-row-h);
+}
+.tlv-row:hover .tlv-label { background: rgba(255, 255, 255, .05); }
+/* Aufgabe ohne Termin: die Zeile steht da, der Balken fehlt noch. Sie ist
+   das Ziel für die Karte aus der Leiste unter der Timeline. */
+.tlv-row.ohne-termin .tlv-label .n { color: var(--text-2); }
+.tlv-row.ohne-termin .tlv-track { background-image: repeating-linear-gradient(-45deg, rgba(148,163,184,.06) 0 6px, transparent 6px 12px); }
+/* Gesamtaufgabe vs. Unterpunkt: die Aufgabe trennt oben ab und ist etwas
+   heller, ihre Unteraufgaben stehen eingerückt an einer Führungslinie. */
+.tlv-row.eltern { border-top: 1px solid rgba(255, 255, 255, .14); }
+.tlv-row.eltern .tlv-label { background: rgba(255, 255, 255, .045); }
+.tlv-row.eltern .tlv-label .n { font-weight: var(--fw-bold); color: var(--text-1); }
+.tlv-row.kind .tlv-label { box-shadow: inset 14px 0 0 -12px rgba(45, 212, 191, .55); }
+.tlv-row.kind .tlv-track { background: rgba(255, 255, 255, .014); }
+
+.tlv-row.zielzeile .tlv-label { background: rgba(56, 189, 248, .22); }
+.tlv-row.zielzeile .tlv-track { box-shadow: inset 0 0 0 2px rgba(56, 189, 248, .55); }
+
+.tlv-group {
+    display: flex; position: sticky; left: 0; z-index: 12;
+    background: rgba(56, 189, 248, .09);
+    border-top: 1px solid var(--glass-border);
+    border-bottom: 1px solid var(--glass-border);
+    cursor: pointer;
+}
+.tlv-group:hover { background: rgba(56, 189, 248, .16); }
+.tlv-group span {
+    padding: 5px var(--space-3);
+    font-size: var(--fs-2xs); font-weight: var(--fw-bold);
+    text-transform: uppercase; letter-spacing: var(--ls-caps);
+    color: #7dd3fc; white-space: nowrap;
+}
+
+.tlv-label {
+    width: var(--tlv-label-w); flex: none;
+    position: sticky; left: 0; z-index: 11;
+    background: rgba(15, 23, 42, .95);
+    border-right: 1px solid var(--glass-border);
+    padding: 5px var(--space-3);
+    display: flex; flex-direction: column; justify-content: center; gap: 1px;
+    overflow: hidden;
+    transition: background .15s;
+}
+.tlv-label .n {
+    font-size: var(--fs-base); font-weight: var(--fw-semibold); line-height: 1.25;
+    /* Umbrechen statt abschneiden — bei langen Titeln wird die Zeile dann
+       einfach hoeher (.tlv-row hat nur eine Mindesthoehe, keine feste). */
+    white-space: normal; overflow-wrap: break-word; color: var(--text-1);
+}
+.tlv-label .m {
+    font-size: var(--fs-2xs); color: var(--text-3);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#timeline.tlv-kompakt .tlv-label .m { display: none; }
+.tlv-label.kind { padding-left: calc(var(--space-3) + 18px); }
+.tlv-label.kind .n { font-weight: var(--fw-normal); color: var(--text-2); }
+.tlv-klapp { cursor: pointer; color: var(--text-3); font-size: var(--fs-xs); }
+
+.tlv-track {
+    position: relative; flex: 1;
+    touch-action: pan-x pan-y;
+    background-size: var(--tlv-day-w) 100%;
+    background-image: linear-gradient(to right, rgba(255, 255, 255, .05) 1px, transparent 1px);
+}
+.tlv-we { position: absolute; top: 0; bottom: 0; background: rgba(255, 255, 255, .035); pointer-events: none; }
+.tlv-we.feier { background: rgba(239, 68, 68, .08); }
+.tlv-now {
+    position: absolute; top: 0; bottom: 0; width: 2px;
+    background: var(--info, #38bdf8); z-index: 20; pointer-events: none;
+    box-shadow: 0 0 10px rgba(56, 189, 248, .8);
+}
+
+.tlv-summe {
+    width: var(--tlv-summe-w); flex: none;
+    position: sticky; right: 0; z-index: 11;
+    background: rgba(15, 23, 42, .95);
+    border-left: 1px solid var(--glass-border);
+    padding: 4px var(--space-2);
+    display: flex; flex-direction: column; justify-content: center;
+    font-size: var(--fs-2xs); color: var(--text-3);
+    overflow: hidden; white-space: nowrap;
+}
+.tlv-summe b { display: block; color: var(--text-1); font-size: var(--fs-xs); line-height: 1.35; }
+.tlv-summe u { display: block; text-decoration: none; line-height: 1.3; }
+
+/* Standort-Band */
+.tlv-stand { position: absolute; top: 0; bottom: 0; pointer-events: none; z-index: 0; }
+.tlv-stand.hof { background: rgba(148, 163, 184, .07); color: #94a3b8; }
+.tlv-stand.vermietet { background: rgba(34, 197, 94, .10); color: #22c55e; }
+.tlv-stand.werkstatt { background: rgba(167, 139, 250, .11); color: #a78bfa; }
+.tlv-stand.kunde { background: rgba(249, 115, 22, .08); color: #f97316; }
+.tlv-stand::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 0;
+    height: 2px; background: currentColor; opacity: .5;
+}
+.tlv-label .ort { display: inline-flex; align-items: center; gap: 4px; }
+.tlv-label .ort i { width: 7px; height: 7px; border-radius: var(--radius-circle); flex: none; }
+
+.tlv-luecke {
+    position: absolute; top: calc(var(--tlv-row-h) / 2 - 2px);
+    height: 4px; border-radius: var(--radius-pill);
+    background: rgba(34, 197, 94, .22); pointer-events: none; z-index: 0;
+}
+
+/* ---------------- Balken ---------------- */
+.tlv-bar {
+    position: absolute; top: 3px; z-index: 2;
+    /* Kraeftiger: der Balken fuellt die Zeile bis auf schmale Luft oben und
+       unten. Vorher blieben 12px frei, bei 44px Zeilenhoehe war der Balken
+       damit nur 32px hoch und wirkte wie ein Strich. */
+    height: calc(var(--tlv-row-h) - 7px);
+    border-radius: var(--radius-xs);
+    /* Kontrast: der Balken bleibt dunkel und nur leicht eingefaerbt, die
+       Farbe traegt die Kante links. Weisse Schrift auf einem zu 62 %
+       eingefaerbten Grund (vorher) war auf Gruen und Tuerkis kaum lesbar —
+       so steht heller Text immer auf dunklem Grund. */
+    background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--c) 34%, #0b1220),
+            color-mix(in srgb, var(--c) 24%, #0b1220));
+    border: 1px solid color-mix(in srgb, var(--c) 58%, transparent);
+    border-left: 4px solid var(--c);
+    display: flex; align-items: center; gap: 6px;
+    padding: 0 7px; overflow: hidden;
+    /* Schrift waechst mit der Zeilenhoehe mit; die Feinanpassung an die
+       Balkenbreite macht schriftEinpassen() in js/timeline-view.js. */
+    font-size: clamp(10px, calc(var(--tlv-row-h) * .29), 15px);
+    color: #f8fafc; white-space: nowrap;
+    font-weight: var(--fw-medium, 500);
+    cursor: grab; touch-action: none;
+    transition: box-shadow .15s, opacity .15s;
+}
+.tlv-bar:hover { box-shadow: var(--shadow-2, 0 8px 28px rgba(0, 0, 0, .38)); z-index: 15; }
+.tlv-bar.zieht { cursor: grabbing; opacity: .9; z-index: 40; transition: none; }
+.tlv-bar .t { overflow: hidden; text-overflow: ellipsis; font-weight: var(--fw-semibold); }
+.tlv-bar .s { color: rgba(255, 255, 255, .82); font-weight: var(--fw-normal); }
+.tlv-bar.angefragt {
+    background: repeating-linear-gradient(45deg,
+        color-mix(in srgb, var(--c) 26%, rgba(15, 23, 42, .8)) 0 6px, rgba(15, 23, 42, .75) 6px 12px);
+}
+.tlv-bar.konflikt { border-color: #ef4444; box-shadow: 0 0 0 1px #ef4444, 0 0 14px rgba(239, 68, 68, .5); }
+.tlv-bar.warnung { border-color: #fbbf24; box-shadow: 0 0 0 1px #fbbf24; }
+.tlv-bar.gesperrt { cursor: not-allowed; opacity: .75; border-style: dashed; }
+.tlv-bar.gewaehlt { outline: 2px solid var(--info, #38bdf8); outline-offset: 1px; }
+.tlv-bar.blass { opacity: .18; }
+.tlv-bar.treffer { outline: 2px solid #fbbf24; outline-offset: 1px; }
+.tlv-bar.ohne-datum {
+    background: repeating-linear-gradient(-45deg,
+        rgba(148, 163, 184, .18) 0 5px, rgba(15, 23, 42, .8) 5px 10px);
+    border-style: dotted;
+}
+.tlv-bar .grip { position: absolute; top: 0; bottom: 0; width: 9px; cursor: ew-resize; touch-action: none; }
+.tlv-bar.gesperrt .grip { cursor: not-allowed; }
+.tlv-bar .grip.l { left: 0; }
+.tlv-bar .grip.r { right: 0; }
+/* Unteraufgabe: flacher, blasser und eingerückt gezeichnet — damit auf einen
+   Blick klar ist, was die Gesamtaufgabe ist und was ein Unterpunkt. */
+.tlv-bar.kind {
+    top: 8px; height: calc(var(--tlv-row-h) - 20px);
+    background: color-mix(in srgb, var(--c) 18%, #0b1220);
+    border-left-width: 3px;
+}
+.tlv-bar.kind .t { font-weight: var(--fw-normal); }
+.tlv-bar > .t, .tlv-bar > .s { position: relative; z-index: 1; }
+.tlv-bar .zaehler {
+    font-variant-numeric: tabular-nums;
+    color: #fff; font-weight: var(--fw-semibold);
+}
+
+/* Aufgabe, deren Zeitraum nur aus den Unteraufgaben stammt: als Klammer
+   zeichnen statt als Block — sie ist kein eigener Termin. */
+/* Aufgabe ohne eigenen Termin: sie liegt vorlaeufig auf ihrem Erstellungstag.
+   Gestrichelter Rand als Hinweis „hier hat noch niemand geplant“ — ziehen
+   macht daraus einen richtigen Termin. */
+.tlv-bar.vorlaeufig {
+    border-style: dashed;
+    border-left-style: solid;
+    background: color-mix(in srgb, var(--c) 34%, rgba(15, 23, 42, .9));
+}
+
+.tlv-bar.klammer {
+    background: color-mix(in srgb, var(--c) 22%, rgba(15, 23, 42, .9));
+    border-color: color-mix(in srgb, var(--c) 55%, transparent);
+    border-top-width: 2px;
+    border-style: dashed;
+    border-left-style: solid;
+}
+
+/* ---------------- Ungeplant ---------------- */
+.tlv-ungeplant {
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    margin-top: var(--space-3);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    background: rgba(15, 23, 42, .45);
+    overflow-x: auto;
+}
+.tlv-ungeplant .lbl {
+    font-size: var(--fs-2xs); text-transform: uppercase;
+    letter-spacing: var(--ls-caps); color: var(--text-3); flex: none;
+}
+.tlv-up {
+    flex: none; font-size: var(--fs-xs);
+    padding: 7px 12px; border-radius: var(--radius-sm);
+    cursor: grab; touch-action: none;
+    background: color-mix(in srgb, var(--c) 24%, rgba(15, 23, 42, .7));
+    border: 1px dashed color-mix(in srgb, var(--c) 60%, transparent);
+    color: var(--text-1);
+}
+.tlv-up.zieht { opacity: .35; }
+
+.tlv-legende {
+    display: flex; gap: var(--space-4); flex-wrap: wrap; align-items: center;
+    padding: var(--space-2) 0;
+    font-size: var(--fs-2xs); color: var(--text-3);
+}
+.tlv-leg { display: inline-flex; align-items: center; gap: 5px; }
+.tlv-leg i { width: 20px; height: 9px; border-radius: 3px; background: var(--c); display: block; }
+
+/* ---------------- Schwebende Elemente ---------------- */
+#tlv-geist {
+    position: fixed; z-index: 2200; pointer-events: none; display: none;
+    font-size: var(--fs-xs); padding: 6px 11px; border-radius: var(--radius-sm); color: #fff;
+    background: color-mix(in srgb, var(--c) 40%, rgba(15, 23, 42, .92));
+    border: 1px solid color-mix(in srgb, var(--c) 70%, transparent);
+    box-shadow: var(--shadow-2, 0 8px 28px rgba(0, 0, 0, .38));
+}
+#tlv-geist.an { display: block; }
+
+.tlv-gummi {
+    position: absolute; top: 4px; z-index: 35; pointer-events: none;
+    height: calc(var(--tlv-row-h) - 12px);
+    border-radius: var(--radius-xs);
+    background: rgba(56, 189, 248, .18);
+    border: 1px dashed rgba(56, 189, 248, .75);
+    display: flex; align-items: center; justify-content: center;
+    font-size: var(--fs-2xs); color: #e0f2fe;
+}
+
+#tlv-waehler {
+    position: fixed; z-index: 2210; display: none;
+    background: rgba(15, 23, 42, .98);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-2, 0 8px 28px rgba(0, 0, 0, .38));
+    padding: 6px; min-width: 210px;
+}
+#tlv-waehler.an { display: block; }
+#tlv-waehler h6 {
+    margin: 4px 8px 8px; font-size: var(--fs-2xs);
+    text-transform: uppercase; letter-spacing: var(--ls-caps);
+    color: var(--text-3); font-weight: var(--fw-semibold);
+}
+#tlv-waehler button {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    border: 0; background: transparent; color: var(--text-1);
+    font: inherit; font-size: var(--fs-sm);
+    padding: 7px 9px; border-radius: var(--radius-sm);
+    cursor: pointer; text-align: left;
+}
+#tlv-waehler button:hover { background: rgba(255, 255, 255, .1); }
+#tlv-waehler button i { width: 10px; height: 10px; border-radius: var(--radius-circle); background: var(--c); flex: none; }
+
+#tlv-toast {
+    position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%);
+    z-index: 2300; display: none; align-items: center; gap: var(--space-3);
+    background: rgba(15, 23, 42, .97);
+    border: 1px solid var(--glass-border);
+    padding: 9px 12px 9px 16px;
+    border-radius: var(--radius-pill);
+    font-size: var(--fs-sm); color: var(--text-1);
+    box-shadow: var(--shadow-2, 0 8px 28px rgba(0, 0, 0, .38));
+    max-width: 92vw;
+}
+#tlv-toast.an { display: flex; }
+#tlv-toast button {
+    border: 1px solid rgba(56, 189, 248, .5);
+    background: rgba(56, 189, 248, .18);
+    color: #fff; font: inherit; font-size: var(--fs-xs);
+    padding: 4px 12px; border-radius: var(--radius-pill); cursor: pointer;
+}
+
+/* ---------------- Seitenpanel ---------------- */
+#tlv-panel {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 380px; max-width: 92vw;
+    z-index: 2100; display: none;
+    background: rgba(15, 23, 42, .93);
+    backdrop-filter: blur(var(--blur-overlay, 32px));
+    -webkit-backdrop-filter: blur(var(--blur-overlay, 32px));
+    border-left: 1px solid var(--glass-border);
+    padding: var(--space-4);
+    overflow-y: auto;
+}
+#tlv-panel.an { display: block; }
+#tlv-panel h2 { font-family: var(--font-heading); font-size: 1rem; margin: 8px 0 4px; color: var(--text-1); }
+#tlv-panel h5 {
+    margin: var(--space-4) 0 var(--space-2);
+    font-size: var(--fs-2xs); text-transform: uppercase;
+    letter-spacing: var(--ls-caps); color: var(--text-3);
+}
+#tlv-panel .kv {
+    display: flex; justify-content: space-between; gap: var(--space-3);
+    padding: 7px 0; border-bottom: 1px solid rgba(255, 255, 255, .07);
+    font-size: var(--fs-sm); color: var(--text-1);
+}
+#tlv-panel .kv span { color: var(--text-3); flex-shrink: 0; }
+/* Lange Werte (die volle Maschinenbezeichnung) dürfen zweizeilig werden,
+   statt die Zeile zu sprengen. */
+#tlv-panel .kv b { text-align: right; min-width: 0; overflow-wrap: anywhere; }
+#tlv-panel .acts { display: flex; gap: var(--space-2); margin-top: var(--space-4); flex-wrap: wrap; }
+#tlv-panel .quelle {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: var(--fs-2xs); line-height: var(--lh-normal);
+    background: rgba(0, 0, 0, .35);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-sm);
+    padding: 9px 11px; color: #7dd3fc;
+    white-space: pre-wrap; word-break: break-word;
+}
+#tlv-panel .quelle .warn { color: var(--warning, #fbbf24); display: block; margin-top: 6px; }
+#tlv-panel .wl {
+    font-size: var(--fs-xs); display: flex; justify-content: space-between;
+    padding: 5px 0; border-bottom: 1px solid rgba(255, 255, 255, .06);
+    color: var(--text-2);
+}
+#tlv-panel .tlv-dep-x {
+    background: none; border: none; color: var(--text-3); cursor: pointer;
+    font-size: 1rem; line-height: 1; padding: 0 0 0 8px; flex-shrink: 0;
+}
+#tlv-panel .tlv-dep-x:hover { color: #ef4444; }
+#tlv-panel .tlv-dep-add {
+    display: flex; gap: 6px; margin-top: 8px;
+}
+#tlv-panel .tlv-dep-add select { flex: 1; min-width: 0; }
+#tlv-panel .tlv-dep-add .btn-secondary { flex-shrink: 0; padding: 6px 10px; font-size: var(--fs-xs); }
+
+.tlv-badge {
+    font-size: var(--fs-2xs); padding: 2px 8px;
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--c) 25%, transparent);
+    color: #fff; white-space: nowrap;
+}
+
+/* ---------------- Feinschliff der Zeitachse ----------------
+   Ruhigeres Bild: weniger Linien, klarere Kanten, deutlicheres Heute. */
+.tlv-buehne {
+    background: linear-gradient(180deg, rgba(15, 23, 42, .5), rgba(15, 23, 42, .32));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
+    scrollbar-width: thin;
+}
+.tlv-head { background: rgba(13, 20, 38, .96); }
+.tlv-day { padding: 7px 0; }
+.tlv-day.heute {
+    background: rgba(56, 189, 248, .12);
+    box-shadow: inset 0 -2px 0 var(--info, #38bdf8);
+}
+.tlv-row { border-bottom-color: rgba(255, 255, 255, .04); }
+.tlv-row:hover .tlv-track { background-color: rgba(255, 255, 255, .022); }
+.tlv-label { padding-block: 6px; }
+
+.tlv-bar {
+    border-radius: var(--radius-sm);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .35);
+    letter-spacing: .01em;
+}
+.tlv-bar::before {
+    /* feiner Lichtverlauf von oben — nimmt den Balken die Flaechigkeit */
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255, 255, 255, .09), rgba(255, 255, 255, 0) 55%);
+}
+.tlv-bar:hover { box-shadow: 0 6px 20px rgba(0, 0, 0, .45); }
+.tlv-ungeplant { background: rgba(15, 23, 42, .35); }
+
+/* ---------------- Handy ---------------- */
+@media (max-width: 768px) {
+    #timeline { --tlv-label-w: 150px; --tlv-row-h: 48px; }
+    .tlv-topbar { gap: var(--space-2); }
+    .tlv-topbar-left, .tlv-topbar-right { width: 100%; }
+    .tlv-titel { font-size: var(--fs-lg); }
+    .tlv-range { min-width: 0; font-size: var(--fs-sm); }
+    /* iOS zoomt bei Feldern unter 16px hinein und nicht zurueck. */
+    .tlv-input { font-size: 16px; height: 38px; }
+    .tlv-tool, .tlv-icon-btn { height: 38px; }
+    .tlv-suchfeld { flex: 1 1 100%; }
+    .tlv-suchfeld .tlv-input,
+    .tlv-suchfeld .tlv-input:focus { width: 100%; }
+    .tlv-topbar-right > .tlv-select { flex: 1 1 44%; }
+    .tlv-pop { right: auto; left: 0; min-width: 260px; max-width: 88vw; }
+    #tlv-panel { width: 100%; max-width: none; }
+}
+
+/* Zeile ohne eigenen Termin: hier laesst sich der Balken auf der leeren Spur
+   aufziehen (druecken und nach rechts ziehen). */
+.tlv-track.tlv-aufziehbar { cursor: crosshair; }
+.tlv-track.tlv-aufziehbar:hover {
+    background-color: rgba(56, 189, 248, .05);
+    box-shadow: inset 0 0 0 1px rgba(56, 189, 248, .25);
+}
+
+/* ---------------- Lesbarkeit (2026-09-03) ----------------
+   Kontraste angehoben: Beschriftungen, Kopfzeile und Wochenenden waren auf
+   dem dunklen Glas nur noch zu erahnen. */
+.tlv-label .n { color: #f1f5f9; }
+.tlv-label .m { color: #94a3b8; }
+.tlv-day { color: #94a3b8; }
+.tlv-day b { color: #e2e8f0; }
+.tlv-day.we { background: rgba(255, 255, 255, .06); }
+.tlv-corner, .tlv-summe-kopf { color: #94a3b8; }
+.tlv-summe { color: #94a3b8; }
+
+/* Ausgewählter Balken hebt sich deutlich ab, statt nur einen dünnen Rand
+   zu bekommen. */
+.tlv-bar.gewaehlt {
+    outline: 2px solid #7dd3fc;
+    outline-offset: 1px;
+    box-shadow: 0 0 0 4px rgba(56, 189, 248, .22), 0 6px 18px rgba(0, 0, 0, .5);
+    z-index: 16;
+}
+.tlv-bar.treffer { outline: 2px solid #fbbf24; outline-offset: 1px; box-shadow: 0 0 0 4px rgba(251, 191, 36, .2); }
+/* Nicht-Treffer bei aktiver Suche: sichtbar bleiben, nur zurücktreten.
+   Bei .18 war der Balken faktisch weg und man wusste nicht, ob dort etwas ist. */
+.tlv-bar.blass { opacity: .3; }
+
+/* Farbpunkt am Anfang der Beschriftung: welche Sorte ist das, ohne den
+   Balken lesen zu müssen. */
+.tlv-bar .punkt {
+    width: 7px; height: 7px; border-radius: var(--radius-circle);
+    background: var(--c); flex: none;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, .35);
+}
+
+/* Legende unter der Timeline */
+.tlv-legende { color: #94a3b8; }
+
+/* Seitenpanel: Beschriftung und Wert klar trennen, beides gut lesbar. */
+#tlv-panel .kv span { color: #94a3b8; }
+#tlv-panel .kv b { color: #f1f5f9; font-weight: var(--fw-semibold); }
+#tlv-panel .tlv-badge {
+    background: color-mix(in srgb, var(--c) 30%, #0b1220);
+    border: 1px solid color-mix(in srgb, var(--c) 60%, transparent);
+    color: #f8fafc;
+    font-weight: var(--fw-semibold);
+    letter-spacing: var(--ls-caps);
+    text-transform: uppercase;
+}
+
+/* ---------------- Farbstreifen links (2026-09-03) ----------------
+   Jede Zeile trägt links ihre eigene Farbe: bei Aufgaben je Aufgabe (die
+   Unteraufgaben erben sie), sonst je Maschine bzw. je Person. Damit sieht
+   man sofort, welche Balken zusammengehören. Der Farbton wird aus dem
+   Schlüssel gerechnet und bleibt darum stabil. */
+.tlv-label.farbig {
+    box-shadow: inset 4px 0 0 0 var(--rc);
+    padding-left: calc(var(--space-3) + 6px);
+}
+.tlv-label.farbig.kind {
+    /* Unteraufgabe: schmaler und blasser, sie hängt an ihrer Aufgabe. */
+    box-shadow: inset 3px 0 0 0 color-mix(in srgb, var(--rc) 55%, transparent);
+    padding-left: calc(var(--space-3) + 22px);
+}
+.tlv-row:hover .tlv-label.farbig { box-shadow: inset 4px 0 0 0 var(--rc), inset 0 0 0 999px rgba(255, 255, 255, .05); }
+
+/* ---------------- Aufgaben-Achse (2026-09-03) ----------------
+   In der Aufgaben-Ansicht steht links nur der Titel. Zuständige und Stand
+   („erledigt“) stehen im Aufgaben-Fenster — hier wird geplant, nicht
+   verwaltet. */
+
+/* Unteraufgabe: gleiche Schriftfarbe wie die Aufgabe, damit sie lesbar ist. */
+.tlv-label.kind .n { color: #f1f5f9; font-weight: var(--fw-normal); }
+
+/* Deutlich weiter eingerückt und mit kräftigem Farbstrich, damit die
+   Zugehörigkeit auf einen Blick sitzt. */
+.tlv-label.kind { padding-left: calc(var(--space-3) + 34px); }
+.tlv-label.farbig.kind {
+    box-shadow: inset 6px 0 0 0 var(--rc);
+    padding-left: calc(var(--space-3) + 34px);
+}
+.tlv-row:hover .tlv-label.farbig.kind {
+    box-shadow: inset 6px 0 0 0 var(--rc), inset 0 0 0 999px rgba(255, 255, 255, .05);
+}
+
+/* Aufklapp-Pfeil: groß genug, um ihn sicher zu treffen. */
+.tlv-klapp {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px;
+    margin-right: 2px;
+    font-size: 1.15rem;
+    line-height: 1;
+    color: var(--text-2);
+    border-radius: var(--radius-sm);
+}
+.tlv-klapp:hover { background: rgba(255, 255, 255, .12); color: #fff; }
+
+/* ---------------- Kalenderwochen im Kopf (2026-09-03) ----------------
+   Zwei Zeilen: oben die KW über ihre Tage gespannt, darunter jeder Tag mit
+   vollem Datum. So sieht man, welche Tage zu einer Woche gehören. */
+.tlv-headcols { display: flex; flex-direction: column; }
+.tlv-kws { display: flex; border-bottom: 1px solid rgba(255, 255, 255, .08); }
+.tlv-kw {
+    flex: none;
+    display: flex; align-items: center; justify-content: center;
+    padding: 3px 0;
+    font-size: var(--fs-2xs);
+    letter-spacing: var(--ls-caps);
+    color: #94a3b8;
+    border-left: 1px solid rgba(255, 255, 255, .18);
+    overflow: hidden; white-space: nowrap;
+}
+.tlv-kw:first-child { border-left: 0; }
+.tlv-kw span { padding: 0 4px; }
+.tlv-kw.heute { color: #7dd3fc; background: rgba(56, 189, 248, .1); font-weight: var(--fw-semibold); }
+
+/* Tageszelle: Wochentag klein darüber, darunter 02.09. */
+.tlv-day .wt { display: block; font-size: 9px; letter-spacing: .04em; opacity: .75; }
+.tlv-day b { font-size: var(--fs-2xs); font-variant-numeric: tabular-nums; }
+/* Montag: kräftigere Trennlinie, damit die Woche auch ohne Kopfzeile sitzt. */
+.tlv-day.wstart { border-left: 1px solid rgba(255, 255, 255, .22); }
+
+/* Wochengrenze quer durch die Spuren */
+.tlv-wgrenze {
+    position: absolute; top: 0; bottom: 0; width: 1px;
+    background: rgba(255, 255, 255, .14);
+    pointer-events: none; z-index: 1;
+}
+
+/* ---------------- Vollbild ----------------
+   Menü, Kopfleiste und alle Ränder weg — die Timeline bekommt den ganzen
+   Bildschirm. Verlassen über denselben Knopf oder Esc. */
+body.tlv-vollbild #sidebar,
+body.tlv-vollbild #topbar { display: none !important; }
+body.tlv-vollbild #main-content {
+    margin: 0 !important;
+    padding: 8px 10px !important;
+    max-width: none !important;
+    width: 100vw !important;
+    height: 100vh !important;
+}
+body.tlv-vollbild #timeline {
+    position: fixed;
+    inset: 0;
+    z-index: 1500;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom)) 12px;
+    background: var(--color-bg, #0b1220);
+}
+body.tlv-vollbild .tlv-topbar { padding-bottom: var(--space-2); margin-bottom: var(--space-2); }
+body.tlv-vollbild .tlv-titel { display: none; }   /* der Platz gehört der Achse */
+body.tlv-vollbild #tlv-vollbild { background: rgba(56, 189, 248, .18); border-color: rgba(56, 189, 248, .5); }
+
+/* ================================================================
+   AUFGABE ↔ UNTERAUFGABE (2026-09-03)
+   Vorher unterschieden sich beide fast nur durch die Einrückung. Jetzt
+   auf drei Wegen gleichzeitig — Zeile, Balkenform und Verbindungslinie —
+   damit auf einen Blick klar ist, was die Gesamtaufgabe ist.
+   ================================================================ */
+
+/* --- Die Gesamtaufgabe ist die Kopfzeile ihres Blocks --- */
+.tlv-row.eltern { border-top: 2px solid rgba(255, 255, 255, .16); }
+.tlv-row.eltern .tlv-label {
+    background: rgba(255, 255, 255, .075);
+}
+.tlv-row.eltern .tlv-label .n {
+    font-size: var(--fs-md);
+    font-weight: var(--fw-bold);
+    color: #fff;
+    letter-spacing: -.005em;
+}
+/* Kräftiger Farbblock statt schmalem Strich: die Aufgabe „besitzt“ die Farbe. */
+.tlv-label.farbig:not(.kind) { box-shadow: inset 8px 0 0 0 var(--rc); }
+.tlv-row:hover .tlv-label.farbig:not(.kind) {
+    box-shadow: inset 8px 0 0 0 var(--rc), inset 0 0 0 999px rgba(255, 255, 255, .05);
+}
+
+/* Zahl der Unteraufgaben direkt hinter dem Titel */
+.tlv-anz {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: var(--radius-pill);
+    background: color-mix(in srgb, var(--rc) 30%, transparent);
+    border: 1px solid color-mix(in srgb, var(--rc) 55%, transparent);
+    font-size: 10px;
+    font-weight: var(--fw-semibold);
+    font-variant-numeric: tabular-nums;
+    color: #fff;
+    vertical-align: middle;
+}
+
+/* --- Unteraufgaben hängen sichtbar darunter --- */
+.tlv-label.kind {
+    position: relative;
+    background: rgba(0, 0, 0, .16);
+}
+/* Senkrechte Führungslinie vom Elternteil herunter … */
+.tlv-label.kind::before {
+    content: '';
+    position: absolute;
+    left: 20px; top: 0; bottom: 0;
+    width: 2px;
+    background: color-mix(in srgb, var(--rc) 70%, transparent);
+}
+/* … beim letzten Kind endet sie auf halber Höhe und schliesst den Block. */
+.tlv-row.letztes-kind .tlv-label.kind::before { bottom: 50%; }
+/* … und ein kurzer Winkel führt zum Titel. */
+.tlv-label.kind::after {
+    content: '';
+    position: absolute;
+    left: 20px; top: 50%;
+    width: 13px; height: 2px;
+    background: color-mix(in srgb, var(--rc) 70%, transparent);
+}
+.tlv-row.letztes-kind .tlv-label.kind {
+    border-bottom: 1px solid rgba(255, 255, 255, .12);
+}
+/* Der Farbstreifen ganz links gehört der Aufgabe — beim Kind entfällt er,
+   dafür trägt die Führungslinie die Farbe. */
+.tlv-label.farbig.kind, .tlv-row:hover .tlv-label.farbig.kind { box-shadow: none; }
+.tlv-row:hover .tlv-label.farbig.kind { background: rgba(255, 255, 255, .05); }
+.tlv-label.kind .n { font-size: var(--fs-sm); }
+
+/* --- Balkenform trennt beide ebenfalls --- */
+/* Gesamtaufgabe: flacher Sammelbalken mit Endmarken, wie im Ablaufplan. */
+.tlv-bar.summe {
+    top: 5px;
+    height: 13px;
+    border-radius: 2px;
+    background: var(--c);
+    border: 0;
+    color: #0b1220;
+    font-weight: var(--fw-bold);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .45);
+}
+.tlv-bar.summe { overflow: visible; }  /* sonst werden die Endmarken abgeschnitten */
+.tlv-bar.summe .s, .tlv-bar.summe .zaehler { color: rgba(0, 0, 0, .65); }
+.tlv-bar.summe .punkt { display: none; }
+/* Endmarken: je eine kleine Spitze nach unten an den beiden Enden.
+   Die Sheen-Ebene aus .tlv-bar::before wird dafuer umgewidmet. */
+.tlv-bar.summe::before,
+.tlv-bar.summe::after {
+    content: '';
+    position: absolute;
+    inset: auto;
+    top: 100%;
+    width: 7px; height: 5px;
+    background: var(--c);
+    pointer-events: none;
+}
+.tlv-bar.summe::before { left: 0; clip-path: polygon(0 0, 100% 0, 0 100%); }
+.tlv-bar.summe::after { right: 0; clip-path: polygon(0 0, 100% 0, 100% 100%); }
+/* Unteraufgabe: normaler, tiefer sitzender Balken. */
+.tlv-bar.kind {
+    top: calc(var(--tlv-row-h) * .34);
+    height: calc(var(--tlv-row-h) - var(--tlv-row-h) * .34 - 8px);
+}
+
+/* ---------------- Maße und Schrift (2026-09-03) ----------------
+   Balken höher, Schrift wächst mit. */
+.tlv-bar.summe {
+    height: clamp(14px, calc(var(--tlv-row-h) * .42), 26px);
+    top: 3px;
+}
+.tlv-bar.kind {
+    top: calc(var(--tlv-row-h) * .30);
+    height: calc(var(--tlv-row-h) * .70 - 7px);
+}
+/* Standort-/Belegungsband hinter den Balken mitwachsen lassen */
+.tlv-luecke { top: calc(var(--tlv-row-h) / 2 - 3px); height: 6px; }
+.tlv-gummi { height: calc(var(--tlv-row-h) - 7px); top: 3px; }
+
+/* Maschine bzw. Werkstattauftrag unter dem Aufgabentitel — deutlich groesser
+   als die uebliche zweite Zeile (.m ist sonst nur var(--fs-2xs)), das ist
+   meist die wichtigste Zusatzangabe der Zeile. */
+.tlv-label .m .maschine {
+    color: #34d399;
+    font-weight: var(--fw-semibold);
+    font-size: var(--fs-sm);
+}
+.tlv-label .m .maschine.wa { color: #fbbf24; }
+
+/* Zusatzzeilen AUF dem Balken (Maschine/WA, bei eingeklappter Aufgabe auch
+   "Verantwortlich: …" — js/timeline-view.js, zeilenBauen/verantwortlichZeile):
+   die Zeile braucht dafuer mehr Hoehe, die Anzahl der Zusatzzeilen kommt als
+   inline min-height mit (siehe dort) — hier nur, dass der Balken selbst per
+   Flex-Umbruch mitwaechst statt abzuschneiden. */
+.tlv-bar.mit-zusatz {
+    flex-wrap: wrap; align-content: flex-start;
+    height: auto; min-height: calc(var(--tlv-row-h) * .42);
+    padding-top: 4px; padding-bottom: 4px;
+}
+.tlv-bar-resp {
+    flex-basis: 100%;                 /* immer eigene Zeile, egal wieviel Platz */
+    /* relativ zur Balkenschrift: schriftEinpassen() vergroessert den Balken
+       auf langen Zeitraeumen, die Zusatzzeilen wachsen dann mit. */
+    font-size: .82em; font-weight: var(--fw-normal);
+    color: rgba(255, 255, 255, .75); white-space: normal; overflow-wrap: break-word;
+}
+.tlv-bar-resp .maschine { color: #6ee7b7; font-weight: var(--fw-semibold); }
+.tlv-bar-resp .maschine.wa { color: #fcd34d; }
+
+/* Zeile „Erledigt" — Sammelkopf fuer die abgehakten Unteraufgaben einer
+   Aufgabe. Bewusst leise: kein Farbstreifen, gedaempfter Titel, halbe
+   Zeilenhoehe, keine Verbindungslinie des Kind-Baums. */
+.tlv-row.erl-kopf { min-height: calc(var(--tlv-row-h) * .62); }
+.tlv-row.erl-kopf .tlv-label { box-shadow: none; }
+.tlv-row.erl-kopf .tlv-label.kind::before,
+.tlv-row.erl-kopf .tlv-label.kind::after { display: none; }
+.tlv-row.erl-kopf .tlv-label .n {
+    color: rgba(255, 255, 255, .5); font-size: var(--fs-2xs);
+    text-transform: uppercase; letter-spacing: .05em; font-weight: var(--fw-semibold);
+}
+.tlv-row.erl-kopf .tlv-anz { opacity: .6; }
+.tlv-row.erl-kopf .tlv-track { background: rgba(255, 255, 255, .01); cursor: default; }
+
+/* Zeitraum-Streifen auf dem Balken (ersetzt die frühere Personenzahl). */
+.tlv-bar .s.zeitspanne {
+    white-space: nowrap; opacity: .9; font-variant-numeric: tabular-nums;
+}
+
+/* Zeitraum auf dem Balken: heller als der Rest, damit er sich vom farbigen
+   Grund abhebt — in Rot/Orange war das gedämpfte Weiß kaum zu lesen. */
+.tlv-bar .s.zeitspanne {
+    color: #fff; font-weight: var(--fw-semibold);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .75);
+}
+
+/* Ein- und Zweitagesbalken: der Text steht RECHTS DANEBEN statt im Balken.
+   Innen wäre er auf 20 px Breite nur noch Buchstabensalat. */
+.tlv-bar.schmal { overflow: visible; }
+.tlv-bar.schmal .tlv-aussen {
+    position: absolute; left: 100%; top: 50%; transform: translateY(-50%);
+    margin-left: 8px; display: flex; flex-direction: column; align-items: flex-start;
+    gap: 1px; white-space: nowrap; pointer-events: none;
+    text-shadow: 0 1px 4px rgba(2, 6, 23, .95), 0 0 10px rgba(2, 6, 23, .8);
+}
+.tlv-bar.schmal .tlv-aussen .t { font-weight: var(--fw-semibold); color: #fff; }
+.tlv-bar.schmal .tlv-aussen .s.zeitspanne { text-shadow: none; }
+.tlv-bar.schmal .tlv-bar-resp { text-shadow: none; }
+
+/* Meldung: klein, unten rechts, im Regelfall nur die eine Frage. */
+#tlv-toast.knapp {
+    left: auto; right: 20px; transform: none;
+    bottom: 20px; padding: 5px 6px; gap: 0; background: rgba(15, 23, 42, .92);
+}
+#tlv-toast.knapp #tlv-toast-text { display: none; }
+#tlv-toast.knapp button { font-size: var(--fs-2xs); padding: 3px 10px; }
+
+/* Dreizeiliger Balken: Titel · Zeitraum · Zuständig/Maschine. Der Zeitraum
+   bekommt wie „Zuständig“ eine eigene Zeile (flex-basis 100 %), damit er dem
+   Titel keine Breite wegnimmt und überall gleich aussieht — vorher stand er
+   bei langen Balken neben dem Titel und bei kurzen darunter. */
+.tlv-bar .s.zeitspanne {
+    flex-basis: 100%; order: 1;
+    color: rgba(255, 255, 255, .88); font-weight: var(--fw-normal);
+    font-size: var(--fs-2xs); text-shadow: none;
+}
+.tlv-bar .tlv-bar-resp { order: 2; }
+.tlv-bar.summe .s.zeitspanne { color: rgba(0, 0, 0, .7); }
+
+/* Eintagesbalken: schmaler Streifen, Text rechts daneben — dort untereinander
+   in derselben Reihenfolge. */
+.tlv-bar.schmal .tlv-aussen .s.zeitspanne,
+.tlv-bar.schmal .tlv-aussen .tlv-bar-resp { flex-basis: auto; }
+
+/* Der Sammelbalken der Gesamtaufgabe hat eine feste Höhe (flacher Strich mit
+   Endspitzen). Mit den drei Zeilen muss auch er wachsen dürfen, sonst
+   schneidet er Zeitraum und Zuständig ab. */
+.tlv-bar.summe.mit-zusatz {
+    height: auto;
+    min-height: clamp(14px, calc(var(--tlv-row-h) * .42), 26px);
+    align-content: center;
+}
+
+/* Alles auf dem Balken weiß und fett — Titel, Zeitraum und Zuständig hatten
+   drei verschiedene Helligkeiten, die unteren zwei Zeilen waren auf dem
+   dunklen Balkengrund kaum zu lesen. */
+.tlv-bar .t,
+.tlv-bar .s,
+.tlv-bar .s.zeitspanne,
+.tlv-bar .tlv-bar-resp,
+.tlv-bar .tlv-bar-resp .maschine,
+.tlv-bar.schmal .tlv-aussen .t,
+.tlv-bar.schmal .tlv-aussen .s,
+.tlv-bar.schmal .tlv-aussen .tlv-bar-resp {
+    color: #fff; font-weight: var(--fw-bold, 700);
+}
+/* Ausnahme Sammelbalken: der ist voll eingefärbt und trägt dunkle Schrift —
+   Weiß wäre dort nicht zu lesen. Fett wird er trotzdem. */
+.tlv-bar.summe .t,
+.tlv-bar.summe .s,
+.tlv-bar.summe .s.zeitspanne,
+.tlv-bar.summe .tlv-bar-resp { color: rgba(0, 0, 0, .8); font-weight: var(--fw-bold, 700); }
+
+/* Eintagesbalken: füllt die Zeile in voller Höhe statt als kleines Kästchen
+   oben in der Ecke zu sitzen. */
+.tlv-bar.schmal {
+    top: 3px; bottom: 3px; height: auto; min-height: 0;
+    align-items: center;
+}
+
+/* ---------------- Einheitliche Balken (2026-09-09) ----------------
+   Vorgabe: JEDER Balken füllt seine Zeile über die volle Höhe, und alles was
+   darin oder daneben steht ist weiß und fett. Damit fallen die Sonderformen
+   weg, die vorher unterschiedlich hoch saßen: Sammelbalken (.summe, flacher
+   Strich), Unteraufgabe (.kind, tiefer sitzend) und Eintagesbalken (.schmal).
+   Diese Regeln stehen bewusst am Ende der Datei — sie überschreiben die
+   älteren Höhen weiter oben. */
+.tlv-bar,
+.tlv-bar.kind,
+.tlv-bar.summe,
+.tlv-bar.schmal,
+.tlv-bar.mit-zusatz,
+.tlv-bar.summe.mit-zusatz {
+    top: 3px; bottom: 3px; height: auto; min-height: 0;
+    align-items: center; align-content: center;
+}
+/* Der Sammelbalken war voll eingefärbt und trug deshalb dunkle Schrift.
+   Jetzt hat er denselben dunklen Grund wie alle anderen — damit ist überall
+   weiße Schrift lesbar. Die Endspitzen bleiben. */
+.tlv-bar.summe {
+    background:
+        linear-gradient(180deg,
+            color-mix(in srgb, var(--c) 34%, #0b1220),
+            color-mix(in srgb, var(--c) 24%, #0b1220));
+    border: 1px solid color-mix(in srgb, var(--c) 58%, transparent);
+    border-left: 4px solid var(--c);
+    border-radius: var(--radius-sm);
+}
+.tlv-bar .t, .tlv-bar .s, .tlv-bar .zaehler,
+.tlv-bar .s.zeitspanne, .tlv-bar .tlv-bar-resp,
+.tlv-bar .tlv-bar-resp .maschine, .tlv-bar .tlv-bar-resp .maschine.wa,
+.tlv-bar.summe .t, .tlv-bar.summe .s, .tlv-bar.summe .zaehler,
+.tlv-bar.summe .s.zeitspanne, .tlv-bar.summe .tlv-bar-resp,
+.tlv-bar.schmal .tlv-aussen .t,
+.tlv-bar.schmal .tlv-aussen .s,
+.tlv-bar.schmal .tlv-aussen .tlv-bar-resp {
+    color: #fff; font-weight: var(--fw-bold, 700);
+}
+
+/* ---------------- „Wer ist frei?" (2026-09-09) ----------------
+   Vollflächige Tafel über der Timeline: Zeile je Person, Spalte je Tag.
+   Aufbau in js/timeline-view.js → zeichneFrei(). */
+#tlv-frei {
+    position: fixed; inset: 0; z-index: 2400; display: none;
+    background: rgba(2, 6, 23, .72); backdrop-filter: blur(3px);
+    padding: 3vh 2vw;
+}
+#tlv-frei.an { display: block; }
+.tlv-frei-box {
+    height: 94vh; display: flex; flex-direction: column; gap: var(--space-3);
+    background: rgba(15, 23, 42, .98);
+    border: 1px solid var(--glass-border); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-3, 0 24px 70px rgba(0, 0, 0, .6));
+    padding: var(--space-4);
+}
+.tlv-frei-kopf { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); }
+.tlv-frei-kopf h2 { margin: 0; font-size: var(--fs-lg); color: #fff; }
+.tlv-frei-kopf p { margin: 2px 0 0; font-size: var(--fs-xs); color: var(--text-2); }
+.tlv-frei-zu {
+    border: 1px solid var(--glass-border); background: rgba(255, 255, 255, .06);
+    color: #fff; font-size: 1.2rem; line-height: 1; width: 34px; height: 34px;
+    border-radius: var(--radius-sm); cursor: pointer;
+}
+.tlv-frei-heute {
+    font-size: var(--fs-sm); color: var(--text-2);
+    border: 1px solid rgba(52, 211, 153, .3); background: rgba(52, 211, 153, .1);
+    border-radius: var(--radius-pill); padding: 5px 12px; align-self: flex-start;
+}
+.tlv-frei-heute b { color: #6ee7b7; }
+.tlv-frei-tafel { flex: 1; overflow: auto; }
+.tlv-frei-zeile {
+    display: grid;
+    grid-template-columns: 190px repeat(var(--tlv-frei-cols), minmax(78px, 1fr)) 74px;
+}
+.tlv-frei-zeile.kopfzeile { position: sticky; top: 0; z-index: 2; }
+.tlv-frei-zelle {
+    border-bottom: 1px solid rgba(255, 255, 255, .06);
+    border-right: 1px solid rgba(255, 255, 255, .04);
+    min-height: 40px; padding: 4px 6px; overflow: hidden;
+    display: flex; align-items: center; font-size: var(--fs-2xs);
+}
+.tlv-frei-zelle.kopf {
+    background: rgba(15, 23, 42, .99); flex-direction: column; gap: 0;
+    align-items: flex-start; justify-content: center;
+    color: var(--text-2); font-weight: var(--fw-semibold); min-height: 44px;
+}
+.tlv-frei-zelle.kopf b { color: #fff; }
+.tlv-frei-zelle.name {
+    position: sticky; left: 0; z-index: 1;
+    background: rgba(15, 23, 42, .99);
+    color: #fff; font-weight: var(--fw-bold, 700); font-size: var(--fs-sm);
+    box-shadow: inset 6px 0 0 -2px var(--rc, transparent);
+    padding-left: 12px;
+}
+.tlv-frei-zelle.frei { background: rgba(52, 211, 153, .16); }
+.tlv-frei-zelle.belegt { background: rgba(56, 189, 248, .2); }
+.tlv-frei-zelle.doppelt { background: rgba(251, 146, 60, .28); }
+.tlv-frei-zelle.we { background: rgba(255, 255, 255, .03); }
+.tlv-frei-zelle.heute { box-shadow: inset 0 0 0 1px rgba(56, 189, 248, .7); }
+.tlv-frei-zelle.bilanz { justify-content: center; color: var(--text-2); }
+.tlv-frei-zelle.bilanz b { color: #6ee7b7; font-size: var(--fs-sm); }
+.tlv-frei-txt {
+    color: #fff; font-weight: var(--fw-bold, 700); line-height: 1.2;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.tlv-frei-txt i { font-style: normal; color: #6ee7b7; font-weight: var(--fw-normal); }
+.tlv-frei-ohne { padding: 10px 12px; font-size: var(--fs-xs); color: var(--text-2); }
+.tlv-frei-ohne b { color: #fbbf24; }
+.tlv-frei-legende { display: flex; align-items: center; gap: 8px; font-size: var(--fs-2xs); color: var(--text-2); }
+.tlv-frei-legende .pkt { width: 12px; height: 12px; border-radius: 3px; display: inline-block; margin-left: 8px; }
+.tlv-frei-legende .pkt.frei { background: rgba(52, 211, 153, .5); }
+.tlv-frei-legende .pkt.belegt { background: rgba(56, 189, 248, .55); }
+.tlv-frei-legende .pkt.doppelt { background: rgba(251, 146, 60, .6); }
+.tlv-frei-legende .pkt.we { background: rgba(255, 255, 255, .12); }
+
+/* Kopfleiste der Tafel: „Heute frei“ links, Abwesenheit eintragen rechts. */
+.tlv-frei-leiste {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: var(--space-3); flex-wrap: wrap;
+}
+.tlv-frei-form { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tlv-frei-form .tlv-input { height: 32px; }
+.tlv-frei-hinweis {
+    font-size: var(--fs-2xs); color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, .3); background: rgba(251, 191, 36, .08);
+    border-radius: var(--radius-sm); padding: 5px 10px;
+}
+.tlv-frei-hinweis code { color: #fde68a; }
+.tlv-frei-zelle.abwesend {
+    background: repeating-linear-gradient(135deg,
+        rgba(148, 163, 184, .3) 0 6px, rgba(148, 163, 184, .14) 6px 12px);
+    cursor: pointer;
+}
+.tlv-frei-legende .pkt.abwesend { background: rgba(148, 163, 184, .45); }
+
+/* Aufgaben-Achse links: die Maschine ist die Hauptzeile, nicht der Titel.
+   Aufbau in zeilenBauen() (js/timeline-view.js). */
+/* Groß und komplett grün — inklusive Seriennummer und Baujahr. Die Spalte
+   ist schmal, deshalb bricht der Name um, statt kleiner zu werden. */
+.tlv-label .n .maschine {
+    color: #34d399; font-weight: var(--fw-bold, 700); font-size: 1.25rem;
+    letter-spacing: .01em; line-height: 1.2;
+    white-space: normal; overflow-wrap: anywhere;
+}
+.tlv-label .n .maschine.wa { color: #fcd34d; }
+.tlv-label .n .maschine .nr {
+    font-weight: 800; color: inherit; font-variant-numeric: tabular-nums;
+}
+.tlv-label .n .maschine.wa .nr { color: #fde68a; }
+
+/* Zeitraum und Zuständig teilen sich eine Größe: „Zuständig“ war größer,
+   der Zeitraum zu klein. Beide relativ zur Balkenschrift, damit sie mit
+   schriftEinpassen() auf langen Balken mitwachsen. */
+.tlv-bar .s.zeitspanne,
+.tlv-bar .tlv-bar-resp,
+.tlv-bar.schmal .tlv-aussen .s.zeitspanne,
+.tlv-bar.schmal .tlv-aussen .tlv-bar-resp {
+    font-size: .82em;
+}
+
+/* ---------------- Waagerecht blättern (Pager) ----------------
+   Zwei schwebende Pfeile am Rand der Bühne. Sie liegen als Geschwister der
+   Bühne im Abschnitt, damit sie beim Rollen stehen bleiben; ihre senkrechte
+   Lage setzt pagerSetzen() in js/timeline-view.js. */
+#timeline .tlv-pager {
+    position: absolute; z-index: 26;
+    transform: translateY(-50%);
+    width: 34px; height: 56px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; line-height: 1; font-weight: 700;
+    color: #e2e8f0; cursor: pointer;
+    background: rgba(15, 23, 42, .82);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(var(--blur-raised));
+    -webkit-backdrop-filter: blur(var(--blur-raised));
+    box-shadow: var(--shadow-2, 0 8px 28px rgba(0, 0, 0, .38));
+    opacity: .55; transition: opacity .15s, background .15s;
+}
+#timeline .tlv-pager:hover { opacity: 1; background: rgba(30, 41, 59, .95); }
+/* Die Pfeile stehen NEBEN der Bühne, nicht darauf: links im Zwischenraum
+   zum Seitenmenü, rechts zwischen Bühnenkante und Fensterrand. Dafür reicht
+   der Innenabstand von #main-content (2rem) aus. */
+#timeline .tlv-pager.l { left: -28px; border-radius: var(--radius-lg) 0 0 var(--radius-lg); }
+#timeline .tlv-pager.r { right: -28px; border-radius: 0 var(--radius-lg) var(--radius-lg) 0; }
+@media (max-width: 900px) {
+    /* Schmaler Rand — dann doch am Bühnenrand, sonst wären sie abgeschnitten. */
+    #timeline .tlv-pager { width: 30px; height: 48px; opacity: .8; }
+    #timeline .tlv-pager.l { left: 2px; }
+    #timeline .tlv-pager.r { right: 2px; }
+}
+/* Bezugsrahmen für die Pager-Pfeile (position: absolute). */
+#timeline:not(.hidden) { position: relative; }

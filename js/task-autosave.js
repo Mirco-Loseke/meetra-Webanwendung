@@ -51,10 +51,16 @@
         // Verschlimmbesserung des vorhandenen Datensatzes.
         if (!title) return null;
 
+        let ende = v('task-end-date') || null;
+        const start = v('task-start-date') || null;
+        if (start && ende && ende < start) ende = start;
+
         const payload = {
             title: title,
             description: v('task-description') || '',
-            machine_id: v('task-machine') || null
+            machine_id: v('task-machine') || null,
+            start_date: start,
+            end_date: ende
         };
 
         // Werkstattauftragsnummer nur mitschreiben, wenn sie vollständig ist —
@@ -97,7 +103,11 @@
                     title: st.title,
                     status: st.status || 'open',
                     supergroup: g.name,
-                    action_type: st.action_type || null
+                    action_type: st.action_type || null,
+                    // Planung je Unteraufgabe (wer · ab wann · wie lange).
+                    start_date: st.start_date || null,
+                    end_date: st.end_date || null,
+                    assigned_to: Array.isArray(st.assigned_to) ? st.assigned_to : []
                 });
             });
         });
@@ -131,10 +141,17 @@
 
         subtaskSaving = true;
         try {
+            const rows = flat.map(s => ({ ...s, task_id: taskId }));
+            // Planung aus der Timeline (start_date/end_date/assigned_to) retten,
+            // bevor die Zeilen gelöscht und neu geschrieben werden.
+            if (typeof window.mergeSubtaskPlanung === 'function') {
+                await window.mergeSubtaskPlanung(taskId, rows);
+            }
             await window.supabaseClient.from('subtasks').delete().eq('task_id', taskId);
             if (flat.length) {
-                const rows = flat.map(s => ({ ...s, task_id: taskId }));
-                const { error } = await window.supabaseClient.from('subtasks').insert(rows);
+                const { error } = typeof window.insertSubtasks === 'function'
+                    ? await window.insertSubtasks(rows)
+                    : await window.supabaseClient.from('subtasks').insert(rows);
                 if (error) throw error;
             }
             lastSubtaskJson = json;
@@ -152,6 +169,15 @@
         clearTimeout(subtaskTimer);
         subtaskTimer = setTimeout(() => saveSubtasks(false), SUBTASK_DELAY);
     }
+
+    // Person/Start/Dauer einer Unteraufgabe bauen die Liste bewusst NICHT neu
+    // auf (sonst verlöre das Feld den Fokus) — der MutationObserver unten
+    // bekommt davon also nichts mit. js/task_templates.js meldet sich deshalb
+    // hier selbst.
+    window.subtaskPlanungGeaendert = function () {
+        if (isEditing()) scheduleSubtasks();
+        else if (typeof window.markTaskDirty === 'function') window.markTaskDirty();
+    };
 
     // ------------------------------------------
     // VERDRAHTUNG

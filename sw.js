@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meetra-app-v384';
+const CACHE_NAME = 'meetra-app-v490';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
@@ -49,6 +49,7 @@ const PRECACHE = [
     'css/views/tasks-print.css',
     'css/views/service-reports.css',
     'css/views/machines.css',
+    'css/views/timeline.css',
     'css/views/procurement.css',
     'css/views/settings.css',
     'css/views/accounting.css',
@@ -77,6 +78,7 @@ const PRECACHE = [
     'js/offline-service.js',
     'assets/data/vorlage_base64.js',
     'js/machines-grouped.js',
+    'js/timeline-view.js',
     'js/protocols.js',
     'js/mietvereinbarung.js',
     'js/mietvereinbarung-vorlagen.js',
@@ -270,6 +272,22 @@ self.addEventListener('fetch', event => {
     const istVersioniert = url.searchParams.has('v')
         && url.origin === self.location.origin
         && event.request.method === 'GET';
+
+    // html2canvas kommt vom CDN und wird nur für das PDF der
+    // Mietvereinbarung gebraucht. Beim ersten Mal holen und behalten —
+    // danach ist es sofort da (auch bei schwachem Empfang und offline).
+    if (url.hostname === 'cdnjs.cloudflare.com' && /html2canvas/.test(url.pathname)) {
+        event.respondWith(
+            caches.match(event.request).then(gecacht => gecacht || fetch(event.request).then(res => {
+                if (res && (res.status === 200 || res.type === 'opaque')) {
+                    const kopie = res.clone();
+                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, kopie));
+                }
+                return res;
+            }))
+        );
+        return;
+    }
 
     if (istVersioniert) {
         event.respondWith(

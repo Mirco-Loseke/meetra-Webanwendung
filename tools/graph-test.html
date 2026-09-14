@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microsoft Graph — Testseite</title>
+    <!-- ======================================================
+         NUR ZUM AUSPROBIEREN. Diese Datei gehoert nicht zur App
+         und kann jederzeit geloescht werden. Sie haengt an
+         nichts: keine Datenbank, kein Supabase, keine Aenderung
+         an euren Daten. Sie meldet sich bei Microsoft an und
+         zeigt, was ueber Microsoft Graph moeglich waere:
+         Kontakte lesen/anlegen und eine Mail senden.
+
+         WICHTIG: nur ueber http(s) oeffnen, nicht per
+         Doppelklick (file://) — die Anmeldung braucht eine
+         echte Adresse als Rueckleitungsziel.
+         ====================================================== -->
+    <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.4/lib/msal-browser.min.js"></script>
+    <style>
+        :root { color-scheme: dark; }
+        body { margin: 0; padding: 24px; background: #0b1220; color: #e5e7eb;
+               font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; line-height: 1.5; }
+        .wrap { max-width: 900px; margin: 0 auto; }
+        h1 { font-size: 1.5rem; margin: 0 0 4px; }
+        .sub { color: #94a3b8; font-size: 0.9rem; margin-bottom: 24px; }
+        .karte { background: #111a2e; border: 1px solid rgba(255,255,255,0.1);
+                 border-radius: 12px; padding: 16px 18px; margin-bottom: 16px; }
+        .karte h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em;
+                    color: #94a3b8; margin: 0 0 12px; }
+        label { display: block; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 6px; }
+        input[type=text] { width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 15px;
+                           border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);
+                           background: rgba(255,255,255,0.04); color: #fff; }
+        button { padding: 10px 16px; margin: 4px 6px 4px 0; border-radius: 8px; cursor: pointer;
+                 border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.06);
+                 color: #e5e7eb; font-size: 0.9rem; font-weight: 600; }
+        button:hover:not(:disabled) { background: rgba(255,255,255,0.12); }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        button.haupt { background: #2563eb; border-color: #2563eb; color: #fff; }
+        pre { background: #060b16; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;
+              padding: 12px; overflow: auto; max-height: 460px; font-size: 12px; white-space: pre-wrap;
+              word-break: break-word; }
+        code { background: rgba(255,255,255,0.08); padding: 1px 6px; border-radius: 4px; font-size: 0.86em; }
+        .status { font-size: 0.9rem; color: #94a3b8; margin-left: 4px; }
+        ol { padding-left: 20px; }
+        li { margin-bottom: 6px; }
+        .warn { color: #fbbf24; }
+    </style>
+</head>
+
+<body>
+    <div class="wrap">
+        <h1>Microsoft Graph — Testseite</h1>
+        <div class="sub">Gehört nicht zur App. Ändert nichts an euren Daten. Nur zum Ausprobieren mit einem
+            privaten Microsoft-Konto.</div>
+
+        <div class="karte">
+            <h2>Schritt 1 — Anwendungs-ID eintragen</h2>
+            <label for="clientId">Anwendungs-ID (Client ID) aus der Registrierung in Microsoft Entra</label>
+            <input type="text" id="clientId" placeholder="z. B. 11111111-2222-3333-4444-555555555555">
+            <div style="margin-top:10px;">
+                <button class="haupt" onclick="anmelden()">Mit Microsoft anmelden</button>
+                <button onclick="abmelden()">Abmelden</button>
+                <span class="status" id="wer">nicht angemeldet</span>
+            </div>
+            <p style="font-size:0.82rem; color:#94a3b8; margin-bottom:0;">
+                Als Rückleitungsziel (Redirect URI, Typ <strong>SPA</strong>) muss in der Registrierung genau
+                diese Adresse stehen: <code id="redirect"></code>
+            </p>
+        </div>
+
+        <div class="karte">
+            <h2>Schritt 2 — Ausprobieren</h2>
+            <button onclick="kontakteLesen()" disabled data-braucht-anmeldung>Kontakte lesen</button>
+            <button onclick="kontaktAnlegen()" disabled data-braucht-anmeldung>Testkontakt anlegen</button>
+            <button onclick="ordnerLesen()" disabled data-braucht-anmeldung>Kontaktordner anzeigen</button>
+            <button onclick="mailSenden()" disabled data-braucht-anmeldung>Testmail an mich senden</button>
+            <button onclick="felderZeigen()" disabled data-braucht-anmeldung>Nur Feldnamen auflisten</button>
+        </div>
+
+        <div class="karte">
+            <h2>Ausgabe</h2>
+            <pre id="ausgabe">Noch nichts abgerufen.</pre>
+        </div>
+
+        <div class="karte">
+            <h2>Vorher bei Microsoft einrichten</h2>
+            <ol style="font-size:0.9rem; color:#cbd5e1;">
+                <li><a href="https://entra.microsoft.com" target="_blank" rel="noopener"
+                       style="color:#60a5fa;">entra.microsoft.com</a> öffnen, mit dem privaten Microsoft-Konto anmelden.</li>
+                <li><strong>Anwendungen → App-Registrierungen → Neue Registrierung</strong></li>
+                <li>Name frei wählen, z. B. „meetra Test".</li>
+                <li>Unterstützte Kontotypen: <strong>Konten in einem beliebigen Organisationsverzeichnis und
+                    persönliche Microsoft-Konten</strong>.</li>
+                <li>Plattform <strong>Einzelseitige Anwendung (SPA)</strong>, Rückleitungs-URI:
+                    <code id="redirect2"></code></li>
+                <li>Registrieren. Auf der Übersichtsseite die <strong>Anwendungs-ID (Client)</strong> kopieren
+                    und oben eintragen.</li>
+            </ol>
+            <p style="font-size:0.85rem; margin-bottom:0;" class="warn">
+                Kein Client Secret anlegen — eine Seite im Browser darf keins haben. Die Berechtigungen
+                (Mail.Send, Contacts.ReadWrite) bestätigst du beim ersten Anmelden im Fenster von Microsoft.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const BERECHTIGUNGEN = ['User.Read', 'Mail.Send', 'Contacts.ReadWrite'];
+        const SCHLUESSEL = 'graph_test_client_id';
+        let anwendung = null;   // MSAL-Instanz. NICHT "msal" nennen — so heisst die Bibliothek selbst.
+        let konto = null;
+
+        const redirectUri = location.origin + location.pathname;
+        document.getElementById('redirect').textContent = redirectUri;
+        document.getElementById('redirect2').textContent = redirectUri;
+        document.getElementById('clientId').value = localStorage.getItem(SCHLUESSEL) || '';
+
+        function zeige(was) {
+            document.getElementById('ausgabe').textContent =
+                typeof was === 'string' ? was : JSON.stringify(was, null, 2);
+        }
+
+        function knoepfe(an) {
+            document.querySelectorAll('[data-braucht-anmeldung]').forEach(b => { b.disabled = !an; });
+        }
+
+        // Die Anmeldebibliothek kommt von einem Microsoft-Server. Ist der nicht
+        // erreichbar (kein Netz, Firewall, Werbeblocker), soll das hier stehen
+        // und nicht als "msal is not defined" in der Konsole verschwinden.
+        if (typeof msal === 'undefined') {
+            zeige('Die Anmeldebibliothek von Microsoft konnte nicht geladen werden '
+                + '(cdn.jsdelivr.net). Ohne sie geht keine Anmeldung.\n\n'
+                + 'Mögliche Gründe: keine Internetverbindung, Firewall oder ein '
+                + 'Werbe-/Skriptblocker im Browser.');
+            document.querySelector('button.haupt').disabled = true;
+        }
+
+        function client() {
+            if (typeof msal === 'undefined') {
+                throw new Error('Die Anmeldebibliothek von Microsoft ist nicht geladen (cdn.jsdelivr.net nicht erreichbar).');
+            }
+            const id = document.getElementById('clientId').value.trim();
+            if (!id) throw new Error('Bitte oben die Anwendungs-ID eintragen.');
+            localStorage.setItem(SCHLUESSEL, id);
+            if (!anwendung || anwendung.config.auth.clientId !== id) {
+                anwendung = new msal.PublicClientApplication({
+                    auth: {
+                        clientId: id,
+                        // "common" = private Microsoft-Konten UND Firmenkonten
+                        authority: 'https://login.microsoftonline.com/common',
+                        redirectUri: redirectUri
+                    },
+                    cache: { cacheLocation: 'sessionStorage' }
+                });
+            }
+            return anwendung;
+        }
+
+        async function anmelden() {
+            try {
+                if (location.protocol === 'file:') {
+                    throw new Error('Diese Seite muss über http(s) geöffnet werden, nicht per Doppelklick.');
+                }
+                const c = client();
+                const antwort = await c.loginPopup({ scopes: BERECHTIGUNGEN, prompt: 'select_account' });
+                konto = antwort.account;
+                document.getElementById('wer').textContent = 'angemeldet als ' + (konto.username || konto.name);
+                knoepfe(true);
+                zeige({ angemeldet: konto.username, erteilteBerechtigungen: antwort.scopes });
+            } catch (e) {
+                zeige('Anmeldung fehlgeschlagen:\n' + (e && e.message ? e.message : e));
+            }
+        }
+
+        function abmelden() {
+            if (anwendung && konto) anwendung.logoutPopup({ account: konto });
+            konto = null;
+            knoepfe(false);
+            document.getElementById('wer').textContent = 'nicht angemeldet';
+        }
+
+        async function token() {
+            const c = client();
+            const anfrage = { scopes: BERECHTIGUNGEN, account: konto };
+            try {
+                const a = await c.acquireTokenSilent(anfrage);
+                return a.accessToken;
+            } catch (e) {
+                const a = await c.acquireTokenPopup(anfrage);
+                return a.accessToken;
+            }
+        }
+
+        async function graph(pfad, methode, rumpf) {
+            const t = await token();
+            const res = await fetch('https://graph.microsoft.com/v1.0' + pfad, {
+                method: methode || 'GET',
+                headers: {
+                    Authorization: 'Bearer ' + t,
+                    'Content-Type': 'application/json'
+                },
+                body: rumpf ? JSON.stringify(rumpf) : undefined
+            });
+            const text = await res.text();
+            let daten = null;
+            try { daten = text ? JSON.parse(text) : null; } catch (e) { daten = text; }
+            if (!res.ok) throw new Error('HTTP ' + res.status + '\n' + JSON.stringify(daten, null, 2));
+            return daten;
+        }
+
+        async function kontakteLesen() {
+            try {
+                zeige('Wird geladen …');
+                zeige(await graph('/me/contacts?$top=5'));
+            } catch (e) { zeige(String(e.message || e)); }
+        }
+
+        // Zeigt nur die Feldnamen — praktisch, um die Struktur weiterzugeben,
+        // ohne echte Kontaktdaten preiszugeben.
+        async function felderZeigen() {
+            try {
+                zeige('Wird geladen …');
+                const d = await graph('/me/contacts?$top=1');
+                const eintrag = (d.value && d.value[0]) || null;
+                if (!eintrag) { zeige('Keine Kontakte vorhanden — erst „Testkontakt anlegen" drücken.'); return; }
+                const felder = Object.keys(eintrag).map(k => {
+                    const w = eintrag[k];
+                    const art = Array.isArray(w) ? 'Liste' : (w && typeof w === 'object' ? 'Objekt' : typeof w);
+                    const unter = (w && typeof w === 'object' && !Array.isArray(w)) ? ' { ' + Object.keys(w).join(', ') + ' }' : '';
+                    return `${k}  —  ${art}${unter}`;
+                });
+                zeige(felder.join('\n'));
+            } catch (e) { zeige(String(e.message || e)); }
+        }
+
+        async function ordnerLesen() {
+            try {
+                zeige('Wird geladen …');
+                zeige(await graph('/me/contactFolders'));
+            } catch (e) { zeige(String(e.message || e)); }
+        }
+
+        async function kontaktAnlegen() {
+            try {
+                zeige('Wird angelegt …');
+                zeige(await graph('/me/contacts', 'POST', {
+                    givenName: 'Max',
+                    surname: 'Mustermann (meetra Test)',
+                    companyName: 'Muster Recycling GmbH',
+                    jobTitle: 'Betriebsleiter',
+                    emailAddresses: [{ address: 'max@example.com', name: 'Max Mustermann' }],
+                    businessPhones: ['0441 1234567'],
+                    mobilePhone: '0171 1234567',
+                    businessAddress: {
+                        street: 'Windmühlenweg 9', postalCode: '26203',
+                        city: 'Wardenburg', countryOrRegion: 'Deutschland'
+                    },
+                    personalNotes: 'Testeintrag der meetra-Webapp — kann gelöscht werden.'
+                }));
+            } catch (e) { zeige(String(e.message || e)); }
+        }
+
+        async function mailSenden() {
+            try {
+                const an = konto && konto.username;
+                if (!an) { zeige('Erst anmelden.'); return; }
+                zeige('Wird gesendet …');
+                await graph('/me/sendMail', 'POST', {
+                    message: {
+                        subject: 'Test aus der meetra-Webapp',
+                        body: { contentType: 'Text', content: 'Testlauf über Microsoft Graph. Wenn diese Mail ankommt, funktioniert der Versand.' },
+                        toRecipients: [{ emailAddress: { address: an } }]
+                    },
+                    saveToSentItems: true
+                });
+                zeige('Gesendet an ' + an + '.\nDie Mail liegt jetzt auch im Ordner „Gesendet".');
+            } catch (e) { zeige(String(e.message || e)); }
+        }
+    </script>
+</body>
+
+</html>

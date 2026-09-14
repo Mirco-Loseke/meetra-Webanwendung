@@ -210,43 +210,35 @@
         if (p) p.attachments = neueListe;
     }
 
-    async function hochladen(dateien) {
-        if (!aktuelleId) return;
-        if (!window.FileUploadService) { status('Der Datei-Dienst ist nicht geladen.', true); return; }
+    // Gemeinsamer Kern: Dateien zu einem (bereits gespeicherten) Vorgang hochladen
+    // und die Liste in internal_processes.attachments sichern. Wird sowohl vom
+    // Dokumente-Fenster (aktuelleId/aktuellerStep) als auch von Stellen genutzt,
+    // die noch keine offene Fenster-UI haben (Vorgang anlegen, KI-Erfassung) —
+    // dort ist processId bereits die frisch gespeicherte ID.
+    async function uploadDateien(processId, stepId, dateien, onProgress) {
+        if (!window.FileUploadService) throw new Error('Der Datei-Dienst ist nicht geladen.');
 
         const zuGross = dateien.filter(f => f.size > MAX_BYTES);
-        if (zuGross.length) {
-            status(zuGross.map(f => f.name + ' (' + groesse(f.size) + ')').join(', ')
-                + ' — zu gross. Erlaubt sind ' + MAX_MB + ' MB je Datei.', true);
-            dateien = dateien.filter(f => f.size <= MAX_BYTES);
-            if (!dateien.length) return;
-        }
+        dateien = dateien.filter(f => f.size <= MAX_BYTES);
 
-        const p = proc(aktuelleId);
-        const neu = liste(p).slice();
+        const p = proc(processId);
+        let neu = liste(p).slice();
 
         // Nichts doppelt: was am Vorgang schon haengt, wird uebersprungen
         // (Inhaltsvergleich bzw. Dateiname + Groesse, js/photo-dedupe.js).
-        if (window.PhotoDedupe) {
+        if (window.PhotoDedupe && dateien.length) {
             const geprueft = await window.PhotoDedupe.pruefeAuswahl(dateien, neu);
-            if (geprueft.doppelt.length) {
-                status(geprueft.doppelt.length === 1
-                    ? '„' + geprueft.doppelt[0] + '" hängt bereits am Vorgang — übersprungen.'
-                    : geprueft.doppelt.length + ' Dateien hängen bereits am Vorgang — übersprungen.');
-            }
             dateien = geprueft.neu.map(e => e.file);
-            if (!dateien.length) return;
         }
 
         let fehler = 0;
-
         for (let i = 0; i < dateien.length; i++) {
             const f = dateien[i];
-            status('Lade hoch … ' + (i + 1) + ' von ' + dateien.length + ' (' + f.name + ')');
+            if (onProgress) onProgress(i + 1, dateien.length, f.name);
             try {
                 // Pfad beginnt mit der Vorgangs-ID -> im Bucket liegt alles
                 // zu einem Vorgang beieinander.
-                const pfad = 'vorgaenge/' + aktuelleId + '/' + Date.now() + '-' + sicherName(f.name);
+                const pfad = 'vorgaenge/' + processId + '/' + Date.now() + '-' + sicherName(f.name);
                 const res = await window.FileUploadService.uploadFile(f, {
                     path: pfad,
                     provider: 'cloudflare-r2',
@@ -263,7 +255,7 @@
                     type: res.type || f.type || '',
                     at: new Date().toISOString(),
                     by: (window.activeUser && window.activeUser.name) || null,
-                    step_id: aktuellerStep || null
+                    step_id: stepId || null
                 });
             } catch (e) {
                 console.error('Dokument konnte nicht hochgeladen werden:', e);
@@ -271,11 +263,28 @@
             }
         }
 
+        const { error } = await sb().from('internal_processes').update({ attachments: neu }).eq('id', processId);
+        if (error) throw error;
+        if (p) p.attachments = neu;
+
+        return { fehler, zuGross: zuGross.length };
+    }
+
+    // Für Stellen ohne eigenes Dokumente-Fenster: Vorgang anlegen (process-add-modal),
+    // KI-Erfassung. processId muss bereits existieren (Vorgang zuvor gespeichert).
+    window.uploadFilesToProcess = function (processId, dateien, onProgress) {
+        return uploadDateien(processId, null, dateien, onProgress);
+    };
+
+    async function hochladen(dateien) {
+        if (!aktuelleId) return;
         try {
-            await speichern(neu);
-            status(fehler
-                ? (fehler + ' Datei(en) konnten nicht hochgeladen werden — Rest gespeichert.')
-                : '', !!fehler);
+            const { fehler, zuGross } = await uploadDateien(aktuelleId, aktuellerStep, dateien,
+                (i, n, name) => status('Lade hoch … ' + i + ' von ' + n + ' (' + name + ')'));
+            const teile = [];
+            if (zuGross) teile.push(zuGross + ' Datei(en) waren größer als ' + MAX_MB + ' MB und wurden übersprungen.');
+            if (fehler) teile.push(fehler + ' Datei(en) konnten nicht hochgeladen werden.');
+            status(teile.join(' '), !!(zuGross || fehler));
         } catch (e) {
             console.error('Dokumentliste nicht speicherbar:', e);
             status(/attachments|column|schema cache|42703|PGRST204/i.test(e.message || '')
@@ -413,5 +422,60 @@
         const id = (document.getElementById('edit-process-id') || {}).value;
         const n = id ? window.processAttachCount(id, null) : 0;
         btn.textContent = n ? '📎 Dokumente (' + n + ')' : '📎 Dokument hinzufügen';
+    };
+
+    // ---------------------------------------------------------------
+    // Dokumente VOR dem Speichern (Vorgang anlegen, KI-Erfassung): der
+    // Vorgang hat noch keine ID, also liegen ausgewaehlte Dateien nur im
+    // Speicher ("bucket" = eindeutiger Schluessel je Formular/Karte) und
+    // werden erst nach dem Speichern per flushProcessPendingFiles hochgeladen.
+    // ---------------------------------------------------------------
+    window.processPendingFiles = {};
+
+    window.addProcessPendingFiles = function (bucket, fileList) {
+        const arr = window.processPendingFiles[bucket] = window.processPendingFiles[bucket] || [];
+        Array.from(fileList || []).forEach(f => arr.push(f));
+        window.renderProcessPendingFiles(bucket);
+    };
+
+    window.removeProcessPendingFile = function (bucket, index) {
+        const arr = window.processPendingFiles[bucket];
+        if (!arr) return;
+        arr.splice(index, 1);
+        window.renderProcessPendingFiles(bucket);
+    };
+
+    window.clearProcessPendingFiles = function (bucket) {
+        delete window.processPendingFiles[bucket];
+        window.renderProcessPendingFiles(bucket);
+    };
+
+    window.renderProcessPendingFiles = function (bucket) {
+        const list = document.getElementById(bucket + '-pending-files-list');
+        const btn = document.getElementById(bucket + '-att-btn');
+        const arr = window.processPendingFiles[bucket] || [];
+        if (btn) btn.textContent = arr.length ? '📎 Dokumente (' + arr.length + ')' : '📎 Dokument hinzufügen';
+        if (!list) return;
+        list.innerHTML = arr.map((f, i) =>
+            '<div style="display:flex; align-items:center; gap:8px; padding:5px 9px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:8px; margin-top:6px; font-size:0.82rem; color:#fff;">' +
+                '<span>' + symbol(f.type, f.name) + '</span>' +
+                '<span style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + esc(f.name) + '</span>' +
+                '<span style="color:rgba(255,255,255,0.4); font-size:0.75rem;">' + esc(groesse(f.size)) + '</span>' +
+                '<button type="button" onclick="window.removeProcessPendingFile(\'' + bucket + '\', ' + i + ')" title="Entfernen" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; width:22px; height:22px; cursor:pointer; flex-shrink:0;">&times;</button>' +
+            '</div>'
+        ).join('');
+    };
+
+    // Nach dem Speichern: gestapelte Dateien an den frisch angelegten Vorgang haengen.
+    window.flushProcessPendingFiles = async function (bucket, processId) {
+        const arr = window.processPendingFiles[bucket];
+        if (!arr || !arr.length || !processId) { window.clearProcessPendingFiles(bucket); return; }
+        try {
+            await uploadDateien(processId, null, arr);
+        } catch (e) {
+            console.error('Gestapelte Dokumente konnten nicht hochgeladen werden:', e);
+            if (window.showToast) window.showToast('Vorgang gespeichert, aber Dokumente konnten nicht hochgeladen werden: ' + (e.message || e));
+        }
+        window.clearProcessPendingFiles(bucket);
     };
 })();

@@ -538,6 +538,13 @@
         if (status) status.style.display = 'none';
         if (prev) { prev.style.display = 'none'; prev.innerHTML = ''; }
         if (prevAct) prevAct.style.display = 'none';
+        // Vor dem Speichern gestapelte Dokumente je Vorgangs-Karte verwerfen
+        // (js/process-attachments.js) — eine neue Vorschau hat neue Karten-Indizes.
+        if (window.processPendingFiles) {
+            Object.keys(window.processPendingFiles)
+                .filter(k => k.startsWith('aicap-proc-'))
+                .forEach(k => delete window.processPendingFiles[k]);
+        }
     };
 
     // ---- KI-Aufruf ---------------------------------------------------------
@@ -882,6 +889,15 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
                         <div style="font-size:0.72rem; color:rgba(255,255,255,0.4); text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;">👤 Zuständig (Mehrfachauswahl)</div>
                         ${assigneeControl(`aicap-asg-v-${i}`, vUserIds)}
                     </div>
+                    <div style="margin-bottom:0.5rem;">
+                        <button type="button" id="aicap-proc-${i}-att-btn" class="proc-att-open-btn"
+                                onclick="document.getElementById('aicap-proc-${i}-att-input').click()">
+                            📎 Dokument hinzufügen
+                        </button>
+                        <input type="file" id="aicap-proc-${i}-att-input" multiple style="display:none;"
+                            onchange="window.addProcessPendingFiles('aicap-proc-${i}', this.files); this.value='';">
+                        <div id="aicap-proc-${i}-pending-files-list"></div>
+                    </div>
                     ${(v.sender || v.recipient) ? `
                     <div style="display:flex; gap:0.5rem; margin-bottom:0.5rem;">
                         <input type="text" class="ai-cap-sender glass-form-input" value="${escapeHtml(v.sender || '')}" placeholder="Absender (Von)" style="flex:1; box-sizing:border-box; font-size:0.85rem;">
@@ -1181,15 +1197,22 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
                         };
                         if (remindRaw) payload.remind_at = new Date(remindRaw).toISOString();
 
-                        let { error } = await window.insertMitErsteller('internal_processes', payload);
+                        let { error, data } = await window.insertMitErsteller('internal_processes', payload);
                         // Spalte remind_at fehlt noch -> Vorgang trotzdem anlegen.
                         if (error && /remind_at/.test(error.message || '')) {
                             const reduced = { ...payload };
                             delete reduced.remind_at;
-                            ({ error } = await window.insertMitErsteller('internal_processes', reduced));
+                            ({ error, data } = await window.insertMitErsteller('internal_processes', reduced));
                         }
                         if (error) throw error;
                         createdProcesses++;
+
+                        // Am Vorgang gestapelte Dokumente jetzt an die frisch
+                        // vergebene ID haengen (js/process-attachments.js).
+                        const newProcId = data && data[0] && data[0].id;
+                        if (newProcId && typeof window.flushProcessPendingFiles === 'function') {
+                            await window.flushProcessPendingFiles(`aicap-proc-${card.dataset.index}`, newProcId);
+                        }
                     }
 
                     // Termin im Kalender — unabhängig davon, ob der Vorgang neu

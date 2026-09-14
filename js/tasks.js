@@ -83,6 +83,53 @@
         setupDragAndDrop();
     }
 
+    /* Das Menü „Zuständig" liegt im Formularbereich des Modals, und der
+       scrollt (overflow-y: auto) — dort wurde es abgeschnitten und lag hinter
+       dem nächsten Feld. Deshalb beim Aufklappen auf position:fixed umstellen
+       und am Auslöser ausrichten. Das Modal hat backdrop-filter und ist damit
+       selbst Bezugsrahmen für fixed — der Versatz wird gemessen und in einem
+       zweiten Durchgang ausgeglichen (wie in js/dropdown-position.js). */
+    function menuFreistellen(trigger, menu) {
+        const setz = (p, v) => menu.style.setProperty(p, v, 'important');
+        const RAND = 12, LUFT = 6;
+
+        setz('position', 'fixed');
+        setz('margin', '0');
+        setz('right', 'auto');
+        setz('bottom', 'auto');
+        setz('min-width', '0');
+        setz('z-index', '100000');
+
+        const t0 = trigger.getBoundingClientRect();
+        menu.style.removeProperty('max-height');
+        const hoehe = Math.min(menu.offsetHeight || 250, 260);
+        const platzUnten = window.innerHeight - t0.bottom - LUFT - RAND;
+        const platzOben = t0.top - LUFT - RAND;
+        const nachOben = platzUnten < hoehe && platzOben > platzUnten;
+        setz('max-height', Math.min(260, Math.max(140, nachOben ? platzOben : platzUnten)) + 'px');
+        setz('overflow-y', 'auto');
+
+        let vx = 0, vy = 0;
+        for (let i = 0; i < 2; i++) {
+            const f = trigger.getBoundingClientRect();
+            setz('width', f.width + 'px');
+            const zielL = f.left;
+            const zielO = nachOben ? f.top - menu.offsetHeight - LUFT : f.bottom + LUFT;
+            setz('left', (zielL + vx) + 'px');
+            setz('top', (zielO + vy) + 'px');
+            const ist = menu.getBoundingClientRect();
+            const dx = zielL - ist.left, dy = zielO - ist.top;
+            if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) break;
+            vx += dx; vy += dy;
+        }
+    }
+
+    function menuLoesen(menu) {
+        ['position', 'left', 'top', 'right', 'bottom', 'width', 'min-width',
+            'margin', 'max-height', 'overflow-y', 'z-index']
+            .forEach(p => menu.style.removeProperty(p));
+    }
+
     function setupFilterDropdowns() {
         const triggers = {
             'task-machine-filter-trigger': 'task-machine-filter-menu',
@@ -94,18 +141,39 @@
             const menu = document.getElementById(triggers[id]);
             if (trigger && menu) {
                 trigger.onclick = (e) => {
+                    // Klick INNERHALB des Menüs darf es nicht wieder zuklappen —
+                    // das Menü liegt im Auslöser, sein Klick landet also hier.
+                    if (menu.contains(e.target)) { e.stopPropagation(); return; }
                     e.stopPropagation();
                     const isVisible = menu.style.display === 'block';
                     // Close others
-                    document.querySelectorAll('.custom-filter-menu').forEach(m => m.style.display = 'none');
+                    document.querySelectorAll('.custom-filter-menu').forEach(m => {
+                        m.style.display = 'none';
+                        menuLoesen(m);
+                    });
                     menu.style.display = isVisible ? 'none' : 'block';
+                    if (!isVisible) menuFreistellen(trigger, menu);
                 };
             }
         });
 
         document.addEventListener('click', () => {
-            document.querySelectorAll('.custom-filter-menu').forEach(m => m.style.display = 'none');
+            document.querySelectorAll('.custom-filter-menu').forEach(m => {
+                m.style.display = 'none';
+                menuLoesen(m);
+            });
         });
+
+        // Offene Menüs beim Rollen/Größenändern mitführen (capture: auch im Modal).
+        const nachfuehren = () => {
+            Object.keys(triggers).forEach(id => {
+                const trigger = document.getElementById(id);
+                const menu = document.getElementById(triggers[id]);
+                if (trigger && menu && menu.style.display === 'block') menuFreistellen(trigger, menu);
+            });
+        };
+        window.addEventListener('scroll', nachfuehren, true);
+        window.addEventListener('resize', nachfuehren);
     }
 
     // ==========================================
@@ -494,6 +562,7 @@
                                         onclick="event.stopPropagation()"
                                         style="color: rgba(255,255,255,${sub.status === 'completed' ? '0.4' : '0.9'}); ${sub.status === 'completed' ? 'text-decoration: line-through;' : ''}">${sub.title}</div>
                                 </div>
+                                ${window.subtaskPlanBadge(sub)}
                                 ${sub.action_type ? (() => {
                                        const isDoc = sub.action_type.startsWith('document:');
                                        const isService = sub.action_type.startsWith('servicebericht:');
@@ -824,7 +893,10 @@
                 window.currentTaskId = null;
                 document.getElementById('task-modal-title').textContent = 'Neue Aufgabe';
                 resetModal();
-                document.getElementById('task-details-section').style.display = 'none';
+                // Titel, Zuständig und Zeitraum sind ab sofort von Anfang an
+                // sichtbar. Vorher war der ganze Block bis zur Maschinenwahl
+                // ausgeblendet — dadurch schien es, als gäbe es die Felder nicht.
+                document.getElementById('task-details-section').style.display = 'block';
             }
 
             // Dirty tracking: reset + event delegation
@@ -872,16 +944,14 @@
         const details = document.getElementById('task-details-section');
         const workshopWrapper = document.getElementById('task-workshop-order-wrapper');
         const workshopActive = workshopWrapper && workshopWrapper.style.display !== 'none';
-        if (machineId || workshopActive) {
-            details.style.display = 'block';
-            // If it's a new task, load the default supergroups
-            if (!currentTask) {
-                if (typeof window.setupNewTaskGroups === 'function') {
-                    window.setupNewTaskGroups();
-                }
+        // Der Block bleibt immer sichtbar — die Maschine ist nur der erste
+        // Schritt, kein Schalter für den Rest des Fensters.
+        details.style.display = 'block';
+        if ((machineId || workshopActive) && !currentTask) {
+            // Bei einer neuen Aufgabe die Standard-Übergruppen laden.
+            if (typeof window.setupNewTaskGroups === 'function') {
+                window.setupNewTaskGroups();
             }
-        } else {
-            details.style.display = 'none';
         }
     };
 
@@ -947,6 +1017,12 @@
             }
         }
 
+        // Zeitraum — dieselben Spalten wie in der Timeline.
+        const startEl = document.getElementById('task-start-date');
+        const endEl = document.getElementById('task-end-date');
+        if (startEl) startEl.value = task.start_date ? String(task.start_date).split('T')[0] : '';
+        if (endEl) endEl.value = task.end_date ? String(task.end_date).split('T')[0] : '';
+
         if (typeof window.setupNewTaskGroups === 'function') {
             window.setupNewTaskGroups(task.subtasks);
         }
@@ -965,6 +1041,11 @@
             machineSearch.style.color = '';
         }
         window.hideWorkshopOrderInput();
+
+        const startEl = document.getElementById('task-start-date');
+        const endEl = document.getElementById('task-end-date');
+        if (startEl) startEl.value = '';
+        if (endEl) endEl.value = '';
 
         const compInfo = document.getElementById('task-completion-info');
         if (compInfo) compInfo.style.display = 'none';
@@ -992,6 +1073,60 @@
         }
     };
 
+    // Unteraufgaben werden beim Speichern gelöscht und neu angelegt. Die in der
+    // Timeline gesetzte Planung (start_date/end_date/assigned_to) ginge dabei
+    // verloren — deshalb vorher lesen und über Gruppe+Titel wieder anheften.
+    // Fehlen die Spalten noch (supabase_add_subtask_planung.sql), passiert nichts.
+    window.mergeSubtaskPlanung = async function (taskId, rows) {
+        if (!taskId || !rows || !rows.length) return rows;
+        try {
+            const { data, error } = await window.supabaseClient
+                .from('subtasks').select('*').eq('task_id', taskId);
+            if (error || !data || !data.length) return rows;
+            const alt = {};
+            data.forEach(s => { alt[(s.supergroup || '') + ' ' + (s.title || '')] = s; });
+            rows.forEach(r => {
+                const a = alt[(r.supergroup || '') + ' ' + (r.title || '')];
+                if (!a) return;
+                // Nur auffüllen, was im Fenster nicht gesetzt wurde — sonst
+                // würde die gerade eingetragene Planung wieder überschrieben.
+                ['start_date', 'end_date', 'assigned_to', 'expected_time'].forEach(f => {
+                    if (a[f] === undefined || a[f] === null) return;
+                    const leer = r[f] == null || (Array.isArray(r[f]) && !r[f].length);
+                    if (leer) r[f] = a[f];
+                });
+            });
+        } catch (e) { console.warn('Unteraufgaben-Planung nicht übernommen:', e); }
+        return rows;
+    };
+
+    // Unteraufgaben schreiben. Solange supabase_add_subtask_planung.sql nicht
+    // gelaufen ist, gibt es die vier Planungsspalten nicht — dann würde der
+    // ganze Insert scheitern und die Unteraufgaben wären weg. Deshalb einmal
+    // ohne diese Felder nachfassen und deutlich sagen, was fehlt.
+    const PLANUNGSFELDER = ['start_date', 'end_date', 'assigned_to', 'expected_time'];
+    let planungFehltGemeldet = false;
+    window.insertSubtasks = async function (rows) {
+        if (!rows || !rows.length) return { error: null };
+        let res = await window.supabaseClient.from('subtasks').insert(rows);
+        if (!res.error) return res;
+        const msg = res.error.message || '';
+        if (!PLANUNGSFELDER.some(f => msg.includes(f))) return res;
+
+        const ohne = rows.map(r => {
+            const kopie = { ...r };
+            PLANUNGSFELDER.forEach(f => delete kopie[f]);
+            return kopie;
+        });
+        res = await window.supabaseClient.from('subtasks').insert(ohne);
+        if (!res.error && !planungFehltGemeldet) {
+            planungFehltGemeldet = true;
+            window.showToast('Unteraufgaben gespeichert — aber ohne Termin und Zuständigen. '
+                + 'Dafür muss supabase/supabase_add_subtask_planung.sql in Supabase laufen.');
+        }
+        return res;
+    };
+
     window.saveTask = async function () {
         const title = document.getElementById('task-title').value.trim();
         if (!title) {
@@ -1011,12 +1146,20 @@
             workshopOrderNumber = `202${yearDigit}-40${suffix.padStart(3, '0')}`;
         }
 
+        // Zeitraum: leeres Feld heisst ausdrücklich „ungeplant" (null), nicht
+        // „unverändert" — sonst liesse sich ein Datum nie wieder entfernen.
+        const startVal = (document.getElementById('task-start-date') || {}).value || null;
+        let endVal = (document.getElementById('task-end-date') || {}).value || null;
+        if (startVal && endVal && endVal < startVal) endVal = startVal;
+
         const taskData = {
             title: title,
             description: document.getElementById('task-description').value,
             status: currentTask ? (currentTask.status || 'open') : 'open',
             machine_id: document.getElementById('task-machine').value || null,
             workshop_order_number: workshopOrderNumber,
+            start_date: startVal,
+            end_date: endVal,
             updated_at: new Date().toISOString()
         };
 
@@ -1048,18 +1191,23 @@
                             title: st.title,
                             status: st.status || 'open',
                             supergroup: g.name,
-                            action_type: st.action_type || null
+                            action_type: st.action_type || null,
+                            // Planung je Unteraufgabe (wer · ab wann · wie lange)
+                            start_date: st.start_date || null,
+                            end_date: st.end_date || null,
+                            assigned_to: Array.isArray(st.assigned_to) ? st.assigned_to : []
                         });
                     });
                 });
 
                 // Clear existing subtasks if editing
                 if (currentTask) {
+                    await window.mergeSubtaskPlanung(taskId, allSubtasks);
                     await window.supabaseClient.from('subtasks').delete().eq('task_id', taskId);
                 }
 
                 if (allSubtasks.length > 0) {
-                    const { error: stError } = await window.supabaseClient.from('subtasks').insert(allSubtasks);
+                    const { error: stError } = await window.insertSubtasks(allSubtasks);
                     if (stError) throw stError;
                 }
             }
@@ -1078,6 +1226,34 @@
     // ==========================================
     // TASK RENDERING UTILS
     // ==========================================
+    // Kleines Schild hinter einer Unteraufgabe: wer · ab wann · wie viele Tage.
+    // Die Werte kommen aus subtasks.assigned_to / start_date / end_date —
+    // dieselben Felder, die das Aufgaben-Fenster und die Timeline schreiben.
+    window.subtaskPlanBadge = function (sub) {
+        if (!sub) return '';
+        const tag = w => (w ? String(w).slice(0, 10) : '');
+        const von = tag(sub.start_date), bis = tag(sub.end_date);
+        const ids = Array.isArray(sub.assigned_to) ? sub.assigned_to : [];
+        const namen = ids.map(id => {
+            const u = (window.userList || []).find(x => String(x.id) === String(id));
+            return u ? (u.name || '').split(' ')[0] : null;
+        }).filter(Boolean);
+        if (!von && !namen.length) return '';
+
+        const kurz = d => d ? d.slice(8, 10) + '.' + d.slice(5, 7) + '.' : '';
+        let zeit = '';
+        if (von) {
+            const t = bis && bis > von
+                ? Math.round((new Date(bis + 'T00:00:00') - new Date(von + 'T00:00:00')) / 86400000) + 1
+                : 1;
+            zeit = kurz(von) + (t > 1 ? ' · ' + t + ' T' : '');
+        }
+        const text = [namen.join(', '), zeit].filter(Boolean).join(' · ');
+        return `<span title="${text}" style="font-size: 0.65rem; font-weight: 800; color: #93c5fd;
+                    background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.25);
+                    padding: 2px 6px; border-radius: 4px; white-space: nowrap;">${text}</span>`;
+    };
+
     function renderAvatars(userIds) {
         if (!userIds || userIds.length === 0) return '';
         return userIds.map(id => {

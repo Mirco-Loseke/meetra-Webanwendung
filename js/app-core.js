@@ -40,11 +40,11 @@
                 user_id: window.uuidUserId(),
                 created_by_user: (window.activeUser && window.activeUser.id) || null
             });
-            let res = await window.supabaseClient.from(table).insert([mitErsteller]);
+            let res = await window.supabaseClient.from(table).insert([mitErsteller]).select();
             if (res.error && /created_by_user/.test(res.error.message || '')) {
                 const ohne = Object.assign({}, mitErsteller);
                 delete ohne.created_by_user;
-                res = await window.supabaseClient.from(table).insert([ohne]);
+                res = await window.supabaseClient.from(table).insert([ohne]).select();
             }
             return res;
         };

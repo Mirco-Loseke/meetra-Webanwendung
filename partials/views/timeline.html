@@ -1,0 +1,103 @@
+<!-- ========================================================= -->
+<!-- ==================== TIMELINE ============================ -->
+<!-- Werkstatt-, Service- und Vermietplanung auf einer Zeitachse. -->
+<!-- Logik: js/timeline-view.js — Stil: css/views/timeline.css     -->
+<!-- Kopfzeile bewusst EINE Zeile: alles Seltene steckt in den      -->
+<!-- Klappmenüs „Filter“ und „Ansicht“.                            -->
+<!-- ========================================================= -->
+<section id="timeline" class="view hidden">
+    <div class="tlv-topbar">
+        <div class="tlv-topbar-left">
+            <h1 class="tlv-titel">Timeline</h1>
+            <div class="tlv-nav" role="group" aria-label="Zeitraum wechseln">
+                <button id="tlv-prev" title="Zeitraum nach links schieben" aria-label="nach links">&lsaquo;</button>
+                <button id="tlv-heute">Heute</button>
+                <button id="tlv-next" title="Zeitraum nach rechts schieben" aria-label="nach rechts">&rsaquo;</button>
+            </div>
+            <span class="tlv-range" id="tlv-range"></span>
+            <span class="tlv-hinweisleiste" id="tlv-hinweisleiste" title="Verschieben bleibt in der Anzeige — zum Schreiben unter „Ansicht“ das Speichern einschalten.">Nur ansehen</span>
+        </div>
+
+        <div class="tlv-topbar-right">
+            <div class="tlv-suchfeld">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg>
+                <input type="search" id="tlv-suche" class="tlv-input" placeholder="Suchen …">
+            </div>
+
+            <div class="tlv-pop-wrap">
+                <button class="tlv-tool tlv-tool-preset" id="tlv-preset-btn" aria-expanded="false" title="Voreinstellung">
+                    <span id="tlv-preset-label">Vermietflotte</span>
+                    <svg class="tlv-caret" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div class="tlv-pop tlv-pop-schmal" id="tlv-preset-pop">
+                    <div class="tlv-pop-kopf">Voreinstellung</div>
+                    <div id="tlv-presets"></div>
+                </div>
+            </div>
+
+            <select id="tlv-spanne" class="tlv-input tlv-select" title="Zeitraum">
+                <option value="t14" selected>14 Tage</option>
+                <option value="t28">28 Tage</option>
+                <option value="t56">8 Wochen</option>
+                <option value="w13">Quartal</option>
+            </select>
+
+            <div class="tlv-pop-wrap">
+                <button class="tlv-tool" id="tlv-filter-btn" aria-expanded="false">
+                    Filter <span class="tlv-zaehlchip" id="tlv-filter-zahl"></span>
+                    <svg class="tlv-caret" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div class="tlv-pop" id="tlv-filter-pop">
+                    <div class="tlv-pop-kopf">
+                        <span>Was anzeigen</span>
+                        <button type="button" class="tlv-link" id="tlv-alle-sorten">alle</button>
+                    </div>
+                    <div class="tlv-chips" id="tlv-filter"></div>
+                    <div class="tlv-pop-kopf tlv-pop-kopf-2">Person</div>
+                    <select id="tlv-person" class="tlv-input tlv-select tlv-block">
+                        <option value="">alle Personen</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="tlv-pop-wrap">
+                <button class="tlv-tool" id="tlv-ansicht-btn" aria-expanded="false">
+                    Ansicht
+                    <svg class="tlv-caret" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <div class="tlv-pop" id="tlv-ansicht-pop">
+                    <div class="tlv-pop-kopf">Zeilen</div>
+                    <select id="tlv-achse" class="tlv-input tlv-select tlv-block">
+                        <option value="maschine">je Maschine</option>
+                        <option value="monteur">je Monteur</option>
+                        <option value="aufgabe">je Aufgabe</option>
+                    </select>
+                    <div class="tlv-pop-kopf tlv-pop-kopf-2">Darstellung</div>
+                    <label class="tlv-schalter"><input type="checkbox" id="tlv-kompakt"><span>kompakte Zeilen</span></label>
+                    <label class="tlv-schalter"><input type="checkbox" id="tlv-leer"><span>auch leere Zeilen</span></label>
+                    <label class="tlv-schalter"><input type="checkbox" id="tlv-summe"><span>Auswertung rechts</span></label>
+                    <div class="tlv-pop-trenner"></div>
+                    <label class="tlv-schalter tlv-speichern-schalter">
+                        <input type="checkbox" id="tlv-speichern" checked><span>Änderungen speichern</span>
+                    </label>
+                    <p class="tlv-pop-hinweis">Aus: Verschieben bleibt nur in der Anzeige.</p>
+                </div>
+            </div>
+
+            <button class="tlv-tool" id="tlv-frei-btn" title="Übersicht: wer macht was und wer ist wann frei">Wer ist frei?</button>
+
+            <button class="tlv-icon-btn" id="tlv-vollbild" title="Vollbild — Menü und Kopfleiste ausblenden" aria-label="Vollbild">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 3 3 3 3 9"></polyline><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><polyline points="15 21 21 21 21 15"></polyline></svg>
+            </button>
+            <button class="tlv-icon-btn" id="tlv-neu-laden" title="Daten neu laden" aria-label="Daten neu laden">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="tlv-buehne" id="tlv-buehne">
+        <div class="tlv-laedt" id="tlv-laedt">Daten werden geladen …</div>
+    </div>
+
+    <div class="tlv-ungeplant" id="tlv-ungeplant"></div>
+</section>

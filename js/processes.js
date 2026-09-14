@@ -391,7 +391,10 @@ window.renderProcesses = function(targetId, opts) {
     const waitingCards = [];
     filtered.forEach(p => {
         const typeInfo = window.PROCESS_TYPE_INFO[p.process_type] || window.PROCESS_TYPE_INFO.manual;
-        const typeHtml = `<span title="${typeInfo.label}" style="color: ${typeInfo.color}; display: inline-flex; align-items: center; justify-content: center; background: ${typeInfo.bg}; width: 36px; height: 36px; border-radius: 10px; border: 1px solid ${typeInfo.border};">
+        const isEmail = p.process_type === 'email_incoming' || p.process_type === 'email_outgoing';
+        // Bei einer E-Mail oeffnet ein Klick auf das Abzeichen direkt das
+        // Bearbeiten-Fenster (zeigt Betreff, Absender/Empfaenger und Inhalt).
+        const typeHtml = `<span ${isEmail ? `onclick="event.stopPropagation(); window.openEditProcessModal('${p.id}')" title="E-Mail öffnen"` : `title="${typeInfo.label}"`} style="color: ${typeInfo.color}; display: inline-flex; align-items: center; justify-content: center; background: ${typeInfo.bg}; width: 36px; height: 36px; border-radius: 10px; border: 1px solid ${typeInfo.border};${isEmail ? ' cursor:pointer;' : ''}">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${typeInfo.icon}</svg>
             </span>`;
         

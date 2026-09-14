@@ -175,8 +175,10 @@
     // zusammen und beginnt bei Bedarf eine Fortsetzungskarte — dort ohne Bild
     // und ohne Kopfdaten, nur mit der Liste, damit sie sauber weiterläuft.
 
-    function gruppenTitel(name) {
-        return `<div class="p-group-title">${esc(name)}</div>`;
+    function gruppenTitel(name, hinweis) {
+        return `<div class="p-group-title">${esc(name)}` +
+            (hinweis ? `<span class="p-group-hint">${esc(hinweis)}</span>` : '') +
+            `</div>`;
     }
 
     function zeileHtml(text, erledigt) {
@@ -195,8 +197,6 @@
         const titel = task.title || 'Ohne Titel';
         const bild = task.machines && task.machines.image_url ? task.machines.image_url : null;
         const namen = userNames(task.assigned_to);
-        const gesamt = (task.subtasks || []).length;
-        const erledigt = (task.subtasks || []).filter(s => s.status === 'completed').length;
 
         const kopfHtml = `
             <header class="p-card-head">
@@ -208,7 +208,6 @@
             </header>
             <div class="p-meta">
                 <div><span class="p-meta-key">Zuständig:</span> ${namen.length ? esc(namen.join(', ')) : 'nicht zugeordnet'}</div>
-                ${gesamt ? `<div><span class="p-meta-key">Fortschritt:</span> ${erledigt} / ${gesamt} erledigt</div>` : ''}
             </div>`;
 
         // Fortsetzung: schmale Zeile ohne Bild, ohne Zuständige, ohne Fortschritt.
@@ -238,7 +237,7 @@
         }
 
         if (extra) {
-            teile.push({ art: 'gruppe', name: 'Ergänzungen', html: gruppenTitel('Ergänzungen') });
+            teile.push({ art: 'gruppe', name: 'Ergänzungen', html: gruppenTitel('Ergänzungen', '(bitte zusätzliche Arbeiten hier ergänzen)') });
             for (let i = 0; i < extra; i++) teile.push({ art: 'zeile', html: leerzeileHtml() });
         }
 
@@ -268,7 +267,7 @@
 
         const teile = items.map(i => ({ art: 'zeile', html: zeileHtml(i.text, i.done) }));
         if (extra) {
-            teile.push({ art: 'gruppe', name: 'Ergänzungen', html: gruppenTitel('Ergänzungen') });
+            teile.push({ art: 'gruppe', name: 'Ergänzungen', html: gruppenTitel('Ergänzungen', '(bitte zusätzliche Arbeiten hier ergänzen)') });
             for (let i = 0; i < extra; i++) teile.push({ art: 'zeile', html: leerzeileHtml() });
         }
         return { kopf: kopfHtml, fort: fortHtml, teile: teile };
@@ -277,15 +276,16 @@
     // ---------------------------------------------------------------
     // Seitenaufbau auf dem meetra-Briefbogen
     // ---------------------------------------------------------------
-    // Seitenränder wie bei der Mietvereinbarung: oben 30mm, seitlich 25mm,
-    // unten 27mm — darunter liegt die Fußzeile des Briefbogens.
+    // Seitenränder: oben 25mm, seitlich 25mm, unten 9,5mm. Gegenüber der
+    // Mietvereinbarung (30/27) sind oben 5mm und unten 17,5mm zurückgeholt —
+    // dort blieb im Ausdruck sichtbar Luft, die jetzt für Aufgaben genutzt wird.
     //
     // `@page { margin: 0 }` ist Absicht: in den Seitenrand druckt der Browser
     // sonst seine eigene Kopf-/Fußzeile (Titel, Datum, Dateipfad). Ohne Rand
     // bleibt dafür kein Platz — der Pfad unten und das doppelte Datum oben
     // verschwinden damit.
-    const SEITE_H = 297, RAND_O = 30, RAND_U = 27, RAND_S = 25, SPALT = 8;
-    const INHALT_H = SEITE_H - RAND_O - RAND_U;   // 240mm
+    const SEITE_H = 297, RAND_O = 25, RAND_U = 9.5, RAND_S = 25, SPALT = 8;
+    const INHALT_H = SEITE_H - RAND_O - RAND_U;   // 262,5mm
     const INHALT_B = 210 - 2 * RAND_S;            // 160mm
 
     function vorlageUrl() {
@@ -353,6 +353,9 @@
         .p-group-title { margin-top: 2mm; font-size: ${cols === 3 ? '8.5pt' : '9.5pt'}; font-weight: bold; text-transform: uppercase;
                          letter-spacing: 0.4pt; color: #333; border-bottom: 0.5pt solid #ddd;
                          padding-bottom: 0.6mm; margin-bottom: 1.2mm; }
+        .p-group-hint { margin-left: 1.5mm; font-weight: normal; font-style: italic;
+                        text-transform: none; letter-spacing: 0; color: #666;
+                        font-size: ${cols === 3 ? '7pt' : '8pt'}; }
         .p-sub { display: flex; gap: 1.8mm; align-items: flex-start; padding: 0.6mm 0; font-size: ${textG}; line-height: 1.3; }
         .p-sub.done .p-sub-text { text-decoration: line-through; color: #666; }
         .p-box { display: inline-block; width: 4mm; height: 4mm; border: 0.9pt solid #333;

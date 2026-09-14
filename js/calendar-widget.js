@@ -47,6 +47,16 @@
     let formOpen = false;
     let editingId = null;
     let focusForm = false;
+    // Aufgeklappte Einträge (Ersteller + Adresse sichtbar), Schlüssel = entry.id
+    const expanded = new Set();
+
+    // Name des App-Nutzers zu einer ID (created_by_user = bigint aus
+    // public.users, user_id = uuid aus auth) — je nachdem, was gesetzt ist.
+    function userNameById(id) {
+        if (id == null || id === '') return '';
+        const u = (window.userList || []).find(x => x && String(x.id) === String(id));
+        return u ? (u.name || '') : '';
+    }
 
     const state = {
         cursor: startOfMonth(new Date()),   // angezeigter Monat
@@ -262,6 +272,26 @@
                 'customers(name, matchcode)',
                 (spalten) => sb().from('maintenance_events').select(spalten).limit(500));
             if (!error && data) {
+                // Fehlt der Join (kein Fremdschlüssel auf customer_id, oder der
+                // Merker steht auf „geht nicht"), Adressnamen einzeln nachladen —
+                // sonst bleibt „Adresse" im aufgeklappten Termin leer.
+                const ohneName = data.filter(ev => ev.customer_id && !(ev.customers && (ev.customers.name || ev.customers.matchcode)));
+                if (ohneName.length) {
+                    const ids = [...new Set(ohneName.map(ev => String(ev.customer_id)))];
+                    const namen = new Map();
+                    (window.customerList || []).forEach(c => { if (c && c.id != null) namen.set(String(c.id), c); });
+                    const fehlend = ids.filter(id => !namen.has(id));
+                    if (fehlend.length) {
+                        try {
+                            const r = await sb().from('customers').select('id, name, matchcode').in('id', fehlend);
+                            (r.data || []).forEach(c => namen.set(String(c.id), c));
+                        } catch (e) { /* dann eben ohne Namen */ }
+                    }
+                    ohneName.forEach(ev => {
+                        const c = namen.get(String(ev.customer_id));
+                        if (c) ev.customers = { name: c.name || '', matchcode: c.matchcode || '' };
+                    });
+                }
                 // Teilnehmer der Termine dazuladen — daraus entstehen die
                 // Daumen-Knöpfe und die Zeile „Meier zugesagt · Schulz offen".
                 let partsByEvent = new Map();
@@ -310,7 +340,12 @@
                         eventId: ev.id,
                         participants,
                         myStatus: mineInvite ? mineInvite.status : null,
-                        targetType: null
+                        targetType: null,
+                        // Fürs Aufklappen: wer hat den Eintrag angelegt, an
+                        // welcher Adresse hängt er.
+                        creator: userNameById(ev.created_by_user) || userNameById(ev.user_id) || '',
+                        customerId: ev.customer_id || null,
+                        customerLabel: adressLabel || ev.location_label || ''
                     });
                 });
             }
@@ -612,12 +647,27 @@
         const diff = dayDiff(e.day);
         const sev = e.done ? 'done' : severityOf(diff);
         const clickable = !!e.targetType;
+        const aufklappbar = !!e.eventId;
+        const offen = aufklappbar && expanded.has(e.id);
         // Mehrtägiger Eintrag: Zeitraum und "Tag x von y" statt nur des Datums.
         const spanNote = e.spanTotal > 1
             ? `${fmtDate(e.spanStart)} – ${fmtDate(e.spanEnd)} · Tag ${e.spanIndex} von ${e.spanTotal}`
             : '';
-        return `<div class="calw-entry sev-${sev}${e.done ? ' is-done' : ''}${clickable ? ' is-clickable' : ''}${e.spanTotal > 1 ? ' is-span span-' + e.spanPos : ''}"
+        // Aufgeklappt: Ersteller, Adresse, Eingeladene und der Sprung ins Adressbuch.
+        const eingeladene = offen
+            ? (e.participants || []).map(p => p.user_name || userNameById(p.user_id) || 'Kollege')
+            : [];
+        const details = offen ? `<div class="calw-entry-details">
+                    <div><span class="calw-entry-details-k">Angelegt von</span> ${esc(e.creator || 'unbekannt')}</div>
+                    <div><span class="calw-entry-details-k">Adresse</span> ${esc(e.customerLabel || '—')}</div>
+                    ${eingeladene.length ? `<div><span class="calw-entry-details-k">Eingeladen</span> ${esc(eingeladene.join(', '))}</div>` : ''}
+                    ${e.customerId ? `<button type="button" class="calw-btn calw-entry-address" data-calw-address="${esc(String(e.customerId))}">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                        Adresse öffnen</button>` : ''}
+                </div>` : '';
+        return `<div class="calw-entry sev-${sev}${e.done ? ' is-done' : ''}${clickable ? ' is-clickable' : ''}${aufklappbar ? ' is-expandable' : ''}${offen ? ' is-open' : ''}${e.spanTotal > 1 ? ' is-span span-' + e.spanPos : ''}"
                      style="--calw-type:${t.color};"
+                     ${aufklappbar ? `data-calw-expand="${esc(e.id)}"` : ''}
                      ${clickable ? `data-calw-target-type="${esc(e.targetType)}" data-calw-target-id="${esc(e.targetId)}"` : ''}>
             <span class="calw-entry-bar"></span>
             <div class="calw-entry-body">
@@ -628,6 +678,7 @@
                 ${e.subject ? `<div class="calw-entry-subject">${esc(e.subject)}</div>` : ''}
                 <div class="calw-entry-meta">${spanNote || fmtDate(e.day)}${e.time ? ' · ' + esc(e.time) + ' Uhr' : ''}${e.done ? ' · erledigt' : (diff !== null ? ' · ' + relLabel(diff) : '')}${e.tag && !e.done ? ' · ' + esc(e.tag) : ''}</div>
                 ${e.note ? `<div class="calw-entry-note">${esc(e.note)}</div>` : ''}
+                ${details}
                 ${e.participants && e.participants.length && window.appointmentParticipantsLine
                     ? `<div class="calw-entry-parts">${window.appointmentParticipantsLine(e.participants)}</div>` : ''}
             </div>
@@ -1320,6 +1371,23 @@
         if ((el = hit('data-calw-edit'))) {
             e.stopPropagation();
             openEditForm(el.getAttribute('data-calw-edit'));
+            return;
+        }
+
+        if ((el = hit('data-calw-address'))) {
+            e.stopPropagation();
+            const id = el.getAttribute('data-calw-address');
+            closePanel();
+            if (typeof window.openAddressbookDetail === 'function') window.openAddressbookDetail(id);
+            return;
+        }
+
+        if ((el = hit('data-calw-expand'))) {
+            // Knöpfe im Eintrag (Daumen, Haken, Stift) klappen nicht um
+            if (e.target.closest('button, a, input, label')) return;
+            const id = el.getAttribute('data-calw-expand');
+            if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
+            render();
             return;
         }
 

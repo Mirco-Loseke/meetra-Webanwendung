@@ -337,6 +337,45 @@ window.FileUploadService = {
     },
 
     /**
+     * Eine Datei aus R2 als Blob zurueckholen — ueber DENSELBEN Weg, ueber
+     * den sie hochgeladen wurde (signierte S3-Anfrage an
+     * ...r2.cloudflarestorage.com).
+     *
+     * Warum das noetig ist: die oeffentliche Adresse (pub-....r2.dev) ist ein
+     * anderer Host, und der schickt keine CORS-Kopfzeilen. Ein `fetch` oder
+     * ein <img crossOrigin> darauf scheitert deshalb, und ohne Pixelzugriff
+     * laesst sich kein PDF bauen ("Tainted canvas"). Der S3-Endpunkt dagegen
+     * beantwortet Anfragen aus dem Browser — sonst koennte diese App dorthin
+     * gar nicht erst hochladen.
+     *
+     * @param {string} path Schluessel im Bucket, z. B. "Maschinen/x/foto.jpg"
+     * @returns {Promise<Blob>}
+     */
+    async downloadFile(path, { bucket } = {}) {
+        if (!path) throw new Error('Kein Pfad angegeben.');
+        const s3 = await this._r2Client();
+        const Bucket = bucket || window.R2_BUCKET_NAME || 'dateien';
+        const res = await s3.getObject({ Bucket, Key: path }).promise();
+        const typ = res.ContentType || 'application/octet-stream';
+        return new Blob([res.Body], { type: typ });
+    },
+
+    /**
+     * Aus einer oeffentlichen R2-Adresse den Schluessel im Bucket gewinnen.
+     * Gibt null zurueck, wenn die Adresse nicht zu unserem Bucket gehoert.
+     */
+    r2PfadAusUrl(url) {
+        try {
+            const oeffentlich = window.R2_PUBLIC_URL || 'https://pub-28aab7dd73f540f38b6358d78f889a27.r2.dev';
+            const u = new URL(url, location.href);
+            if (u.origin !== new URL(oeffentlich).origin) return null;
+            return decodeURIComponent(u.pathname.replace(/^\//, ''));
+        } catch (e) {
+            return null;
+        }
+    },
+
+    /**
      * Deletes a single file from the specified storage provider.
      * @param {string} path
      * @param {Object} options { bucket, provider }

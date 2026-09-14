@@ -70,6 +70,19 @@
                     <input type="text" id="process-add-title-input" class="glass-input" required placeholder="Titel des Vorgangs...">
                 </div>
 
+                <!-- Dokumente: der Vorgang hat vor dem Speichern noch keine ID,
+                     ausgewaehlte Dateien werden daher nur gestapelt (js/process-attachments.js,
+                     window.processPendingFiles) und erst nach saveNewProcess hochgeladen. -->
+                <div class="form-group" style="margin-bottom: 0.75rem;">
+                    <button type="button" id="process-add-att-btn" class="proc-att-open-btn"
+                            onclick="document.getElementById('process-add-att-input').click()">
+                        📎 Dokument hinzufügen
+                    </button>
+                    <input type="file" id="process-add-att-input" multiple style="display:none;"
+                        onchange="window.addProcessPendingFiles('process-add', this.files); this.value='';">
+                    <div id="process-add-pending-files-list"></div>
+                </div>
+
                 <!-- Aktueller Stand: gleich beim Anlegen eintragbar. Der Text
                      wird als erster Eintrag in status_updates gespeichert und
                      erscheint danach auf der Karte unter „Aktueller Stand". -->

@@ -1088,7 +1088,7 @@
                     <div id="modal-group-content-${gIdx}" style="display: ${isCollapsed ? 'none' : 'block'};">
                     <div id="modal-subtasks-${gIdx}" ondragover="event.preventDefault();" ondrop="window.handleModalSubtaskDrop(event, ${gIdx})" style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; min-height: 30px;">
                         ${displayOrder.map(sIdx => { const st = subtasks[sIdx]; return `
-                            <div draggable="true" ondragstart="window.handleModalSubtaskDragStart(event, ${gIdx}, ${sIdx})" style="display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); cursor: grab;">
+                            <div draggable="true" ondragstart="window.handleModalSubtaskDragStart(event, ${gIdx}, ${sIdx})" style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; background: rgba(255,255,255,0.03); padding: 8px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05); cursor: grab;">
                                 <div class="task-quick-complete ${st.status === 'completed' ? 'completed' : ''}" onclick="window.toggleModalSubtaskStatus(${gIdx}, ${sIdx})">
                                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                 </div>
@@ -1099,6 +1099,7 @@
                                     </span>
                                 </div>
                                 <button onclick="window.removeModalSubtask(${gIdx}, ${sIdx})" style="color: rgba(255,255,255,0.2); background: none; border: none; cursor: pointer; font-size: 1.2rem; transition: color 0.2s;" onmouseover="this.style.color='#ef4444'">&times;</button>
+                                ${window.subtaskPlanungZeile(gIdx, sIdx, st)}
                             </div>
                         `; }).join('')}
                     </div>
@@ -1126,6 +1127,94 @@
             console.error('Error in renderModalGroups:', e);
         }
     }
+
+    // ==========================================
+    // PLANUNG JE UNTERAUFGABE  (wer · ab wann · wie lange)
+    // ==========================================
+    // Geschrieben wird in subtasks.assigned_to / start_date / end_date —
+    // dieselben Spalten, die die Timeline liest und beim Verschieben setzt.
+    // Nötige Migration: supabase/supabase_add_subtask_planung.sql.
+    //
+    // Wichtig: diese drei Felder lösen ABSICHTLICH kein renderModalGroups()
+    // aus. Sonst würde die Liste unter dem Finger neu gebaut und das Feld
+    // verlöre den Fokus, sobald man ein Datum tippt.
+    function tagOhneZeit(wert) {
+        if (!wert) return '';
+        const s = String(wert);
+        return s.length >= 10 ? s.slice(0, 10) : '';
+    }
+    function plusTage(datum, n) {
+        const d = new Date(datum + 'T00:00:00');
+        d.setDate(d.getDate() + n);
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0')
+             + '-' + String(d.getDate()).padStart(2, '0');
+    }
+    function dauerTage(st) {
+        const von = tagOhneZeit(st.start_date), bis = tagOhneZeit(st.end_date);
+        if (!von) return '';
+        if (!bis || bis <= von) return 1;
+        return Math.round((new Date(bis + 'T00:00:00') - new Date(von + 'T00:00:00')) / 86400000) + 1;
+    }
+    // Ende immer aus Start + Dauer ableiten, damit beides nicht auseinanderläuft.
+    function endeSetzen(st) {
+        const von = tagOhneZeit(st.start_date);
+        if (!von) { st.end_date = null; return; }
+        const n = Math.max(1, parseInt(st._dauer, 10) || dauerTage(st) || 1);
+        st._dauer = n;
+        st.end_date = plusTage(von, n - 1);
+    }
+
+    window.subtaskPlanungZeile = function (gIdx, sIdx, st) {
+        const person = Array.isArray(st.assigned_to) && st.assigned_to.length ? String(st.assigned_to[0]) : '';
+        const von = tagOhneZeit(st.start_date);
+        const n = st._dauer || dauerTage(st) || '';
+        const leute = (window.userList || []).map(u =>
+            `<option value="${u.id}"${String(u.id) === person ? ' selected' : ''}>${u.name || ('Benutzer ' + u.id)}</option>`
+        ).join('');
+        const feld = 'background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.1);'
+                   + ' border-radius: 8px; color: #fff; font-size: 0.8rem; padding: 4px 8px; height: 30px;';
+        return `
+            <div class="subtask-planung" style="flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-left: 34px;">
+                <select style="${feld} min-width: 120px;" title="Wer macht das?"
+                        onchange="window.updateModalSubtaskPerson(${gIdx}, ${sIdx}, this.value)">
+                    <option value="">wer?</option>
+                    ${leute}
+                </select>
+                <input type="date" value="${von}" style="${feld}" title="ab wann"
+                       onchange="window.updateModalSubtaskStart(${gIdx}, ${sIdx}, this.value)">
+                <label style="display: flex; align-items: center; gap: 4px; font-size: 0.75rem; color: rgba(255,255,255,0.45);">
+                    <input type="number" min="1" step="1" value="${n}" style="${feld} width: 56px;" title="wie viele Tage"
+                           onchange="window.updateModalSubtaskDauer(${gIdx}, ${sIdx}, this.value)">
+                    Tage
+                </label>
+            </div>`;
+    };
+
+    function subtaskAus(gIdx, sIdx) {
+        const g = modalGroups[gIdx];
+        return g && g.subtasks ? g.subtasks[sIdx] : null;
+    }
+    window.updateModalSubtaskPerson = function (gIdx, sIdx, val) {
+        const st = subtaskAus(gIdx, sIdx); if (!st) return;
+        st.assigned_to = val ? [Number(val)] : [];
+        if (typeof window.subtaskPlanungGeaendert === "function") window.subtaskPlanungGeaendert();
+    };
+    window.updateModalSubtaskStart = function (gIdx, sIdx, val) {
+        const st = subtaskAus(gIdx, sIdx); if (!st) return;
+        st.start_date = val || null;
+        if (!val) st.end_date = null;
+        else {
+            if (!st._dauer) st._dauer = dauerTage(st) || 1;
+            endeSetzen(st);
+        }
+        if (typeof window.subtaskPlanungGeaendert === 'function') window.subtaskPlanungGeaendert();
+    };
+    window.updateModalSubtaskDauer = function (gIdx, sIdx, val) {
+        const st = subtaskAus(gIdx, sIdx); if (!st) return;
+        st._dauer = Math.max(1, parseInt(val, 10) || 1);
+        endeSetzen(st);
+        if (typeof window.subtaskPlanungGeaendert === 'function') window.subtaskPlanungGeaendert();
+    };
 
     window.addNewSupergroupToTask = function() {
         const name = prompt('Name der neuen Übergruppe:');

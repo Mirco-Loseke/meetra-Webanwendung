@@ -1,0 +1,1706 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kalender &amp; Timeline — Vorschau</title>
+<style>
+/* ============================================================
+   VORSCHAU — gehoert NICHT zur App.
+   Eigenstaendig, laeuft per Doppelklick. Keine Datenbank,
+   keine Anmeldung. Loeschen = restlos weg.
+   ============================================================ */
+:root{
+  --glass-border:rgba(255,255,255,.12);
+  --text-1:#f1f5f9; --text-2:#cbd5e1; --text-3:#94a3b8;
+  --font-body:'Inter',system-ui,-apple-system,sans-serif;
+  --font-heading:'Outfit','Inter',system-ui,sans-serif;
+  --fs-2xs:.6875rem; --fs-xs:.75rem; --fs-sm:.8125rem; --fs-md:.875rem;
+  --space-2:8px;--space-3:12px;--space-4:16px;--space-6:24px;
+  --radius-xs:6px;--radius-sm:10px;--radius-md:14px;--radius-lg:20px;--radius-pill:999px;
+  --shadow-2:0 8px 28px rgba(0,0,0,.38);
+
+  --cal-miete:#22c55e; --cal-service:#38bdf8; --cal-uvv:#facc15;
+  --cal-reparatur:#ef4444; --cal-werkstatt:#a78bfa; --cal-termin:#f97316;
+  --cal-abwesend:#64748b; --cal-aufgabe:#2dd4bf;
+
+  --day-w:44px; --row-h:44px; --label-w:230px; --summe-w:0px;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;font-family:var(--font-body);color:var(--text-1);
+  background:
+    radial-gradient(circle at 10% 20%,rgba(14,165,233,.25) 0,transparent 60%),
+    radial-gradient(circle at 85% 15%,rgba(59,130,246,.2) 0,transparent 50%),
+    radial-gradient(circle at 70% 80%,rgba(30,58,138,.2) 0,transparent 50%),
+    #0f172a;
+  background-attachment:fixed;display:flex;flex-direction:column;overflow:hidden;
+}
+body.kompakt{--row-h:28px}
+body.mitSumme{--summe-w:132px}
+
+header{padding:var(--space-3) var(--space-4);display:flex;flex-direction:column;gap:var(--space-2);
+  border-bottom:1px solid var(--glass-border);background:rgba(15,23,42,.55);
+  backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);flex:none}
+.hrow{display:flex;align-items:center;gap:var(--space-3);flex-wrap:wrap}
+h1{font-family:var(--font-heading);font-size:1.05rem;font-weight:700;margin:0;letter-spacing:-.02em}
+h1 small{display:block;font-size:var(--fs-2xs);font-weight:400;color:var(--text-3);
+  letter-spacing:.04em;text-transform:uppercase}
+.spacer{flex:1}
+
+.tabs{display:flex;gap:2px;background:rgba(255,255,255,.05);padding:3px;border-radius:var(--radius-pill);
+  border:1px solid var(--glass-border)}
+.tabs button{border:0;background:transparent;color:var(--text-3);font:inherit;font-size:var(--fs-sm);
+  padding:6px 14px;border-radius:var(--radius-pill);cursor:pointer;white-space:nowrap;transition:.18s}
+.tabs button:hover{color:var(--text-1)}
+.tabs button.on{background:rgba(255,255,255,.14);color:#fff;font-weight:600}
+
+.btn{border:1px solid var(--glass-border);background:rgba(255,255,255,.06);color:var(--text-2);
+  font:inherit;font-size:var(--fs-sm);padding:6px 12px;border-radius:var(--radius-sm);cursor:pointer;transition:.18s}
+.btn:hover{background:rgba(255,255,255,.13);color:#fff}
+.btn.icon{padding:6px 10px;font-size:1rem;line-height:1}
+.btn.stark{background:rgba(56,189,248,.22);border-color:rgba(56,189,248,.6);color:#fff}
+.range{font-size:var(--fs-md);font-weight:600;min-width:190px;text-align:center;font-family:var(--font-heading)}
+
+.chips{display:flex;gap:var(--space-2);flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-xs);padding:5px 11px;
+  border-radius:var(--radius-pill);border:1px solid var(--glass-border);background:rgba(255,255,255,.05);
+  color:var(--text-3);cursor:pointer;user-select:none;transition:.18s}
+.chip .dot{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none;opacity:.35}
+.chip.on{color:#fff;background:color-mix(in srgb,var(--c) 22%,transparent);
+  border-color:color-mix(in srgb,var(--c) 55%,transparent)}
+.chip.on .dot{opacity:1;box-shadow:0 0 8px var(--c)}
+
+select,input[type=date],input[type=text],input[type=search]{font:inherit;font-size:var(--fs-sm);
+  color:var(--text-1);background:rgba(255,255,255,.06);border:1px solid var(--glass-border);
+  border-radius:var(--radius-sm);padding:6px 10px}
+select option{background:#1e293b}
+input[type=range]{accent-color:#38bdf8;width:100px}
+label.mini{font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.06em;color:var(--text-3);
+  display:inline-flex;align-items:center;gap:6px}
+
+.presets{display:flex;gap:var(--space-2);align-items:center}
+.preset{border:1px solid var(--glass-border);background:rgba(255,255,255,.05);color:var(--text-2);
+  font:inherit;font-size:var(--fs-xs);padding:5px 12px;border-radius:var(--radius-pill);cursor:pointer}
+.preset:hover{background:rgba(255,255,255,.12);color:#fff}
+.preset.on{background:rgba(56,189,248,.2);border-color:rgba(56,189,248,.6);color:#fff;font-weight:600}
+
+main{flex:1;min-height:0;display:flex;overflow:hidden}
+#stage{flex:1;min-width:0;overflow:auto;position:relative}
+#stage::-webkit-scrollbar{width:10px;height:10px}
+#stage::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:99px}
+
+/* ---------- Timeline ---------- */
+.tl{position:relative;min-width:max-content}
+.tl-head{position:sticky;top:0;z-index:30;display:flex;background:rgba(15,23,42,.94);
+  backdrop-filter:blur(14px);border-bottom:1px solid var(--glass-border)}
+.tl-corner{width:var(--label-w);flex:none;position:sticky;left:0;z-index:31;
+  background:rgba(15,23,42,.97);border-right:1px solid var(--glass-border);
+  display:flex;align-items:center;padding:0 var(--space-3);font-size:var(--fs-2xs);
+  text-transform:uppercase;letter-spacing:.07em;color:var(--text-3)}
+.tl-days{display:flex}
+.tl-day{width:var(--day-w);flex:none;text-align:center;padding:5px 0;font-size:var(--fs-2xs);
+  border-left:1px solid rgba(255,255,255,.05);line-height:1.25}
+.tl-day b{display:block;font-size:var(--fs-sm);font-weight:600;color:var(--text-1)}
+.tl-day.we{background:rgba(255,255,255,.035);color:var(--text-3)}
+.tl-day.feier{background:rgba(239,68,68,.1)}
+.tl-day.feier b{color:#fca5a5}
+.tl-day.today b{color:#38bdf8}
+.tl-day.mstart{border-left:1px solid rgba(255,255,255,.22)}
+.tl-summe-kopf{width:var(--summe-w);flex:none;position:sticky;right:0;z-index:31;
+  background:rgba(15,23,42,.97);border-left:1px solid var(--glass-border);
+  display:flex;align-items:center;justify-content:center;font-size:var(--fs-2xs);
+  text-transform:uppercase;letter-spacing:.07em;color:var(--text-3);overflow:hidden}
+body:not(.mitSumme) .tl-summe-kopf,body:not(.mitSumme) .tl-summe{display:none}
+
+.tl-row{display:flex;border-bottom:1px solid rgba(255,255,255,.055);min-height:var(--row-h)}
+.tl-row:hover .tl-label{background:rgba(255,255,255,.05)}
+.tl-row.zielzeile .tl-label{background:rgba(56,189,248,.22)}
+.tl-row.zielzeile .tl-track{box-shadow:inset 0 0 0 2px rgba(56,189,248,.55)}
+.tl-group{display:flex;position:sticky;left:0;z-index:12;background:rgba(56,189,248,.09);
+  border-bottom:1px solid var(--glass-border);border-top:1px solid var(--glass-border);cursor:pointer}
+.tl-group:hover{background:rgba(56,189,248,.16)}
+.tl-group span{padding:5px var(--space-3);font-size:var(--fs-2xs);font-weight:700;
+  text-transform:uppercase;letter-spacing:.08em;color:#7dd3fc;white-space:nowrap}
+.tl-label{width:var(--label-w);flex:none;position:sticky;left:0;z-index:11;
+  background:rgba(15,23,42,.95);border-right:1px solid var(--glass-border);
+  padding:5px var(--space-3);display:flex;flex-direction:column;justify-content:center;gap:1px;
+  transition:background .15s;overflow:hidden}
+.tl-label .n{font-size:var(--fs-sm);font-weight:600;line-height:1.2;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-label .m{font-size:var(--fs-2xs);color:var(--text-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.kompakt .tl-label .m{display:none}
+.tl-label.kind{padding-left:calc(var(--space-3) + 20px);position:sticky}
+.tl-label.kind .n{font-weight:400;color:var(--text-2)}
+.klapp{cursor:pointer;color:var(--text-3);font-size:var(--fs-xs)}
+
+.tl-track{position:relative;flex:1;touch-action:pan-x pan-y;
+  background-size:var(--day-w) 100%;
+  background-image:linear-gradient(to right,rgba(255,255,255,.05) 1px,transparent 1px)}
+.tl-we{position:absolute;top:0;bottom:0;background:rgba(255,255,255,.035);pointer-events:none}
+.tl-we.feier{background:rgba(239,68,68,.08)}
+.tl-now{position:absolute;top:0;bottom:0;width:2px;background:#38bdf8;z-index:20;pointer-events:none;
+  box-shadow:0 0 10px rgba(56,189,248,.8)}
+.tl-summe{width:var(--summe-w);flex:none;position:sticky;right:0;z-index:11;
+  background:rgba(15,23,42,.95);border-left:1px solid var(--glass-border);
+  padding:4px var(--space-2);display:flex;flex-direction:column;justify-content:center;
+  font-size:var(--fs-2xs);color:var(--text-3);overflow:hidden;white-space:nowrap}
+.tl-summe b{color:var(--text-1);font-size:var(--fs-xs);display:block;line-height:1.35}
+.tl-summe u{text-decoration:none;display:block;line-height:1.3}
+
+.stand{position:absolute;top:0;bottom:0;pointer-events:none;z-index:0}
+.stand.hof{background:rgba(148,163,184,.07);color:#94a3b8}
+.stand.vermietet{background:rgba(34,197,94,.10);color:#22c55e}
+.stand.werkstatt{background:rgba(167,139,250,.11);color:#a78bfa}
+.stand.kunde{background:rgba(249,115,22,.08);color:#f97316}
+.stand::after{content:'';position:absolute;left:0;right:0;bottom:0;height:2px;background:currentColor;opacity:.5}
+.tl-label .ort{display:inline-flex;align-items:center;gap:4px}
+.tl-label .ort i{width:7px;height:7px;border-radius:50%;flex:none}
+.luecke{position:absolute;top:calc(var(--row-h)/2 - 2px);height:4px;border-radius:99px;
+  background:rgba(34,197,94,.22);pointer-events:none;z-index:0}
+
+.bar{position:absolute;top:4px;height:calc(var(--row-h) - 12px);border-radius:var(--radius-xs);z-index:2;
+  background:color-mix(in srgb,var(--c) 30%,rgba(15,23,42,.75));
+  border:1px solid color-mix(in srgb,var(--c) 70%,transparent);border-left:3px solid var(--c);
+  display:flex;align-items:center;padding:0 7px;gap:6px;cursor:grab;overflow:hidden;
+  font-size:var(--fs-2xs);color:#fff;white-space:nowrap;touch-action:none;
+  transition:box-shadow .15s,opacity .15s}
+.bar:hover{box-shadow:0 4px 16px rgba(0,0,0,.5);z-index:15}
+.bar.dragging{cursor:grabbing;opacity:.9;z-index:40;box-shadow:var(--shadow-2);transition:none}
+.bar .t{overflow:hidden;text-overflow:ellipsis;font-weight:600}
+.bar .s{color:rgba(255,255,255,.7);font-weight:400}
+.bar.angefragt{background:repeating-linear-gradient(45deg,
+   color-mix(in srgb,var(--c) 26%,rgba(15,23,42,.8)) 0 6px,rgba(15,23,42,.75) 6px 12px)}
+.bar.wartet{background:repeating-linear-gradient(-45deg,
+   color-mix(in srgb,var(--c) 20%,rgba(15,23,42,.85)) 0 5px,rgba(15,23,42,.85) 5px 10px);opacity:.85}
+.bar.konflikt{border-color:#ef4444;box-shadow:0 0 0 1px #ef4444,0 0 14px rgba(239,68,68,.5)}
+.bar.warnung{border-color:#fbbf24;box-shadow:0 0 0 1px #fbbf24}
+.bar.ueberfaellig{animation:puls 1.6s ease-in-out infinite}
+@keyframes puls{0%,100%{box-shadow:0 0 0 1px #ef4444}50%{box-shadow:0 0 0 1px #ef4444,0 0 18px rgba(239,68,68,.75)}}
+.bar.gesperrt{cursor:not-allowed;opacity:.75;border-style:dashed}
+.bar.gewaehlt{outline:2px solid #38bdf8;outline-offset:1px}
+.bar.blass{opacity:.18}
+.bar.treffer{outline:2px solid #fbbf24;outline-offset:1px}
+.bar.kopie{border-style:dotted}
+.bar .grip{position:absolute;top:0;bottom:0;width:9px;cursor:ew-resize;touch-action:none}
+.bar.gesperrt .grip{cursor:not-allowed}
+.bar .grip.l{left:0} .bar .grip.r{right:0}
+.bar .puffer{position:absolute;top:0;bottom:0;right:0;background:repeating-linear-gradient(90deg,
+  rgba(148,163,184,.4) 0 3px,transparent 3px 6px);pointer-events:none}
+.bar.kind{top:7px;height:calc(var(--row-h) - 18px);opacity:.92}
+
+.gummi{position:absolute;top:4px;height:calc(var(--row-h) - 12px);border-radius:var(--radius-xs);
+  background:rgba(56,189,248,.18);border:1px dashed rgba(56,189,248,.75);z-index:35;pointer-events:none;
+  display:flex;align-items:center;justify-content:center;font-size:var(--fs-2xs);color:#e0f2fe}
+
+.cap-row{display:flex;border-bottom:1px solid var(--glass-border);background:rgba(255,255,255,.03)}
+.cap-cell{width:var(--day-w);flex:none;border-left:1px solid rgba(255,255,255,.05);
+  display:flex;align-items:flex-end;justify-content:center;height:34px;padding-bottom:3px;position:relative}
+.cap-cell i{width:60%;background:#38bdf8;border-radius:2px 2px 0 0;display:block;opacity:.7}
+.cap-cell.voll i{background:#facc15}
+.cap-cell.ueber i{background:#ef4444;opacity:1}
+.cap-cell span{position:absolute;top:2px;font-size:9px;color:var(--text-3)}
+
+/* Schwebende Karte beim Ziehen aus der Ungeplant-Leiste */
+#geist{position:fixed;z-index:200;pointer-events:none;display:none;
+  font-size:var(--fs-xs);padding:6px 11px;border-radius:var(--radius-sm);color:#fff;
+  background:color-mix(in srgb,var(--c) 40%,rgba(15,23,42,.92));
+  border:1px solid color-mix(in srgb,var(--c) 70%,transparent);box-shadow:var(--shadow-2)}
+#geist.an{display:block}
+
+/* Sorten-Auswahl beim Neuanlegen */
+#waehler{position:fixed;z-index:210;display:none;background:rgba(15,23,42,.98);
+  border:1px solid var(--glass-border);border-radius:var(--radius-md);box-shadow:var(--shadow-2);
+  padding:6px;min-width:190px}
+#waehler.an{display:block}
+#waehler h6{margin:4px 8px 8px;font-size:var(--fs-2xs);text-transform:uppercase;
+  letter-spacing:.07em;color:var(--text-3);font-weight:600}
+#waehler button{display:flex;align-items:center;gap:8px;width:100%;border:0;background:transparent;
+  color:var(--text-1);font:inherit;font-size:var(--fs-sm);padding:7px 9px;border-radius:var(--radius-sm);
+  cursor:pointer;text-align:left}
+#waehler button:hover{background:rgba(255,255,255,.1)}
+#waehler button i{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none}
+
+/* ---------- Monat / Woche / Agenda / Tafel ---------- */
+.mon{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--glass-border);
+  border:1px solid var(--glass-border);margin:var(--space-4);border-radius:var(--radius-lg);overflow:hidden}
+.mon .wd{background:rgba(15,23,42,.9);padding:7px;font-size:var(--fs-2xs);text-transform:uppercase;
+  letter-spacing:.07em;color:var(--text-3);text-align:center}
+.mon .cell{background:rgba(15,23,42,.62);min-height:112px;padding:5px;display:flex;flex-direction:column;gap:2px}
+.mon .cell.off{opacity:.35}
+.mon .cell.we{background:rgba(15,23,42,.78)}
+.mon .cell.today{box-shadow:inset 0 0 0 2px #38bdf8}
+.mon .dnum{font-size:var(--fs-xs);color:var(--text-3);font-weight:600;margin-bottom:2px}
+.mon .today .dnum{color:#38bdf8}
+.ev{font-size:var(--fs-2xs);padding:2px 6px;border-radius:4px;cursor:pointer;
+  background:color-mix(in srgb,var(--c) 26%,rgba(15,23,42,.6));border-left:3px solid var(--c);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ev:hover{background:color-mix(in srgb,var(--c) 42%,rgba(15,23,42,.6))}
+.mon .more{font-size:var(--fs-2xs);color:var(--text-3)}
+
+.wk{display:flex;margin:var(--space-4);border:1px solid var(--glass-border);
+  border-radius:var(--radius-lg);overflow:hidden;background:rgba(15,23,42,.55)}
+.wk-hours{width:52px;flex:none;border-right:1px solid var(--glass-border)}
+.wk-hours .kopf{height:38px}
+.wk-hours .ganz{height:var(--ganz-h);border-bottom:1px solid var(--glass-border);
+  font-size:var(--fs-2xs);color:var(--text-3);padding:4px 6px;text-align:right}
+.wk-hours div.std{height:46px;font-size:var(--fs-2xs);color:var(--text-3);text-align:right;padding:0 6px;
+  border-bottom:1px solid rgba(255,255,255,.05)}
+.wk-cols{display:flex;flex:1}
+.wk-col{flex:1;border-left:1px solid rgba(255,255,255,.06);position:relative;min-width:0}
+.wk-col h4{margin:0;padding:7px 0;text-align:center;font-size:var(--fs-xs);font-weight:600;
+  background:rgba(15,23,42,.8);border-bottom:1px solid var(--glass-border);height:38px}
+.wk-col h4 span{display:block;font-size:var(--fs-2xs);color:var(--text-3);font-weight:400}
+.wk-col.today h4{color:#38bdf8}
+.wk-ganz{height:var(--ganz-h);border-bottom:1px solid var(--glass-border);
+  background:rgba(255,255,255,.03);padding:2px;display:flex;flex-direction:column;gap:2px;overflow:hidden}
+.wk-grid{position:relative;background-image:linear-gradient(to bottom,rgba(255,255,255,.055) 1px,transparent 1px);
+  background-size:100% 46px}
+.wk-ev{position:absolute;left:3px;right:3px;border-radius:var(--radius-xs);padding:3px 6px;
+  font-size:var(--fs-2xs);overflow:hidden;cursor:pointer;
+  background:color-mix(in srgb,var(--c) 30%,rgba(15,23,42,.8));border-left:3px solid var(--c)}
+.wk-ev b{display:block;font-weight:600}
+.wk-ev i{font-style:normal;color:rgba(255,255,255,.65)}
+
+.ag{max-width:760px;margin:var(--space-4) auto;padding:0 var(--space-4)}
+.ag h3{font-family:var(--font-heading);font-size:var(--fs-md);margin:var(--space-6) 0 var(--space-2);
+  color:var(--text-2);position:sticky;top:0;background:rgba(15,23,42,.92);padding:6px 0;z-index:5}
+.ag h3.heute{color:#38bdf8}
+.ag-item{display:flex;gap:var(--space-3);align-items:center;padding:10px var(--space-3);
+  border-radius:var(--radius-md);background:rgba(255,255,255,.045);margin-bottom:6px;cursor:pointer;
+  border-left:3px solid var(--c)}
+.ag-item:hover{background:rgba(255,255,255,.09)}
+.ag-item .zeit{font-size:var(--fs-xs);color:var(--text-3);width:74px;flex:none}
+.ag-item .txt{flex:1;min-width:0}
+.ag-item .txt b{display:block;font-size:var(--fs-md);font-weight:600}
+.ag-item .txt span{font-size:var(--fs-xs);color:var(--text-3)}
+.badge{font-size:var(--fs-2xs);padding:2px 8px;border-radius:var(--radius-pill);
+  background:color-mix(in srgb,var(--c) 25%,transparent);color:#fff;white-space:nowrap}
+
+/* Anzeigetafel */
+.tafel{padding:var(--space-6);display:grid;gap:var(--space-4);
+  grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+.tafel .sp{background:rgba(15,23,42,.62);border:1px solid var(--glass-border);
+  border-radius:var(--radius-lg);padding:var(--space-4)}
+.tafel h3{margin:0 0 var(--space-3);font-family:var(--font-heading);font-size:1.35rem;
+  display:flex;align-items:center;gap:var(--space-2)}
+.tafel h3 em{font-style:normal;font-size:var(--fs-xs);color:var(--text-3);font-weight:400}
+.tafel .z{display:flex;gap:var(--space-3);align-items:center;padding:11px 0;
+  border-bottom:1px solid rgba(255,255,255,.07);font-size:1.05rem}
+.tafel .z:last-child{border:0}
+.tafel .z i{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none}
+.tafel .z b{flex:1;font-weight:600}
+.tafel .z span{font-size:var(--fs-sm);color:var(--text-3)}
+.tafel .leer{color:var(--text-3);font-size:var(--fs-sm);padding:11px 0}
+
+#unplanned{flex:none;border-top:1px solid var(--glass-border);background:rgba(15,23,42,.75);
+  backdrop-filter:blur(18px);padding:var(--space-2) var(--space-4);display:flex;align-items:center;
+  gap:var(--space-3);overflow-x:auto}
+#unplanned .lbl{font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.07em;
+  color:var(--text-3);flex:none}
+.up{flex:none;font-size:var(--fs-xs);padding:7px 12px;border-radius:var(--radius-sm);cursor:grab;
+  touch-action:none;background:color-mix(in srgb,var(--c) 24%,rgba(15,23,42,.7));
+  border:1px dashed color-mix(in srgb,var(--c) 60%,transparent)}
+.up.zieht{opacity:.35}
+
+#panel{width:360px;flex:none;border-left:1px solid var(--glass-border);background:rgba(15,23,42,.84);
+  backdrop-filter:blur(24px);padding:var(--space-4);overflow-y:auto;display:none}
+#panel.open{display:block}
+#panel h2{font-family:var(--font-heading);font-size:1rem;margin:8px 0 4px}
+#panel .kv{display:flex;justify-content:space-between;gap:var(--space-3);padding:7px 0;
+  border-bottom:1px solid rgba(255,255,255,.07);font-size:var(--fs-sm)}
+#panel .kv span{color:var(--text-3)}
+#panel .acts{display:flex;gap:var(--space-2);margin-top:var(--space-4);flex-wrap:wrap}
+#panel h5{margin:var(--space-4) 0 var(--space-2);font-size:var(--fs-2xs);text-transform:uppercase;
+  letter-spacing:.07em;color:var(--text-3)}
+.sql{font-family:ui-monospace,Consolas,monospace;font-size:var(--fs-2xs);line-height:1.6;
+  background:rgba(0,0,0,.35);border:1px solid var(--glass-border);border-radius:var(--radius-sm);
+  padding:9px 11px;color:#7dd3fc;white-space:pre-wrap;word-break:break-word}
+.sql .warn{color:#fbbf24;display:block;margin-top:6px}
+.wl{font-size:var(--fs-xs);display:flex;justify-content:space-between;padding:5px 0;
+  border-bottom:1px solid rgba(255,255,255,.06)}
+.stufen{display:flex;gap:3px;flex-wrap:wrap;margin-top:var(--space-2)}
+.stufe{font-size:var(--fs-2xs);padding:4px 9px;border-radius:var(--radius-pill);cursor:pointer;
+  border:1px solid var(--glass-border);background:rgba(255,255,255,.05);color:var(--text-3)}
+.stufe.on{background:rgba(34,197,94,.25);border-color:rgba(34,197,94,.6);color:#fff;font-weight:600}
+.stufe.vor{opacity:.5}
+
+.toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);z-index:99;
+  background:rgba(15,23,42,.97);border:1px solid var(--glass-border);padding:9px 12px 9px 16px;
+  border-radius:var(--radius-pill);font-size:var(--fs-sm);box-shadow:var(--shadow-2);
+  display:none;align-items:center;gap:var(--space-3);max-width:92vw}
+.toast.show{display:flex}
+.toast button{border:1px solid rgba(56,189,248,.5);background:rgba(56,189,248,.18);color:#fff;
+  font:inherit;font-size:var(--fs-xs);padding:4px 12px;border-radius:var(--radius-pill);cursor:pointer}
+
+#konflikt{position:fixed;inset:0;z-index:220;background:rgba(2,6,23,.55);
+  display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+#konflikt.show{display:flex}
+#konflikt .box{background:rgba(15,23,42,.97);border:1px solid rgba(239,68,68,.5);
+  border-radius:var(--radius-lg);padding:var(--space-6);max-width:420px}
+#konflikt h3{margin:0 0 var(--space-2);font-family:var(--font-heading);font-size:var(--fs-md);color:#fca5a5}
+#konflikt p{margin:0 0 var(--space-4);font-size:var(--fs-sm);color:var(--text-2);line-height:1.6}
+#konflikt .acts{display:flex;gap:var(--space-2);flex-wrap:wrap}
+
+footer{flex:none;padding:6px var(--space-4);border-top:1px solid var(--glass-border);
+  background:rgba(15,23,42,.6);display:flex;gap:var(--space-4);flex-wrap:wrap;align-items:center;
+  font-size:var(--fs-2xs);color:var(--text-3)}
+.leg{display:inline-flex;align-items:center;gap:5px}
+.leg i{width:20px;height:9px;border-radius:3px;background:var(--c);display:block}
+
+@media print{
+  header .tabs,header .presets,#unplanned,#panel,.toast,footer,#zoomWrap,#views,#saveView{display:none !important}
+  body{background:#fff;color:#000;overflow:visible;height:auto}
+  .tl-label,.tl-corner,.tl-head,.tl-summe{background:#fff !important;color:#000}
+  .tl-label .n,.tl-day b,.tl-summe b{color:#000}
+  #stage{overflow:visible}
+}
+@media(max-width:900px){
+  #panel{position:fixed;inset:0;width:auto;z-index:60}
+  :root{--label-w:150px}
+  body{--row-h:48px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hrow">
+    <h1>Kalender &amp; Timeline<small>Vorschau — Beispieldaten, keine Datenbank</small></h1>
+    <div class="tabs" id="tabs"></div>
+    <div class="spacer"></div>
+    <button class="btn icon" id="prev">&lsaquo;</button>
+    <button class="btn" id="today">Heute</button>
+    <button class="btn icon" id="next">&rsaquo;</button>
+    <div class="range" id="range"></div>
+  </div>
+  <div class="hrow" id="presetRow">
+    <span class="mini">Voreinstellung</span>
+    <div class="presets" id="presets"></div>
+    <span class="spacer"></span>
+    <label class="mini">Zeile =
+      <select id="achse">
+        <option value="maschine">Maschine</option>
+        <option value="monteur">Monteur</option>
+        <option value="aufgabe">Aufgabe</option>
+      </select>
+    </label>
+    <label class="mini">Zeitraum
+      <select id="spanne">
+        <option value="t14">14 Tage</option>
+        <option value="t28" selected>28 Tage</option>
+        <option value="t56">8 Wochen</option>
+        <option value="w13">Quartal (Wochen)</option>
+      </select>
+    </label>
+    <label class="mini"><input type="checkbox" id="optWE"> WE/Feiertag meiden</label>
+    <label class="mini"><input type="checkbox" id="optSumme"> Auswertung</label>
+    <label class="mini"><input type="checkbox" id="optKompakt"> kompakt</label>
+    <button class="btn" id="print">Drucken</button>
+  </div>
+  <div class="hrow">
+    <div class="chips" id="filter"></div>
+    <div class="spacer"></div>
+    <input type="search" id="suche" placeholder="Kunde, Maschine, Titel …" style="width:190px">
+    <label class="mini" id="zoomWrap">Zoom <input type="range" id="zoom" min="18" max="130" value="44"></label>
+    <select id="views" title="Gespeicherte Ansicht"></select>
+    <button class="btn" id="saveView">Ansicht sichern</button>
+  </div>
+</header>
+
+<main>
+  <div id="stage"></div>
+  <aside id="panel"></aside>
+</main>
+
+<div id="unplanned"></div>
+<footer id="legend"></footer>
+
+<div id="geist"></div>
+<div id="waehler"></div>
+<div class="toast" id="toast"><span id="toastText"></span><button id="toastUndo">Rückgängig</button></div>
+
+<div id="konflikt"><div class="box">
+  <h3>Überschneidung</h3>
+  <p id="kText"></p>
+  <div class="acts">
+    <button class="btn stark" id="kFrei">auf nächsten freien Tag</button>
+    <button class="btn" id="kTrotzdem">trotzdem so lassen</button>
+    <button class="btn" id="kZurueck">rückgängig</button>
+  </div>
+</div></div>
+
+<script>
+/* ============================================================
+   1. DATEN
+   In der App kaeme das aus EINER Schicht getCalendarItems(),
+   die service_entries, tasks, subtasks, rental_agreements,
+   maintenance_events und workshop_tasks auf dasselbe Format bringt.
+   ============================================================ */
+var HEUTE = new Date(); HEUTE.setHours(0,0,0,0);
+function d(n){ var x=new Date(HEUTE); x.setDate(x.getDate()+n); return x; }
+function key(x){ return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0'); }
+function parse(s){ var p=s.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); }
+function tage(a,b){ return Math.round((parse(b)-parse(a))/86400000); }
+function dez(x){ return x.toLocaleDateString('de-DE'); }
+function montag(x){ var y=new Date(x); y.setDate(y.getDate()-((y.getDay()+6)%7)); y.setHours(0,0,0,0); return y; }
+
+var FEIERTAGE = {
+  '2026-01-01':'Neujahr','2026-04-03':'Karfreitag','2026-04-06':'Ostermontag',
+  '2026-05-01':'Tag der Arbeit','2026-05-14':'Christi Himmelfahrt','2026-05-25':'Pfingstmontag',
+  '2026-10-03':'Tag der Dt. Einheit','2026-10-31':'Reformationstag',
+  '2026-12-25':'1. Weihnachtstag','2026-12-26':'2. Weihnachtstag'
+};
+function istFrei(x){ return x.getDay()===0 || x.getDay()===6 || !!FEIERTAGE[key(x)]; }
+function naechsterFreier(x){ var y=new Date(x); while(istFrei(y)) y.setDate(y.getDate()+1); return y; }
+
+var SORTEN = {
+  miete:     {label:'Vermietung',  farbe:'var(--cal-miete)'},
+  service:   {label:'Service',     farbe:'var(--cal-service)'},
+  uvv:       {label:'UVV/Wartung', farbe:'var(--cal-uvv)'},
+  reparatur: {label:'Reparatur',   farbe:'var(--cal-reparatur)'},
+  werkstatt: {label:'Werkstatt',   farbe:'var(--cal-werkstatt)'},
+  termin:    {label:'Termin',      farbe:'var(--cal-termin)'},
+  aufgabe:   {label:'Aufgabe',     farbe:'var(--cal-aufgabe)'},
+  abwesend:  {label:'Abwesend',    farbe:'var(--cal-abwesend)'}
+};
+/* Welche Tabelle beim Neuanlegen zu welcher Sorte gehoert */
+var SORTE_QUELLE = {
+  miete:'rental_agreements', service:'service_entries', reparatur:'service_entries',
+  uvv:'maintenance_events', termin:'maintenance_events', abwesend:'maintenance_events',
+  werkstatt:'workshop_tasks', aufgabe:'tasks'
+};
+
+var QUELLEN = {
+  service_entries:    {von:'datum_von',  bis:'datum_bis'},
+  tasks:              {von:'start_date', bis:'end_date'},
+  subtasks:           {von:'start_date', bis:'end_date', neu:true,
+                       hinweis:'subtasks hat heute nur title/status/created_at — Migration noetig.'},
+  rental_agreements:  {von:'von',        bis:'bis',      neu:true,
+                       hinweis:'Daten liegen heute in data (JSONB) — echte Spalten noetig, sonst nicht filterbar.'},
+  maintenance_events: {von:'start_date', bis:'end_date'},
+  workshop_tasks:     {von:'start_date', bis:'end_date', neu:true,
+                       hinweis:'workshop_tasks hat heute nur text/done.'}
+};
+
+var MASCHINEN = [
+  {id:'m1', name:'Rotorschaufel RS-1000', kat:'Rotorschaufel', nr:'#4412', basis:'hof'},
+  {id:'m2', name:'Rotorschaufel RS-600',  kat:'Rotorschaufel', nr:'#4419', basis:'hof'},
+  {id:'m3', name:'Umsetzer UM-2200',      kat:'Umsetzer',      nr:'#3301', basis:'hof'},
+  {id:'m4', name:'Umsetzer UM-1600',      kat:'Umsetzer',      nr:'#3318', basis:'hof'},
+  {id:'m5', name:'Backenbrecher BB-90',   kat:'Brecher',       nr:'#7702', basis:'kunde'},
+  {id:'m6', name:'Prallbrecher PB-120',   kat:'Brecher',       nr:'#7711', basis:'hof'},
+  {id:'m7', name:'Trommelsieb TS-75',     kat:'Siebtechnik',   nr:'#5504', basis:'hof'},
+  {id:'m8', name:'Sternsieb ST-40',       kat:'Siebtechnik',   nr:'#5521', basis:'kunde'}
+];
+var MONTEURE = [
+  {id:'p1', name:'Jens Bruhns',    rolle:'Werkstatt'},
+  {id:'p4', name:'Ali Yildiz',     rolle:'Werkstatt'},
+  {id:'p2', name:'Marco Hillmann', rolle:'Aussendienst'},
+  {id:'p3', name:'Timo Sanders',   rolle:'Aussendienst'}
+];
+var ORTE = {
+  hof:{label:'bei uns auf dem Hof',farbe:'#94a3b8'}, vermietet:{label:'vermietet',farbe:'#22c55e'},
+  werkstatt:{label:'in der Werkstatt',farbe:'#a78bfa'}, kunde:{label:'beim Kunden',farbe:'#f97316'}
+};
+var MIETSTUFEN = ['angefragt','reserviert','draussen','zurueck','geprueft'];
+
+var ITEMS = [
+  {id:1, quelle:'rental_agreements', sorte:'miete', titel:'Fa. Kruse GmbH', maschine:'m1',
+   von:key(d(-6)), bis:key(d(4)), status:'draussen', puffer:1, preis:280},
+  {id:2, quelle:'rental_agreements', sorte:'miete', titel:'Bauhof Wardenburg', maschine:'m1',
+   von:key(d(7)), bis:key(d(16)), status:'reserviert', puffer:1, preis:280},
+  {id:3, quelle:'rental_agreements', sorte:'miete', titel:'Recycling Nord AG', maschine:'m3',
+   von:key(d(-2)), bis:key(d(11)), status:'draussen', preis:410, gesperrt:true},
+  {id:4, quelle:'rental_agreements', sorte:'miete', titel:'Anfrage Meyer KG', maschine:'m3',
+   von:key(d(9)), bis:key(d(18)), status:'angefragt', preis:410},
+  {id:5, quelle:'rental_agreements', sorte:'miete', titel:'Kompost Ammerland', maschine:'m4',
+   von:key(d(-11)), bis:key(d(-1)), status:'ueberfaellig', preis:350},
+  {id:6, quelle:'rental_agreements', sorte:'miete', titel:'Erdbau Tjaden', maschine:'m6',
+   von:key(d(2)), bis:key(d(13)), status:'reserviert', puffer:2, preis:520},
+  {id:7, quelle:'rental_agreements', sorte:'miete', titel:'GaLaBau Oltmanns', maschine:'m7',
+   von:key(d(-4)), bis:key(d(2)), status:'draussen', preis:190},
+
+  /* liegt mitten in der Miete an Bauhof — weiche gelbe Warnung */
+  {id:8, quelle:'maintenance_events', sorte:'uvv', titel:'UVV-Pruefung faellig', maschine:'m1',
+   von:key(d(9)), bis:key(d(9)), monteur:'p1', std:4, wiederholung:'jaehrlich'},
+  {id:9, quelle:'maintenance_events', sorte:'uvv', titel:'Jahreswartung', maschine:'m5',
+   von:key(d(1)), bis:key(d(2)), monteur:'p4', std:9, wiederholung:'jaehrlich'},
+  {id:10, quelle:'maintenance_events', sorte:'uvv', titel:'UVV-Pruefung', maschine:'m8',
+   von:key(d(8)), bis:key(d(8)), monteur:'p1', std:3, wiederholung:'jaehrlich'},
+
+  {id:11, quelle:'service_entries', sorte:'reparatur', titel:'Hydraulikschlauch', maschine:'m4',
+   von:key(d(0)), bis:key(d(3)), monteur:'p4', std:11, status:'wartet',
+   work_log:[{datum:key(d(0)),zeit:'07:30 - 12:00'},{datum:key(d(1)),zeit:'08:00 - 16:00'}]},
+  {id:12, quelle:'service_entries', sorte:'reparatur', titel:'Lagerschaden Rotor', maschine:'m2',
+   von:key(d(-3)), bis:key(d(1)), monteur:'p1', std:14, gesperrt:true,
+   work_log:[{datum:key(d(-3)),zeit:'08:00 - 16:30'},{datum:key(d(-2)),zeit:'08:00 - 14:00'}]},
+  {id:13, quelle:'service_entries', sorte:'service', titel:'Einweisung Kruse', maschine:'m1',
+   von:key(d(-6)), bis:key(d(-6)), monteur:'p2', std:5, zeit:'08:00', dauer:4, gesperrt:true,
+   work_log:[{datum:key(d(-6)),zeit:'08:00 - 13:00'}]},
+  {id:14, quelle:'service_entries', sorte:'service', titel:'Stoerung Nord AG', maschine:'m3',
+   von:key(d(0)), bis:key(d(0)), monteur:'p2', std:6, zeit:'09:30', dauer:3,
+   work_log:[{datum:key(d(0)),zeit:'09:30 - 15:30'}]},
+  {id:15, quelle:'service_entries', sorte:'service', titel:'Inbetriebnahme PB-120', maschine:'m6',
+   von:key(d(2)), bis:key(d(2)), monteur:'p3', std:8, zeit:'07:00', dauer:8,
+   work_log:[{datum:key(d(2)),zeit:'07:00 - 15:00'}]},
+  {id:16, quelle:'service_entries', sorte:'service', titel:'Nachschulung Tjaden', maschine:'m6',
+   von:key(d(4)), bis:key(d(4)), monteur:'p3', std:4, zeit:'13:00', dauer:3},
+  {id:23, quelle:'service_entries', sorte:'service', titel:'Wartung vor Ort', maschine:'m5',
+   von:key(d(7)), bis:key(d(7)), monteur:'p2', std:7, zeit:'08:00', dauer:6},
+  {id:24, quelle:'service_entries', sorte:'reparatur', titel:'Elektrik Fehlersuche', maschine:'m2',
+   von:key(d(6)), bis:key(d(9)), monteur:'p1', std:13},
+
+  {id:17, quelle:'workshop_tasks', sorte:'werkstatt', titel:'Siebbelaege tauschen', maschine:'m7',
+   von:key(d(3)), bis:key(d(5)), monteur:'p4', std:16},
+  {id:18, quelle:'workshop_tasks', sorte:'werkstatt', titel:'Aufbereitung / Lackierung', maschine:'m8',
+   von:key(d(-1)), bis:key(d(2)), monteur:'p1', std:12},
+
+  {id:19, quelle:'maintenance_events', sorte:'termin', titel:'Angebotstermin Kruse',
+   von:key(d(1)), bis:key(d(1)), monteur:'p2', std:2, zeit:'14:00', dauer:2},
+  {id:20, quelle:'maintenance_events', sorte:'termin', titel:'Messe-Vorbesprechung',
+   von:key(d(6)), bis:key(d(6)), monteur:'p3', std:2, zeit:'10:00', dauer:2},
+  {id:21, quelle:'maintenance_events', sorte:'abwesend', titel:'Urlaub',
+   von:key(d(9)), bis:key(d(20)), monteur:'p3'},
+  {id:22, quelle:'maintenance_events', sorte:'abwesend', titel:'Schulung',
+   von:key(d(3)), bis:key(d(4)), monteur:'p2'},
+
+  {id:30, quelle:'tasks', sorte:'aufgabe', titel:'Messe Bauma vorbereiten',
+   von:key(d(-1)), bis:key(d(12)), monteur:'p2', std:24},
+  {id:31, quelle:'subtasks', eltern:30, sorte:'aufgabe', titel:'Standflaeche bestaetigen',
+   von:key(d(-1)), bis:key(d(1)), monteur:'p2', std:2},
+  {id:32, quelle:'subtasks', eltern:30, sorte:'aufgabe', titel:'Maschinen auswaehlen',
+   von:key(d(2)), bis:key(d(6)), monteur:'p3', std:8},
+  {id:33, quelle:'subtasks', eltern:30, sorte:'aufgabe', titel:'Transport buchen',
+   von:key(d(7)), bis:key(d(12)), monteur:'p2', std:6},
+  {id:34, quelle:'tasks', sorte:'aufgabe', titel:'Ersatzteillager inventieren',
+   von:key(d(4)), bis:key(d(9)), monteur:'p1', std:16},
+  {id:35, quelle:'subtasks', eltern:34, sorte:'aufgabe', titel:'Hydraulik zaehlen',
+   von:key(d(4)), bis:key(d(5)), monteur:'p1', std:6},
+  {id:36, quelle:'subtasks', eltern:34, sorte:'aufgabe', titel:'Verschleissteile zaehlen',
+   von:key(d(6)), bis:key(d(9)), monteur:'p4', std:10}
+];
+
+var UNGEPLANT = [
+  {id:101,quelle:'workshop_tasks',   sorte:'werkstatt', titel:'Oelwechsel RS-600',      maschine:'m2', std:3},
+  {id:102,quelle:'service_entries',  sorte:'service',   titel:'Rueckruf Bauhof',                       std:2},
+  {id:103,quelle:'service_entries',  sorte:'reparatur', titel:'Kettenspanner UM-1600',  maschine:'m4', std:5},
+  {id:104,quelle:'maintenance_events',sorte:'uvv',      titel:'UVV TS-75 ueberfaellig', maschine:'m7', std:4}
+];
+
+var naechsteId = 500;
+
+/* ============================================================
+   2. ZUSTAND
+   ============================================================ */
+var S = {
+  view:'tl', achse:'maschine', preset:'vermiet',
+  anker:new Date(HEUTE), raster:'tag', spalten:28,
+  sorten:new Set(Object.keys(SORTEN)), kat:'', suche:'',
+  gewaehlt:null, auswahl:new Set(), zu:new Set(), zuAufg:new Set(),
+  weMeiden:false
+};
+var VIEWS = [['tl','Timeline'],['woche','Woche'],['monat','Monat'],
+             ['agenda','Agenda'],['tafel','Heute'],['frei','Verfuegbarkeit']];
+var PRESETS = {
+  vermiet:  {label:'Vermietflotte',    achse:'maschine', sorten:['miete','uvv']},
+  werkstatt:{label:'Werkstatt',        achse:'maschine', sorten:['werkstatt','reparatur','uvv']},
+  service:  {label:'Serviceeinsaetze', achse:'monteur',  sorten:['service','termin','abwesend']},
+  aufgaben: {label:'Aufgaben',         achse:'aufgabe',  sorten:['aufgabe']},
+  alles:    {label:'alles',            achse:'maschine', sorten:Object.keys(SORTEN)}
+};
+
+/* ============================================================
+   3. RUECKGAENGIG
+   ============================================================ */
+var UNDO = [];
+function schnappschuss(items){
+  return items.map(function(i){
+    return {id:i.id, von:i.von, bis:i.bis, maschine:i.maschine, monteur:i.monteur,
+            work_log:i.work_log ? JSON.parse(JSON.stringify(i.work_log)) : null};
+  });
+}
+function merken(items, text, neuIds){
+  UNDO.push({text:text, stand:schnappschuss(items), neu:neuIds || null});
+  if(UNDO.length > 50) UNDO.shift();
+}
+function rueckgaengig(){
+  var u = UNDO.pop();
+  if(!u){ toast('Nichts mehr rueckgaengig zu machen', false); return; }
+  if(u.neu) ITEMS = ITEMS.filter(function(i){ return u.neu.indexOf(i.id) < 0; });
+  u.stand.forEach(function(s){
+    var it = ITEMS.filter(function(i){ return i.id === s.id; })[0];
+    if(!it) return;
+    it.von=s.von; it.bis=s.bis; it.maschine=s.maschine; it.monteur=s.monteur;
+    if(s.work_log) it.work_log = s.work_log;
+  });
+  toast(u.text + ' — zurueckgenommen', false);
+  render();
+}
+function toast(text, mitUndo){
+  var t = document.getElementById('toast');
+  document.getElementById('toastText').textContent = text;
+  document.getElementById('toastUndo').style.display = mitUndo === false ? 'none' : '';
+  t.classList.add('show');
+  clearTimeout(t._t); t._t = setTimeout(function(){ t.classList.remove('show'); }, 6000);
+}
+document.getElementById('toastUndo').onclick = function(){
+  document.getElementById('toast').classList.remove('show'); rueckgaengig();
+};
+
+/* ============================================================
+   4. HILFEN
+   ============================================================ */
+function kats(){ var s={}; MASCHINEN.forEach(function(m){ s[m.kat]=1; }); return Object.keys(s); }
+function maschine(id){ return MASCHINEN.filter(function(m){ return m.id===id; })[0]; }
+function monteur(id){ return MONTEURE.filter(function(m){ return m.id===id; })[0]; }
+function item(id){ return ITEMS.filter(function(i){ return i.id==id; })[0]; }
+function blockt(i){ return ['miete','reparatur','werkstatt','uvv'].indexOf(i.sorte) >= 0; }
+/* UVV zaehlt bewusst NICHT als Doppelbelegung — das ist eine
+   Terminfrage, keine Buchungskollision (siehe uvvWarnung). */
+function belegtSorte(i){ return ['miete','reparatur','werkstatt'].indexOf(i.sorte) >= 0; }
+
+function standort(mid, x, basis){
+  var s = basis || 'hof';
+  ITEMS.forEach(function(i){
+    if(i.maschine !== mid || i.status === 'angefragt') return;
+    if(!(parse(i.von) <= x && x <= parse(i.bis))) return;
+    if(i.sorte === 'miete') s = 'vermietet';
+    else if(['werkstatt','reparatur','uvv'].indexOf(i.sorte) >= 0 && s !== 'vermietet') s = 'werkstatt';
+  });
+  return s;
+}
+function sichtbar(){
+  var erlaubt = null;
+  if(S.kat){ erlaubt = {}; MASCHINEN.forEach(function(m){ if(m.kat===S.kat) erlaubt[m.id]=1; }); }
+  return ITEMS.filter(function(i){
+    if(!S.sorten.has(i.sorte)) return false;
+    if(erlaubt && S.achse === 'maschine' && !(i.maschine && erlaubt[i.maschine])) return false;
+    return true;
+  });
+}
+function trifft(i){
+  if(!S.suche) return null;
+  var m = maschine(i.maschine), p = monteur(i.monteur);
+  var txt = [i.titel, m&&m.name, m&&m.nr, p&&p.name, i.status].filter(Boolean).join(' ').toLowerCase();
+  return txt.indexOf(S.suche.toLowerCase()) >= 0;
+}
+function konflikte(list){
+  var k = {}, proM = {};
+  list.forEach(function(i){
+    if(!i.maschine || !belegtSorte(i) || i.status === 'angefragt') return;
+    (proM[i.maschine] = proM[i.maschine] || []).push(i);
+  });
+  Object.keys(proM).forEach(function(mid){
+    var arr = proM[mid].slice().sort(function(a,b){ return a.von < b.von ? -1 : 1; });
+    for(var a=0;a<arr.length;a++) for(var b=a+1;b<arr.length;b++)
+      if(arr[b].von <= arr[a].bis){ k[arr[a].id]=1; k[arr[b].id]=1; }
+  });
+  return k;
+}
+function uvvWarnung(){
+  var w = {};
+  ITEMS.forEach(function(u){
+    if(u.sorte !== 'uvv' || !u.maschine) return;
+    ITEMS.forEach(function(m){
+      if(m.sorte !== 'miete' || m.maschine !== u.maschine) return;
+      if(u.von >= m.von && u.von <= m.bis){ w[u.id]=1; w[m.id]=1; }
+    });
+  });
+  return w;
+}
+
+/* Raster: 1 Spalte = 1 Tag oder 1 Woche */
+function schritt(){ return S.raster === 'woche' ? 7 : 1; }
+function fensterStart(){
+  var s;
+  if(S.raster === 'woche'){ s = montag(S.anker); s.setDate(s.getDate() - 14); }
+  else { s = new Date(S.anker); s.setDate(s.getDate() - 7); s.setHours(0,0,0,0); }
+  return s;
+}
+function spalteVon(dateStr, start){ return Math.floor((parse(dateStr)-start)/86400000/schritt()); }
+
+/* ============================================================
+   5. KOPFZEILE
+   ============================================================ */
+document.getElementById('tabs').innerHTML = VIEWS.map(function(v){
+  return '<button data-v="'+v[0]+'">'+v[1]+'</button>'; }).join('');
+document.getElementById('presets').innerHTML = Object.keys(PRESETS).map(function(k){
+  return '<button class="preset" data-p="'+k+'">'+PRESETS[k].label+'</button>'; }).join('');
+document.getElementById('filter').innerHTML =
+  Object.keys(SORTEN).map(function(k){
+    return '<span class="chip on" data-s="'+k+'" style="--c:'+SORTEN[k].farbe+'"><i class="dot"></i>'
+      + SORTEN[k].label+'</span>'; }).join('')
+  + '<select id="katfilter" style="margin-left:8px"><option value="">Alle Kategorien</option>'
+  + kats().map(function(k){ return '<option>'+k+'</option>'; }).join('') + '</select>';
+document.getElementById('legend').innerHTML =
+  Object.keys(SORTEN).map(function(k){
+    return '<span class="leg" style="--c:'+SORTEN[k].farbe+'"><i></i>'+SORTEN[k].label+'</span>'; }).join('')
+  + '<span style="opacity:.4">|</span>'
+  + Object.keys(ORTE).map(function(k){
+      return '<span class="leg" style="--c:'+ORTE[k].farbe+'"><i style="opacity:.35"></i>'+ORTE[k].label+'</span>';
+    }).join('')
+  + '<span class="spacer"></span>'
+  + '<span>Ziehen = verschieben, auch in andere Zeilen · Strg+Ziehen = kopieren · Kante = verlaengern · '
+  + 'leere Flaeche ziehen = neu · Shift+Klick = mehrere · Strg+Z = rueckgaengig</span>';
+
+function setzePreset(k){
+  var p = PRESETS[k]; if(!p) return;
+  S.preset = k; S.achse = p.achse; S.sorten = new Set(p.sorten);
+  document.getElementById('achse').value = p.achse;
+  Array.prototype.forEach.call(document.querySelectorAll('#filter .chip'), function(c){
+    c.classList.toggle('on', S.sorten.has(c.dataset.s)); });
+}
+document.getElementById('presets').onclick = function(e){
+  var b = e.target.closest('.preset'); if(!b) return;
+  setzePreset(b.dataset.p); render();
+};
+document.getElementById('achse').onchange = function(e){ S.achse=e.target.value; S.preset=null; render(); };
+document.getElementById('spanne').onchange = function(e){
+  var v = e.target.value;
+  S.raster = v.charAt(0) === 'w' ? 'woche' : 'tag';
+  S.spalten = +v.slice(1);
+  document.getElementById('zoom').value = S.raster === 'woche' ? 62 : 44;
+  document.documentElement.style.setProperty('--day-w',
+    (S.raster === 'woche' ? 62 : 44) + 'px');
+  render();
+};
+document.getElementById('optWE').onchange = function(e){ S.weMeiden = e.target.checked; };
+document.getElementById('optSumme').onchange = function(e){
+  document.body.classList.toggle('mitSumme', e.target.checked); render(); };
+document.getElementById('optKompakt').onchange = function(e){
+  document.body.classList.toggle('kompakt', e.target.checked); render(); };
+document.getElementById('print').onclick = function(){ window.print(); };
+document.getElementById('suche').oninput = function(e){ S.suche = e.target.value.trim(); render(); };
+document.getElementById('tabs').onclick = function(e){
+  var b = e.target.closest('button'); if(!b) return;
+  S.view = b.dataset.v; S.gewaehlt = null; render();
+};
+document.getElementById('filter').onclick = function(e){
+  var c = e.target.closest('.chip'); if(!c) return;
+  var k = c.dataset.s;
+  if(S.sorten.has(k)) S.sorten.delete(k); else S.sorten.add(k);
+  c.classList.toggle('on'); S.preset = null; render();
+};
+document.getElementById('filter').onchange = function(e){
+  if(e.target.id === 'katfilter'){ S.kat = e.target.value; render(); }
+};
+document.getElementById('zoom').oninput = function(e){
+  document.documentElement.style.setProperty('--day-w', e.target.value+'px');
+};
+document.getElementById('today').onclick = function(){ S.anker=new Date(HEUTE); render(); };
+document.getElementById('prev').onclick  = function(){ schiebe(-1); };
+document.getElementById('next').onclick  = function(){ schiebe(1); };
+function schiebe(r){
+  if(S.view === 'monat') S.anker.setMonth(S.anker.getMonth()+r);
+  else if(S.view === 'tl' && S.raster === 'woche') S.anker.setDate(S.anker.getDate()+28*r);
+  else S.anker.setDate(S.anker.getDate()+7*r);
+  S.anker = new Date(S.anker); render();
+}
+document.addEventListener('keydown', function(e){
+  if(e.target.matches('input,select,textarea')) return;
+  if((e.ctrlKey||e.metaKey) && (e.key==='z'||e.key==='Z')){ e.preventDefault(); rueckgaengig(); return; }
+  if(e.key==='t'||e.key==='T'){ S.anker=new Date(HEUTE); render(); }
+  if(e.key==='ArrowLeft')  schiebe(-1);
+  if(e.key==='ArrowRight') schiebe(1);
+  if(e.key>='1' && e.key<='6'){ S.view=VIEWS[+e.key-1][0]; S.gewaehlt=null; render(); }
+  if(e.key==='a'||e.key==='A'){
+    var f=['maschine','monteur','aufgabe'];
+    S.achse=f[(f.indexOf(S.achse)+1)%3];
+    document.getElementById('achse').value=S.achse; S.preset=null; render();
+  }
+  if(e.key==='Escape'){ S.gewaehlt=null; S.auswahl.clear(); waehlerZu(); render(); }
+});
+
+function ladeViews(){
+  var v={}; try{ v=JSON.parse(localStorage.getItem('kal_views')||'{}'); }catch(e){}
+  document.getElementById('views').innerHTML='<option value="">— gespeicherte Ansicht —</option>'
+    + Object.keys(v).map(function(n){ return '<option>'+n+'</option>'; }).join('');
+  return v;
+}
+document.getElementById('saveView').onclick = function(){
+  var n=prompt('Name der Ansicht (z. B. "Werkstatt Woche", "Vermietflotte")'); if(!n) return;
+  var v=ladeViews();
+  v[n]={view:S.view,achse:S.achse,sorten:Array.from(S.sorten),kat:S.kat,
+        raster:S.raster,spalten:S.spalten,zoom:document.getElementById('zoom').value};
+  try{ localStorage.setItem('kal_views',JSON.stringify(v)); }catch(e){}
+  ladeViews(); toast('Ansicht "'+n+'" gesichert', false);
+};
+document.getElementById('views').onchange = function(e){
+  var v=ladeViews()[e.target.value]; if(!v) return;
+  S.view=v.view; S.sorten=new Set(v.sorten); S.kat=v.kat; S.achse=v.achse||'maschine';
+  S.raster=v.raster||'tag'; S.spalten=v.spalten||28; S.preset=null;
+  document.getElementById('achse').value=S.achse;
+  document.getElementById('spanne').value=(S.raster==='woche'?'w':'t')+S.spalten;
+  document.getElementById('zoom').value=v.zoom;
+  document.documentElement.style.setProperty('--day-w', v.zoom+'px');
+  Array.prototype.forEach.call(document.querySelectorAll('#filter .chip'), function(c){
+    c.classList.toggle('on', S.sorten.has(c.dataset.s)); });
+  document.getElementById('katfilter').value=v.kat||'';
+  render();
+};
+ladeViews();
+
+/* ============================================================
+   6. RENDERN
+   ============================================================ */
+function render(){
+  Array.prototype.forEach.call(document.querySelectorAll('#tabs button'), function(b){
+    b.classList.toggle('on', b.dataset.v===S.view); });
+  var tl = S.view==='tl';
+  document.getElementById('presetRow').style.display = tl?'flex':'none';
+  document.getElementById('zoomWrap').style.visibility = tl?'visible':'hidden';
+  Array.prototype.forEach.call(document.querySelectorAll('.preset'), function(b){
+    b.classList.toggle('on', b.dataset.p===S.preset); });
+
+  var st = document.getElementById('stage');
+  if(tl)                        st.innerHTML = timeline();
+  else if(S.view==='woche')     st.innerHTML = woche();
+  else if(S.view==='monat')     st.innerHTML = monat();
+  else if(S.view==='agenda')    st.innerHTML = agenda();
+  else if(S.view==='tafel')     st.innerHTML = tafel();
+  else                          st.innerHTML = verfuegbar();
+
+  document.getElementById('unplanned').style.display = tl?'flex':'none';
+  panel();
+}
+
+function zeilenBauen(list){
+  if(S.achse==='maschine'){
+    return MASCHINEN.filter(function(m){ return !S.kat||m.kat===S.kat; }).map(function(m){
+      var o = ORTE[standort(m.id, HEUTE, m.basis)];
+      return {schluessel:m.id, grp:m.kat, basis:m.basis, band:true, zuweisung:'maschine',
+              n:m.name, m:'<span class="ort"><i style="background:'+o.farbe+'"></i>'+o.label+'</span>',
+              items:list.filter(function(i){ return i.maschine===m.id; })};
+    });
+  }
+  if(S.achse==='monteur'){
+    return MONTEURE.map(function(p){
+      return {schluessel:p.id, grp:p.rolle, zuweisung:'monteur', n:p.name, m:p.rolle,
+              items:list.filter(function(i){ return i.monteur===p.id; })};
+    });
+  }
+  var zeilen=[];
+  list.filter(function(i){ return i.quelle==='tasks'; }).forEach(function(t){
+    var kinder = ITEMS.filter(function(k){ return k.eltern===t.id; });
+    var zu = S.zuAufg.has(t.id);
+    zeilen.push({schluessel:'t'+t.id, grp:'Aufgaben', zuweisung:null, n:t.titel,
+      m:(monteur(t.monteur)||{}).name||'', items:[t],
+      klapp: kinder.length ? {id:t.id, zu:zu, anz:kinder.length} : null});
+    if(!zu) kinder.forEach(function(k){
+      zeilen.push({schluessel:'s'+k.id, grp:'Aufgaben', zuweisung:null, kind:true,
+        n:k.titel, m:(monteur(k.monteur)||{}).name||'', items:[k]});
+    });
+  });
+  return zeilen;
+}
+
+function timeline(){
+  var start = fensterStart(), n = S.spalten, sw = schritt();
+  var ende = new Date(start); ende.setDate(ende.getDate()+n*sw-1);
+  document.getElementById('range').textContent =
+    start.toLocaleDateString('de-DE',{day:'2-digit',month:'short'}) + ' – '
+    + ende.toLocaleDateString('de-DE',{day:'2-digit',month:'short',year:'numeric'});
+
+  var sp = [];
+  for(var i=0;i<n;i++){ var x=new Date(start); x.setDate(x.getDate()+i*sw); sp.push(x); }
+
+  var list = sichtbar(), konf = konflikte(list), warn = uvvWarnung();
+
+  var kopf = '<div class="tl-head"><div class="tl-corner">'
+    + (S.achse==='maschine'?'Maschine':S.achse==='monteur'?'Monteur':'Aufgabe')
+    + '</div><div class="tl-days">';
+  sp.forEach(function(x){
+    if(S.raster==='woche'){
+      kopf += '<div class="tl-day'+(key(x)<=key(HEUTE)&&key(HEUTE)<key(new Date(x.getFullYear(),x.getMonth(),x.getDate()+7))?' today':'')
+        + (x.getDate()<=7?' mstart':'')+'">KW<b>'+kw(x)+'</b></div>';
+    } else {
+      var f = FEIERTAGE[key(x)];
+      kopf += '<div class="tl-day'+(istFrei(x)?' we':'')+(f?' feier':'')
+        + (key(x)===key(HEUTE)?' today':'')+(x.getDate()===1?' mstart':'')+'"'
+        + (f?' title="'+f+'"':'')+'>'
+        + x.toLocaleDateString('de-DE',{weekday:'short'}).slice(0,2)+'<b>'+x.getDate()+'</b></div>';
+    }
+  });
+  kopf += '</div><div class="tl-summe-kopf">'
+    + (S.achse==='maschine'?'Auslastung':'Stunden')+'</div></div>';
+
+  var wedivs = S.raster==='woche' ? '' : sp.map(function(x,i){
+    if(!istFrei(x)) return '';
+    return '<div class="tl-we'+(FEIERTAGE[key(x)]?' feier':'')
+      + '" style="left:calc(var(--day-w)*'+i+');width:var(--day-w)"></div>';
+  }).join('');
+  var nowPos = (HEUTE - start)/86400000/sw;
+  var nowLine = (nowPos>=0 && nowPos<n)
+    ? '<div class="tl-now" style="left:calc(var(--day-w)*'+(nowPos+(S.raster==='woche'?0:0.5))+')"></div>' : '';
+
+  var zeilen = zeilenBauen(list);
+  var html = '<div class="tl">' + kopf;
+
+  if(S.achse==='monteur'){
+    var kap = MONTEURE.length*8*sw;
+    html += '<div class="cap-row"><div class="tl-label"><div class="n">Auslastung</div>'
+      + '<div class="m">'+kap+' h je Spalte</div></div><div style="display:flex">';
+    sp.forEach(function(x){
+      var bis = new Date(x); bis.setDate(bis.getDate()+sw-1);
+      var frei = (S.raster==='tag') && istFrei(x), h = 0;
+      list.forEach(function(i){
+        if(!i.std) return;
+        var pro = i.std/(tage(i.von,i.bis)+1);
+        for(var t=new Date(x); t<=bis; t.setDate(t.getDate()+1))
+          if(parse(i.von)<=t && t<=parse(i.bis)) h += pro;
+      });
+      h = Math.round(h);
+      var q = frei ? 0 : h/kap;
+      html += '<div class="cap-cell '+(q>1?'ueber':q>0.85?'voll':'')+'"><span>'+(frei?'':(h||''))+'</span>'
+        + '<i style="height:'+Math.min(26,q*26)+'px"></i></div>';
+    });
+    html += '</div><div class="tl-summe"></div></div>';
+  }
+
+  var letzteGrp = '';
+  zeilen.forEach(function(z){
+    if(z.grp !== letzteGrp){
+      letzteGrp = z.grp;
+      html += '<div class="tl-group" data-grp="'+z.grp+'"><span>'
+        + (S.zu.has(z.grp)?'▸':'▾')+' '+z.grp+'</span></div>';
+    }
+    if(S.zu.has(z.grp)) return;
+
+    var bars = '';
+    if(z.band){
+      var von0=0, akt=standort(z.schluessel, sp[0], z.basis);
+      for(var t2=1; t2<=n; t2++){
+        var s2 = t2<n ? standort(z.schluessel, sp[t2], z.basis) : null;
+        if(s2 !== akt){
+          bars += '<div class="stand '+akt+'" title="'+ORTE[akt].label+'" style="left:calc(var(--day-w)*'
+            + von0+');width:calc(var(--day-w)*'+(t2-von0)+')"></div>';
+          von0=t2; akt=s2;
+        }
+      }
+      var bel = z.items.filter(function(i){ return blockt(i)&&i.sorte!=='uvv'; })
+        .map(function(i){ return [Math.max(0,spalteVon(i.von,start)), Math.min(n-1,spalteVon(i.bis,start))]; })
+        .sort(function(a,b){ return a[0]-b[0]; });
+      var cur=0;
+      bel.forEach(function(p){ if(p[0]>cur+1) bars += luecke(cur,p[0]-1); cur=Math.max(cur,p[1]+1); });
+      if(cur<n-1) bars += luecke(cur,n-1);
+    }
+
+    z.items.forEach(function(i){
+      var a = Math.max(0, spalteVon(i.von,start)), b = Math.min(n-1, spalteVon(i.bis,start));
+      if(b<0 || a>n-1) return;
+      var cls=[];
+      if(i.status==='angefragt')    cls.push('angefragt');
+      if(i.status==='wartet')       cls.push('wartet');
+      if(i.status==='ueberfaellig') cls.push('ueberfaellig');
+      if(konf[i.id])                cls.push('konflikt');
+      else if(warn[i.id])           cls.push('warnung');
+      if(i.gesperrt)                cls.push('gesperrt');
+      if(S.auswahl.has(i.id))       cls.push('gewaehlt');
+      if(z.kind)                    cls.push('kind');
+      var tr = trifft(i);
+      if(tr === true) cls.push('treffer'); else if(tr === false) cls.push('blass');
+      var zusatz = i.preis
+        ? '<span class="s">'+(i.preis*(tage(i.von,i.bis)+1)).toLocaleString('de-DE')+' €</span>'
+        : (i.std ? '<span class="s">'+i.std+' h</span>' : '');
+      bars += '<div class="bar '+cls.join(' ')+'" data-id="'+i.id+'" style="--c:'+SORTEN[i.sorte].farbe
+        + ';left:calc(var(--day-w)*'+a+' + 2px);width:calc(var(--day-w)*'+(b-a+1)+' - 4px)">'
+        + '<div class="grip l"></div>'
+        + (i.gesperrt?'<span class="s">🔒</span>':'')
+        + (i.wiederholung?'<span class="s">↻</span>':'')
+        + '<span class="t">'+i.titel+'</span>'+zusatz
+        + (i.status && ['draussen','angefragt'].indexOf(i.status)<0 ? '<span class="s">· '+i.status+'</span>' : '')
+        + (i.puffer?'<div class="puffer" style="width:calc(var(--day-w)*'+i.puffer+' / 2)"></div>':'')
+        + '<div class="grip r"></div></div>';
+    });
+
+    html += '<div class="tl-row" data-row="'+z.schluessel+'" data-zuw="'+(z.zuweisung||'')+'">'
+      + '<div class="tl-label'+(z.kind?' kind':'')+'"><div class="n">'
+      + (z.klapp?'<span class="klapp" data-klapp="'+z.klapp.id+'">'+(z.klapp.zu?'▸':'▾')+'</span> ':'')
+      + (z.kind?'└ ':'') + z.n
+      + (z.klapp&&z.klapp.zu?' <span class="s">('+z.klapp.anz+')</span>':'')+'</div>'
+      + '<div class="m">'+z.m+'</div></div>'
+      + '<div class="tl-track" data-row="'+z.schluessel+'" data-zuw="'+(z.zuweisung||'')+'"'
+      + ' style="width:calc(var(--day-w)*'+n+')">'+wedivs+nowLine+bars+'</div>'
+      + '<div class="tl-summe">'+auswertung(z, start, n*sw)+'</div></div>';
+  });
+  html += '</div>';
+
+  document.getElementById('unplanned').innerHTML =
+    '<span class="lbl">Ungeplant — in eine Zeile ziehen</span>'
+    + UNGEPLANT.map(function(u){
+        return '<span class="up" data-up="'+u.id+'" style="--c:'+SORTEN[u.sorte].farbe+'">'
+          + u.titel + (u.std?' · '+u.std+' h':'') + '</span>'; }).join('');
+
+  setTimeout(function(){ bindTimeline(start, n); }, 0);
+  return html;
+}
+function luecke(a,b){
+  return '<div class="luecke" style="left:calc(var(--day-w)*'+a+' + 4px);'
+       + 'width:calc(var(--day-w)*'+(b-a+1)+' - 8px)"></div>';
+}
+function auswertung(z, start, tageGesamt){
+  if(!document.body.classList.contains('mitSumme')) return '';
+  var ende = new Date(start); ende.setDate(ende.getDate()+tageGesamt-1);
+  var vonK = key(start), bisK = key(ende);
+  if(S.achse==='maschine'){
+    var belegtTage = 0, umsatz = 0;
+    z.items.forEach(function(i){
+      if(!blockt(i) || i.status==='angefragt') return;
+      var a = i.von > vonK ? i.von : vonK, b = i.bis < bisK ? i.bis : bisK;
+      if(a > b) return;
+      var t = tage(a,b)+1;
+      belegtTage += t;
+      if(i.sorte==='miete' && i.preis) umsatz += i.preis*t;
+    });
+    var q = Math.min(100, Math.round(belegtTage/tageGesamt*100));
+    return '<b>'+q+' % belegt</b><u>'+belegtTage+' von '+tageGesamt+' Tagen</u>'
+      + (umsatz?'<b>'+umsatz.toLocaleString('de-DE')+' €</b>':'');
+  }
+  var std = 0;
+  z.items.forEach(function(i){
+    if(!i.std) return;
+    var a = i.von > vonK ? i.von : vonK, b = i.bis < bisK ? i.bis : bisK;
+    if(a > b) return;
+    std += i.std/(tage(i.von,i.bis)+1)*(tage(a,b)+1);
+  });
+  return '<b>'+Math.round(std)+' h</b><u>im Zeitraum</u>';
+}
+
+/* ============================================================
+   7. ZIEHEN — Maus UND Touch ueber Pointer-Events
+   ============================================================ */
+var drag=null, neuZug=null, upZug=null, tlStart=null, handlerAn=false, zeilenBox=[];
+function dayW(){ return parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--day-w')); }
+/* Pointer festhalten — manche Browser werfen bei unbekannter pointerId. */
+function fangen(el, ev){ try{ el.setPointerCapture(ev.pointerId); }catch(e){} }
+
+/* Verschiebt einen Eintrag um dt TAGE — work_log wandert mit,
+   die Uhrzeiten bleiben unveraendert. */
+function verschiebe(it, dt, modus){
+  var v=parse(it.von), b=parse(it.bis);
+  if(modus==='move'){ v.setDate(v.getDate()+dt); b.setDate(b.getDate()+dt); }
+  else if(modus==='l'){ v.setDate(v.getDate()+dt); if(v>b) return false; }
+  else { b.setDate(b.getDate()+dt); if(b<v) return false; }
+  it.von=key(v); it.bis=key(b);
+  if(modus==='move' && it.work_log) it.work_log.forEach(function(w){
+    var x=parse(w.datum); x.setDate(x.getDate()+dt); w.datum=key(x);
+  });
+  return true;
+}
+function zeilenVermessen(){
+  zeilenBox = Array.prototype.map.call(document.querySelectorAll('.tl-row'), function(r){
+    var b = r.getBoundingClientRect();
+    return {el:r, key:r.dataset.row, zuw:r.dataset.zuw, oben:b.top, unten:b.bottom};
+  });
+}
+function zeileBei(y){
+  for(var i=0;i<zeilenBox.length;i++) if(y>=zeilenBox[i].oben && y<zeilenBox[i].unten) return zeilenBox[i];
+  return null;
+}
+function zielMarkieren(z){
+  Array.prototype.forEach.call(document.querySelectorAll('.tl-row.zielzeile'), function(r){
+    r.classList.remove('zielzeile'); });
+  if(z) z.el.classList.add('zielzeile');
+}
+
+function bindTimeline(start, n){
+  var stage = document.getElementById('stage');
+  tlStart = start;
+
+  Array.prototype.forEach.call(stage.querySelectorAll('.tl-group'), function(g){
+    g.onclick = function(){
+      var k=g.dataset.grp; if(S.zu.has(k)) S.zu.delete(k); else S.zu.add(k); render(); };
+  });
+  Array.prototype.forEach.call(stage.querySelectorAll('.klapp'), function(k){
+    k.onclick = function(ev){
+      ev.stopPropagation();
+      var id=+k.dataset.klapp;
+      if(S.zuAufg.has(id)) S.zuAufg.delete(id); else S.zuAufg.add(id);
+      render();
+    };
+  });
+
+  /* --- Balken ziehen --- */
+  Array.prototype.forEach.call(stage.querySelectorAll('.bar'), function(bar){
+    bar.addEventListener('pointerdown', function(ev){
+      var it = item(bar.dataset.id); if(!it) return;
+      if(it.gesperrt){
+        ev.preventDefault();
+        toast('"'+it.titel+'" ist abgeschlossen und kann nicht verschoben werden', false);
+        return;
+      }
+      var modus = ev.target.classList.contains('grip')
+        ? (ev.target.classList.contains('l')?'l':'r') : 'move';
+      var mit = (modus==='move' && S.auswahl.has(it.id))
+        ? Array.from(S.auswahl).map(item).filter(function(x){ return x && !x.gesperrt; })
+        : [it];
+      zeilenVermessen();
+      var quelle = zeileBei(ev.clientY);
+      drag = {bar:bar, items:mit, haupt:it, modus:modus, x0:ev.clientX, y0:ev.clientY,
+              dt:0, bewegt:false, kopie:(ev.ctrlKey||ev.metaKey) && modus==='move',
+              quelleZeile:quelle, zielZeile:quelle,
+              vorher:schnappschuss(mit)};
+      bar.classList.add('dragging');
+      if(drag.kopie) bar.classList.add('kopie');
+      fangen(bar, ev);
+      ev.preventDefault();
+    });
+    bar.addEventListener('click', function(ev){
+      if(bar._bewegt){ bar._bewegt=false; return; }
+      var it=item(bar.dataset.id); if(!it) return;
+      if(ev.shiftKey){
+        if(S.auswahl.has(it.id)) S.auswahl.delete(it.id); else S.auswahl.add(it.id);
+        render(); return;
+      }
+      S.auswahl.clear(); S.gewaehlt=it; render();
+    });
+  });
+
+  /* --- Auf leerer Flaeche ziehen = neu anlegen --- */
+  Array.prototype.forEach.call(stage.querySelectorAll('.tl-track'), function(tr){
+    tr.addEventListener('pointerdown', function(ev){
+      if(ev.target.closest('.bar')) return;
+      if(!tr.dataset.zuw) return;            /* Aufgaben-Achse: kein Neuanlegen */
+      var off = Math.floor((ev.clientX - tr.getBoundingClientRect().left)/dayW());
+      var g = document.createElement('div');
+      g.className='gummi'; tr.appendChild(g);
+      neuZug = {tr:tr, a:off, b:off, el:g};
+      zeichneGummi();
+      fangen(tr, ev);
+      ev.preventDefault();
+    });
+  });
+
+  /* --- Aus der Ungeplant-Leiste ziehen --- */
+  Array.prototype.forEach.call(document.querySelectorAll('.up'), function(u){
+    u.addEventListener('pointerdown', function(ev){
+      var e = UNGEPLANT.filter(function(x){ return x.id === +u.dataset.up; })[0];
+      if(!e) return;
+      zeilenVermessen();
+      upZug = {eintrag:e, el:u};
+      u.classList.add('zieht');
+      var g = document.getElementById('geist');
+      g.style.setProperty('--c', SORTEN[e.sorte].farbe);
+      g.textContent = e.titel;
+      g.classList.add('an');
+      geistBewegen(ev.clientX, ev.clientY);
+      fangen(u, ev);
+      ev.preventDefault();
+    });
+  });
+
+  if(!handlerAn){ handlerAn = true; handlerHaengen(); }
+}
+
+function geistBewegen(x,y){
+  var g=document.getElementById('geist');
+  g.style.left=(x+14)+'px'; g.style.top=(y-14)+'px';
+}
+function zeichneGummi(){
+  if(!neuZug) return;
+  var a=Math.min(neuZug.a,neuZug.b), b=Math.max(neuZug.a,neuZug.b);
+  neuZug.el.style.left='calc(var(--day-w)*'+a+' + 2px)';
+  neuZug.el.style.width='calc(var(--day-w)*'+(b-a+1)+' - 4px)';
+  neuZug.el.textContent=(b-a+1)*schritt()+(schritt()===1?' Tage':' Tage');
+}
+
+function handlerHaengen(){
+  document.addEventListener('pointermove', function(ev){
+    if(upZug){ geistBewegen(ev.clientX, ev.clientY); zielMarkieren(zeileBei(ev.clientY)); return; }
+    if(neuZug){
+      var off=Math.floor((ev.clientX - neuZug.tr.getBoundingClientRect().left)/dayW());
+      if(off!==neuZug.b){ neuZug.b=Math.max(0,off); zeichneGummi(); }
+      return;
+    }
+    if(!drag) return;
+
+    /* waagerecht */
+    var ziel = Math.round((ev.clientX-drag.x0)/dayW());
+    if(ziel !== drag.dt){
+      var s = (ziel-drag.dt)*schritt();
+      var ok = drag.items.every(function(it){ return verschiebe(it, s, drag.modus); });
+      if(ok){
+        drag.dt=ziel; drag.bewegt=true; drag.bar._bewegt=true;
+        var a=spalteVon(drag.haupt.von, tlStart), len=spalteVon(drag.haupt.bis,tlStart)-a+1;
+        drag.bar.style.left='calc(var(--day-w)*'+a+' + 2px)';
+        drag.bar.style.width='calc(var(--day-w)*'+len+' - 4px)';
+        /* Kollision schon waehrend des Ziehens zeigen */
+        var kk=konflikte(sichtbar());
+        drag.bar.classList.toggle('konflikt', !!kk[drag.haupt.id]);
+      }
+    }
+    /* senkrecht */
+    if(drag.modus==='move'){
+      var z = zeileBei(ev.clientY);
+      if(z && z.zuw && drag.quelleZeile && z.zuw === drag.quelleZeile.zuw){
+        drag.zielZeile = z;
+        zielMarkieren(z.key !== drag.quelleZeile.key ? z : null);
+        drag.bar.style.transform = 'translateY('+(z.oben - drag.quelleZeile.oben)+'px)';
+      }
+    }
+  });
+
+  document.addEventListener('pointerup', function(ev){
+    /* --- Ungeplantes fallen lassen --- */
+    if(upZug){
+      var z = zeileBei(ev.clientY);
+      document.getElementById('geist').classList.remove('an');
+      upZug.el.classList.remove('zieht');
+      zielMarkieren(null);
+      var e = upZug.eintrag; upZug = null;
+      if(!z){ render(); return; }
+      var tr = z.el.querySelector('.tl-track');
+      var off = Math.floor((ev.clientX - tr.getBoundingClientRect().left)/dayW());
+      var v = new Date(tlStart); v.setDate(v.getDate()+Math.max(0,off)*schritt());
+      if(S.weMeiden) v = naechsterFreier(v);
+      var dauer = Math.max(1, Math.ceil((e.std||8)/8));
+      var b2 = new Date(v); b2.setDate(b2.getDate()+dauer-1);
+      var neu = {id:e.id, quelle:e.quelle, sorte:e.sorte, titel:e.titel, std:e.std,
+                 von:key(v), bis:key(b2), maschine:e.maschine, monteur:e.monteur};
+      if(z.zuw==='maschine') neu.maschine = z.key;
+      if(z.zuw==='monteur')  neu.monteur  = z.key;
+      ITEMS.push(neu);
+      UNGEPLANT = UNGEPLANT.filter(function(x){ return x.id !== e.id; });
+      merken([], '"'+e.titel+'" eingeplant', [neu.id]);
+      toast('"'+e.titel+'" eingeplant — '+dez(v)+' bis '+dez(b2));
+      render(); return;
+    }
+
+    /* --- Neu anlegen --- */
+    if(neuZug){
+      var a2=Math.min(neuZug.a,neuZug.b), b3=Math.max(neuZug.a,neuZug.b);
+      var tr2=neuZug.tr, el=neuZug.el; neuZug=null;
+      if(el.parentNode) el.parentNode.removeChild(el);
+      zeigeWaehler(ev.clientX, ev.clientY, tr2, a2, b3);
+      return;
+    }
+
+    if(!drag) return;
+    var dd = drag; drag = null;
+    dd.bar.classList.remove('dragging','kopie');
+    dd.bar.style.transform='';
+    zielMarkieren(null);
+
+    if(!dd.bewegt && (!dd.zielZeile || !dd.quelleZeile || dd.zielZeile.key===dd.quelleZeile.key)) return;
+
+    /* Zeilenwechsel = neue Zuordnung */
+    var wechsel = dd.zielZeile && dd.quelleZeile && dd.zielZeile.key !== dd.quelleZeile.key
+                  && dd.zielZeile.zuw;
+    if(wechsel) dd.items.forEach(function(it){
+      if(dd.zielZeile.zuw==='maschine') it.maschine = dd.zielZeile.key;
+      if(dd.zielZeile.zuw==='monteur')  it.monteur  = dd.zielZeile.key;
+    });
+
+    if(S.weMeiden && dd.modus==='move' && S.raster==='tag'){
+      dd.items.forEach(function(it){
+        var v3=parse(it.von), f=naechsterFreier(v3);
+        var schub=Math.round((f-v3)/86400000);
+        if(schub) verschiebe(it, schub, 'move');
+      });
+    }
+
+    if(dd.kopie){
+      /* Original auf den alten Stand zuruecksetzen, Kopie bleibt am Ziel */
+      var neueIds = [];
+      dd.items.forEach(function(it, ix){
+        var kopie = JSON.parse(JSON.stringify(it));
+        kopie.id = naechsteId++; kopie.gesperrt = false;
+        delete kopie.eltern;
+        ITEMS.push(kopie); neueIds.push(kopie.id);
+        var alt = dd.vorher[ix];
+        it.von=alt.von; it.bis=alt.bis; it.maschine=alt.maschine; it.monteur=alt.monteur;
+        if(alt.work_log) it.work_log = alt.work_log;
+      });
+      merken([], dd.items.length+' Kopie(n) angelegt', neueIds);
+      toast('Kopiert — '+dez(parse(item(neueIds[0]).von))+' bis '+dez(parse(item(neueIds[0]).bis)));
+      render(); return;
+    }
+
+    UNDO.push({text: dd.items.length>1 ? dd.items.length+' Eintraege geaendert'
+                                       : '"'+dd.haupt.titel+'" geaendert',
+               stand: dd.vorher, neu:null});
+
+    var k = konflikte(sichtbar());
+    var stoerer = dd.items.filter(function(it){ return k[it.id]; })[0];
+    if(stoerer){ zeigeKonflikt(stoerer, dd.items); return; }
+    melde(dd, wechsel);
+    render();
+  });
+
+  document.addEventListener('pointercancel', function(){
+    if(drag){ drag.bar.classList.remove('dragging','kopie'); drag.bar.style.transform=''; drag=null; }
+    if(upZug){ document.getElementById('geist').classList.remove('an');
+               upZug.el.classList.remove('zieht'); upZug=null; }
+    if(neuZug){ if(neuZug.el.parentNode) neuZug.el.parentNode.removeChild(neuZug.el); neuZug=null; }
+    zielMarkieren(null);
+  });
+}
+
+function melde(dd, wechsel){
+  var it = dd.haupt, q = QUELLEN[it.quelle] || {};
+  var txt = dd.items.length>1
+    ? dd.items.length+' Eintraege verschoben'
+    : '"'+it.titel+'" → '+dez(parse(it.von))+' – '+dez(parse(it.bis));
+  if(wechsel){
+    var ziel = dd.zielZeile.zuw==='maschine' ? (maschine(dd.zielZeile.key)||{}).name
+                                             : (monteur(dd.zielZeile.key)||{}).name;
+    txt += ' · jetzt ' + ziel;
+  }
+  if(it.work_log && it.work_log.length && dd.modus==='move')
+    txt += ' · '+it.work_log.length+' Arbeitszeilen mit';
+  if(q.von) txt += ' · schreibt '+it.quelle+'.'+q.von+'/'+q.bis;
+  toast(txt);
+}
+
+function zeigeKonflikt(it, alle){
+  var k=document.getElementById('konflikt'), m=maschine(it.maschine);
+  document.getElementById('kText').innerHTML =
+    '<b>'+it.titel+'</b> ueberschneidet sich auf '+((m&&m.name)||'derselben Maschine')
+    + ' mit einem anderen Eintrag ('+dez(parse(it.von))+' – '+dez(parse(it.bis))+').';
+  k.classList.add('show');
+  document.getElementById('kTrotzdem').onclick=function(){
+    k.classList.remove('show'); toast('Ueberschneidung stehen gelassen'); render(); };
+  document.getElementById('kZurueck').onclick=function(){ k.classList.remove('show'); rueckgaengig(); };
+  document.getElementById('kFrei').onclick=function(){
+    k.classList.remove('show');
+    for(var v=0; v<400; v++){
+      alle.forEach(function(x){ verschiebe(x, 1, 'move'); });
+      var kk=konflikte(sichtbar());
+      if(!alle.some(function(x){ return kk[x.id]; })) break;
+    }
+    toast('Auf naechsten freien Zeitraum geschoben — '+dez(parse(it.von)));
+    render();
+  };
+}
+
+/* ---------- Sorten-Auswahl beim Neuanlegen ---------- */
+function waehlerZu(){ document.getElementById('waehler').classList.remove('an'); }
+function zeigeWaehler(x, y, tr, a, b){
+  var w = document.getElementById('waehler');
+  var moeglich = Object.keys(SORTEN).filter(function(s){
+    if(tr.dataset.zuw === 'monteur' && s === 'miete') return false;
+    return true;
+  });
+  w.innerHTML = '<h6>Neu anlegen</h6>' + moeglich.map(function(s){
+    return '<button data-s="'+s+'" style="--c:'+SORTEN[s].farbe+'"><i></i>'+SORTEN[s].label
+      + ' <span style="color:var(--text-3);font-size:var(--fs-2xs)">'+SORTE_QUELLE[s]+'</span></button>';
+  }).join('');
+  w.style.left = Math.min(x, window.innerWidth-210)+'px';
+  w.style.top  = Math.min(y, window.innerHeight-320)+'px';
+  w.classList.add('an');
+  Array.prototype.forEach.call(w.querySelectorAll('button'), function(btn){
+    btn.onclick = function(){
+      waehlerZu();
+      var sorte = btn.dataset.s;
+      var v = new Date(tlStart); v.setDate(v.getDate()+a*schritt());
+      var bis = new Date(tlStart); bis.setDate(bis.getDate()+(b+1)*schritt()-1);
+      if(S.weMeiden && S.raster==='tag'){
+        var f = naechsterFreier(v), schub = Math.round((f-v)/86400000);
+        if(schub){ v=f; bis.setDate(bis.getDate()+schub); }
+      }
+      var neu = {id:naechsteId++, quelle:SORTE_QUELLE[sorte], sorte:sorte,
+                 titel:'Neu: '+SORTEN[sorte].label, von:key(v), bis:key(bis), std:8};
+      if(tr.dataset.zuw==='maschine') neu.maschine = tr.dataset.row;
+      if(tr.dataset.zuw==='monteur')  neu.monteur  = tr.dataset.row;
+      if(sorte==='miete'){ neu.status='angefragt'; neu.preis=250; }
+      ITEMS.push(neu);
+      merken([], 'Neuer Eintrag "'+neu.titel+'"', [neu.id]);
+      S.gewaehlt = neu;
+      toast('Angelegt: '+SORTEN[sorte].label+' '+dez(v)+' – '+dez(bis)
+        + ' · wuerde in '+neu.quelle+' geschrieben');
+      render();
+    };
+  });
+}
+document.addEventListener('pointerdown', function(e){
+  if(!e.target.closest('#waehler')) waehlerZu();
+}, true);
+
+/* ============================================================
+   8. WEITERE ANSICHTEN
+   ============================================================ */
+function monat(){
+  var a=new Date(S.anker.getFullYear(), S.anker.getMonth(), 1);
+  document.getElementById('range').textContent=a.toLocaleDateString('de-DE',{month:'long',year:'numeric'});
+  var first=new Date(a); first.setDate(1-((a.getDay()+6)%7));
+  var list=sichtbar();
+  var h='<div class="mon">'+['Mo','Di','Mi','Do','Fr','Sa','So']
+    .map(function(w){ return '<div class="wd">'+w+'</div>'; }).join('');
+  for(var i=0;i<42;i++){
+    var x=new Date(first); x.setDate(x.getDate()+i);
+    var evs=list.filter(function(it){ return parse(it.von)<=x && x<=parse(it.bis); });
+    h+='<div class="cell'+(x.getMonth()!==a.getMonth()?' off':'')+(istFrei(x)?' we':'')
+      +(key(x)===key(HEUTE)?' today':'')+'"><div class="dnum">'+x.getDate()
+      +(FEIERTAGE[key(x)]?' <span style="color:#fca5a5">'+FEIERTAGE[key(x)]+'</span>':'')+'</div>'
+      +evs.slice(0,3).map(function(it){
+         return '<div class="ev" data-id="'+it.id+'" style="--c:'+SORTEN[it.sorte].farbe+'">'
+           +(it.zeit?it.zeit+' ':'')+it.titel+'</div>'; }).join('')
+      +(evs.length>3?'<div class="more">+'+(evs.length-3)+' weitere</div>':'')+'</div>';
+  }
+  setTimeout(bindKlicks('.ev'),0);
+  return h+'</div>';
+}
+
+function woche(){
+  var mo=montag(S.anker), so=new Date(mo); so.setDate(so.getDate()+6);
+  document.getElementById('range').textContent='KW '+kw(mo)+' · '
+    +mo.toLocaleDateString('de-DE',{day:'2-digit',month:'short'})+' – '
+    +so.toLocaleDateString('de-DE',{day:'2-digit',month:'short'});
+  var list=sichtbar();
+  var mitZeit=list.filter(function(i){ return i.zeit; });
+  var ganztags=list.filter(function(i){ return !i.zeit; });
+  /* Hoehe des Ganztags-Streifens nach dem vollsten Tag */
+  var maxGanz=1;
+  for(var g=0;g<7;g++){
+    var xg=new Date(mo); xg.setDate(xg.getDate()+g);
+    var c=ganztags.filter(function(it){ return parse(it.von)<=xg && xg<=parse(it.bis); }).length;
+    if(c>maxGanz) maxGanz=c;
+  }
+  var ganzH=Math.min(maxGanz,4)*20+6;
+  var H0=6,H1=19;
+  var h='<div class="wk" style="--ganz-h:'+ganzH+'px"><div class="wk-hours"><div class="kopf"></div>'
+    +'<div class="ganz">ganztags</div>';
+  for(var s=H0;s<H1;s++) h+='<div class="std">'+String(s).padStart(2,'0')+':00</div>';
+  h+='</div><div class="wk-cols">';
+  for(var i=0;i<7;i++){
+    var x=new Date(mo); x.setDate(x.getDate()+i);
+    var tk=key(x);
+    var gz=ganztags.filter(function(it){ return parse(it.von)<=x && x<=parse(it.bis); });
+    var evs=mitZeit.filter(function(it){ return it.von===tk; });
+    h+='<div class="wk-col'+(tk===key(HEUTE)?' today':'')+'"><h4>'
+      +x.toLocaleDateString('de-DE',{weekday:'short'})
+      +'<span>'+x.getDate()+'.'+(x.getMonth()+1)+'.</span></h4>'
+      +'<div class="wk-ganz">'
+      + gz.slice(0,4).map(function(it){
+          return '<div class="ev" data-id="'+it.id+'" style="--c:'+SORTEN[it.sorte].farbe+'">'
+            +it.titel+'</div>'; }).join('')
+      + (gz.length>4?'<div class="more">+'+(gz.length-4)+'</div>':'')
+      +'</div><div class="wk-grid" style="height:'+((H1-H0)*46)+'px">'
+      +evs.map(function(it){
+         var p=it.zeit.split(':');
+         var top=((+p[0]-H0)+(+p[1])/60)*46, hgt=(it.dauer||2)*46-4;
+         var mm=monteur(it.monteur);
+         return '<div class="wk-ev" data-id="'+it.id+'" style="--c:'+SORTEN[it.sorte].farbe
+           +';top:'+top+'px;height:'+hgt+'px"><b>'+it.titel+'</b><i>'+it.zeit
+           +(mm?' · '+mm.name.split(' ')[0]:'')+'</i></div>'; }).join('')
+      +'</div></div>';
+  }
+  setTimeout(bindKlicks('.wk-ev,.wk-ganz .ev'),0);
+  return h+'</div></div>';
+}
+function kw(x){
+  var t=new Date(x); t.setDate(t.getDate()+3-((t.getDay()+6)%7));
+  var e=new Date(t.getFullYear(),0,4);
+  return 1+Math.round(((t-e)/86400000-3+((e.getDay()+6)%7))/7);
+}
+
+function agenda(){
+  document.getElementById('range').textContent='Naechste 3 Wochen';
+  var bis=new Date(S.anker); bis.setDate(bis.getDate()+21);
+  var list=sichtbar(), h='<div class="ag">';
+  for(var x=new Date(S.anker); x<=bis; x.setDate(x.getDate()+1)){
+    (function(tag){
+      var evs=list.filter(function(it){ return parse(it.von)<=tag && tag<=parse(it.bis); });
+      if(!evs.length) return;
+      var heute=key(tag)===key(HEUTE);
+      h+='<h3 class="'+(heute?'heute':'')+'">'+(heute?'Heute · ':'')
+        +tag.toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'long'})
+        +(FEIERTAGE[key(tag)]?' · '+FEIERTAGE[key(tag)]:'')+'</h3>';
+      evs.sort(function(a,b){ return (a.zeit||'zz').localeCompare(b.zeit||'zz'); }).forEach(function(it){
+        var m=maschine(it.maschine), p=monteur(it.monteur);
+        h+='<div class="ag-item" data-id="'+it.id+'" style="--c:'+SORTEN[it.sorte].farbe+'">'
+          +'<span class="zeit">'+(it.zeit||'ganztags')+'</span>'
+          +'<span class="txt"><b>'+(it.gesperrt?'🔒 ':'')+it.titel+'</b><span>'
+          +[m&&m.name,p&&p.name].filter(Boolean).join(' · ')+'</span></span>'
+          +'<span class="badge">'+SORTEN[it.sorte].label+'</span></div>';
+      });
+    })(new Date(x));
+  }
+  setTimeout(bindKlicks('.ag-item'),0);
+  return h+'</div>';
+}
+
+/* Anzeigetafel fuer die Werkstatt — grosse Schrift, nach Monteur */
+function tafel(){
+  document.getElementById('range').textContent =
+    HEUTE.toLocaleDateString('de-DE',{weekday:'long',day:'2-digit',month:'long'});
+  var heute = sichtbar().filter(function(i){
+    return parse(i.von) <= HEUTE && HEUTE <= parse(i.bis); });
+  var h = '<div class="tafel">';
+  MONTEURE.forEach(function(p){
+    var meine = heute.filter(function(i){ return i.monteur === p.id; });
+    h += '<div class="sp"><h3>'+p.name+' <em>'+p.rolle+'</em></h3>'
+      + (meine.length ? meine.map(function(i){
+          var m = maschine(i.maschine);
+          return '<div class="z" data-id="'+i.id+'" style="--c:'+SORTEN[i.sorte].farbe+'">'
+            + '<i></i><b>'+i.titel+'</b>'
+            + '<span>'+[m&&m.name, i.zeit, i.std&&i.std+' h'].filter(Boolean).join(' · ')+'</span></div>';
+        }).join('') : '<div class="leer">nichts eingeplant</div>')
+      + '</div>';
+  });
+  var ohne = heute.filter(function(i){ return !i.monteur; });
+  if(ohne.length){
+    h += '<div class="sp"><h3>ohne Zuordnung</h3>'
+      + ohne.map(function(i){
+          var m = maschine(i.maschine);
+          return '<div class="z" data-id="'+i.id+'" style="--c:'+SORTEN[i.sorte].farbe+'">'
+            + '<i></i><b>'+i.titel+'</b><span>'+((m&&m.name)||'')+'</span></div>'; }).join('')
+      + '</div>';
+  }
+  setTimeout(bindKlicks('.tafel .z'),0);
+  return h+'</div>';
+}
+
+function bindKlicks(sel){
+  return function(){
+    Array.prototype.forEach.call(document.querySelectorAll(sel), function(e){
+      e.onclick=function(){ S.gewaehlt=item(e.dataset.id); panel(); };
+    });
+  };
+}
+
+var AV={von:key(d(5)), bis:key(d(12)), kat:''};
+function verfuegbar(){
+  document.getElementById('range').textContent='Freie Maschinen finden';
+  var rows=MASCHINEN.filter(function(m){ return !AV.kat||m.kat===AV.kat; }).map(function(m){
+    var koll=ITEMS.filter(function(i){
+      return i.maschine===m.id && blockt(i) && !(i.bis<AV.von || i.von>AV.bis); });
+    return {m:m, koll:koll};
+  }).sort(function(a,b){ return a.koll.length-b.koll.length; });
+
+  var h='<div style="margin:16px;padding:16px;border-radius:20px;background:rgba(15,23,42,.6);'
+    +'border:1px solid var(--glass-border)">'
+    +'<h3 style="margin:0 0 12px;font-family:var(--font-heading);font-size:var(--fs-md)">'
+    +'Welche Maschine ist in einem Zeitraum frei?</h3>'
+    +'<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin-bottom:16px">'
+    +'<div><label class="mini">von</label><br><input type="date" id="av1" value="'+AV.von+'"></div>'
+    +'<div><label class="mini">bis</label><br><input type="date" id="av2" value="'+AV.bis+'"></div>'
+    +'<div><label class="mini">Kategorie</label><br><select id="av3"><option value="">alle</option>'
+    +kats().map(function(k){ return '<option'+(k===AV.kat?' selected':'')+'>'+k+'</option>'; }).join('')
+    +'</select></div><button class="btn" id="avgo">Suchen</button></div>'
+    +rows.map(function(r){
+       return '<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;'
+         +'background:rgba(255,255,255,.045);margin-bottom:6px;border-left:3px solid '
+         +(r.koll.length?'var(--cal-reparatur)':'var(--cal-miete)')+';'+(r.koll.length?'opacity:.6':'')+'">'
+         +'<b style="flex:1;font-size:var(--fs-md)">'+r.m.name+'</b>'
+         +'<span style="font-size:var(--fs-xs);color:var(--text-3)">'+r.m.kat+' · '+r.m.nr+'</span>'
+         +'<span class="badge" style="--c:'+(r.koll.length?'var(--cal-reparatur)':'var(--cal-miete)')+'">'
+         +(r.koll.length?'belegt: '+r.koll.map(function(k){ return k.titel; }).join(', '):'frei')
+         +'</span></div>'; }).join('')+'</div>';
+
+  setTimeout(function(){
+    var b=document.getElementById('avgo'); if(!b) return;
+    b.onclick=function(){
+      AV={von:document.getElementById('av1').value, bis:document.getElementById('av2').value,
+          kat:document.getElementById('av3').value};
+      render();
+    };
+  },0);
+  return h;
+}
+
+/* ============================================================
+   9. DETAIL-PANEL
+   ============================================================ */
+function panel(){
+  var p=document.getElementById('panel'), it=S.gewaehlt;
+  if(!it){ p.classList.remove('open'); return; }
+  var m=maschine(it.maschine), pe=monteur(it.monteur), q=QUELLEN[it.quelle]||{};
+  var eltern=it.eltern?item(it.eltern):null;
+  p.classList.add('open');
+
+  var h='<div style="display:flex;align-items:flex-start;gap:8px">'
+    +'<div style="flex:1"><span class="badge" style="--c:'+SORTEN[it.sorte].farbe+'">'
+    +SORTEN[it.sorte].label+'</span><h2>'+(it.gesperrt?'🔒 ':'')+it.titel+'</h2></div>'
+    +'<button class="btn icon" id="pclose">&times;</button></div>'
+    +'<div class="kv"><span>Zeitraum</span><b>'+dez(parse(it.von))
+    +(it.von!==it.bis?' – '+dez(parse(it.bis)):'')+'</b></div>'
+    +'<div class="kv"><span>Dauer</span><b>'+(tage(it.von,it.bis)+1)+' Tage'
+    +(it.std?' · '+it.std+' h':'')+'</b></div>'
+    +(m?'<div class="kv"><span>Maschine</span><b>'+m.name+'</b></div>':'')
+    +(pe?'<div class="kv"><span>Monteur</span><b>'+pe.name+'</b></div>':'')
+    +(eltern?'<div class="kv"><span>gehoert zu</span><b>'+eltern.titel+'</b></div>':'')
+    +(it.preis?'<div class="kv"><span>Miete</span><b>'+it.preis+' €/Tag · '
+      +(it.preis*(tage(it.von,it.bis)+1)).toLocaleString('de-DE')+' € gesamt</b></div>':'')
+    +(it.wiederholung?'<div class="kv"><span>Wiederholung</span><b>'+it.wiederholung+'</b></div>':'');
+
+  if(it.sorte==='miete'){
+    var akt=MIETSTUFEN.indexOf(it.status);
+    h+='<h5>Status</h5><div class="stufen">'
+      +MIETSTUFEN.map(function(s,i){
+         return '<span class="stufe'+(s===it.status?' on':'')+(akt>=0&&i<akt?' vor':'')
+           +'" data-stufe="'+s+'">'+s+'</span>'; }).join('')+'</div>';
+  }
+  if(it.work_log && it.work_log.length){
+    h+='<h5>Arbeitszeiten (work_log)</h5>'
+      +it.work_log.map(function(w){
+         return '<div class="wl"><span>'+dez(parse(w.datum))+'</span><span>'+w.zeit+'</span></div>';
+       }).join('')
+      +'<p style="font-size:var(--fs-2xs);color:var(--text-3);margin:8px 0 0;line-height:1.5">'
+      +'Beim Verschieben wandern diese Daten um denselben Versatz mit, die Uhrzeiten bleiben.</p>';
+  }
+
+  h+='<h5>Was beim Verschieben geschrieben wuerde</h5><div class="sql">'
+    +'update '+it.quelle+'\n  set '+(q.von||'?')+" = '"+it.von+"',\n      "
+    +(q.bis||'?')+" = '"+it.bis+"'\n where id = "+it.id+';'
+    +(it.work_log&&it.work_log.length
+       ? '\n\nupdate '+it.quelle+' set work_log = <'+it.work_log.length+' Zeilen verschoben>' : '')
+    +(q.neu?'<span class="warn">⚠ '+q.hinweis+'</span>':'')
+    +(it.gesperrt?'<span class="warn">⚠ is_finalized = true — gesperrt, kein Schreiben.</span>':'')
+    +'</div>';
+
+  h+='<div class="acts"><button class="btn">Oeffnen</button>'
+    +(it.sorte==='miete'?'<button class="btn">Mietvereinbarung</button>':'')
+    +(it.quelle==='service_entries'?'<button class="btn">Servicebericht</button>':'')
+    +(it.wiederholung?'<button class="btn stark" id="perledigt">erledigt → naechster Termin</button>':'')
+    +'<button class="btn" id="pdel">zurueck zu "Ungeplant"</button></div>'
+    +'<p style="font-size:var(--fs-xs);color:var(--text-3);margin-top:16px;line-height:1.6">'
+    +'In der App wuerden diese Schaltflaechen die vorhandenen Fenster oeffnen.</p>';
+
+  p.innerHTML=h;
+
+  document.getElementById('pclose').onclick=function(){ S.gewaehlt=null; panel(); };
+  document.getElementById('pdel').onclick=function(){
+    merken([it], '"'+it.titel+'" entplant');
+    ITEMS=ITEMS.filter(function(i){ return i.id!==it.id; });
+    UNGEPLANT.push({id:it.id, quelle:it.quelle, sorte:it.sorte, titel:it.titel,
+                    maschine:it.maschine, std:it.std});
+    S.gewaehlt=null; toast('"'+it.titel+'" ist wieder ungeplant', false); render();
+  };
+  var pe2=document.getElementById('perledigt');
+  if(pe2) pe2.onclick=function(){
+    var v=parse(it.von), b=parse(it.bis);
+    v.setFullYear(v.getFullYear()+1); b.setFullYear(b.getFullYear()+1);
+    var neu=JSON.parse(JSON.stringify(it));
+    neu.id=naechsteId++; neu.von=key(v); neu.bis=key(b); neu.status=undefined;
+    ITEMS.push(neu);
+    merken([], 'Folgetermin angelegt', [neu.id]);
+    toast('Erledigt — naechster Termin am '+dez(v)+' angelegt');
+    S.gewaehlt=neu; render();
+  };
+  Array.prototype.forEach.call(p.querySelectorAll('.stufe'), function(s){
+    s.onclick=function(){
+      it.status=s.dataset.stufe;
+      if(it.status==='zurueck'){
+        var v=new Date(parse(it.bis)); v.setDate(v.getDate()+1);
+        if(S.weMeiden) v=naechsterFreier(v);
+        var pruef={id:naechsteId++, quelle:'workshop_tasks', sorte:'werkstatt',
+                   titel:'Rueckgabe pruefen: '+it.titel, maschine:it.maschine,
+                   von:key(v), bis:key(v), std:2};
+        ITEMS.push(pruef);
+        merken([], 'Pruefaufgabe angelegt', [pruef.id]);
+        toast('Status "zurueck" — Pruefaufgabe fuer '+dez(v)+' angelegt');
+      } else toast('Status → '+it.status, false);
+      render();
+    };
+  });
+}
+
+/* ============================================================ */
+setzePreset('vermiet');
+render();
+</script>
+</body>
+</html>

@@ -86,6 +86,13 @@
         ],
 
         texte: {
+            // „stand" ist der Fassungsstand des Vertragstextes. Wird der
+            // Wortlaut hier geändert, MUSS die Zahl hochgezählt werden: gespeicherte
+            // Vorlagen mit einem älteren (oder fehlendem) Stand bekommen dann beim
+            // Öffnen automatisch diesen Text — siehe textMitStandard(). Ohne das
+            // hing jede vor der Änderung angelegte Vorlage für immer am alten
+            // Wortlaut, obwohl er rechtlich überholt ist.
+            stand: 2,
             titel: 'Mietbedingungen und Vereinbarungen',
             abschnitte: [
                 // ---- Zweite Rechtsseite: allgemeine Mietbedingungen ----
@@ -291,8 +298,25 @@
             spalten: (Array.isArray(c.spalten) && c.spalten.length) ? c.spalten : tiefeKopie(s.spalten),
             baugruppen: Array.isArray(c.baugruppen) ? c.baugruppen : tiefeKopie(s.baugruppen),
             fotos: (Array.isArray(c.fotos) && c.fotos.length) ? c.fotos : s.fotos.slice(),
-            texte: c.texte && Array.isArray(c.texte.abschnitte) ? c.texte : tiefeKopie(s.texte)
+            texte: textMitStandard(c.texte)
         };
+    }
+
+    // Vertragstext einer gespeicherten Vorlage gegen den aktuellen Stand
+    // abgleichen. Vorlagen, die vor der Textumstellung angelegt wurden, haben
+    // keinen oder einen älteren "stand" — die bekommen den aktuellen Wortlaut
+    // (Allgemeines, 2.–13., danach die ergänzenden Vereinbarungen). Ein eigener
+    // Text, der MIT dem aktuellen Stand gespeichert wurde, bleibt unangetastet.
+    function textMitStandard(texte) {
+        const s = window.MIET_VORLAGE_STANDARD;
+        if (!texte || !Array.isArray(texte.abschnitte) || !texte.abschnitte.length) {
+            return tiefeKopie(s.texte);
+        }
+        if (Number(texte.stand || 0) < Number(s.texte.stand || 0)) {
+            console.info('Mietvereinbarung: Vertragstext der Vorlage auf den aktuellen Stand gehoben.');
+            return tiefeKopie(s.texte);
+        }
+        return texte;
     }
 
     // Kategorien einer Vorlage als Liste von IDs (Strings).

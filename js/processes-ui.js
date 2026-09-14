@@ -344,6 +344,9 @@
             window.processSteps['process-add'] = [];
             window.renderProcessSteps('process-add');
 
+            // Reset gestapelte Dokumente (js/process-attachments.js)
+            if (typeof window.clearProcessPendingFiles === 'function') window.clearProcessPendingFiles('process-add');
+
             // Reset Erinnerung
             const remindEl = document.getElementById('process-add-remind-input');
             if (remindEl) remindEl.value = '';
@@ -457,9 +460,9 @@
                 const attempt = { ...payload };
                 const optionalCols = ['customer_id', 'contact_name', 'remind_at', 'status_updates'];
                 const dropped = [];
-                let error;
+                let error, data;
                 for (let i = 0; i < optionalCols.length + 1; i++) {
-                    ({ error } = await window.insertMitErsteller('internal_processes', attempt));
+                    ({ error, data } = await window.insertMitErsteller('internal_processes', attempt));
                     if (!error) break;
                     const msg = error.message || '';
                     const offending = optionalCols.filter(c => (c in attempt) && msg.includes(c));
@@ -468,6 +471,13 @@
                 }
 
                 if (error) throw error;
+
+                // Gestapelte Dokumente (vor dem Speichern ausgewaehlt) an die
+                // frisch vergebene ID haengen.
+                const newProcessId = data && data[0] && data[0].id;
+                if (newProcessId && typeof window.flushProcessPendingFiles === 'function') {
+                    await window.flushProcessPendingFiles('process-add', newProcessId);
+                }
 
                 if (dropped.length) {
                     const labelMap = { customer_id: 'Adresse', contact_name: 'Ansprechpartner', remind_at: 'Erinnerung', status_updates: 'Aktueller Stand' };

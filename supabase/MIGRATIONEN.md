@@ -29,6 +29,7 @@ lassen als eine Migration auszulassen.
 | `supabase_add_addressbook_realtime.sql` | Live-Aktualisierung des Adressbuchs |
 | `supabase_add_customer_coords.sql` | Koordinaten-Cache je Adresse (Umkreissuche Routenplanung) |
 | `supabase_add_manufacturer_category.sql` | Hersteller als eigene Kategorie + Zuordnung je Adresse |
+| `supabase_add_manual_history_customer_id.sql` | Historie-Einträge (u. a. importierte Angebote) auch ohne Maschine direkt an der Adresse sichtbar |
 
 ## Maschinen, Service, Protokolle
 
@@ -59,6 +60,8 @@ lassen als eine Migration auszulassen.
 | `supabase_add_workshop_tasks.sql` | Werkstatt-Liste (schnelle kleine Aufgaben) |
 | `supabase_add_notification_prefs.sql` | Benachrichtigungs-Einstellungen je Benutzer, geräteübergreifend |
 | `supabase_add_erinnerung_owner.sql` | Angebots-Erinnerung gehört dem, der sie gesetzt hat (`erinnerung_by`) |
+| `supabase_add_subtask_planung.sql` | Unteraufgaben planbar: `start_date`, `end_date`, `assigned_to`, `expected_time` — nötig für eigene Balken in der Timeline |
+| `supabase_add_task_dependencies.sql` | Abhängigkeiten zwischen Aufgaben (`depends_on`) für die Timeline-Ansicht |
 
 ## Vorgänge
 
@@ -80,6 +83,7 @@ lassen als eine Migration auszulassen.
 |---|---|
 | `supabase_add_event_participants.sql` | Termine mit Teilnehmern (Zu-/Absagen) |
 | `supabase_add_event_customer.sql` | Termine an Adressen + Bezug zu einem Historieneintrag |
+| `supabase_add_absences.sql` | Abwesenheiten (Urlaub/Krank/Schulung) für die Übersicht „Wer ist frei?" in der Timeline |
 
 ## Routenplanung
 

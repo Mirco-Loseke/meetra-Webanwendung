@@ -151,7 +151,7 @@
     <link rel="stylesheet" href="css/components/notifications.css?v=7">
     <link rel="stylesheet" href="css/components/reminder-alarm.css?v=5">
     <link rel="stylesheet" href="css/components/calendar.css?v=1">
-    <link rel="stylesheet" href="css/components/calendar-widget.css?v=6">
+    <link rel="stylesheet" href="css/components/calendar-widget.css?v=7">
     <link rel="stylesheet" href="css/components/dropdowns.css?v=2">
     <link rel="stylesheet" href="css/components/focus-mode.css?v=3">
     <link rel="stylesheet" href="css/components/elements.css?v=1">
@@ -163,6 +163,7 @@
     <link rel="stylesheet" href="css/views/tasks.css?v=4">
     <link rel="stylesheet" href="css/views/service-reports.css?v=4">
     <link rel="stylesheet" href="css/views/machines.css?v=1">
+    <link rel="stylesheet" href="css/views/timeline.css?v=41">
     <link rel="stylesheet" href="css/views/procurement.css?v=1">
     <link rel="stylesheet" href="css/views/settings.css?v=2">
     <link rel="stylesheet" href="css/views/accounting.css?v=1">
@@ -171,7 +172,7 @@
     <link rel="stylesheet" href="css/views/tasks-print.css?v=3">
     <link rel="stylesheet" href="css/views/dashboard.css?v=1">
     <link rel="stylesheet" href="css/views/listen.css?v=1">
-    <link rel="stylesheet" href="css/views/addressbook.css?v=12">
+    <link rel="stylesheet" href="css/views/addressbook.css?v=13">
     <link rel="stylesheet" href="css/views/routenplanung.css?v=5">
     <link rel="stylesheet" href="css/base/responsive.css?v=16">
 
@@ -290,7 +291,7 @@
          gewinnt. Diese Zeile loeschen = alles wie vorher. -->
     <link rel="stylesheet" href="css/components/dropdown-look.css?v=5">
     <!-- MIETVEREINBARUNG (1/3) — eigenstaendig, diese Zeile loeschen = weg -->
-    <link rel="stylesheet" href="css/views/mietvereinbarung.css?v=21">
+    <link rel="stylesheet" href="css/views/mietvereinbarung.css?v=31">
 
     <!-- @partial:modals/pin-prompt-modal.html -->
         <!-- PIN Prompt Modal -->
@@ -663,14 +664,18 @@
                                 </a>
                             </li>
                             <li>
-                                <a href="#calendar" class="nav-link" data-target="calendar">
-                                    <!-- Bell Icon for Ereignisse -->
+                                <!-- Kalender und Timeline sind eine Ansicht. Die Wartungsliste
+                                     (#calendar) hängt als zweite Darstellung daran und wird über
+                                     den Knopf „Wartung & Ereignisse" im Kalenderkopf geöffnet. -->
+                                <a href="#timeline" class="nav-link" data-target="timeline">
+                                    <!-- Gantt-Balken Icon -->
                                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                                        <line x1="4" y1="6" x2="14" y2="6"></line>
+                                        <line x1="8" y1="12" x2="20" y2="12"></line>
+                                        <line x1="6" y1="18" x2="12" y2="18"></line>
                                     </svg>
-                                    <span>Wartung</span>
+                                    <span>Timeline</span>
                                 </a>
                             </li>
                             <li>
@@ -1431,6 +1436,8 @@
                                                 </h1>
                                             </div>
                                             <div class="view-header-right">
+                                                <button class="btn-secondary" style="margin-right: 12px;"
+                                                        onclick="window.openTimelineView ? window.openTimelineView() : window.switchView(&quot;timeline&quot;)">&lsaquo; Kalender</button>
                                                 <!-- Calendar Search Field -->
                                                 <div class="custom-search-wrapper" style="width: 250px;">
                                                     <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -1741,6 +1748,112 @@
                     </div>
                 </section>
                 <!-- /@partial:views/processes.html -->
+
+                <!-- @partial:views/timeline.html -->
+                <!-- ========================================================= -->
+                <!-- ==================== TIMELINE ============================ -->
+                <!-- Werkstatt-, Service- und Vermietplanung auf einer Zeitachse. -->
+                <!-- Logik: js/timeline-view.js — Stil: css/views/timeline.css     -->
+                <!-- Kopfzeile bewusst EINE Zeile: alles Seltene steckt in den      -->
+                <!-- Klappmenüs „Filter“ und „Ansicht“.                            -->
+                <!-- ========================================================= -->
+                <section id="timeline" class="view hidden">
+                    <div class="tlv-topbar">
+                        <div class="tlv-topbar-left">
+                            <h1 class="tlv-titel">Timeline</h1>
+                            <div class="tlv-nav" role="group" aria-label="Zeitraum wechseln">
+                                <button id="tlv-prev" title="Zeitraum nach links schieben" aria-label="nach links">&lsaquo;</button>
+                                <button id="tlv-heute">Heute</button>
+                                <button id="tlv-next" title="Zeitraum nach rechts schieben" aria-label="nach rechts">&rsaquo;</button>
+                            </div>
+                            <span class="tlv-range" id="tlv-range"></span>
+                            <span class="tlv-hinweisleiste" id="tlv-hinweisleiste" title="Verschieben bleibt in der Anzeige — zum Schreiben unter „Ansicht“ das Speichern einschalten.">Nur ansehen</span>
+                        </div>
+
+                        <div class="tlv-topbar-right">
+                            <div class="tlv-suchfeld">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="16.5" y1="16.5" x2="21" y2="21"></line></svg>
+                                <input type="search" id="tlv-suche" class="tlv-input" placeholder="Suchen …">
+                            </div>
+
+                            <div class="tlv-pop-wrap">
+                                <button class="tlv-tool tlv-tool-preset" id="tlv-preset-btn" aria-expanded="false" title="Voreinstellung">
+                                    <span id="tlv-preset-label">Vermietflotte</span>
+                                    <svg class="tlv-caret" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                </button>
+                                <div class="tlv-pop tlv-pop-schmal" id="tlv-preset-pop">
+                                    <div class="tlv-pop-kopf">Voreinstellung</div>
+                                    <div id="tlv-presets"></div>
+                                </div>
+                            </div>
+
+                            <select id="tlv-spanne" class="tlv-input tlv-select" title="Zeitraum">
+                                <option value="t14" selected>14 Tage</option>
+                                <option value="t28">28 Tage</option>
+                                <option value="t56">8 Wochen</option>
+                                <option value="w13">Quartal</option>
+                            </select>
+
+                            <div class="tlv-pop-wrap">
+                                <button class="tlv-tool" id="tlv-filter-btn" aria-expanded="false">
+                                    Filter <span class="tlv-zaehlchip" id="tlv-filter-zahl"></span>
+                                    <svg class="tlv-caret" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                </button>
+                                <div class="tlv-pop" id="tlv-filter-pop">
+                                    <div class="tlv-pop-kopf">
+                                        <span>Was anzeigen</span>
+                                        <button type="button" class="tlv-link" id="tlv-alle-sorten">alle</button>
+                                    </div>
+                                    <div class="tlv-chips" id="tlv-filter"></div>
+                                    <div class="tlv-pop-kopf tlv-pop-kopf-2">Person</div>
+                                    <select id="tlv-person" class="tlv-input tlv-select tlv-block">
+                                        <option value="">alle Personen</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="tlv-pop-wrap">
+                                <button class="tlv-tool" id="tlv-ansicht-btn" aria-expanded="false">
+                                    Ansicht
+                                    <svg class="tlv-caret" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                                </button>
+                                <div class="tlv-pop" id="tlv-ansicht-pop">
+                                    <div class="tlv-pop-kopf">Zeilen</div>
+                                    <select id="tlv-achse" class="tlv-input tlv-select tlv-block">
+                                        <option value="maschine">je Maschine</option>
+                                        <option value="monteur">je Monteur</option>
+                                        <option value="aufgabe">je Aufgabe</option>
+                                    </select>
+                                    <div class="tlv-pop-kopf tlv-pop-kopf-2">Darstellung</div>
+                                    <label class="tlv-schalter"><input type="checkbox" id="tlv-kompakt"><span>kompakte Zeilen</span></label>
+                                    <label class="tlv-schalter"><input type="checkbox" id="tlv-leer"><span>auch leere Zeilen</span></label>
+                                    <label class="tlv-schalter"><input type="checkbox" id="tlv-summe"><span>Auswertung rechts</span></label>
+                                    <div class="tlv-pop-trenner"></div>
+                                    <label class="tlv-schalter tlv-speichern-schalter">
+                                        <input type="checkbox" id="tlv-speichern" checked><span>Änderungen speichern</span>
+                                    </label>
+                                    <p class="tlv-pop-hinweis">Aus: Verschieben bleibt nur in der Anzeige.</p>
+                                </div>
+                            </div>
+
+                            <button class="tlv-tool" id="tlv-frei-btn" title="Übersicht: wer macht was und wer ist wann frei">Wer ist frei?</button>
+
+                            <button class="tlv-icon-btn" id="tlv-vollbild" title="Vollbild — Menü und Kopfleiste ausblenden" aria-label="Vollbild">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 3 3 3 3 9"></polyline><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><polyline points="15 21 21 21 21 15"></polyline></svg>
+                            </button>
+                            <button class="tlv-icon-btn" id="tlv-neu-laden" title="Daten neu laden" aria-label="Daten neu laden">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="tlv-buehne" id="tlv-buehne">
+                        <div class="tlv-laedt" id="tlv-laedt">Daten werden geladen …</div>
+                    </div>
+
+                    <div class="tlv-ungeplant" id="tlv-ungeplant"></div>
+                </section>
+                <!-- /@partial:views/timeline.html -->
 
                 <!-- @partial:settings/settings.html -->
                                 <!-- ========================================================= -->
@@ -3991,7 +4104,7 @@
     <script src="js/ui-feedback.js?v=2"></script>
     <script src="js/auto-nachladen.js?v=2"></script>
     <!-- Berechtigungen: ausgelagert aus index.html -->
-    <script src="js/permissions.js?v=4"></script>
+    <script src="js/permissions.js?v=5"></script>
     <script src="lib/supabase.min.js?v=1"></script>
     <script>
         if (typeof supabase === 'undefined') {
@@ -4055,7 +4168,7 @@
         };
     </script>
     <script src="js/dashboard.js?v=1"></script>
-    <script src="js/app-core.js?v=5"></script>
+    <script src="js/app-core.js?v=6"></script>
     <script src="js/photo-dedupe.js?v=3"></script>
     <script src="js/app-init.js?v=14"></script>
     <script src="js/settings-uvv-plans.js?v=1"></script>
@@ -4065,16 +4178,16 @@
     <script src="js/service-list.js?v=3"></script>
     <script src="js/history-modal.js?v=205"></script>
     <script src="js/calendar-events.js?v=5"></script>
-    <script src="js/processes-ui.js?v=26"></script>
+    <script src="js/processes-ui.js?v=27"></script>
     <!-- Dokumente an Vorgaengen/Schritten. Nutzt window.FileUploadService
          (js/file-upload-service-r2.js, weiter UNTEN geladen) — das ist in
          Ordnung, weil der Dienst erst beim Hochladen angefasst wird. -->
-    <script src="js/process-attachments.js?v=3"></script>
+    <script src="js/process-attachments.js?v=4"></script>
     <script src="js/process-messages.js?v=1"></script>
     <script src="js/process-machine-select.js?v=1"></script>
     <script src="js/customer-matching.js?v=1"></script>
     <script src="js/ui-modals.js?v=2"></script>
-    <script src="js/processes.js?v=127"></script>
+    <script src="js/processes.js?v=128"></script>
     <script src="js/service-reports.js?v=2"></script>
     <script src="js/service-entries.js?v=12"></script>
     <script src="js/service-picker.js?v=1"></script>
@@ -5859,6 +5972,23 @@
                             </div>
                         </div>
 
+                        <!-- Zeitraum: dieselben Spalten, die auch die Timeline schreibt
+                             (tasks.start_date / tasks.end_date). Leer lassen heisst
+                             „ungeplant" — die Aufgabe steht dann in der Timeline-Leiste. -->
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label>Zeitraum</label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div>
+                                    <span class="form-label-caps">Start</span>
+                                    <input type="date" id="task-start-date" class="glass-input">
+                                </div>
+                                <div>
+                                    <span class="form-label-caps">Ende</span>
+                                    <input type="date" id="task-end-date" class="glass-input">
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Supergroups Section -->
                         <div id="supergroups-container" style="margin-top: 30px;">
                             <div id="quick-template-picker-container" style="margin-bottom: 25px;">
@@ -5909,17 +6039,17 @@
     <script src="js/machines-grouped.js?v=51"></script>
     <script src="js/protocols.js?v=55"></script>
     <!-- MIETVEREINBARUNG (2/3) — eigenstaendig, diese Zeile loeschen = weg -->
-    <script src="js/mietvereinbarung-vorlagen.js?v=10"></script>
-    <script src="js/mietvereinbarung.js?v=21"></script>
+    <script src="js/mietvereinbarung-vorlagen.js?v=11"></script>
+    <script src="js/mietvereinbarung.js?v=40"></script>
     <script src="js/mietvereinbarung-liste.js?v=1"></script>
 
     </main>
     </div><!-- End main-wrapper -->
 
-    <script src="js/tasks.js?v=23"></script>
+    <script src="js/tasks.js?v=29"></script>
     <script src="js/workshop-tasks.js?v=3"></script>
-    <script src="js/tasks-print.js?v=10"></script>
-    <script src="js/task_templates.js?v=99"></script>
+    <script src="js/tasks-print.js?v=12"></script>
+    <script src="js/task_templates.js?v=100"></script>
     <!-- Spracheingabe für die KI-Felder — muss vor den KI-Modulen stehen,
          die beim Aufbau ihrer Modals window.micButtonHtml() aufrufen. -->
     <script src="js/speech-input.js?v=3"></script>
@@ -5927,7 +6057,7 @@
          ai-quick-capture.js, ai-address-task.js und accounting.js stehen —
          die rufen window.groqFetch() auf. -->
     <script src="js/groq-proxy.js?v=1"></script>
-    <script src="js/ai-quick-capture.js?v=22"></script>
+    <script src="js/ai-quick-capture.js?v=23"></script>
     <script>
         window.addEventListener('load', () => {
             if (typeof window.initTaskTemplates === 'function') {
@@ -6677,7 +6807,7 @@
         import MsgReader from 'https://esm.sh/@kenjiuno/msgreader@1.28.0';
         window.MSGReaderClass = MsgReader;
     </script>
-    <script src="js/file-upload-service-r2.js?v=2"></script>
+    <script src="js/file-upload-service-r2.js?v=3"></script>
     <script src="js/accounting.js?v=43"></script>
     <script src="js/documents-r2.js?v=9"></script>
     <script src="js/checklists.js?v=5"></script>
@@ -6686,10 +6816,10 @@
     <script src="js/autosave.js?v=1"></script>
     <script src="js/unsaved-guard.js?v=1"></script>
     <script src="js/address-history.js?v=2"></script>
-    <script src="js/addressbook.js?v=56"></script>
+    <script src="js/addressbook.js?v=58"></script>
     <script src="js/addressbook-live.js?v=3"></script>
     <script src="js/process-autosave.js?v=3"></script>
-    <script src="js/task-autosave.js?v=1"></script>
+    <script src="js/task-autosave.js?v=3"></script>
     <script src="js/task-drafts.js?v=1"></script>
     <script src="js/process-open-hints.js?v=2"></script>
     <script src="js/ai-address-task.js?v=12"></script>
@@ -6703,13 +6833,13 @@
          notifications.js stehen: nutzt window.notificationsPushEnabled. -->
     <script src="js/reminder-alarm.js?v=4"></script>
     <script src="js/assignment-handoff.js?v=2"></script>
-    <script src="js/calendar-widget.js?v=14"></script>
+    <script src="js/calendar-widget.js?v=19"></script>
     <!-- tasks.js und processes.js werden bereits weiter oben geladen (vor ihren
          jeweiligen Folgemodulen). Ein zweites Einbinden ließ beide Module doppelt
          laufen — mit doppelt registrierten Event-Handlern. -->
     <script src="js/routeplanner.js?v=2"></script>
     <script src="js/routenplanung.js?v=19"></script>
-    <script src="js/listen.js?v=13"></script>
+    <script src="js/listen.js?v=14"></script>
 
     <script src="js/labels.js?v=2"></script>
     <script src="js/offline-service.js?v=1"></script>
@@ -6996,6 +7126,18 @@
                         <input type="text" id="process-add-title-input" class="glass-input" required placeholder="Titel des Vorgangs...">
                     </div>
 
+                    <!-- Dokumente: der Vorgang hat vor dem Speichern noch keine ID,
+                         ausgewaehlte Dateien werden daher nur gestapelt (js/process-attachments.js,
+                         window.processPendingFiles) und erst nach saveNewProcess hochgeladen. -->
+                    <div class="form-group" style="margin-bottom: 0.75rem;">
+                        <button type="button" id="process-add-att-btn" class="proc-att-open-btn"
+                                onclick="document.getElementById('process-add-att-input').click()">
+                            📎 Dokument hinzufügen
+                        </button>
+                        <input type="file" id="process-add-att-input" multiple style="display:none;"
+                            onchange="window.addProcessPendingFiles('process-add', this.files); this.value='';">
+                        <div id="process-add-pending-files-list"></div>
+                    </div>
 
                     <!-- Aktueller Stand: gleich beim Anlegen eintragbar. Der Text
                          wird als erster Eintrag in status_updates gespeichert und
@@ -7610,6 +7752,7 @@
 <script src="js/auth.js?v=1"></script>
 <script src="js/users.js?v=3"></script>
 <script src="js/machines-grouped.js?v=1"></script>
+<script src="js/timeline-view.js?v=70"></script>
 <script src="js/voice-dictation.js?v=2"></script>
 </body>
 

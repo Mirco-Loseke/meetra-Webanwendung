@@ -66,6 +66,8 @@
         { key: 'unteraufgaben', label: 'Unteraufgaben', what: ['Unteraufgaben'] },
         { key: 'werkstatt', label: 'Werkstatt-Einträge', what: ['Werkstatt-Einträgen'] },
         { key: 'mietvereinbarungen', label: 'Mietvereinbarungen', what: ['Mietvereinbarungen'] },
+        // Abwesenheiten (Urlaub/Krank) werden in der Timeline gepflegt (js/timeline-view.js).
+        { key: 'abwesenheiten', label: 'Abwesenheiten (Timeline)', what: ['Abwesenheiten'] },
         { key: 'benutzer', label: 'Benutzer', what: ['Benutzern'] }
     ];
 
