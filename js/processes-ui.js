@@ -535,6 +535,10 @@
             const editStandText = document.getElementById('edit-process-status-text');
             if (editStandText) editStandText.value = '';
             window.renderProcessStatusHistory(proc);
+            angeboteSucheCache = null;   // Angebotssuche frisch laden (Importe seit dem letzten Öffnen)
+            angebotSucheAlle = false;
+            const angBox = document.getElementById('edit-process-angebot-block');
+            if (angBox) angBox.innerHTML = window.renderProcessAngebotBlock ? window.renderProcessAngebotBlock(proc, 'modal') : '';
             window.syncProcessSelectDisplay('edit-process', 'type');
             window.syncProcessSelectDisplay('edit-process', 'status');
             window.processSteps['edit-process'] = Array.isArray(proc.steps)
@@ -1111,10 +1115,267 @@
             return isNaN(d) ? null : d.toISOString();
         };
 
-        window.openProcessStatusUpdateModal = function(id, event) {
+        // ------------------------------------------------------------------
+        // ANGEBOT AM VORGANG
+        // ------------------------------------------------------------------
+        // Hängt an einem Vorgang ein Angebot (angebote.process_id, geladen in
+        // js/processes.js → window.angeboteByProcess), werden Status, VK, EK
+        // und Realisierbar hier gezeigt und geändert. Gespeichert wird in
+        // `angebote` (window.angebotFeldSpeichern, js/listen.js) — die
+        // Angebotsliste zeigt danach denselben Stand.
+        const angEsc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        // Zahlen kommen aus der Datenbank als "12500.00" (Punkt) und aus dem
+        // Feld als "12.500,00" (deutsch). Wie parseGermanNumber in listen.js:
+        // Punkte sind nur dann Tausenderzeichen, wenn ein Komma dabei ist.
+        const angParse = (s) => {
+            if (s === null || s === undefined || s === '') return null;
+            if (typeof s === 'number') return s;
+            let t = String(s).trim().replace(/[€%\s]/g, '');
+            if (!t) return null;
+            if (t.includes(',')) t = t.replace(/\./g, '').replace(',', '.');
+            const n = parseFloat(t);
+            return isNaN(n) ? null : n;
+        };
+        const angZahl = (v) => {
+            const n = angParse(v);
+            return n === null ? '' : n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
+
+        window.renderProcessAngebotBlock = function (proc, modus) {
+            const a = window.angeboteByProcess && window.angeboteByProcess[String(proc.id)];
+            if (!a) {
+                if (modus !== 'modal') return '';
+                // Noch kein Angebot am Vorgang: eines aus der Angebotsliste suchen
+                // und verknüpfen (setzt angebote.process_id auf diesen Vorgang).
+                return `
+                <div class="form-group" style="margin-bottom:0.75rem; position:relative;">
+                    <label class="form-label-caps">Angebot</label>
+                    <input type="text" class="glass-input" id="edit-process-angebot-suche" placeholder="Angebot suchen (Belegnummer oder Firma) …" autocomplete="off"
+                           oninput="window.procAngebotSuche(this.value, '${proc.id}')" onfocus="window.procAngebotSuche(this.value, '${proc.id}')"
+                           onblur="setTimeout(() => { const d = document.getElementById('edit-process-angebot-treffer'); if (d) d.style.display = 'none'; }, 200)">
+                    <div id="edit-process-angebot-treffer" class="autocomplete-suggestions" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:9999; max-height:220px; overflow-y:auto; margin-top:4px;"></div>
+                </div>`;
+            }
+            const optionen = (typeof window.angebotStatusOptionen === 'function')
+                ? window.angebotStatusOptionen(a.status)
+                : (window.categoryList || []).filter(c => c.type === 'status');
+            const statusCat = (window.categoryList || []).find(c => c.type === 'status' && c.name === a.status);
+            const vk = angParse(a.nettobetrag), ek = angParse(a.ek_betrag);
+            const spanne = (vk !== null && ek !== null) ? vk - ek : null;
+            const spannePct = (spanne !== null && vk > 0) ? (spanne / vk * 100) : null;
+            const datum = a.belegdatum ? String(a.belegdatum).split('-').reverse().join('.') : '';
+            const feld = (label, inhalt, stil) => `
+                <div style="display:flex; flex-direction:column; gap:3px; min-width:0; ${stil || ''}">
+                    <span style="font-size:0.66rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:rgba(255,255,255,0.5);">${label}</span>
+                    ${inhalt}
+                </div>`;
+            const eingabe = (wert, platz, onblur, extra) => `
+                <input type="text" class="glass-input" value="${angEsc(wert)}" placeholder="${platz}"
+                       style="height:32px; padding:0 9px; font-size:0.85rem; text-align:right; ${extra || ''}"
+                       onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){ this.blur(); }"
+                       onblur="${onblur}">`;
+            return `
+                <div class="proc-angebot-block" onclick="event.stopPropagation()"
+                     style="margin-bottom:8px; padding:9px 11px; border-radius:10px; background:rgba(250,204,21,0.07); border:1px solid rgba(250,204,21,0.3);">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:7px;">
+                        <span style="font-size:0.7rem; font-weight:800; color:#facc15; text-transform:uppercase; letter-spacing:0.5px;">Angebot ${angEsc(a.belegnummer || '')}</span>
+                        ${datum ? `<span style="font-size:0.72rem; color:rgba(255,255,255,0.45);">vom ${datum}</span>` : ''}
+                        ${modus === 'card' ? `<span onclick="window.switchView('listen'); window.switchListenTab && window.switchListenTab('angebote');" title="Zur Angebotsliste" style="margin-left:auto; font-size:0.72rem; color:#facc15; cursor:pointer; text-decoration:underline;">Liste</span>` : ''}
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:8px;">
+                        ${feld('Status', `
+                            <select class="glass-input" style="height:32px; padding:0 6px; font-size:0.85rem; ${statusCat && statusCat.color ? `border-color:${statusCat.color};` : ''}"
+                                    onclick="event.stopPropagation()" onchange="window.procAngebotFeld('${a.id}', 'status', this.value)">
+                                <option value="">-- kein Status --</option>
+                                ${optionen.map(c => `<option value="${angEsc(c.name)}" ${c.name === a.status ? 'selected' : ''}>${angEsc(c.name)}</option>`).join('')}
+                            </select>`, 'grid-column: span 2;')}
+                        ${feld('VK (€)', eingabe(angZahl(a.nettobetrag), 'VK…', `window.procAngebotFeld('${a.id}', 'nettobetrag', this.value)`))}
+                        ${feld('EK (€)', eingabe(angZahl(a.ek_betrag), 'EK…', `window.procAngebotFeld('${a.id}', 'ek_betrag', this.value)`))}
+                        ${feld('Realisierbar (%)', eingabe(a.realisierbar == null ? '' : String(a.realisierbar), '…', `window.procAngebotFeld('${a.id}', 'realisierbar', this.value)`))}
+                        ${spanne !== null ? feld('Spanne', `<div style="height:32px; display:flex; align-items:center; justify-content:flex-end; font-weight:800; font-size:0.9rem; color:${spannePct !== null && spannePct < 10 ? '#F87171' : '#22c55e'};">${angZahl(spanne)} €${spannePct !== null ? ` <span style="font-size:0.72rem; margin-left:5px; opacity:0.8;">${spannePct.toLocaleString('de-DE', { maximumFractionDigits: 1 })} %</span>` : ''}</div>`) : ''}
+                    </div>
+                </div>`;
+        };
+
+        // Angebot suchen und an diesen Vorgang hängen.
+        let angeboteSucheCache = null;
+        let angebotSucheAlle = false;   // true = nicht auf die Adresse des Vorgangs eingrenzen
+        async function angeboteFuerSuche() {
+            if (angeboteSucheCache) return angeboteSucheCache;
+            const { data, error } = await window.supabaseClient
+                .from('angebote').select('id, belegnummer, belegdatum, nettobetrag, process_id, customer_id, machine_id, machine_label, kundenmatchcode, customers(name)')
+                .order('belegdatum', { ascending: false }).limit(2000);
+            if (error) { console.warn('Angebote für Suche:', error.message); return []; }
+            angeboteSucheCache = data || [];
+            return angeboteSucheCache;
+        }
+        // Zuerst nur die Angebote der im Vorgang hinterlegten Adresse; „Alle
+        // durchsuchen" hebt die Eingrenzung auf.
+        window.procAngebotSuche = async function (text, processId) {
+            const box = document.getElementById('edit-process-angebot-treffer');
+            if (!box) return;
+            const liste = await angeboteFuerSuche();
+            const t = String(text || '').trim().toLowerCase();
+            const adresseId = document.getElementById('edit-process-customer-id')?.value || '';
+            const eingegrenzt = !!adresseId && !angebotSucheAlle;
+            const passt = (a) => !t
+                || String(a.belegnummer || '').toLowerCase().includes(t)
+                || String(a.customers?.name || a.kundenmatchcode || '').toLowerCase().includes(t);
+            let treffer = liste.filter(a => passt(a) && (!eingegrenzt || String(a.customer_id) === String(adresseId)));
+            const anzahlAlle = eingegrenzt ? liste.filter(passt).length : treffer.length;
+            treffer = treffer.slice(0, 25);
+            const zeilen = treffer.map(a => {
+                const firma = (a.customers?.name || a.kundenmatchcode || '').split(',')[0].trim();
+                const datum = a.belegdatum ? String(a.belegdatum).split('-').reverse().join('.') : '';
+                const belegt = a.process_id && String(a.process_id) !== String(processId);
+                return `<div onmousedown="event.preventDefault(); window.procAngebotVerknuepfen('${a.id}', '${processId}')"
+                             style="padding:9px 12px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; gap:10px; align-items:center;">
+                            <span style="font-weight:800; color:#facc15; white-space:nowrap;">${angEsc(a.belegnummer || '')}</span>
+                            <span style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#fff; font-size:0.86rem;">${angEsc(firma)}</span>
+                            <span style="font-size:0.74rem; color:rgba(255,255,255,0.45); white-space:nowrap;">${datum}${belegt ? ' · hat eigenen Vorgang → wird zusammengeführt' : ''}</span>
+                        </div>`;
+            });
+            if (!treffer.length) {
+                zeilen.push(`<div style="padding:9px 12px; color:rgba(255,255,255,0.45); font-size:0.84rem;">${eingegrenzt ? 'Kein Angebot dieser Adresse gefunden.' : 'Kein Angebot gefunden.'}</div>`);
+            }
+            if (eingegrenzt) {
+                zeilen.push(`<div onmousedown="event.preventDefault(); window.procAngebotSucheAlle('${processId}')"
+                                  style="padding:9px 12px; cursor:pointer; background:rgba(255,255,255,0.05); color:#34d399; font-weight:700; font-size:0.84rem;">
+                                 🔍 Alle Angebote durchsuchen (${anzahlAlle}) — nicht nur die dieser Adresse
+                             </div>`);
+            }
+            box.innerHTML = zeilen.join('');
+            box.style.display = 'block';
+        };
+        window.procAngebotSucheAlle = function (processId) {
+            angebotSucheAlle = true;
+            const input = document.getElementById('edit-process-angebot-suche');
+            window.procAngebotSuche(input ? input.value : '', processId);
+            if (input) input.focus();
+        };
+
+        // Angebot an diesen Vorgang hängen. Hat das Angebot schon seinen
+        // (automatisch angelegten) Vorgang, werden BEIDE zu einem: Schritte,
+        // Zuständige, Stände und Dokumente wandern in diesen Vorgang, der
+        // Titel wird „Angebot <Nr> – <Maschine> – <bisheriger Titel>", der
+        // andere Vorgang wird gelöscht.
+        window.procAngebotVerknuepfen = async function (angebotId, processId) {
+            const box = document.getElementById('edit-process-angebot-treffer');
+            if (box) box.style.display = 'none';
+            const liste = await angeboteFuerSuche();
+            const a = liste.find(x => String(x.id) === String(angebotId));
+            if (!a) return;
+            const proc = (window.eventsState.processes || []).find(p => String(p.id) === String(processId));
+            if (!proc) { window.showToast('Vorgang nicht geladen.'); return; }
+
+            let quelle = null;
+            if (a.process_id && String(a.process_id) !== String(processId)) {
+                quelle = (window.eventsState.processes || []).find(p => String(p.id) === String(a.process_id)) || null;
+                if (!quelle) {
+                    const { data: q } = await window.supabaseClient.from('internal_processes').select('*').eq('id', a.process_id).maybeSingle();
+                    quelle = q || null;
+                }
+                if (quelle && !confirm(`Angebot ${a.belegnummer} hat bereits einen eigenen Vorgang („${quelle.title || ''}“).\n\nBeide zusammenführen? Schritte, Zuständige, Stände und Dokumente des anderen Vorgangs kommen in diesen; der andere wird danach gelöscht.`)) return;
+            }
+
+            const maschine = a.machine_id
+                ? ((typeof window.getMachineName === 'function' && window.getMachineName(a.machine_id)) || '')
+                : (a.machine_label || '');
+            const titelAlt = (document.getElementById('edit-process-title-input')?.value || proc.title || '').trim();
+            const kopf = `Angebot ${a.belegnummer || ''}${maschine ? ' – ' + maschine : ''}`.trim();
+            const titelNeu = titelAlt && !titelAlt.startsWith('Angebot ' + (a.belegnummer || '')) ? `${kopf} – ${titelAlt}` : (titelAlt || kopf);
+
+            const felder = { title: titelNeu };
+            if (quelle) {
+                // Listen zusammenführen — Vorhandenes bleibt vorn, Doppeltes fällt weg.
+                const ohneDoppel = (x, y, key) => {
+                    const alle = [].concat(Array.isArray(x) ? x : [], Array.isArray(y) ? y : []);
+                    const gesehen = new Set();
+                    return alle.filter(e => { const k = key(e); if (gesehen.has(k)) return false; gesehen.add(k); return true; });
+                };
+                felder.steps = ohneDoppel(proc.steps, quelle.steps, s => (s && s.id) || JSON.stringify(s));
+                felder.assigned_users = ohneDoppel(proc.assigned_users, quelle.assigned_users, u => String(u));
+                felder.status_updates = ohneDoppel(proc.status_updates, quelle.status_updates, u => (u && (u.at + '|' + u.text)) || JSON.stringify(u))
+                    .sort((x, y) => String(y.at || '').localeCompare(String(x.at || '')));
+                felder.attachments = ohneDoppel(proc.attachments, quelle.attachments, f => (f && (f.path || f.url || f.id)) || JSON.stringify(f));
+                if (!proc.machine_id && quelle.machine_id) felder.machine_id = quelle.machine_id;
+                if (!proc.customer_id && quelle.customer_id) felder.customer_id = quelle.customer_id;
+                if (!proc.remind_at && quelle.remind_at) felder.remind_at = quelle.remind_at;
+            } else {
+                if (!proc.machine_id && a.machine_id) felder.machine_id = a.machine_id;
+                if (!proc.customer_id && a.customer_id) felder.customer_id = a.customer_id;
+            }
+
+            const { error: pErr } = await window.supabaseClient.from('internal_processes').update(felder).eq('id', processId);
+            if (pErr) { window.showToast('Zusammenführen fehlgeschlagen: ' + pErr.message); return; }
+            const { data, error } = await window.supabaseClient
+                .from('angebote').update({ process_id: processId }).eq('id', angebotId)
+                .select('*, customers(name), angebot_notizen(id, content, created_at)').single();
+            if (error) { window.showToast('Verknüpfen fehlgeschlagen: ' + error.message); return; }
+            if (quelle) {
+                const { error: dErr } = await window.supabaseClient.from('internal_processes').delete().eq('id', quelle.id);
+                if (dErr) console.warn('Alter Angebots-Vorgang nicht gelöscht:', dErr.message);
+            }
+
+            a.process_id = processId;
+            Object.assign(proc, felder);
+            window.angeboteByProcess = window.angeboteByProcess || {};
+            window.angeboteByProcess[String(processId)] = data;
+            if (quelle) delete window.angeboteByProcess[String(quelle.id)];
+            const titel = document.getElementById('edit-process-title-input');
+            if (titel) titel.value = titelNeu;
+            const boxA = document.getElementById('edit-process-angebot-block');
+            if (boxA) boxA.innerHTML = window.renderProcessAngebotBlock(proc, 'modal');
+            // Fenster-Inhalte nachziehen (Schritte, Zuständige, Stand-Verlauf)
+            if (quelle) {
+                window.processSteps['edit-process'] = (felder.steps || []).map(s => ({ ...s }));
+                if (typeof window.renderProcessSteps === 'function') window.renderProcessSteps('edit-process');
+                window.processAssignedUsers['edit-process'] = [...(felder.assigned_users || [])];
+                const hidden = document.getElementById('edit-process-assigned-users');
+                if (hidden) hidden.value = JSON.stringify(window.processAssignedUsers['edit-process']);
+                if (typeof renderProcessTechDropdown === 'function') renderProcessTechDropdown('edit-process');
+                if (typeof window.renderProcessStatusHistory === 'function') window.renderProcessStatusHistory(proc);
+                if (typeof window.updateProcessAttachButton === 'function') window.updateProcessAttachButton();
+            }
+            if (typeof window.fetchProcesses === 'function') window.fetchProcesses();
+            if (typeof window.fetchAngebote === 'function' && document.getElementById('listen')?.classList.contains('active')) window.fetchAngebote();
+            window.showToast(quelle ? `Angebot ${data.belegnummer} zusammengeführt — ein Vorgang.` : `Angebot ${data.belegnummer} verknüpft.`);
+        };
+
+        window.procAngebotFeld = async function (angebotId, feld, wert) {
+            if (typeof window.angebotFeldSpeichern !== 'function') return;
+            const felder = {};
+            if (feld === 'status') {
+                felder.status = (wert || '').trim() || null;
+                // Gleiche Automatik wie in der Liste (updateAngebotStatus).
+                const n = (felder.status || '').toLowerCase();
+                if (n === 'auftrag erhalten') felder.realisierbar = 100;
+                else if (n === 'auftrag verloren') felder.realisierbar = 0;
+                else if (n === 'warten auf reaktion') felder.realisierbar = 5;
+            } else {
+                felder[feld] = angParse(wert);
+            }
+            const neu = await window.angebotFeldSpeichern(angebotId, felder);
+            if (!neu) return;
+            if (window.angeboteByProcess && neu.process_id) window.angeboteByProcess[String(neu.process_id)] = neu;
+            if (typeof window.renderProcesses === 'function') window.renderProcesses();
+            const box = document.getElementById('edit-process-angebot-block');
+            const proc = neu.process_id && (window.eventsState.processes || []).find(p => String(p.id) === String(neu.process_id));
+            if (box && proc && !document.getElementById('process-edit-modal')?.classList.contains('hidden')) {
+                box.innerHTML = window.renderProcessAngebotBlock(proc, 'modal');
+            }
+        };
+
+        window.openProcessStatusUpdateModal = async function(id, event) {
             if (event) event.stopPropagation();
-            const proc = (window.eventsState.processes || []).find(p => String(p.id) === String(id));
-            if (!proc) return;
+            let proc = (window.eventsState.processes || []).find(p => String(p.id) === String(id));
+            // Aus der Angebotsliste heraus sind die Vorgänge evtl. noch nicht
+            // geladen — einmal nachladen statt still nichts zu tun.
+            if (!proc && typeof window.fetchProcesses === 'function') {
+                await window.fetchProcesses();
+                proc = (window.eventsState.processes || []).find(p => String(p.id) === String(id));
+            }
+            if (!proc) { window.showToast('Vorgang nicht gefunden.'); return; }
             window.statusUpdateProcessId = id;
             const sub = document.getElementById('status-update-modal-subtitle');
             if (sub) sub.textContent = proc.title || 'Vorgang';

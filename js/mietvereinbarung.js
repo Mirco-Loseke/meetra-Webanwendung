@@ -58,7 +58,11 @@
             // beides bleibt normal anklickbar und aenderbar.
             miete: {
                 abholdatum: heute(), abholzeit: jetztUhrzeit(), beginn: heute(), beginn_bs: '',
-                ende: '', ende_bs: '', tagessatz: '', zusatzinfo: vorlage.zusatzinfo || ''
+                ende: '', ende_bs: '', tagessatz: '', zusatzinfo: vorlage.zusatzinfo || '',
+                // Zuletzt automatisch aus den Preisregeln der Vorlage eingetragener
+                // Betrag. Stimmt "tagessatz" damit überein (oder ist leer), darf
+                // die Automatik überschreiben — sonst hat jemand von Hand getippt.
+                tagessatz_auto: ''
             },
             pruefpunkte: {},   // "nr" -> { spaltenId: 'io' | 'nio' | null }
             auswahl: {},       // "nr" -> ['12 mm'] — gewählte Ausführungen
@@ -495,9 +499,50 @@
     // ------------------------------------------------------
     // Der Briefbogen — auf A4-Seiten verteilt
     // ------------------------------------------------------
+    // ------------------------------------------------------
+    // Tagessatz nach Ausstattung
+    // ------------------------------------------------------
+    // Die Vorlage kann Preisregeln tragen (Einstellungen → Mietvereinbarung
+    // → „Tagessätze nach Ausstattung"). Was am Bogen gesetzt ist — gewählte
+    // Ausführungen und angekreuzte optionale Prüfpunkte — wird gegen diese
+    // Regeln gehalten; der Treffer landet im Feld „Tagessatz".
+    function ausstattungAmBogen() {
+        const liste = [];
+        let nr = 0;
+        (vorlage.baugruppen || []).forEach(g => (g.punkte || []).forEach(roh => {
+            nr++;
+            const p = punktLesen(roh);
+            ((daten.auswahl && daten.auswahl[nr]) || []).forEach(o => liste.push({ punkt: p.text, option: o }));
+            if (p.optional) {
+                const eintrag = daten.pruefpunkte[nr] || {};
+                if (Object.keys(eintrag).some(k => eintrag[k])) liste.push({ punkt: p.text, verbaut: true });
+            }
+        }));
+        return liste;
+    }
+
+    // Trägt den passenden Tagessatz ein — aber nur, wenn das Feld leer ist
+    // oder noch den zuletzt automatisch gesetzten Wert zeigt. Ein von Hand
+    // eingetippter Betrag bleibt stehen. Gibt true zurück, wenn sich der
+    // Wert geändert hat.
+    function preisAktualisieren() {
+        if (!daten || !vorlage || typeof window.mietPreisErmitteln !== 'function') return false;
+        if (!Array.isArray(vorlage.preise) || !vorlage.preise.length) return false;
+        const m = daten.miete;
+        const neu = window.mietPreisErmitteln(vorlage.preise, ausstattungAmBogen());
+        const aktuell = String(m.tagessatz || '');
+        const frei = !aktuell.trim() || aktuell === String(m.tagessatz_auto || '');
+        if (!frei || aktuell === neu) { return false; }
+        m.tagessatz = neu;
+        m.tagessatz_auto = neu;
+        return true;
+    }
+
     function zeichneInhalt() {
         const pages = document.getElementById('miet-pages');
         if (!pages) return;
+
+        preisAktualisieren();
 
         // Jeder Neuaufbau heisst: es hat sich etwas geändert.
         entwurfMerken();
@@ -2199,6 +2244,12 @@
             const eintrag = daten.pruefpunkte[nr] || {};
             zeile.classList.toggle('miet-opt-leer',
                 !Object.keys(eintrag).some(k => eintrag[k]));
+            // Eine angekreuzte Option kann den Tagessatz ändern — nur das
+            // eine Feld nachziehen, der Bogen wird nicht neu aufgebaut.
+            if (preisAktualisieren()) {
+                const feld = document.querySelector('[data-feld="miete.tagessatz"]');
+                if (feld) feld.textContent = daten.miete.tagessatz;
+            }
         }
         entwurfMerken();
     };

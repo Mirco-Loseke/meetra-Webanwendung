@@ -76,3 +76,35 @@
     color: #fff;
     margin-bottom: 4px;
 }
+
+/* Die Angebotsliste darf nie breiter als der Bildschirm werden — nur die
+   Tabelle scrollt in ihrem Rahmen (.angebote-table-wrap). Ohne diese Grenze
+   dehnte die 1650px breite Tabelle die ganze Seite samt Statistik-Kacheln,
+   und die Blätter-Pfeile hatten nichts mehr zu scrollen. */
+#listen,
+#listen-tab-content-angebote,
+#angebote-list-container {
+    max-width: 100%;
+    min-width: 0;
+}
+.angebote-glass-card {
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* Endgültige Sperre: die Breite des Listen-Bereichs hängt NIE vom Inhalt ab
+   (contain: inline-size) und läuft nie über den Bildschirm hinaus. Nur die
+   Tabelle scrollt seitlich in ihrem eigenen Rahmen. */
+#listen {
+    overflow-x: clip;
+}
+#listen-tab-content-angebote,
+#angebote-list-container {
+    contain: inline-size;
+    width: 100%;
+}
+.angebote-glass-card {
+    width: 100%;
+    box-sizing: border-box;
+}

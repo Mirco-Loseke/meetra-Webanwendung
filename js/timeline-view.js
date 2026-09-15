@@ -1758,9 +1758,11 @@
                    vorher: der Platzhalter fing den Klick ab, bevor die Spur
                    ihn sah. */
                 if ((it.ohneDatum || it.vorlaeufig) && !ev.target.classList.contains('grip')) {
+                    if (!zweiTasten(ev)) { ev.preventDefault(); return; }
                     aufziehen(it, bar.parentNode, bar, ev);
                     return;
                 }
+                if (ev.button !== 0 && ev.pointerType === 'mouse') return;
                 var modus = ev.target.classList.contains('grip')
                     ? (ev.target.classList.contains('l') ? 'l' : 'r') : 'move';
                 var mit = (modus === 'move' && S.auswahl.has(it.id))
@@ -1789,6 +1791,22 @@
                 S.auswahl.clear(); S.gewaehlt = it; zeichne();
             });
         });
+
+        /* Ein neuer Balken entsteht mit der Maus NUR, wenn linke UND rechte
+           Taste zugleich gedrueckt sind (ev.buttons: 1 = links, 2 = rechts).
+           Ein einzelner Druck auf die Spur legte zu oft aus Versehen etwas
+           an. Wer zuerst links drueckt, loest mit dem zweiten Druck (rechts)
+           ein weiteres pointerdown aus — erst das startet das Aufziehen.
+           Finger und Stift kennen keine zwei Tasten und duerfen wie bisher. */
+        function zweiTasten(ev) {
+            if (ev.pointerType && ev.pointerType !== 'mouse') return true;
+            return (ev.buttons & 3) === 3;
+        }
+        wurzel.oncontextmenu = function (ev) {
+            /* Die rechte Taste gehoert hier zum Aufziehen — kein Browsermenue
+               auf Spuren und Balken. */
+            if (ev.target.closest('.tlv-track, .tlv-bar')) ev.preventDefault();
+        };
 
         /* Balken aufziehen: in einer Zeile ohne eigenen Termin druecken und
            nach rechts ziehen. Der Tag unter dem Zeiger ist der erste Tag, die
@@ -1857,11 +1875,11 @@
             var vorab = eintrag(tr.dataset.row || '');
             if (vorab && !vorab.gesperrt && schreibbarRoh(vorab)) {
                 tr.classList.add('tlv-aufziehbar');
-                tr.title = 'Gedrückt halten und ziehen — so lang wird der Balken. '
-                         + 'Ein kurzer Klick legt nichts an.';
+                tr.title = 'Linke UND rechte Maustaste zusammen drücken und ziehen — '
+                         + 'so lang wird der Balken. Eine Taste allein legt nichts an.';
             }
             tr.addEventListener('pointerdown', function (ev) {
-                if (ev.button !== 0 && ev.pointerType === 'mouse') return;
+                if (!zweiTasten(ev)) return;
                 if (ev.target.closest('.tlv-bar')) return;   // hat einen eigenen Handler
                 // Auf der freien Spur gilt immer: neu aufziehen. Auch wenn die
                 // Zeile schon einen Termin hat — sie wird dann neu gesteckt.

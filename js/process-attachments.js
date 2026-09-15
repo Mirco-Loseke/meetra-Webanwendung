@@ -29,7 +29,7 @@
 (function () {
     'use strict';
 
-    const MAX_MB = 5;
+    const MAX_MB = 8;   // PDFs mit Bildern werden gern groesser als 5 MB
     const MAX_BYTES = MAX_MB * 1024 * 1024;
 
     let aktuelleId = null;     // Vorgang, dessen Fenster gerade offen ist
@@ -231,14 +231,17 @@
             dateien = geprueft.neu.map(e => e.file);
         }
 
-        let fehler = 0;
-        for (let i = 0; i < dateien.length; i++) {
+        // Bis zu vier Dateien gleichzeitig hochladen statt eine nach der
+        // anderen — bei mehreren Dokumenten spürbar schneller. Die Reihenfolge
+        // in der Liste bleibt die der Auswahl.
+        let fehler = 0, fertig = 0;
+        const ergebnisse = new Array(dateien.length).fill(null);
+        const ladeEine = async (i) => {
             const f = dateien[i];
-            if (onProgress) onProgress(i + 1, dateien.length, f.name);
             try {
                 // Pfad beginnt mit der Vorgangs-ID -> im Bucket liegt alles
                 // zu einem Vorgang beieinander.
-                const pfad = 'vorgaenge/' + processId + '/' + Date.now() + '-' + sicherName(f.name);
+                const pfad = 'vorgaenge/' + processId + '/' + Date.now() + '-' + i + '-' + sicherName(f.name);
                 const res = await window.FileUploadService.uploadFile(f, {
                     path: pfad,
                     provider: 'cloudflare-r2',
@@ -246,7 +249,7 @@
                     // unverändert bleiben, auch wenn es ein Scan/Foto ist.
                     compress: false
                 });
-                neu.push({
+                ergebnisse[i] = {
                     id: 'att_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
                     name: f.name,
                     url: res.url,
@@ -256,12 +259,21 @@
                     at: new Date().toISOString(),
                     by: (window.activeUser && window.activeUser.name) || null,
                     step_id: stepId || null
-                });
+                };
             } catch (e) {
                 console.error('Dokument konnte nicht hochgeladen werden:', e);
                 fehler++;
             }
+            fertig++;
+            if (onProgress) onProgress(fertig, dateien.length, f.name);
+        };
+        let naechste = 0;
+        const arbeiter = [];
+        for (let k = 0; k < Math.min(4, dateien.length); k++) {
+            arbeiter.push((async () => { while (naechste < dateien.length) await ladeEine(naechste++); })());
         }
+        await Promise.all(arbeiter);
+        ergebnisse.forEach(e => { if (e) neu.push(e); });
 
         const { error } = await sb().from('internal_processes').update({ attachments: neu }).eq('id', processId);
         if (error) throw error;
@@ -319,6 +331,7 @@
             }
         } catch (e) {
             console.warn('Datei blieb im Speicher liegen:', e);
+            status('Verweis entfernt, aber die Datei konnte im Speicher nicht gelöscht werden: ' + (e.message || e), true);
         }
         zeichnen();
         aktualisiereAnzeigen();
@@ -333,6 +346,9 @@
         }
         if (typeof window.updateProcessAttachButton === 'function') window.updateProcessAttachButton();
         if (typeof window.renderProcesses === 'function') window.renderProcesses();
+        // Angebotsliste zeigt dieselben Dokumente (Angebot = Vorgang, js/listen.js).
+        const p = proc(aktuelleId);
+        if (p && typeof window.angeboteNachVorgangAktualisieren === 'function') window.angeboteNachVorgangAktualisieren(p);
     }
 
     // Dokumente eines einzelnen Schritts entfernen — Datei UND Verweis.

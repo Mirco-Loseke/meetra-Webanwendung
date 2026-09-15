@@ -1125,42 +1125,28 @@
     }
 }
 
-/* Angebote-Tabelle: auf dem Desktop exakt auf 100% Breite ausfüllen statt
-   horizontal zu scrollen. Feste Spaltenanteile, Inhalte umbrechen. */
+/* Angebote-Tabelle am Desktop (Stand 2026-09-15): KEINE festen Spaltenanteile
+   mehr. Die Tabelle hat in js/listen.js eine Mindestbreite (1500px) und
+   scrollt bei Bedarf seitlich — Erinnerung und Löschen dürfen rechts aus
+   dem Bild laufen, Status/Zuständig/Maschine/Stand bleiben lesbar. Die
+   früheren nth-child-Prozentwerte passten nach jeder neuen Spalte nicht
+   mehr (Zuständig war 7 %, Erinnerung 3 % breit — praktisch unsichtbar). */
 @media (min-width: 901px) {
     #listen-tab-content-angebote .angebote-table-wrap {
-        overflow-x: visible;
+        overflow-x: auto;
     }
     #listen-tab-content-angebote .angebote-table-wrap table {
-        table-layout: fixed;
-        width: 100%;
+        table-layout: auto;
     }
     #listen-tab-content-angebote .angebote-table-wrap th,
     #listen-tab-content-angebote .angebote-table-wrap td {
-        min-width: 0 !important;
-        padding-left: 6px;
-        padding-right: 6px;
-        overflow-wrap: anywhere;
-        word-break: break-word;
+        padding-left: 8px;
+        padding-right: 8px;
+        vertical-align: middle;
     }
-    #listen-tab-content-angebote .angebote-table-wrap input.glass-form-input,
-    #listen-tab-content-angebote .angebote-table-wrap .angebot-realisierbar-input {
-        width: 100% !important;
+    #listen-tab-content-angebote .angebote-table-wrap input.glass-form-input {
         box-sizing: border-box;
     }
-    /* Spaltenanteile (Summe = 100%) */
-    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(1)  { width: 7%; }
-    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(2)  { width: 8%; }
-    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(3)  { width: 11%; }
-    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(4)  { width: 6%; }
-    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(5)  { width: 7%; }
-    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(6)  { width: 7%; }
-    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(7)  { width: 8%; }
-    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(8)  { width: 10%; }
-    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(9)  { width: 11%; }
-    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(10) { width: 12%; }
-    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(11) { width: 10%; }
-    #listen-tab-content-angebote .angebote-table-wrap tr > *:nth-child(12) { width: 3%; }
 }
 
 .dash-header {

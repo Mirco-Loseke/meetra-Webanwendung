@@ -141,7 +141,7 @@
     <!-- ========================================================= -->
     <link rel="stylesheet" href="css/base/variables.css?v=1">
     <link rel="stylesheet" href="css/base/tokens.css?v=1">
-    <link rel="stylesheet" href="css/base/reset.css?v=1">
+    <link rel="stylesheet" href="css/base/reset.css?v=2">
     <link rel="stylesheet" href="css/base/brand-accents.css?v=1">
     <link rel="stylesheet" href="css/components/navigation.css?v=1">
     <link rel="stylesheet" href="css/components/modals.css?v=5">
@@ -171,10 +171,10 @@
     <link rel="stylesheet" href="css/views/workshop-tasks.css?v=4">
     <link rel="stylesheet" href="css/views/tasks-print.css?v=3">
     <link rel="stylesheet" href="css/views/dashboard.css?v=1">
-    <link rel="stylesheet" href="css/views/listen.css?v=1">
+    <link rel="stylesheet" href="css/views/listen.css?v=3">
     <link rel="stylesheet" href="css/views/addressbook.css?v=13">
     <link rel="stylesheet" href="css/views/routenplanung.css?v=5">
-    <link rel="stylesheet" href="css/base/responsive.css?v=16">
+    <link rel="stylesheet" href="css/base/responsive.css?v=17">
 
     <!-- ========================================================= -->
     <!-- ============ EINBINDUNG DER HTML-BAUSTEINE ============== -->
@@ -2409,6 +2409,7 @@
                                         <h4 style="color: #fff; margin-top: 0; margin-bottom: 0.5rem; font-size: 1.1rem;">Import erfolgreich abgeschlossen</h4>
                                         <p id="import-result-message" style="margin: 0; font-size: 0.95rem; color: rgba(255,255,255,0.85); line-height: 1.5;"></p>
                                         <button type="button" class="btn-primary" onclick="resetImportUI()" style="margin-top: 1rem; padding: 10px 20px; font-weight: 700;">Weitere Datei importieren</button>
+                                <button type="button" class="btn-secondary" onclick="window.importAusschlussLeeren()" style="margin-top: 1rem; margin-left: 8px; padding: 10px 20px;" title="Beim Import als Dopplung abgewählte Adressen werden dauerhaft übersprungen — hier die Liste leeren">Sperrliste der Dopplungen leeren</button>
                                     </div>
                                 </div>
                             </div>
@@ -3332,8 +3333,12 @@
                         style="width:150px; height:38px; font-size:0.85rem; flex-shrink:0;">
                         <option value="">Alle Status</option>
                     </select>
+                    <select id="angebote-filter-zustaendig" class="glass-form-input" onchange="window.renderAngeboteList()"
+                        style="width:160px; height:38px; font-size:0.85rem; flex-shrink:0;">
+                        <option value="">Alle Zuständigen</option>
+                    </select>
                     <select id="angebote-filter-maschine" class="glass-form-input" onchange="window.renderAngeboteList()"
-                        style="width:150px; height:38px; font-size:0.85rem; flex-shrink:0;">
+                        style="width:190px; height:38px; font-size:0.85rem; flex-shrink:0;">
                         <option value="">Alle Maschinen</option>
                     </select>
                     <input type="text" id="angebote-search-input" class="glass-form-input" placeholder="Suchen..." style="width: 180px; height: 38px; flex-shrink:0;" oninput="window.renderAngeboteList()">
@@ -3349,7 +3354,7 @@
             <!-- Tab: Angebote -->
             <div id="listen-tab-content-angebote">
                 <!-- Angebote Liste -->
-                <div class="glass-card angebote-glass-card" style="padding: 0.75rem 2rem 1.5rem;">
+                <div class="glass-card angebote-glass-card" style="padding: 0.75rem 1rem 1.5rem;">
                     <div id="angebote-list-container"></div>
                 </div>
             </div>
@@ -4178,16 +4183,16 @@
     <script src="js/service-list.js?v=3"></script>
     <script src="js/history-modal.js?v=205"></script>
     <script src="js/calendar-events.js?v=5"></script>
-    <script src="js/processes-ui.js?v=27"></script>
+    <script src="js/processes-ui.js?v=31"></script>
     <!-- Dokumente an Vorgaengen/Schritten. Nutzt window.FileUploadService
          (js/file-upload-service-r2.js, weiter UNTEN geladen) — das ist in
          Ordnung, weil der Dienst erst beim Hochladen angefasst wird. -->
-    <script src="js/process-attachments.js?v=4"></script>
+    <script src="js/process-attachments.js?v=8"></script>
     <script src="js/process-messages.js?v=1"></script>
     <script src="js/process-machine-select.js?v=1"></script>
     <script src="js/customer-matching.js?v=1"></script>
     <script src="js/ui-modals.js?v=2"></script>
-    <script src="js/processes.js?v=128"></script>
+    <script src="js/processes.js?v=129"></script>
     <script src="js/service-reports.js?v=2"></script>
     <script src="js/service-entries.js?v=12"></script>
     <script src="js/service-picker.js?v=1"></script>
@@ -6039,14 +6044,14 @@
     <script src="js/machines-grouped.js?v=51"></script>
     <script src="js/protocols.js?v=55"></script>
     <!-- MIETVEREINBARUNG (2/3) — eigenstaendig, diese Zeile loeschen = weg -->
-    <script src="js/mietvereinbarung-vorlagen.js?v=11"></script>
-    <script src="js/mietvereinbarung.js?v=40"></script>
+    <script src="js/mietvereinbarung-vorlagen.js?v=12"></script>
+    <script src="js/mietvereinbarung.js?v=41"></script>
     <script src="js/mietvereinbarung-liste.js?v=1"></script>
 
     </main>
     </div><!-- End main-wrapper -->
 
-    <script src="js/tasks.js?v=29"></script>
+    <script src="js/tasks.js?v=30"></script>
     <script src="js/workshop-tasks.js?v=3"></script>
     <script src="js/tasks-print.js?v=12"></script>
     <script src="js/task_templates.js?v=100"></script>
@@ -6812,11 +6817,11 @@
     <script src="js/documents-r2.js?v=9"></script>
     <script src="js/checklists.js?v=5"></script>
     <script src="js/protokoll-liste.js?v=3"></script>
-    <script src="js/customers.js?v=4"></script>
+    <script src="js/customers.js?v=5"></script>
     <script src="js/autosave.js?v=1"></script>
     <script src="js/unsaved-guard.js?v=1"></script>
     <script src="js/address-history.js?v=2"></script>
-    <script src="js/addressbook.js?v=58"></script>
+    <script src="js/addressbook.js?v=62"></script>
     <script src="js/addressbook-live.js?v=3"></script>
     <script src="js/process-autosave.js?v=3"></script>
     <script src="js/task-autosave.js?v=3"></script>
@@ -6839,7 +6844,7 @@
          laufen — mit doppelt registrierten Event-Handlern. -->
     <script src="js/routeplanner.js?v=2"></script>
     <script src="js/routenplanung.js?v=19"></script>
-    <script src="js/listen.js?v=14"></script>
+    <script src="js/listen.js?v=38"></script>
 
     <script src="js/labels.js?v=2"></script>
     <script src="js/offline-service.js?v=1"></script>
@@ -7414,6 +7419,7 @@
                          Angabe, die im Alltag am haeufigsten gebraucht wird —
                          sie soll ohne Klick sichtbar sein. Nur die Bemerkung
                          bleibt hinter dem +. -->
+
                     <div class="form-group proc-stand-block" style="margin-bottom: 0.75rem;">
                         <label class="form-label-caps">Stand</label>
                         <div class="proc-note-stand-row">
@@ -7508,6 +7514,8 @@
                             </div>
                         </div>
                     </div>
+                    <!-- Angebot am Vorgang (js/processes-ui.js, renderProcessAngebotBlock) — unter der Adresse -->
+                    <div id="edit-process-angebot-block" style="margin-bottom: 1.25rem;"></div>
 
                     </div>
                     <div class="proc-add-col">
@@ -7752,7 +7760,7 @@
 <script src="js/auth.js?v=1"></script>
 <script src="js/users.js?v=3"></script>
 <script src="js/machines-grouped.js?v=1"></script>
-<script src="js/timeline-view.js?v=70"></script>
+<script src="js/timeline-view.js?v=71"></script>
 <script src="js/voice-dictation.js?v=2"></script>
 </body>
 

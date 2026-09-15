@@ -113,8 +113,28 @@ window.fetchProcesses = async function() {
             }
         }
 
+        // Angebote, die an einem Vorgang hängen (angebote.process_id, siehe
+        // js/listen.js): Status, VK, EK, Realisierbar werden auf der Karte und
+        // im Bearbeiten-Fenster gezeigt und dort auch geändert — der Datensatz
+        // bleibt in `angebote`. Fehlt die Spalte noch, bleibt die Karte leer.
+        window.angeboteByProcess = window.angeboteByProcess || {};
+        try {
+            const ids = processes.map(p => p.id);
+            const map = {};
+            for (let i = 0; i < ids.length; i += 200) {
+                const { data: ang, error: angErr } = await window.supabaseClient
+                    .from('angebote')
+                    .select('*, customers(name), angebot_notizen(id, content, created_at)')
+                    .in('process_id', ids.slice(i, i + 200));
+                if (angErr) { if (i === 0) console.info('Angebote zu Vorgängen nicht geladen:', angErr.message); break; }
+                (ang || []).forEach(a => { map[String(a.process_id)] = a; });
+            }
+            window.angeboteByProcess = map;
+        } catch (angErr) { console.warn('Angebote zu Vorgängen:', angErr); }
+
         window.eventsState.processes = processes;
         window.renderProcesses();
+        if (typeof window.angeboteNachVorgangAktualisieren === 'function') window.angeboteNachVorgangAktualisieren(processes);
     } catch (err) {
         console.error("Error loading internal processes:", err);
         const container = document.getElementById('processes-list-container');
@@ -615,6 +635,7 @@ window.renderProcesses = function(targetId, opts) {
                 <div class="proc-card-machine">${machineCell}</div>
                 ${remindBadge}
                 ${serviceLinkHtml}
+                ${window.renderProcessAngebotBlock ? window.renderProcessAngebotBlock(p, 'card') : ''}
                 ${senderRecText ? `<div style="font-size: 0.82rem; color: rgba(255,255,255,0.4); margin-bottom: 8px; word-break: break-word;">${senderRecText}</div>` : ''}
                 ${lastUpd ? standCardHtml : ""}
                 ${stepsCardHtml}
@@ -892,6 +913,16 @@ window.updateProcess = async function(event) {
             window.showToast('Gespeichert, aber NICHT übernommen: ' + fehlend + '.\n\nDazu fehlt eine Spalte in der Datenbank – bitte supabase_add_process_customer.sql in Supabase ausführen.');
         } else {
             window.showToast('Vorgang gespeichert.', 'success');
+        }
+
+        // Hängt ein Angebot am Vorgang, folgen Maschine und Adresse des
+        // Angebots dem Vorgang — die Angebotsliste soll dasselbe zeigen.
+        const ang = window.angeboteByProcess && window.angeboteByProcess[String(id)];
+        if (ang && typeof window.angebotFeldSpeichern === 'function') {
+            const felder = {};
+            if (String(ang.machine_id || '') !== String(attempt.machine_id || '')) { felder.machine_id = attempt.machine_id || null; if (attempt.machine_id) felder.machine_label = null; }
+            if ('customer_id' in attempt && String(ang.customer_id || '') !== String(attempt.customer_id || '')) felder.customer_id = attempt.customer_id || null;
+            if (Object.keys(felder).length) await window.angebotFeldSpeichern(ang.id, felder);
         }
 
         window.closeEditProcessModal();

@@ -373,6 +373,91 @@
         resetImportUI();
     };
 
+    // ------------------------------------------------------------------
+    // Dopplungen beim Adressimport: Auswahl je Adresse + dauerhafte Sperrliste
+    // ------------------------------------------------------------------
+    // Sage legt Firmen manchmal doppelt an und kann sie nicht mehr löschen.
+    // Hier entscheidet der Nutzer je Adresse, ob sie importiert wird; abgewählte
+    // Adressnummern landen in app_settings ('customer_import_ausgeschlossen')
+    // und werden bei künftigen Importen ohne Rückfrage übersprungen.
+    async function ladeImportAusschluss() {
+        try {
+            const { data } = await window.supabaseClient
+                .from('app_settings').select('value').eq('key', 'customer_import_ausgeschlossen').limit(1);
+            const liste = data && data[0] && Array.isArray(data[0].value) ? data[0].value : [];
+            return new Set(liste.map(String));
+        } catch (e) { return new Set(); }
+    }
+    async function speichereImportAusschluss(bisher, neue) {
+        const alle = new Set(bisher);
+        neue.forEach(n => alle.add(String(n)));
+        try {
+            const { error } = await window.supabaseClient
+                .from('app_settings').upsert({ key: 'customer_import_ausgeschlossen', value: [...alle] });
+            if (error) console.warn('Sperrliste nicht gespeichert:', error.message);
+        } catch (e) { console.warn('Sperrliste nicht gespeichert:', e); }
+    }
+    // Sperrliste leeren (Einstellungen → Adressimport, falls mal eine Adresse
+    // doch gewollt ist): beim nächsten Import wird wieder gefragt.
+    window.importAusschlussLeeren = async function () {
+        if (!confirm('Sperrliste der beim Import ausgeschlossenen Adressen leeren? Beim nächsten Import wird für diese wieder gefragt.')) return;
+        await window.supabaseClient.from('app_settings').upsert({ key: 'customer_import_ausgeschlossen', value: [] });
+        window.showToast('Sperrliste geleert.');
+    };
+
+    // Fenster: jede mögliche Dopplung mit Häkchen „importieren". Liefert
+    // { nichtImportieren: [adressnummern] } oder null bei Abbruch.
+    function importDublettenDialog(dubletten, schonAusgeschlossen) {
+        return new Promise((fertig) => {
+            const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            const alt = document.getElementById('import-dubletten-modal');
+            if (alt) alt.remove();
+            const el = document.createElement('div');
+            el.id = 'import-dubletten-modal';
+            el.style.cssText = 'position:fixed; inset:0; z-index:100000; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; padding:16px;';
+            el.innerHTML = `
+                <div style="background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:16px; width:min(760px, 100%); max-height:90vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.8); color:#fff; font-family:'Inter',sans-serif;">
+                    <div style="padding:18px 22px 10px;">
+                        <h3 style="margin:0 0 6px; font-size:1.1rem;">${dubletten.length} mögliche Dopplung${dubletten.length === 1 ? '' : 'en'} erkannt</h3>
+                        <p style="margin:0; font-size:0.85rem; color:rgba(255,255,255,0.6); line-height:1.4;">
+                            Haken weg = diese Adresse wird <strong>nicht</strong> importiert und beim nächsten Import ohne Rückfrage übersprungen.
+                            Eindeutige Treffer (gleiche E-Mail/Telefon/Adressnr.) werden ohnehin automatisch zusammengeführt.
+                            ${schonAusgeschlossen ? `<br>${schonAusgeschlossen} Adresse(n) sind aus früheren Importen bereits dauerhaft ausgeschlossen.` : ''}
+                        </p>
+                        <div style="margin-top:8px; display:flex; gap:8px;">
+                            <button type="button" class="btn-secondary" style="padding:5px 10px; font-size:0.78rem;" data-alle="1">Alle importieren</button>
+                            <button type="button" class="btn-secondary" style="padding:5px 10px; font-size:0.78rem;" data-alle="0">Keine importieren</button>
+                        </div>
+                    </div>
+                    <div style="overflow-y:auto; padding:0 22px; flex:1;">
+                        ${dubletten.map((d, i) => `
+                        <label style="display:flex; align-items:flex-start; gap:10px; padding:9px 0; border-top:1px solid rgba(255,255,255,0.08); cursor:pointer; font-size:0.86rem; line-height:1.35;">
+                            <input type="checkbox" data-i="${i}" checked style="margin-top:3px; accent-color:#10b981; width:16px; height:16px; flex-shrink:0;">
+                            <span>${esc(d.text)}</span>
+                        </label>`).join('')}
+                    </div>
+                    <div style="padding:14px 22px 18px; display:flex; justify-content:flex-end; gap:10px; border-top:1px solid rgba(255,255,255,0.1);">
+                        <button type="button" class="btn-secondary" data-abbruch="1">Import abbrechen</button>
+                        <button type="button" class="btn-primary" data-weiter="1">Weiter mit Import</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(el);
+            el.querySelectorAll('[data-alle]').forEach(b => b.addEventListener('click', () => {
+                const an = b.dataset.alle === '1';
+                el.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = an; });
+            }));
+            el.querySelector('[data-abbruch]').addEventListener('click', () => { el.remove(); fertig(null); });
+            el.querySelector('[data-weiter]').addEventListener('click', () => {
+                const nicht = [];
+                el.querySelectorAll('input[type=checkbox]').forEach(cb => {
+                    if (!cb.checked) nicht.push(dubletten[Number(cb.dataset.i)].c.address_number);
+                });
+                el.remove();
+                fertig({ nichtImportieren: nicht });
+            });
+        });
+    }
+
     window.resetImportUI = function () {
         parsedHeaders = [];
         parsedRows = [];
@@ -583,9 +668,9 @@
                         (c.street && o.street && normStreet(o.street) === normStreet(c.street))
                     );
                     if (matched) {
-                        possibleDuplicates.push(
+                        possibleDuplicates.push({ c: c, text:
                             `${c.name} (PLZ ${c.zip_code || '?'}) — neu: Adressnr. ${c.address_number}, bestehend: Adressnr. ${matched.address_number}${matched.customer_number ? `, Kdnr. ${matched.customer_number}` : ''}`
-                        );
+                        });
                     }
                 });
             }
@@ -656,25 +741,32 @@
                         ((c.zip_code && o.zip_code && normalize(o.zip_code) === normalize(c.zip_code)) ||
                          (c.street && o.street && normStreet(o.street) === normStreet(c.street))));
                     if (near) {
-                        possibleDuplicates.push(
+                        possibleDuplicates.push({ c: c, text:
                             `${c.name} (PLZ ${c.zip_code || '?'}) — ähnlich zu bestehender Adresse ohne Adressnr.: „${near.name}"${near.customer_number ? ` (Kdnr. ${near.customer_number})` : ''}`
-                        );
+                        });
                     }
                 });
             }
 
-            // Eine einzige Rückfrage für ALLE unklaren möglichen Dopplungen.
-            if (possibleDuplicates.length > 0) {
-                const proceed = confirm(
-                    `${possibleDuplicates.length} mögliche Dopplung(en) erkannt:\n\n` +
-                    possibleDuplicates.slice(0, 15).join('\n') +
-                    (possibleDuplicates.length > 15 ? `\n... und ${possibleDuplicates.length - 15} weitere` : '') +
-                    `\n\nEindeutige Treffer (gleiche E-Mail/Telefon/Adressnr./Name+Anschrift) werden ohnehin automatisch zusammengeführt.\nFür die oben gelisteten UNKLAREN Fälle: trotzdem als neue Kunden importieren?\n„Abbrechen" stoppt den gesamten Import, damit du das vorher prüfen kannst.`
-                );
-                if (!proceed) {
-                    resetImportUI();
-                    return;
+            // Unklare Dopplungen: der Nutzer wählt JE ADRESSE, ob sie importiert
+            // wird. Abgewählte Adressnummern werden dauerhaft gemerkt (app_settings
+            // 'customer_import_ausgeschlossen') — Sage kann solche Doppelanlagen
+            // nicht löschen, und beim nächsten Import soll nicht wieder gefragt werden.
+            const ausgeschlossen = await ladeImportAusschluss();
+            const vorabRaus = possibleDuplicates.filter(d => ausgeschlossen.has(String(d.c.address_number)));
+            const offen = possibleDuplicates.filter(d => !ausgeschlossen.has(String(d.c.address_number)));
+            let rausNummern = new Set(vorabRaus.map(d => String(d.c.address_number)));
+            if (offen.length > 0) {
+                const wahl = await importDublettenDialog(offen, vorabRaus.length);
+                if (!wahl) { resetImportUI(); return; }
+                wahl.nichtImportieren.forEach(nr => rausNummern.add(String(nr)));
+                if (wahl.nichtImportieren.length) await speichereImportAusschluss(ausgeschlossen, wahl.nichtImportieren);
+            }
+            if (rausNummern.size) {
+                for (let i = customersToUpsert.length - 1; i >= 0; i--) {
+                    if (rausNummern.has(String(customersToUpsert[i].address_number))) customersToUpsert.splice(i, 1);
                 }
+                window.showToast(`${rausNummern.size} Adresse(n) nicht importiert (als Dopplung ausgeschlossen).`);
             }
 
             customersToUpsert.forEach(c => {

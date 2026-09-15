@@ -60,7 +60,9 @@ lassen als eine Migration auszulassen.
 | `supabase_add_workshop_tasks.sql` | Werkstatt-Liste (schnelle kleine Aufgaben) |
 | `supabase_add_notification_prefs.sql` | Benachrichtigungs-Einstellungen je Benutzer, geräteübergreifend |
 | `supabase_add_erinnerung_owner.sql` | Angebots-Erinnerung gehört dem, der sie gesetzt hat (`erinnerung_by`) |
+| `supabase_add_angebot_vorgang.sql` | Jedes Angebot ist ein Vorgang (`angebote.process_id`); Zuständiger, Stand, Adresse, Maschine leben im Vorgang |
 | `supabase_add_subtask_planung.sql` | Unteraufgaben planbar: `start_date`, `end_date`, `assigned_to`, `expected_time` — nötig für eigene Balken in der Timeline |
+| `supabase_add_subtask_sort_order.sql` | Unteraufgaben: feste Reihenfolge (`sort_order`) — nötig, damit Verschieben per Ziehen auf der Aufgabentafel hält |
 | `supabase_add_task_dependencies.sql` | Abhängigkeiten zwischen Aufgaben (`depends_on`) für die Timeline-Ansicht |
 
 ## Vorgänge

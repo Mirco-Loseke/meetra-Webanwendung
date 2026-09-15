@@ -283,6 +283,39 @@
         return { text: String(p == null ? '' : p), optional: false, mehrfach: false, optionen: [] };
     };
 
+    // ------------------------------------------------------
+    // Tagessätze nach Ausstattung
+    // ------------------------------------------------------
+    // Eine Vorlage kann Preisregeln tragen:
+    //   preise: [{ tagessatz: '450,00 €/Tag',
+    //              bedingungen: [{ punkt: 'Siebkorb', option: '40 x 110' },
+    //                            { punkt: 'Kaskadensieb', verbaut: true }] }]
+    // Eine Bedingung verweist per Text auf einen Prüfpunkt der Vorlage —
+    // nicht per Nummer, weil die sich beim Umsortieren ändert. "option"
+    // heißt: diese Ausführung ist am Bogen gewählt; "verbaut" heißt: der
+    // optionale Prüfpunkt hat in irgendeiner Spalte ein Kreuz.
+    //
+    // Es gewinnt die Regel, deren Bedingungen ALLE zutreffen und die die
+    // meisten Bedingungen hat; bei Gleichstand die zuerst eingetragene.
+    // Eine Regel ohne Bedingung ist der Grundpreis.
+    //
+    // "ausstattung" ist eine Liste dessen, was am Bogen gesetzt ist:
+    //   [{ punkt: 'Siebkorb', option: '40 x 110' }, { punkt: 'Kaskadensieb', verbaut: true }]
+    window.mietPreisErmitteln = function (preise, ausstattung) {
+        const liste = Array.isArray(preise) ? preise : [];
+        const ist = Array.isArray(ausstattung) ? ausstattung : [];
+        const trifft = (b) => ist.some(a => a.punkt === b.punkt
+            && (b.verbaut ? !!a.verbaut : (a.option != null && a.option === b.option)));
+        let beste = null;
+        liste.forEach(r => {
+            const bed = Array.isArray(r.bedingungen) ? r.bedingungen : [];
+            if (!String(r.tagessatz || '').trim()) return;
+            if (!bed.every(trifft)) return;
+            if (!beste || bed.length > beste.bedingungen.length) beste = { tagessatz: r.tagessatz, bedingungen: bed };
+        });
+        return beste ? String(beste.tagessatz) : '';
+    };
+
     // Fehlt in einer gespeicherten Vorlage ein Feld, wird es aus dem
     // Standard ergaenzt. So bleiben aeltere Vorlagen benutzbar, wenn
     // spaeter neue Felder dazukommen.
@@ -298,6 +331,7 @@
             spalten: (Array.isArray(c.spalten) && c.spalten.length) ? c.spalten : tiefeKopie(s.spalten),
             baugruppen: Array.isArray(c.baugruppen) ? c.baugruppen : tiefeKopie(s.baugruppen),
             fotos: (Array.isArray(c.fotos) && c.fotos.length) ? c.fotos : s.fotos.slice(),
+            preise: Array.isArray(c.preise) ? c.preise : [],
             texte: textMitStandard(c.texte)
         };
     }
@@ -659,6 +693,47 @@
             </div>`).join('')
             + `<button class="btn-secondary" onclick="window.mietVorlageFotoNeu()">+ Position</button>`;
 
+        // --- Tagessätze nach Ausstattung
+        // Zur Auswahl stehen alle Ausführungen der Prüfpunkte und alle
+        // optionalen Prüfpunkte („verbaut"). Ein <select> reicht hier —
+        // die Liste ist kurz und ein Klick fügt die Bedingung hinzu.
+        const bedingungWahl = preisBedingungen();
+        const bedingungText = (b) => b.verbaut ? b.punkt + ' verbaut' : b.punkt + ': ' + b.option;
+        const preise = `
+            <p style="font-size:0.8rem; color:rgba(255,255,255,0.45); margin:0 0 12px;">
+                Der Tagessatz wird auf dem Bogen automatisch eingetragen, sobald die gewählten
+                Ausführungen und angekreuzten Optionen zu einer Regel passen. Es gilt die Regel mit den
+                meisten zutreffenden Bedingungen; eine Regel ohne Bedingung ist der Grundpreis.
+                Der Betrag am Bogen bleibt von Hand änderbar.
+            </p>
+            ${(c.preise || []).map((r, ri) => `
+            <div style="border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:12px 14px; margin-bottom:10px;">
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <input class="glass-form-input" value="${esc(r.tagessatz || '')}" style="width:170px; font-weight:700;"
+                           placeholder="z. B. 450,00 €/Tag"
+                           oninput="window.mietVorlagePreis(${ri}, this.value)">
+                    <span style="font-size:0.8rem; color:rgba(255,255,255,0.45);">wenn</span>
+                    ${(r.bedingungen || []).length ? (r.bedingungen || []).map((b, bi) => `
+                    <span style="display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px;
+                                 background:rgba(16,185,129,0.15); color:#10b981; font-size:0.8rem; font-weight:600;">
+                        ${esc(bedingungText(b))}
+                        <span style="cursor:pointer; opacity:0.7;" title="Bedingung entfernen"
+                              onclick="window.mietVorlagePreisBedingungWeg(${ri}, ${bi})">&times;</span>
+                    </span>`).join('<span style="font-size:0.75rem; color:rgba(255,255,255,0.4);">und</span>')
+                    : '<span style="font-size:0.8rem; color:rgba(255,255,255,0.35); font-style:italic;">keine Bedingung — Grundpreis</span>'}
+                    <select class="glass-form-input" style="width:auto; max-width:260px; font-size:0.82rem; padding:6px 10px;"
+                            onchange="window.mietVorlagePreisBedingungNeu(${ri}, this.value); this.value='';">
+                        <option value="">+ Bedingung …</option>
+                        ${bedingungWahl.map((b, wi) => `<option value="${wi}">${esc(bedingungText(b))}</option>`).join('')}
+                    </select>
+                    <button class="btn-secondary" style="padding:6px 12px; margin-left:auto;" onclick="window.mietVorlagePreisWeg(${ri})">&times;</button>
+                </div>
+            </div>`).join('')}
+            ${bedingungWahl.length ? '' : `<p style="font-size:0.8rem; color:rgba(255,255,255,0.4);">
+                Bedingungen brauchen Prüfpunkte mit Ausführungen (z. B. Siebkorb: 40 x 110; 60 x 110)
+                oder optionale Prüfpunkte (z. B. Kaskadensieb) — siehe „Baugruppen und Prüfpunkte".</p>`}
+            <button class="btn-secondary" onclick="window.mietVorlagePreisNeu()">+ Tagessatz</button>`;
+
         // --- Vertragstext
         const texte = feldZeile('Überschrift', 'texte.titel', c.texte.titel)
             + c.texte.abschnitte.map((a, ai) => `
@@ -685,6 +760,7 @@
             + abschnitt('Baugruppen und Prüfpunkte', baugruppen)
             + abschnitt('Fotopositionen', fotos)
             + abschnitt('Beschriftungen der Zeilen', felder)
+            + abschnitt('Tagessätze nach Ausstattung', preise, true)
             + abschnitt('Vertragstext', texte, true)
             + `</div>`;
     }
@@ -789,6 +865,49 @@
     };
     window.mietVorlagePunktWeg = function (gi, pi) {
         bearbeitet.config.baugruppen[gi].punkte.splice(pi, 1);
+        renderEditor();
+    };
+
+    // Tagessätze nach Ausstattung: alles, was als Bedingung taugt —
+    // jede Ausführung eines Prüfpunkts und jeder optionale Prüfpunkt.
+    function preisBedingungen() {
+        const liste = [];
+        (bearbeitet.config.baugruppen || []).forEach(g => (g.punkte || []).forEach(roh => {
+            const p = window.mietPunktLesen(roh);
+            if (!p.text) return;
+            p.optionen.forEach(o => liste.push({ punkt: p.text, option: o }));
+            if (p.optional) liste.push({ punkt: p.text, verbaut: true });
+        }));
+        return liste;
+    }
+    function preisRegel(ri) {
+        if (!Array.isArray(bearbeitet.config.preise)) bearbeitet.config.preise = [];
+        return bearbeitet.config.preise[ri];
+    }
+    window.mietVorlagePreis = function (ri, wert) { const r = preisRegel(ri); if (r) r.tagessatz = wert; };
+    window.mietVorlagePreisNeu = function () {
+        if (!Array.isArray(bearbeitet.config.preise)) bearbeitet.config.preise = [];
+        bearbeitet.config.preise.push({ tagessatz: '', bedingungen: [] });
+        renderEditor();
+    };
+    window.mietVorlagePreisWeg = function (ri) {
+        bearbeitet.config.preise.splice(ri, 1);
+        renderEditor();
+    };
+    window.mietVorlagePreisBedingungNeu = function (ri, wi) {
+        if (wi === '') return;
+        const r = preisRegel(ri);
+        const b = preisBedingungen()[Number(wi)];
+        if (!r || !b) return;
+        if (!Array.isArray(r.bedingungen)) r.bedingungen = [];
+        const gleich = r.bedingungen.some(x => x.punkt === b.punkt && !!x.verbaut === !!b.verbaut && x.option === b.option);
+        if (!gleich) r.bedingungen.push(b);
+        renderEditor();
+    };
+    window.mietVorlagePreisBedingungWeg = function (ri, bi) {
+        const r = preisRegel(ri);
+        if (!r || !Array.isArray(r.bedingungen)) return;
+        r.bedingungen.splice(bi, 1);
         renderEditor();
     };
 

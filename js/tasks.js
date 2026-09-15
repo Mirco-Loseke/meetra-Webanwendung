@@ -192,6 +192,7 @@
 
             if (error) throw error;
             allTasks = data || [];
+            allTasks.forEach(subtasksSortieren);
 
             // Fetch protocol metadata for machines in current tasks
             const machineIds = [...new Set(allTasks.map(t => t.machine_id).filter(Boolean))];
@@ -533,7 +534,8 @@
                 for (const [groupName, subs] of Object.entries(grouped)) {
                     if (subs.length === 0) continue;
                     html += `
-                        <div class="subtask-group">
+                        <div class="subtask-group" data-supergroup="${String(groupName).replace(/"/g, '&quot;')}" data-task-id="${task.id}"
+                             oncontextmenu="window.subtaskKontextmenu(event, '${task.id}', null, this.dataset.supergroup)">
                             <div class="subtask-group-title" style="font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: var(--color-primary-green); margin-bottom: 6px; letter-spacing: 0.05em; opacity: 0.8;">${groupName}</div>
                             <div style="display: flex; flex-direction: column; gap: 6px;">`;
 
@@ -542,6 +544,7 @@
                             <div class="subtask-item" draggable="true"
                                  data-subtask-id="${sub.id}" data-task-id="${task.id}"
                                  ondragstart="window.startSubtaskDrag(event,'${sub.id}','${task.id}')"
+                                 oncontextmenu="window.subtaskKontextmenu(event, '${task.id}', '${sub.id}', this.closest('.subtask-group').dataset.supergroup)"
                                  style="display:flex; align-items:flex-start; gap: 6px; border-radius:6px; padding:2px 4px; transition:background 0.15s;">
                                 <div class="subtask-drag-handle" title="Verschieben" style="cursor:grab; color:rgba(255,255,255,0.18); flex-shrink:0; display:flex; align-items:center; padding:2px; margin-top:3px;">
                                     <svg width="8" height="12" viewBox="0 0 8 14" fill="currentColor"><circle cx="2" cy="2" r="1.2"/><circle cx="6" cy="2" r="1.2"/><circle cx="2" cy="7" r="1.2"/><circle cx="6" cy="7" r="1.2"/><circle cx="2" cy="12" r="1.2"/><circle cx="6" cy="12" r="1.2"/></svg>
@@ -637,6 +640,12 @@
         div.onclick = (e) => {
             e.stopPropagation();
             window.openTaskModal(task.id);
+        };
+        // Rechtsklick auf die Karte (nicht auf eine Unteraufgabe/Gruppe —
+        // die haben ihr eigenes Menü): Aufgabe duplizieren, Unteraufgabe einfügen.
+        div.oncontextmenu = (e) => {
+            if (e.target.closest('.subtask-item, .subtask-group, .ghost-input, input, textarea')) return;
+            window.subtaskKontextmenu(e, task.id, null, null);
         };
 
         // Buttons are always fully visible - no opacity fade needed
@@ -873,6 +882,7 @@
                         console.error('Error fetching task from Supabase:', error);
                     } else if (data) {
                         task = data;
+                        subtasksSortieren(task);
                         allTasks.push(task); // Add to local cache
                     }
                 }
@@ -1104,13 +1114,29 @@
     // gelaufen ist, gibt es die vier Planungsspalten nicht — dann würde der
     // ganze Insert scheitern und die Unteraufgaben wären weg. Deshalb einmal
     // ohne diese Felder nachfassen und deutlich sagen, was fehlt.
+    // Gleiches Spiel mit `sort_order` (supabase_add_subtask_sort_order.sql):
+    // fehlt die Spalte, wird sie weggelassen — die Reihenfolge hält dann nur
+    // bis zum nächsten Laden.
     const PLANUNGSFELDER = ['start_date', 'end_date', 'assigned_to', 'expected_time'];
     let planungFehltGemeldet = false;
+    let sortOrderFehltGemeldet = false;
+    function sortOrderFehltMelden() {
+        if (sortOrderFehltGemeldet) return;
+        sortOrderFehltGemeldet = true;
+        window.showToast('Reihenfolge der Unteraufgaben wird nicht gespeichert — '
+            + 'dafür muss supabase/supabase_add_subtask_sort_order.sql in Supabase laufen.');
+    }
     window.insertSubtasks = async function (rows) {
         if (!rows || !rows.length) return { error: null };
         let res = await window.supabaseClient.from('subtasks').insert(rows);
         if (!res.error) return res;
-        const msg = res.error.message || '';
+        let msg = res.error.message || '';
+        if (msg.includes('sort_order')) {
+            rows = rows.map(r => { const k = { ...r }; delete k.sort_order; return k; });
+            res = await window.supabaseClient.from('subtasks').insert(rows);
+            if (!res.error) { sortOrderFehltMelden(); return res; }
+            msg = res.error.message || '';
+        }
         if (!PLANUNGSFELDER.some(f => msg.includes(f))) return res;
 
         const ohne = rows.map(r => {
@@ -1126,6 +1152,46 @@
         }
         return res;
     };
+
+    // Eine Unteraufgabe ändern; fehlt `sort_order` in der Datenbank, ohne
+    // dieses Feld noch einmal — so bleibt Verschieben trotzdem möglich.
+    async function updateSubtask(id, felder) {
+        let res = await window.supabaseClient.from('subtasks').update(felder).eq('id', id);
+        if (res.error && 'sort_order' in felder && (res.error.message || '').includes('sort_order')) {
+            const ohne = { ...felder }; delete ohne.sort_order;
+            if (!Object.keys(ohne).length) { sortOrderFehltMelden(); return { error: null }; }
+            res = await window.supabaseClient.from('subtasks').update(ohne).eq('id', id);
+            if (!res.error) sortOrderFehltMelden();
+        }
+        return res;
+    }
+
+    // Reihenfolge einer Aufgabe festschreiben: sort_order = Platz in der
+    // Liste. Nur Zeilen schreiben, deren Platz sich geändert hat.
+    async function subtaskReihenfolgeSpeichern(task) {
+        const subs = (task && task.subtasks) || [];
+        const arbeit = [];
+        subs.forEach((s, i) => {
+            if (s.sort_order === i) return;
+            s.sort_order = i;
+            arbeit.push(updateSubtask(s.id, { sort_order: i }));
+        });
+        const ergebnisse = await Promise.all(arbeit);
+        const fehler = ergebnisse.find(r => r && r.error);
+        if (fehler) throw fehler.error;
+    }
+
+    // Unteraufgaben in Anzeigereihenfolge bringen: erst sort_order, dann
+    // Anlagezeit (Altbestand ohne Position).
+    function subtasksSortieren(task) {
+        if (!task || !Array.isArray(task.subtasks)) return;
+        task.subtasks.sort((a, b) => {
+            const ao = a.sort_order == null ? Infinity : a.sort_order;
+            const bo = b.sort_order == null ? Infinity : b.sort_order;
+            if (ao !== bo) return ao - bo;
+            return String(a.created_at || '').localeCompare(String(b.created_at || ''));
+        });
+    }
 
     window.saveTask = async function () {
         const title = document.getElementById('task-title').value.trim();
@@ -1191,6 +1257,7 @@
                             title: st.title,
                             status: st.status || 'open',
                             supergroup: g.name,
+                            sort_order: allSubtasks.length,
                             action_type: st.action_type || null,
                             // Planung je Unteraufgabe (wer · ab wann · wie lange)
                             start_date: st.start_date || null,
@@ -1723,76 +1790,259 @@
             setTimeout(() => { if (el) el.style.opacity = '0.35'; }, 0);
         };
 
+        // Wohin soll die Unteraufgabe? Aus dem Element unter dem Zeiger:
+        //   Karte  → Aufgabe (Ziel-Aufgabe)
+        //   Gruppe → Übergruppe (sonst behält die Unteraufgabe ihre eigene)
+        //   Zeile  → davor oder dahinter, je nach oberer/unterer Hälfte
+        function subtaskZiel(e) {
+            const card = e.target.closest('.task-card');
+            if (!card) return null;
+            const gruppe = e.target.closest('.subtask-group');
+            const zeile = e.target.closest('.subtask-item');
+            let nach = false;
+            if (zeile) {
+                const r = zeile.getBoundingClientRect();
+                nach = e.clientY > r.top + r.height / 2;
+            }
+            return {
+                toTaskId: String(card.dataset.id),
+                supergroup: gruppe ? gruppe.dataset.supergroup : null,
+                beforeId: zeile ? String(zeile.dataset.subtaskId) : null,
+                nach: nach,
+                card: card, gruppe: gruppe, zeile: zeile
+            };
+        }
+
+        // Einwurf-Markierung: Linie über/unter der Zeile, sonst Rahmen um
+        // Gruppe bzw. Karte.
+        let zielMarkiert = [];
+        function zielMarkieren(z) {
+            zielMarkiert.forEach(el => { el.style.boxShadow = ''; el.style.outline = ''; });
+            zielMarkiert = [];
+            if (!z) return;
+            if (z.zeile) {
+                z.zeile.style.boxShadow = z.nach
+                    ? '0 2px 0 0 #60a5fa' : '0 -2px 0 0 #60a5fa';
+                zielMarkiert.push(z.zeile);
+            } else if (z.gruppe) {
+                z.gruppe.style.outline = '2px dashed rgba(96,165,250,0.7)';
+                z.gruppe.style.outlineOffset = '2px';
+                zielMarkiert.push(z.gruppe);
+            } else {
+                z.card.style.outline = '2px solid rgba(59,130,246,0.6)';
+                z.card.style.outlineOffset = '-2px';
+                zielMarkiert.push(z.card);
+            }
+        }
+
         document.addEventListener('dragover', (e) => {
             if (!window._subtaskDragInfo) return;
-            const card = e.target.closest('.task-card');
-            if (card && card.dataset.id !== window._subtaskDragInfo.fromTaskId) {
-                e.preventDefault();
-                e.stopPropagation();
-                if (!card._stDragActive) {
-                    card._stDragActive = true;
-                    card.style.outline = '2px solid rgba(59,130,246,0.6)';
-                    card.style.outlineOffset = '-2px';
-                }
-            }
+            const z = subtaskZiel(e);
+            if (!z) { zielMarkieren(null); return; }
+            if (z.beforeId === window._subtaskDragInfo.subtaskId) { zielMarkieren(null); return; }
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'move';
+            zielMarkieren(z);
         }, true);
-
-        document.addEventListener('dragleave', (e) => {
-            if (!window._subtaskDragInfo) return;
-            const card = e.target.closest('.task-card');
-            if (card && card._stDragActive && !card.contains(e.relatedTarget)) {
-                card._stDragActive = false;
-                card.style.outline = '';
-            }
-        });
 
         document.addEventListener('dragend', (e) => {
             if (!window._subtaskDragInfo) return;
             const el = e.target.closest('.subtask-item');
             if (el) el.style.opacity = '1';
-            document.querySelectorAll('.task-card').forEach(c => { c._stDragActive = false; c.style.outline = ''; });
+            zielMarkieren(null);
             window._subtaskDragInfo = null;
         });
 
         document.addEventListener('drop', async (e) => {
             if (!window._subtaskDragInfo) return;
-            const card = e.target.closest('.task-card');
-            if (!card) return;
+            const z = subtaskZiel(e);
+            if (!z) return;
             e.preventDefault();
             e.stopPropagation();
-
             const { subtaskId, fromTaskId } = window._subtaskDragInfo;
-            const toTaskId = String(card.dataset.id);
             window._subtaskDragInfo = null;
-            card._stDragActive = false;
-            card.style.outline = '';
-
-            if (toTaskId === fromTaskId) return;
-
-            const fromTask = allTasks.find(t => String(t.id) === fromTaskId);
-            const toTask = allTasks.find(t => String(t.id) === toTaskId);
-            if (!fromTask || !toTask) return;
-
-            const subIdx = (fromTask.subtasks || []).findIndex(s => String(s.id) === subtaskId);
-            if (subIdx === -1) return;
-
-            const [movedSub] = fromTask.subtasks.splice(subIdx, 1);
-            if (!toTask.subtasks) toTask.subtasks = [];
-            toTask.subtasks.push(movedSub);
-            renderTasks();
-
-            try {
-                const { error } = await window.supabaseClient.from('subtasks')
-                    .update({ task_id: toTaskId }).eq('id', subtaskId);
-                if (error) throw error;
-            } catch (err) {
-                console.error('Subtask move failed:', err);
-                toTask.subtasks.pop();
-                fromTask.subtasks.splice(subIdx, 0, movedSub);
-                renderTasks();
-            }
+            zielMarkieren(null);
+            if (z.beforeId === subtaskId) return;
+            await subtaskVerschieben(subtaskId, fromTaskId, z);
         }, true);
     }
+
+    // Wo eine Unteraufgabe in der Zielaufgabe landet: vor/hinter einer
+    // Zeile, sonst ans Ende ihrer Übergruppe, sonst ans Ende der Aufgabe.
+    function einfuegeIndex(toTask, supergroup, beforeId, nach) {
+        const subs = toTask.subtasks || [];
+        if (beforeId) {
+            const i = subs.findIndex(s => String(s.id) === String(beforeId));
+            if (i !== -1) return i + (nach ? 1 : 0);
+        }
+        let letzte = -1;
+        subs.forEach((s, i) => { if ((s.supergroup || 'Allgemein') === (supergroup || 'Allgemein')) letzte = i; });
+        return letzte === -1 ? subs.length : letzte + 1;
+    }
+
+    // Unteraufgabe verschieben — innerhalb der Aufgabe, in eine andere
+    // Übergruppe oder in eine andere Aufgabe. Erst lokal umhängen und
+    // zeichnen, dann speichern; schlägt das fehl, wird neu geladen.
+    async function subtaskVerschieben(subtaskId, fromTaskId, ziel) {
+        const fromTask = allTasks.find(t => String(t.id) === String(fromTaskId));
+        const toTask = allTasks.find(t => String(t.id) === String(ziel.toTaskId));
+        if (!fromTask || !toTask) return;
+        const subIdx = (fromTask.subtasks || []).findIndex(s => String(s.id) === String(subtaskId));
+        if (subIdx === -1) return;
+
+        const [sub] = fromTask.subtasks.splice(subIdx, 1);
+        if (!toTask.subtasks) toTask.subtasks = [];
+        const supergroup = ziel.supergroup != null ? ziel.supergroup : (sub.supergroup || 'Allgemein');
+        const idx = einfuegeIndex(toTask, supergroup, ziel.beforeId, ziel.nach);
+        sub.supergroup = supergroup;
+        sub.task_id = toTask.id;
+        toTask.subtasks.splice(idx, 0, sub);
+        renderTasks();
+
+        try {
+            const { error } = await updateSubtask(sub.id, { task_id: toTask.id, supergroup: supergroup });
+            if (error) throw error;
+            await subtaskReihenfolgeSpeichern(toTask);
+            if (fromTask !== toTask) await subtaskReihenfolgeSpeichern(fromTask);
+        } catch (err) {
+            console.error('Unteraufgabe verschieben fehlgeschlagen:', err);
+            window.showToast('Verschieben fehlgeschlagen: ' + (err.message || 'unbekannter Fehler'));
+            window.fetchTasks();
+        }
+    }
+
+    // Kopie einer Unteraufgabe an einer Stelle anlegen. Die Zeile wird
+    // vollständig übernommen (auch Aktion, Planung), nur neu und offen.
+    async function subtaskKopieAnlegen(quelle, toTask, supergroup, beforeId, nach) {
+        const idx = einfuegeIndex(toTask, supergroup, beforeId, nach);
+        const zeile = { ...quelle };
+        delete zeile.id; delete zeile.created_at;
+        zeile.task_id = toTask.id;
+        zeile.supergroup = supergroup;
+        zeile.status = 'open';
+        zeile.sort_order = idx;
+        try {
+            // Platz schaffen: alles ab idx rückt eins nach hinten.
+            const arbeit = (toTask.subtasks || []).slice(idx).map((s, i) => updateSubtask(s.id, { sort_order: idx + 1 + i }));
+            const ergebnisse = await Promise.all(arbeit);
+            const fehler = ergebnisse.find(r => r && r.error);
+            if (fehler) throw fehler.error;
+            const { error } = await window.insertSubtasks([zeile]);
+            if (error) throw error;
+            await window.fetchTasks();
+        } catch (err) {
+            console.error('Unteraufgabe kopieren fehlgeschlagen:', err);
+            window.showToast('Einfügen fehlgeschlagen: ' + (err.message || 'unbekannter Fehler'));
+            window.fetchTasks();
+        }
+    }
+
+    // Ganze Aufgabe samt Unteraufgaben duplizieren.
+    async function taskDuplizieren(task) {
+        const zeile = { ...task };
+        ['id', 'created_at', 'updated_at', 'completed_at', 'completed_by', 'machines', 'subtasks'].forEach(k => delete zeile[k]);
+        zeile.title = (task.title || 'Aufgabe') + ' (Kopie)';
+        zeile.status = 'open';
+        if (window.activeUser && window.activeUser.id) zeile.created_by = window.activeUser.id;
+        try {
+            const { data, error } = await window.supabaseClient.from('tasks').insert([zeile]).select();
+            if (error) throw error;
+            const neu = data && data[0];
+            if (neu && (task.subtasks || []).length) {
+                const rows = task.subtasks.map((s, i) => {
+                    const r = { ...s };
+                    delete r.id; delete r.created_at;
+                    r.task_id = neu.id; r.status = 'open'; r.sort_order = i;
+                    return r;
+                });
+                const { error: subErr } = await window.insertSubtasks(rows);
+                if (subErr) throw subErr;
+            }
+            window.showToast('Aufgabe dupliziert.');
+            await window.fetchTasks();
+        } catch (err) {
+            console.error('Aufgabe duplizieren fehlgeschlagen:', err);
+            window.showToast('Duplizieren fehlgeschlagen: ' + (err.message || 'unbekannter Fehler'));
+        }
+    }
+
+    // ---- Rechtsklick-Menü: Duplizieren / Kopieren / Ausschneiden / Einfügen ----
+    // Zwischenablage nur für diese Sitzung. 'schnitt' verschiebt beim
+    // Einfügen, 'kopie' legt eine neue Zeile an.
+    let subtaskZwischenablage = null;   // { sub, fromTaskId, modus }
+    let kontextMenuEl = null;
+
+    function kontextMenuSchliessen() {
+        if (kontextMenuEl) { kontextMenuEl.remove(); kontextMenuEl = null; }
+    }
+    document.addEventListener('click', kontextMenuSchliessen);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') kontextMenuSchliessen(); });
+    document.addEventListener('scroll', kontextMenuSchliessen, true);
+
+    // Rechtsklick auf Unteraufgabe (subtaskId gesetzt), Übergruppe
+    // (supergroup gesetzt) oder Karte (beides null).
+    window.subtaskKontextmenu = function (e, taskId, subtaskId, supergroup) {
+        e.preventDefault();
+        e.stopPropagation();
+        kontextMenuSchliessen();
+        const task = allTasks.find(t => String(t.id) === String(taskId));
+        if (!task) return;
+        const sub = subtaskId ? (task.subtasks || []).find(s => String(s.id) === String(subtaskId)) : null;
+        const gruppe = supergroup != null ? supergroup : (sub ? (sub.supergroup || 'Allgemein') : null);
+        const ab = subtaskZwischenablage;
+        const eintraege = [];
+
+        if (sub) {
+            eintraege.push({ text: 'Duplizieren', tu: () => subtaskKopieAnlegen(sub, task, gruppe, sub.id, true) });
+            eintraege.push({ text: 'Kopieren', tu: () => { subtaskZwischenablage = { sub: { ...sub }, fromTaskId: task.id, modus: 'kopie' }; window.showToast('Kopiert — Rechtsklick auf die Zielstelle → Einfügen.'); } });
+            eintraege.push({ text: 'Ausschneiden', tu: () => { subtaskZwischenablage = { sub: { ...sub }, fromTaskId: task.id, modus: 'schnitt' }; window.showToast('Ausgeschnitten — Rechtsklick auf die Zielstelle → Einfügen.'); } });
+        } else if (gruppe == null) {
+            eintraege.push({ text: 'Aufgabe duplizieren', tu: () => taskDuplizieren(task) });
+        }
+        if (ab && !(sub && String(ab.sub.id) === String(sub.id))) {
+            const sicher = String(gruppe || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const wo = sub ? 'dahinter' : (gruppe != null ? `in „${sicher}"` : 'in diese Aufgabe');
+            eintraege.push({
+                text: `Einfügen ${wo}${ab.modus === 'schnitt' ? ' (verschieben)' : ''}`,
+                tu: async () => {
+                    const zielGruppe = gruppe != null ? gruppe : (ab.sub.supergroup || 'Allgemein');
+                    if (ab.modus === 'schnitt') {
+                        subtaskZwischenablage = null;
+                        await subtaskVerschieben(ab.sub.id, ab.fromTaskId, {
+                            toTaskId: task.id, supergroup: zielGruppe, beforeId: sub ? sub.id : null, nach: true
+                        });
+                    } else {
+                        await subtaskKopieAnlegen(ab.sub, task, zielGruppe, sub ? sub.id : null, true);
+                    }
+                }
+            });
+        }
+        if (!eintraege.length) return;
+
+        const menu = document.createElement('div');
+        menu.className = 'task-kontextmenu';
+        menu.style.cssText = `position:fixed; left:${e.clientX}px; top:${e.clientY}px; z-index:100000; min-width:210px;
+            background:#0b1220; border:1px solid rgba(255,255,255,0.15); border-radius:10px; padding:4px;
+            box-shadow:0 12px 40px rgba(0,0,0,0.7); font-size:0.88rem; color:#fff;`;
+        menu.innerHTML = eintraege.map((x, i) =>
+            `<div data-i="${i}" style="padding:9px 14px; cursor:pointer; border-radius:7px;"
+                  onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background=''">${x.text}</div>`).join('');
+        menu.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            const li = ev.target.closest('[data-i]');
+            if (!li) return;
+            kontextMenuSchliessen();
+            eintraege[Number(li.dataset.i)].tu();
+        });
+        menu.addEventListener('contextmenu', (ev) => ev.preventDefault());
+        document.body.appendChild(menu);
+        // Nicht aus dem Fenster laufen
+        const r = menu.getBoundingClientRect();
+        if (r.right > window.innerWidth) menu.style.left = Math.max(4, window.innerWidth - r.width - 4) + 'px';
+        if (r.bottom > window.innerHeight) menu.style.top = Math.max(4, window.innerHeight - r.height - 4) + 'px';
+        kontextMenuEl = menu;
+    };
     // ---- End subtask drag ----
 
     function setupDragAndDrop() {

@@ -233,7 +233,7 @@ formfüllenden Feldern zusätzlich `.menu-block`. Ausgewählter Eintrag: `.selec
 einem Inline-`style` suchen.
 
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v300 (Stand 2026-08-25) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v520 (Stand 2026-09-15) — bei jeder Änderung hochzählen.
 
 **Mietvereinbarung (Stand 2026-08-25).** Der Bogen wird gespeichert: PDF per
 html2canvas je `.miet-page` + jsPDF, Ablage in R2 unter
@@ -250,6 +250,11 @@ wie im gedruckten Original). Unterschrieben wird **unter den Fotos** — je zwei
 plus Datum für Übergabe und Rücknahme (`fotoUnterschriften`); die Felder der nicht
 gewählten Phase sind grau (`.miet-dim`). Eine eigene Bestätigungsseite am Ende gibt es
 nicht mehr.
+**Tagessätze nach Ausstattung (2026-09-15):** in der Vorlage `config.preise`
+(Regeln aus Prüfpunkt-Ausführungen / optionalen Prüfpunkten → Betrag, per
+Prüfpunkt-**Text** verknüpft). `window.mietPreisErmitteln` wählt die Regel mit den
+meisten zutreffenden Bedingungen; `preisAktualisieren` im Bogen schreibt sie ins
+Feld Tagessatz, solange dort nichts von Hand steht (`miete.tagessatz_auto`).
 
 **Handy-Optimierung (2026-08-15).** In `css/base/responsive.css` unter
 „HANDY-FEINSCHLIFF": alle Eingabefelder sind ab ≤768px auf **16px** gesetzt —

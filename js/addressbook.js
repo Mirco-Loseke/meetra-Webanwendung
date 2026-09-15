@@ -246,6 +246,7 @@
 
     const icon = {
         phone: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+        download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>',
         mail: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>',
         globe: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
         pin: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>',
@@ -1537,6 +1538,18 @@
                 const { data, error } = await procQuery.order('process_date', { ascending: false });
                 if (error) throw error;
                 state.detail.processes = data || [];
+
+                // Angebote, die an diesen Vorgängen hängen (Angebot = Vorgang,
+                // js/listen.js): der Vorgang wird in der Historie als „Angebot …"
+                // gezeichnet und ersetzt dort den alten Einzel-Eintrag.
+                state.detail.angeboteByProcess = {};
+                const pIds = state.detail.processes.map(p => p.id);
+                if (pIds.length) {
+                    const { data: ang, error: angErr } = await sb().from('angebote')
+                        .select('id, belegnummer, belegdatum, nettobetrag, ek_betrag, realisierbar, status, process_id, machine_id, machine_label, customers(name)')
+                        .in('process_id', pIds);
+                    if (!angErr) (ang || []).forEach(a => { state.detail.angeboteByProcess[String(a.process_id)] = a; });
+                }
             } catch (err) {
                 console.warn('Vorgänge zur Adresse konnten nicht geladen werden:', err.message || err);
                 state.detail.processes = [];
@@ -2384,7 +2397,7 @@
 
         // 2) Maschinen-Historie (Servicereporte, Werkstatt-Einträge aller Cluster-Maschinen)
         const machinesMap = new Map((state.detail.allClusterMachines || state.detail.machines || []).map(m => [String(m.id), m]));
-        const machineEntries = (state.detail.machineHistoryEntries || []).map(mh => {
+        let machineEntries = (state.detail.machineHistoryEntries || []).map(mh => {
             const m = mh.machine_id ? machinesMap.get(String(mh.machine_id)) : null;
 
             // Maschinentitel vollständig zusammensetzen: Hersteller + Kategorie/Typ + Name + SN + Baujahr
@@ -2442,6 +2455,25 @@
             if (p.remark) teile.push(String(p.remark));
             if (schritte.length) teile.push(`Schritte: ${schritte.filter(s => s && s.done).length} von ${schritte.length} erledigt`);
 
+            // Hängt ein Angebot am Vorgang, ist DER Vorgang das Angebot:
+            // Kennzeichen „Angebot", Titel „Angebot 30154", Beträge und Status
+            // aus dem Angebot, dazu die Dokumente des Vorgangs (PDF).
+            const ang = (state.detail.angeboteByProcess || {})[String(p.id)] || null;
+            let titel = p.title || 'Vorgang ohne Titel';
+            if (ang) {
+                titel = `Angebot ${ang.belegnummer || ''}`.trim();
+                const geld = (v) => (v === null || v === undefined || v === '') ? null
+                    : Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+                const at = [];
+                if (geld(ang.nettobetrag)) at.push('VK ' + geld(ang.nettobetrag));
+                if (geld(ang.ek_betrag)) at.push('EK ' + geld(ang.ek_betrag));
+                if (ang.realisierbar != null) at.push('Realisierbar ' + ang.realisierbar + ' %');
+                if (ang.status) at.push('Status: ' + ang.status);
+                if (at.length) teile.unshift(at.join(' · '));
+            }
+            const stand = Array.isArray(p.status_updates) && p.status_updates[0] ? p.status_updates[0] : null;
+            if (stand && stand.text) teile.push('Stand: ' + stand.text);
+
             return {
                 type: isMachine ? 'machine' : 'address',
                 kind: 'entry',
@@ -2450,15 +2482,24 @@
                 sourceLabel: label,
                 raw: {
                     id: p.id,
-                    type: 'process',
-                    title: p.title || 'Vorgang ohne Titel',
+                    type: ang ? 'angebot' : 'process',
+                    title: titel,
                     content: teile.join('\n'),
                     statusLabel: (PROC_STATUS[p.status] || {}).label || '',
                     processId: p.id,
+                    angebotId: ang ? ang.id : null,
+                    dokumente: (Array.isArray(p.attachments) ? p.attachments : []).filter(f => f && !f.step_id),
                     created_at: p.process_date || p.created_at
                 }
             };
         });
+
+        // Alte Einzel-Einträge „Angebot …" (manual_history_entries, type
+        // 'angebot') sind überflüssig, sobald das Angebot als Vorgang hier
+        // steht — sonst stünde jedes Angebot doppelt.
+        const angeboteMitVorgang = new Set(Object.values(state.detail.angeboteByProcess || {}).map(a => String(a.id)));
+        machineEntries = machineEntries.filter(item => !(item.raw && item.raw.type === 'angebot'
+            && item.raw.angebot_id && angeboteMitVorgang.has(String(item.raw.angebot_id))));
 
         // 4) Aufgaben (tasks) - Maschinen-Aufgaben
         const taskEntries = (state.detail.machineTasks || []).map(t => {
@@ -2637,7 +2678,25 @@
             const statusHtml = mh.statusLabel
                 ? `<span class="ab-pill" style="border-color:${config.color}55; color:${config.color}; opacity:0.85;">${esc(mh.statusLabel)}</span>`
                 : '';
-            const processBtnHtml = (mh.type === 'process' && mh.processId)
+            // Dokumente des Vorgangs (z. B. die Angebots-PDF): öffnen,
+            // herunterladen, per Mail — dieselben Dateien wie im Vorgang und in
+            // der Angebotsliste.
+            const dokumente = Array.isArray(mh.dokumente) ? mh.dokumente : [];
+            const dokHtml = dokumente.length ? `
+                <div style="display:flex; flex-direction:column; gap:5px; margin-top:8px;">
+                    ${dokumente.map(f => `
+                    <div style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:8px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); min-width:0;">
+                        <span style="flex-shrink:0;">📄</span>
+                        <a href="${esc(f.url || '#')}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Öffnen"
+                           style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#34d399; font-weight:600; font-size:0.84rem; text-decoration:none;">${esc(f.name || 'Datei')}</a>
+                        <a href="${esc(f.url || '#')}" download="${esc(f.name || '')}" onclick="event.stopPropagation()" title="Herunterladen"
+                           style="flex-shrink:0; color:rgba(255,255,255,0.6); display:flex;">${ic('download', 14)}</a>
+                        <span onclick="event.stopPropagation(); window.addressbookDokumentMailen('${esc(mh.processId)}', '${esc(String(f.id))}')" title="Per E-Mail senden"
+                              style="flex-shrink:0; cursor:pointer; color:rgba(255,255,255,0.6); display:flex;">${ic('mail', 14)}</span>
+                    </div>`).join('')}
+                </div>` : '';
+
+            const processBtnHtml = ((mh.type === 'process' || mh.type === 'angebot') && mh.processId)
                 ? `<button onclick="event.stopPropagation(); window.openEditProcessModal && window.openEditProcessModal('${esc(mh.processId)}')"
                             title="Vorgang öffnen"
                             style="padding: 4px 10px; font-size: 0.78rem; font-weight: 700; background: rgba(129,140,248,0.2); color: #a5b4fc; border: 1px solid rgba(129,140,248,0.45); border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; margin-left: auto;">
@@ -2663,10 +2722,28 @@
                     </div>
                     ${mh.content ? `<div class="ab-timeline-text" style="white-space: pre-wrap;">${esc(mh.content)}</div>` : ''}
                     ${filesHtml}
+                    ${dokHtml}
                 </div>
             </div>`;
         }
     }
+
+    // Dokument eines Vorgangs aus der Historie per Mail — gleiche Logik wie
+    // in der Angebotsliste: Teilen-Dialog mit Datei, wo der Browser das kann,
+    // sonst Mailprogramm mit Betreff und Link (ein Anhang lässt sich aus dem
+    // Browser heraus nicht direkt anhängen).
+    window.addressbookDokumentMailen = function (processId, attId) {
+        const p = (state.detail.processes || []).find(x => String(x.id) === String(processId));
+        const f = p && Array.isArray(p.attachments) ? p.attachments.find(x => String(x.id) === String(attId)) : null;
+        if (!f) return;
+        // Direkt das Standard-Mailprogramm (Outlook) mit Entwurf öffnen — gleiche
+        // Vorlage wie in der Angebotsliste (Betreff „Angebot <Nr> – <Maschine>").
+        const ang = (state.detail.angeboteByProcess || {})[String(processId)];
+        const v = (ang && typeof window.angebotMailVorlage === 'function')
+            ? window.angebotMailVorlage(ang, f.url)
+            : { betreff: p.title || 'Dokument', text: `Guten Tag,\n\nanbei ${p.title || 'das Dokument'}:\n${f.url}\n\nMit freundlichen Grüßen` };
+        window.location.href = `mailto:?subject=${encodeURIComponent(v.betreff)}&body=${encodeURIComponent(v.text)}`;
+    };
 
     // ---------- Vorgänge ----------
     // Status-Wortlaut wie im Vorgänge-Modul (internal_processes.status)
@@ -2708,13 +2785,48 @@
                 }
             }
 
+            // Angebot am Vorgang (Angebot = Vorgang, js/listen.js): Beträge,
+            // Realisierbar, Maschine und die Dokumente (PDF) mit
+            // öffnen / herunterladen / per Mail.
+            const ang = (state.detail.angeboteByProcess || {})[String(p.id)] || null;
+            const geld = (v) => (v === null || v === undefined || v === '') ? '–'
+                : Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+            const maschineName = p.machine_id
+                ? ((typeof window.getMachineName === 'function' && window.getMachineName(p.machine_id)) || ('Maschine #' + p.machine_id))
+                : (ang && ang.machine_label) || '';
+            const dokumente = (Array.isArray(p.attachments) ? p.attachments : []).filter(f => f && !f.step_id);
+            const dokHtml = dokumente.length ? `
+                <div style="display:flex; flex-direction:column; gap:5px; margin-top:8px;">
+                    ${dokumente.map(f => `
+                    <div style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:8px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); min-width:0;">
+                        <span style="flex-shrink:0;">📄</span>
+                        <a href="${esc(f.url || '#')}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Öffnen"
+                           style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#34d399; font-weight:600; font-size:0.84rem; text-decoration:none;">${esc(f.name || 'Datei')}</a>
+                        <a href="${esc(f.url || '#')}" download="${esc(f.name || '')}" onclick="event.stopPropagation()" title="Herunterladen"
+                           style="flex-shrink:0; color:rgba(255,255,255,0.6); display:flex;">${ic('download', 14)}</a>
+                        <span onclick="event.stopPropagation(); window.addressbookDokumentMailen('${esc(p.id)}', '${esc(String(f.id))}')" title="Per E-Mail senden (Standard-Mailprogramm)"
+                              style="flex-shrink:0; cursor:pointer; color:rgba(255,255,255,0.6); display:flex;">${ic('mail', 14)}</span>
+                    </div>`).join('')}
+                </div>` : '';
+            const angebotHtml = ang ? `
+                <div style="margin-top:8px; padding:8px 11px; border-radius:10px; background:rgba(250,204,21,0.07); border:1px solid rgba(250,204,21,0.3);">
+                    <div style="display:flex; flex-wrap:wrap; gap:6px 14px; font-size:0.82rem; color:#fff;">
+                        <span><span class="ab-muted">VK</span> <strong>${geld(ang.nettobetrag)}</strong></span>
+                        <span><span class="ab-muted">EK</span> <strong>${geld(ang.ek_betrag)}</strong></span>
+                        <span><span class="ab-muted">Realisierbar</span> <strong>${ang.realisierbar == null ? '–' : ang.realisierbar + ' %'}</strong></span>
+                        ${ang.status ? `<span><span class="ab-muted">Status</span> <strong>${esc(ang.status)}</strong></span>` : ''}
+                        ${maschineName ? `<span><span class="ab-muted">Maschine</span> <strong style="color:#34d399;">${esc(maschineName)}</strong></span>` : ''}
+                    </div>
+                    ${dokHtml}
+                </div>` : (dokHtml || (maschineName ? `<div class="ab-muted ab-small" style="margin-top:6px;">Maschine: <span style="color:#34d399;">${esc(maschineName)}</span></div>` : ''));
+
             return `
             <div class="ab-sub-card">
                 <div class="ab-sub-card-head">
-                    <div class="ab-link-icon" style="color:#a78bfa; border-color:rgba(167,139,250,0.3); background:rgba(167,139,250,0.1);">${ic('note', 18)}</div>
+                    <div class="ab-link-icon" style="color:${ang ? '#facc15' : '#a78bfa'}; border-color:${ang ? 'rgba(250,204,21,0.35)' : 'rgba(167,139,250,0.3)'}; background:${ang ? 'rgba(250,204,21,0.1)' : 'rgba(167,139,250,0.1)'};">${ic('note', 18)}</div>
                     <div class="ab-sub-card-title">
                         <div class="ab-sub-name">
-                            <span>${esc(p.title || 'Unbenannter Vorgang')}</span>
+                            <span>${esc(ang ? ('Angebot ' + (ang.belegnummer || '')) : (p.title || 'Unbenannter Vorgang'))}</span>
                             <span class="ab-pill ${st.cls}">${esc(st.label)}</span>
                         </div>
                         <div class="ab-muted ab-small" style="margin-top:4px;">
@@ -2724,6 +2836,7 @@
                             ${assignedNames ? ` · Zuständig: ${esc(assignedNames)}` : ''}
                         </div>
                         ${remindHtml}
+                        ${angebotHtml}
                         ${steps.length ? `
                         <div style="margin-top:8px; display:flex; flex-direction:column; gap:4px;">
                             ${steps.slice(0, 5).map(s => `
