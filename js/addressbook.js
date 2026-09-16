@@ -2623,6 +2623,7 @@
                 'wartung': { label: 'Wartung', icon: '🔧', color: '#f97316' },
                 'auslieferung': { label: 'Auslieferung', icon: '🚚', color: '#6366f1' },
                 'angebot': { label: 'Angebot', icon: '📃', color: '#eab308' },
+                'miete': { label: 'Mietvereinbarung', icon: '🚜', color: '#22c55e' },
                 'service': { label: 'Servicebericht', icon: '📄', color: '#3b82f6' },
                 'process': { label: 'Vorgang', icon: '🗂️', color: '#818cf8' },
                 'task': { label: 'Aufgabe', icon: '📋', color: '#f59e0b' }

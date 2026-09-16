@@ -1176,6 +1176,10 @@
                  + '" style="left:calc(var(--tlv-day-w)*' + ix + ');width:var(--tlv-day-w)"></div>';
         }).join('');
         var nowPos = (HEUTE - start) / 86400000 / sw;
+        // Liegt heute ausserhalb des Fensters, leuchtet der Heute-Knopf gruen —
+        // so sieht man sofort, wie man zurueckkommt.
+        var heuteBtn = document.getElementById('tlv-heute');
+        if (heuteBtn) heuteBtn.classList.toggle('weg', !(nowPos >= 0 && nowPos < n));
         var nowLine = (nowPos >= 0 && nowPos < n)
             ? '<div class="tlv-now" style="left:calc(var(--tlv-day-w)*'
               + (nowPos + (S.raster === 'woche' ? 0 : 0.5)) + ')"></div>' : '';
@@ -1183,7 +1187,8 @@
         var zeilen = zeilenBauen(list, key(start), key(ende));
         if (!zeilen.length) {
             buehne.innerHTML = '<div class="tlv-leer">In diesem Zeitraum steht nichts an. '
-                + 'Anderen Zeitraum wählen, eine andere Voreinstellung nehmen '
+                + '<button type="button" class="tlv-leer-heute" onclick="window.timelineHeute()">Zurück zu heute</button> '
+                + '— oder anderen Zeitraum wählen, eine andere Voreinstellung nehmen '
                 + 'oder „auch leere Zeilen" einschalten.</div>';
             zeichneUngeplant();
             return;
@@ -1517,15 +1522,38 @@
     }
 
     /* Die Pfeile liegen als Geschwister der Bühne im Abschnitt (dort rollen
-       sie nicht mit dem Inhalt weg) — ihre Höhe wird deshalb gemessen. */
+       sie nicht mit dem Inhalt weg) — ihre Höhe wird deshalb gemessen.
+       Bezug ist der SICHTBARE Teil der Bühne: Die Bühne wächst mit ihren
+       Zeilen (kein eigener Rollbalken); früher stand der Pfeil in der Mitte
+       der gesamten Höhe — bei vielen Zeilen also unterhalb des Fensters, und
+       mit jeder weiteren Zeile rutschte er tiefer. Jetzt: Mitte des Teils der
+       Bühne, der gerade im Fenster liegt. Bei zwei Zeilen ist das die Mitte
+       der zwei Zeilen, bei vier die der vier; bei mehr Zeilen als ins Fenster
+       passen die Mitte des Ausschnitts. Beim Rollen der Seite wird nachgeführt. */
     function pagerSetzen() {
         var buehne = document.getElementById('tlv-buehne');
-        if (!buehne || !buehne.parentNode) return;
-        var mitte = buehne.offsetTop + buehne.clientHeight / 2;
+        var wurzel = document.getElementById('timeline');
+        if (!buehne || !buehne.parentNode || !wurzel) return;
+        var r = buehne.getBoundingClientRect();
+        var oben = Math.max(r.top, 0);
+        var unten = Math.min(r.bottom, window.innerHeight);
+        if (unten <= oben) { oben = r.top; unten = r.bottom; }
+        var mitte = (oben + unten) / 2 - wurzel.getBoundingClientRect().top;
         Array.prototype.forEach.call(buehne.parentNode.querySelectorAll('.tlv-pager'), function (b) {
             b.style.top = Math.round(mitte) + 'px';
         });
     }
+    // Rollt die Seite oder ändert sich die Fenstergröße, wandert der Pfeil mit.
+    (function () {
+        var wartend = false;
+        function nachfuehren() {
+            if (wartend) return;
+            wartend = true;
+            setTimeout(function () { wartend = false; pagerSetzen(); }, 16);
+        }
+        document.addEventListener('scroll', nachfuehren, true);
+        window.addEventListener('resize', nachfuehren);
+    })();
 
     function schriftEinpassen() {
         var wurzel = document.getElementById('timeline');
@@ -1889,6 +1917,36 @@
                 aufziehen(it, tr, tr.querySelector('.tlv-bar[data-id="' + it.id + '"]'), ev);
             });
         });
+
+        /* Zweite Taste dazudrücken löst KEIN weiteres pointerdown aus — der
+           Browser meldet einen Tastenwechsel bei schon gedrücktem Zeiger als
+           pointermove (mit geändertem ev.buttons). Die pointerdown-Handler oben
+           sehen deshalb immer nur die erste Taste allein und lehnen ab; das
+           Aufziehen kam so nie zustande. Hier wird der Moment abgefangen, in dem
+           beide Tasten gedrückt sind, und von da an gestartet. */
+        if (!wurzel.dataset.akkordGebunden) {
+            wurzel.dataset.akkordGebunden = '1';
+            wurzel.addEventListener('pointermove', function (ev) {
+                if (drag || upZug) return;
+                if (ev.pointerType && ev.pointerType !== 'mouse') return;
+                if ((ev.buttons & 3) !== 3) return;
+                var bar = ev.target.closest('.tlv-bar');
+                var tr = ev.target.closest('.tlv-track');
+                if (!tr) return;
+                var it;
+                if (bar) {
+                    // Nur der Platzhalter-Balken (noch ohne eigenen Termin) darf
+                    // aufgezogen werden; echte Balken werden mit links verschoben.
+                    it = eintrag(bar.dataset.id);
+                    if (!it || !(it.ohneDatum || it.vorlaeufig) || ev.target.classList.contains('grip')) return;
+                    aufziehen(it, bar.parentNode, bar, ev);
+                    return;
+                }
+                it = eintrag(tr.dataset.row || '');
+                if (!it) return;
+                aufziehen(it, tr, tr.querySelector('.tlv-bar[data-id="' + it.id + '"]'), ev);
+            });
+        }
 
         Array.prototype.forEach.call(document.querySelectorAll('.tlv-up'), function (u) {
             u.addEventListener('pointerdown', function (ev) {
@@ -2686,11 +2744,27 @@
         });
         wrap.addEventListener('click', function (e) { e.stopPropagation(); });
     }
+    /* Zurueck zu heute: Anker auf heute, gewaehlte Breite, Buehne nach links. */
+    function zumHeute() {
+        S.anker = heuteDatum(); S.spalten = S.basisSpalten; zeichne();
+        var buehne = document.getElementById('tlv-buehne');
+        if (buehne) buehne.scrollLeft = 0;
+    }
+    window.timelineHeute = zumHeute;
     function schiebe(r) {
         if (S.raster === 'woche') S.anker.setDate(S.anker.getDate() + 28 * r);
         else S.anker.setDate(S.anker.getDate() + 7 * r);
         S.anker = new Date(S.anker);
+        /* Das Fenster behaelt beim Blaettern seine gewaehlte Breite. Vorher
+           blieb eine automatische Verbreiterung (zeichne(): Balken ragt ueber
+           das Ende hinaus) stehen und wuchs mit jedem Schritt weiter — bis zu
+           180 Spalten. Die Buehne war dann meterbreit, die Balken lagen weit
+           rechts ausserhalb des Sichtfelds, und es sah aus, als waere nichts
+           mehr da. Erst ein Neuladen setzte die Breite zurueck. */
+        S.spalten = S.basisSpalten;
         zeichne();
+        var buehne = document.getElementById('tlv-buehne');
+        if (buehne) buehne.scrollLeft = 0;
     }
 
     /* "Weiter" (nach rechts): statt das Fenster nur zu verschieben, wird es
@@ -2815,7 +2889,7 @@
         an('tlv-frei-btn', 'click', function () { zeichneFrei(); });
         an('tlv-weiter', 'click', function () { weiterRechts(); });
         an('tlv-enger', 'click', function () { engerMachen(); });
-        an('tlv-heute', 'click', function () { S.anker = heuteDatum(); S.spalten = S.basisSpalten; zeichne(); });
+        an('tlv-heute', 'click', function () { zumHeute(); });
         an('tlv-neu-laden', 'click', function () { S.geladen = false; ladeAlles(); });
         an('tlv-achse', 'change', function (e) { S.achse = e.target.value; S.preset = null; zeichne(); });
         an('tlv-spanne', 'change', function (e) {

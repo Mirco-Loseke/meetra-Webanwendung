@@ -574,3 +574,24 @@
 .pm-item:hover {
     background: rgba(255, 255, 255, 0.08);
 }
+
+/* Suchfeld oben in langen Auswahlmenüs (js/select-enhance.js, ab 10 Optionen):
+   bleibt beim Rollen der Liste oben stehen. */
+.user-dropdown-menu .menu-such {
+    position: sticky; top: 0; z-index: 2;
+    padding: 6px;
+    background: rgba(15, 23, 42, .98);
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+.user-dropdown-menu .menu-such input {
+    width: 100%; box-sizing: border-box;
+    padding: 7px 10px;
+    font: inherit; font-size: var(--fs-sm, .85rem);
+    color: var(--text-1, #fff);
+    background: rgba(255, 255, 255, .06);
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-radius: var(--radius-md, 8px);
+    outline: none;
+}
+.user-dropdown-menu .menu-such input:focus { border-color: var(--success, #22c55e); }
+.user-dropdown-menu ul > li[hidden] { display: none !important; }

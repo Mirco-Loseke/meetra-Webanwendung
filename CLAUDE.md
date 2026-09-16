@@ -234,7 +234,7 @@ formfüllenden Feldern zusätzlich `.menu-block`. Ausgewählter Eintrag: `.selec
 einem Inline-`style` suchen.
 
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v536 (Stand 2026-09-16) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v541 (Stand 2026-09-16) — bei jeder Änderung hochzählen.
 
 **Mietvereinbarung (Stand 2026-08-25).** Der Bogen wird gespeichert: PDF per
 html2canvas je `.miet-page` + jsPDF, Ablage in R2 unter
@@ -309,3 +309,16 @@ passt nichts mehr → raus (Eingaben in den Merker). Beim Öffnen eines
 gespeicherten Berichts wird **nichts** nachträglich angehakt; ein neuer
 Bericht leert Kategorie, Maschine und Pläne (`openServiceberichtModal`).
 Das frühere `isNew`-Gate ist weg — es hatte den zweiten Plan verhindert.
+
+**Mietvereinbarung → Historie (2026-09-16).** Jede gespeicherte Vereinbarung
+steht in `manual_history_entries` (Typ `miete`: Zeitraum, Kunde, Stunden bei
+Übergabe/Rücknahme, Tagessatz; dazu je ein `hours`-Eintrag für Übergabe und
+Rücknahme, damit der Zählerstand der Maschine weiterläuft). Pflege:
+`historieAbgleichen()` in `js/mietvereinbarung.js`, eindeutig über
+`rental_agreement_id` + `rental_phase`. **Migration
+`supabase/supabase_add_rental_history.sql` MUSS laufen.**
+
+**Timeline-Pfeile (2026-09-16):** `pagerSetzen()` richtet sie an der Mitte des
+*sichtbaren* Teils der Bühne aus und führt beim Rollen nach. Balken aufziehen
+mit beiden Maustasten: die zweite Taste löst **kein** `pointerdown` aus, sondern
+`pointermove` mit `buttons === 3` — dort wird gestartet.

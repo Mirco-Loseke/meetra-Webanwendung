@@ -566,10 +566,52 @@
         dokDropMarkieren(td, false); dokDropZelle = null;
         const dateien = Array.from(e.dataTransfer.files || []);
         if (!dateien.length) return;
-        await window.angebotDateienHochladen(td.dataset.angebotId, dateien, td);
+        // Hängt schon ein Dokument am Angebot? Dann fragen: ersetzen (das alte
+        // wird endgültig gelöscht) oder zusätzlich anhängen. Spart den Umweg
+        // „Fenster öffnen, entfernen, neu ziehen".
+        const vorhandene = angebotDokumente(angeboteList.find(x => String(x.id) === String(td.dataset.angebotId)));
+        let ersetzen = false;
+        if (vorhandene.length) {
+            const wahl = await angebotDropFrage(vorhandene, dateien);
+            if (!wahl) return;
+            ersetzen = wahl === 'ersetzen';
+        }
+        await window.angebotDateienHochladen(td.dataset.angebotId, dateien, td, ersetzen);
     }, true);
 
-    window.angebotDateienHochladen = async function (angebotId, dateien, td) {
+    // Kleine Rückfrage beim Ablegen: Ersetzen / Zusätzlich anhängen / Abbrechen.
+    function angebotDropFrage(vorhandene, dateien) {
+        return new Promise(resolve => {
+            const alt = document.getElementById('angebot-drop-frage');
+            if (alt) alt.remove();
+            const ov = document.createElement('div');
+            ov.id = 'angebot-drop-frage';
+            ov.style.cssText = 'position:fixed; inset:0; z-index:999999; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.55); padding:16px;';
+            const alteNamen = vorhandene.map(f => escapeHtml(f.name || 'Datei')).join('<br>');
+            const neueNamen = dateien.map(f => escapeHtml(f.name)).join('<br>');
+            ov.innerHTML = `
+                <div style="width:min(460px, 100%); padding:22px; border-radius:16px; background:rgba(15,23,42,0.97); border:1px solid rgba(255,255,255,0.14); box-shadow:0 20px 60px rgba(0,0,0,0.6); color:#fff;">
+                    <h3 style="margin:0 0 10px; font-size:1.05rem;">Dokument ersetzen?</h3>
+                    <div style="font-size:0.85rem; color:rgba(255,255,255,0.75); line-height:1.5; word-break:break-word;">
+                        Am Angebot hängt bereits:<br><strong style="color:#34d399;">${alteNamen}</strong><br><br>
+                        Neu:<br><strong>${neueNamen}</strong>
+                    </div>
+                    <div style="display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; margin-top:18px;">
+                        <button type="button" class="btn-secondary" data-wahl="">Abbrechen</button>
+                        <button type="button" class="btn-secondary" data-wahl="hinzu">Zusätzlich anhängen</button>
+                        <button type="button" class="btn-primary" data-wahl="ersetzen" style="background:#ef4444; border-color:#ef4444;">Ersetzen — alte endgültig löschen</button>
+                    </div>
+                </div>`;
+            ov.addEventListener('click', ev => {
+                const b = ev.target.closest('button[data-wahl]');
+                if (b) { ov.remove(); resolve(b.dataset.wahl || null); return; }
+                if (ev.target === ov) { ov.remove(); resolve(null); }
+            });
+            document.body.appendChild(ov);
+        });
+    }
+
+    window.angebotDateienHochladen = async function (angebotId, dateien, td, ersetzen) {
         const a = angeboteList.find(x => String(x.id) === String(angebotId));
         const proc = vorgangZu(a);
         if (!proc) { window.showToast('Zu diesem Angebot gibt es noch keinen Vorgang — bitte die Liste einmal neu laden.'); return; }
@@ -578,13 +620,18 @@
         const anzeige = td ? td.querySelector('button') : null;
         const alt = anzeige ? anzeige.textContent : '';
         try {
-            const { fehler, zuGross } = await window.uploadFilesToProcess(proc.id, dateien, (i, n, name) => {
+            // Ersetzen: erst neu hochladen, dann die alten Dokumente endgültig
+            // löschen (js/process-attachments.js, replaceProcessAttachments).
+            const lauf = (ersetzen && typeof window.replaceProcessAttachments === 'function')
+                ? window.replaceProcessAttachments : window.uploadFilesToProcess;
+            const { fehler, zuGross, ersetzt } = await lauf(proc.id, dateien, (i, n, name) => {
                 if (anzeige) anzeige.textContent = `⏳ ${i} von ${n} …`;
             });
             const teile = [];
             if (zuGross) teile.push(`${zuGross} Datei(en) über 8 MB übersprungen`);
             if (fehler) teile.push(`${fehler} Datei(en) fehlgeschlagen`);
-            window.showToast(teile.length ? teile.join(' · ') : `${dateien.length} Dokument${dateien.length === 1 ? '' : 'e'} zum Angebot ${a.belegnummer || ''} hochgeladen.`);
+            window.showToast(teile.length ? teile.join(' · ')
+                : `${dateien.length} Dokument${dateien.length === 1 ? '' : 'e'} zum Angebot ${a.belegnummer || ''} ${ersetzt ? `hochgeladen — ${ersetzt} altes Dokument${ersetzt === 1 ? '' : 'e'} gelöscht` : 'hochgeladen'}.`);
         } catch (err) {
             if (anzeige) anzeige.textContent = alt;
             window.showToast('Hochladen fehlgeschlagen: ' + (err.message || 'unbekannter Fehler'));
@@ -1006,14 +1053,16 @@
         }
 
         if (term) {
+            // Alle Wörter müssen vorkommen, Reihenfolge egal — „arjes impaktor"
+            // findet „ARJES Impaktor 250 evo". Durchsucht werden Belegnummer,
+            // Firma, Maschine (verknüpft oder Freitext), Bemerkung, Status, Notizen.
+            const tokens = term.split(/\s+/).filter(Boolean);
             entries = entries.filter(a => {
                 const firma = a.customers?.name || a.kundenmatchcode || '';
-                const notizTreffer = (a.angebot_notizen || []).some(n => (n.content || '').toLowerCase().includes(term));
-                return (a.belegnummer || '').toLowerCase().includes(term) ||
-                    firma.toLowerCase().includes(term) ||
-                    (a.bemerkung || '').toLowerCase().includes(term) ||
-                    (a.status || '').toLowerCase().includes(term) ||
-                    notizTreffer;
+                const notizen = (a.angebot_notizen || []).map(n => n.content || '').join(' ');
+                const heu = [a.belegnummer, firma, getAngebotMachineLabel(a), a.bemerkung, a.status, notizen]
+                    .map(v => String(v || '')).join(' ').toLowerCase();
+                return tokens.every(t => heu.includes(t));
             });
         }
 

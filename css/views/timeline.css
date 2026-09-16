@@ -1305,15 +1305,15 @@ body.tlv-vollbild #tlv-vollbild { background: rgba(56, 189, 248, .18); border-co
     width: 34px; height: 56px;
     display: flex; align-items: center; justify-content: center;
     font-size: 22px; line-height: 1; font-weight: 700;
-    color: #e2e8f0; cursor: pointer;
+    color: var(--success, #22c55e); cursor: pointer;
     background: rgba(15, 23, 42, .82);
-    border: 1px solid var(--glass-border);
+    border: 1px solid rgba(34, 197, 94, .45);
     backdrop-filter: blur(var(--blur-raised));
     -webkit-backdrop-filter: blur(var(--blur-raised));
     box-shadow: var(--shadow-2, 0 8px 28px rgba(0, 0, 0, .38));
     opacity: .55; transition: opacity .15s, background .15s;
 }
-#timeline .tlv-pager:hover { opacity: 1; background: rgba(30, 41, 59, .95); }
+#timeline .tlv-pager:hover { opacity: 1; background: rgba(34, 197, 94, .18); border-color: var(--success, #22c55e); }
 /* Die Pfeile stehen NEBEN der Bühne, nicht darauf: links im Zwischenraum
    zum Seitenmenü, rechts zwischen Bühnenkante und Fensterrand. Dafür reicht
    der Innenabstand von #main-content (2rem) aus. */
@@ -1327,3 +1327,19 @@ body.tlv-vollbild #tlv-vollbild { background: rgba(56, 189, 248, .18); border-co
 }
 /* Bezugsrahmen für die Pager-Pfeile (position: absolute). */
 #timeline:not(.hidden) { position: relative; }
+
+/* „Heute" leuchtet grün, sobald der heutige Tag nicht mehr im Fenster liegt
+   (js/timeline-view.js, zeichne) — der Weg zurück ist damit immer sichtbar. */
+.tlv-nav button#tlv-heute.weg {
+    color: #fff;
+    background: var(--success, #22c55e);
+    font-weight: 700;
+}
+.tlv-nav button#tlv-heute.weg:hover { background: #16a34a; }
+/* Gleicher Knopf im Leerzustand der Bühne */
+.tlv-leer .tlv-leer-heute {
+    border: 0; cursor: pointer; font: inherit; font-weight: 700;
+    color: #fff; background: var(--success, #22c55e);
+    padding: 6px 14px; border-radius: var(--radius-pill); margin: 0 4px;
+}
+.tlv-leer .tlv-leer-heute:hover { background: #16a34a; }

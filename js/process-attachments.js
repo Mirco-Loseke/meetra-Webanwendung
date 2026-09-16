@@ -288,6 +288,34 @@
         return uploadDateien(processId, null, dateien, onProgress);
     };
 
+    // Dokumente ERSETZEN: neue Dateien hochladen, danach die bisherigen
+    // Vorgangs-Dokumente (ohne Schritt-Bezug) aus Liste und Speicher entfernen.
+    // Genutzt von der Angebotsliste (Datei auf die Zelle ziehen → „Ersetzen").
+    // Bewusst OHNE Löschrecht-Prüfung: Austauschen darf jeder — es ist derselbe
+    // Vorgang wie „neues Dokument statt altem", nur in einem Schritt.
+    // Reihenfolge: erst hochladen, dann löschen — schlägt der Upload fehl,
+    // bleibt das alte Dokument unangetastet.
+    window.replaceProcessAttachments = async function (processId, dateien, onProgress) {
+        const p = proc(processId);
+        const alte = liste(p).filter(f => !f.step_id);
+        const alteIds = new Set(alte.map(f => String(f.id)));
+        const erg = await uploadDateien(processId, null, dateien, onProgress);
+        const neuHochgeladen = liste(proc(processId)).filter(f => !f.step_id && !alteIds.has(String(f.id)));
+        if (!neuHochgeladen.length) return Object.assign(erg, { ersetzt: 0 });
+
+        const rest = liste(proc(processId)).filter(f => !alteIds.has(String(f.id)));
+        const { error } = await sb().from('internal_processes').update({ attachments: rest }).eq('id', processId);
+        if (error) throw error;
+        const p2 = proc(processId);
+        if (p2) p2.attachments = rest;
+        for (const f of alte) {
+            try {
+                if (window.FileUploadService && f.path) await window.FileUploadService.deleteFile(f.path, { provider: 'cloudflare-r2' });
+            } catch (e) { console.warn('Altes Dokument blieb im Speicher liegen:', f.path, e); }
+        }
+        return Object.assign(erg, { ersetzt: alte.length });
+    };
+
     async function hochladen(dateien) {
         if (!aktuelleId) return;
         try {

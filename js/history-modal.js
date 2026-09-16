@@ -430,7 +430,8 @@
                                 'whatsapp': { label: 'WhatsApp', icon: '💬', color: '#22c55e' },
                                 'wartung': { label: 'Wartung', icon: '🔧', color: '#f97316' },
                                 'auslieferung': { label: 'Auslieferung', icon: '🚚', color: '#6366f1' },
-                                'angebot': { label: 'Angebot', icon: '📃', color: '#eab308' }
+                                'angebot': { label: 'Angebot', icon: '📃', color: '#eab308' },
+                                'miete': { label: 'Mietvereinbarung', icon: '🚜', color: '#22c55e' }
                             };
                             const config = typeMap[m.type] || { label: 'Eintrag', icon: '📄', color: '#9ca3af' };
 
@@ -459,6 +460,7 @@
                                 remark: m.remark || null,
                                 rawType: m.type,
                                 angebotId: m.angebot_id || null,
+                                rentalAgreementId: m.rental_agreement_id || null,
                                 endDate: m.end_date || null,
                                 color: config.color,
                                 icon: config.icon,
@@ -591,6 +593,12 @@
                         actionButtons += `
                                 <button onclick="window.navigateToProcess('${item.id}')" class="btn-icon-circular edit" title="Vorgang öffnen">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                </button>
+                            `;
+                    } else if (item.rawType === 'miete' && item.rentalAgreementId) {
+                        actionButtons += `
+                                <button onclick="window.openMietvereinbarung('${machineId}', '${item.rentalAgreementId}')" class="btn-icon-circular edit" title="Mietvereinbarung öffnen">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                                 </button>
                             `;
                     } else if (item.rawType === 'angebot') {

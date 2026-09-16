@@ -47,6 +47,7 @@ lassen als eine Migration auszulassen.
 | Datei | Wofür |
 |---|---|
 | `supabase_mietvereinbarung_komplett.sql` | **Die einzige Datei, die ausgeführt wird.** Vereinbarungen, Vorlagen und Vorlagen-Kategorien in einem — passend zu den `bigint`-Schlüsseln dieser Datenbank |
+| `supabase_add_rental_history.sql` | Mietvereinbarung in der Maschinen-Historie (Typ `miete` + Betriebsstunden bei Übergabe/Rücknahme als `hours`-Einträge). **Nach** `supabase_mietvereinbarung_komplett.sql` ausführen |
 | ~~`supabase_add_rental_agreements.sql`~~ | **Veraltet, nicht ausführen** (setzt `uuid`-Schlüssel voraus) |
 | ~~`supabase_add_rental_templates.sql`~~ | **Veraltet, nicht ausführen** |
 | ~~`supabase_add_rental_template_categories.sql`~~ | **Veraltet, nicht ausführen** |

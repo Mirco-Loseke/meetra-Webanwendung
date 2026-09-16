@@ -1658,6 +1658,9 @@
                 gespeicherteId = neu.id;
             }
 
+            // Historie der Maschine nachziehen (Mietvereinbarung + Betriebsstunden).
+            await historieAbgleichen();
+
             // Ab hier das PDF. Ein Fehler darf das Gespeicherte nicht mehr
             // umwerfen — deshalb eigener try-Block mit eigener Meldung.
             messPunkt('Datenbank');
@@ -1773,6 +1776,93 @@
     // ebenfalls. Wird das Dokument selbst gelöscht, ruft documents-r2.js
     // diese Funktion mit ohneDokument:true auf — dann ist das Dokument
     // dort schon in Arbeit und wird hier nicht noch einmal angefasst.
+    // ------------------------------------------------------
+    // Historie der Maschine
+    // ------------------------------------------------------
+    // Jede gespeicherte Vereinbarung steht in manual_history_entries:
+    //   * Typ 'miete'  — Zeitraum, Kunde, Betriebsstunden bei Übergabe und
+    //     Rücknahme, Tagessatz (Phase 'miete', Datum = Mietbeginn)
+    //   * Typ 'hours'  — Betriebsstunden bei Übergabe (Phase 'uebergabe',
+    //     Datum = Mietbeginn) und bei Rücknahme (Phase 'ruecknahme', Datum =
+    //     Mietende). Dadurch zählt der Stand der Maschine weiter wie bei
+    //     einer manuellen Ablesung — Maschinen-Detail und die nächste
+    //     Vereinbarung lesen ihn von dort.
+    // rental_agreement_id + rental_phase sind eindeutig (Migration
+    // supabase_add_rental_history.sql): erneutes Speichern aktualisiert.
+    // Ohne Migration bleibt die Vereinbarung gespeichert, nur der Eintrag
+    // fehlt — mit Hinweis.
+    function stundenWert(s) {
+        return String(s == null ? '' : s).trim().replace(/\s*(h|std\.?|stunden)\s*$/i, '').trim();
+    }
+    function datumIso(tag, fallback) {
+        const t = String(tag || '').trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t + 'T12:00:00';
+        return fallback || new Date().toISOString();
+    }
+    function datumDe(tag) {
+        const t = String(tag || '').trim();
+        const m = t.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        return m ? `${m[3]}.${m[2]}.${m[1]}` : t;
+    }
+    async function historieAbgleichen() {
+        if (!gespeicherteId || !maschine || !window.supabaseClient) return;
+        const m = daten.miete || {}, k = daten.mieter || {};
+        const beginn = m.beginn || m.abholdatum || '';
+        const bsAb = stundenWert(m.beginn_bs);
+        const bsZu = stundenWert(m.ende_bs);
+        const kunde = (k.name || '').trim();
+
+        const teile = [];
+        teile.push('Zeitraum: ' + (beginn ? datumDe(beginn) : '–') + (m.ende ? ' – ' + datumDe(m.ende) : ' – offen'));
+        if (kunde) teile.push('Kunde: ' + kunde + (k.einsatzort ? ' (' + k.einsatzort + ')' : ''));
+        if (bsAb) teile.push('Betriebsstunden bei Übergabe: ' + bsAb + ' h');
+        if (bsZu) teile.push('bei Rücknahme: ' + bsZu + ' h' + (bsAb && !isNaN(bsZu - bsAb) ? ' (' + (bsZu - bsAb) + ' h gelaufen)' : ''));
+        if (m.tagessatz) teile.push('Tagessatz: ' + m.tagessatz + ' €');
+
+        const basis = {
+            rental_agreement_id: gespeicherteId,
+            machine_id: maschine.id,
+            customer_id: k.customer_id || null,
+            created_by: window.activeUser ? window.activeUser.id : null
+        };
+        const zeilen = [Object.assign({}, basis, {
+            rental_phase: 'miete', type: 'miete',
+            title: 'Mietvereinbarung' + (kunde ? ' — ' + kunde : ''),
+            content: teile.join(' · '),
+            created_at: datumIso(beginn),
+            end_date: m.ende ? datumIso(m.ende) : null
+        })];
+        if (bsAb) zeilen.push(Object.assign({}, basis, {
+            rental_phase: 'uebergabe', type: 'hours',
+            title: 'Betriebsstunden bei Übergabe' + (kunde ? ' (Miete ' + kunde + ')' : ''),
+            content: bsAb, created_at: datumIso(beginn)
+        }));
+        if (bsZu) zeilen.push(Object.assign({}, basis, {
+            rental_phase: 'ruecknahme', type: 'hours',
+            title: 'Betriebsstunden bei Rücknahme' + (kunde ? ' (Miete ' + kunde + ')' : ''),
+            content: bsZu, created_at: datumIso(m.ende || '', datumIso(beginn))
+        }));
+
+        try {
+            const { error } = await window.supabaseClient
+                .from('manual_history_entries')
+                .upsert(zeilen, { onConflict: 'rental_agreement_id,rental_phase' });
+            if (error) throw error;
+            // Stunden inzwischen gelöscht? Dann den alten Eintrag der Phase entfernen.
+            const behalten = zeilen.map(z => z.rental_phase);
+            const weg = ['uebergabe', 'ruecknahme'].filter(p => !behalten.includes(p));
+            if (weg.length) {
+                await window.supabaseClient.from('manual_history_entries')
+                    .delete().eq('rental_agreement_id', gespeicherteId).in('rental_phase', weg);
+            }
+        } catch (e) {
+            console.warn('Historie zur Mietvereinbarung nicht geschrieben:', e && e.message);
+            if (/rental_agreement_id|rental_phase|type_check/.test((e && e.message) || '')) {
+                window.showToast('Historie-Eintrag fehlt: supabase/supabase_add_rental_history.sql in Supabase ausführen.');
+            }
+        }
+    }
+
     window.deleteRentalAgreement = async function (id, optionen) {
         if (!id || !window.supabaseClient) return;
         const ohneDokument = !!(optionen && optionen.ohneDokument);
@@ -1799,6 +1889,12 @@
                 .from('documents').delete().eq('rental_agreement_id', id);
             if (docFehler) console.error('Dokument konnte nicht gelöscht werden:', docFehler);
         }
+
+        // Historie-Einträge (Mietvereinbarung + Betriebsstunden) mit entfernen —
+        // die Datenbank räumt sie per Cascade ohnehin, das hier ist der Gurt.
+        try {
+            await window.supabaseClient.from('manual_history_entries').delete().eq('rental_agreement_id', id);
+        } catch (e) { /* Migration evtl. nicht gelaufen */ }
 
         const { error: zeilenFehler } = await window.supabaseClient
             .from('rental_agreements').delete().eq('id', id);

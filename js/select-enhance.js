@@ -61,12 +61,49 @@
         return o ? o.text : '';
     }
 
+    var SUCHE_AB = 10;   // ab so vielen Optionen bekommt das Menue ein Suchfeld
+
+    // Suchfeld oben im Menue: tippen filtert die Eintraege (alle Woerter
+    // muessen vorkommen, Reihenfolge egal). Enter waehlt den ersten Treffer.
+    function sucheEinbauen(sel, menu) {
+        var alt = menu.querySelector('.menu-such');
+        if (alt) alt.remove();
+        if (sel.options.length <= SUCHE_AB) return;
+        var box = document.createElement('div');
+        box.className = 'menu-such';
+        var inp = document.createElement('input');
+        inp.type = 'text';
+        inp.placeholder = 'Suchen …';
+        inp.setAttribute('autocomplete', 'off');
+        box.appendChild(inp);
+        menu.insertBefore(box, menu.firstChild);
+        function filtern() {
+            var tokens = inp.value.toLowerCase().split(/s+/).filter(Boolean);
+            Array.prototype.forEach.call(menu.querySelectorAll('ul > li'), function (li) {
+                var t = li.textContent.toLowerCase();
+                li.hidden = !tokens.every(function (tok) { return t.indexOf(tok) !== -1; });
+            });
+        }
+        inp.addEventListener('input', filtern);
+        inp.addEventListener('click', function (e) { e.stopPropagation(); });
+        inp.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { menu.classList.remove('show'); return; }
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                var erster = Array.prototype.filter.call(menu.querySelectorAll('ul > li'), function (li) { return !li.hidden; })[0];
+                if (erster) erster.click();
+            }
+        });
+        setTimeout(function () { try { inp.focus(); } catch (e) {} }, 0);
+    }
+
     function menueFuellen(sel, menu) {
         var ul = menu.querySelector('ul');
         ul.innerHTML = '';
         // Lange Listen (Laender, Kunden, Maschinen) enger setzen, damit man
         // ohne endloses Scrollen etwas findet.
         menu.classList.toggle('menu-compact', sel.options.length > 10);
+        sucheEinbauen(sel, menu);
         Array.prototype.forEach.call(sel.options, function (opt) {
             var li = document.createElement('li');
             li.textContent = opt.text;
