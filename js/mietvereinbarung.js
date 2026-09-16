@@ -1965,9 +1965,7 @@
         let zeilen = '';
 
         (vorlage.baugruppen || []).forEach(g => {
-            zeilen += `<tr class="miet-group" data-split><td colspan="${2 + sp.length}">${esc(g.gruppe)}${g.trommeltyp
-                ? ` &nbsp;&nbsp;Trommeltyp: <span style="display:inline-block; min-width:150px; border-bottom:1px solid #9ca3af;">${txt('trommeltyp', daten.trommeltyp, '', 'display:inline-block;')}</span>`
-                : ''}</td></tr>`;
+            zeilen += `<tr class="miet-group" data-split><td colspan="${2 + sp.length}">${esc(g.gruppe)}</td></tr>`;   // Feld „Trommeltyp" entfernt (2026-09-15, auf Wunsch)
             (g.punkte || []).forEach(roh => {
                 nr++;
                 const p = punktLesen(roh);

@@ -24,15 +24,8 @@
 
                 timeout = setTimeout(async () => {
                     try {
-                        if (!window.supabaseClient) return;
-                        
-                        const { data, error } = await window.supabaseClient
-                            .from('customers')
-                            .select('id, name, email, matchcode, customer_number, city')
-                            .or(`name.ilike.%${query}%,matchcode.ilike.%${query}%,email.ilike.%${query}%`)
-                            .limit(8);
-
-                        if (error) throw error;
+                        // Suche im Browser über den Kunden-Cache (js/lookup-cache.js) — kein Serverruf pro Tastendruck
+                        const data = await window.customerCacheSearch(query, 8);
 
                         suggestionsBox.innerHTML = '';
                         if (!data || data.length === 0) {
@@ -79,7 +72,7 @@
                         suggestionsBox.innerHTML = '<div style="padding: 10px; color: #f87171; text-align: center; font-size: 0.9rem;">Fehler bei der Suche</div>';
                         suggestionsBox.style.display = 'block';
                     }
-                }, 200);
+                }, 60);
             });
 
             // Close suggestions when clicking outside

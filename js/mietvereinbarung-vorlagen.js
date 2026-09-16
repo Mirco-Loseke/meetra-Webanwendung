@@ -75,7 +75,7 @@
         baugruppen: [
             { gruppe: 'Rahmen, Räder', punkte: ['Felgen/Reifen', 'Unterfahrschutz', 'Kotflügel/Schmutzfänger', 'Hauben/Klappen/Deckel'] },
             { gruppe: 'Bänder, Zylinder', punkte: ['Bunkerband', 'Heckband', 'Seitenband', 'Zylinder'] },
-            { gruppe: 'Siebtrommel', trommeltyp: true, punkte: ['Beschädigung/Beulen'] },
+            { gruppe: 'Siebtrommel', punkte: ['Beschädigung/Beulen'] },
             { gruppe: 'E-Anlage', punkte: ['Scheinwerfer/Rundumleuchte', 'Rücklichter/Rückstrahler', 'Zündschloss', 'Schlüssel'] }
         ],
 
@@ -648,9 +648,6 @@
                 <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
                     <input class="glass-form-input" value="${esc(g.gruppe)}" style="flex:1; font-weight:700;"
                            oninput="window.mietVorlageGruppe(${gi}, this.value)">
-                    <label style="display:flex; align-items:center; gap:6px; font-size:0.78rem; color:rgba(255,255,255,0.5); white-space:nowrap;">
-                        <input type="checkbox" ${g.trommeltyp ? 'checked' : ''} onchange="window.mietVorlageTrommeltyp(${gi}, this.checked)"> Feld „Trommeltyp"
-                    </label>
                     <button class="btn-secondary" style="padding:6px 12px;" onclick="window.mietVorlageGruppeWeg(${gi})">Gruppe löschen</button>
                 </div>
                 ${(g.punkte || []).map((roh, pi) => {

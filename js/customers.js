@@ -884,13 +884,8 @@
             try {
                 if (!window.supabaseClient) throw new Error('Supabase Client nicht initialisiert');
 
-                const { data, error } = await window.supabaseClient
-                    .from('customers')
-                    .select('id, name, matchcode, customer_number, address_number, street, zip_code, city, country')
-                    .or(`name.ilike.%${query}%,matchcode.ilike.%${query}%,customer_number.ilike.%${query}%,address_number.ilike.%${query}%`)
-                    .limit(10);
-
-                if (error) throw error;
+                // Suche im Browser über den Kunden-Cache (js/lookup-cache.js) — kein Serverruf pro Tastendruck
+                const data = await window.customerCacheSearch(query, 10);
 
                 if (data.length === 0) {
                     suggestionsBox.innerHTML = '<div style="padding:10px; color:rgba(255,255,255,0.4);">Keine Kunden gefunden</div>';
@@ -925,7 +920,7 @@
                 console.error('Autocomplete search failed:', err);
                 suggestionsBox.innerHTML = '<div style="padding:10px; color:red;">Fehler bei der Suche</div>';
             }
-        }, 250);
+        }, 60);
     };
 
     window.searchOperatorsForMachine = function () {
@@ -947,13 +942,8 @@
             try {
                 if (!window.supabaseClient) throw new Error('Supabase Client nicht initialisiert');
 
-                const { data, error } = await window.supabaseClient
-                    .from('customers')
-                    .select('id, name, matchcode, customer_number, address_number, street, zip_code, city, country')
-                    .or(`name.ilike.%${query}%,matchcode.ilike.%${query}%,customer_number.ilike.%${query}%,address_number.ilike.%${query}%`)
-                    .limit(10);
-
-                if (error) throw error;
+                // Suche im Browser über den Kunden-Cache (js/lookup-cache.js) — kein Serverruf pro Tastendruck
+                const data = await window.customerCacheSearch(query, 10);
 
                 if (data.length === 0) {
                     suggestionsBox.innerHTML = '<div style="padding:10px; color:rgba(255,255,255,0.4);">Keine Betreiber gefunden</div>';
@@ -988,7 +978,7 @@
                 console.error('Autocomplete operator search failed:', err);
                 suggestionsBox.innerHTML = '<div style="padding:10px; color:red;">Fehler bei der Suche</div>';
             }
-        }, 250);
+        }, 60);
     };
 
     window.selectOperatorForMachine = function (cust) {
@@ -1030,13 +1020,8 @@
             try {
                 if (!window.supabaseClient) throw new Error('Supabase Client nicht initialisiert');
 
-                const { data, error } = await window.supabaseClient
-                    .from('customers')
-                    .select('id, name, matchcode, customer_number, address_number, street, zip_code, city, country')
-                    .or(`name.ilike.%${query}%,matchcode.ilike.%${query}%,customer_number.ilike.%${query}%,address_number.ilike.%${query}%`)
-                    .limit(10);
-
-                if (error) throw error;
+                // Suche im Browser über den Kunden-Cache (js/lookup-cache.js) — kein Serverruf pro Tastendruck
+                const data = await window.customerCacheSearch(query, 10);
 
                 if (data.length === 0) {
                     suggestionsBox.innerHTML = '<div style="padding:10px; color:rgba(255,255,255,0.4);">Keine Standorte gefunden</div>';
@@ -1071,7 +1056,7 @@
                 console.error('Autocomplete location search failed:', err);
                 suggestionsBox.innerHTML = '<div style="padding:10px; color:red;">Fehler bei der Suche</div>';
             }
-        }, 250);
+        }, 60);
     };
 
     window.selectLocationForMachine = function (cust) {

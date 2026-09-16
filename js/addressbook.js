@@ -2739,6 +2739,8 @@
         // Direkt das Standard-Mailprogramm (Outlook) mit Entwurf öffnen — gleiche
         // Vorlage wie in der Angebotsliste (Betreff „Angebot <Nr> – <Maschine>").
         const ang = (state.detail.angeboteByProcess || {})[String(processId)];
+        // Mit Angebot: Entwurf als .eml MIT PDF im Anhang (js/listen.js).
+        if (ang && typeof window.angebotMailEntwurfMitAnhang === 'function') { window.angebotMailEntwurfMitAnhang(ang, f); return; }
         const v = (ang && typeof window.angebotMailVorlage === 'function')
             ? window.angebotMailVorlage(ang, f.url)
             : { betreff: p.title || 'Dokument', text: `Guten Tag,\n\nanbei ${p.title || 'das Dokument'}:\n${f.url}\n\nMit freundlichen Grüßen` };
@@ -2808,6 +2810,31 @@
                               style="flex-shrink:0; cursor:pointer; color:rgba(255,255,255,0.6); display:flex;">${ic('mail', 14)}</span>
                     </div>`).join('')}
                 </div>` : '';
+            // Stände des Vorgangs: Anzahl + letzter Eintrag immer sichtbar,
+            // der ganze Verlauf klappt auf; „+" trägt einen neuen Stand ein.
+            const staende = Array.isArray(p.status_updates) ? p.status_updates.slice()
+                .sort((x, y) => String(y.at || '').localeCompare(String(x.at || ''))) : [];
+            const standZeile = (u) => `
+                <div style="padding:6px 9px; border-radius:8px; background:rgba(96,165,250,0.08); border:1px solid rgba(96,165,250,0.25);">
+                    <div style="color:#fff; font-size:0.84rem; white-space:pre-wrap; word-break:break-word;">${esc(u.text || '')}</div>
+                    <div class="ab-small" style="color:rgba(255,255,255,0.45); margin-top:2px;">${esc(u.by || 'Unbekannt')} · ${formatDateTime(u.at)}</div>
+                </div>`;
+            const standHtml = `
+                <div style="margin-top:8px;">
+                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:5px;">
+                        <span style="font-size:0.7rem; font-weight:800; color:#60a5fa; text-transform:uppercase; letter-spacing:0.5px;">Stand${staende.length ? ` (${staende.length})` : ''}</span>
+                        <button type="button" class="ab-icon-btn" data-ab-action="proc-stand-new" data-ab-id="${esc(p.id)}" title="Stand eintragen"
+                            style="width:22px; height:22px; border-radius:999px; color:#60a5fa; border-color:rgba(96,165,250,0.5); font-weight:800;">+</button>
+                        ${staende.length > 1 ? `<button type="button" class="ab-btn ab-btn-secondary" data-ab-action="proc-stand-toggle" style="padding:2px 10px; font-size:0.74rem; border-radius:20px; margin-left:auto;">Alle ${staende.length} anzeigen</button>` : ''}
+                    </div>
+                    ${staende.length
+                        ? `<div style="display:flex; flex-direction:column; gap:5px;">
+                               ${standZeile(staende[0])}
+                               ${staende.length > 1 ? `<div class="ab-proc-stand-rest" style="display:none; flex-direction:column; gap:5px;">${staende.slice(1).map(standZeile).join('')}</div>` : ''}
+                           </div>`
+                        : `<div class="ab-muted ab-small" style="font-style:italic;">Noch kein Stand eingetragen.</div>`}
+                </div>`;
+
             const angebotHtml = ang ? `
                 <div style="margin-top:8px; padding:8px 11px; border-radius:10px; background:rgba(250,204,21,0.07); border:1px solid rgba(250,204,21,0.3);">
                     <div style="display:flex; flex-wrap:wrap; gap:6px 14px; font-size:0.82rem; color:#fff;">
@@ -2837,6 +2864,7 @@
                         </div>
                         ${remindHtml}
                         ${angebotHtml}
+                        ${standHtml}
                         ${steps.length ? `
                         <div style="margin-top:8px; display:flex; flex-direction:column; gap:4px;">
                             ${steps.slice(0, 5).map(s => `
@@ -5565,6 +5593,40 @@
                     window.openEditProcessModal(id);
                 }
                 break;
+            case 'proc-stand-toggle': {
+                // Ganzen Stand-Verlauf der Karte auf-/zuklappen
+                const rest = el.parentElement && el.parentElement.parentElement
+                    ? el.parentElement.parentElement.querySelector('.ab-proc-stand-rest') : null;
+                if (rest) {
+                    const offen = rest.style.display !== 'none';
+                    rest.style.display = offen ? 'none' : 'flex';
+                    el.textContent = offen ? el.textContent.replace('Weniger', 'Alle') : 'Weniger anzeigen';
+                    if (offen) { const n = rest.children.length + 1; el.textContent = `Alle ${n} anzeigen`; }
+                }
+                break;
+            }
+            case 'proc-stand-new': {
+                // Stand-Fenster des Vorgangs-Moduls öffnen; den Vorgang aus der
+                // Adresse dort einhängen, damit nichts nachgeladen werden muss.
+                const p = (state.detail.processes || []).find(x => String(x.id) === String(id));
+                if (p && window.eventsState) {
+                    if (!Array.isArray(window.eventsState.processes)) window.eventsState.processes = [];
+                    const i = window.eventsState.processes.findIndex(x => String(x.id) === String(p.id));
+                    if (i === -1) window.eventsState.processes.push(p); else window.eventsState.processes[i] = p;
+                }
+                if (typeof window.openProcessStatusUpdateModal === 'function') {
+                    window.openProcessStatusUpdateModal(id, null);
+                    // Nach dem Schließen die Adress-Ansicht nachziehen
+                    const modal = document.getElementById('process-status-update-modal');
+                    if (modal && !modal._abStandHook) {
+                        modal._abStandHook = true;
+                        new MutationObserver(() => {
+                            if (modal.classList.contains('hidden') && typeof window.refreshAddressbookDetail === 'function') window.refreshAddressbookDetail();
+                        }).observe(modal, { attributes: true, attributeFilter: ['class'] });
+                    }
+                }
+                break;
+            }
         }
     });
 

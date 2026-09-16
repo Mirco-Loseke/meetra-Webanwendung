@@ -33,13 +33,45 @@
             }
         };
 
-        function buildProcessMachineDropdown(prefix, machines, workshopOrders) {
+        // ----------------------------------------------------------
+        // Leistung: Früher wurden bei jedem Tastendruck ALLE Maschinen als
+        // einzelne DOM-Knoten mit je drei Event-Handlern aufgebaut. Jetzt:
+        //  - Suchtext je Maschine wird einmal vorberechnet (Index, neu bei
+        //    geänderter machineList),
+        //  - höchstens MAX_TREFFER Einträge werden gezeichnet, der Rest als
+        //    Hinweis „weiter eingeben",
+        //  - ein einziger innerHTML-Aufruf, Klicks per Event-Delegation,
+        //    Hover per CSS-Klasse (.pm-item in css/components/dropdowns.css).
+        // ----------------------------------------------------------
+        const MAX_TREFFER = 60;
+        let suchIndexQuelle = null, suchIndexLaenge = -1, suchIndex = [];
+        function maschinenIndex() {
+            const liste = window.machineList || [];
+            if (liste !== suchIndexQuelle || liste.length !== suchIndexLaenge) {
+                suchIndexQuelle = liste; suchIndexLaenge = liste.length;
+                suchIndex = liste.map(m => ({
+                    m,
+                    text: [m.manufacturer || '', m.name || '', m.serial || m.serial_number || '', m.year ? String(m.year) : ''].join(' ').toLowerCase()
+                }));
+            }
+            return suchIndex;
+        }
+
+        function escHtml(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        const ITEM_STYLE = 'padding: 10px 14px; cursor: pointer; font-size: 0.9rem; border-top: 1px solid rgba(255,255,255,0.05);';
+        const HEAD_STYLE = 'padding: 6px 14px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid rgba(255,255,255,0.05);';
+
+        function buildProcessMachineDropdown(prefix, machines, workshopOrders, restAnzahl) {
             workshopOrders = workshopOrders || window.processOpenWorkshopOrders || [];
             const portalId = `${prefix}-machine-dropdown-portal`;
             let dropdown = document.getElementById(portalId);
             if (!dropdown) {
                 dropdown = document.createElement('div');
                 dropdown.id = portalId;
+                dropdown.className = 'proc-machine-portal';
                 dropdown.style.cssText = [
                     'position: fixed',
                     'z-index: 999999',
@@ -51,6 +83,18 @@
                     'box-shadow: 0 16px 48px rgba(0,0,0,0.7)',
                     'display: none'
                 ].join(';');
+                // Ein Handler für alle Einträge (mousedown, damit das Suchfeld den Fokus behält)
+                dropdown.addEventListener('mousedown', (e) => {
+                    const item = e.target.closest('.pm-item');
+                    if (!item) return;
+                    e.preventDefault();
+                    if (item.hasAttribute('data-none')) { window.selectProcessMachine(prefix, '', ''); return; }
+                    if (item.hasAttribute('data-wo')) {
+                        window.selectProcessWorkshopOrder(prefix, item.getAttribute('data-wo'), item.getAttribute('data-title') || '');
+                        return;
+                    }
+                    window.selectProcessMachine(prefix, item.getAttribute('data-mid'), item.textContent);
+                });
                 document.body.appendChild(dropdown);
             }
 
@@ -62,89 +106,90 @@
                 dropdown.style.width = rect.width + 'px';
             }
 
-            dropdown.innerHTML = '';
+            const html = [];
+            html.push(`<div class="pm-item" data-none style="padding: 10px 14px; cursor: pointer; color: rgba(255,255,255,0.6); font-size: 0.9rem;">Keine Maschine zugeordnet</div>`);
 
-            const buildItem = (m) => {
-                const label = window.processMachineLabel(m);
-                const item = document.createElement('div');
-                item.style.cssText = 'padding: 10px 14px; cursor: pointer; font-size: 0.9rem; border-top: 1px solid rgba(255,255,255,0.05);';
-                item.innerHTML = `<span style="color: var(--color-primary-green); font-weight: 600;">${label}</span>`;
-                item.onmousedown = (e) => { e.preventDefault(); window.selectProcessMachine(prefix, m.id, label); };
-                item.onmouseover = () => { item.style.background = 'rgba(255,255,255,0.06)'; };
-                item.onmouseout = () => { item.style.background = ''; };
-                return item;
-            };
+            const itemHtml = (m) => `<div class="pm-item" data-mid="${escHtml(m.id)}" style="${ITEM_STYLE}"><span style="color: var(--color-primary-green); font-weight: 600;">${escHtml(window.processMachineLabel(m))}</span></div>`;
 
-            const noneItem = document.createElement('div');
-            noneItem.textContent = 'Keine Maschine zugeordnet';
-            noneItem.style.cssText = 'padding: 10px 14px; cursor: pointer; color: rgba(255,255,255,0.6); font-size: 0.9rem;';
-            noneItem.onmousedown = (e) => { e.preventDefault(); window.selectProcessMachine(prefix, '', ''); };
-            noneItem.onmouseover = () => { noneItem.style.background = 'rgba(255,255,255,0.08)'; };
-            noneItem.onmouseout = () => { noneItem.style.background = ''; };
-            dropdown.appendChild(noneItem);
-
-            const recommendedIds = window.processMachineRecommended[prefix] || [];
-            const recommended = recommendedIds.length > 0 ? machines.filter(m => recommendedIds.includes(m.id)) : [];
-            const others = recommended.length > 0 ? machines.filter(m => !recommendedIds.includes(m.id)) : machines;
+            const recSet = new Set((window.processMachineRecommended[prefix] || []).map(String));
+            const recommended = recSet.size > 0 ? machines.filter(m => recSet.has(String(m.id))) : [];
+            const others = recommended.length > 0 ? machines.filter(m => !recSet.has(String(m.id))) : machines;
 
             if (recommended.length > 0) {
-                const header = document.createElement('div');
-                header.textContent = 'Empfohlene Maschinen';
-                header.style.cssText = 'padding: 6px 14px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-primary-green); border-top: 1px solid rgba(255,255,255,0.05);';
-                dropdown.appendChild(header);
-                recommended.forEach(m => dropdown.appendChild(buildItem(m)));
-
-                if (others.length > 0) {
-                    const header2 = document.createElement('div');
-                    header2.textContent = 'Alle Maschinen';
-                    header2.style.cssText = 'padding: 6px 14px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.4); border-top: 1px solid rgba(255,255,255,0.05);';
-                    dropdown.appendChild(header2);
-                }
+                html.push(`<div style="${HEAD_STYLE} color: var(--color-primary-green);">Empfohlene Maschinen</div>`);
+                recommended.forEach(m => html.push(itemHtml(m)));
+                if (others.length > 0) html.push(`<div style="${HEAD_STYLE} color: rgba(255,255,255,0.4);">Alle Maschinen</div>`);
             }
 
-            others.forEach(m => dropdown.appendChild(buildItem(m)));
+            others.forEach(m => html.push(itemHtml(m)));
+
+            if (restAnzahl > 0) {
+                html.push(`<div style="padding: 8px 14px; font-size: 0.78rem; color: rgba(255,255,255,0.45); font-style: italic; border-top: 1px solid rgba(255,255,255,0.05);">… ${restAnzahl} weitere — zum Eingrenzen weiter eingeben</div>`);
+            }
 
             if (workshopOrders.length > 0) {
-                const header3 = document.createElement('div');
-                header3.textContent = 'Werkstattaufträge';
-                header3.style.cssText = 'padding: 6px 14px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #60a5fa; border-top: 1px solid rgba(255,255,255,0.05);';
-                dropdown.appendChild(header3);
-
+                html.push(`<div style="${HEAD_STYLE} color: #60a5fa;">Werkstattaufträge</div>`);
                 workshopOrders.forEach(t => {
                     const label = `Werkstattauftrag ${t.workshop_order_number}${t.title ? ' – ' + t.title : ''}`;
-                    const item = document.createElement('div');
-                    item.style.cssText = 'padding: 10px 14px; cursor: pointer; font-size: 0.9rem; border-top: 1px solid rgba(255,255,255,0.05);';
-                    item.innerHTML = `<span style="color: #60a5fa; font-weight: 600;">${label}</span>`;
-                    item.onmousedown = (e) => { e.preventDefault(); window.selectProcessWorkshopOrder(prefix, t.workshop_order_number, t.title); };
-                    item.onmouseover = () => { item.style.background = 'rgba(255,255,255,0.06)'; };
-                    item.onmouseout = () => { item.style.background = ''; };
-                    dropdown.appendChild(item);
+                    html.push(`<div class="pm-item" data-wo="${escHtml(t.workshop_order_number)}" data-title="${escHtml(t.title || '')}" style="${ITEM_STYLE}"><span style="color: #60a5fa; font-weight: 600;">${escHtml(label)}</span></div>`);
                 });
             }
 
+            dropdown.innerHTML = html.join('');
             dropdown.style.display = 'block';
         }
 
         window.showProcessMachineDropdown = function(prefix) {
+            const input = document.getElementById(`${prefix}-machine-search`);
             if (!window.processOpenWorkshopOrders || window.processOpenWorkshopOrders.length === 0) {
-                window.fetchProcessOpenWorkshopOrders().then(() => buildProcessMachineDropdown(prefix, window.machineList || []));
+                window.fetchProcessOpenWorkshopOrders().then(() => {
+                    // Nur neu zeichnen, wenn wirklich Werkstattaufträge dazugekommen sind
+                    // und die Liste noch offen ist — sonst würde ein spät eintreffendes
+                    // Ergebnis den inzwischen getippten Filter überschreiben.
+                    const dd = document.getElementById(`${prefix}-machine-dropdown-portal`);
+                    if (!window.processOpenWorkshopOrders.length || !dd || dd.style.display === 'none') return;
+                    window.filterProcessMachineDropdown(prefix, input ? input.value : '');
+                });
             }
-            buildProcessMachineDropdown(prefix, window.machineList || []);
+            window.filterProcessMachineDropdown(prefix, input ? input.value : '');
         };
 
+        // Filtern gebündelt: bei schnellem Tippen wird nur der letzte Stand gezeichnet
+        // (setTimeout statt requestAnimationFrame — das feuert in nicht sichtbaren
+        // Fenstern gar nicht).
+        const filterWartend = {};
         window.filterProcessMachineDropdown = function(prefix, query) {
-            const machines = window.machineList || [];
-            const tokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
-            const filtered = machines.filter(m => {
-                const searchable = [m.manufacturer || '', m.name || '', m.serial || '', m.year ? String(m.year) : ''].join(' ').toLowerCase();
-                return tokens.length === 0 || tokens.every(token => searchable.includes(token));
-            });
+            filterWartend[prefix] = query;
+            if (filterWartend['_t_' + prefix]) return;
+            filterWartend['_t_' + prefix] = setTimeout(() => {
+                filterWartend['_t_' + prefix] = 0;
+                filterProcessMachineDropdownJetzt(prefix, filterWartend[prefix] || '');
+            }, 16);
+        };
+
+        function filterProcessMachineDropdownJetzt(prefix, query) {
+            const tokens = (query || '').toLowerCase().split(/\s+/).filter(t => t.length > 0);
+            const index = maschinenIndex();
+            const recSet = new Set((window.processMachineRecommended[prefix] || []).map(String));
+            const filtered = [];
+            let rest = 0;
+            for (let i = 0; i < index.length; i++) {
+                const e = index[i];
+                let ok = true;
+                for (let t = 0; t < tokens.length; t++) {
+                    if (e.text.indexOf(tokens[t]) === -1) { ok = false; break; }
+                }
+                if (!ok) continue;
+                // Empfohlene immer mitnehmen, sonst nur bis zur Obergrenze
+                if (filtered.length < MAX_TREFFER || recSet.has(String(e.m.id))) filtered.push(e.m);
+                else rest++;
+            }
             const workshopOrders = (window.processOpenWorkshopOrders || []).filter(t => {
                 const searchable = [t.workshop_order_number || '', t.title || ''].join(' ').toLowerCase();
                 return tokens.length === 0 || tokens.every(token => searchable.includes(token));
             });
-            buildProcessMachineDropdown(prefix, filtered, workshopOrders);
-        };
+            buildProcessMachineDropdown(prefix, filtered, workshopOrders, rest);
+        }
 
         window.selectProcessMachine = function(prefix, id, label) {
             const hidden = document.getElementById(`${prefix}-machine-select`);

@@ -199,6 +199,8 @@
         window.supabaseClient
             .channel('customers_live')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, (payload) => {
+                // Kunden-Cache der Suchfelder (js/lookup-cache.js) mitziehen
+                try { if (typeof window.customerCacheInvalidate === 'function') window.customerCacheInvalidate(payload); } catch (e) {}
                 try { handleCustomerChange(payload); } catch (e) { console.error('Realtime customers Fehler:', e); }
             })
             .subscribe();

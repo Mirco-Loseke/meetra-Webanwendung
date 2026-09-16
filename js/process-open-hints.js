@@ -115,18 +115,21 @@
         const box = ensureContainer(prefix);
         if (!box) return;
 
-        const { list, machineId } = findOpenProcesses(prefix);
+        const { list, machineId, customerId } = findOpenProcesses(prefix);
         if (!list.length) {
             box.style.display = 'none';
             box.innerHTML = '';
             return;
         }
 
-        const bezug = machineId
-            ? 'zu dieser Maschine' + (machineLabel(machineId) ? ' (' + esc(machineLabel(machineId)) + ')' : '')
-            : 'zu dieser Adresse';
+        // Zwei Gruppen: erst die Adresse (aufgeklappt — das ist, was im Alltag
+        // zählt), darunter die Maschine (eingeklappt — wie oft z. B. eine A30
+        // angeboten wurde, interessiert selten). Ein Vorgang, der zu beidem
+        // passt, steht bei der Adresse.
+        const zurAdresse = customerId ? list.filter(p => String(p.customer_id || '') === String(customerId)) : [];
+        const zurMaschine = machineId ? list.filter(p => String(p.machine_id || '') === String(machineId) && !zurAdresse.includes(p)) : [];
 
-        const rows = list.map(p => {
+        const zeile = (p) => {
             const meta = STATUS_META[p.status] || { label: p.status || 'Offen', color: '#94a3b8' };
             const tage = ageInDays(p.process_date);
             const altText = tage !== null && tage > 7 ? `<span class="proc-open-hint-old">seit ${tage} Tagen</span>` : '';
@@ -142,19 +145,32 @@
                     </div>
                     <button type="button" class="proc-open-hint-btn" data-open-hint-id="${esc(p.id)}" data-open-hint-prefix="${esc(prefix)}">Bearbeiten</button>
                 </div>`;
-        }).join('');
+        };
+        const gruppe = (eintraege, bezug, offen) => {
+            if (!eintraege.length) return '';
+            const kopf = (eintraege.length === 1 ? 'Es gibt bereits einen offenen Vorgang ' : 'Es gibt bereits ' + eintraege.length + ' offene Vorgänge ') + bezug;
+            return `
+                <details class="proc-open-hint-group"${offen ? ' open' : ''}>
+                    <summary class="proc-open-hint-head" style="cursor:pointer; list-style:none; display:flex; align-items:center; gap:8px;">
+                        <span class="proc-open-hint-chevron" style="display:inline-block; transition:transform .15s;">▸</span>${kopf}
+                    </summary>
+                    ${eintraege.map(zeile).join('')}
+                </details>`;
+        };
 
-        box.innerHTML = `
-            <div class="proc-open-hint-head">
-                ${list.length === 1 ? 'Es gibt bereits einen offenen Vorgang' : 'Es gibt bereits ' + list.length + ' offene Vorgänge'} ${bezug}
-            </div>
-            ${rows}`;
+        const maschinenText = machineLabel(machineId) ? ' (' + esc(machineLabel(machineId)) + ')' : '';
+        box.innerHTML = gruppe(zurAdresse, 'zu dieser Adresse', true)
+            + gruppe(zurMaschine, 'zu dieser Maschine' + maschinenText, false);
         box.style.display = 'block';
 
         box.querySelectorAll('[data-open-hint-id]').forEach(btn => {
             btn.addEventListener('click', () => {
                 switchToProcess(btn.getAttribute('data-open-hint-prefix'), btn.getAttribute('data-open-hint-id'));
             });
+        });
+        box.querySelectorAll('details').forEach(d => {
+            const dreh = () => { const c = d.querySelector('.proc-open-hint-chevron'); if (c) c.style.transform = d.open ? 'rotate(90deg)' : ''; };
+            d.addEventListener('toggle', dreh); dreh();
         });
     };
 

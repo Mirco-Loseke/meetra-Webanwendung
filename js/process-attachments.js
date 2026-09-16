@@ -167,7 +167,7 @@
         const modal = document.getElementById('proc-att-modal');
         if (!modal) return;
         modal.classList.remove('show');
-        setTimeout(() => { modal.classList.add('hidden'); modal.style.display = 'none'; }, 250);
+        setTimeout(() => { modal.classList.add('hidden'); modal.style.display = 'none'; if (typeof window.processesRefetchIfPending === 'function') window.processesRefetchIfPending(); }, 250);
         aktuelleId = null;
         aktuellerStep = null;
     };

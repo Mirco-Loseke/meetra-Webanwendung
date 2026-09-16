@@ -58,6 +58,7 @@ Reihenfolge der ausgelagerten Module:
 | Kunden-Zuordnung, Autocomplete | `js/customer-matching.js` |
 | Dropdown-Positionierung in Modals | `js/dropdown-position.js` |
 | Automatisches Nachladen langer Listen | `js/auto-nachladen.js` |
+| Kunden-Cache für Suchfelder, Maschinen-Index (`machineById`, `machineLabel`) | `js/lookup-cache.js` |
 | Modal „Maschine anlegen/bearbeiten" (CSS) | `css/views/machine-modal.css` |
 | Mietvereinbarung: Bogen, Kamera, Speichern/Löschen | `js/mietvereinbarung.js` |
 | Mietvereinbarung: Vorlagen (Einstellungen) | `js/mietvereinbarung-vorlagen.js` |
@@ -233,7 +234,7 @@ formfüllenden Feldern zusätzlich `.menu-block`. Ausgewählter Eintrag: `.selec
 einem Inline-`style` suchen.
 
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v520 (Stand 2026-09-15) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v536 (Stand 2026-09-16) — bei jeder Änderung hochzählen.
 
 **Mietvereinbarung (Stand 2026-08-25).** Der Bogen wird gespeichert: PDF per
 html2canvas je `.miet-page` + jsPDF, Ablage in R2 unter
@@ -288,3 +289,23 @@ zeigt nur Aufgaben, die Ansicht „Vorgänge" nur Vorgänge. Beide haben denselb
 Umschalter: alle / „Meine …" (`filterTasksByUser`, `filterProcessesByUser`).
 Der frühere Vorgänge-Tab innerhalb der Aufgaben (`tasks-vorgaenge`,
 `renderMyProcessesSection`) ist entfernt.
+
+**Suchfelder ohne Serverruf (2026-09-16).** Alle Kunden-Suchfelder (Maschine:
+Kunde/Betreiber/Standort, Vorgang: Absender/Empfänger/Adresse) suchen im
+Browser über `js/lookup-cache.js` (`customerCacheSearch`, einmal geladen,
+Realtime pflegt nach). **Neue Kundensuche ⇒ diesen Cache nehmen, keine
+`ilike`-Abfrage pro Tastendruck.** Maschinen-Dropdowns in Vorgängen und
+Angeboten zeichnen höchstens 60 bzw. 50 Treffer (Hinweis „… weitere"), per
+einem `innerHTML` und Klick-Delegation (`.pm-item`). Angebote: „Maschine
+bearbeiten" tauscht nur die Zelle (`rerenderAngebotMachineCell`), nicht die
+ganze Liste. `getMachineName(id)` läuft über `window.machineById` — niemals
+in Schleifen `machineList.find(...)` schreiben.
+
+**Prüfpläne im Servicebericht folgen einer festen Regel (2026-09-16).**
+`populateChecklistSelector` (`js/checklists.js`) baut die aktiven Pläne bei
+jeder Änderung von Kategorie oder Maschine neu: passt Typ+Maschine → angehakt,
+außer der Nutzer hat den Plan selbst abgehakt (`userUncheckedChecklists`);
+passt nichts mehr → raus (Eingaben in den Merker). Beim Öffnen eines
+gespeicherten Berichts wird **nichts** nachträglich angehakt; ein neuer
+Bericht leert Kategorie, Maschine und Pläne (`openServiceberichtModal`).
+Das frühere `isNew`-Gate ist weg — es hatte den zweiten Plan verhindert.

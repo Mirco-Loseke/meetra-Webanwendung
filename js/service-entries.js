@@ -531,6 +531,21 @@ window.openServiceberichtModal = function (editData = null) {
                 // einen Bericht mit UVV-/Wartungsplan offen hatte, sah dessen
                 // Haken und Antworten im neuen Bericht wieder — samt der
                 // gemerkten Eingaben aus dem Zwischenspeicher.
+                // Kategorie und Maschine wurden für einen NEUEN Bericht ebenfalls
+                // nie zurückgesetzt: das Kategoriefeld zeigte noch „UVV" vom
+                // vorigen Bericht, die Maschinen-ID steckte noch im Feld — und
+                // loadChecklistPayload hakte daraufhin gleich wieder Pläne an,
+                // die im neuen Bericht (z. B. nur „Reparatur") nichts zu suchen
+                // hatten. Erst leeren, dann die Prüflisten aufbauen; wer von
+                // einer Maschinenkarte kommt, setzt die Maschine danach neu.
+                const machineIdFeld = document.getElementById('selected-machine-id');
+                if (machineIdFeld) machineIdFeld.value = '';
+                const previewNameEl = document.getElementById('preview-name');
+                if (previewNameEl) previewNameEl.textContent = '';
+                document.querySelectorAll('#service-machine-list .premium-item.selected').forEach(el => el.classList.remove('selected'));
+                if (typeof window.selectServiceCategory === 'function') {
+                    try { window.selectServiceCategory(null); } catch (e) { /* Kategorien-Modul fehlt */ }
+                }
                 if (typeof window.loadChecklistPayload === 'function') {
                     try { window.loadChecklistPayload(null); } catch (e) { /* ohne Prüflisten weiter */ }
                 }

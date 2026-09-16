@@ -557,9 +557,14 @@ window.formatCurrency = function (val) {
 
 window.getMachineName = function (id) {
     if (!id || !window.machineList) return '-';
-    // Fallback if ID is string/number mismatch
-    const machine = window.machineList.find(m => String(m.id) === String(id));
-    return machine ? [machine.manufacturer, machine.name, machine.serial_number || machine.serial ? `#${machine.serial_number || machine.serial}` : null, machine.year ? `(${machine.year})` : null].filter(Boolean).join(' ') : '-';
+    // Index statt Liste durchlaufen (js/lookup-cache.js) — wird pro Zeile/Dropdown-Eintrag aufgerufen
+    const machine = typeof window.machineById === 'function'
+        ? window.machineById(id)
+        : window.machineList.find(m => String(m.id) === String(id));
+    if (!machine) return '-';
+    return typeof window.machineLabel === 'function'
+        ? window.machineLabel(machine)
+        : [machine.manufacturer, machine.name, machine.serial_number || machine.serial ? `#${machine.serial_number || machine.serial}` : null, machine.year ? `(${machine.year})` : null].filter(Boolean).join(' ');
 };
 window.togglePaidStatus = async function (id, checked) {
     try {

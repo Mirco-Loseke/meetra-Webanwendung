@@ -568,3 +568,9 @@
 .user-dropdown-menu::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.3);
 }
+
+/* Maschinen-Suche in Vorgängen und Angeboten (js/process-machine-select.js,
+   js/listen.js): Hover per CSS statt je Eintrag zwei JS-Handler. */
+.pm-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}

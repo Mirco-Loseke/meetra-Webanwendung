@@ -255,8 +255,9 @@
             const machines = (window.machineList || []).filter(m => {
                 if (excludeId && String(m.id) === String(excludeId)) return false;
                 if (selected.has(String(m.id))) return false;
-                const label = (typeof window.getMachineName === 'function')
-                    ? window.getMachineName(m.id)
+                // Label direkt aus dem Objekt — getMachineName(id) suchte frueher je Maschine die ganze Liste durch
+                const label = (typeof window.machineLabel === 'function')
+                    ? window.machineLabel(m)
                     : `${m.manufacturer || ''} ${m.name || ''}`.trim();
                 const serial = (m.serial || m.serial_number || '').toString().toLowerCase();
                 const haystack = `${label} ${serial}`.toLowerCase();

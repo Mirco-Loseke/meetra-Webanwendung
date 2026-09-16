@@ -177,6 +177,9 @@ const MOCK_CHECKLIST_TEMPLATES = window.MOCK_CHECKLIST_TEMPLATES = [
 ];
 
 let activeChecklists = {}; // templateId -> { template_id, title, type, answers }
+// Pläne, die der Nutzer in diesem Formular selbst abgehakt hat — die werden
+// beim nächsten Neuaufbau der Auswahl nicht wieder automatisch angehakt.
+let userUncheckedChecklists = new Set();
 
 // Abgehakte, aber schon ausgefüllte Protokolle. Wer den Haken herausnimmt,
 // verliert seine Eingaben NICHT mehr — sie wandern hierher und kommen beim
@@ -339,45 +342,61 @@ window.populateChecklistSelector = function() {
         return true;
     });
 
-    // Check if there are active checklists already loaded or entered.
-    // If it's a completely new servicebericht or we haven't selected anything yet, we auto-enable the recommended ones.
-    // Gibt es gemerkte Eingaben, ist das Formular NICHT frisch — sonst würde die
-    // Auto-Aktivierung einen bewusst abgehakten Plan wieder anhaken.
-    const isNew = Object.keys(activeChecklists).length === 0 &&
-                  Object.keys(stashedChecklists).length === 0;
+    // ------------------------------------------------------------------
+    // Welche Pläne aktiv sind, folgt ab hier einer festen Regel — bei jedem
+    // Aufruf (Kategorie geändert, Maschine geändert, Bericht geöffnet):
+    //   1. Aktive Pläne, deren Typ nicht mehr zu den Kategorien passt oder die
+    //      nicht mehr zur Maschine gehören, fliegen raus (Eingaben → Merker).
+    //      Ausnahme: Pläne MIT Eingaben bleiben — sonst verschwänden beim
+    //      Bearbeiten eines alten Berichts dessen Antworten, nur weil die
+    //      Plan-Zuordnung in den Einstellungen inzwischen anders ist.
+    //   2. Empfohlene Pläne (Typ passt, Maschine passt) werden angehakt —
+    //      es sei denn, der Nutzer hat genau diesen Plan selbst abgehakt
+    //      (userUncheckedChecklists). Vorher gab es das nur, solange noch gar
+    //      kein Plan aktiv war („isNew"): wer erst Einweisung wählte und dann
+    //      UVV dazu, bekam den zweiten Plan nicht; wer die Maschine wechselte,
+    //      behielt den Plan der alten Maschine.
+    // ------------------------------------------------------------------
+    const eligible = new Set(templates.map(t => t.id));
+    Object.keys(activeChecklists).forEach(id => {
+        if (eligible.has(id)) return;
+        if (checklistHasData(activeChecklists[id])) {
+            // Typ passt noch (nur Maschine anders) → sichtbar lassen, damit
+            // der Haken erreichbar bleibt; passt der Typ nicht mehr → merken.
+            const t = allTemplates.find(x => x.id === id);
+            if (t && categoryText.includes(t.type)) { templates.push(t); eligible.add(id); return; }
+            stashedChecklists[id] = activeChecklists[id];
+        }
+        delete activeChecklists[id];
+    });
+
+    const frischesProtokoll = (t) => ({
+        template_id: t.id,
+        title: t.title,
+        type: t.type,
+        answers: t.items.map(item => ({
+            pos: item.pos,
+            category: item.category,
+            description: item.description,
+            interval: item.interval,
+            answerType: item.answerType,
+            checked: false,
+            comment: ""
+        }))
+    });
 
     let html = '';
     templates.forEach(t => {
         const matchesMachine = matchesMachineSeries(t);
+
+        if (!activeChecklists[t.id] && matchesMachine && !userUncheckedChecklists.has(t.id)) {
+            activeChecklists[t.id] = unstashChecklist(t.id) || frischesProtokoll(t);
+        }
+
         let suffix = matchesMachine ? ' (Empfohlen)' : '';
         // Sichtbar machen, dass hinter dem leeren Haken noch Eingaben liegen.
         if (stashedChecklists[t.id]) suffix += ' — Eingaben gemerkt';
-
-        let isChecked = activeChecklists[t.id] ? 'checked' : '';
-        if (isNew) {
-            // Auto-Aktivierung: der Plan-Typ passt bereits (siehe Filter oben), hier reicht die
-            // Maschinenserie als zusätzliche Bedingung — einheitlich für Wartung, UVV und
-            // Einweisung (vorher war UVV fest auf "uvv-allgemein" verdrahtet und Einweisung
-            // ignorierte den Maschinen-Abgleich komplett).
-            if (matchesMachine) {
-                isChecked = 'checked';
-                const answers = t.items.map(item => ({
-                    pos: item.pos,
-                    category: item.category,
-                    description: item.description,
-                    interval: item.interval,
-                    answerType: item.answerType,
-                    checked: false,
-                    comment: ""
-                }));
-                activeChecklists[t.id] = {
-                    template_id: t.id,
-                    title: t.title,
-                    type: t.type,
-                    answers: answers
-                };
-            }
-        }
+        const isChecked = activeChecklists[t.id] ? 'checked' : '';
 
         const typeBadgeStyle = t.type === 'wartung'
             ? 'background: rgba(16, 185, 129, 0.2); color: #10b981;'
@@ -396,11 +415,9 @@ window.populateChecklistSelector = function() {
             </label>
         `;
     });
-    
+
     container.innerHTML = html;
-    if (isNew) {
-        window.renderActiveChecklists();
-    }
+    window.renderActiveChecklists();
 };
 
 window.handleChecklistMachineChange = function() {
@@ -414,6 +431,7 @@ window.handleChecklistMachineChange = function() {
 
 window.onChecklistToggle = function(templateId, checked) {
     if (!checked) {
+        userUncheckedChecklists.add(templateId);
         // Haken raus: nichts geht verloren. Was ausgefüllt war, wandert in den
         // Zwischenspeicher und steht beim erneuten Anhaken wieder da. Die frühere
         // Rückfrage („Alle eingegebenen Antworten gehen verloren") entfällt damit.
@@ -428,6 +446,7 @@ window.onChecklistToggle = function(templateId, checked) {
             window.showToast('Eingaben bleiben gemerkt — Haken wieder setzen holt sie zurück.');
         }
     } else {
+        userUncheckedChecklists.delete(templateId);
         // Haken rein: zuerst im Zwischenspeicher nachsehen — ein zuvor
         // ausgefülltes Protokoll kommt unverändert zurück.
         const remembered = unstashChecklist(templateId);
@@ -901,11 +920,12 @@ window.getChecklistPayload = function() {
 window.loadChecklistPayload = function(payload) {
     activeChecklists = {};
     stashedChecklists = {};
+    userUncheckedChecklists = new Set();
 
     if (payload) {
         if (Array.isArray(payload.stashed)) {
             payload.stashed.forEach(cl => {
-                if (cl && cl.template_id) stashedChecklists[cl.template_id] = cl;
+                if (cl && cl.template_id) { stashedChecklists[cl.template_id] = cl; userUncheckedChecklists.add(cl.template_id); }
             });
         }
         // Support backward compatibility (old payload format with template_id and answers array)
@@ -923,8 +943,14 @@ window.loadChecklistPayload = function(payload) {
                 activeChecklists[cl.template_id] = cl;
             });
         }
+        // Gespeicherter Bericht: Was damals nicht drin war, wird beim Öffnen
+        // auch nicht automatisch angehakt — der Bericht soll so aufgehen, wie
+        // er gespeichert wurde. Neu angehakt wird nur, was der Nutzer anklickt.
+        (window.ACTIVE_CHECKLIST_TEMPLATES || window.MOCK_CHECKLIST_TEMPLATES || []).forEach(t => {
+            if (!activeChecklists[t.id]) userUncheckedChecklists.add(t.id);
+        });
     }
-    
+
     // Re-render UI selector and tables
     const categoryText = clCategoryText();
     if (categoryText.includes('wartung') || categoryText.includes('uvv') || categoryText.includes('einweisung')) {

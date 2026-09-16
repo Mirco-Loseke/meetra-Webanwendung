@@ -651,6 +651,8 @@
                 setTimeout(() => {
                     modal.classList.add('hidden');
                     modal.style.display = 'none';
+                    // Während des Fensters aufgeschobenes Neuladen jetzt nachholen.
+                    if (typeof window.processesRefetchIfPending === 'function') window.processesRefetchIfPending();
                 }, 300);
             }
         };
@@ -1337,6 +1339,8 @@
                 if (typeof window.renderProcessStatusHistory === 'function') window.renderProcessStatusHistory(proc);
                 if (typeof window.updateProcessAttachButton === 'function') window.updateProcessAttachButton();
             }
+            // Angebot schon erhalten/verloren -> Vorgang gleich auf „Erledigt"
+            if (typeof window.vorgangStatusNachAngebot === 'function') await window.vorgangStatusNachAngebot(data);
             if (typeof window.fetchProcesses === 'function') window.fetchProcesses();
             if (typeof window.fetchAngebote === 'function' && document.getElementById('listen')?.classList.contains('active')) window.fetchAngebote();
             window.showToast(quelle ? `Angebot ${data.belegnummer} zusammengeführt — ein Vorgang.` : `Angebot ${data.belegnummer} verknüpft.`);
@@ -1398,7 +1402,7 @@
             const modal = document.getElementById('process-status-update-modal');
             if (!modal) return;
             modal.classList.remove('show');
-            setTimeout(() => { modal.classList.add('hidden'); modal.style.display = 'none'; }, 300);
+            setTimeout(() => { modal.classList.add('hidden'); modal.style.display = 'none'; if (typeof window.processesRefetchIfPending === 'function') window.processesRefetchIfPending(); }, 300);
         };
 
         // Zeichnet den Stand-Verlauf in alle vorhandenen Behälter: das eigene
@@ -1445,6 +1449,10 @@
                 .eq('id', proc.id);
             if (error) throw error;
             proc.status_updates = list;
+            // Angebotsliste sofort nachziehen (Angebot = Vorgang) — nicht erst,
+            // wenn fetchProcesses alle Vorgänge neu geladen hat.
+            if (typeof window.angeboteNachVorgangAktualisieren === 'function') window.angeboteNachVorgangAktualisieren(proc);
+            if (typeof window.renderProcesses === 'function') window.renderProcesses();
         }
 
         function currentStatusProcess() {
@@ -1704,6 +1712,7 @@
                 if (error) throw error;
                 proc.remind_at = iso;
                 window.renderProcesses();
+                if (typeof window.angebotErinnerungNachVorgang === 'function') window.angebotErinnerungNachVorgang(proc);
                 window.showToast('Erinnerung gesetzt: ' + window.formatProcessStatusStamp(iso));
             } catch (e) {
                 console.error('Fehler beim Setzen der Erinnerung:', e);
@@ -1808,6 +1817,7 @@
                 if (error) throw error;
                 proc.remind_at = null;
                 window.renderProcesses();
+                if (typeof window.angebotErinnerungNachVorgang === 'function') window.angebotErinnerungNachVorgang(proc);
             } catch (e) {
                 console.error('Fehler beim Entfernen der Erinnerung:', e);
                 window.showToast('Fehler beim Speichern: ' + e.message);
@@ -1823,18 +1833,14 @@
         window.processAddressCache = null;   // [{id,name,zip_code,city,matchcode}]
         window.processContactCache = {};      // prefix -> [contacts]
 
+        // Nutzt den gemeinsamen Kunden-Cache (js/lookup-cache.js): dieselbe Liste
+        // wie die Suchfelder der Maschine, einmal geladen, per Realtime aktuell.
         async function ensureProcessAddresses() {
-            if (window.processAddressCache) return window.processAddressCache;
             try {
-                const { data, error } = await window.supabaseClient
-                    .from('customers')
-                    .select('id, name, zip_code, city, matchcode')
-                    .order('name');
-                if (error) throw error;
-                window.processAddressCache = data || [];
+                window.processAddressCache = await window.customerCacheGet();
             } catch (e) {
                 console.warn('Adressen für Vorgang konnten nicht geladen werden:', e);
-                window.processAddressCache = [];
+                window.processAddressCache = window.processAddressCache || [];
             }
             return window.processAddressCache;
         }
@@ -1848,13 +1854,10 @@
         window.filterProcessAddressDropdown = function(prefix, q) {
             const box = document.getElementById(`${prefix}-address-suggestions`);
             if (!box) return;
-            const list = window.processAddressCache || [];
-            const term = (q || '').toLowerCase().trim();
-            let res = term
-                ? list.filter(a => [a.name, a.zip_code, a.city, a.matchcode]
-                    .map(v => (v || '').toString().toLowerCase()).join(' ').includes(term))
-                : list;
-            res = res.slice(0, 40);
+            // Vorbereiteter Suchindex aus js/lookup-cache.js (alle Wörter müssen vorkommen)
+            const res = typeof window.customerCacheSearchSync === 'function'
+                ? window.customerCacheSearchSync(q, 40)
+                : (window.processAddressCache || []).slice(0, 40);
             if (!res.length) {
                 box.innerHTML = `<div style="padding:10px 12px; color:rgba(255,255,255,0.4); font-size:0.85rem;">Keine Adresse gefunden</div>`;
                 box.style.display = 'block';

@@ -149,9 +149,19 @@
 
     function start() {
         beobachten(document);
-        // Später nachgeladene Menüs ebenfalls erfassen
-        new MutationObserver(() => beobachten(document))
-            .observe(document.body, { childList: true, subtree: true });
+        // Später nachgeladene Menüs ebenfalls erfassen — nur in den neu
+        // eingefügten Knoten suchen, nicht bei jeder DOM-Änderung das ganze
+        // Dokument durchkämmen (Listen mit Hunderten Einträgen lösen sonst
+        // pro Tastendruck einen Komplett-Scan aus).
+        new MutationObserver(mutationen => {
+            mutationen.forEach(m => {
+                m.addedNodes.forEach(n => {
+                    if (n.nodeType !== 1) return;
+                    if (n.matches && n.matches(MENU_SELECTOR)) beobachten(n.parentElement || n);
+                    else beobachten(n);
+                });
+            });
+        }).observe(document.body, { childList: true, subtree: true });
 
         window.addEventListener('scroll', nachfuehren, true);
         window.addEventListener('resize', nachfuehren);

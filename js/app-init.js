@@ -2121,6 +2121,8 @@
                 if (typeof window.initAddressbookLive === 'function') {
                     try { window.initAddressbookLive(); } catch (e) { console.error('Adressbuch-Live init Fehler:', e); }
                 }
+                // Kundenliste für die Suchfelder im Hintergrund vorladen (js/lookup-cache.js)
+                if (typeof window.customerCachePrefetch === 'function') window.customerCachePrefetch();
 
                 // Werkstatt-Liste laden + live halten (eigener Kanal in workshop-tasks.js)
                 if (typeof window.initWorkshopTasks === 'function') {
@@ -2129,10 +2131,28 @@
             };
 
             let _processesRefetchTimer = null;
+            // Solange ein Vorgangs-Fenster offen ist, NICHT neu laden: jedes
+            // Auto-Speichern (js/process-autosave.js) löst über Realtime sonst
+            // ein komplettes Neuladen samt Neuzeichnen aller Karten aus — das
+            // machte das Bearbeiten zäh. Nachgeholt wird beim Schließen.
+            let _processesRefetchPending = false;
+            function processFensterOffen() {
+                return ['process-edit-modal', 'process-status-update-modal', 'proc-att-modal', 'process-steps-modal']
+                    .some(id => { const m = document.getElementById(id); return m && !m.classList.contains('hidden') && m.style.display !== 'none'; });
+            }
             window.scheduleProcessesRefetch = function () {
                 if (typeof window.fetchProcesses !== 'function') return;
                 clearTimeout(_processesRefetchTimer);
-                _processesRefetchTimer = setTimeout(() => { window.fetchProcesses(); }, 400);
+                _processesRefetchTimer = setTimeout(() => {
+                    if (processFensterOffen()) { _processesRefetchPending = true; return; }
+                    _processesRefetchPending = false;
+                    window.fetchProcesses();
+                }, 1200);   // Änderungsschwall (z. B. Zusammenführen, Import) nur einmal laden
+            };
+            window.processesRefetchIfPending = function () {
+                if (!_processesRefetchPending) return;
+                _processesRefetchPending = false;
+                window.scheduleProcessesRefetch();
             };
 
             window.handleServiceEntryRealtimeChange = function (payload) {
@@ -2406,11 +2426,21 @@
                     // Update customer search UI
                     if (editData && editData.customer_id) {
                         try {
-                            const { data: custData, error: custErr } = await window.supabaseClient
-                                .from('customers')
-                                .select('name, matchcode')
-                                .eq('id', editData.customer_id)
-                                .single();
+                            // Erst im Kunden-Cache nachsehen (js/lookup-cache.js) — spart den
+                            // Serverruf, der das Befüllen des Fensters sonst aufhält.
+                            let custData = null, custErr = null;
+                            const imCache = (typeof window.customerCacheSync === 'function' ? window.customerCacheSync() : [])
+                                .find(k => String(k.id) === String(editData.customer_id));
+                            if (imCache) {
+                                custData = imCache;
+                            } else {
+                                const res = await window.supabaseClient
+                                    .from('customers')
+                                    .select('name, matchcode')
+                                    .eq('id', editData.customer_id)
+                                    .single();
+                                custData = res.data; custErr = res.error;
+                            }
                             if (custData && !custErr) {
                                 document.getElementById('machine-customer-search').value = custData.matchcode ? `[${custData.matchcode}] ${custData.name}` : custData.name;
                                 document.getElementById('machine-customer-search').disabled = true;

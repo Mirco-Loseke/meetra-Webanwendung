@@ -119,17 +119,20 @@ window.fetchProcesses = async function() {
         // bleibt in `angebote`. Fehlt die Spalte noch, bleibt die Karte leer.
         window.angeboteByProcess = window.angeboteByProcess || {};
         try {
-            const ids = processes.map(p => p.id);
+            // EINE Abfrage statt Häppchen je 200 Vorgänge — schneller, und
+            // verknüpfte Angebote gibt es nur mit process_id.
             const map = {};
-            for (let i = 0; i < ids.length; i += 200) {
-                const { data: ang, error: angErr } = await window.supabaseClient
-                    .from('angebote')
-                    .select('*, customers(name), angebot_notizen(id, content, created_at)')
-                    .in('process_id', ids.slice(i, i + 200));
-                if (angErr) { if (i === 0) console.info('Angebote zu Vorgängen nicht geladen:', angErr.message); break; }
-                (ang || []).forEach(a => { map[String(a.process_id)] = a; });
-            }
+            const { data: ang, error: angErr } = await window.supabaseClient
+                .from('angebote')
+                .select('*, customers(name), angebot_notizen(id, content, created_at)')
+                .not('process_id', 'is', null);
+            if (angErr) console.info('Angebote zu Vorgängen nicht geladen:', angErr.message);
+            (ang || []).forEach(a => { map[String(a.process_id)] = a; });
             window.angeboteByProcess = map;
+            // Erinnerung Vorgang → Angebot abgleichen (nur bei Abweichung wird geschrieben).
+            if (typeof window.angebotErinnerungNachVorgang === 'function') {
+                processes.forEach(p => { if (map[String(p.id)]) window.angebotErinnerungNachVorgang(p); });
+            }
         } catch (angErr) { console.warn('Angebote zu Vorgängen:', angErr); }
 
         window.eventsState.processes = processes;
@@ -406,11 +409,24 @@ window.renderProcesses = function(targetId, opts) {
         return;
     }
 
-    const openCards = [];
-    const doneCards = [];
-    const waitingCards = [];
-    filtered.forEach(p => {
+    // Karten werden nur gebaut, wenn sie auch gezeigt werden: eingeklappte
+    // Gruppen (Erledigt/Wartet) kosten nichts, und von den offenen kommen
+    // erst PROC_SEITE Stück — der Rest beim Scrollen (js/auto-nachladen.js).
+    // Vorher wurde bei jedem Neuzeichnen das HTML ALLER Vorgänge erzeugt.
+    const offenListe = filtered.filter(p => p.status !== 'erledigt' && p.status !== 'wartet');
+    const doneListe = filtered.filter(p => p.status === 'erledigt');
+    const waitingListe = filtered.filter(p => p.status === 'wartet');
+    const PROC_SEITE = 30;
+    const sichtKey = [targetId, searchQuery, statusFilter, sortMode, opts.compact ? 1 : 0, opts.onlyAssignedTo || ''].join('|');
+    // Je Zielcontainer eigener Zähler (Kalender-Unteransicht und Vorgänge-Seite
+    // werden nacheinander gezeichnet und dürfen sich nicht gegenseitig zurücksetzen).
+    window._procSicht = window._procSicht || {};
+    const sicht = window._procSicht[targetId] || (window._procSicht[targetId] = { key: null, n: PROC_SEITE });
+    if (sicht.key !== sichtKey) { sicht.key = sichtKey; sicht.n = PROC_SEITE; }
+    const sichtbarN = Math.max(PROC_SEITE, sicht.n);
+    const bauKarte = (p) => {
         const typeInfo = window.PROCESS_TYPE_INFO[p.process_type] || window.PROCESS_TYPE_INFO.manual;
+
         const isEmail = p.process_type === 'email_incoming' || p.process_type === 'email_outgoing';
         // Bei einer E-Mail oeffnet ein Klick auf das Abzeichen direkt das
         // Bearbeiten-Fenster (zeigt Betreff, Absender/Empfaenger und Inhalt).
@@ -707,14 +723,22 @@ window.renderProcesses = function(targetId, opts) {
                 </div>
             </div>
         `;
-        if (p.status === 'erledigt') doneCards.push(cardHtml);
-        else if (p.status === 'wartet') waitingCards.push(cardHtml);
-        else openCards.push(cardHtml);
-    });
+        return cardHtml;
+    };
+    const openCards = offenListe.slice(0, sichtbarN).map(bauKarte);
+    const doneExpanded = !!window._procDoneExpanded || statusFilter === 'erledigt';
+    const waitExpanded = !!window._procWaitingExpanded || statusFilter === 'wartet';
+    const doneCards = doneExpanded ? doneListe.map(bauKarte) : new Array(doneListe.length).fill('');
+    const waitingCards = waitExpanded ? waitingListe.map(bauKarte) : new Array(waitingListe.length).fill('');
 
     if (openCards.length) {
         html += `<div class="proc-cards-grid">${openCards.join('')}</div>`;
+        const rest = offenListe.length - openCards.length;
+        if (rest > 0) {
+            html += `<div style="text-align:center; padding:12px;"><button type="button" class="btn-secondary proc-mehr-btn" onclick="window.procMehrLaden('${targetId}')" style="padding:8px 18px;">Weitere ${Math.min(rest, PROC_SEITE)} von ${rest} Vorgängen laden</button></div>`;
+        }
     }
+
 
     // "Wartet" wie "Erledigt": eigene, standardmäßig eingeklappte Gruppe unten.
     if (waitingCards.length) {
@@ -744,9 +768,20 @@ window.renderProcesses = function(targetId, opts) {
     }
 
     container.innerHTML = html;
+    if (typeof window.autoNachladen === 'function') {
+        container.querySelectorAll('.proc-mehr-btn').forEach(b => window.autoNachladen(b, () => window.procMehrLaden(targetId)));
+    }
+};
+
+window.procMehrLaden = function (targetId) {
+    window._procSicht = window._procSicht || {};
+    const sicht = window._procSicht[targetId] || (window._procSicht[targetId] = { key: null, n: 30 });
+    sicht.n += 30;
+    window.renderProcesses(targetId);
 };
 
 window.toggleProcDoneGroup = function() {
+
     window._procDoneExpanded = !window._procDoneExpanded;
     window.renderProcesses();
 };

@@ -13,6 +13,7 @@
     let angeboteList = [];
     let editingAngebotMachineId = null;
     let editingAngebotMachineMode = 'search'; // 'search' (Dropdown) oder 'freitext' (reines Textfeld)
+    let zuletztBearbeiteteMaschineZelle = null; // Angebot-ID, deren Maschinen-Zelle gerade als Eingabe gezeichnet ist
     let pendingFreitextValue = '';
 
     // Vollständiges deutsches Währungsformat: 1.234.567 € — keine Abkürzungen
@@ -30,10 +31,11 @@
             !e.target.closest('.angebot-machine-search') &&
             !e.target.closest('#angebot-machine-dropdown-portal') &&
             !e.target.closest('.angebot-machine-edit-btn')) {
+            const zelle = zuletztBearbeiteteMaschineZelle != null ? zuletztBearbeiteteMaschineZelle : editingAngebotMachineId;
             editingAngebotMachineId = null;
             const dropdown = document.getElementById('angebot-machine-dropdown-portal');
             if (dropdown) dropdown.style.display = 'none';
-            window.renderAngeboteList();
+            window.rerenderAngebotMachineCell(zelle);
         }
     });
 
@@ -127,6 +129,34 @@
         return `${datum}, ${zeit} Uhr${letzterImport.by ? ' · ' + escapeHtml(letzterImport.by) : ''}`;
     }
 
+    // Werktage (Mo–Fr) seit dem letzten Import. Ohne Import: unendlich.
+    function werktageSeitImport() {
+        if (!letzterImport || !letzterImport.at) return Infinity;
+        const von = new Date(letzterImport.at);
+        if (isNaN(von)) return Infinity;
+        const start = new Date(von.getFullYear(), von.getMonth(), von.getDate());
+        const heute = new Date(); const ende = new Date(heute.getFullYear(), heute.getMonth(), heute.getDate());
+        let n = 0;
+        for (let d = new Date(start); d < ende; d.setDate(d.getDate() + 1)) {
+            const w = d.getDay();
+            if (w !== 0 && w !== 6) n++;
+        }
+        return n;
+    }
+    // Zeile über der Tabelle: nach mehr als 3 Werktagen rot mit Ausrufezeichen —
+    // dann sollte mal wieder ein Belegimport gemacht werden.
+    function letzterImportZeile() {
+        const text = letzterImportText() || '—';
+        const tage = werktageSeitImport();
+        const alt = tage > 3;
+        const hinweis = alt
+            ? (isFinite(tage) ? `seit ${tage} Werktagen kein Belegimport — bitte aktualisieren` : 'noch nie importiert — bitte Belege importieren')
+            : 'Wann zuletzt ein Belegimport aus Sage 100 stattgefunden hat';
+        return `<span title="${escapeHtml(hinweis)}" style="display:inline-flex; align-items:center; gap:6px; font-size:0.72rem; ${alt
+            ? 'color:#f87171; font-weight:800; padding:3px 10px; border-radius:999px; background:rgba(248,113,113,0.12); border:1px solid rgba(248,113,113,0.5);'
+            : 'color:rgba(255,255,255,0.5);'}">${alt ? '<span style="display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; background:#f87171; color:#fff; font-size:0.7rem; font-weight:900;">!</span>' : ''}zuletzt aktualisiert: ${text}${alt && isFinite(tage) ? ` (${tage} Werktage)` : ''}</span>`;
+    }
+
     // ------------------------------------------------------------------
     // JEDES ANGEBOT IST EIN VORGANG
     // ------------------------------------------------------------------
@@ -163,6 +193,30 @@
             (data || []).forEach(p => { byId[p.id] = p; });
         }
         angeboteList.forEach(a => { if (a.process_id && byId[a.process_id]) vorgaengeByAngebot[a.id] = byId[a.process_id]; });
+        await abgeschlosseneVorgaengeErledigen();
+    }
+
+    // Nachziehen beim Laden: Angebote mit „Auftrag erhalten/verloren", deren
+    // Vorgang noch nicht erledigt ist (z. B. Status früher gesetzt, als die
+    // Automatik den Namen nicht erkannte) — die Vorgänge werden gesammelt auf
+    // „erledigt" gesetzt, damit sie aus den offenen Vorgängen verschwinden.
+    async function abgeschlosseneVorgaengeErledigen() {
+        const ids = [];
+        angeboteList.forEach(a => {
+            const p = vorgaengeByAngebot[a.id];
+            if (p && p.status !== 'erledigt' && angebotAbgeschlossen(a)) ids.push(p.id);
+        });
+        if (!ids.length) return;
+        const { error } = await window.supabaseClient
+            .from('internal_processes').update({ status: 'erledigt' }).in('id', ids);
+        if (error) { console.warn('Vorgänge zu abgeschlossenen Angeboten nicht erledigt:', error.message); return; }
+        const set = new Set(ids.map(String));
+        Object.values(vorgaengeByAngebot).forEach(p => { if (set.has(String(p.id))) p.status = 'erledigt'; });
+        if (window.eventsState && Array.isArray(window.eventsState.processes)) {
+            let treffer = false;
+            window.eventsState.processes.forEach(p => { if (set.has(String(p.id))) { p.status = 'erledigt'; treffer = true; } });
+            if (treffer && typeof window.renderProcesses === 'function') window.renderProcesses();
+        }
     }
 
     // Für jedes Angebot ohne Vorgang einen anlegen. Läuft nach dem Laden
@@ -197,7 +251,7 @@
             machine_id: a.machine_id || null,
             customer_id: a.customer_id || null,
             // Auftrag erhalten/verloren = abgeschlossen -> Vorgang gleich erledigt.
-            status: /^auftrag (erhalten|verloren)$/i.test(String(a.status || '').trim()) ? 'erledigt' : 'offen',
+            status: angebotAbgeschlossen(a) ? 'erledigt' : 'offen',
             assigned_users: [],
             steps: [],
             // Alte Bemerkung aus der Liste wird zum ersten Stand-Eintrag.
@@ -297,13 +351,37 @@
         return data;
     };
 
+    // Erinnerung des Vorgangs (remind_at) → Erinnerung des Angebots (Datum).
+    // Wird von processes.js/processes-ui.js gerufen, sobald sich remind_at
+    // ändert oder die Vorgänge neu geladen wurden.
+    window.angebotErinnerungNachVorgang = async function (proc) {
+        if (!proc) return;
+        const a = (window.angeboteByProcess && window.angeboteByProcess[String(proc.id)])
+            || angeboteList.find(x => String(x.process_id) === String(proc.id));
+        if (!a) return;
+        let datum = null;
+        if (proc.remind_at) {
+            const d = new Date(proc.remind_at);
+            if (!isNaN(d)) datum = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+        if ((a.erinnerung || null) === datum) return;
+        const felder = { erinnerung: datum };
+        if (!datum) { felder.erinnerung_by = null; felder.erinnerung_by_name = null; }
+        else if (window.activeUser) felder.erinnerung_by_name = window.activeUser.name || null;
+        let neu = await window.angebotFeldSpeichern(a.id, felder);
+        if (!neu && Object.keys(felder).length > 1) neu = await window.angebotFeldSpeichern(a.id, { erinnerung: datum });
+        if (neu && typeof window.renderAngebotReminderBadge === 'function') window.renderAngebotReminderBadge();
+    };
+
     // Angebots-Status → Vorgangs-Status: „Auftrag erhalten" und „Auftrag
     // verloren" schließen den Vorgang (erledigt); geht der Status zurück auf
     // etwas Offenes, wird ein erledigter Vorgang wieder geöffnet.
     window.vorgangStatusNachAngebot = async function (a) {
         if (!a || !a.process_id) return;
-        const n = String(a.status || '').trim().toLowerCase();
-        const fertig = n === 'auftrag erhalten' || n === 'auftrag verloren';
+        // Abgeschlossen = gewonnen ODER verloren, nach derselben Einstufung wie das
+        // Dashboard (classifyAngebotStatus) — Statusnamen sind frei gepflegt, ein
+        // exakter Textvergleich („Auftrag erhalten") hat z. B. „Auftrag gewonnen" verpasst.
+        const fertig = angebotAbgeschlossen(a);
         const proc = vorgaengeByAngebot[a.id]
             || (window.eventsState && (window.eventsState.processes || []).find(p => String(p.id) === String(a.process_id)))
             || null;
@@ -374,12 +452,12 @@
         const letzte = liste[0] || null;
         const stamp = letzte && typeof window.formatProcessStatusStamp === 'function' ? window.formatProcessStatusStamp(letzte.at) : '';
         const plus = `
-            <button type="button" onclick="event.stopPropagation(); window.openProcessStatusUpdateModal('${proc.id}', event)" title="Stand hinzufügen"
+            <button type="button" onclick="event.stopPropagation(); window.openAngebotStand('${a.id}', event)" title="Stand hinzufügen"
                 style="flex-shrink:0; width:28px; height:28px; padding:0; border-radius:999px; font-size:1rem; font-weight:800; cursor:pointer; display:flex; align-items:center; justify-content:center;
                        background:rgba(96,165,250,0.15); border:1px solid rgba(96,165,250,0.5); color:#60a5fa;">+</button>`;
         return `
             <div style="display:flex; align-items:center; gap:6px; min-width:200px; max-width:300px;">
-                <div onclick="event.stopPropagation(); window.openProcessStatusUpdateModal('${proc.id}', event)" title="Stand ansehen / ändern — derselbe Stand wie im Vorgang"
+                <div onclick="event.stopPropagation(); window.openAngebotStand('${a.id}', event)" title="Stand ansehen / ändern — derselbe Stand wie im Vorgang"
                      style="flex:1; min-width:0; cursor:pointer; padding:6px 9px; border-radius:9px; background:${letzte ? 'rgba(96,165,250,0.12)' : 'rgba(255,255,255,0.04)'}; border:1px solid ${letzte ? 'rgba(96,165,250,0.4)' : 'rgba(255,255,255,0.1)'};">
                     ${letzte
                         ? `<div style="color:#fff; font-size:0.88rem; line-height:1.3; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; word-break:break-word;">${escapeHtml(letzte.text || '')}</div>
@@ -517,6 +595,35 @@
         if (typeof window.renderProcesses === 'function') window.renderProcesses();
     };
 
+    // Kleines lila Vorgangs-Symbol vor der Belegnummer: öffnet den Vorgang
+    // zum Angebot (Bearbeiten-Fenster des Vorgänge-Moduls).
+    function renderAngebotVorgangIcon(a) {
+        const proc = vorgangZu(a);
+        if (!proc) return '';
+        return `<span onclick="event.stopPropagation(); window.openAngebotVorgang('${a.id}')" title="Vorgang öffnen"
+                      style="flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:999px; background:rgba(167,139,250,0.14); border:1px solid rgba(167,139,250,0.45); color:#a78bfa; cursor:pointer;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                </span>`;
+    }
+    window.openAngebotVorgang = function (angebotId) {
+        const a = angeboteList.find(x => String(x.id) === String(angebotId));
+        const proc = vorgangZu(a);
+        if (!proc) { window.showToast('Zu diesem Angebot gibt es noch keinen Vorgang.'); return; }
+        vorgangInEventsState(proc);
+        if (typeof window.openEditProcessModal === 'function') window.openEditProcessModal(proc.id);
+    };
+
+    // Stand-Fenster des Vorgangs aus der Liste heraus öffnen — den schon
+    // geladenen Vorgang einhängen statt alle Vorgänge nachzuladen (langsam).
+    window.openAngebotStand = function (angebotId, event) {
+        if (event) event.stopPropagation();
+        const a = angeboteList.find(x => String(x.id) === String(angebotId));
+        const proc = vorgangZu(a);
+        if (!proc) { window.showToast('Zu diesem Angebot gibt es noch keinen Vorgang — bitte die Liste einmal neu laden.'); return; }
+        vorgangInEventsState(proc);
+        if (typeof window.openProcessStatusUpdateModal === 'function') window.openProcessStatusUpdateModal(proc.id, null);
+    };
+
     window.openAngebotDokumente = async function (angebotId) {
         const a = angeboteList.find(x => String(x.id) === String(angebotId));
         const proc = vorgangZu(a);
@@ -537,7 +644,12 @@
     // Adress-Historie. „bezüglich" nennt die Maschine des Angebots, sonst die
     // Anfrage. Der Link kommt nur dazu, wenn die Datei nicht angehängt werden kann.
     window.angebotMailVorlage = function (a, url) {
-        const nr = String((a && a.belegnummer) || '').trim();
+        // Angebotsnummer in der Mail als „2026-30154": Jahr des Belegdatums
+        // (sonst aktuelles Jahr) vor der Belegnummer — nur in Betreff/Text,
+        // in der Liste bleibt die Sage-Nummer wie sie ist.
+        const roh = String((a && a.belegnummer) || '').trim();
+        const jahr = (a && a.belegdatum && /^\d{4}/.test(String(a.belegdatum))) ? String(a.belegdatum).slice(0, 4) : String(new Date().getFullYear());
+        const nr = roh && !/^\d{4}-/.test(roh) ? jahr + '-' + roh : roh;
         const maschine = a ? (getAngebotMachineLabel(a) || '') : '';
         const betreff = ('Angebot ' + nr + (maschine ? ' – ' + maschine : '')).trim();
         let text = 'Sehr geehrte Damen und Herren,\n\n'
@@ -550,15 +662,76 @@
     // Datei per Mail: Browser können kein Mailprogramm mit Anhang öffnen.
     // Deshalb: wo möglich (Handy, Edge/Windows) der Teilen-Dialog mit der
     // Datei — sonst Mailprogramm mit Betreff und Link zur Datei.
+    // E-Mail-Entwurf MIT Anhang: Ein Browser darf Outlook keine Datei mitgeben
+    // (mailto: kennt keine Anhänge). Der Weg, der funktioniert: eine .eml-Datei
+    // mit der Kopfzeile „X-Unsent: 1" — die öffnet Outlook als NEUEN ENTWURF
+    // (Betreff, Text und PDF im Anhang), nicht als empfangene Mail. Die Datei
+    // landet im Download-Ordner; Doppelklick öffnet den Entwurf.
+    async function emlEntwurf(betreff, text, datei) {
+        const antwort = await fetch(datei.url);
+        if (!antwort.ok) throw new Error('Datei nicht abrufbar (' + antwort.status + ')');
+        const blob = await antwort.blob();
+        const b64 = await new Promise((ok, nein) => {
+            const r = new FileReader();
+            r.onload = () => ok(String(r.result).split(',')[1] || '');
+            r.onerror = () => nein(r.error);
+            r.readAsDataURL(blob);
+        });
+        const zeilen = (s) => s.replace(/(.{76})/g, '$1\r\n');
+        const utf8b64 = (s) => btoa(unescape(encodeURIComponent(s)));
+        const name = datei.name || 'Angebot.pdf';
+        const typ = blob.type || datei.type || 'application/pdf';
+        const grenze = 'meetra-' + Date.now().toString(36);
+        const eml = [
+            'X-Unsent: 1',
+            'To: ',
+            'Subject: =?UTF-8?B?' + utf8b64(betreff) + '?=',
+            'MIME-Version: 1.0',
+            'Content-Type: multipart/mixed; boundary="' + grenze + '"',
+            '',
+            '--' + grenze,
+            'Content-Type: text/plain; charset=UTF-8',
+            'Content-Transfer-Encoding: base64',
+            '',
+            zeilen(utf8b64(text)),
+            '',
+            '--' + grenze,
+            'Content-Type: ' + typ + '; name="=?UTF-8?B?' + utf8b64(name) + '?="',
+            'Content-Transfer-Encoding: base64',
+            'Content-Disposition: attachment; filename="=?UTF-8?B?' + utf8b64(name) + '?="',
+            '',
+            zeilen(b64),
+            '',
+            '--' + grenze + '--',
+            ''
+        ].join('\r\n');
+        const out = new Blob([eml], { type: 'message/rfc822' });
+        const url = URL.createObjectURL(out);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = betreff.replace(/[\/:*?"<>|]+/g, ' ').trim() + '.eml';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
+    }
+    window.angebotMailEntwurfMitAnhang = async function (angebotLike, datei) {
+        const v = window.angebotMailVorlage(angebotLike, null);
+        try {
+            await emlEntwurf(v.betreff, v.text, datei);
+            window.showToast('E-Mail-Entwurf „' + v.betreff + '.eml" heruntergeladen — Datei öffnen, dann steht der Entwurf in Outlook mit dem Angebot im Anhang.');
+        } catch (e) {
+            console.warn('EML-Entwurf nicht möglich, Mailprogramm mit Link:', e);
+            const v2 = window.angebotMailVorlage(angebotLike, datei.url);
+            window.location.href = `mailto:?subject=${encodeURIComponent(v2.betreff)}&body=${encodeURIComponent(v2.text)}`;
+        }
+    };
+
     window.angebotDokumentMailen = function (angebotId, attId) {
         const a = angeboteList.find(x => String(x.id) === String(angebotId));
         const f = angebotDokumente(a).find(x => String(x.id) === String(attId));
         if (!a || !f) return;
-        // Direkt das Standard-Mailprogramm (Outlook) mit neuem Entwurf öffnen:
-        // Betreff „Angebot <Nr> – <Maschine>", Text mit Link zur Datei. Einen
-        // Anhang kann der Browser nicht mitgeben — deshalb steht der Link drin.
-        const v = window.angebotMailVorlage(a, f.url);
-        window.location.href = `mailto:?subject=${encodeURIComponent(v.betreff)}&body=${encodeURIComponent(v.text)}`;
+        window.angebotMailEntwurfMitAnhang(a, f);
     };
 
     // ------------------------------------------------------------------
@@ -619,12 +792,23 @@
                     onkeydown="if(event.key==='Escape'){ window.cancelAngebotKundeEdit(); }">`;
         }
         const zugeordnet = !!a.customer_id;
+        // Kleines Kontakt-Symbol: öffnet die Adresse im Adressbuch (nicht die
+        // Zuordnung). Klick auf den Namen ändert weiterhin die Zuordnung.
+        const kontakt = zugeordnet ? `
+                <span onclick="event.stopPropagation(); window.openAddressbookDetail && window.openAddressbookDetail('${escapeHtml(String(a.customer_id))}')"
+                      title="Adresse öffnen (Kontakt, Ansprechpartner, Historie)"
+                      style="flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:999px; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; cursor:pointer;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                </span>` : '';
         return `
-            <div class="angebot-kunde-btn" onclick="event.stopPropagation(); window.startAngebotKundeEdit('${a.id}')"
-                 title="${zugeordnet ? 'Adresse ändern' : 'Keine Adresse aus dem Adressbuch zugeordnet — klicken zum Zuordnen'}"
-                 style="cursor:pointer; display:flex; align-items:center; gap:6px; color:${zugeordnet ? '#fff' : '#f59e0b'};">
-                <span style="min-width:0; overflow-wrap:anywhere;">${escapeHtml(firmaDisplay || '—')}</span>
-                ${zugeordnet ? '' : '<span title="Nicht zugeordnet" style="flex-shrink:0;">⚠</span>'}
+            <div style="display:flex; align-items:center; gap:6px;">
+                <div class="angebot-kunde-btn" onclick="event.stopPropagation(); window.startAngebotKundeEdit('${a.id}')"
+                     title="${zugeordnet ? 'Adresse ändern' : 'Keine Adresse aus dem Adressbuch zugeordnet — klicken zum Zuordnen'}"
+                     style="flex:1; min-width:0; cursor:pointer; display:flex; align-items:center; gap:6px; color:${zugeordnet ? '#fff' : '#f59e0b'};">
+                    <span style="min-width:0; overflow-wrap:anywhere;">${escapeHtml(firmaDisplay || '—')}</span>
+                    ${zugeordnet ? '' : '<span title="Nicht zugeordnet" style="flex-shrink:0;">⚠</span>'}
+                </div>
+                ${kontakt}
             </div>`;
     }
     window.startAngebotKundeEdit = function (angebotId) {
@@ -762,6 +946,10 @@
         if (/gewonnen|auftrag|bestellt|verkauft|angenommen|zusage/.test(s)) return 'won';
         return 'open';
     }
+
+    // Auftrag erhalten oder verloren -> der zugehörige Vorgang gilt als erledigt.
+    function angebotAbgeschlossen(a) { return classifyAngebotStatus(a) !== 'open'; }
+    window.angebotAbgeschlossen = angebotAbgeschlossen;
 
     // Jüngste Aktivität eines Angebots: Belegdatum oder die neueste Notiz — Basis für den
     // "Nachfassen"-Block (Angebote, bei denen lange nichts passiert ist).
@@ -1825,7 +2013,7 @@
         // ==========================================
         html += `
             <div style="display:flex; justify-content:flex-start; align-items:center; gap:14px; margin:0 0 4px; flex-wrap:wrap;">
-                <span style="font-size:0.72rem; color:rgba(255,255,255,0.5);" title="Wann zuletzt ein Belegimport aus Sage 100 stattgefunden hat">zuletzt aktualisiert: ${letzterImportText() || '—'}</span>
+                ${letzterImportZeile()}
                 ${(() => { const n = angeboteList.filter(a => !a.customer_id).length; return n ? `<button type="button" onclick="window.toggleAngeboteOhneAdresse()" title="Angebote, die noch keiner Adresse aus dem Adressbuch zugeordnet sind — Klick auf die Firma ordnet zu"
                     style="height:28px; padding:0 12px; border-radius:999px; font-size:0.78rem; font-weight:700; cursor:pointer; background:${nurOhneAdresse ? 'rgba(245,158,11,0.35)' : 'rgba(245,158,11,0.12)'}; border:1px solid rgba(245,158,11,0.6); color:#f59e0b;">⚠ ${n} ohne Adresse${nurOhneAdresse ? ' · Filter aktiv' : ''}</button>` : ''; })()}
             </div>
@@ -1874,7 +2062,12 @@
                             return `
                             <tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
                                 <td style="padding:12px 10px; color:#fff; font-size:0.95rem; white-space:nowrap; ${accentStyle}">${fmtDate(a.belegdatum)}${ageHtml}</td>
-                                <td style="padding:12px 10px; color:white; font-weight:700; font-size:0.95rem; white-space:nowrap;">${escapeHtml(a.belegnummer)}</td>
+                                <td style="padding:12px 10px; color:white; font-weight:700; font-size:0.95rem; white-space:nowrap;">
+                                    <span style="display:inline-flex; align-items:center; gap:7px;">
+                                        ${renderAngebotVorgangIcon(a)}
+                                        <span>${escapeHtml(a.belegnummer)}</span>
+                                    </span>
+                                </td>
                                 <td style="padding:12px 10px; color:white; font-size:0.95rem; min-width:170px;">${renderAngebotFirmaCell(a, firmaDisplay)}</td>
                                 <td style="padding:12px 10px; text-align:right; color:#fff; font-size:0.95rem; white-space:nowrap;">${fmtNumberInput(a.nettobetrag)}</td>
                                 <td style="padding:12px 10px; font-size:0.95rem; min-width:110px;">
@@ -2382,15 +2575,27 @@
                 .single();
 
             let { data, error } = await schreibe(feld);
-            // Migration noch nicht gelaufen -> ohne die neuen Spalten speichern,
-            // statt die Erinnerung ganz scheitern zu lassen.
-            if (error && /erinnerung_by/.test(error.message || '')) {
-                ({ data, error } = await schreibe({ erinnerung: date }));
+            // erinnerung_by ist in der Datenbank uuid, die App-Nutzer haben aber
+            // bigint-IDs („invalid input syntax for type uuid: "1"") — dann nur
+            // den Namen mitschreiben. Fehlt die Spalte ganz (Migration nicht
+            // gelaufen), ohne beide Felder speichern.
+            if (error && /uuid|erinnerung_by/i.test(error.message || '')) {
+                const ohneId = { erinnerung: date, erinnerung_by_name: feld.erinnerung_by_name === undefined ? null : feld.erinnerung_by_name };
+                ({ data, error } = await schreibe(ohneId));
+                if (error && /erinnerung_by/i.test(error.message || '')) ({ data, error } = await schreibe({ erinnerung: date }));
             }
             if (error) throw error;
             const idx = angeboteList.findIndex(x => x.id === angebotId);
             if (idx !== -1) angeboteList[idx] = data;
             window.renderAngebotReminderBadge();
+            // Dieselbe Erinnerung am Vorgang (remind_at, 08:00 Uhr) — der Vorgang
+            // zeigt sie dann ebenfalls, und die Glocke der Vorgänge weiß Bescheid.
+            const proc = vorgangZu(data);
+            if (proc) {
+                const remindAt = date ? new Date(date + 'T08:00:00').toISOString() : null;
+                const bisher = proc.remind_at ? String(proc.remind_at).slice(0, 10) : null;
+                if ((date || null) !== bisher) await vorgangAktualisieren(data, { remind_at: remindAt });
+            }
         } catch (err) {
             console.error('Error updating Erinnerung:', err);
             window.showToast('Fehler beim Speichern der Erinnerung: ' + err.message);
@@ -2542,7 +2747,23 @@
     // ==========================================
     // ANGEBOTE: MASCHINEN-ZUORDNUNG (automatisch + manuell)
     // ==========================================
+    // Aeussere Huelle mit data-aid, damit rerenderAngebotMachineCell nur diese Zelle
+    // austauschen kann statt die ganze Liste (Dashboard + 40 Zeilen) neu zu zeichnen.
     function renderAngebotMachineCell(a) {
+        return `<div class="angebot-machine-cell" data-aid="${escapeHtml(String(a.id))}">${renderAngebotMachineCellInhalt(a)}</div>`;
+    }
+
+    window.rerenderAngebotMachineCell = function (angebotId) {
+        if (angebotId == null) return;
+        const a = angeboteList.find(x => String(x.id) === String(angebotId));
+        if (!a) { window.renderAngeboteList(); return; }
+        const zellen = document.querySelectorAll(`.angebot-machine-cell[data-aid="${CSS.escape(String(angebotId))}"]`);
+        if (!zellen.length) { window.renderAngeboteList(); return; }
+        zellen.forEach(z => { z.innerHTML = renderAngebotMachineCellInhalt(a); });
+        zuletztBearbeiteteMaschineZelle = (editingAngebotMachineId === a.id) ? a.id : null;
+    };
+
+    function renderAngebotMachineCellInhalt(a) {
         if (editingAngebotMachineId === a.id) {
             if (editingAngebotMachineMode === 'freitext') {
                 return `
@@ -2592,9 +2813,12 @@
     }
 
     window.startEditAngebotMachine = function (angebotId) {
+        const vorher = zuletztBearbeiteteMaschineZelle;
         editingAngebotMachineId = angebotId;
         editingAngebotMachineMode = 'search';
-        window.renderAngeboteList();
+        // War gerade eine andere Zeile im Bearbeiten-Modus, deren Eingabefeld wieder zurueckbauen
+        if (vorher != null && String(vorher) !== String(angebotId)) window.rerenderAngebotMachineCell(vorher);
+        window.rerenderAngebotMachineCell(angebotId);
         requestAnimationFrame(() => {
             const input = document.querySelector(`.angebot-machine-search[data-angebot-id="${angebotId}"]`);
             if (input) {
@@ -2612,7 +2836,7 @@
         if (dropdown) dropdown.style.display = 'none';
         editingAngebotMachineMode = 'freitext';
         pendingFreitextValue = (prefillText || '').trim();
-        window.renderAngeboteList();
+        window.rerenderAngebotMachineCell(angebotId);
         requestAnimationFrame(() => {
             const input = document.querySelector(`.angebot-machine-search[data-angebot-id="${angebotId}"]`);
             if (input) { input.focus(); input.select(); }
@@ -2621,31 +2845,89 @@
 
     // Bereits verwendete Freitext-Maschinenbezeichnungen (nur fürs Angebote-Dropdown, gelten an
     // keiner anderen Stelle der App) — werden direkt aus der schon geladenen Angebote-Liste
-    // ermittelt, keine eigene Tabelle/Abfrage dafür nötig.
+    // ermittelt, keine eigene Tabelle/Abfrage dafür nötig. Gecacht je Listenstand, damit
+    // nicht bei jedem Tastendruck neu gesammelt und sortiert wird.
+    let labelCacheQuelle = null, labelCacheLaenge = -1, labelCache = [];
     function getDistinctMachineLabels() {
+        if (angeboteList === labelCacheQuelle && angeboteList.length === labelCacheLaenge) return labelCache;
         const set = new Set();
         angeboteList.forEach(a => { if (a.machine_label) set.add(a.machine_label); });
-        return [...set].sort((a, b) => a.localeCompare(b, 'de'));
+        labelCache = [...set].sort((a, b) => a.localeCompare(b, 'de'));
+        labelCacheQuelle = angeboteList; labelCacheLaenge = angeboteList.length;
+        return labelCache;
     }
 
+    // Suchtext je Maschine einmal vorberechnen (neu, sobald sich machineList ändert)
+    let maschSuchQuelle = null, maschSuchLaenge = -1, maschSuch = [];
+    function angebotMaschinenIndex() {
+        const liste = window.machineList || [];
+        if (liste !== maschSuchQuelle || liste.length !== maschSuchLaenge) {
+            maschSuchQuelle = liste; maschSuchLaenge = liste.length;
+            maschSuch = liste.map(m => ({
+                m,
+                text: [m.manufacturer || '', m.name || '', m.serial_number || m.serial || '', m.year ? String(m.year) : ''].join(' ').toLowerCase()
+            }));
+        }
+        return maschSuch;
+    }
+
+    // Beim schnellen Tippen nur den letzten Stand zeichnen (gebündelt per setTimeout)
+    let angebotDdTimer = 0, angebotDdArgs = null;
     window.filterAngebotMachineDropdown = function (query, angebotId) {
-        const machines = window.machineList || [];
-        const tokens = query.toLowerCase().split(/\s+/).filter(t => t.length > 0);
-        const filtered = machines.filter(m => {
-            const searchable = [m.manufacturer || '', m.name || '', m.serial_number || m.serial || '', m.year ? String(m.year) : ''].join(' ').toLowerCase();
-            return tokens.length === 0 || tokens.every(t => searchable.includes(t));
-        });
-        const filteredLabels = getDistinctMachineLabels().filter(label =>
-            tokens.length === 0 || tokens.every(t => label.toLowerCase().includes(t))
-        );
+        angebotDdArgs = [query, angebotId];
+        if (angebotDdTimer) return;
+        angebotDdTimer = setTimeout(() => {
+            angebotDdTimer = 0;
+            filterAngebotMachineDropdownJetzt(angebotDdArgs[0], angebotDdArgs[1]);
+        }, 16);
+    };
+
+    function filterAngebotMachineDropdownJetzt(query, angebotId) {
+        const tokens = (query || '').toLowerCase().split(/\s+/).filter(t => t.length > 0);
+        const index = angebotMaschinenIndex();
+        const filtered = [];
+        for (let i = 0; i < index.length && filtered.length < 50; i++) {
+            const e = index[i];
+            let ok = true;
+            for (let t = 0; t < tokens.length; t++) {
+                if (e.text.indexOf(tokens[t]) === -1) { ok = false; break; }
+            }
+            if (ok) filtered.push(e.m);
+        }
+        const filteredLabels = [];
+        const alleLabels = getDistinctMachineLabels();
+        for (let i = 0; i < alleLabels.length && filteredLabels.length < 30; i++) {
+            const l = alleLabels[i].toLowerCase();
+            if (tokens.every(t => l.includes(t))) filteredLabels.push(alleLabels[i]);
+        }
 
         let dropdown = document.getElementById('angebot-machine-dropdown-portal');
         if (!dropdown) {
             dropdown = document.createElement('div');
             dropdown.id = 'angebot-machine-dropdown-portal';
             dropdown.style.cssText = 'position:fixed;z-index:999999;background:rgba(15,23,42,0.98);border:1px solid rgba(255,255,255,0.15);border-radius:12px;max-height:320px;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,0.7);display:none;min-width:200px;';
+            // Ein Handler für alle Einträge (Delegation). mousedown + preventDefault, damit das
+            // Suchfeld den Fokus behält; der Freitext-Eintrag wechselt nur den Modus und
+            // stoppt den Klick, damit der Außerhalb-Klick-Listener die Bearbeitung nicht beendet.
+            dropdown.addEventListener('mousedown', (e) => {
+                const item = e.target.closest('.pm-item');
+                if (!item || item.hasAttribute('data-freitext')) return;
+                e.preventDefault();
+                const aid = dropdown.dataset.angebotId;
+                if (item.hasAttribute('data-none')) { window.selectAngebotMachine(aid, null); return; }
+                if (item.hasAttribute('data-mid')) { window.selectAngebotMachine(aid, item.getAttribute('data-mid')); return; }
+                if (item.hasAttribute('data-label')) { window.commitAngebotMachineFreitext(aid, item.getAttribute('data-label')); }
+            });
+            dropdown.addEventListener('click', (e) => {
+                const item = e.target.closest('.pm-item[data-freitext]');
+                if (!item) return;
+                e.stopPropagation();
+                window.switchAngebotMachineToFreitext(dropdown.dataset.angebotId, dropdown.dataset.query || '');
+            });
             document.body.appendChild(dropdown);
         }
+        dropdown.dataset.angebotId = angebotId;
+        dropdown.dataset.query = query || '';
 
         const searchInput = document.querySelector(`.angebot-machine-search[data-angebot-id="${angebotId}"]`);
         if (searchInput) {
@@ -2663,63 +2945,33 @@
             dropdown.style.left = Math.max(margin, left) + 'px';
         }
 
-        dropdown.innerHTML = '';
-
-        const noneItem = document.createElement('div');
-        noneItem.textContent = 'Keine Maschine';
-        noneItem.style.cssText = 'padding:10px 14px;cursor:pointer;color:#fff;font-size:0.9rem;';
-        noneItem.onmousedown = (e) => { e.preventDefault(); window.selectAngebotMachine(angebotId, null); };
-        noneItem.onmouseover = () => { noneItem.style.background = 'rgba(255,255,255,0.08)'; };
-        noneItem.onmouseout = () => { noneItem.style.background = ''; };
-        dropdown.appendChild(noneItem);
+        const ITEM = 'padding:10px 14px;cursor:pointer;font-size:0.9rem;border-top:1px solid rgba(255,255,255,0.05);';
+        const html = [];
+        html.push(`<div class="pm-item" data-none style="padding:10px 14px;cursor:pointer;color:#fff;font-size:0.9rem;">Keine Maschine</div>`);
 
         // Direkt unter "Keine Maschine": eigene Bezeichnung eintippen, grau hinterlegt. Übernimmt
         // einfach den aktuell eingetippten Text als Freitext-Maschine (genau wie Enter im Feld).
-        const trimmedQuery = query.trim();
-        const freitextItem = document.createElement('div');
-        freitextItem.textContent = trimmedQuery ? `✎ Eigene Bezeichnung „${trimmedQuery}“ übernehmen` : '✎ Eigene Bezeichnung eintippen...';
-        freitextItem.style.cssText = 'padding:10px 14px;cursor:pointer;font-size:0.9rem;color:#fff;background:rgba(255,255,255,0.05);border-top:1px solid rgba(255,255,255,0.05);';
-        // onclick + stopPropagation statt onmousedown: dieser Eintrag lässt editingAngebotMachineId
-        // bewusst gesetzt (wechselt nur den Modus), darum darf das nachfolgende click-Event nicht
-        // erst beim Dokument landen und die Bearbeitung über den Außerhalb-Klick-Listener sofort
-        // wieder beenden.
-        freitextItem.onclick = (e) => { e.stopPropagation(); window.switchAngebotMachineToFreitext(angebotId, query); };
-        freitextItem.onmouseover = () => { freitextItem.style.background = 'rgba(255,255,255,0.1)'; };
-        freitextItem.onmouseout = () => { freitextItem.style.background = 'rgba(255,255,255,0.05)'; };
-        dropdown.appendChild(freitextItem);
+        const trimmedQuery = (query || '').trim();
+        html.push(`<div class="pm-item" data-freitext style="padding:10px 14px;cursor:pointer;font-size:0.9rem;color:#fff;background:rgba(255,255,255,0.05);border-top:1px solid rgba(255,255,255,0.05);">${trimmedQuery ? `✎ Eigene Bezeichnung „${escapeHtml(trimmedQuery)}“ übernehmen` : '✎ Eigene Bezeichnung eintippen...'}</div>`);
 
         if (filtered.length === 0 && filteredLabels.length === 0) {
-            const empty = document.createElement('div');
-            empty.textContent = 'Keine Maschine gefunden';
-            empty.style.cssText = 'padding:10px 14px;color:#fff;font-size:0.85rem;font-style:italic;';
-            dropdown.appendChild(empty);
+            html.push(`<div style="padding:10px 14px;color:#fff;font-size:0.85rem;font-style:italic;">Keine Maschine gefunden</div>`);
         }
 
-        filtered.slice(0, 50).forEach(m => {
+        filtered.forEach(m => {
             const label = (typeof window.getMachineName === 'function') ? window.getMachineName(m.id) : (m.name || '');
-            const item = document.createElement('div');
-            item.style.cssText = 'padding:10px 14px;cursor:pointer;font-size:0.9rem;border-top:1px solid rgba(255,255,255,0.05);';
-            item.innerHTML = `<span style="color:var(--color-primary-green);font-weight:600;">${escapeHtml(label)}</span>`;
-            item.onmousedown = (e) => { e.preventDefault(); window.selectAngebotMachine(angebotId, m.id); };
-            item.onmouseover = () => { item.style.background = 'rgba(255,255,255,0.06)'; };
-            item.onmouseout = () => { item.style.background = ''; };
-            dropdown.appendChild(item);
+            html.push(`<div class="pm-item" data-mid="${escapeHtml(String(m.id))}" style="${ITEM}"><span style="color:var(--color-primary-green);font-weight:600;">${escapeHtml(label)}</span></div>`);
         });
 
         // Bereits anderswo verwendete Freitext-Bezeichnungen — rot, damit klar erkennbar ist:
         // das ist keine echte Maschine aus der Maschinenübersicht.
-        filteredLabels.slice(0, 30).forEach(label => {
-            const item = document.createElement('div');
-            item.style.cssText = 'padding:10px 14px;cursor:pointer;font-size:0.9rem;border-top:1px solid rgba(255,255,255,0.05);';
-            item.innerHTML = `<span style="color:#ef4444;font-weight:600;">${escapeHtml(label)}</span>`;
-            item.onmousedown = (e) => { e.preventDefault(); window.commitAngebotMachineFreitext(angebotId, label); };
-            item.onmouseover = () => { item.style.background = 'rgba(255,255,255,0.06)'; };
-            item.onmouseout = () => { item.style.background = ''; };
-            dropdown.appendChild(item);
+        filteredLabels.forEach(label => {
+            html.push(`<div class="pm-item" data-label="${escapeHtml(label)}" style="${ITEM}"><span style="color:#ef4444;font-weight:600;">${escapeHtml(label)}</span></div>`);
         });
 
+        dropdown.innerHTML = html.join('');
         dropdown.style.display = 'block';
-    };
+    }
 
     window.selectAngebotMachine = async function (angebotId, machineId) {
         const dropdown = document.getElementById('angebot-machine-dropdown-portal');
@@ -2753,9 +3005,12 @@
             const idx = angeboteList.findIndex(x => x.id === angebotId);
             if (idx !== -1) angeboteList[idx] = data;
 
-            await window.syncAngebotMachineHistory(data);
-            await vorgangMitAngebotAbgleichen(data);
+            // Erst zeichnen, dann Historie und Vorgang im Hintergrund nachziehen —
+            // beides braucht je einen Netzaufruf und muss nicht im Weg stehen.
             window.renderAngeboteList();
+            Promise.all([window.syncAngebotMachineHistory(data), vorgangMitAngebotAbgleichen(data)])
+                .then(() => window.renderAngeboteList())
+                .catch(e => console.warn('Nachziehen von Historie/Vorgang:', e));
         } catch (err) {
             console.error('Error assigning machine to Angebot:', err);
             window.showToast('Fehler beim Zuordnen der Maschine: ' + err.message);
@@ -2786,9 +3041,12 @@
             const idx = angeboteList.findIndex(x => x.id === angebotId);
             if (idx !== -1) angeboteList[idx] = data;
 
-            await window.syncAngebotMachineHistory(data); // kein machine_id -> haengt ggf. noch am Kunden, sonst geloescht
-            await vorgangMitAngebotAbgleichen(data);
+            // Erst zeichnen, dann Historie und Vorgang im Hintergrund nachziehen —
+            // beides braucht je einen Netzaufruf und muss nicht im Weg stehen.
             window.renderAngeboteList();
+            Promise.all([window.syncAngebotMachineHistory(data), vorgangMitAngebotAbgleichen(data)])
+                .then(() => window.renderAngeboteList())
+                .catch(e => console.warn('Nachziehen von Historie/Vorgang:', e));
         } catch (err) {
             console.error('Error saving machine label for Angebot:', err);
             window.showToast('Fehler beim Speichern der Maschinenbezeichnung: ' + err.message);
@@ -2964,48 +3222,10 @@
                 }
             }
 
-            // --- Phase 2: Maschine anhand des (ggf. gerade ermittelten) Kunden finden ---
-            const { data: unresolvedMachines, error: machFetchError } = await window.supabaseClient
-                .from('angebote')
-                .select('id, customer_id')
-                .is('machine_id', null)
-                .not('customer_id', 'is', null);
-
-            if (machFetchError) throw machFetchError;
-            if (!unresolvedMachines || unresolvedMachines.length === 0) return;
-
-            const customerIds = [...new Set(unresolvedMachines.map(a => a.customer_id))];
-            const { data: machines, error: machError } = await window.supabaseClient
-                .from('machines')
-                .select('id, customer_id')
-                .in('customer_id', customerIds);
-
-            if (machError) throw machError;
-
-            const machineIdsByCustomer = {};
-            (machines || []).forEach(m => {
-                if (!m.customer_id) return;
-                if (!machineIdsByCustomer[m.customer_id]) machineIdsByCustomer[m.customer_id] = [];
-                machineIdsByCustomer[m.customer_id].push(m.id);
-            });
-
-            for (const angebot of unresolvedMachines) {
-                const machineIds = machineIdsByCustomer[angebot.customer_id] || [];
-                if (machineIds.length !== 1) continue; // Kunde hat keine oder mehrere Maschinen -> manuell zuordnen
-
-                const { data: updated, error: updError } = await window.supabaseClient
-                    .from('angebote')
-                    .update({ machine_id: machineIds[0] })
-                    .eq('id', angebot.id)
-                    .select()
-                    .single();
-
-                if (updError) {
-                    console.error('Error auto-assigning machine to Angebot:', updError);
-                    continue;
-                }
-                await window.syncAngebotMachineHistory(updated);
-            }
+            // Maschine wird NICHT mehr geraten (bis 2026-09-15: bei genau einer
+            // Maschine des Kunden automatisch eingetragen). Das Feld „Maschine"
+            // wird ausschließlich von Hand gepflegt — der Import lässt es leer
+            // und fasst es bei bestehenden Belegen nie an.
         } catch (err) {
             console.error('Error in autoAssignAngeboteMachines:', err);
         }

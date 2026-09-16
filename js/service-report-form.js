@@ -933,8 +933,11 @@
             (Array.isArray(d.contact_persons) ? d.contact_persons : []).forEach(p => { if (typeof window.addServiceContactPerson === 'function') window.addServiceContactPerson(p); });
 
             // Checkliste
-            if (d.checklist_payload && typeof window.loadChecklistPayload === 'function') {
-                try { window.loadChecklistPayload(d.checklist_payload); } catch (e) { console.warn('Checkliste laden fehlgeschlagen:', e); }
+            // Immer aufrufen — auch ohne gespeicherte Prüfliste: sonst bleiben die
+            // Pläne des zuvor offenen Berichts stehen und tauchen hier wieder auf.
+            // Ein leeres Objekt heißt „Bericht hatte keine Pläne" (nichts nachträglich anhaken).
+            if (typeof window.loadChecklistPayload === 'function') {
+                try { window.loadChecklistPayload(d.checklist_payload || { checklists: [] }); } catch (e) { console.warn('Checkliste laden fehlgeschlagen:', e); }
             }
 
             // Bereits gespeicherte Dateien (Closure-Variable existingServiceFiles)
