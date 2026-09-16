@@ -27,7 +27,9 @@
     'use strict';
 
     const TABLE = 'assignment_responses';
-    const TAKT = 20 * 1000;          // gleicher Takt wie der Wecker
+    // 60 s statt 20 s: die Abfrage zieht alle offenen Vorgänge samt Schritten —
+    // dreimal pro Minute in jedem Browser war ein spürbarer Teil des Egress.
+    const TAKT = 60 * 1000;
     const MORGENS_STUNDE = 8;        // „morgen" heißt: morgen früh um 8
 
     // Später-Erinnern-Auswahl. Minuten, oder morgens = fester Zeitpunkt.
@@ -115,6 +117,8 @@
         const { data, error } = await sb()
             .from('internal_processes')
             .select('id, title, assigned_users, status, created_by_user, steps')
+            // Erledigte gleich auf dem Server aussortieren statt sie mitzuladen.
+            .not('status', 'in', '("erledigt","abgeschlossen")')
             .order('process_date', { ascending: false })
             .limit(300);
         if (error) { console.warn('Vorgangs-Quittung: Vorgänge nicht lesbar:', error); return; }

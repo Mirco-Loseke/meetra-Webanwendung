@@ -1343,3 +1343,12 @@ body.tlv-vollbild #tlv-vollbild { background: rgba(56, 189, 248, .18); border-co
     padding: 6px 14px; border-radius: var(--radius-pill); margin: 0 4px;
 }
 .tlv-leer .tlv-leer-heute:hover { background: #16a34a; }
+
+/* Herausgezoomt (Mausrad über der Bühne, js/timeline-view.js zoomen()):
+   enge Spalten zeigen weniger Beschriftung, statt die Bühne zu rollen. */
+#timeline.tlv-eng .tlv-day .wt { display: none; }
+#timeline.tlv-eng .tlv-day b { font-size: 9px; letter-spacing: -.02em; }
+#timeline.tlv-eng .tlv-day { padding: 4px 0; }
+#timeline.tlv-sehr-eng .tlv-day b { display: none; }
+#timeline.tlv-sehr-eng .tlv-day.wstart b { display: block; }
+#timeline.tlv-sehr-eng .tlv-day { padding: 2px 0; min-height: 10px; }

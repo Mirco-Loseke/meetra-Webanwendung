@@ -833,7 +833,7 @@
             // (Kundenmatchcode ohne passenden Kunden) jetzt eindeutig machen.
             if (typeof window.autoAssignAngeboteMachines === 'function') {
                 window.autoAssignAngeboteMachines().then(() => {
-                    if (typeof window.fetchAngebote === 'function') window.fetchAngebote();
+                    if (typeof window.fetchAngebote === 'function') window.fetchAngebote(true);
                 });
             }
         } catch (err) {

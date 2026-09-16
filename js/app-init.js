@@ -389,7 +389,9 @@
                 'home', 'tasks', 'machines', 'workshop', 'service', 'protocols',
                 'settings-etiketten', 'documents', 'listen', 'history', 'accounting', 'calendar', 'timeline', 'settings',
                 'users', 'categories', 'protocol-templates', 'settings-textbausteine',
-                'settings-firmeneinstellungen', 'settings-import', 'settings-uvv-wartungsplaene', 'settings-ai'
+                'settings-firmeneinstellungen', 'settings-import', 'settings-uvv-wartungsplaene', 'settings-ai',
+                // kein Ansichts-Ziel, sondern die Leiste in „Vorgänge" (js/rechnungsliste.js)
+                'rechnungsliste'
             ];
 
             function updateLastViewed(machineId) {
@@ -2100,8 +2102,18 @@
                 // gebündelt (Debounce), damit ein Schwall Änderungen nur einmal lädt.
                 window.supabaseClient
                     .channel('internal_processes_live')
-                    .on('postgres_changes', { event: '*', schema: 'public', table: 'internal_processes' }, () => {
-                        try { window.scheduleProcessesRefetch(); } catch (e) { console.error('Realtime internal_processes Fehler:', e); }
+                    .on('postgres_changes', { event: '*', schema: 'public', table: 'internal_processes' }, (payload) => {
+                        // Nur die geänderte Zeile nachladen (js/processes.js,
+                        // applyProcessRealtime) — das komplette Neuladen kostete
+                        // je Änderung mehrere MB Egress. Bei offenem Fenster oder
+                        // Fehler wie bisher gebündelt komplett laden.
+                        if (processFensterOffen() || typeof window.applyProcessRealtime !== 'function') {
+                            try { window.scheduleProcessesRefetch(); } catch (e) { console.error('Realtime internal_processes Fehler:', e); }
+                            return;
+                        }
+                        window.applyProcessRealtime(payload).then(ok => {
+                            if (!ok) window.scheduleProcessesRefetch();
+                        }).catch(e => { console.warn('Vorgang einzeln nachladen fehlgeschlagen:', e); window.scheduleProcessesRefetch(); });
                     })
                     .subscribe();
 
@@ -2111,8 +2123,9 @@
                 ['tasks', 'subtasks'].forEach(tabelle => {
                     window.supabaseClient
                         .channel(tabelle + '_live')
-                        .on('postgres_changes', { event: '*', schema: 'public', table: tabelle }, () => {
-                            try { window.scheduleTasksRefetch(); } catch (e) { console.error('Realtime ' + tabelle + ' Fehler:', e); }
+                        .on('postgres_changes', { event: '*', schema: 'public', table: tabelle }, (payload) => {
+                            // Nur die betroffene Aufgabe nachladen (js/tasks.js, applyTaskRealtime)
+                            try { if (typeof window.applyTaskRealtime !== 'function' || !window.applyTaskRealtime(tabelle, payload)) window.scheduleTasksRefetch(); } catch (e) { console.error('Realtime ' + tabelle + ' Fehler:', e); }
                         })
                         .subscribe();
                 });
@@ -2127,6 +2140,10 @@
                 // Werkstatt-Liste laden + live halten (eigener Kanal in workshop-tasks.js)
                 if (typeof window.initWorkshopTasks === 'function') {
                     try { window.initWorkshopTasks(); } catch (e) { console.error('Werkstatt-Liste init Fehler:', e); }
+                }
+                // Rechnungsliste (js/rechnungsliste.js) — rechts in „Vorgänge"
+                if (typeof window.initRechnungsliste === 'function') {
+                    try { window.initRechnungsliste(); } catch (e) { console.error('Rechnungsliste init Fehler:', e); }
                 }
             };
 

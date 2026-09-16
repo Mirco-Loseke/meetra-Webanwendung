@@ -163,12 +163,13 @@
     <link rel="stylesheet" href="css/views/tasks.css?v=4">
     <link rel="stylesheet" href="css/views/service-reports.css?v=4">
     <link rel="stylesheet" href="css/views/machines.css?v=1">
-    <link rel="stylesheet" href="css/views/timeline.css?v=43">
+    <link rel="stylesheet" href="css/views/timeline.css?v=44">
     <link rel="stylesheet" href="css/views/procurement.css?v=1">
     <link rel="stylesheet" href="css/views/settings.css?v=2">
     <link rel="stylesheet" href="css/views/accounting.css?v=1">
     <link rel="stylesheet" href="css/views/workshop.css?v=1">
     <link rel="stylesheet" href="css/views/workshop-tasks.css?v=4">
+    <link rel="stylesheet" href="css/views/rechnungsliste.css?v=2">
     <link rel="stylesheet" href="css/views/tasks-print.css?v=3">
     <link rel="stylesheet" href="css/views/dashboard.css?v=1">
     <link rel="stylesheet" href="css/views/listen.css?v=3">
@@ -386,6 +387,15 @@
                         </div>
                     </details>
     
+                <details class="perm-group" open>
+                    <summary class="perm-group-head">
+                        <span>Zusatzlisten</span>
+                    </summary>
+                    <div class="perm-grid">
+                        <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-rechnungsliste"> Rechnungsliste (unter Vorgänge)</label>
+                    </div>
+                </details>
+
                     <details class="perm-group perm-group-danger">
                         <summary class="perm-group-head">
                             <span>Löschen</span>
@@ -1537,8 +1547,25 @@
                                         </div>
                                     </div>
 
-                                    <!-- Subview 2: Internal Processes -->
+                    <!-- Subview 2: Internal Processes -->
                                     <div id="events-processes-subview" style="display: none;">
+                    <!-- Rechnungsliste (js/rechnungsliste.js): Knopf am rechten Rand, Leiste klappt aus.
+                         Sichtbar nur mit Recht „Rechnungsliste" (Benutzerverwaltung). -->
+                    <button type="button" id="rechnungen-toggle" class="rechnungen-toggle" aria-expanded="false"
+                            onclick="window.rechnungenToggleLeiste()" title="Rechnungsliste auf-/zuklappen">
+                        <span class="rechnungen-count">0</span><span class="rechnungen-label">🧾 Rechnungen</span>
+                    </button>
+                    <aside id="rechnungen-panel" class="rechnungen-panel workshop-panel">
+                        <div class="workshop-head">
+                            <h3><span class="workshop-ic">🧾</span> Rechnungen schreiben <span class="rechnungen-count workshop-count">0</span></h3>
+                            <button type="button" class="rechnungen-close" onclick="window.rechnungenToggleLeiste(false)" title="Zuklappen" aria-label="Zuklappen">&times;</button>
+                        </div>
+                        <form id="rechnungen-add-form" class="workshop-add" autocomplete="off">
+                            <input type="text" id="rechnungen-add-input" placeholder="Kunde / Vorgang + Enter…" autocomplete="off" maxlength="200">
+                            <button type="submit" title="Hinzufügen" aria-label="Hinzufügen">+</button>
+                        </form>
+                        <div id="rechnungen-list" class="workshop-list"></div>
+                    </aside>
                                         <div id="processes-list-container" style="min-height: 400px;">
                                             <!-- KPIs, Grafen und Vorgangs-Karten werden hier gerendert -->
                                         </div>
@@ -4109,7 +4136,7 @@
     <script src="js/ui-feedback.js?v=2"></script>
     <script src="js/auto-nachladen.js?v=2"></script>
     <!-- Berechtigungen: ausgelagert aus index.html -->
-    <script src="js/permissions.js?v=5"></script>
+    <script src="js/permissions.js?v=6"></script>
     <script src="lib/supabase.min.js?v=1"></script>
     <script>
         if (typeof supabase === 'undefined') {
@@ -4176,7 +4203,7 @@
     <script src="js/app-core.js?v=6"></script>
     <script src="js/lookup-cache.js?v=1"></script>
     <script src="js/photo-dedupe.js?v=3"></script>
-    <script src="js/app-init.js?v=17"></script>
+    <script src="js/app-init.js?v=20"></script>
     <script src="js/settings-uvv-plans.js?v=1"></script>
     <script src="js/machine-details-modal.js?v=3"></script>
     <script src="js/machine-modal.js?v=6"></script>
@@ -4184,7 +4211,7 @@
     <script src="js/service-list.js?v=3"></script>
     <script src="js/history-modal.js?v=206"></script>
     <script src="js/calendar-events.js?v=5"></script>
-    <script src="js/processes-ui.js?v=35"></script>
+    <script src="js/processes-ui.js?v=36"></script>
     <!-- Dokumente an Vorgaengen/Schritten. Nutzt window.FileUploadService
          (js/file-upload-service-r2.js, weiter UNTEN geladen) — das ist in
          Ordnung, weil der Dienst erst beim Hochladen angefasst wird. -->
@@ -4193,7 +4220,7 @@
     <script src="js/process-machine-select.js?v=2"></script>
     <script src="js/customer-matching.js?v=2"></script>
     <script src="js/ui-modals.js?v=2"></script>
-    <script src="js/processes.js?v=132"></script>
+    <script src="js/processes.js?v=133"></script>
     <script src="js/service-reports.js?v=2"></script>
     <script src="js/service-entries.js?v=13"></script>
     <script src="js/service-picker.js?v=1"></script>
@@ -6052,8 +6079,9 @@
     </main>
     </div><!-- End main-wrapper -->
 
-    <script src="js/tasks.js?v=30"></script>
+    <script src="js/tasks.js?v=31"></script>
     <script src="js/workshop-tasks.js?v=3"></script>
+    <script src="js/rechnungsliste.js?v=2"></script>
     <script src="js/tasks-print.js?v=12"></script>
     <script src="js/task_templates.js?v=100"></script>
     <!-- Spracheingabe für die KI-Felder — muss vor den KI-Modulen stehen,
@@ -6818,7 +6846,7 @@
     <script src="js/documents-r2.js?v=9"></script>
     <script src="js/checklists.js?v=6"></script>
     <script src="js/protokoll-liste.js?v=3"></script>
-    <script src="js/customers.js?v=6"></script>
+    <script src="js/customers.js?v=7"></script>
     <script src="js/autosave.js?v=1"></script>
     <script src="js/unsaved-guard.js?v=1"></script>
     <script src="js/address-history.js?v=2"></script>
@@ -6837,15 +6865,15 @@
     <script src="js/notification-settings.js?v=2"></script>
     <!-- Minutengenauer Wecker fuer Erinnerungen mit Uhrzeit. Muss NACH
          notifications.js stehen: nutzt window.notificationsPushEnabled. -->
-    <script src="js/reminder-alarm.js?v=4"></script>
-    <script src="js/assignment-handoff.js?v=2"></script>
+    <script src="js/reminder-alarm.js?v=5"></script>
+    <script src="js/assignment-handoff.js?v=3"></script>
     <script src="js/calendar-widget.js?v=19"></script>
     <!-- tasks.js und processes.js werden bereits weiter oben geladen (vor ihren
          jeweiligen Folgemodulen). Ein zweites Einbinden ließ beide Module doppelt
          laufen — mit doppelt registrierten Event-Handlern. -->
     <script src="js/routeplanner.js?v=2"></script>
     <script src="js/routenplanung.js?v=19"></script>
-    <script src="js/listen.js?v=50"></script>
+    <script src="js/listen.js?v=51"></script>
 
     <script src="js/labels.js?v=2"></script>
     <script src="js/offline-service.js?v=1"></script>
@@ -7761,7 +7789,7 @@
 <script src="js/auth.js?v=1"></script>
 <script src="js/users.js?v=3"></script>
 <script src="js/machines-grouped.js?v=1"></script>
-<script src="js/timeline-view.js?v=73"></script>
+<script src="js/timeline-view.js?v=75"></script>
 <script src="js/voice-dictation.js?v=2"></script>
 </body>
 

@@ -118,6 +118,23 @@
 
                     <!-- Subview 2: Internal Processes -->
                     <div id="events-processes-subview" style="display: none;">
+                    <!-- Rechnungsliste (js/rechnungsliste.js): Knopf am rechten Rand, Leiste klappt aus.
+                         Sichtbar nur mit Recht „Rechnungsliste" (Benutzerverwaltung). -->
+                    <button type="button" id="rechnungen-toggle" class="rechnungen-toggle" aria-expanded="false"
+                            onclick="window.rechnungenToggleLeiste()" title="Rechnungsliste auf-/zuklappen">
+                        <span class="rechnungen-count">0</span><span class="rechnungen-label">🧾 Rechnungen</span>
+                    </button>
+                    <aside id="rechnungen-panel" class="rechnungen-panel workshop-panel">
+                        <div class="workshop-head">
+                            <h3><span class="workshop-ic">🧾</span> Rechnungen schreiben <span class="rechnungen-count workshop-count">0</span></h3>
+                            <button type="button" class="rechnungen-close" onclick="window.rechnungenToggleLeiste(false)" title="Zuklappen" aria-label="Zuklappen">&times;</button>
+                        </div>
+                        <form id="rechnungen-add-form" class="workshop-add" autocomplete="off">
+                            <input type="text" id="rechnungen-add-input" placeholder="Kunde / Vorgang + Enter…" autocomplete="off" maxlength="200">
+                            <button type="submit" title="Hinzufügen" aria-label="Hinzufügen">+</button>
+                        </form>
+                        <div id="rechnungen-list" class="workshop-list"></div>
+                    </aside>
                         <div id="processes-list-container" style="min-height: 400px;">
                             <!-- KPIs, Grafen und Vorgangs-Karten werden hier gerendert -->
                         </div>

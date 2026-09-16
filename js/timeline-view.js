@@ -146,7 +146,10 @@
        auf — man sucht dann eine Maschine, die es in der Ansicht gar nicht
        geben kann. */
     var GELADEN_AM = 0;
-    var NEULADEN_NACH = 20000;   // ms
+    // 3 Minuten statt 20 s: die Timeline lädt Aufgaben, Berichte, Mieten und
+    // Termine komplett — bei jedem Ansichtswechsel war das unnötiger Egress.
+    // „Neu laden" holt jederzeit frisch.
+    var NEULADEN_NACH = 180000;   // ms
 
     function sb() { return window.supabaseClient || null; }
 
@@ -1444,10 +1447,16 @@
         var summe = parseFloat(cs.getPropertyValue('--tlv-summe-w')) || 0;
         var frei = verfuegbar - label - summe - 2;   // 2px Rahmen
         if (frei <= 0) return;
-        // 42px: darunter passt "02.09." nicht mehr in eine Spalte.
-        var min = S.raster === 'woche' ? 52 : 42;
-        wurzel.style.setProperty('--tlv-day-w',
-            Math.max(min, Math.floor((frei / n) * 100) / 100) + 'px');
+        // 42px: darunter passt "02.09." nicht mehr in eine Spalte. Beim
+        // Herauszoomen (viele Spalten) darf es enger werden — dann blendet
+        // das CSS die Tagesbeschriftung stufenweise aus (.tlv-eng, .tlv-sehr-eng)
+        // statt die Buehne waagerecht rollen zu lassen.
+        var voll = S.raster === 'woche' ? 52 : 42;
+        var min = S.raster === 'woche' ? 26 : 12;
+        var breite = Math.max(min, Math.floor((frei / n) * 100) / 100);
+        wurzel.classList.toggle('tlv-eng', breite < voll);
+        wurzel.classList.toggle('tlv-sehr-eng', breite < 24);
+        wurzel.style.setProperty('--tlv-day-w', breite + 'px');
     }
 
     /* Hoehe: die Buehne bekommt genau den Platz, der bis zum unteren
@@ -1480,6 +1489,62 @@
         }
     }
 
+    /* Zoom mit dem Mausrad: der Zeitraum wird enger (Rad nach vorn) oder
+       weiter (Rad zurueck) — der Tag unter dem Zeiger bleibt dabei an
+       seiner Stelle, man zoomt also genau dorthin, wo man hinschaut.
+       Technisch aendert sich nur die Zahl der Spalten (S.spalten); die
+       Spaltenbreite passt breiteVerteilen() danach wieder an die Buehne an.
+       Die neue Weite wird zur Grundeinstellung (basisSpalten), damit ‹ ›
+       genau in dieser Ansicht weiterblaettern. */
+    var ZOOM_MIN = { tag: 7, woche: 4 };
+    var wheelSammler = 0;
+    function zoomen(e) {
+        var buehne = document.getElementById('tlv-buehne');
+        var wurzel = document.getElementById('timeline');
+        if (!buehne || !wurzel || !S.geladen) return false;
+        // Mehrere feine Rad-Schritte (Trackpad) zu einem Schritt buendeln.
+        wheelSammler += e.deltaY;
+        if (Math.abs(wheelSammler) < 20) return true;
+        var richtung = wheelSammler > 0 ? 1 : -1;
+        wheelSammler = 0;
+
+        var sw = schritt(), start = fensterStart();
+        var cs = getComputedStyle(wurzel);
+        var label = parseFloat(cs.getPropertyValue('--tlv-label-w')) || 240;
+        var rect = buehne.getBoundingClientRect();
+        var x = e.clientX - rect.left - label + buehne.scrollLeft;
+        var gesamt = dayW() * S.spalten;
+        var anteil = Math.min(1, Math.max(0, gesamt > 0 ? x / gesamt : 0.5));
+        var tagUnterMaus = new Date(start);
+        tagUnterMaus.setDate(tagUnterMaus.getDate() + Math.round(anteil * S.spalten * sw));
+
+        var deckel = SPALTEN_DECKEL[S.raster] || 180;
+        var minSp = ZOOM_MIN[S.raster] || 7;
+        var faktor = richtung > 0 ? 1.25 : 0.8;
+        var neu = Math.round(S.spalten * faktor);
+        if (richtung > 0 && neu <= S.spalten) neu = S.spalten + 1;
+        if (richtung < 0 && neu >= S.spalten) neu = S.spalten - 1;
+        neu = Math.max(minSp, Math.min(deckel, neu));
+        if (neu === S.spalten) return true;
+
+        // Neuer Fensteranfang so, dass der Tag unter der Maus am selben
+        // Anteil der Breite liegt. fensterStart() = anker - 7 Tage (Tag)
+        // bzw. montag(anker) - 14 Tage (Woche) — entsprechend rueckrechnen.
+        var neuStart = new Date(tagUnterMaus);
+        neuStart.setDate(neuStart.getDate() - Math.round(anteil * neu * sw));
+        if (S.raster === 'woche') {
+            neuStart = montag(neuStart);
+            neuStart.setDate(neuStart.getDate() + 14);
+        } else {
+            neuStart.setDate(neuStart.getDate() + 7);
+        }
+        S.anker = neuStart;
+        S.spalten = S.basisSpalten = neu;
+        zeichne();
+        buehne.scrollLeft = 0;
+        return true;
+    }
+
     function buehneNavBinden(buehne) {
         var wrap = buehne.parentNode;
         if (!wrap) return;
@@ -1488,11 +1553,16 @@
             // Shift+Rad und waagerechtes Wischen rollen die Bühne.
             buehne.addEventListener('wheel', function (e) {
                 var dx = e.shiftKey ? e.deltaY : e.deltaX;
-                if (!dx) return;
-                var max = buehne.scrollWidth - buehne.clientWidth;
-                if (max <= 2) return;
-                buehne.scrollLeft += dx;
-                e.preventDefault();
+                if (dx) {
+                    var max = buehne.scrollWidth - buehne.clientWidth;
+                    if (max <= 2) return;
+                    buehne.scrollLeft += dx;
+                    e.preventDefault();
+                    return;
+                }
+                // Mausrad ueber der Buehne = Zoom (Rad vor: naeher, zurueck:
+                // weiter weg). Senkrecht rollen geht daneben weiter.
+                if (e.deltaY && zoomen(e)) e.preventDefault();
             }, { passive: false });
             document.addEventListener('keydown', function (e) {
                 var tl = document.getElementById('timeline');

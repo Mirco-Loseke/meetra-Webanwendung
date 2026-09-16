@@ -243,6 +243,50 @@
         return !!(a && a.classList && a.classList.contains('ghost-input'));
     }
 
+    // Egress: statt bei jeder Änderung ALLE Aufgaben samt Unteraufgaben neu zu
+    // laden (die Tafel auf dem Fernseher läuft den ganzen Tag, das Auto-Speichern
+    // schreibt beim Tippen), wird nur die betroffene Aufgabe nachgeladen.
+    // Unteraufgaben-Ereignisse bringen task_id mit → die Aufgabe darüber. Pro
+    // Aufgabe gebündelt (ein Schwall = ein Ladevorgang). Klappt es nicht
+    // (z. B. Aufgabe unbekannt und nicht ladbar), greift das Komplett-Laden.
+    const _taskEinzelTimer = {};
+    window.applyTaskRealtime = function (tabelle, payload) {
+        if (!Array.isArray(allTasks)) return false;
+        const zeile = payload.new && Object.keys(payload.new).length ? payload.new : (payload.old || {});
+        let taskId = tabelle === 'subtasks' ? zeile.task_id : zeile.id;
+        if (taskId == null) return false;
+        if (tabelle === 'tasks' && payload.eventType === 'DELETE') {
+            allTasks = allTasks.filter(t => String(t.id) !== String(taskId));
+            if (!taskModalOpen()) renderTasks();
+            return true;
+        }
+        clearTimeout(_taskEinzelTimer[taskId]);
+        _taskEinzelTimer[taskId] = setTimeout(async () => {
+            delete _taskEinzelTimer[taskId];
+            if (taskModalOpen()) { _tasksRefetchPending = true; return; }
+            try {
+                const { data, error } = await window.supabaseClient
+                    .from('tasks')
+                    .select('*, machines(manufacturer, name, serial, year, image_url), subtasks(*)')
+                    .eq('id', taskId).maybeSingle();
+                if (error) throw error;
+                const idx = allTasks.findIndex(t => String(t.id) === String(taskId));
+                if (!data) { if (idx !== -1) allTasks.splice(idx, 1); }
+                else {
+                    subtasksSortieren(data);
+                    if (idx !== -1) allTasks[idx] = data; else allTasks.unshift(data);
+                }
+                const y = window.pageYOffset;
+                renderTasks();
+                if (!cinemaActive && Math.abs(window.pageYOffset - y) > 1) window.scrollTo(0, y);
+            } catch (e) {
+                console.warn('Aufgabe einzeln nachladen fehlgeschlagen, lade alles:', e);
+                window.scheduleTasksRefetch();
+            }
+        }, 500);
+        return true;
+    };
+
     window.scheduleTasksRefetch = function () {
         clearTimeout(_tasksRefetchTimer);
         _tasksRefetchTimer = setTimeout(async () => {

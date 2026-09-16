@@ -1,0 +1,103 @@
+/* ==========================================================
+   Rechnungsliste — ausklappbare Leiste rechts in „Vorgänge"
+   (js/rechnungsliste.js). Zeilen, Eingabe und Haken kommen aus
+   css/views/workshop-tasks.css (.workshop-*), hier nur Knopf und Leiste.
+   ========================================================== */
+
+/* Knopf am rechten Fensterrand, hochkant, immer erreichbar. Nur die
+   Beschriftung steht gedreht — die Zahl bleibt aufrecht und rund, sonst
+   wirkt sie durch die Drehung in die Länge gezogen. */
+.rechnungen-toggle {
+    position: fixed;
+    right: 0;
+    top: 45%;
+    z-index: 1200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 7px;
+    border: 1px solid rgba(245, 158, 11, 0.5);
+    border-right: 0;
+    border-radius: var(--radius-md, 10px) 0 0 var(--radius-md, 10px);
+    background: rgba(15, 23, 42, 0.92);
+    color: #fbbf24;
+    font: inherit;
+    font-size: var(--fs-sm, 0.85rem);
+    font-weight: 700;
+    letter-spacing: .03em;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: var(--shadow-2, 0 8px 28px rgba(0, 0, 0, .38));
+    transition: right .25s ease, background .15s;
+}
+.rechnungen-toggle:hover { background: rgba(245, 158, 11, 0.18); }
+.rechnungen-toggle .rechnungen-label {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+}
+.rechnungen-toggle .rechnungen-count {
+    display: flex; align-items: center; justify-content: center;
+    min-width: 22px; height: 22px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #f59e0b;
+    color: #111;
+    font-size: 0.78rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+.rechnungen-toggle .rechnungen-count.leer { background: rgba(255, 255, 255, .18); color: #fff; }
+/* Knopf wandert mit der geöffneten Leiste nach links */
+.rechnungen-panel.offen ~ .rechnungen-toggle,
+.rechnungen-panel.offen + .rechnungen-toggle { right: 360px; }
+
+/* Die Leiste: schwebt am rechten Rand, eingeklappt außerhalb des Bildes. */
+.rechnungen-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 360px;
+    max-width: 92vw;
+    max-height: none;
+    z-index: 1190;
+    border-radius: var(--radius-lg, 16px) 0 0 var(--radius-lg, 16px);
+    background: rgba(15, 23, 42, 0.96);
+    backdrop-filter: blur(var(--blur-overlay, 18px));
+    -webkit-backdrop-filter: blur(var(--blur-overlay, 18px));
+    box-shadow: -12px 0 40px rgba(0, 0, 0, .45);
+    transform: translateX(100%);
+    transition: transform .25s ease;
+    padding-top: env(safe-area-inset-top, 0);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.rechnungen-panel.offen { transform: translateX(0); }
+.rechnungen-panel .workshop-head h3 .workshop-count { margin-left: 6px; }
+.rechnungen-close {
+    border: 0;
+    background: rgba(255, 255, 255, .06);
+    color: var(--text-2, #cbd5e1);
+    width: 30px; height: 30px;
+    border-radius: 999px;
+    font-size: 1.2rem; line-height: 1;
+    cursor: pointer;
+}
+.rechnungen-close:hover { background: rgba(255, 255, 255, .14); color: #fff; }
+.rechnungen-meta {
+    flex-shrink: 0;
+    font-size: 0.68rem;
+    color: rgba(255, 255, 255, .4);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Der Knopf steht vor der Leiste im Markup — damit "+" greift, hier die
+   Reihenfolge-unabhängige Variante über eine Klasse am Elternelement. */
+body:has(.rechnungen-panel.offen) .rechnungen-toggle { right: 360px; }
+
+@media (max-width: 768px) {
+    .rechnungen-panel { width: 100vw; max-width: 100vw; border-radius: 0; }
+    body:has(.rechnungen-panel.offen) .rechnungen-toggle { display: none; }
+    .rechnungen-toggle { top: auto; bottom: 90px; }
+}

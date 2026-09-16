@@ -147,6 +147,75 @@ window.fetchProcesses = async function() {
     }
 };
 
+// ---------------------------------------------------------------------
+// Realtime: EINEN Vorgang nachziehen statt alle neu zu laden.
+// ---------------------------------------------------------------------
+// Bis 2026-09-16 lud jede Änderung an irgendeinem Vorgang (auch die, die
+// Angebots-Status/-Stand im Hintergrund schreiben) die KOMPLETTE Liste neu —
+// samt Joins und allen verknüpften Angeboten mit Notizen. Seit jedes Angebot
+// ein Vorgang ist, sind das mehrere MB je Änderung, bei jedem Nutzer, der die
+// App offen hat: der Egress bei Supabase schoss dadurch hoch. Jetzt wird nur
+// die geänderte Zeile geholt (ein paar KB). Fällt das aus, greift wie früher
+// das komplette Nachladen.
+const PROC_SELECT_VOLL = '*, machines(id, name, manufacturer, serial, year, company, operator_city, customer_id), customers(id, name)';
+const PROC_SELECT_OHNE_KUNDE = '*, machines(id, name, manufacturer, serial, year, company, operator_city)';
+
+window.applyProcessRealtime = async function (payload) {
+    const list = window.eventsState && window.eventsState.processes;
+    // Liste noch nie geladen → beim Öffnen der Ansicht kommt sie ohnehin frisch.
+    if (!Array.isArray(list)) return true;
+    const id = (payload.new && payload.new.id) || (payload.old && payload.old.id);
+    if (id == null) return false;
+
+    if (payload.eventType === 'DELETE') {
+        const i = list.findIndex(p => String(p.id) === String(id));
+        if (i !== -1) list.splice(i, 1);
+        if (window.angeboteByProcess) delete window.angeboteByProcess[String(id)];
+        window.renderProcesses();
+        return true;
+    }
+
+    let { data: row, error } = await window.supabaseClient
+        .from('internal_processes').select(PROC_SELECT_VOLL).eq('id', id).maybeSingle();
+    if (error) {
+        ({ data: row, error } = await window.supabaseClient
+            .from('internal_processes').select(PROC_SELECT_OHNE_KUNDE).eq('id', id).maybeSingle());
+    }
+    if (error) return false;
+    if (!row) { // inzwischen gelöscht
+        const i = list.findIndex(p => String(p.id) === String(id));
+        if (i !== -1) { list.splice(i, 1); window.renderProcesses(); }
+        return true;
+    }
+
+    if (row.linked_service_report_id) {
+        try {
+            const { data: r } = await window.supabaseClient
+                .from('service_entries').select('id, title, date, is_finalized')
+                .eq('id', row.linked_service_report_id).maybeSingle();
+            row.service_entries = r || null;
+        } catch (e) { row.service_entries = null; }
+    } else row.service_entries = null;
+
+    // Angebot am Vorgang (nur diese eine Zeile)
+    try {
+        const { data: ang } = await window.supabaseClient
+            .from('angebote').select('*, customers(name), angebot_notizen(id, content, created_at)')
+            .eq('process_id', id).limit(1);
+        window.angeboteByProcess = window.angeboteByProcess || {};
+        if (ang && ang[0]) window.angeboteByProcess[String(id)] = ang[0];
+        else delete window.angeboteByProcess[String(id)];
+        if (ang && ang[0] && typeof window.angebotErinnerungNachVorgang === 'function') window.angebotErinnerungNachVorgang(row);
+    } catch (e) { /* Angebot fehlt — Karte bleibt ohne */ }
+
+    const idx = list.findIndex(p => String(p.id) === String(id));
+    if (idx !== -1) list[idx] = row; else list.push(row);
+    list.sort((a, b) => String(b.process_date || '').localeCompare(String(a.process_date || '')));
+    window.renderProcesses();
+    if (typeof window.angeboteNachVorgangAktualisieren === 'function') window.angeboteNachVorgangAktualisieren([row]);
+    return true;
+};
+
 window.toggleProcessKpiFilter = function (status) {
     const next = (window.eventsState.processStatusFilter === status) ? 'all' : status;
     window.setProcessStatusFilter(next);

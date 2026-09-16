@@ -58,6 +58,7 @@ Reihenfolge der ausgelagerten Module:
 | Kunden-Zuordnung, Autocomplete | `js/customer-matching.js` |
 | Dropdown-Positionierung in Modals | `js/dropdown-position.js` |
 | Automatisches Nachladen langer Listen | `js/auto-nachladen.js` |
+| Rechnungsliste (ausklappbar rechts unter Vorgänge, Recht `rechnungsliste`) | `js/rechnungsliste.js`, `css/views/rechnungsliste.css` |
 | Kunden-Cache für Suchfelder, Maschinen-Index (`machineById`, `machineLabel`) | `js/lookup-cache.js` |
 | Modal „Maschine anlegen/bearbeiten" (CSS) | `css/views/machine-modal.css` |
 | Mietvereinbarung: Bogen, Kamera, Speichern/Löschen | `js/mietvereinbarung.js` |
@@ -234,7 +235,7 @@ formfüllenden Feldern zusätzlich `.menu-block`. Ausgewählter Eintrag: `.selec
 einem Inline-`style` suchen.
 
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v541 (Stand 2026-09-16) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v547 (Stand 2026-09-16) — bei jeder Änderung hochzählen.
 
 **Mietvereinbarung (Stand 2026-08-25).** Der Bogen wird gespeichert: PDF per
 html2canvas je `.miet-page` + jsPDF, Ablage in R2 unter
@@ -322,3 +323,24 @@ Rücknahme, damit der Zählerstand der Maschine weiterläuft). Pflege:
 *sichtbaren* Teils der Bühne aus und führt beim Rollen nach. Balken aufziehen
 mit beiden Maustasten: die zweite Taste löst **kein** `pointerdown` aus, sondern
 `pointermove` mit `buttons === 3` — dort wird gestartet.
+
+**Egress-Regeln (2026-09-16).** Der Supabase-Egress stieg mit „jedes Angebot
+ist ein Vorgang" sprunghaft: `internal_processes` wurde groß, und drei Stellen
+zogen sie ständig komplett — Realtime (jede Änderung → `fetchProcesses` mit
+Joins + alle Angebote), der Wecker (`reminder-alarm.js`, alle 20 s `select *`
+bis 300 Zeilen) und die Vorgangs-Quittung (`assignment-handoff.js`, alle 20 s).
+Jetzt: Realtime lädt nur die geänderte Zeile (`applyProcessRealtime`), Wecker
+filtert serverseitig auf fällige Zeitpunkte mit wenigen Spalten, Quittung alle
+60 s ohne Erledigte, Angebote-Liste bleibt 90 s frisch (`fetchAngebote(true)`
+erzwingt), Timeline lädt frühestens nach 3 min neu. **Regel:** keine Abfrage
+in einer Schleife/Timer mit `select('*')` ohne serverseitigen Filter, kein
+Komplett-Neuladen als Reaktion auf ein Realtime-Ereignis.
+
+**Rechnungsliste (2026-09-16).** Ausklappbare Leiste rechts in „Vorgänge"
+(`js/rechnungsliste.js`, Tabelle `invoice_todos`, Migration
+`supabase_add_invoice_todos.sql`). Knopf und Leiste werden beim Start an
+`<body>` gehängt (backdrop-filter von `#main-content` verschiebt sonst
+`position:fixed`); Sichtbarkeit folgt Ansicht + Recht
+(`permissions.rechnungsliste`, Haken „Rechnungsliste" in der
+Benutzerverwaltung; `PERM_VIEW_KEYS` enthält den Schlüssel nur fürs Modal).
+Zeilen/Eingabe nutzen die `.workshop-*`-Bausteine der Werkstatt-Liste.

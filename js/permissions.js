@@ -65,6 +65,7 @@
         { key: 'wartungsplaene', label: 'Wartungspläne', what: ['Wartungsplänen'] },
         { key: 'unteraufgaben', label: 'Unteraufgaben', what: ['Unteraufgaben'] },
         { key: 'werkstatt', label: 'Werkstatt-Einträge', what: ['Werkstatt-Einträgen'] },
+        { key: 'rechnungen', label: 'Rechnungsliste', what: ['Rechnungs-Einträgen'] },
         { key: 'mietvereinbarungen', label: 'Mietvereinbarungen', what: ['Mietvereinbarungen'] },
         // Abwesenheiten (Urlaub/Krank) werden in der Timeline gepflegt (js/timeline-view.js).
         { key: 'abwesenheiten', label: 'Abwesenheiten (Timeline)', what: ['Abwesenheiten'] },
@@ -179,6 +180,11 @@
         const activeViewEl = document.querySelector('.view.active');
         if (activeViewEl && activeViewEl.id !== fallbackView && perms[activeViewEl.id] === false) {
             go(fallbackView);
+        }
+
+        // Rechnungsliste in „Vorgänge" (js/rechnungsliste.js): eigener Haken.
+        if (typeof window.rechnungslisteRechtePruefen === 'function') {
+            try { window.rechnungslisteRechtePruefen(); } catch (e) {}
         }
     };
 })();

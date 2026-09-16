@@ -1342,7 +1342,7 @@
             // Angebot schon erhalten/verloren -> Vorgang gleich auf „Erledigt"
             if (typeof window.vorgangStatusNachAngebot === 'function') await window.vorgangStatusNachAngebot(data);
             if (typeof window.fetchProcesses === 'function') window.fetchProcesses();
-            if (typeof window.fetchAngebote === 'function' && document.getElementById('listen')?.classList.contains('active')) window.fetchAngebote();
+            if (typeof window.fetchAngebote === 'function' && document.getElementById('listen')?.classList.contains('active')) window.fetchAngebote(true);
             window.showToast(quelle ? `Angebot ${data.belegnummer} zusammengeführt — ein Vorgang.` : `Angebot ${data.belegnummer} verknüpft.`);
         };
 

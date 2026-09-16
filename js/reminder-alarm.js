@@ -169,11 +169,19 @@
 
         // 2) Vorgänge mit Erinnerungs-Zeitpunkt
         try {
-            const { data, error } = await sb()
+            // Nur was jetzt fällig ist, und nur die gebrauchten Spalten. Vorher:
+            // `*` mit Schritten, Stand-Verlauf und Anhängen für bis zu 300 Vorgänge —
+            // alle 20 Sekunden, in jedem offenen Browser. Das war ein Großteil des
+            // Supabase-Egress. Serverseitig gefiltert kommen meist 0 Zeilen zurück.
+            const abfrage = (spalten) => sb()
                 .from('internal_processes')
-                .select('*')
-                .not('remind_at', 'is', null)
-                .limit(300);
+                .select(spalten)
+                .gte('remind_at', new Date(frueheste).toISOString())
+                .lte('remind_at', new Date(jetzt).toISOString())
+                .limit(100);
+            let { data, error } = await abfrage('id, title, remind_at, status, assigned_users, user_id, created_by_user, remark');
+            // remark/created_by_user kommen aus Migrationen — fehlen sie, ohne sie.
+            if (error) ({ data, error } = await abfrage('id, title, remind_at, status, assigned_users, user_id'));
             if (error) throw error;
 
             (data || []).forEach(p => {

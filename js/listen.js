@@ -55,9 +55,20 @@
     // ANGEBOTE: LISTE LADEN & ANZEIGEN
     // ==========================================
     let autoAssignGelaufen = false;
-    window.fetchAngebote = async function () {
+    let angeboteGeladenAm = 0;
+    const ANGEBOTE_FRISCH_MS = 90 * 1000;
+    // erzwingen: true = auf jeden Fall neu laden (nach Import, Änderung aus
+    // anderer Ansicht). Ohne: ein Wechsel auf den Reiter innerhalb von 90 s
+    // zeichnet nur neu — die komplette Liste (alle Angebote mit Notizen plus
+    // alle Vorgänge dazu) sind mehrere MB, das muss nicht bei jedem Klick sein.
+    window.fetchAngebote = async function (erzwingen) {
         const container = document.getElementById('angebote-list-container');
         if (!window.supabaseClient) return;
+        if (!erzwingen && angeboteList.length && Date.now() - angeboteGeladenAm < ANGEBOTE_FRISCH_MS) {
+            window.renderAngeboteList();
+            return;
+        }
+        angeboteGeladenAm = Date.now();
 
         const { data, error } = await window.supabaseClient
             .from('angebote')
@@ -3662,7 +3673,7 @@
             // Adresse (und damit ohne Vorgang an der Adresse).
             await window.autoAssignAngeboteMachines();
             autoAssignGelaufen = true;
-            await window.fetchAngebote();
+            await window.fetchAngebote(true);
             const ohne = angeboteList.filter(a => !a.customer_id).length;
             if (ohne) {
                 nurOhneAdresse = true;
