@@ -45,14 +45,17 @@ window.fetchServiceEntries = async function() {
 
     // 2. Frische Daten vom Server holen
     let data, error;
+    // customer_signed ist eine generierte Spalte (supabase_add_service_signed_flag.sql):
+    // nur ja/nein statt des ganzen Unterschriftsbilds — die Liste zeigt damit,
+    // ob der Kunde unterschrieben hat. Fehlt die Spalte noch, ohne sie laden.
+    const SPALTEN = 'id, machine_id, category_id, category_ids, title, date, datum_von, datum_bis, hours, technicians, pdf_url, pdf_path, files, is_finalized, finalized_at, workshop_order_number, previous_report_id';
+    const laden = (spalten) => window.withTimeout(
+        window.supabaseClient.from('service_entries').select(spalten).order('date', { ascending: false }),
+        6000 // 6 Sekunden Timeout
+    );
     try {
-        const result = await window.withTimeout(
-            window.supabaseClient
-                .from('service_entries')
-                .select('id, machine_id, category_id, category_ids, title, date, datum_von, datum_bis, hours, technicians, pdf_url, pdf_path, files, is_finalized, finalized_at, workshop_order_number, previous_report_id')
-                .order('date', { ascending: false }),
-            6000 // 6 Sekunden Timeout
-        );
+        let result = await laden(SPALTEN + ', customer_signed');
+        if (result.error && /customer_signed/i.test(result.error.message || '')) result = await laden(SPALTEN);
         data = result.data; error = result.error;
     } catch (timeoutErr) {
         error = timeoutErr;
@@ -784,6 +787,11 @@ window.renderServiceEntries = function () {
                                 ${(e.datum_von && e.datum_bis && new Date(e.datum_von).toLocaleDateString('de-DE') !== new Date(e.datum_bis).toLocaleDateString('de-DE'))
                                     ? new Date(e.datum_von).toLocaleDateString('de-DE') + ' - ' + new Date(e.datum_bis).toLocaleDateString('de-DE')
                                     : (e.datum_von ? new Date(e.datum_von).toLocaleDateString('de-DE') : dateStr)}${durationStr}
+                                ${e.customer_signed ? `
+                                <span title="Der Kunde hat unterschrieben" style="margin-left: auto; display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; background: rgba(16,185,129,0.18); border: 1.5px solid rgba(16,185,129,0.55); color: #34d399; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.4px; white-space: nowrap;">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="M2 2l7.586 7.586"></path><circle cx="11" cy="11" r="2"></circle></svg>
+                                    Unterschrieben
+                                </span>` : ''}
                             </div>
 
                             ${machine && machine.company ? `

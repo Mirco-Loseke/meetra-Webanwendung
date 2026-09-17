@@ -101,3 +101,9 @@ body:has(.rechnungen-panel.offen) .rechnungen-toggle { right: 360px; }
     body:has(.rechnungen-panel.offen) .rechnungen-toggle { display: none; }
     .rechnungen-toggle { top: auto; bottom: 90px; }
 }
+
+/* Datum und Löschen-Kreuz in der Rechnungsliste in Weiß statt Grau. */
+.rechnungen-panel .rechnungen-meta { color: #fff; opacity: 1; }
+.rechnungen-panel .workshop-del { color: #fff; opacity: 1; }
+.rechnungen-panel .workshop-row.done .rechnungen-meta,
+.rechnungen-panel .workshop-row.done .workshop-del { color: #fff; }

@@ -375,3 +375,61 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* „Vorgang erstellen": bereits vorhandene offene Vorgänge zur gewählten
+   Adresse (js/processes-ui.js, zeigeVorhandeneVorgaenge). */
+.proc-vorhandene {
+    margin-bottom: 0.9rem;
+    padding: 10px 12px;
+    border-radius: var(--radius-md, 12px);
+    border: 1px solid rgba(59, 130, 246, 0.45);
+    background: rgba(59, 130, 246, 0.08);
+}
+.proc-vorhandene-kopf {
+    display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px;
+    margin-bottom: 6px;
+    color: #93c5fd; font-weight: 800; font-size: var(--fs-sm, 0.85rem);
+}
+.proc-vorhandene-hinweis { color: rgba(255, 255, 255, .55); font-weight: 600; font-size: var(--fs-xs, 0.75rem); }
+.proc-vorhandene-zeile {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0;
+    border-top: 1px solid rgba(255, 255, 255, .06);
+}
+.proc-vorhandene-punkt { flex: none; width: 9px; height: 9px; border-radius: 50%; }
+.proc-vorhandene-titel { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff; font-weight: 600; font-size: var(--fs-sm, 0.85rem); }
+.proc-vorhandene-meta { flex: none; color: rgba(255, 255, 255, .6); font-size: var(--fs-xs, 0.75rem); white-space: nowrap; }
+.proc-vorhandene-btn {
+    flex: none;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1.5px solid rgba(147, 197, 253, 0.85);
+    background: rgba(59, 130, 246, 0.85);
+    color: #fff; font: inherit; font-size: var(--fs-xs, 0.75rem); font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 0 14px rgba(59, 130, 246, 0.55);
+}
+.proc-vorhandene-btn:hover { background: #3b82f6; box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); }
+@media (max-width: 600px) {
+    .proc-vorhandene-zeile { flex-wrap: wrap; }
+    .proc-vorhandene-titel { flex-basis: 100%; white-space: normal; }
+}
+
+/* Adressbuch → Verlauf: „Vorgang öffnen" blau und leuchtend, damit man ihn
+   sofort findet (Knopf in js/addressbook.js, processBtnHtml). */
+.ab-vorgang-oeffnen {
+    padding: 5px 12px; margin-left: auto;
+    font-size: 0.78rem; font-weight: 800;
+    display: inline-flex; align-items: center; gap: 6px;
+    border-radius: 999px;
+    border: 1.5px solid rgba(147, 197, 253, 0.9);
+    background: rgba(59, 130, 246, 0.9);
+    color: #fff; cursor: pointer;
+    box-shadow: 0 0 16px rgba(59, 130, 246, 0.65);
+    animation: ab-vorgang-puls 2.4s ease-in-out infinite;
+}
+.ab-vorgang-oeffnen:hover { background: #3b82f6; animation: none; box-shadow: 0 0 22px rgba(59, 130, 246, 0.9); }
+@keyframes ab-vorgang-puls {
+    0%, 100% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.45); }
+    50%      { box-shadow: 0 0 22px rgba(59, 130, 246, 0.9); }
+}

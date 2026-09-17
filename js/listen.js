@@ -3293,19 +3293,22 @@
 
     // Springt aus der Maschinenhistorie zurück zur Angebote-Liste und filtert direkt auf den
     // jeweiligen Beleg (per Belegnummer), damit der Eintrag dort einfach wiedergefunden wird.
-    window.navigateToAngebot = function (angebotId) {
+    // belegnummer optional: greift, wenn die Liste noch nicht geladen ist (erster
+    // Aufruf aus einem Vorgang heraus) — dann wird gewartet, bis sie da ist.
+    window.navigateToAngebot = function (angebotId, belegnummer) {
         if (!angebotId) return;
-        const angebot = angeboteList.find(a => a.id === angebotId);
         if (typeof window.closeHistoryModal === 'function') window.closeHistoryModal();
         if (typeof window.switchView === 'function') window.switchView('listen');
         if (typeof window.switchListenTab === 'function') window.switchListenTab('angebote');
-        setTimeout(() => {
+        let versuche = 0;
+        const setzen = () => {
+            const angebot = angeboteList.find(a => String(a.id) === String(angebotId));
+            const nr = (angebot && angebot.belegnummer) || belegnummer || '';
+            if (!angebot && !nr && versuche++ < 30) { setTimeout(setzen, 100); return; }
             const searchInput = document.getElementById('angebote-search-input');
-            if (searchInput && angebot) {
-                searchInput.value = angebot.belegnummer;
-                window.renderAngeboteList();
-            }
-        }, 50);
+            if (searchInput && nr) { searchInput.value = nr; window.renderAngeboteList(); }
+        };
+        setTimeout(setzen, 50);
     };
 
     function escapeHtml(str) {

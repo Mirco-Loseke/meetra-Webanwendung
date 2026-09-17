@@ -95,6 +95,9 @@ window.fetchProcesses = async function() {
         if (error) throw error;
 
         const processes = data || [];
+        // „Wartet" gibt es seit 2026-09-16 nicht mehr — Altbestand zeigt sich als
+        // „In Arbeit" (Datenbank: supabase_migrate_status_wartet.sql).
+        processes.forEach(p => { if (p.status === 'wartet') p.status = 'in_bearbeitung'; });
 
         const linkedIds = [...new Set(processes.map(p => p.linked_service_report_id).filter(Boolean))];
         if (linkedIds.length > 0) {
@@ -181,6 +184,7 @@ window.applyProcessRealtime = async function (payload) {
         ({ data: row, error } = await window.supabaseClient
             .from('internal_processes').select(PROC_SELECT_OHNE_KUNDE).eq('id', id).maybeSingle());
     }
+    if (row && row.status === 'wartet') row.status = 'in_bearbeitung';
     if (error) return false;
     if (!row) { // inzwischen gelöscht
         const i = list.findIndex(p => String(p.id) === String(id));
@@ -250,15 +254,17 @@ window.buildProcessRemindersPanel = function(base) {
     (base || []).forEach(p => {
         if (p.status === 'erledigt') return;
         const pTitle = p.title || 'Unbenannter Vorgang';
+        // Adresse des Vorgangs (falls hinterlegt) steht mit in der Erinnerungszeile.
+        const pAddr = (p.customers && p.customers.name) || '';
         if (p.remind_at && (!onlyMine || processMine(p))) {
             const t = new Date(p.remind_at).getTime();
-            if (!isNaN(t)) items.push({ id: p.id, at: t, kind: 'Vorgang', title: pTitle, sub: '' });
+            if (!isNaN(t)) items.push({ id: p.id, at: t, kind: 'Vorgang', title: pTitle, sub: '', addr: pAddr });
         }
         (Array.isArray(p.steps) ? p.steps : []).forEach(s => {
             if (!s.remind_at || s.done) return;
             if (onlyMine && !stepMine(s)) return;
             const t = new Date(s.remind_at).getTime();
-            if (!isNaN(t)) items.push({ id: p.id, at: t, kind: 'Schritt', title: (s.text || 'Schritt'), sub: pTitle });
+            if (!isNaN(t)) items.push({ id: p.id, at: t, kind: 'Schritt', title: (s.text || 'Schritt'), sub: pTitle, addr: pAddr });
         });
     });
     // Panel bleibt sichtbar (mit Filter-Umschalter), sobald es überhaupt
@@ -290,6 +296,7 @@ window.buildProcessRemindersPanel = function(base) {
                 <span style="color:${rc}; opacity:0.85; font-size:0.66rem; font-weight:600; white-space:nowrap;">${rel}</span>
             </div>
             <div style="flex:1; min-width:0;">
+                ${i.addr ? `<div style="color:#a78bfa; font-weight:800; font-size:0.8rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(i.addr)}</div>` : ''}
                 <div style="color:#fff; font-weight:700; font-size:0.85rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(i.title)}</div>
                 <div style="color:rgba(255,255,255,0.5); font-size:0.72rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${i.kind}${i.sub ? ` · ${esc(i.sub)}` : ''}</div>
             </div>
@@ -394,7 +401,6 @@ window.renderProcesses = function(targetId, opts) {
     const counts = {
         offen: base.filter(p => p.status === 'offen').length,
         in_bearbeitung: base.filter(p => p.status === 'in_bearbeitung').length,
-        wartet: base.filter(p => p.status === 'wartet').length,
         erledigt: base.filter(p => p.status === 'erledigt').length,
         stale: base.filter(isStale).length
     };
@@ -411,10 +417,6 @@ window.renderProcesses = function(targetId, opts) {
             <div class="maint-kpi-tile${kpiActive('in_bearbeitung')}" onclick="window.toggleProcessKpiFilter('in_bearbeitung')" title="Nur Vorgänge in Bearbeitung anzeigen">
                 <div class="maint-kpi-value" style="color: #f59e0b;">${counts.in_bearbeitung}</div>
                 <div class="maint-kpi-label">In Arbeit</div>
-            </div>
-            <div class="maint-kpi-tile${kpiActive('wartet')}" onclick="window.toggleProcessKpiFilter('wartet')" title="Nur wartende Vorgänge anzeigen">
-                <div class="maint-kpi-value" style="color: #a78bfa;">${counts.wartet}</div>
-                <div class="maint-kpi-label">Wartet</div>
             </div>
             <div class="maint-kpi-tile${kpiActive('erledigt')}" onclick="window.toggleProcessKpiFilter('erledigt')" title="Nur erledigte Vorgänge anzeigen">
                 <div class="maint-kpi-value" style="color: #10b981;">${counts.erledigt}</div>
@@ -479,12 +481,11 @@ window.renderProcesses = function(targetId, opts) {
     }
 
     // Karten werden nur gebaut, wenn sie auch gezeigt werden: eingeklappte
-    // Gruppen (Erledigt/Wartet) kosten nichts, und von den offenen kommen
+    // Gruppen (Erledigt) kosten nichts, und von den offenen kommen
     // erst PROC_SEITE Stück — der Rest beim Scrollen (js/auto-nachladen.js).
     // Vorher wurde bei jedem Neuzeichnen das HTML ALLER Vorgänge erzeugt.
-    const offenListe = filtered.filter(p => p.status !== 'erledigt' && p.status !== 'wartet');
+    const offenListe = filtered.filter(p => p.status !== 'erledigt');
     const doneListe = filtered.filter(p => p.status === 'erledigt');
-    const waitingListe = filtered.filter(p => p.status === 'wartet');
     const PROC_SEITE = 30;
     const sichtKey = [targetId, searchQuery, statusFilter, sortMode, opts.compact ? 1 : 0, opts.onlyAssignedTo || ''].join('|');
     // Je Zielcontainer eigener Zähler (Kalender-Unteransicht und Vorgänge-Seite
@@ -511,9 +512,6 @@ window.renderProcesses = function(targetId, opts) {
         } else if (p.status === 'in_bearbeitung') {
             statusColor = '#f59e0b';
             statusBadge = `<span style="font-size: 0.86rem; padding: 6px 14px; border-radius: 8px; background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">In Arbeit</span>`;
-        } else if (p.status === 'wartet') {
-            statusColor = '#a78bfa';
-            statusBadge = `<span style="font-size: 0.86rem; padding: 6px 14px; border-radius: 8px; background: rgba(167, 139, 250, 0.15); color: #a78bfa; border: 1px solid rgba(167, 139, 250, 0.3); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Wartet</span>`;
         } else {
             statusColor = '#10b981';
             statusBadge = `<span style="font-size: 0.86rem; padding: 6px 14px; border-radius: 8px; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">Erledigt</span>`;
@@ -767,8 +765,9 @@ window.renderProcesses = function(targetId, opts) {
                             if (!mailText) return '';
                             return `
                         <div style="position:relative; display:inline-flex;" onmouseenter="window.procPopShow(this, '.proc-remark-pop')" onmouseleave="window.procPopHide(this, '.proc-remark-pop')">
-                            <button type="button" class="btn-icon-soft" title="E-Mail Inhalt" style="position: relative; background: rgba(167,139,250,0.3); color: #a78bfa; border: 1px solid rgba(167,139,250,0.9); box-shadow: 0 0 14px rgba(167,139,250,0.75); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(167,139,250,0.4)'" onmouseout="this.style.background='rgba(167,139,250,0.3)'">
+                            <button type="button" onclick="event.stopPropagation(); window.openProcessMailModal('${p.id}')" class="btn-icon-soft" title="E-Mail ansehen / bearbeiten" style="position: relative; background: rgba(167,139,250,0.3); color: #a78bfa; border: 1px solid rgba(167,139,250,0.9); box-shadow: 0 0 14px rgba(167,139,250,0.75); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(167,139,250,0.4)'" onmouseout="this.style.background='rgba(167,139,250,0.3)'">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+                                <span style="position: absolute; top: -6px; right: -6px; background: #a78bfa; color: #fff; font-size: 0.62rem; font-weight: 800; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #1e293b; box-shadow: 0 2px 8px rgba(167,139,250,0.7);">1</span>
                             </button>
                             <div class="proc-remark-pop" style="display:none; position:absolute; bottom:calc(100% + 8px); right:0; z-index:60; width:420px; max-width:85vw; max-height:320px; overflow-y:auto; background:rgba(15,23,42,0.98); border:1px solid rgba(167,139,250,0.3); border-radius:12px; padding:12px 14px; box-shadow:0 12px 40px rgba(0,0,0,0.6); color:#fff; font-size:0.85rem; line-height:1.5; white-space:pre-wrap; word-break:break-word; text-align:left;">
                                 ${escStep(mailText)}
@@ -796,9 +795,7 @@ window.renderProcesses = function(targetId, opts) {
     };
     const openCards = offenListe.slice(0, sichtbarN).map(bauKarte);
     const doneExpanded = !!window._procDoneExpanded || statusFilter === 'erledigt';
-    const waitExpanded = !!window._procWaitingExpanded || statusFilter === 'wartet';
     const doneCards = doneExpanded ? doneListe.map(bauKarte) : new Array(doneListe.length).fill('');
-    const waitingCards = waitExpanded ? waitingListe.map(bauKarte) : new Array(waitingListe.length).fill('');
 
     if (openCards.length) {
         html += `<div class="proc-cards-grid">${openCards.join('')}</div>`;
@@ -809,24 +806,10 @@ window.renderProcesses = function(targetId, opts) {
     }
 
 
-    // "Wartet" wie "Erledigt": eigene, standardmäßig eingeklappte Gruppe unten.
-    if (waitingCards.length) {
-        const wExpanded = !!window._procWaitingExpanded || statusFilter === 'wartet';
-        html += `
-            <div style="margin-top: ${openCards.length ? '1.25rem' : '0'};">
-                <div onclick="window.toggleProcWaitingGroup()" style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:0.7rem 1rem; background:rgba(167,139,250,0.08); border:1px solid rgba(167,139,250,0.25); border-radius:12px; user-select:none;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.25s; transform: rotate(${wExpanded ? '0' : '-90'}deg);"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    <span style="color:#a78bfa; font-weight:800; font-size:0.9rem; text-transform:uppercase; letter-spacing:0.5px;">Wartet</span>
-                    <span style="background:rgba(167,139,250,0.2); color:#a78bfa; font-size:0.72rem; font-weight:800; min-width:20px; height:20px; padding:0 6px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center;">${waitingCards.length}</span>
-                </div>
-                <div class="proc-cards-grid" style="margin-top:0.75rem; display:${wExpanded ? '' : 'none'};">${waitingCards.join('')}</div>
-            </div>`;
-    }
-
     if (doneCards.length) {
         const expanded = !!window._procDoneExpanded || statusFilter === 'erledigt';
         html += `
-            <div style="margin-top: ${(openCards.length || waitingCards.length) ? '1.25rem' : '0'};">
+            <div style="margin-top: ${openCards.length ? '1.25rem' : '0'};">
                 <div onclick="window.toggleProcDoneGroup()" style="display:flex; align-items:center; gap:10px; cursor:pointer; padding:0.7rem 1rem; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); border-radius:12px; user-select:none;">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.25s; transform: rotate(${expanded ? '0' : '-90'}deg);"><polyline points="6 9 12 15 18 9"></polyline></svg>
                     <span style="color:#10b981; font-weight:800; font-size:0.9rem; text-transform:uppercase; letter-spacing:0.5px;">Erledigt</span>
@@ -873,7 +856,6 @@ window.toggleProcessStatusMenu = function(event, id) {
     const opts = [
         ['offen', 'Offen', '#ef4444'],
         ['in_bearbeitung', 'In Arbeit', '#f59e0b'],
-        ['wartet', 'Wartet', '#a78bfa'],
         ['erledigt', 'Erledigt', '#10b981']
     ];
     const menu = document.createElement('div');

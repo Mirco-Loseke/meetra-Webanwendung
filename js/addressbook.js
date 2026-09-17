@@ -2486,6 +2486,7 @@
                     title: titel,
                     content: teile.join('\n'),
                     statusLabel: (PROC_STATUS[p.status] || {}).label || '',
+                    statusColor: (PROC_STATUS[p.status] || {}).color || null,
                     processId: p.id,
                     angebotId: ang ? ang.id : null,
                     dokumente: (Array.isArray(p.attachments) ? p.attachments : []).filter(f => f && !f.step_id),
@@ -2677,7 +2678,7 @@
 
             // Vorgang: Stand und ein Knopf, der ihn direkt öffnet.
             const statusHtml = mh.statusLabel
-                ? `<span class="ab-pill" style="border-color:${config.color}55; color:${config.color}; opacity:0.85;">${esc(mh.statusLabel)}</span>`
+                ? `<span class="ab-pill" style="border-color:${mh.statusColor || config.color}66; color:${mh.statusColor || config.color}; background:${mh.statusColor || config.color}1a;">${esc(mh.statusLabel)}</span>`
                 : '';
             // Dokumente des Vorgangs (z. B. die Angebots-PDF): öffnen,
             // herunterladen, per Mail — dieselben Dateien wie im Vorgang und in
@@ -2698,10 +2699,9 @@
                 </div>` : '';
 
             const processBtnHtml = ((mh.type === 'process' || mh.type === 'angebot') && mh.processId)
-                ? `<button onclick="event.stopPropagation(); window.openEditProcessModal && window.openEditProcessModal('${esc(mh.processId)}')"
-                            title="Vorgang öffnen"
-                            style="padding: 4px 10px; font-size: 0.78rem; font-weight: 700; background: rgba(129,140,248,0.2); color: #a5b4fc; border: 1px solid rgba(129,140,248,0.45); border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; margin-left: auto;">
-                        Vorgang öffnen
+                ? `<button class="ab-vorgang-oeffnen" onclick="event.stopPropagation(); window.openEditProcessModal && window.openEditProcessModal('${esc(mh.processId)}')"
+                            title="Vorgang öffnen">
+                        ${ic('edit', 13)} Vorgang bearbeiten
                     </button>`
                 : '';
 
@@ -2750,10 +2750,14 @@
 
     // ---------- Vorgänge ----------
     // Status-Wortlaut wie im Vorgänge-Modul (internal_processes.status)
+    // Farben wie auf der Vorgänge-Seite (js/processes-ui.js, PROCESS_STATUS_INFO):
+    // Offen rot, In Bearbeitung gelb, Erledigt grün. „Wartet" gibt es seit
+    // 2026-09-16 nicht mehr — Altbestand ist auf in_bearbeitung umgestellt.
     const PROC_STATUS = {
-        offen: { label: 'Offen', cls: '' },
-        in_bearbeitung: { label: 'In Bearbeitung', cls: 'ab-pill-warn' },
-        erledigt: { label: 'Erledigt', cls: 'ab-pill-success' }
+        offen: { label: 'Offen', cls: '', color: '#ef4444' },
+        in_bearbeitung: { label: 'In Bearbeitung', cls: 'ab-pill-warn', color: '#f59e0b' },
+        wartet: { label: 'In Bearbeitung', cls: 'ab-pill-warn', color: '#f59e0b' },
+        erledigt: { label: 'Erledigt', cls: 'ab-pill-success', color: '#10b981' }
     };
 
     function renderTasksTab() {
@@ -2855,7 +2859,7 @@
                     <div class="ab-sub-card-title">
                         <div class="ab-sub-name">
                             <span>${esc(ang ? ('Angebot ' + (ang.belegnummer || '')) : (p.title || 'Unbenannter Vorgang'))}</span>
-                            <span class="ab-pill ${st.cls}">${esc(st.label)}</span>
+                            <span class="ab-pill ${st.cls}" style="border-color:${st.color}66; color:${st.color}; background:${st.color}1a;">${esc(st.label)}</span>
                         </div>
                         <div class="ab-muted ab-small" style="margin-top:4px;">
                             ${esc(typeLabel)}${p.process_date ? ` · ${formatDate(p.process_date)}` : ''}

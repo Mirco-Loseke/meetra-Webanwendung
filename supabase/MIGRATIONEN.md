@@ -37,6 +37,7 @@ lassen als eine Migration auszulassen.
 |---|---|
 | `supabase_add_machine_coords.sql` | Koordinaten-Cache je Maschine (Routenplaner Umkreissuche) |
 | `supabase_add_service_location_snapshot.sql` | Standort **pro Servicebericht** (`location_snapshot`), überschreibt den Maschinen-Stammsatz nicht mehr |
+| `supabase_add_service_signed_flag.sql` | Generierte Spalten `customer_signed`/`tech_signed` — die Berichte-Liste zeigt „Unterschrieben", ohne das Unterschriftsbild zu laden |
 
 > Das **UVV- & Wartungsprotokoll** (`js/uvv-protokoll.js`) braucht **keine**
 > eigene Migration: es liegt als normale Zeile in `service_entries`
@@ -79,6 +80,7 @@ lassen als eine Migration auszulassen.
 | `supabase_add_processes_realtime.sql` | Live-Aktualisierung der Vorgänge |
 | `supabase_fix_process_user.sql` | Ersteller an Vorgängen/Ereignissen als `bigint` statt `uuid` |
 | `supabase_add_assignment_responses.sql` | Zuweisungen quittieren („Vorgang erhalten") |
+| `supabase_migrate_status_wartet.sql` | Status „Wartet" abgeschafft — setzt Altbestand auf `in_bearbeitung` |
 | ~~`supabase_add_process_status_log.sql`~~ | **Veraltet** — Status-Verlauf wurde am 23.07.2026 durch die Schritte ersetzt |
 
 ## Kalender & Termine

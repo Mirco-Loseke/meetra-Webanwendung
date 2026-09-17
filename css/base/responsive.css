@@ -2577,3 +2577,12 @@ details.category-group-details[open] .group-chevron {
         flex-wrap: wrap;
     }
 }
+
+/* Handy: Sortier-Leiste der Vorgänge und Reiter der Buchhaltung ragten
+   um einige Pixel über den Rand (waagerechter Versatz um 17 px bzw. 8 px).
+   Beschriftung in eine eigene Zeile, Reiter dürfen umbrechen. */
+@media (max-width: 768px) {
+    #processes .proc-sort-label { flex-basis: 100%; }
+    #accounting .calendar-view-tabs { flex-wrap: wrap !important; max-width: 100%; }
+    #accounting .calendar-view-tabs > * { flex: 1 1 auto; min-width: 0; }
+}

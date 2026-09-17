@@ -2188,7 +2188,9 @@
                         title: r.title, date: r.date, datum_von: r.datum_von, datum_bis: r.datum_bis,
                         hours: r.hours, technicians: r.technicians, pdf_url: r.pdf_url, pdf_path: r.pdf_path,
                         files: r.files, is_finalized: r.is_finalized, finalized_at: r.finalized_at,
-                        workshop_order_number: r.workshop_order_number, previous_report_id: r.previous_report_id
+                        workshop_order_number: r.workshop_order_number, previous_report_id: r.previous_report_id,
+                        // Realtime bringt die generierte Spalte nicht immer mit — dann aus dem Bild ableiten.
+                        customer_signed: r.customer_signed != null ? r.customer_signed : !!(r.customer_signature && r.customer_signature !== '')
                     };
                     const idx = allServiceEntries.findIndex(e => e.id === slim.id);
                     if (idx !== -1) allServiceEntries[idx] = slim; else allServiceEntries.push(slim);

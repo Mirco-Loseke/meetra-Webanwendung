@@ -144,7 +144,7 @@
     <link rel="stylesheet" href="css/base/reset.css?v=2">
     <link rel="stylesheet" href="css/base/brand-accents.css?v=1">
     <link rel="stylesheet" href="css/components/navigation.css?v=1">
-    <link rel="stylesheet" href="css/components/modals.css?v=5">
+    <link rel="stylesheet" href="css/components/modals.css?v=6">
     <link rel="stylesheet" href="css/components/process-attachments.css?v=1">
     <link rel="stylesheet" href="css/components/buttons.css?v=1">
     <link rel="stylesheet" href="css/components/forms.css?v=5">
@@ -163,19 +163,19 @@
     <link rel="stylesheet" href="css/views/tasks.css?v=4">
     <link rel="stylesheet" href="css/views/service-reports.css?v=4">
     <link rel="stylesheet" href="css/views/machines.css?v=1">
-    <link rel="stylesheet" href="css/views/timeline.css?v=44">
+    <link rel="stylesheet" href="css/views/timeline.css?v=45">
     <link rel="stylesheet" href="css/views/procurement.css?v=1">
     <link rel="stylesheet" href="css/views/settings.css?v=2">
     <link rel="stylesheet" href="css/views/accounting.css?v=1">
     <link rel="stylesheet" href="css/views/workshop.css?v=1">
     <link rel="stylesheet" href="css/views/workshop-tasks.css?v=4">
-    <link rel="stylesheet" href="css/views/rechnungsliste.css?v=2">
+    <link rel="stylesheet" href="css/views/rechnungsliste.css?v=3">
     <link rel="stylesheet" href="css/views/tasks-print.css?v=3">
     <link rel="stylesheet" href="css/views/dashboard.css?v=1">
     <link rel="stylesheet" href="css/views/listen.css?v=3">
     <link rel="stylesheet" href="css/views/addressbook.css?v=13">
     <link rel="stylesheet" href="css/views/routenplanung.css?v=5">
-    <link rel="stylesheet" href="css/base/responsive.css?v=17">
+    <link rel="stylesheet" href="css/base/responsive.css?v=18">
 
     <!-- ========================================================= -->
     <!-- ============ EINBINDUNG DER HTML-BAUSTEINE ============== -->
@@ -1793,7 +1793,7 @@
                                 <button id="tlv-heute">Heute</button>
                                 <button id="tlv-next" title="Zeitraum nach rechts schieben" aria-label="nach rechts">&rsaquo;</button>
                             </div>
-                            <span class="tlv-range" id="tlv-range"></span>
+                            <span class="tlv-range" id="tlv-range" title="Zeitraum ändern: Strg + Mausrad über der Bühne (je Schritt eine Woche, der Tag unter dem Zeiger bleibt stehen) — oder − / + rechts"></span>
                             <span class="tlv-hinweisleiste" id="tlv-hinweisleiste" title="Verschieben bleibt in der Anzeige — zum Schreiben unter „Ansicht“ das Speichern einschalten.">Nur ansehen</span>
                         </div>
 
@@ -4203,7 +4203,7 @@
     <script src="js/app-core.js?v=6"></script>
     <script src="js/lookup-cache.js?v=1"></script>
     <script src="js/photo-dedupe.js?v=3"></script>
-    <script src="js/app-init.js?v=20"></script>
+    <script src="js/app-init.js?v=21"></script>
     <script src="js/settings-uvv-plans.js?v=1"></script>
     <script src="js/machine-details-modal.js?v=3"></script>
     <script src="js/machine-modal.js?v=6"></script>
@@ -4211,7 +4211,7 @@
     <script src="js/service-list.js?v=3"></script>
     <script src="js/history-modal.js?v=206"></script>
     <script src="js/calendar-events.js?v=5"></script>
-    <script src="js/processes-ui.js?v=36"></script>
+    <script src="js/processes-ui.js?v=42"></script>
     <!-- Dokumente an Vorgaengen/Schritten. Nutzt window.FileUploadService
          (js/file-upload-service-r2.js, weiter UNTEN geladen) — das ist in
          Ordnung, weil der Dienst erst beim Hochladen angefasst wird. -->
@@ -4220,9 +4220,9 @@
     <script src="js/process-machine-select.js?v=2"></script>
     <script src="js/customer-matching.js?v=2"></script>
     <script src="js/ui-modals.js?v=2"></script>
-    <script src="js/processes.js?v=133"></script>
+    <script src="js/processes.js?v=136"></script>
     <script src="js/service-reports.js?v=2"></script>
-    <script src="js/service-entries.js?v=13"></script>
+    <script src="js/service-entries.js?v=14"></script>
     <script src="js/service-picker.js?v=1"></script>
     <script src="js/worklog-tables.js?v=3"></script>
     <script src="js/signature-pads.js?v=1"></script>
@@ -4578,18 +4578,6 @@
                                     <input type="text" id="service-hotel-country" class="glass-form-input" placeholder="Deutschland">
                                 </div>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Verknuepfter Bericht (Folgebericht-Kette) -->
-                    <div class="form-section" id="service-link-section" style="margin-top: 1.5rem;">
-                        <span style="font-size:0.72rem; font-weight:700; color:rgba(255,255,255,0.5); text-transform:uppercase; letter-spacing:0.5px; display:block; margin-bottom:0.5rem;">Verknüpfter Bericht</span>
-                        <div id="service-link-display" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;"></div>
-                        <div id="service-link-search-wrapper" class="hidden" style="margin-top:0.5rem; position:relative;">
-                            <input type="text" id="service-link-search-input" class="glass-form-input"
-                                placeholder="Bericht suchen (Maschine, Maschinennummer, Datum, Titel)..."
-                                oninput="window.filterServiceLinkDropdown(this.value)"
-                                onfocus="window.filterServiceLinkDropdown(this.value)">
                         </div>
                     </div>
 
@@ -6850,12 +6838,12 @@
     <script src="js/autosave.js?v=1"></script>
     <script src="js/unsaved-guard.js?v=1"></script>
     <script src="js/address-history.js?v=2"></script>
-    <script src="js/addressbook.js?v=65"></script>
+    <script src="js/addressbook.js?v=67"></script>
     <script src="js/addressbook-live.js?v=4"></script>
     <script src="js/process-autosave.js?v=3"></script>
     <script src="js/task-autosave.js?v=3"></script>
     <script src="js/task-drafts.js?v=1"></script>
-    <script src="js/process-open-hints.js?v=3"></script>
+    <script src="js/process-open-hints.js?v=4"></script>
     <script src="js/ai-address-task.js?v=12"></script>
     <!-- Termine mit Teilnehmern: liefert die Bausteine, die Benachrichtigungen,
          Kalender und Routenplanung darunter benutzen. -->
@@ -6873,7 +6861,7 @@
          laufen — mit doppelt registrierten Event-Handlern. -->
     <script src="js/routeplanner.js?v=2"></script>
     <script src="js/routenplanung.js?v=19"></script>
-    <script src="js/listen.js?v=51"></script>
+    <script src="js/listen.js?v=52"></script>
 
     <script src="js/labels.js?v=2"></script>
     <script src="js/offline-service.js?v=1"></script>
@@ -7216,7 +7204,6 @@
                                 <select id="process-add-status-select" style="display:none;">
                                     <option value="offen">Offen</option>
                                     <option value="in_bearbeitung">In Bearbeitung</option>
-                                    <option value="wartet">Wartet</option>
                                     <option value="erledigt">Erledigt</option>
                                 </select>
                                 <div id="process-add-status-select-trigger" class="glass-select" style="cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="window.toggleProcessSelectDropdown('process-add','status')">
@@ -7227,6 +7214,21 @@
                             </div>
                         </div>
                     </div>
+
+                <!-- Bereits vorhandene Vorgänge zur gewählten Adresse (js/processes-ui.js,
+                     zeigeVorhandeneVorgaenge) — lieber weiterbearbeiten als doppelt anlegen. -->
+                <!-- Angebot gleich beim Anlegen anhängen (js/processes-ui.js, procAngebotSucheAdd):
+                     Belegnummer oder Firma tippen, Treffer wählen — verknüpft wird nach dem Speichern. -->
+                <div class="form-group" style="margin-bottom: 0.9rem; position: relative;">
+                    <label class="form-label-caps">Angebot (Belegnummer) <span style="font-weight:600; text-transform:none; letter-spacing:0; color:rgba(255,255,255,0.45);">optional</span></label>
+                    <input type="hidden" id="process-add-angebot-id" value="">
+                    <input type="text" class="glass-input" id="process-add-angebot-suche" placeholder="Belegnummer oder Firma …" autocomplete="off"
+                           oninput="window.procAngebotSucheAdd(this.value)" onfocus="window.procAngebotSucheAdd(this.value)"
+                           onblur="setTimeout(() => { const d = document.getElementById('process-add-angebot-treffer'); if (d) d.style.display = 'none'; }, 200)">
+                    <div id="process-add-angebot-treffer" class="autocomplete-suggestions" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:9999; max-height:220px; overflow-y:auto; margin-top:4px;"></div>
+                </div>
+
+                <div id="process-add-vorhandene" class="proc-vorhandene" style="display:none;"></div>
 
                     <div class="form-group" id="process-add-address-group" style="margin-bottom: 0.75rem;">
                         <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px;">
@@ -7504,7 +7506,6 @@
                                 <select id="edit-process-status-select" style="display:none;">
                                     <option value="offen">Offen</option>
                                     <option value="in_bearbeitung">In Bearbeitung</option>
-                                    <option value="wartet">Wartet</option>
                                     <option value="erledigt">Erledigt</option>
                                 </select>
                                 <div id="edit-process-status-select-trigger" class="glass-select" style="cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="window.toggleProcessSelectDropdown('edit-process','status')">
@@ -7789,7 +7790,7 @@
 <script src="js/auth.js?v=1"></script>
 <script src="js/users.js?v=3"></script>
 <script src="js/machines-grouped.js?v=1"></script>
-<script src="js/timeline-view.js?v=75"></script>
+<script src="js/timeline-view.js?v=76"></script>
 <script src="js/voice-dictation.js?v=2"></script>
 </body>
 

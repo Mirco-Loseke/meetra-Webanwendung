@@ -14,8 +14,7 @@
 
     const STATUS_META = {
         offen: { label: 'Offen', color: '#38bdf8' },
-        in_bearbeitung: { label: 'In Bearbeitung', color: '#fbbf24' },
-        wartet: { label: 'Wartet', color: '#c084fc' }
+        in_bearbeitung: { label: 'In Bearbeitung', color: '#fbbf24' }
     };
 
     // Fenster je Vorsilbe: welche Vorsilbe gehört zu welchem Modal.

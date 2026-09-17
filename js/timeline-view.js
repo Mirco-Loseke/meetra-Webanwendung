@@ -1087,7 +1087,7 @@
            (laengere Vermietung, Aufgabe mit spaeterem Ende …), wird das
            Fenster automatisch verbreitert — ohne dass oben am Filter
            gedreht werden muss, siehe weiterRechts(). */
-        (function () {
+        if (!S.zoomFest) (function () {
             var vonK0 = key(start), bisK0 = key(ende), maxBis = bisK0;
             sichtbar().forEach(function (i) {
                 if (i.ohneDatum) return;
@@ -1187,6 +1187,9 @@
             ? '<div class="tlv-now" style="left:calc(var(--tlv-day-w)*'
               + (nowPos + (S.raster === 'woche' ? 0 : 0.5)) + ')"></div>' : '';
 
+        // Rad/Pfeile auch im Leerzustand binden — sonst liesse sich aus einer
+        // leeren Ansicht nicht herauszoomen oder blaettern.
+        buehneNavBinden(buehne);
         var zeilen = zeilenBauen(list, key(start), key(ende));
         if (!zeilen.length) {
             buehne.innerHTML = '<div class="tlv-leer">In diesem Zeitraum steht nichts an. '
@@ -1489,49 +1492,55 @@
         }
     }
 
-    /* Zoom mit dem Mausrad: der Zeitraum wird enger (Rad nach vorn) oder
-       weiter (Rad zurueck) — der Tag unter dem Zeiger bleibt dabei an
-       seiner Stelle, man zoomt also genau dorthin, wo man hinschaut.
-       Technisch aendert sich nur die Zahl der Spalten (S.spalten); die
-       Spaltenbreite passt breiteVerteilen() danach wieder an die Buehne an.
-       Die neue Weite wird zur Grundeinstellung (basisSpalten), damit ‹ ›
-       genau in dieser Ansicht weiterblaettern. */
+    /* Zoom: Strg + Mausrad (Mac: ⌘ + Rad) ueber der Buehne. Das blosse Rad
+       rollt die Seite wie ueberall — es zoomt NICHT mehr (das kam beim
+       normalen Rollen ungewollt dazwischen).
+       Jeder Rad-Schritt macht das Fenster um eine Woche enger oder weiter
+       (Wochenraster: vier Wochen). Der Tag unter dem Zeiger bleibt dabei an
+       Ort und Stelle: 21 Tage sind 21 Tage um genau diesen Tag herum, statt
+       dass die Ansicht beim Zoomen Monate davonlaeuft.
+       Nach einem Zoom ist die Breite „festgesetzt“ (S.zoomFest): die
+       automatische Verbreiterung in zeichne() (Balken ragt ueber das Ende
+       hinaus) bleibt dann aus — sonst waere eine 3-Wochen-Ansicht nie zu
+       halten, sobald irgendeine Vermietung laenger laeuft. Die Auswahl im
+       Zeitraum-Menue oben oder „Heute“ hebt das wieder auf. */
     var ZOOM_MIN = { tag: 7, woche: 4 };
     var wheelSammler = 0;
     function zoomen(e) {
         var buehne = document.getElementById('tlv-buehne');
         var wurzel = document.getElementById('timeline');
         if (!buehne || !wurzel || !S.geladen) return false;
-        // Mehrere feine Rad-Schritte (Trackpad) zu einem Schritt buendeln.
+        // Feine Trackpad-Schritte zu einem Schritt buendeln; ein Mausrad-Klick
+        // (deltaY um 100) ist genau ein Schritt.
         wheelSammler += e.deltaY;
-        if (Math.abs(wheelSammler) < 20) return true;
-        var richtung = wheelSammler > 0 ? 1 : -1;
+        if (Math.abs(wheelSammler) < 40) return true;
+        var richtung = wheelSammler > 0 ? 1 : -1;   // Rad zurueck (positiv) = weiter weg
         wheelSammler = 0;
 
         var sw = schritt(), start = fensterStart();
         var cs = getComputedStyle(wurzel);
         var label = parseFloat(cs.getPropertyValue('--tlv-label-w')) || 240;
         var rect = buehne.getBoundingClientRect();
+        var breite = dayW();
         var x = e.clientX - rect.left - label + buehne.scrollLeft;
-        var gesamt = dayW() * S.spalten;
-        var anteil = Math.min(1, Math.max(0, gesamt > 0 ? x / gesamt : 0.5));
+        var gesamt = breite * S.spalten;
+        var anteil = gesamt > 0 ? Math.min(1, Math.max(0, x / gesamt)) : 0.5;
+        // Der Tag unter dem Zeiger (Spalte, nicht gerundeter Anteil)
+        var spalte = Math.min(S.spalten - 1, Math.max(0, Math.floor(x / breite)));
         var tagUnterMaus = new Date(start);
-        tagUnterMaus.setDate(tagUnterMaus.getDate() + Math.round(anteil * S.spalten * sw));
+        tagUnterMaus.setDate(tagUnterMaus.getDate() + spalte * sw);
 
         var deckel = SPALTEN_DECKEL[S.raster] || 180;
         var minSp = ZOOM_MIN[S.raster] || 7;
-        var faktor = richtung > 0 ? 1.25 : 0.8;
-        var neu = Math.round(S.spalten * faktor);
-        if (richtung > 0 && neu <= S.spalten) neu = S.spalten + 1;
-        if (richtung < 0 && neu >= S.spalten) neu = S.spalten - 1;
-        neu = Math.max(minSp, Math.min(deckel, neu));
+        var schrittSp = S.raster === 'woche' ? 4 : 7;
+        var neu = Math.max(minSp, Math.min(deckel, S.spalten + richtung * schrittSp));
         if (neu === S.spalten) return true;
 
-        // Neuer Fensteranfang so, dass der Tag unter der Maus am selben
-        // Anteil der Breite liegt. fensterStart() = anker - 7 Tage (Tag)
-        // bzw. montag(anker) - 14 Tage (Woche) — entsprechend rueckrechnen.
+        // Neuer Fensteranfang: der Tag unter der Maus bleibt am selben Anteil
+        // der Breite. fensterStart() = anker − 7 Tage (Tag) bzw.
+        // montag(anker) − 14 Tage (Woche) — entsprechend zurueckrechnen.
         var neuStart = new Date(tagUnterMaus);
-        neuStart.setDate(neuStart.getDate() - Math.round(anteil * neu * sw));
+        neuStart.setDate(neuStart.getDate() - Math.round(anteil * (neu - 1)) * sw);
         if (S.raster === 'woche') {
             neuStart = montag(neuStart);
             neuStart.setDate(neuStart.getDate() + 14);
@@ -1540,9 +1549,29 @@
         }
         S.anker = neuStart;
         S.spalten = S.basisSpalten = neu;
+        S.zoomFest = true;
         zeichne();
         buehne.scrollLeft = 0;
+        zoomHinweis(neu * sw);
         return true;
+    }
+
+    // Kurze Einblendung „21 Tage“ beim Zoomen, damit man weiss, wo man steht.
+    var zoomHinweisTimer = 0;
+    function zoomHinweis(tage) {
+        var wurzel = document.getElementById('timeline');
+        if (!wurzel) return;
+        var el = document.getElementById('tlv-zoom-hinweis');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'tlv-zoom-hinweis';
+            el.className = 'tlv-zoom-hinweis';
+            wurzel.appendChild(el);
+        }
+        el.textContent = tage % 7 === 0 ? (tage / 7 === 1 ? '1 Woche' : (tage / 7) + ' Wochen') : tage + ' Tage';
+        el.classList.add('an');
+        clearTimeout(zoomHinweisTimer);
+        zoomHinweisTimer = setTimeout(function () { el.classList.remove('an'); }, 900);
     }
 
     function buehneNavBinden(buehne) {
@@ -1560,9 +1589,8 @@
                     e.preventDefault();
                     return;
                 }
-                // Mausrad ueber der Buehne = Zoom (Rad vor: naeher, zurueck:
-                // weiter weg). Senkrecht rollen geht daneben weiter.
-                if (e.deltaY && zoomen(e)) e.preventDefault();
+                // Strg (Mac: ⌘) + Rad = Zoom. Ohne Taste rollt die Seite normal.
+                if ((e.ctrlKey || e.metaKey) && e.deltaY && zoomen(e)) e.preventDefault();
             }, { passive: false });
             document.addEventListener('keydown', function (e) {
                 var tl = document.getElementById('timeline');
@@ -2816,7 +2844,7 @@
     }
     /* Zurueck zu heute: Anker auf heute, gewaehlte Breite, Buehne nach links. */
     function zumHeute() {
-        S.anker = heuteDatum(); S.spalten = S.basisSpalten; zeichne();
+        S.anker = heuteDatum(); S.spalten = S.basisSpalten; S.zoomFest = false; zeichne();
         var buehne = document.getElementById('tlv-buehne');
         if (buehne) buehne.scrollLeft = 0;
     }
@@ -2969,6 +2997,7 @@
             if (v === '__akt') return;
             S.raster = v.charAt(0) === 'w' ? 'woche' : 'tag';
             S.spalten = S.basisSpalten = parseInt(v.slice(1), 10);
+            S.zoomFest = false;
             zeichne();   // die Spaltenbreite ergibt sich aus der Buehne
         });
         an('tlv-leer', 'change', function (e) { S.leereZeilen = e.target.checked; zeichne(); });

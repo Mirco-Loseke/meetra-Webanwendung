@@ -235,7 +235,7 @@ formfüllenden Feldern zusätzlich `.menu-block`. Ausgewählter Eintrag: `.selec
 einem Inline-`style` suchen.
 
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v547 (Stand 2026-09-16) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v557 (Stand 2026-09-17) — bei jeder Änderung hochzählen.
 
 **Mietvereinbarung (Stand 2026-08-25).** Der Bogen wird gespeichert: PDF per
 html2canvas je `.miet-page` + jsPDF, Ablage in R2 unter
@@ -318,6 +318,8 @@ Rücknahme, damit der Zählerstand der Maschine weiterläuft). Pflege:
 `historieAbgleichen()` in `js/mietvereinbarung.js`, eindeutig über
 `rental_agreement_id` + `rental_phase`. **Migration
 `supabase/supabase_add_rental_history.sql` MUSS laufen.**
+
+**Timeline-Zoom (2026-09-16):** nur **Strg/⌘ + Mausrad** über der Bühne, je Schritt ±1 Woche (Wochenraster ±4), Tag unter dem Zeiger bleibt stehen; `S.zoomFest` schaltet die Auto-Verbreiterung in `zeichne()` ab, Zeitraum-Menü und „Heute" heben es auf.
 
 **Timeline-Pfeile (2026-09-16):** `pagerSetzen()` richtet sie an der Mitte des
 *sichtbaren* Teils der Bühne aus und führt beim Rollen nach. Balken aufziehen

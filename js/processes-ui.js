@@ -80,7 +80,6 @@
                 if (status === 'all') labelEl.textContent = 'Status: Alle';
                 else if (status === 'offen') labelEl.textContent = 'Status: Offen';
                 else if (status === 'in_bearbeitung') labelEl.textContent = 'Status: In Bearbeitung';
-                else if (status === 'wartet') labelEl.textContent = 'Status: Wartet';
                 else if (status === 'erledigt') labelEl.textContent = 'Status: Erledigt';
                 else if (status === 'stale') labelEl.textContent = 'Länger als 7 Tage offen';
             }
@@ -351,6 +350,7 @@
             const remindEl = document.getElementById('process-add-remind-input');
             if (remindEl) remindEl.value = '';
 
+            if (typeof window.procAngebotFuerAddWaehlen === 'function') window.procAngebotFuerAddWaehlen('', '', '');
             // Adress- vs. Maschinen-Modus
             window.processPendingAddress = (opts && opts.customerId)
                 ? { id: opts.customerId, name: opts.customerName || 'Adresse', contact: opts.contactName || '' }
@@ -372,6 +372,8 @@
                 if (machineGroup) machineGroup.style.display = '';
                 if (addrGroup) addrGroup.style.display = '';
             }
+            // Vorhandene Vorgänge zur Adresse zeigen (bei Aufruf aus dem Adressbuch sofort)
+            window.zeigeVorhandeneVorgaenge(window.processPendingAddress ? window.processPendingAddress.id : null);
         };
 
         window.closeProcessAddModal = function() {
@@ -489,7 +491,14 @@
 
                 const savedAddressId = addr ? addr.id : null;
                 window.closeProcessAddModal();
-                window.fetchProcesses();
+                // Beim Anlegen gewähltes Angebot jetzt an den neuen Vorgang hängen —
+                // dafür muss der Vorgang in der geladenen Liste stehen.
+                const angebotId = document.getElementById('process-add-angebot-id')?.value || '';
+                await window.fetchProcesses();
+                if (angebotId && newProcessId && typeof window.procAngebotVerknuepfen === 'function') {
+                    try { await window.procAngebotVerknuepfen(angebotId, newProcessId); }
+                    catch (e) { console.warn('Angebot nicht verknüpft:', e); window.showToast('Vorgang gespeichert, Angebot konnte nicht verknüpft werden.'); }
+                }
 
                 // Zurück ins Adressbuch, wenn der Vorgang von dort angelegt wurde.
                 if (savedAddressId && typeof window.openAddressbookDetail === 'function') {
@@ -740,7 +749,6 @@
         window.PROCESS_STATUS_INFO = {
             offen: { label: 'Offen', color: '#ef4444' },
             in_bearbeitung: { label: 'In Bearbeitung', color: '#f59e0b' },
-            wartet: { label: 'Wartet', color: '#a78bfa' },
             erledigt: { label: 'Erledigt', color: '#10b981' }
         };
 
@@ -1180,7 +1188,8 @@
                 <div class="proc-angebot-block" onclick="event.stopPropagation()"
                      style="margin-bottom:8px; padding:9px 11px; border-radius:10px; background:rgba(250,204,21,0.07); border:1px solid rgba(250,204,21,0.3);">
                     <div style="display:flex; align-items:center; gap:8px; margin-bottom:7px;">
-                        <span style="font-size:0.7rem; font-weight:800; color:#facc15; text-transform:uppercase; letter-spacing:0.5px;">Angebot ${angEsc(a.belegnummer || '')}</span>
+                        <a href="#" onclick="event.preventDefault(); event.stopPropagation(); window.vorgangZumAngebotSpringen('${a.id}', '${angEsc(a.belegnummer || '')}')" title="Angebot in der Angebotsliste öffnen"
+                           style="font-size:0.72rem; font-weight:800; color:#facc15; text-transform:uppercase; letter-spacing:0.5px; text-decoration:underline; text-underline-offset:3px;">Angebot ${angEsc(a.belegnummer || '')} ↗</a>
                         ${datum ? `<span style="font-size:0.72rem; color:rgba(255,255,255,0.45);">vom ${datum}</span>` : ''}
                         ${modus === 'card' ? `<span onclick="window.switchView('listen'); window.switchListenTab && window.switchListenTab('angebote');" title="Zur Angebotsliste" style="margin-left:auto; font-size:0.72rem; color:#facc15; cursor:pointer; text-decoration:underline;">Liste</span>` : ''}
                     </div>
@@ -1197,6 +1206,15 @@
                         ${spanne !== null ? feld('Spanne', `<div style="height:32px; display:flex; align-items:center; justify-content:flex-end; font-weight:800; font-size:0.9rem; color:${spannePct !== null && spannePct < 10 ? '#F87171' : '#22c55e'};">${angZahl(spanne)} €${spannePct !== null ? ` <span style="font-size:0.72rem; margin-left:5px; opacity:0.8;">${spannePct.toLocaleString('de-DE', { maximumFractionDigits: 1 })} %</span>` : ''}</div>`) : ''}
                     </div>
                 </div>`;
+        };
+
+        // Vom Vorgang zum Angebot: Fenster zu, Angebotsliste auf, nach der
+        // Belegnummer gefiltert (navigateToAngebot in js/listen.js).
+        window.vorgangZumAngebotSpringen = function (angebotId, belegnummer) {
+            const modal = document.getElementById('process-edit-modal');
+            if (modal && !modal.classList.contains('hidden') && typeof window.closeEditProcessModal === 'function') window.closeEditProcessModal();
+            if (typeof window.navigateToAngebot === 'function') window.navigateToAngebot(angebotId, belegnummer);
+            else { window.switchView('listen'); window.switchListenTab && window.switchListenTab('angebote'); }
         };
 
         // Angebot suchen und an diesen Vorgang hängen.
@@ -1249,6 +1267,46 @@
             box.innerHTML = zeilen.join('');
             box.style.display = 'block';
         };
+        // Gleiche Suche im Anlegen-Fenster: hier wird nur gemerkt, welches
+        // Angebot gemeint ist — verknüpft wird, sobald der Vorgang gespeichert
+        // ist (saveNewProcess ruft dann procAngebotVerknuepfen).
+        window.procAngebotSucheAdd = async function (text) {
+            const box = document.getElementById('process-add-angebot-treffer');
+            if (!box) return;
+            const liste = await angeboteFuerSuche();
+            const t = String(text || '').trim().toLowerCase();
+            const adresseId = document.getElementById('process-add-customer-id')?.value
+                || (window.processPendingAddress && window.processPendingAddress.id) || '';
+            const passt = (a) => !t
+                || String(a.belegnummer || '').toLowerCase().includes(t)
+                || String(a.customers?.name || a.kundenmatchcode || '').toLowerCase().includes(t);
+            // Erst die Angebote dieser Adresse, dann der Rest — beides sichtbar.
+            const eigene = liste.filter(a => passt(a) && adresseId && String(a.customer_id) === String(adresseId));
+            const andere = liste.filter(a => passt(a) && !(adresseId && String(a.customer_id) === String(adresseId)));
+            const treffer = eigene.concat(andere).slice(0, 25);
+            const zeilen = treffer.map(a => {
+                const firma = (a.customers?.name || a.kundenmatchcode || '').split(',')[0].trim();
+                const datum = a.belegdatum ? String(a.belegdatum).split('-').reverse().join('.') : '';
+                return `<div onmousedown="event.preventDefault(); window.procAngebotFuerAddWaehlen('${a.id}', '${angEsc(a.belegnummer || '')}', '${angEsc(firma)}')"
+                             style="padding:9px 12px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; gap:10px; align-items:center;">
+                            <span style="font-weight:800; color:#facc15; white-space:nowrap;">${angEsc(a.belegnummer || '')}</span>
+                            <span style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#fff; font-size:0.86rem;">${angEsc(firma)}</span>
+                            <span style="font-size:0.74rem; color:rgba(255,255,255,0.45); white-space:nowrap;">${datum}${a.process_id ? ' · hat schon einen Vorgang' : ''}</span>
+                        </div>`;
+            });
+            if (!treffer.length) zeilen.push('<div style="padding:9px 12px; color:rgba(255,255,255,0.45); font-size:0.84rem;">Kein Angebot gefunden.</div>');
+            box.innerHTML = zeilen.join('');
+            box.style.display = 'block';
+        };
+        window.procAngebotFuerAddWaehlen = function (id, belegnummer, firma) {
+            const hidden = document.getElementById('process-add-angebot-id');
+            const input = document.getElementById('process-add-angebot-suche');
+            if (hidden) hidden.value = id || '';
+            if (input) { input.value = belegnummer ? `Angebot ${belegnummer}${firma ? ' – ' + firma : ''}` : ''; input.style.color = id ? '#facc15' : ''; }
+            const box = document.getElementById('process-add-angebot-treffer');
+            if (box) box.style.display = 'none';
+        };
+
         window.procAngebotSucheAlle = function (processId) {
             angebotSucheAlle = true;
             const input = document.getElementById('edit-process-angebot-suche');
@@ -1362,11 +1420,21 @@
             const neu = await window.angebotFeldSpeichern(angebotId, felder);
             if (!neu) return;
             if (window.angeboteByProcess && neu.process_id) window.angeboteByProcess[String(neu.process_id)] = neu;
+            // Auftrag erhalten/verloren -> Vorgang gleich erledigt (und zurück auf
+            // offen, wenn der Status wieder etwas Offenes wird) — wie in der Angebotsliste.
+            if (feld === 'status' && typeof window.vorgangStatusNachAngebot === 'function') await window.vorgangStatusNachAngebot(neu);
             if (typeof window.renderProcesses === 'function') window.renderProcesses();
             const box = document.getElementById('edit-process-angebot-block');
             const proc = neu.process_id && (window.eventsState.processes || []).find(p => String(p.id) === String(neu.process_id));
             if (box && proc && !document.getElementById('process-edit-modal')?.classList.contains('hidden')) {
                 box.innerHTML = window.renderProcessAngebotBlock(proc, 'modal');
+                // Status-Feld im offenen Fenster nachziehen, sonst schriebe
+                // „Speichern" den alten Status gleich wieder zurück.
+                const sel = document.getElementById('edit-process-status-select');
+                if (sel && feld === 'status' && String(document.getElementById('edit-process-id')?.value) === String(proc.id)) {
+                    sel.value = proc.status || 'offen';
+                    window.syncProcessSelectDisplay('edit-process', 'status');
+                }
             }
         };
 
@@ -1396,6 +1464,89 @@
                 modal.classList.add('show');
                 if (ta) ta.focus();
             });
+        };
+
+        // E-Mail-Inhalt (internal_processes.description) ansehen und anpassen.
+        // Öffnet sich über den leuchtenden Mail-Knopf in der Vorgangsliste;
+        // das Fenster wird beim ersten Aufruf an <body> gehängt.
+        window.openProcessMailModal = async function(id) {
+            let proc = (window.eventsState.processes || []).find(p => String(p.id) === String(id));
+            if (!proc && typeof window.fetchProcesses === 'function') {
+                await window.fetchProcesses();
+                proc = (window.eventsState.processes || []).find(p => String(p.id) === String(id));
+            }
+            if (!proc) { window.showToast('Vorgang nicht gefunden.'); return; }
+            let modal = document.getElementById('process-mail-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'process-mail-modal';
+                modal.className = 'modal-new hidden';
+                modal.style.cssText = 'z-index:10002; display:none; position:fixed; top:0; left:0; width:100%; height:100%; align-items:center; justify-content:center; background:rgba(0,0,0,0.85); backdrop-filter:blur(15px); -webkit-backdrop-filter:blur(15px);';
+                modal.innerHTML = `
+                    <div class="modal-content glass-card" style="max-width:760px; width:94%; max-height:88vh; display:flex; flex-direction:column; overflow:hidden; padding:2rem; border:1px solid rgba(167,139,250,0.3); box-shadow:0 20px 50px rgba(0,0,0,0.5);">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; flex-shrink:0;">
+                            <div style="min-width:0;">
+                                <h2 style="margin:0; color:#fff; font-size:1.6rem; font-weight:800; display:flex; align-items:center; gap:10px;">
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
+                                    E-Mail Inhalt
+                                </h2>
+                                <div id="process-mail-modal-subtitle" style="color:rgba(255,255,255,0.45); font-size:0.9rem; margin-top:4px; word-break:break-word;"></div>
+                            </div>
+                            <button type="button" class="btn-close" onclick="window.closeProcessMailModal()" style="background:none; border:none; color:rgba(255,255,255,0.4); cursor:pointer; flex-shrink:0;">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>
+                        <textarea id="process-mail-modal-text" class="glass-input" spellcheck="false" style="flex:1; min-height:280px; max-height:60vh; resize:vertical; width:100%; box-sizing:border-box; font-size:0.9rem; line-height:1.5; white-space:pre-wrap; color:#fff;"></textarea>
+                        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px; flex-shrink:0;">
+                            <button type="button" onclick="window.closeProcessMailModal()" style="padding:10px 18px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.16); color:rgba(255,255,255,0.8); font-weight:700; cursor:pointer;">Abbrechen</button>
+                            <button type="button" id="process-mail-modal-save" onclick="window.saveProcessMailModal()" style="padding:10px 18px; border-radius:10px; background:rgba(167,139,250,0.25); border:1px solid rgba(167,139,250,0.7); color:#ddd6fe; font-weight:800; cursor:pointer;">Speichern</button>
+                        </div>
+                    </div>`;
+                modal.addEventListener('click', (e) => { if (e.target === modal) window.closeProcessMailModal(); });
+                document.body.appendChild(modal);
+            }
+            window.mailModalProcessId = id;
+            document.getElementById('process-mail-modal-subtitle').textContent = proc.title || 'Vorgang';
+            const ta = document.getElementById('process-mail-modal-text');
+            ta.value = proc.description || '';
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            requestAnimationFrame(() => { modal.classList.add('show'); ta.focus(); });
+        };
+
+        window.closeProcessMailModal = function() {
+            const modal = document.getElementById('process-mail-modal');
+            if (!modal) return;
+            modal.classList.remove('show');
+            setTimeout(() => { modal.classList.add('hidden'); modal.style.display = 'none'; }, 300);
+        };
+
+        window.saveProcessMailModal = async function() {
+            const id = window.mailModalProcessId;
+            const proc = (window.eventsState.processes || []).find(p => String(p.id) === String(id));
+            const ta = document.getElementById('process-mail-modal-text');
+            if (!proc || !ta) return;
+            const text = ta.value;
+            if (text === (proc.description || '')) { window.closeProcessMailModal(); return; }
+            const btn = document.getElementById('process-mail-modal-save');
+            if (btn) btn.disabled = true;
+            try {
+                const { error } = await window.supabaseClient
+                    .from('internal_processes')
+                    .update({ description: text })
+                    .eq('id', proc.id);
+                if (error) throw error;
+                proc.description = text;
+                if (typeof window.angeboteNachVorgangAktualisieren === 'function') window.angeboteNachVorgangAktualisieren(proc);
+                if (typeof window.renderProcesses === 'function') window.renderProcesses();
+                window.showToast && window.showToast('E-Mail Inhalt gespeichert.');
+                window.closeProcessMailModal();
+            } catch (err) {
+                console.error('E-Mail Inhalt speichern fehlgeschlagen:', err);
+                window.showToast && window.showToast('Speichern fehlgeschlagen: ' + (err.message || err));
+            } finally {
+                if (btn) btn.disabled = false;
+            }
         };
 
         window.closeProcessStatusUpdateModal = function() {
@@ -1876,6 +2027,7 @@
         window.selectProcessAddress = async function(prefix, id) {
             const a = (window.processAddressCache || []).find(x => String(x.id) === String(id));
             if (!a) return;
+            zeigeProcessAddressBanner(prefix, a, a.name);
             const hidden = document.getElementById(`${prefix}-customer-id`);
             if (hidden) hidden.value = a.id;
             const input = document.getElementById(`${prefix}-address-search`);
@@ -1889,6 +2041,7 @@
             // Ansprechpartner der Adresse (und verknüpfter Adressen) laden.
             window.selectProcessContact(prefix, '');
             await loadProcessContacts(prefix, a.id);
+            if (prefix === 'process-add') window.zeigeVorhandeneVorgaenge(a.id);
         };
 
         // Neue Adresse direkt aus dem Vorgang-Dialog anlegen (inkl. .vcf-Import).
@@ -1915,7 +2068,62 @@
         };
 
         // Adresse wieder entfernen (leert Suche + Ansprechpartner).
+        // ----------------------------------------------------------
+        // „Vorgang erstellen": gibt es zu dieser Adresse schon offene
+        // Vorgänge? Dann stehen sie unter der Adresse mit „Weiterbearbeiten" —
+        // lieber den vorhandenen fortführen als einen zweiten anlegen.
+        // Quelle: geladene Vorgangsliste; ist sie noch nicht da, eine schlanke
+        // Abfrage nur für diese Adresse (keine Schritte/Anhänge).
+        // ----------------------------------------------------------
+        window.zeigeVorhandeneVorgaenge = async function (customerId) {
+            const box = document.getElementById('process-add-vorhandene');
+            if (!box) return;
+            if (!customerId) { box.style.display = 'none'; box.innerHTML = ''; return; }
+            let liste = (window.eventsState && Array.isArray(window.eventsState.processes) && window.eventsState.processes.length)
+                ? window.eventsState.processes.filter(p => String(p.customer_id) === String(customerId))
+                : null;
+            if (!liste && window.supabaseClient) {
+                try {
+                    const { data } = await window.supabaseClient
+                        .from('internal_processes')
+                        .select('id, title, status, process_date, process_type, customer_id')
+                        .eq('customer_id', customerId)
+                        .order('process_date', { ascending: false })
+                        .limit(30);
+                    liste = data || [];
+                } catch (e) { liste = []; }
+            }
+            liste = (liste || []).filter(p => p.status !== 'erledigt').slice(0, 8);
+            if (!liste.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+            const info = window.PROCESS_STATUS_INFO || {};
+            const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            box.innerHTML = `
+                <div class="proc-vorhandene-kopf">
+                    <span>Zu dieser Adresse gibt es bereits ${liste.length === 1 ? 'einen offenen Vorgang' : liste.length + ' offene Vorgänge'}</span>
+                    <span class="proc-vorhandene-hinweis">Lieber weiterbearbeiten statt doppelt anlegen</span>
+                </div>
+                ${liste.map(p => {
+                    const st = info[p.status] || { label: p.status || '–', color: 'rgba(255,255,255,0.4)' };
+                    const datum = p.process_date ? new Date(p.process_date).toLocaleDateString('de-DE') : '';
+                    return `<div class="proc-vorhandene-zeile">
+                        <span class="proc-vorhandene-punkt" style="background:${st.color}"></span>
+                        <span class="proc-vorhandene-titel" title="${esc(p.title)}">${esc(p.title || 'Vorgang')}</span>
+                        <span class="proc-vorhandene-meta">${esc(st.label)}${datum ? ' · ' + datum : ''}</span>
+                        <button type="button" class="proc-vorhandene-btn" onclick="window.vorhandenenVorgangOeffnen('${esc(p.id)}')">Weiterbearbeiten</button>
+                    </div>`;
+                }).join('')}`;
+            box.style.display = 'block';
+        };
+        window.vorhandenenVorgangOeffnen = function (id) {
+            // Ungespeichertes im Anlegen-Fenster verwerfen — es wurde nichts eingetragen,
+            // was den vorhandenen Vorgang ersetzen soll.
+            if (typeof window.closeProcessAddModal === 'function') window.closeProcessAddModal();
+            if (typeof window.openEditProcessModal === 'function') window.openEditProcessModal(id);
+        };
+
         window.clearProcessAddress = function(prefix) {
+            if (prefix === 'process-add') window.zeigeVorhandeneVorgaenge(null);
+            zeigeProcessAddressBanner(prefix, null, '');
             const hidden = document.getElementById(`${prefix}-customer-id`);
             if (hidden) hidden.value = '';
             const input = document.getElementById(`${prefix}-address-search`);
@@ -1994,7 +2202,22 @@
         };
 
         // Adress-/Ansprechpartner-Felder für ein Modal zurücksetzen.
+        // Großes Adress-Banner oben im Bearbeiten-Fenster: zeigt sofort, um wen es geht.
+        // Nur für 'edit-process' vorhanden; `a` = Eintrag aus processAddressCache, `name` = Fallback.
+        function zeigeProcessAddressBanner(prefix, a, name) {
+            if (prefix !== 'edit-process') return;
+            const banner = document.getElementById('edit-process-address-banner');
+            const label = document.getElementById('edit-process-address-name');
+            if (!banner || !label) return;
+            const n = (a && a.name) || name || '';
+            if (!n) { banner.style.display = 'none'; label.textContent = '-'; return; }
+            const sub = a ? [a.zip_code, a.city].filter(Boolean).join(' ') : '';
+            label.textContent = n + (sub ? ' · ' + sub : '');
+            banner.style.display = '';
+        }
+
         window.resetProcessAddressFields = function(prefix) {
+            zeigeProcessAddressBanner(prefix, null, '');
             const hidden = document.getElementById(`${prefix}-customer-id`);
             if (hidden) hidden.value = '';
             const input = document.getElementById(`${prefix}-address-search`);
@@ -2017,6 +2240,7 @@
             const input = document.getElementById(`${prefix}-address-search`);
             const a = (window.processAddressCache || []).find(x => String(x.id) === String(proc.customer_id));
             const name = (proc.customers && proc.customers.name) || (a && a.name) || 'Adresse';
+            zeigeProcessAddressBanner(prefix, a, name);
             if (input) {
                 const sub = a ? [a.zip_code, a.city].filter(Boolean).join(' ') : '';
                 input.value = name + (sub ? ' · ' + sub : '');
