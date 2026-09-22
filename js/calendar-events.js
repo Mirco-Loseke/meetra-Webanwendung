@@ -19,13 +19,26 @@
             events: []
         };
 
+        // Beim Start ruft renderEvents() innerhalb von ~150 ms zweimal (Maschinen-
+        // Cache, dann Netz). Laufende Abfrage wiederverwenden, Ergebnis 2 s halten —
+        // spart 54 KB Wartungen + 130 KB Prüfprotokolle je Start.
+        let _maintLauf = null, _maintCache = { am: 0, data: null };
+        async function ladeMaintEvents() {
+            if (Date.now() - _maintCache.am < 2000 && _maintCache.data) return _maintCache.data;
+            if (_maintLauf) return _maintLauf;
+            _maintLauf = supabaseClient
+                .from('maintenance_events')
+                .select('*, machines(name, manufacturer, serial, year)')
+                .then(res => { _maintCache = { am: Date.now(), data: res }; _maintLauf = null; return res; })
+                .catch(e => { _maintLauf = null; throw e; });
+            return _maintLauf;
+        }
+
         async function fetchCalendarEvents() {
             if (!supabaseClient) return [];
 
             // Fetch hard events from maintenance_events
-            const { data: maintEvents, error: e1 } = await supabaseClient
-                .from('maintenance_events')
-                .select('*, machines(name, manufacturer, serial, year)');
+            const { data: maintEvents, error: e1 } = await ladeMaintEvents();
 
             // Alle Maschinen kommen aus window.machineList statt aus einer eigenen DB-Abfrage,
             // damit hier immer der live neu berechnete Wartungstermin (siehe applyMachineList /
@@ -430,10 +443,17 @@
             const ids = [...new Set(nodes.map(n => parseInt(n.dataset.mid, 10)).filter(Boolean))];
             if (!ids.length) return;
             try {
-                const [wartungRes, serviceRes] = await Promise.all([
-                    window.supabaseClient.from('manual_history_entries').select('machine_id, created_at, content, title').in('machine_id', ids).eq('type', 'wartung'),
-                    window.supabaseClient.from('service_entries').select('machine_id, date, created_at, checklist_payload').in('machine_id', ids)
-                ]);
+                // Ergebnis 60 s je Maschinen-Satz halten: die Prüfprotokolle (checklist_payload)
+                // sind ~130 KB, und die Liste wird beim Start zweimal gezeichnet.
+                const key = ids.slice().sort((a, b) => a - b).join(',');
+                const c = window.enrichMaintLastArt._cache || (window.enrichMaintLastArt._cache = {});
+                if (!c[key] || Date.now() - c[key].am > 60000) {
+                    c[key] = { am: Date.now(), lauf: Promise.all([
+                        window.supabaseClient.from('manual_history_entries').select('machine_id, created_at, content, title').in('machine_id', ids).eq('type', 'wartung'),
+                        window.supabaseClient.from('service_entries').select('machine_id, date, created_at, checklist_payload').in('machine_id', ids)
+                    ]).catch(e => { delete c[key]; throw e; }) };
+                }
+                const [wartungRes, serviceRes] = await c[key].lauf;
                 const byMachine = {}; // machine_id -> {date, art}
                 const consider = (mid, date, art) => {
                     if (!date) return;

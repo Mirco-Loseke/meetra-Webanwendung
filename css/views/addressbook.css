@@ -1925,3 +1925,28 @@
     cursor: pointer;
 }
 .ab-zuordnung-aus button:hover { text-decoration: underline; }
+
+/* ---------- KI-Zusammenfassung (js/ai-address-summary.js) ---------- */
+.ab-btn-ki { border-color: rgba(167,139,250,0.45); color: #c4b5fd; }
+.ab-btn-ki:hover { background: rgba(167,139,250,0.12); color: #fff; }
+.ab-ai-summary-body { font-size: var(--fs-md); line-height: 1.55; color: var(--text-1); }
+.ab-ai-summary-body h4 { margin: var(--space-4) 0 var(--space-2); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: 0.5px; color: #c4b5fd; }
+.ab-ai-summary-body h4:first-child { margin-top: 0; }
+.ab-ai-summary-body p { margin: 0 0 var(--space-2); }
+.ab-ai-summary-body ul { margin: 0 0 var(--space-2); padding-left: 1.2rem; }
+.ab-ai-summary-body li { margin: 2px 0; }
+.ab-ai-summary-body code { background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px; }
+.ab-ai-summary-laden { display: flex; align-items: center; gap: var(--space-3); color: var(--text-3); padding: var(--space-4) 0; }
+.ab-ai-spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.2); border-top-color: #c4b5fd; border-radius: 50%; animation: ab-ai-spin 0.8s linear infinite; flex: none; }
+@keyframes ab-ai-spin { to { transform: rotate(360deg); } }
+/* Die Karte wächst mit dem Text; gescrollt wird der Hintergrund (.modal-backdrop
+   hat overflow-y:auto). Eine feste Höhe an .modal-content greift nicht — dort
+   steht overflow: visible !important. */
+#ab-ai-summary-modal { align-items: flex-start; }
+#ab-ai-summary-modal .ab-ai-summary { margin: 0 auto 5vh; }
+/* Handy/schmales Fenster: responsive.css setzt das Modal auf feste 100dvh als
+   Flex-Spalte — dann scrollt der Textbereich selbst, statt unten herauszulaufen. */
+@media (max-width: 768px) {
+    #ab-ai-summary-modal .ab-ai-summary-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 4px; }
+}
+.ab-ai-summary-roh { white-space: pre-wrap; font-size: var(--fs-xs); line-height: 1.45; background: rgba(0,0,0,0.3); padding: var(--space-3); border-radius: var(--radius-sm); max-height: 60vh; overflow: auto; color: var(--text-2); }

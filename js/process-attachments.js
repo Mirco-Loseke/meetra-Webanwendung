@@ -424,27 +424,8 @@
 
         // Alles im Ordner des Vorgangs einsammeln.
         try {
-            if (typeof window.loadAWSSDK === 'function') {
-                await window.loadAWSSDK();
-                const s3 = new AWS.S3({
-                    endpoint: 'https://855feaccf4d0215922275100e91c4656.r2.cloudflarestorage.com',
-                    accessKeyId: '49a3cbad28594d9d5a90e46f3965133b',
-                    secretAccessKey: '0642e23714ce5c9f805d0c2f8f59e7c9df01ba8ba7a728b9640b0db5341de797',
-                    region: 'auto',
-                    signatureVersion: 'v4'
-                });
-                const bucket = window.R2_BUCKET_NAME || 'dateien';
-                let token;
-                do {
-                    const res = await s3.listObjectsV2({
-                        Bucket: bucket,
-                        Prefix: 'vorgaenge/' + processId + '/',
-                        ContinuationToken: token
-                    }).promise();
-                    (res.Contents || []).forEach(o => { if (o.Key) pfade.add(o.Key); });
-                    token = res.IsTruncated ? res.NextContinuationToken : null;
-                } while (token);
-            }
+            // Auflisten macht die Edge Function r2-sign (kein Schlüssel im Browser).
+            (await window.FileUploadService.listFiles('vorgaenge/' + processId + '/')).forEach(k => pfade.add(k));
         } catch (e) {
             console.warn('Ordner des Vorgangs konnte nicht aufgelistet werden — es werden nur die vermerkten Dateien gelöscht:', e);
         }

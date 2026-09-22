@@ -1,130 +1,112 @@
 ================================================================================
-  meetra Webapp — Supabase CLI Setup & Edge Function Deployment
+  meetra Webapp — R2 ohne Schlüssel im Browser: Edge Function "r2-sign"
 ================================================================================
 
-ZIEL
-----
-Die R2-Credentials (Access Key / Secret Key) wurden aus dem Client-Code entfernt.
-Sie liegen jetzt als Supabase Secrets (serverseitig). Der Browser bekommt nur
-noch eine 5-Minuten-gültige signierte Upload-URL — keine echten Credentials.
+WAS SICH ÄNDERT (Stand 2026-09-21)
+----------------------------------
+Vorher: Access Key + Secret Key von Cloudflare R2 standen im Klartext in
+        js/file-upload-service-r2.js und js/process-attachments.js. Jeder, der
+        die Seite aufrufen konnte, hatte damit Vollzugriff auf den Bucket.
 
-Edge Function: supabase/functions/r2-sign/index.ts
-Client:        file-upload-service-r2.js (keine Credentials mehr drin)
+Nachher: die Schlüssel liegen EINMAL als Supabase Secrets auf dem Server.
+        Der Browser fragt die Edge Function r2-sign, die prüft die Anmeldung
+        (JWT) und gibt eine 5 Minuten gültige, signierte URL zurück (Upload,
+        Download, Löschen) bzw. führt Umbenennen und Auflisten selbst aus.
+        Das AWS-SDK (1 MB) wird nicht mehr geladen.
 
+Function:  supabase/functions/r2-sign/index.ts
+Client:    js/file-upload-service-r2.js  (FileUploadService.r2Sign, listFiles)
+Projekt:   rtnpyziwyaqrlfazxkyr
 
-================================================================================
-SCHRITT 1 — Supabase CLI installieren
-================================================================================
-
-Option A: npm (empfohlen wenn Node.js vorhanden)
-  npm install -g supabase
-
-Option B: Windows direkt (ohne npm)
-  https://github.com/supabase/cli/releases
-  → supabase_windows_amd64.exe herunterladen, in PATH legen
-
-Prüfen ob installiert:
-  supabase --version
+WICHTIG: Ohne ausgerollte Function funktionieren Upload, Löschen, Umbenennen
+und der PDF-Download der Mietvereinbarung NICHT mehr (Meldung "Edge Function
+r2-sign ist nicht ausgerollt"). Also erst Schritt 1–3, dann die App verteilen.
 
 
 ================================================================================
-SCHRITT 2 — Mit Supabase Projekt verbinden
+SCHRITT 1 — NEUE R2-Schlüssel erzeugen (die alten gelten als verbrannt)
 ================================================================================
+  https://dash.cloudflare.com → R2 → Manage R2 API Tokens → Create API Token
+    Berechtigung: Object Read & Write, nur Bucket "dateien"
+  → Access Key ID und Secret Access Key notieren (Secret wird nur einmal gezeigt)
 
-  supabase login
-
-  → Öffnet Browser, Supabase-Account anmelden
-  → Access Token wird gespeichert
-
-Projekt-Ref: rtnpyziwyaqrlfazxkyr
-Supabase URL: https://rtnpyziwyaqrlfazxkyr.supabase.co
+  Das ALTE Token noch NICHT löschen — erst nach Schritt 4, sonst steht die
+  App bis dahin still.
 
 
 ================================================================================
-SCHRITT 3 — Edge Function deployen
+SCHRITT 2 — Secrets setzen
 ================================================================================
+Weg A (CLI, wie bei groq-proxy):
+  supabase secrets set R2_ACCOUNT_ID=855feaccf4d0215922275100e91c4656 R2_ACCESS_KEY=<neu> R2_SECRET_KEY=<neu> R2_BUCKET=dateien R2_PUBLIC_URL=https://pub-28aab7dd73f540f38b6358d78f889a27.r2.dev --project-ref rtnpyziwyaqrlfazxkyr
 
-Im Webapp-Ordner ausführen:
+Weg B (Dashboard):
+  https://supabase.com/dashboard/project/rtnpyziwyaqrlfazxkyr/settings/functions
+  → Secrets → die fünf Werte einzeln anlegen.
 
+
+================================================================================
+SCHRITT 3 — Function ausrollen
+================================================================================
+Weg A (CLI):
   supabase functions deploy r2-sign --project-ref rtnpyziwyaqrlfazxkyr
 
-Prüfen ob deployed:
-  → https://supabase.com/dashboard/project/rtnpyziwyaqrlfazxkyr/functions
+Weg B (Dashboard, ohne CLI):
+  https://supabase.com/dashboard/project/rtnpyziwyaqrlfazxkyr/functions
+  → "Deploy a new function" → "Via Editor" → Name: r2-sign
+  → Inhalt von supabase/functions/r2-sign/index.ts einfügen → Deploy
+  → in den Function-Einstellungen "Verify JWT" darf AN bleiben (die Function
+    prüft zusätzlich selbst).
+
+Prüfen (muss 401 liefern — kein Token mitgeschickt, genau richtig):
+  curl -i -X POST https://rtnpyziwyaqrlfazxkyr.supabase.co/functions/v1/r2-sign
 
 
 ================================================================================
-SCHRITT 4 — Secrets setzen (Credentials serverseitig hinterlegen)
+SCHRITT 4 — In der App testen
 ================================================================================
+  - Maschine → Foto hochladen
+  - Dokumente → Datei umbenennen, Datei löschen
+  - Mietvereinbarung speichern (Upload) und eine alte öffnen (Download)
+  - Vorgang mit Anhängen löschen (Auflisten + Löschen)
 
-  supabase secrets set ^
-    R2_ACCOUNT_ID=855feaccf4d0215922275100e91c4656 ^
-    R2_ACCESS_KEY=49a3cbad28594d9d5a90e46f3965133b ^
-    R2_SECRET_KEY=0642e23714ce5c9f805d0c2f8f59e7c9df01ba8ba7a728b9640b0db5341de797 ^
-    R2_BUCKET=dateien ^
-    R2_PUBLIC_URL=https://pub-28aab7dd73f540f38b6358d78f889a27.r2.dev ^
-    --project-ref rtnpyziwyaqrlfazxkyr
-
-Hinweis: ^ ist Windows-Zeilenumbruch in CMD. In PowerShell stattdessen ` verwenden
-oder alles in eine Zeile.
-
-Secrets prüfen:
-  supabase secrets list --project-ref rtnpyziwyaqrlfazxkyr
+CORS am Bucket: R2 → Bucket "dateien" → Settings → CORS Policy muss die
+Adresse(n) der App mit den Methoden GET, PUT, DELETE erlauben und den Header
+Content-Type. Beispiel:
+  [{"AllowedOrigins":["http://localhost:5187","https://<firmenserver>"],
+    "AllowedMethods":["GET","PUT","DELETE"],
+    "AllowedHeaders":["Content-Type"],"MaxAgeSeconds":3600}]
 
 
 ================================================================================
-SCHRITT 5 — Alte Credentials rotieren (WICHTIG)
+SCHRITT 5 — ALTES Token widerrufen (der eigentliche Sicherheitsgewinn)
 ================================================================================
+  https://dash.cloudflare.com → R2 → Manage R2 API Tokens
+  → das Token mit Access Key 49a3cbad28594d9d5a90e46f3965133b LÖSCHEN.
 
-Die alten Keys waren im Browser-Code — könnten gecacht sein.
-Nach erfolgreichem Deploy unbedingt in Cloudflare neue Keys generieren:
-
-  https://dash.cloudflare.com → R2 → Bucket "dateien" → Manage R2 API Tokens
-  → Neues Token erstellen → Altes Token widerrufen
-
-Danach neue Keys in Schritt 4 erneut als Secrets setzen.
+Erst damit ist die Lücke geschlossen: der alte Schlüssel steht in jedem
+Browser-Cache und jeder Sicherung der alten App-Version.
 
 
 ================================================================================
 AKTUELLER STATUS
 ================================================================================
-
-[ ] Supabase CLI installiert
-[ ] supabase login ausgeführt
-[ ] r2-sign deployed
+[x] Client ohne Schlüssel (2026-09-21)
+[x] Function um download + list erweitert, Pfadprüfung gegen ".."
+[ ] Neues R2-Token erzeugt
 [ ] Secrets gesetzt
-[ ] Alte R2-Credentials rotiert (neues Token in Cloudflare)
-[ ] Testen: Datei hochladen, löschen, umbenennen
+[ ] r2-sign ausgerollt
+[ ] Getestet (Schritt 4)
+[ ] Altes Token widerrufen
 
 
 ================================================================================
-TECHNISCHER ABLAUF (nach Deploy)
+TECHNISCHER ABLAUF
 ================================================================================
-
-Upload:
-  Browser → POST /functions/v1/r2-sign { action:'upload', path, contentType }
-         ← { uploadUrl: 'https://...r2.cloudflarestorage.com/...?X-Amz-Signature=...' }
-  Browser → PUT uploadUrl (direkt zu R2, kein Umweg über Supabase)
-
-Delete:
-  Browser → POST /functions/v1/r2-sign { action:'delete', path }
-         ← { deleteUrl: '...' }
-  Browser → DELETE deleteUrl
-
-Rename/Umbenennen:
-  Browser → POST /functions/v1/r2-sign { action:'rename', fromPath, toPath }
-  Edge Function → kopiert Datei + löscht Original in R2
-         ← { success: true, publicUrl: '...' }
-
-
-================================================================================
-DATEIEN
-================================================================================
-
-supabase/
-  functions/
-    r2-sign/
-      index.ts          ← Edge Function (Signing-Logik, Credentials via env)
-  SETUP.txt             ← Diese Datei
-
-file-upload-service-r2.js   ← Kein AWS SDK, keine Credentials — ruft r2-sign auf
+upload:   Browser → r2-sign {action:'upload', path, contentType}
+                  ← {uploadUrl, publicUrl};  Browser → PUT uploadUrl
+download: Browser → r2-sign {action:'download', path} ← {downloadUrl}; GET
+delete:   Browser → r2-sign {action:'delete', path} ← {deleteUrl}; DELETE
+rename:   Browser → r2-sign {action:'rename', fromPath, toPath}  (serverseitig)
+list:     Browser → r2-sign {action:'list', prefix} ← {keys:[…]} (serverseitig)
 ================================================================================

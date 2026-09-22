@@ -103,6 +103,12 @@ lassen als eine Migration auszulassen.
 |---|---|
 | `supabase_add_ai_usage.sql` | KI-Verbrauch je Nutzer und Tag |
 
+## Mail (Outlook / Microsoft Graph)
+
+| Datei | Wofür |
+|---|---|
+| `supabase_add_mail_zuordnungen.sql` | Ansicht „Mail": Absender-Adresse → Kunde von Hand zugeordnet (Rückfall ohne Tabelle: localStorage) |
+
 ---
 
 ## Edge Functions (kein SQL)

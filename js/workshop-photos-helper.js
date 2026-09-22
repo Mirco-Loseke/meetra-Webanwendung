@@ -271,7 +271,7 @@ window.pruefeKiVerbindung = async function () {
     if (!box) return;
     if (res.ok) {
         box.style.color = '#4ade80';
-        box.textContent = '✓ Verbindung steht — die KI ist einsatzbereit.';
+        box.textContent = '✓ Verbindung steht — KI läuft über: ' + (res.anbieter || 'Server') + '.';
     } else {
         box.style.color = '#fca5a5';
         box.textContent = '✗ ' + res.message;

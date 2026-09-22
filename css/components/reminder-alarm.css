@@ -38,11 +38,11 @@
 .alarm-head {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 10px;
+    gap: 8px;
+    margin-bottom: 6px;
 }
 .alarm-bell {
-    font-size: 1.25rem;
+    font-size: 1.05rem;
     animation: alarm-shake 1.6s ease-in-out infinite;
 }
 @keyframes alarm-shake {
@@ -52,7 +52,7 @@
     97% { transform: rotate(8deg); }
 }
 .alarm-time {
-    font-size: 1.35rem;
+    font-size: 1.15rem;
     font-weight: 900;
     color: #fbbf24;
     letter-spacing: -0.02em;
@@ -67,45 +67,70 @@
 }
 
 .alarm-title {
-    font-size: 1.15rem;
+    font-size: 1.02rem;
     font-weight: 800;
-    line-height: 1.3;
+    line-height: 1.25;
     word-break: break-word;
+    cursor: pointer;
 }
+.alarm-title:hover { color: #fde68a; }
 .alarm-sub {
-    margin-top: 4px;
-    font-size: 0.85rem;
+    margin-top: 2px;
+    font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.6);
 }
 .alarm-note {
-    margin-top: 8px;
-    font-size: 0.9rem;
-    line-height: 1.5;
+    margin-top: 6px;
+    font-size: 0.82rem;
+    line-height: 1.4;
     color: rgba(255, 255, 255, 0.75);
     white-space: pre-wrap;
     word-break: break-word;
-    max-height: 8em;
+    max-height: 5.6em;
     overflow-y: auto;
+}
+
+/* Adresse (Kunde · PLZ Ort · Ansprechpartner) — wie im Vorgang lila,
+   damit man sofort sieht, um wen es geht. */
+.alarm-address {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: #a78bfa;
+    word-break: break-word;
+}
+.alarm-address svg { flex-shrink: 0; margin-top: 2px; }
+.alarm-address em {
+    font-style: normal;
+    font-weight: 600;
+    color: rgba(167, 139, 250, 0.8);
+}
+.alarm-steps {
+    margin-top: 5px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.5);
 }
 
 .alarm-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 16px;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 10px;
 }
-/* Drei Knoepfe nebeneinander wuerden zu schmal: "Bearbeiten" und
-   "Verstanden" teilen sich die erste Zeile, "Spaeter" steht darunter. */
-.alarm-btn-snooze {
-    flex: 1 1 100%;
-    order: 3;
-}
+/* Kompakte Knoepfe in einer Zeile: "Spaeter" und "Oeffnen" schlicht,
+   "Verstanden" als Hauptknopf rechts. */
+.alarm-btn-snooze { margin-right: auto; }
 .alarm-btn {
-    flex: 1;
-    padding: 10px 14px;
-    border-radius: 11px;
+    flex: 0 0 auto;
+    padding: 6px 12px;
+    border-radius: 9px;
     font-family: inherit;
-    font-size: 0.88rem;
+    font-size: 0.78rem;
     font-weight: 700;
     cursor: pointer;
     border: 1px solid rgba(255, 255, 255, 0.16);

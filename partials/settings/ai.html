@@ -25,7 +25,7 @@
                     <h3 style="margin: 0; color: #fff; font-size: 1.1rem;">Zugang liegt zentral</h3>
                 </div>
                 <p style="color: rgba(255,255,255,0.6); font-size: 0.9rem; line-height: 1.6; margin: 0 0 1.25rem 0;">
-                    Der Groq-Schlüssel ist auf dem Server hinterlegt und wird von dort angehängt.
+                    Der KI-Schlüssel (Gemini, ersatzweise Groq) ist auf dem Server hinterlegt und wird von dort angehängt.
                     <strong style="color:#fff;">Niemand muss ihn mehr eintragen</strong>, und er
                     lässt sich aus der App nicht auslesen. Die KI funktioniert für jeden, der
                     angemeldet ist — ohne Anmeldung antwortet der Dienst gar nicht erst.
@@ -36,14 +36,45 @@
                     <div id="ai-connection-status" style="font-size: 0.88rem; color: rgba(255,255,255,0.6);"></div>
                 </div>
 
+                <!-- TEST: Gemini als Anbieter, Key je Browser (js/ki-einstellungen.js).
+                     Bewusst vorläufig — nach dem Test wandert der Key in die Edge Function. -->
+                <div class="ki-anbieter-box" style="margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <div style="font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.4); margin-bottom: 8px;">
+                        Anbieter (Test)
+                    </div>
+                    <div class="ki-zeile">
+                        <label for="ki-anbieter" class="form-label-caps">Anbieter</label>
+                        <select id="ki-anbieter" class="glass-form-input">
+                            <option value="groq">Server (Standard — Edge Function ki-proxy)</option>
+                            <option value="gemini">Gemini mit eigenem Key in diesem Browser (nur Test)</option>
+                        </select>
+                    </div>
+                    <div id="ki-gemini-felder" hidden>
+                        <div class="ki-zeile">
+                            <label for="ki-gemini-key" class="form-label-caps">Gemini API-Key</label>
+                            <input type="password" id="ki-gemini-key" class="glass-form-input" placeholder="AIza… oder AQ.…" autocomplete="off" spellcheck="false">
+                        </div>
+                        <div class="ki-zeile">
+                            <label for="ki-gemini-modell" class="form-label-caps">Modell</label>
+                            <select id="ki-gemini-modell" class="glass-form-input"><option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option></select>
+                            <button class="btn-secondary" id="ki-gemini-modelle">Modelle laden</button>
+                        </div>
+                        <p class="text-muted-sm" style="margin: 6px 0 0;">Key holen: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:#93c5fd;">aistudio.google.com/apikey</a>. Der Key bleibt nur in diesem Browser und gilt nur hier — jeder Kollege müsste ihn selbst eintragen. Deshalb nur zum Testen.</p>
+                    </div>
+                    <div style="display:flex; gap:10px; margin-top: 12px; flex-wrap: wrap;">
+                        <button class="btn-primary" id="ki-anbieter-speichern">Speichern</button>
+                        <span id="ki-anbieter-status" class="text-muted-sm"></span>
+                    </div>
+                </div>
+
                 <div style="margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.1);">
                     <div style="font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.4); margin-bottom: 8px;">
                         Für die Verwaltung
                     </div>
                     <p style="color: rgba(255,255,255,0.5); font-size: 0.84rem; line-height: 1.6; margin: 0;">
-                        Schlüssel wechseln oder Tagesgrenze ändern: als Supabase Secret setzen und die
+                        Anbieter oder Schlüssel wechseln, Modell oder Tagesgrenze ändern: als Supabase Secret setzen und die
                         Edge Function neu ausrollen — die Schritte stehen in
-                        <code style="background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 5px;">supabase/SETUP_GROQ.txt</code>.
+                        <code style="background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 5px;">supabase/SETUP_KI.txt</code>.
                         In der App ist dafür nichts zu ändern.
                     </p>
                 </div>

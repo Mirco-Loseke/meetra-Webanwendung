@@ -433,3 +433,17 @@
     0%, 100% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.45); }
     50%      { box-shadow: 0 0 22px rgba(59, 130, 246, 0.9); }
 }
+
+/* Pseudonymisierungs-Hinweis unter KI-Vorschauen (js/ki-pseudonym.js) */
+.ki-ps-hinweis { font-size: var(--fs-xs); color: var(--text-3); margin: 0 0 var(--space-3); padding: 6px 10px; border: 1px solid rgba(167,139,250,0.25); border-radius: var(--radius-sm); background: rgba(167,139,250,0.06); }
+.ki-ps-hinweis a { color: #c4b5fd; }
+.ki-ps-details { margin-top: var(--space-2); }
+.ki-ps-bericht { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-2); }
+.ki-ps-gruppe b { color: var(--text-2); }
+.ki-ps-gruppe ul { margin: 2px 0 0; padding-left: 1rem; }
+.ki-ps-gruppe li { margin: 1px 0; }
+.ki-ps-orig { color: var(--text-1); }
+.ki-ps-bericht code { background: rgba(255,255,255,0.08); padding: 0 4px; border-radius: 3px; }
+.ki-ps-raus { margin-top: var(--space-2); }
+.ki-ps-raus summary { cursor: pointer; color: #c4b5fd; }
+.ki-ps-raus pre { white-space: pre-wrap; max-height: 40vh; overflow: auto; background: rgba(0,0,0,0.3); padding: var(--space-2); border-radius: var(--radius-sm); font-size: var(--fs-2xs); }

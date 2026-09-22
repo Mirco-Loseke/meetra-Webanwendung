@@ -396,6 +396,9 @@
                     .limit(600));
             if (!error && data) {
                 data.forEach(s => {
+                    // „Werkstattaufenthalt Beginn/Ende" sind nur Historien-Marken
+                    // der Maschine, keine Einsätze — nicht in den Kalender.
+                    if (/^werkstattaufenthalt/i.test(s.title || '')) return;
                     // Ein Bericht kann über mehrere Tage gehen (datum_von/datum_bis).
                     // Dann steht er an jedem Tag des Zeitraums im Kalender, damit
                     // man den Einsatz über die Tage hinweg sieht. `date` ist der

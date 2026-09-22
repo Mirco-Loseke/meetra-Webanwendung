@@ -1822,7 +1822,7 @@ Setze Unbekanntes auf null.`;
 
         if (!response.ok) {
             const errData = await response.json();
-            throw new Error(`Groq Fehler: ${errData.error?.message || response.statusText}`);
+            throw new Error(`KI-Fehler: ${errData.error?.message || response.statusText}`);
         }
 
         const data = await response.json();
@@ -1894,10 +1894,10 @@ Setze Unbekanntes auf null.`;
         console.error("AI Analysis Error:", err);
         const errMsg = err.message || JSON.stringify(err) || "Unbekannter Fehler beim API-Aufruf.";
 
-        if (errMsg.includes('insufficient_quota') || errMsg.includes('exceeded your current quota') || errMsg.includes('rate_limit')) {
-            window.showAccAiBanner('error', '<strong>Rate-Limit erreicht:</strong> Die kostenlose Groq API ist gerade ausgelastet. Bitte kurz warten und erneut versuchen.');
+        if (errMsg.includes('insufficient_quota') || errMsg.includes('exceeded your current quota') || errMsg.includes('rate_limit') || /KI-Anfragen|Tageskontingent|\[429/.test(errMsg)) {
+            window.showAccAiBanner('error', '<strong>KI-Limit:</strong> ' + (/KI-Anfragen|Tageskontingent/.test(errMsg) ? errMsg.replace(/^KI-Fehler: /, '') : 'Die KI ist gerade ausgelastet. Bitte in 2–3 Minuten erneut versuchen.'));
         } else if (errMsg.includes('invalid_api_key') || errMsg.includes('Incorrect API key')) {
-            window.showAccAiBanner('error', '<strong>API-Key ungültig:</strong> Bitte den Groq API-Key in den Einstellungen prüfen.');
+            window.showAccAiBanner('error', '<strong>Zugriff abgelehnt:</strong> Bitte unter Einstellungen → KI „Verbindung prüfen".');
         } else {
             window.showAccAiBanner('error', `<strong>Fehler bei der Analyse:</strong> ${errMsg}`);
         }

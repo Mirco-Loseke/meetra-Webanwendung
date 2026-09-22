@@ -372,7 +372,8 @@
                 let rightBottomY = rightY + 5;
 
                 if (hotelOnRight) {
-                    let hotelY = maschinenstandortY;
+                    // Auf Höhe von "Maschinenstandort:", aber nie in die Maschinendaten hinein
+                    let hotelY = Math.max(maschinenstandortY, rightY + 8);
                     doc.setFont('helvetica', 'bold');
                     doc.text(T('Hotel / Unterkunft:'), 120, hotelY);
                     doc.setFont('helvetica', 'normal');

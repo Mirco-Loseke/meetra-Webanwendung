@@ -67,6 +67,9 @@ Reihenfolge der ausgelagerten Module:
 | Mietvereinbarung: Vorlagen-Ansicht (Markup) | `partials/settings/mietvereinbarung-vorlagen.html` |
 | UVV- & Wartungsprotokoll (ohne Servicebericht) | `js/uvv-protokoll.js` |
 | Protokolle → Ansehen: Übersicht je Beleg-Art | `js/protokoll-liste.js` |
+| Mail: Outlook-Anmeldung (MSAL) + `graphFetch` | `js/outlook-graph.js`, `lib/msal-browser.min.js` |
+| Mail: Ansicht Posteingang / Outlook-Kontakte / Schreiben | `js/mail-view.js`, `partials/views/mail.html`, `css/views/mail.css` |
+| Mail: Einstellungen → Outlook (Anwendungs-ID, Anmelden) | `js/outlook-settings.js`, `partials/settings/outlook.html` |
 
 ## Zuerst hier nachschlagen (spart das Durchsuchen)
 - **`FUNKTIONEN.txt`** — Nachschlagewerk mit 1.500+ Funktionen: `name → datei:zeile`.
@@ -84,6 +87,7 @@ Reihenfolge der ausgelagerten Module:
 - **Neue js/css-Datei angelegt?** Zusätzlich in die `PRECACHE`-Liste in `sw.js` eintragen,
   sonst fehlt sie offline.
 - **HTML-Änderung:** immer im passenden `partials/`-Baustein → `node build.js`.
+  Ohne Node: `powershell -ExecutionPolicy Bypass -File tools/build.ps1` (gleiche Logik).
   Direkt in `index.html` editierte Partial-Bereiche werden beim nächsten Build überschrieben.
 - **CSS:** in die passende Datei unter `css/views/` bzw. `css/components/` —
   nichts an `style.css` anhängen.
@@ -140,7 +144,27 @@ Reihenfolge der ausgelagerten Module:
   das eine, mal das andere enthalten.
 
 ## KI im Projekt
-Alle KI-Funktionen laufen über **Groq** (`llama-3.3-70b-versatile`).
+**Stand 2026-09-21:** Anbieter ist **Gemini** (Flash-Lite) über die Edge Function
+`ki-proxy` (`supabase/functions/ki-proxy/index.ts`, Secret `AI_PROVIDER=gemini|groq`,
+`GEMINI_API_KEY`, `GEMINI_MODEL`; Anleitung `supabase/SETUP_KI.txt`). `groq-proxy` war
+nie ausgerollt und ist ersetzt. Der Client heißt weiter `js/groq-proxy.js` /
+`window.groqFetch` — die Weiche (Server oder Test-Key im Browser) sitzt dort.
+**KI-Zusammenfassung einer Adresse** (`js/ai-address-summary.js`, Knopf im
+Adress-Kopf) schickt alle Detail-Daten (`window.abDetailDaten`) — **immer über
+`js/ki-pseudonym.js`**: Namen, Mitarbeiter, Firma, Orte, Kunden-/Serien-/Belegnummern,
+Telefon, Mail, Straße werden vor dem Senden durch Platzhalter ersetzt und in der
+Antwort zurückübersetzt; die Zuordnung lebt nur im Browser. Knopf „Was geht raus?"
+zeigt den gesendeten Text. Schnellerfassung (`ai-quick-capture.js`, alle drei
+Aufrufe) und Adress-Vorgang (`ai-address-task.js`) laufen über
+`kiPseudonym.fetchMaskiert(payload)` — Standardkontext aus Kunden-Cache, Maschinen,
+`userList`; unter jeder Vorschau steht „🔒 N Angaben ersetzt · Details" mit Bericht
+(`p.bericht()`: was → Platzhalter, wie oft) und dem gesendeten Text. Platzhalter werden
+erst beim ersten Treffer fortlaufend vergeben. **Neue KI-Stelle ⇒ `fetchMaskiert` statt
+`groqFetch`.** Nicht angebunden: `accounting.js` (Lieferantenrechnungen, Bilder) und
+`pdf-i18n.js` (Übersetzung).
+Die Regel „nie Datenbestände an die KI" gilt damit nur noch für unpseudonymisierte Daten.
+
+Alte Fassung (Groq, bis 2026-09-21):
 
 **Der Schlüssel liegt NICHT mehr im Browser.** Jede Anfrage geht über
 `window.groqFetch` (`js/groq-proxy.js`) an die Supabase Edge Function
@@ -235,7 +259,7 @@ formfüllenden Feldern zusätzlich `.menu-block`. Ausgewählter Eintrag: `.selec
 einem Inline-`style` suchen.
 
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v557 (Stand 2026-09-17) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v592 (Stand 2026-09-22) — bei jeder Änderung hochzählen.
 
 **Mietvereinbarung (Stand 2026-08-25).** Der Bogen wird gespeichert: PDF per
 html2canvas je `.miet-page` + jsPDF, Ablage in R2 unter
@@ -337,6 +361,13 @@ filtert serverseitig auf fällige Zeitpunkte mit wenigen Spalten, Quittung alle
 erzwingt), Timeline lädt frühestens nach 3 min neu. **Regel:** keine Abfrage
 in einer Schleife/Timer mit `select('*')` ohne serverseitigen Filter, kein
 Komplett-Neuladen als Reaktion auf ein Realtime-Ereignis.
+**Nachtrag 2026-09-21:** Benachrichtigungen (`notifications.js`, alle 5 min) laden
+Vorgänge nur mit den gelesenen Spalten (`PROC_FELDER`) und Serviceberichte mit
+`customer_signed` statt des Base64-Bilds; Wecker-Schritte nur Vorgänge mit offenem
+Schritt (`steps @> [{"done":false}]`); `users` ohne `saved_signature` — das Bild
+holt `window.userSignatur(id)` bei Bedarf. Kalender: `ladeMaintEvents`/
+`enrichMaintLastArt` puffern kurz, weil der Start doppelt zeichnet. Messen:
+`performance.getEntriesByType("resource")` + Bodygröße je REST-URL nachladen.
 
 **Rechnungsliste (2026-09-16).** Ausklappbare Leiste rechts in „Vorgänge"
 (`js/rechnungsliste.js`, Tabelle `invoice_todos`, Migration
@@ -346,3 +377,28 @@ Komplett-Neuladen als Reaktion auf ein Realtime-Ereignis.
 (`permissions.rechnungsliste`, Haken „Rechnungsliste" in der
 Benutzerverwaltung; `PERM_VIEW_KEYS` enthält den Schlüssel nur fürs Modal).
 Zeilen/Eingabe nutzen die `.workshop-*`-Bausteine der Werkstatt-Liste.
+
+**Mail / Outlook (2026-09-18).** Ansicht „Mail" in der Sidebar: Posteingang,
+Outlook-Kontakte, Schreiben — alles live über **Microsoft Graph**, nichts wird
+kopiert. Anmeldung per MSAL (`lib/msal-browser.min.js`, `js/outlook-graph.js`),
+Anwendungs-ID je Browser in `localStorage['outlook_client_id']` (Einstellungen →
+Outlook). **Nur über http(s)** — per `file://` kann Microsoft nicht zurückleiten;
+die Rückleitungs-URI (`location.origin + pathname`, Typ SPA) muss in der
+App-Registrierung stehen. Kundenerkennung an Mails: Ansprechpartner-/Firmen-Mail
+→ Hand-Zuordnung (`mail_zuordnungen`, Migration
+`supabase_add_mail_zuordnungen.sql`, Rückfall localStorage) → eindeutige
+Firmen-Domain. „In Webapp übernehmen" nutzt die Import-Vorschau des Adressbuchs
+(`window.showOutlookContactImport`, gleiche Dublettenprüfung wie der .vcf-Drop);
+nach Anlage feuert `addressbook:changed`. Die Ansicht hat bewusst **kein Glas
+und kleine Radien** (Mailprogramm-Optik) und einen Vollbild-Modus
+(`body.mv-vollbild`, wie Timeline). Freigegebene Postfächer (info@, service@)
+brauchen `Mail.Read.Shared`/`Mail.Send.Shared` und `/users/<adresse>/…` — noch
+nicht gebaut.
+**Mail-Editor = Quill (2026-09-18).** `lib/quill.min.js` + `lib/quill.snow.css` (1.3.7),
+Toolbar-Markup in `partials/views/mail.html`, Umfärbung in `css/views/mail.css`.
+Schriften laufen als Style-Attributor mit Kurznamen (`calibri`, `arial` …); `textHtml()`
+übersetzt sie beim Versand in echte Schriftstapel. Anhänge: ≤3 MB als `fileAttachment`,
+größer per Upload-Session; mit Anhang wird immer Entwurf → Anhänge → `/send` gefahren.
+Signatur je Browser in `localStorage['outlook_signatur']` (Einstellungen → Outlook).
+**Fallstrick:** `js/select-enhance.js` baut jedes `<select>` um — auch Quills
+Toolbar-Selects, die dann unsichtbar werden. Toolbar-Container brauchen `data-no-enhance`.

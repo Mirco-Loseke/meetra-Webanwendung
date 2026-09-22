@@ -205,9 +205,13 @@
 
         var abfragen = [
             client.from('users').select('id, name'),
+            /* „Werkstattaufenthalt Beginn/Ende" sind reine Historien-Marken
+               der Maschine (js/app-init.js) — keine Einsätze, gehören nicht
+               auf die Achse. Schon serverseitig weglassen. */
             client.from('service_entries')
                   .select('id, machine_id, title, date, datum_von, datum_bis, hours, technicians, '
-                        + 'is_finalized, work_log, customer_name, contact_person, location_snapshot'),
+                        + 'is_finalized, work_log, customer_name, contact_person, location_snapshot')
+                  .not('title', 'in', '("Werkstattaufenthalt Beginn","Werkstattaufenthalt Ende")'),
             client.from('tasks').select('*'),
             client.from('subtasks').select('*'),
             client.from('rental_agreements').select('id, machine_id, title, data'),
@@ -267,6 +271,7 @@
 
     function ladeServiceberichte(rows) {
         rows.forEach(function (r) {
+            if (/^werkstattaufenthalt/i.test(r.title || '')) return;   // Historien-Marke, kein Einsatz
             var von = ausDB(r.datum_von) || ausDB(r.date);
             if (!von) return;
             var bis = ausDB(r.datum_bis) || von;

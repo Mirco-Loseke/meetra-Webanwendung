@@ -2364,8 +2364,15 @@
     // Die hinterlegte Unterschrift des Einweisers wandert in das
     // Vermieter-Feld der Uebergabe — genau wie beim Servicebericht.
     function uebernehmeEinweiserUnterschrift() {
-        const u = (window.userList || []).find(x => String(x.id) === String(daten.einweisung.durch_id));
-        if (u && u.saved_signature) daten.unterschriften.u_vermieter = u.saved_signature;
+        const id = daten.einweisung.durch_id;
+        if (!id || typeof window.userSignatur !== 'function') return;
+        // Bild wird nachgeladen (nicht mehr Teil der Nutzerliste); danach neu zeichnen.
+        window.userSignatur(id).then(sig => {
+            if (!sig || String(daten.einweisung.durch_id) !== String(id)) return;
+            if (daten.unterschriften.u_vermieter === sig) return;
+            daten.unterschriften.u_vermieter = sig;
+            if (typeof zeichneInhalt === 'function') zeichneInhalt();
+        });
     }
 
     // ------------------------------------------------------

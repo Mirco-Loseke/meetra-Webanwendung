@@ -143,6 +143,7 @@
                             'settings-import',
                             'settings-textbausteine',
                             'settings-ai',
+                            'settings-outlook',
                             'settings-uvv-wartungsplaene',
                             'settings-etiketten',
                             'users',
@@ -246,10 +247,15 @@
                     if (typeof window.renderEvents === 'function') {
                         window.renderEvents();
                     }
+                } else if (targetId === 'mail') {
+                    if (typeof window.mailViewOeffnen === 'function') window.mailViewOeffnen();
+                } else if (targetId === 'settings-outlook') {
+                    if (typeof window.outlookSettingsRender === 'function') window.outlookSettingsRender();
                 } else if (targetId === 'settings-ai') {
                     // Kein Schlüsselfeld mehr — der Zugang liegt serverseitig.
                     // Beim Öffnen gleich zeigen, ob der Dienst antwortet.
                     if (typeof window.pruefeKiVerbindung === 'function') window.pruefeKiVerbindung();
+                    if (typeof window.kiEinstellungenRender === 'function') window.kiEinstellungenRender();
                 } else if (targetId === 'settings-uvv-wartungsplaene') {
                     if (typeof window.loadUvvWartungsplaene === 'function') {
                         window.loadUvvWartungsplaene();
@@ -389,7 +395,7 @@
                 'home', 'tasks', 'machines', 'workshop', 'service', 'protocols',
                 'settings-etiketten', 'documents', 'listen', 'history', 'accounting', 'calendar', 'timeline', 'settings',
                 'users', 'categories', 'protocol-templates', 'settings-textbausteine',
-                'settings-firmeneinstellungen', 'settings-import', 'settings-uvv-wartungsplaene', 'settings-ai',
+                'settings-firmeneinstellungen', 'settings-import', 'settings-uvv-wartungsplaene', 'settings-ai', 'settings-outlook',
                 // kein Ansichts-Ziel, sondern die Leiste in „Vorgänge" (js/rechnungsliste.js)
                 'rechnungsliste'
             ];

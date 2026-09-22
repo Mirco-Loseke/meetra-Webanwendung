@@ -73,13 +73,14 @@
         let roh = response.statusText || '';
         try { const e = await response.clone().json(); roh = e.error?.message || roh; } catch (_) { }
         if (response.status === 401 || response.status === 403) {
-            return 'Der Groq API-Key wird nicht akzeptiert. Bitte unter Einstellungen → KI prüfen.';
+            return roh || 'Die KI-Anfrage wurde abgelehnt (Anmeldung oder Schlüssel). Bitte unter Einstellungen → KI „Verbindung prüfen".';
         }
         if (response.status === 429) {
-            return 'Das Minutenlimit von Groq ist erreicht (kostenloser Zugang: 12.000 Token/Minute). Bitte kurz warten und erneut auf „Analysieren" klicken.';
+            // js/groq-proxy.js liefert hier schon den passenden Satz (Minute/Tag, Wartezeit)
+            return roh || 'Zu viele KI-Anfragen in kurzer Zeit — bitte in 2–3 Minuten noch einmal versuchen.';
         }
         if (response.status >= 500) {
-            return 'Groq antwortet gerade nicht (Serverfehler). Bitte gleich noch einmal versuchen.';
+            return 'Die KI antwortet gerade nicht (Serverfehler). Bitte gleich noch einmal versuchen.' + (roh ? ' [' + roh.slice(0, 120) + ']' : '');
         }
         return roh || ('Unerwartete Antwort (' + response.status + ')');
     }
@@ -699,7 +700,7 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
         // Läuft über die eigene Edge Function (js/groq-proxy.js) — der
         // Schlüssel liegt serverseitig, nicht mehr im Browser.
         async function callGroq(model) {
-            return window.groqFetch({
+            return (window.kiPseudonym ? window.kiPseudonym.fetchMaskiert : window.groqFetch)({
                 model,
                 messages: [
                     { role: 'system', content: systemPrompt },
@@ -732,7 +733,7 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
             // einer technischen Meldung wegzuschicken.
             if (response.status === 429) {
                 const warten = retryAfterSekunden(response) || 6;
-                if (status) status.textContent = `Groq-Limit erreicht — neuer Versuch in ${Math.ceil(warten)} s …`;
+                if (status) status.textContent = `KI-Limit erreicht — neuer Versuch in ${Math.ceil(warten)} s …`;
                 await new Promise(r => setTimeout(r, warten * 1000));
                 if (status) status.textContent = 'KI analysiert deine Eingabe...';
                 response = await callGroq(groqModel());
@@ -921,7 +922,7 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
         }
 
         prev.style.display = 'block';
-        prev.innerHTML = html;
+        prev.innerHTML = (window.kiPseudonym ? window.kiPseudonym.hinweisHtml() : '') + html;
         if (prevAct) prevAct.style.display = 'flex';
 
         // Schritte-Editor je Vorgangs-Karte initialisieren (nutzt die globalen Schritte-Funktionen aus index.html)
@@ -1406,7 +1407,7 @@ Regeln:
             const chosenModel = groqModel();
             // Über die eigene Edge Function, siehe js/groq-proxy.js
             async function callGroq(model) {
-                return window.groqFetch({
+                return (window.kiPseudonym ? window.kiPseudonym.fetchMaskiert : window.groqFetch)({
                     model,
                     messages: [
                         { role: 'system', content: systemPrompt },
@@ -1429,7 +1430,7 @@ Regeln:
             // Minutenlimit: einmal automatisch nachfassen (siehe runAiCapture).
             if (response.status === 429) {
                 const warten = retryAfterSekunden(response) || 6;
-                if (status) status.textContent = `Groq-Limit erreicht — neuer Versuch in ${Math.ceil(warten)} s …`;
+                if (status) status.textContent = `KI-Limit erreicht — neuer Versuch in ${Math.ceil(warten)} s …`;
                 await new Promise(r => setTimeout(r, warten * 1000));
                 if (status) status.textContent = 'KI analysiert deine Eingabe...';
                 response = await callGroq(groqModel());
@@ -1505,7 +1506,7 @@ Regeln:
                 + Material hinzufügen
             </button>`;
 
-        prev.innerHTML = html;
+        prev.innerHTML = (window.kiPseudonym ? window.kiPseudonym.hinweisHtml() : '') + html;
         prev.style.display = 'block';
         if (prevAct) prevAct.style.display = 'flex';
         const inp = document.getElementById('ai-sr-input-area');
@@ -1667,7 +1668,7 @@ Regeln:
 
         try {
             const stepsPrompt = `Du bekommst Betreff und Inhalt einer Geschäfts-E-Mail. Schlage NUR wirklich passende, logische Arbeitsschritte vor, die sich aus dieser Mail ergeben (max. 4). Wenn keine sinnvolle Zerlegung möglich ist, gib ein leeres Array zurück. Erfinde keine Fakten. Antworte AUSSCHLIESSLICH mit JSON: { "steps": ["kurzer Schritt-Text"] }`;
-            const resp = await window.groqFetch({
+            const resp = await (window.kiPseudonym ? window.kiPseudonym.fetchMaskiert : window.groqFetch)({
                     model: groqModel(),
                     messages: [
                         { role: 'system', content: stepsPrompt },

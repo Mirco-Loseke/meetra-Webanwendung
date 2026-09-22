@@ -37,11 +37,17 @@ Deno.serve(async (req) => {
     if (authErr || !user) return json({ error: 'Unauthorized' }, 401);
 
     // ── Action dispatch ───────────────────────────────────────────
-    let body: { action: string; path?: string; contentType?: string; fromPath?: string; toPath?: string };
+    let body: { action: string; path?: string; contentType?: string; fromPath?: string; toPath?: string; prefix?: string };
     try {
         body = await req.json();
     } catch {
         return json({ error: 'Invalid JSON' }, 400);
+    }
+
+    // Pfade dürfen nicht aus dem Bucket herausführen oder leer sein.
+    const pfadOk = (p?: string) => !!p && !p.startsWith('/') && !p.includes('..') && p.length <= 1024;
+    for (const k of ['path', 'fromPath', 'toPath'] as const) {
+        if (body[k] !== undefined && !pfadOk(body[k])) return json({ error: 'Invalid path' }, 400);
     }
 
     const aws = new AwsClient({
@@ -81,6 +87,36 @@ Deno.serve(async (req) => {
         );
 
         return json({ deleteUrl: signed.url });
+    }
+
+    // ── download: presigned GET URL (5 min) — für Dateien, die der Browser
+    //    als Blob braucht (z. B. PDF der Mietvereinbarung zum Weiterverarbeiten)
+    if (body.action === 'download' && body.path) {
+        const target = new URL(`${R2_ENDPOINT}/${R2_BUCKET}/${body.path}`);
+        target.searchParams.set('X-Amz-Expires', '300');
+        const signed = await aws.sign(new Request(target.toString(), { method: 'GET' }), { aws: { signQuery: true } });
+        return json({ downloadUrl: signed.url });
+    }
+
+    // ── list: alle Schlüssel unter einem Präfix (serverseitig, seitenweise) ──
+    if (body.action === 'list' && typeof body.prefix === 'string') {
+        if (!pfadOk(body.prefix)) return json({ error: 'Invalid prefix' }, 400);
+        const keys: string[] = [];
+        let token: string | null = null;
+        do {
+            const u = new URL(`${R2_ENDPOINT}/${R2_BUCKET}`);
+            u.searchParams.set('list-type', '2');
+            u.searchParams.set('prefix', body.prefix);
+            u.searchParams.set('max-keys', '1000');
+            if (token) u.searchParams.set('continuation-token', token);
+            const res = await aws.fetch(u.toString(), { method: 'GET' });
+            if (!res.ok) return json({ error: `List failed: ${await res.text()}` }, 500);
+            const xml = await res.text();
+            for (const m of xml.matchAll(/<Key>([^<]*)<\/Key>/g)) keys.push(m[1].replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'"));
+            const nt = xml.match(/<NextContinuationToken>([^<]*)<\/NextContinuationToken>/);
+            token = /<IsTruncated>true<\/IsTruncated>/.test(xml) && nt ? nt[1].replace(/&amp;/g, '&') : null;
+        } while (token && keys.length < 10000);
+        return json({ keys });
     }
 
     // ── rename: server-side copy + delete ────────────────────────

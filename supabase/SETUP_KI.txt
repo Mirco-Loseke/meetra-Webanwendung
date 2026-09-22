@@ -1,0 +1,71 @@
+================================================================================
+  meetra Webapp — KI zentral: Edge Function "ki-proxy" (Gemini oder Groq)
+================================================================================
+
+Stand 2026-09-21. Ersetzt SETUP_GROQ.txt und die nie ausgerollte Function
+groq-proxy. Alle KI-Stellen der App (Schnellerfassung, Servicebericht-KI,
+Adress-Vorgang, Rechnungs-PDF) rufen window.groqFetch (js/groq-proxy.js) →
+/functions/v1/ki-proxy. Der Anbieter wird per Secret gewählt, der Key liegt
+nur auf dem Server.
+
+Function:  supabase/functions/ki-proxy/index.ts
+Projekt:   rtnpyziwyaqrlfazxkyr
+
+
+================================================================================
+SCHRITT 1 — Secrets setzen
+================================================================================
+https://supabase.com/dashboard/project/rtnpyziwyaqrlfazxkyr/functions/secrets
+→ "Add new secrets", je Zeile Key + Value, dann Save:
+
+  AI_PROVIDER      gemini
+  GEMINI_API_KEY   <dein Key aus aistudio.google.com/apikey>
+  GEMINI_MODEL     <Modellname, z. B. gemini-3.6-flash-lite — der, der in
+                    Einstellungen → KI beim Test am besten lief>
+
+Optional:
+  GROQ_API_KEY     (nur wenn AI_PROVIDER=groq)
+  AI_DAILY_LIMIT   z. B. 200 — Anfragen je Nutzer und Tag; braucht die
+                   Tabelle aus supabase/supabase_add_ai_usage.sql
+
+GROQ_API_KEY ist schon da und darf bleiben — er wird nur bei AI_PROVIDER=groq
+benutzt.
+
+
+================================================================================
+SCHRITT 2 — Function ausrollen
+================================================================================
+https://supabase.com/dashboard/project/rtnpyziwyaqrlfazxkyr/functions
+→ "Deploy a new function" → "Via Editor"
+→ Function name: ki-proxy
+→ Beispielcode löschen, Inhalt von supabase/functions/ki-proxy/index.ts
+   einfügen → Deploy.
+
+Prüfen (muss 401 liefern — kein Token mitgeschickt, genau richtig):
+  https://rtnpyziwyaqrlfazxkyr.supabase.co/functions/v1/ki-proxy
+
+
+================================================================================
+SCHRITT 3 — In der App umstellen und prüfen
+================================================================================
+Einstellungen → KI:
+  - Anbieter auf "Server (Standard — Edge Function ki-proxy)" → Speichern.
+    (Damit ist der Browser-Key aus dem Test nicht mehr in Gebrauch.)
+  - "Verbindung prüfen" → "✓ … KI läuft über: gemini · <Modell>".
+
+Danach in jedem Browser, in dem der Test-Key eingetragen war, einmal auf
+"Server" umstellen — sonst läuft dort weiter der Browser-Key.
+
+
+================================================================================
+ANBIETER / MODELL SPÄTER WECHSELN
+================================================================================
+Secret ändern (AI_PROVIDER, GEMINI_MODEL …) → Function neu deployen (Secrets
+werden erst beim Start gelesen). In der App ist nichts zu ändern.
+
+Fehlermeldungen in der App sagen, was fehlt:
+  "Edge Function ki-proxy ist nicht ausgerollt"  → Schritt 2
+  "Auf dem Server fehlt der KI-Schlüssel"        → Schritt 1
+  "Schlüssel ungültig oder widerrufen"           → neuen Key, Secret ersetzen
+  "Modell nicht verfügbar"                       → GEMINI_MODEL anpassen
+================================================================================

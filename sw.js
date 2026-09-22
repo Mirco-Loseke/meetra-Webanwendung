@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meetra-app-v557';
+const CACHE_NAME = 'meetra-app-v592';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
@@ -74,6 +74,13 @@ const PRECACHE = [
     'js/pdf-i18n.js',
     'js/process-open-hints.js',
     'css/views/routenplanung.css',
+    'css/views/mail.css',
+    'js/outlook-graph.js',
+    'js/mail-view.js',
+    'js/outlook-settings.js',
+    'lib/msal-browser.min.js',
+    'lib/quill.min.js',
+    'lib/quill.snow.css',
     'js/routenplanung.js',
     'lib/supabase.min.js',
     'js/offline-service.js',
@@ -139,12 +146,15 @@ const PRECACHE = [
     'js/modal-sections.js',
     'js/speech-input.js',
     'js/groq-proxy.js',
+    'js/ki-einstellungen.js',
     'js/ai-quick-capture.js',
     'js/photo-lightbox.js',
     'js/documents-modal.js',
     'js/workshop-photos-modal.js',
     'js/workshop-photos-helper.js',
     'js/ai-address-task.js',
+    'js/ki-pseudonym.js',
+    'js/ai-address-summary.js',
     'js/dropdown-position.js',
     'js/select-enhance.js',
     'js/auth.js',

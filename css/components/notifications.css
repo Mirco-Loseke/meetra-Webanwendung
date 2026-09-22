@@ -481,6 +481,45 @@ body.notif-full-open::before {
     word-break: break-word;
 }
 
+/* Adresse (Kunde · Ansprechpartner) — eigene Zeile, damit man sofort
+   sieht, um wen es geht; gleiche Farbe wie im Vorgang. */
+.notif-item-address {
+    color: #a78bfa;
+    font-size: var(--fs-sm);
+    font-weight: 800;
+    word-break: break-word;
+}
+
+/* Zahl an der Glocke: rot = überfällig, gelb = nur heute,
+   Punkt ohne Zahl = nur Unwichtiges ungelesen. */
+#notif-badge.is-warning {
+    background: var(--warning);
+    color: #1e293b;
+}
+#notif-badge.is-dot {
+    min-width: 10px;
+    width: 10px;
+    height: 10px;
+    padding: 0;
+    top: -2px;
+    right: -2px;
+    background: rgba(255, 255, 255, 0.55);
+    border-width: 1px;
+}
+#notif-bell-btn.has-overdue {
+    color: var(--danger);
+    border-color: rgba(239, 68, 68, 0.5);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+/* Auf-/zuklappbare Gruppe („Zur Kenntnis") */
+.notif-group-title.is-toggle {
+    cursor: pointer;
+    user-select: none;
+}
+.notif-group-title.is-toggle:hover { opacity: 0.85; }
+.notif-group-title.is-collapsed { padding-bottom: 12px; }
+
 .notif-item-meta {
     font-size: var(--fs-sm);
     font-weight: 700;

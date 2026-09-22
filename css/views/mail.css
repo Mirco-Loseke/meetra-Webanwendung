@@ -1,0 +1,460 @@
+/* ==========================================================
+   MAIL — Outlook-Postfach in der App (partials/views/mail.html)
+   Bewusst anders als der Rest der App: deckende Flächen statt Glas,
+   kleine Radien, Werkzeug-Optik wie ein Mailprogramm. Die Ansicht
+   füllt die ganze Höhe; Vollbild (body.mv-vollbild) nimmt Menü und
+   Kopfleiste weg — wie bei der Timeline.
+   ========================================================== */
+#mail {
+    --mv-bg: #0d1424;          /* Grundfläche */
+    --mv-bg-2: #111a2e;        /* Liste */
+    --mv-bg-3: #16213a;        /* Kopfzeilen, Hover */
+    --mv-line: #223050;
+    --mv-akzent: #3b82f6;
+    --mv-r: 4px;
+
+    display: flex; flex-direction: column;
+    height: calc(100vh - 70px - 0.75rem - 2rem); /* Topbar + #main-content-Innenabstand */
+    min-height: 480px;
+    background: var(--mv-bg);
+    border: 1px solid var(--mv-line);
+    border-radius: var(--mv-r);
+    overflow: hidden;
+    color: var(--text-1);
+}
+#mail.hidden { display: none; }
+
+/* ---------- Kopfzeile ---------- */
+.mv-kopf {
+    display: flex; align-items: center; gap: var(--space-4);
+    height: 52px; padding: 0 var(--space-4);
+    background: var(--mv-bg-3); border-bottom: 1px solid var(--mv-line);
+    flex: none;
+}
+.mv-titel {
+    display: flex; align-items: center; gap: var(--space-2);
+    margin: 0; font-size: var(--fs-lg); font-weight: var(--fw-bold); color: var(--text-1);
+    padding-right: var(--space-4); border-right: 1px solid var(--mv-line);
+}
+.mv-tabs { display: flex; gap: var(--space-1); height: 100%; }
+.mv-tab {
+    display: flex; align-items: center; gap: var(--space-2);
+    padding: 0 var(--space-4); border: 0; background: transparent; cursor: pointer;
+    color: var(--text-3); font-weight: var(--fw-semibold); font-size: var(--fs-md);
+    border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.mv-tab svg { width: 17px; height: 17px; }
+.mv-tab:hover { color: var(--text-1); }
+.mv-tab.active { color: var(--text-1); border-bottom-color: var(--mv-akzent); }
+.mv-tab-zahl {
+    display: inline-block; min-width: 18px; padding: 0 6px; border-radius: var(--mv-r); text-align: center;
+    font-size: var(--fs-2xs); background: rgba(255,255,255,0.1);
+}
+.mv-konto {
+    margin-left: auto; display: flex; align-items: center; gap: var(--space-3);
+    font-size: var(--fs-xs); color: var(--text-3); line-height: 1.3;
+}
+.mv-konto .mv-konto-name { color: var(--text-1); font-weight: var(--fw-semibold); font-size: var(--fs-sm); }
+.mv-konto .mv-avatar { width: 30px; height: 30px; }
+.mv-konto .btn-secondary, .mv-kunde .btn-secondary, .mv-mail-aktionen .btn-secondary, .mv-k-aktionen .btn-secondary {
+    padding: 6px 12px; font-size: var(--fs-sm); border-radius: var(--mv-r);
+}
+#mail .btn-primary { border-radius: var(--mv-r); }
+
+.mv-avatar {
+    width: 34px; height: 34px; border-radius: var(--radius-circle); flex: none;
+    display: grid; place-items: center;
+    font-size: var(--fs-xs); font-weight: var(--fw-bold); color: #fff;
+    background: #1d4ed8;
+}
+.mv-avatar.gruen { background: #0f7a56; }
+.mv-avatar.rot { background: #be1e2d; }
+
+.mv-icon-btn {
+    width: 34px; height: 34px; flex: none; border-radius: var(--mv-r); cursor: pointer;
+    display: grid; place-items: center;
+    border: 1px solid var(--mv-line); background: var(--mv-bg-2); color: var(--text-2);
+}
+.mv-icon-btn:hover { background: var(--mv-bg-3); color: var(--text-1); }
+
+/* ---------- Nicht verbunden ---------- */
+.mv-leer {
+    margin: auto; max-width: 480px; padding: var(--space-8); text-align: center;
+    background: var(--mv-bg-2); border: 1px solid var(--mv-line); border-radius: var(--mv-r);
+}
+.mv-leer h3 { margin: 0 0 var(--space-2); font-size: var(--fs-lg); }
+.mv-leer p { margin: 0 0 var(--space-5); color: var(--text-3); font-size: var(--fs-md); line-height: var(--lh-normal); }
+.mv-leer-aktionen { display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap; }
+.mv-app { display: none; flex: 1; min-height: 0; }
+#mail.verbunden .mv-leer { display: none; }
+#mail.verbunden .mv-app { display: flex; flex-direction: column; }
+#mail:not(.verbunden) .mv-tabs, #mail:not(.verbunden) #mv-vollbild { display: none; }
+
+.mv-panel { display: none; flex: 1; min-height: 0; }
+.mv-panel.active { display: block; overflow-y: auto; }
+.mv-panel.mv-split.active { display: grid; overflow: hidden; }
+
+/* ---------- Liste | Detail ---------- */
+.mv-split { grid-template-columns: minmax(320px, 420px) 1fr; }
+.mv-liste { background: var(--mv-bg-2); border-right: 1px solid var(--mv-line); overflow-y: auto; min-height: 0; }
+.mv-liste-kopf {
+    display: flex; gap: var(--space-2); align-items: center;
+    padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--mv-line);
+    position: sticky; top: 0; z-index: 2; background: var(--mv-bg-2);
+}
+.mv-liste-kopf input {
+    flex: 1; min-width: 0; height: 34px; padding: 0 11px; font-size: var(--fs-md);
+    color: var(--text-1); background: var(--mv-bg); border: 1px solid var(--mv-line); border-radius: var(--mv-r);
+}
+.mv-liste-kopf input:focus { outline: none; border-color: var(--mv-akzent); }
+.mv-detail { overflow-y: auto; padding: var(--space-6) var(--space-8); min-height: 0; background: var(--mv-bg); }
+.mv-platzhalter, .mv-laden { color: var(--text-3); font-size: var(--fs-md); padding: var(--space-10); text-align: center; }
+.mv-laden { padding: var(--space-4); text-align: left; }
+.mv-mehr { padding: var(--space-3); text-align: center; }
+.mv-kontakt-info { padding: 6px var(--space-3); border-bottom: 1px solid var(--mv-line); }
+
+/* ---------- Mail-Zeile ---------- */
+.mv-mail {
+    display: grid; grid-template-columns: 34px 1fr auto; gap: var(--space-3);
+    padding: 10px var(--space-3); border-bottom: 1px solid var(--mv-line);
+    cursor: pointer; align-items: start; border-left: 3px solid transparent;
+}
+.mv-mail:hover { background: var(--mv-bg-3); }
+.mv-mail.active { background: var(--mv-bg-3); border-left-color: var(--mv-akzent); }
+.mv-mail .mv-wer, .mv-mail .mv-betreff, .mv-mail .mv-vorschau { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mv-mail .mv-wer { font-size: var(--fs-md); font-weight: var(--fw-semibold); color: var(--text-2); }
+.mv-mail .mv-betreff { font-size: var(--fs-sm); color: var(--text-2); }
+.mv-mail .mv-vorschau { font-size: var(--fs-xs); color: var(--text-3); }
+.mv-mail .mv-rechts { text-align: right; font-size: var(--fs-xs); color: var(--text-3); white-space: nowrap; }
+.mv-mail .mv-kunde-punkt {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 6px;
+    background: var(--success); vertical-align: middle;
+}
+.mv-mail.ungelesen .mv-wer, .mv-mail.ungelesen .mv-betreff { color: var(--text-1); font-weight: var(--fw-bold); }
+.mv-mail.ungelesen .mv-betreff::before {
+    content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--mv-akzent); margin-right: 6px; vertical-align: middle;
+}
+.mv-richtung {
+    font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: var(--ls-caps);
+    padding: 1px 6px; border-radius: var(--mv-r); margin-right: 6px; vertical-align: middle;
+}
+.mv-richtung.ein { background: #1e3a8a; color: #bfdbfe; }
+.mv-richtung.aus { background: #065f46; color: #a7f3d0; }
+
+/* ---------- Mail-Detail ---------- */
+.mv-zurueck { display: none; margin-bottom: var(--space-3); }
+.mv-mail-titel { font-size: var(--fs-xl); margin: 0 0 var(--space-4); color: var(--text-1); font-family: var(--font-heading); }
+.mv-mail-meta {
+    display: grid; grid-template-columns: 44px 1fr auto; gap: var(--space-3); align-items: center;
+    padding-bottom: var(--space-4); border-bottom: 1px solid var(--mv-line); margin-bottom: var(--space-4);
+}
+.mv-mail-meta .mv-avatar { width: 44px; height: 44px; }
+.mv-mail-meta .mv-name { font-weight: var(--fw-semibold); color: var(--text-1); }
+.mv-mail-meta .mv-adr, .mv-mail-meta .mv-an, .mv-mail-meta .mv-datum { font-size: var(--fs-xs); color: var(--text-3); }
+.mv-kunde {
+    display: flex; align-items: center; gap: var(--space-3);
+    padding: 10px var(--space-4); border-radius: var(--mv-r); margin-bottom: var(--space-4); font-size: var(--fs-sm);
+}
+.mv-kunde .mv-kunde-text { flex: 1; }
+.mv-kunde.ja { background: #0b3b2c; border: 1px solid #10b981; color: var(--text-1); }
+.mv-kunde.nein { background: var(--mv-bg-2); border: 1px solid var(--mv-line); color: var(--text-3); }
+.mv-kunde-suche { position: relative; flex: 1; }
+.mv-kunde-suche input {
+    width: 100%; height: 32px; padding: 0 10px; font-size: var(--fs-sm); color: var(--text-1);
+    background: var(--mv-bg); border: 1px solid var(--mv-line); border-radius: var(--mv-r);
+}
+.mv-kunde-suche .menu-panel { border-radius: var(--mv-r); }
+.mv-mail-aktionen { display: flex; gap: var(--space-2); margin-bottom: var(--space-4); flex-wrap: wrap; }
+.mv-mail-aktionen .btn-secondary { text-decoration: none; }
+.mv-anhang {
+    display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; margin: 0 8px 8px 0;
+    border: 1px solid var(--mv-line); border-radius: var(--mv-r); font-size: var(--fs-xs);
+    background: var(--mv-bg-2); color: var(--text-2);
+}
+.mv-body iframe { width: 100%; min-height: 55vh; border: 1px solid var(--mv-line); background: #fff; border-radius: var(--mv-r); }
+.mv-body pre { white-space: pre-wrap; font: inherit; margin: 0; color: var(--text-2); line-height: var(--lh-normal); }
+
+/* ---------- Kontakte ---------- */
+.mv-buchstabe {
+    padding: 3px var(--space-3); font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--text-3); background: var(--mv-bg); position: sticky; top: 51px; z-index: 1;
+    border-bottom: 1px solid var(--mv-line);
+}
+.mv-kontakt {
+    display: grid; grid-template-columns: 34px 1fr auto; gap: var(--space-3); align-items: center;
+    padding: 9px var(--space-3); border-bottom: 1px solid var(--mv-line); cursor: pointer; border-left: 3px solid transparent;
+}
+.mv-kontakt:hover { background: var(--mv-bg-3); }
+.mv-kontakt.active { background: var(--mv-bg-3); border-left-color: var(--mv-akzent); }
+.mv-kontakt .mv-n { font-size: var(--fs-md); font-weight: var(--fw-semibold); color: var(--text-1); }
+.mv-kontakt .mv-f { font-size: var(--fs-xs); color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mv-kontakt .mv-status { font-size: var(--fs-2xs); padding: 2px 7px; border-radius: var(--mv-r); white-space: nowrap; }
+.mv-status.da { background: #0b3b2c; color: var(--success-soft); }
+.mv-status.neu { background: var(--mv-bg); color: var(--text-3); border: 1px solid var(--mv-line); }
+.mv-k-kopf { display: grid; grid-template-columns: 64px 1fr; gap: var(--space-4); align-items: center; margin-bottom: var(--space-4); }
+.mv-k-kopf .mv-avatar { width: 64px; height: 64px; font-size: var(--fs-lg); }
+.mv-k-kopf h2 { margin: 0; font-size: var(--fs-xl); color: var(--text-1); font-family: var(--font-heading); }
+.mv-k-kopf .mv-firma { color: var(--text-3); font-size: var(--fs-md); }
+.mv-k-aktionen { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-5); }
+.mv-felder {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--space-3) var(--space-6);
+    margin-bottom: var(--space-6); padding: var(--space-4); background: var(--mv-bg-2); border: 1px solid var(--mv-line); border-radius: var(--mv-r);
+}
+.mv-feld .mv-l { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: var(--ls-caps); color: var(--text-3); }
+.mv-feld .mv-w { font-size: var(--fs-md); color: var(--text-1); }
+.mv-feld .mv-w a { color: #93c5fd; text-decoration: none; }
+.mv-k-mails h3 { font-size: var(--fs-md); color: var(--text-2); margin: 0 0 var(--space-2); }
+.mv-k-mails .mv-mail { grid-template-columns: 1fr auto; padding: 10px 0; border-left: 0; }
+
+/* ---------- Schreiben (Outlook-Aufbau) ----------
+   Leiste oben, Kopfzeilen mit fester Beschriftungsspalte, Textfeld füllt den Rest. */
+.mv-panel.mv-schreiben.active { display: flex; flex-direction: column; overflow: hidden; }
+.mv-s-leiste {
+    display: flex; align-items: center; gap: var(--space-2);
+    padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--mv-line); background: var(--mv-bg-2); flex: none;
+}
+.mv-s-senden { display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px; }
+.mv-s-leiste .btn-secondary { padding: 8px 14px; font-size: var(--fs-sm); border-radius: var(--mv-r); }
+.mv-s-status { margin-left: var(--space-2); }
+.mv-s-kopf { flex: none; border-bottom: 1px solid var(--mv-line); }
+.mv-s-zeile {
+    display: flex; align-items: center; min-height: 42px;
+    padding: 0 var(--space-4); border-bottom: 1px solid var(--mv-line);
+}
+.mv-s-zeile:last-child { border-bottom: 0; }
+.mv-s-zeile[hidden] { display: none; }   /* Klasse schlägt sonst das UA-hidden */
+.mv-s-zeile label {
+    width: 72px; flex: none; font-size: var(--fs-sm); color: var(--text-3); font-weight: var(--fw-semibold);
+}
+.mv-s-zeile input {
+    flex: 1; min-width: 0; height: 40px; padding: 0 var(--space-2); font-size: var(--fs-md);
+    color: var(--text-1); background: transparent; border: 0; outline: none;
+}
+.mv-s-zeile input::placeholder { color: var(--text-3); opacity: 0.7; }
+.mv-s-von { flex: 1; display: flex; align-items: center; gap: var(--space-2); font-size: var(--fs-md); color: var(--text-1); padding: 0 var(--space-2); }
+.mv-s-von .mv-avatar { width: 24px; height: 24px; font-size: 10px; }
+.mv-s-von .mv-s-von-adr { color: var(--text-3); font-size: var(--fs-sm); }
+.mv-s-schalter { display: flex; gap: var(--space-1); flex: none; }
+.mv-s-schalter button {
+    padding: 4px 10px; border-radius: var(--mv-r); border: 1px solid transparent; background: transparent; cursor: pointer;
+    color: var(--text-3); font-size: var(--fs-sm); font-weight: var(--fw-semibold);
+}
+.mv-s-schalter button:hover { color: var(--text-1); background: var(--mv-bg-3); }
+.mv-s-schalter button[hidden] { display: none; }
+.mv-s-text {
+    flex: 1; min-height: 0; width: 100%; resize: none; border: 0; outline: none;
+    padding: var(--space-5) var(--space-6); font: inherit; font-size: var(--fs-base); line-height: var(--lh-normal);
+    color: var(--text-1); background: var(--mv-bg);
+}
+.mv-s-text::placeholder { color: var(--text-3); opacity: 0.6; }
+
+/* ---------- Vollbild ---------- */
+body.mv-vollbild #sidebar,
+body.mv-vollbild #topbar,
+body.mv-vollbild #sidebar-toggle,
+body.mv-vollbild #mobile-sidebar-toggle { display: none !important; }
+/* backdrop-filter macht #main-content zum Bezugsrahmen für position:fixed — also selbst auf Vollbild ziehen */
+body.mv-vollbild #main-content { margin: 0 !important; padding: 0 !important; max-width: none !important; width: 100vw !important; height: 100vh !important; }
+body.mv-vollbild #mail {
+    position: fixed; inset: 0; z-index: 1500; height: 100vh; border: 0; border-radius: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+body.mv-vollbild #mv-vollbild { background: #1e3a8a; border-color: var(--mv-akzent); color: #fff; }
+
+/* ---------- Handy ---------- */
+@media (max-width: 768px) {
+    #mail { height: calc(100vh - 70px - 16px); border-radius: 0; border-left: 0; border-right: 0; }
+    .mv-kopf { gap: var(--space-2); padding: 0 var(--space-2); }
+    .mv-titel { display: none; }
+    .mv-tab span { display: none; }
+    .mv-tab { padding: 0 var(--space-3); }
+    .mv-konto > div { display: none; }
+    .mv-split { grid-template-columns: 1fr; }
+    .mv-liste { border-right: 0; }
+    .mv-detail { display: none; padding: var(--space-4); }
+    .mv-split.zeigt-detail .mv-liste { display: none; }
+    .mv-split.zeigt-detail .mv-detail { display: block; }
+    .mv-zurueck { display: inline-flex; }
+    .mv-mail-meta { grid-template-columns: 44px 1fr; }
+    .mv-mail-meta .mv-datum { grid-column: 2; }
+    .mv-s-zeile label { width: 52px; }
+    .mv-s-text { padding: var(--space-4); }
+}
+
+/* Schmale, dunkle Rollbalken — der weiße Standardbalken zerschneidet die Flächen */
+#mail .mv-liste, #mail .mv-detail, #mail .mv-panel { scrollbar-width: thin; scrollbar-color: #2b3a5c transparent; }
+#mail .mv-liste::-webkit-scrollbar, #mail .mv-detail::-webkit-scrollbar, #mail .mv-panel::-webkit-scrollbar { width: 8px; }
+#mail .mv-liste::-webkit-scrollbar-thumb, #mail .mv-detail::-webkit-scrollbar-thumb, #mail .mv-panel::-webkit-scrollbar-thumb { background: #2b3a5c; border-radius: 4px; }
+#mail ::-webkit-scrollbar-track { background: transparent; }
+
+/* ---------- Lesebereich in Weiß (Wunsch 2026-09-18) ----------
+   Liste links bleibt dunkel, die geöffnete Mail rechts liest sich wie in Outlook auf weißem Grund. */
+#mail .mv-detail {
+    --mv-bg: #ffffff; --mv-bg-2: #f3f4f6; --mv-bg-3: #e5e7eb; --mv-line: #d1d5db;
+    --text-1: #111827; --text-2: #374151; --text-3: #6b7280;
+    background: #fff; color: #111827;
+}
+#mail .mv-detail .mv-avatar { color: #fff; }
+#mail .mv-detail .btn-secondary {
+    background: #f3f4f6; color: #111827; border: 1px solid #d1d5db;
+}
+#mail .mv-detail .btn-secondary:hover { background: #e5e7eb; }
+#mail .mv-detail .mv-kunde.ja { background: #ecfdf5; border-color: #10b981; color: #065f46; }
+#mail .mv-detail .mv-kunde.nein { background: #f9fafb; border-color: #d1d5db; color: #6b7280; }
+#mail .mv-detail .mv-body iframe { border-color: #e5e7eb; }
+#mail .mv-detail .mv-body pre { color: #111827; }
+#mail .mv-detail .mv-anhang { background: #f9fafb; color: #374151; }
+#mail .mv-detail .mv-feld .mv-w a { color: #1d4ed8; }
+#mail .mv-detail .mv-status.da { background: #ecfdf5; color: #047857; }
+#mail .mv-detail .mv-richtung.ein { background: #dbeafe; color: #1e40af; }
+#mail .mv-detail .mv-richtung.aus { background: #d1fae5; color: #065f46; }
+#mail .mv-detail .mv-tab-zahl { background: #e5e7eb; color: #374151; }
+#mail .mv-detail .mv-kunde-suche input { background: #fff; color: #111827; }
+/* Zuordnen-Dropdown: zwei Stufen dunkler als der weiße Lesebereich, damit es sich absetzt ohne zu knallen */
+#mail .mv-detail .mv-kunde-suche .menu-panel {
+    background: #e5e7eb; color: #111827; border: 1px solid #c7ccd4; border-radius: var(--mv-r);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18); margin-top: 4px; overflow: hidden;
+}
+#mail .mv-detail .mv-kunde-suche .menu-list { list-style: none; margin: 0; padding: 4px; max-height: 280px; overflow-y: auto; }
+#mail .mv-detail .mv-kunde-suche .menu-list li {
+    padding: 8px 10px; border-radius: 3px; cursor: pointer; color: #111827; font-size: var(--fs-sm); line-height: 1.35;
+}
+#mail .mv-detail .mv-kunde-suche .menu-list li .text-muted-sm { color: #6b7280; }
+#mail .mv-detail .mv-kunde-suche .menu-list li:hover { background: #d1d5db; }
+#mail .mv-detail .mv-kunde-suche input { background: #f3f4f6; border-color: #c7ccd4; }
+#mail .mv-detail .mv-platzhalter { color: #9ca3af; }
+#mail .mv-detail { scrollbar-color: #cbd5e1 transparent; }
+#mail .mv-detail::-webkit-scrollbar-thumb { background: #cbd5e1; }
+
+/* ---------- Reiter „Mails" im Adressbuch (dunkler Detail-Dialog) ---------- */
+.ab-mails-kopf { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); flex-wrap: wrap; }
+.ab-mails-liste .mv-mail { grid-template-columns: 1fr auto; padding: 10px 4px; border-left: 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.ab-mails-liste .mv-mail:hover { background: rgba(255,255,255,0.05); }
+
+/* ---------- Ordnerwahl über der Liste ---------- */
+.mv-ordner {
+    display: flex; gap: 2px; padding: 6px var(--space-3); border-bottom: 1px solid var(--mv-line);
+    background: var(--mv-bg-2); position: sticky; top: 51px; z-index: 2;
+}
+.mv-ordner button {
+    padding: 5px 12px; border-radius: var(--mv-r); border: 1px solid transparent; background: transparent; cursor: pointer;
+    color: var(--text-3); font-size: var(--fs-sm); font-weight: var(--fw-semibold);
+}
+.mv-ordner button:hover { color: var(--text-1); background: var(--mv-bg-3); }
+.mv-ordner button.active { color: #fff; background: #1e3a8a; border-color: var(--mv-akzent); }
+#mail .mv-buchstabe { top: 51px; }
+
+/* ---------- Editor (Quill, lib/quill.snow.css) im Schreibfenster ----------
+   Leiste dunkel wie der Rest, Schreibfläche weiß wie das Lesefenster. Quill-Klassen
+   werden hier nur umgefärbt; Aufbau der Leiste steht im Markup (partials/views/mail.html). */
+#mail .mv-s-toolbar.ql-toolbar.ql-snow {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 2px 0; flex: none;
+    padding: 6px var(--space-3); border: 0; border-bottom: 1px solid var(--mv-line);
+    background: var(--mv-bg-2); font-family: inherit;
+}
+#mail .ql-toolbar.ql-snow .ql-formats { margin-right: 10px; display: inline-flex; align-items: center; gap: 2px; }
+#mail .ql-toolbar.ql-snow .ql-formats + .ql-formats { padding-left: 10px; border-left: 1px solid var(--mv-line); }
+#mail .ql-snow.ql-toolbar button {
+    width: 30px; height: 30px; padding: 6px; border-radius: var(--mv-r); color: var(--text-2);
+}
+#mail .ql-snow.ql-toolbar button:hover, #mail .ql-snow.ql-toolbar button.ql-active,
+#mail .ql-snow.ql-toolbar .ql-picker-label:hover, #mail .ql-snow.ql-toolbar .ql-picker-label.ql-active { color: #fff; background: var(--mv-bg-3); }
+#mail .ql-snow.ql-toolbar button:hover .ql-stroke, #mail .ql-snow.ql-toolbar button.ql-active .ql-stroke,
+#mail .ql-snow.ql-toolbar .ql-picker-label:hover .ql-stroke, #mail .ql-snow.ql-toolbar .ql-picker-label.ql-active .ql-stroke { stroke: #fff; }
+#mail .ql-snow.ql-toolbar button:hover .ql-fill, #mail .ql-snow.ql-toolbar button.ql-active .ql-fill { fill: #fff; }
+#mail .ql-snow .ql-stroke { stroke: var(--text-2); }
+#mail .ql-snow .ql-fill { fill: var(--text-2); }
+#mail .ql-snow .ql-picker { color: var(--text-2); height: 30px; font-size: var(--fs-sm); }
+#mail .ql-snow .ql-picker-label { border: 1px solid var(--mv-line); border-radius: var(--mv-r); background: var(--mv-bg); padding-left: 10px; display: inline-flex; align-items: center; }
+#mail .ql-snow .ql-picker.ql-font { width: 130px; }
+#mail .ql-snow .ql-picker.ql-size { width: 64px; }
+#mail .ql-snow .ql-picker-options { background: #e5e7eb; border: 1px solid #c7ccd4; border-radius: var(--mv-r); box-shadow: 0 8px 24px rgba(0,0,0,0.25); padding: 4px; }
+#mail .ql-snow .ql-picker-item { color: #111827; border-radius: 3px; padding: 5px 8px; }
+#mail .ql-snow .ql-picker-item:hover, #mail .ql-snow .ql-picker-item.ql-selected { color: #111827; background: #d1d5db; }
+#mail .ql-snow .ql-picker-item:hover .ql-stroke, #mail .ql-snow .ql-picker-item.ql-selected .ql-stroke { stroke: #111827; }
+#mail .ql-snow .ql-picker-options .ql-stroke { stroke: #374151; }
+#mail .ql-snow .ql-picker.ql-expanded .ql-picker-label { border-color: var(--mv-akzent); color: #fff; }
+#mail .ql-snow .ql-color-picker .ql-picker-options, #mail .ql-snow .ql-icon-picker .ql-picker-options { padding: 6px; width: 172px; }
+#mail .ql-snow .ql-color-picker .ql-picker-item { border: 1px solid rgba(0,0,0,0.15); }
+/* Sichtbare Namen in den Schrift-/Größen-Listen */
+#mail .ql-picker.ql-font .ql-picker-label::before, #mail .ql-picker.ql-font .ql-picker-item::before { content: 'Calibri'; }
+#mail .ql-picker.ql-font [data-value=calibri]::before { content: 'Calibri'; font-family: Calibri, Carlito, sans-serif; }
+#mail .ql-picker.ql-font [data-value=arial]::before { content: 'Arial'; font-family: Arial, sans-serif; }
+#mail .ql-picker.ql-font [data-value=verdana]::before { content: 'Verdana'; font-family: Verdana, sans-serif; }
+#mail .ql-picker.ql-font [data-value=segoe]::before { content: 'Segoe UI'; font-family: 'Segoe UI', sans-serif; }
+#mail .ql-picker.ql-font [data-value=times]::before { content: 'Times New Roman'; font-family: 'Times New Roman', serif; }
+#mail .ql-picker.ql-font [data-value=georgia]::before { content: 'Georgia'; font-family: Georgia, serif; }
+#mail .ql-picker.ql-font [data-value=courier]::before { content: 'Courier New'; font-family: 'Courier New', monospace; }
+#mail .ql-picker.ql-size .ql-picker-label::before, #mail .ql-picker.ql-size .ql-picker-item::before { content: '12'; }
+#mail .ql-picker.ql-size [data-value="8pt"]::before { content: '8'; }
+#mail .ql-picker.ql-size [data-value="9pt"]::before { content: '9'; }
+#mail .ql-picker.ql-size [data-value="10pt"]::before { content: '10'; }
+#mail .ql-picker.ql-size [data-value="11pt"]::before { content: '11'; }
+#mail .ql-picker.ql-size [data-value="12pt"]::before { content: '12'; }
+#mail .ql-picker.ql-size [data-value="14pt"]::before { content: '14'; }
+#mail .ql-picker.ql-size [data-value="16pt"]::before { content: '16'; }
+#mail .ql-picker.ql-size [data-value="18pt"]::before { content: '18'; }
+#mail .ql-picker.ql-size [data-value="20pt"]::before { content: '20'; }
+#mail .ql-picker.ql-size [data-value="24pt"]::before { content: '24'; }
+#mail .ql-picker.ql-size [data-value="28pt"]::before { content: '28'; }
+#mail .ql-picker.ql-size [data-value="36pt"]::before { content: '36'; }
+/* Rechte Seite der Leiste: Anhängen, Signatur */
+#mail .mv-s-toolbar-rechts { margin-left: auto !important; border-left: 0 !important; }
+#mail .ql-snow.ql-toolbar .mv-s-anhang-btn {
+    display: inline-flex; align-items: center; gap: 6px; width: auto; height: 30px; padding: 0 10px;
+    border: 1px solid var(--mv-line); border-radius: var(--mv-r); background: var(--mv-bg); color: var(--text-1);
+    font-size: var(--fs-sm); font-weight: var(--fw-semibold); cursor: pointer;
+}
+#mail .ql-snow.ql-toolbar .mv-s-anhang-btn:hover { background: var(--mv-bg-3); color: #fff; }
+/* Anhänge-Zeile */
+.mv-s-anhaenge { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px var(--space-4); border-bottom: 1px solid var(--mv-line); background: var(--mv-bg-2); flex: none; }
+.mv-s-anhaenge[hidden] { display: none; }
+.mv-s-anhaenge .mv-anhang { margin: 0; }
+.mv-s-anhaenge .mv-anhang button { border: 0; background: transparent; color: var(--text-3); cursor: pointer; font-size: 15px; line-height: 1; padding: 0 2px; margin-left: 4px; }
+.mv-s-anhaenge .mv-anhang button:hover { color: var(--danger-soft); }
+/* Schreibfläche */
+.mv-s-editor-wrap { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; background: #fff; }
+.mv-s-editor-wrap.drop::after { content: ''; position: absolute; inset: 6px; border: 2px dashed var(--mv-akzent); border-radius: var(--mv-r); pointer-events: none; }
+.mv-s-editor-wrap.drop .mv-s-drop { display: block; }
+.mv-s-drop { display: none; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 10px 18px; border-radius: var(--mv-r); background: #1e3a8a; color: #fff; font-weight: var(--fw-semibold); pointer-events: none; }
+#mail #mv-s-text.ql-container.ql-snow { flex: 1; min-height: 0; border: 0; font-family: Calibri, Carlito, 'Segoe UI', sans-serif; font-size: 12pt; }
+#mail #mv-s-text .ql-editor { height: 100%; padding: var(--space-5) var(--space-6); color: #111827; line-height: 1.4; }
+#mail #mv-s-text .ql-editor.ql-blank::before { color: #9ca3af; font-style: normal; left: var(--space-6); }
+#mail #mv-s-text .ql-editor blockquote { border-left: 3px solid #ccc; margin: 0; padding-left: 12px; color: #555; }
+#mail .ql-snow .ql-tooltip { background: #e5e7eb; border: 1px solid #c7ccd4; border-radius: var(--mv-r); color: #111827; box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
+#mail .ql-snow .ql-tooltip input[type=text] { border: 1px solid #c7ccd4; border-radius: 3px; }
+/* Schriftfamilien im Editor (Quill schreibt den Kurznamen als font-family; beim Versand übersetzt textHtml) */
+#mail .ql-editor [style*="font-family: calibri"] { font-family: Calibri, Carlito, 'Segoe UI', sans-serif; }
+#mail .ql-editor [style*="font-family: arial"] { font-family: Arial, Helvetica, sans-serif; }
+#mail .ql-editor [style*="font-family: verdana"] { font-family: Verdana, Geneva, sans-serif; }
+#mail .ql-editor [style*="font-family: segoe"] { font-family: 'Segoe UI', sans-serif; }
+#mail .ql-editor [style*="font-family: times"] { font-family: 'Times New Roman', Times, serif; }
+#mail .ql-editor [style*="font-family: georgia"] { font-family: Georgia, serif; }
+#mail .ql-editor [style*="font-family: courier"] { font-family: 'Courier New', monospace; }
+
+/* Signatur-Editor in Einstellungen → Outlook */
+#settings-outlook .os-signatur-toolbar.ql-toolbar.ql-snow { border: 1px solid rgba(255,255,255,0.12); border-bottom: 0; border-radius: 6px 6px 0 0; background: rgba(255,255,255,0.06); }
+#settings-outlook .os-signatur-toolbar .ql-stroke { stroke: #cbd5e1; }
+#settings-outlook .os-signatur-toolbar .ql-fill { fill: #cbd5e1; }
+#settings-outlook .os-signatur-toolbar .ql-picker-label { color: #cbd5e1; }
+#settings-outlook .os-signatur.ql-container.ql-snow { border: 1px solid rgba(255,255,255,0.12); border-radius: 0 0 6px 6px; background: #fff; min-height: 140px; font-family: Calibri, Carlito, 'Segoe UI', sans-serif; font-size: 12pt; }
+#settings-outlook .os-signatur .ql-editor { min-height: 140px; color: #111827; }
+/* Farb-/Ausrichtungs-Picker sind Symbole, keine Auswahlfelder — ohne Rahmen */
+#mail .ql-snow .ql-color-picker .ql-picker-label, #mail .ql-snow .ql-icon-picker .ql-picker-label { border: 0; background: transparent; padding: 2px 4px; width: 30px; }
+#mail .ql-snow .ql-color-picker, #mail .ql-snow .ql-icon-picker { width: 30px; }
+
+/* ---------- Mehrere Konten: Postfach-Wahl im Kopf, „Von"-Wahl beim Schreiben ---------- */
+.mv-konto-wahl, .mv-s-von-wahl {
+    height: 32px; max-width: 320px; padding: 0 var(--space-2); border-radius: var(--mv-r);
+    border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06); color: var(--text-1);
+    font-size: var(--fs-sm); cursor: pointer; outline: none;
+}
+.mv-konto-wahl:hover, .mv-s-von-wahl:hover { border-color: rgba(255,255,255,0.25); }
+.mv-konto-wahl option, .mv-s-von-wahl option { background: #1f2430; color: #fff; }
+.mv-s-von-wahl { height: 30px; max-width: 420px; background: transparent; border-color: transparent; font-size: var(--fs-md); }
+.mv-s-von-wahl:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12); }
+@media (max-width: 768px) {
+    .mv-konto-wahl { max-width: 150px; }
+    #mv-konto-plus { display: none; }
+}

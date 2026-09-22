@@ -591,14 +591,16 @@
         // Füllt die Techniker-Unterschrift mit der hinterlegten Unterschrift des ersten
         // ausgewählten Technikers (bei mehreren Technikern bewusst nur einer, nicht alle).
         // Rührt eine vom Nutzer selbst gezeichnete/gelöschte Unterschrift nicht an.
-        function applyAutoTechSignature() {
+        async function applyAutoTechSignature() {
             const techSigInput = document.getElementById('service-tech-signature');
             if (!techSigInput) return;
             if (techSigInput.value && !window._techSigIsAutofilled) return;
 
             const primaryTechId = selectedTechs.length > 0 ? selectedTechs[0] : null;
-            const primaryTech = primaryTechId != null ? (window.userList || []).find(u => String(u.id) === String(primaryTechId)) : null;
-            const sig = primaryTech?.saved_signature || '';
+            // Unterschriftsbild wird nicht mehr mit der Nutzerliste geladen, sondern hier nachgeholt.
+            const sig = primaryTechId != null && typeof window.userSignatur === 'function' ? (await window.userSignatur(primaryTechId)) || '' : '';
+            // Inzwischen anderer Techniker gewählt? Dann gilt der spätere Aufruf.
+            if (primaryTechId != null && String(selectedTechs[0]) !== String(primaryTechId)) return;
 
             techSigInput.value = sig;
             const img = document.getElementById('tech-signature-preview-img');

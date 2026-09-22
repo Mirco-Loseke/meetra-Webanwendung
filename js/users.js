@@ -3,6 +3,22 @@
 // ==========================================
 var userList = [];
 
+// Spalten der Tabelle users OHNE saved_signature — das Bild kommt bei Bedarf nach.
+const USER_SPALTEN = 'id, name, initials, color, photo, role, created_at, last_viewed, permissions, pin, email';
+
+// Hinterlegte Unterschrift eines Nutzers nachladen (einmal je Sitzung, wird am
+// userList-Eintrag gemerkt). Liefert den Base64-String oder ''.
+window.userSignatur = async function (id) {
+    const u = (window.userList || []).find(x => String(x.id) === String(id));
+    if (!u) return '';
+    if (u.saved_signature !== undefined) return u.saved_signature || '';
+    try {
+        const { data } = await window.supabaseClient.from('users').select('saved_signature').eq('id', u.id).maybeSingle();
+        u.saved_signature = (data && data.saved_signature) || '';
+    } catch (e) { u.saved_signature = ''; }
+    return u.saved_signature;
+};
+
 async function fetchUsers() {
     window.fetchUsers = fetchUsers;
     const client = window.supabaseClient || (typeof supabaseClient !== 'undefined' ? supabaseClient : null);
@@ -36,7 +52,9 @@ async function fetchUsers() {
         const result = await window.withTimeout(
             client
                 .from('users')
-                .select('*')
+                // Ohne saved_signature (Base64-Bilder, ~70 KB): die holt window.userSignatur(id)
+                // erst, wenn jemand unterschreibt oder das Profil bearbeitet.
+                .select(USER_SPALTEN)
                 .order('created_at', { ascending: true }),
             6000
         );
@@ -239,19 +257,28 @@ window.editUser = function (id) {
     document.getElementById('edit-user-name').value = user.name || '';
     document.getElementById('edit-user-email').value = user.email || '';
 
-    // Hinterlegte Unterschrift anzeigen
-    document.getElementById('edit-user-signature').value = user.saved_signature || '';
-    const sigImg = document.getElementById('user-signature-preview-img');
-    const sigPh = document.getElementById('user-signature-placeholder');
-    const sigBtn = document.getElementById('btn-clear-user-signature');
-    if (user.saved_signature) {
-        if (sigImg) { sigImg.src = user.saved_signature; sigImg.classList.remove('hidden'); sigImg.style.display = 'block'; }
-        if (sigPh) sigPh.classList.add('hidden');
-        if (sigBtn) sigBtn.classList.remove('hidden');
-    } else {
-        if (sigImg) { sigImg.src = ''; sigImg.classList.add('hidden'); sigImg.style.display = 'none'; }
-        if (sigPh) sigPh.classList.remove('hidden');
-        if (sigBtn) sigBtn.classList.add('hidden');
+    // Hinterlegte Unterschrift anzeigen — das Bild kommt nicht mit der Nutzerliste,
+    // sondern wird hier nachgeladen (window.userSignatur, oben in dieser Datei).
+    const zeigeUnterschrift = (sig) => {
+        document.getElementById('edit-user-signature').value = sig || '';
+        const sigImg = document.getElementById('user-signature-preview-img');
+        const sigPh = document.getElementById('user-signature-placeholder');
+        const sigBtn = document.getElementById('btn-clear-user-signature');
+        if (sig) {
+            if (sigImg) { sigImg.src = sig; sigImg.classList.remove('hidden'); sigImg.style.display = 'block'; }
+            if (sigPh) sigPh.classList.add('hidden');
+            if (sigBtn) sigBtn.classList.remove('hidden');
+        } else {
+            if (sigImg) { sigImg.src = ''; sigImg.classList.add('hidden'); sigImg.style.display = 'none'; }
+            if (sigPh) sigPh.classList.remove('hidden');
+            if (sigBtn) sigBtn.classList.add('hidden');
+        }
+    };
+    zeigeUnterschrift(user.saved_signature || '');
+    if (user.saved_signature === undefined) {
+        window.userSignatur(user.id).then(sig => {
+            if (document.getElementById('edit-user-id').value === String(user.id)) zeigeUnterschrift(sig);
+        });
     }
 
     // PIN Logic: Admin sees all, users see their own

@@ -194,7 +194,7 @@ TERMIN und ERINNERUNG auseinanderhalten:
 
         try {
             // Über die eigene Edge Function, siehe js/groq-proxy.js
-            const resp = await window.groqFetch({
+            const resp = await (window.kiPseudonym ? window.kiPseudonym.fetchMaskiert : window.groqFetch)({
                 model: groqModel(),
                 temperature: 0.1,
                 max_tokens: 4096,
@@ -206,7 +206,7 @@ TERMIN und ERINNERUNG auseinanderhalten:
             });
             if (!resp.ok) {
                 const errTxt = await resp.text();
-                throw new Error('Groq HTTP ' + resp.status + ': ' + errTxt.slice(0, 200));
+                throw new Error('KI HTTP ' + resp.status + ': ' + errTxt.slice(0, 200));
             }
             const data = await resp.json();
             const content = data?.choices?.[0]?.message?.content || '{}';
@@ -244,7 +244,7 @@ TERMIN und ERINNERUNG auseinanderhalten:
         const apptDate = /^\d{4}-\d{2}-\d{2}$/.test(appt.date || '') ? appt.date : '';
         const apptTime = timeOrEmpty(appt.time);
 
-        preview.innerHTML = `
+        preview.innerHTML = (window.kiPseudonym ? window.kiPseudonym.hinweisHtml() : "") + `
             <div style="font-size:0.72rem; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:#c4b5fd; margin-bottom:8px;">
                 Vorschau
             </div>

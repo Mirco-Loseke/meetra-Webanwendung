@@ -8,23 +8,39 @@ window.FileUploadService = {
     // Umwandeln mehr Zeit, als es an Übertragung spart.
     COMPRESS_MIN_BYTES: 300 * 1024,
 
-    // Der S3-Client wurde bisher für JEDE Datei neu gebaut — samt Prüfung, ob
-    // das SDK schon geladen ist. Einmal reicht; er ist zustandslos.
-    _r2: null,
-    async _r2Client() {
-        if (this._r2) return this._r2;
-        await window.loadAWSSDK();
-        this._r2 = new AWS.S3({
-            endpoint: 'https://855feaccf4d0215922275100e91c4656.r2.cloudflarestorage.com',
-            accessKeyId: '49a3cbad28594d9d5a90e46f3965133b',
-            secretAccessKey: '0642e23714ce5c9f805d0c2f8f59e7c9df01ba8ba7a728b9640b0db5341de797',
-            region: 'auto',
-            signatureVersion: 'v4',
-            // Wartet nicht endlos an einem hängenden Sockel, sondern versucht es neu.
-            httpOptions: { timeout: 120000, connectTimeout: 10000 },
-            maxRetries: 3
-        });
-        return this._r2;
+    // Kein Schlüssel im Browser: jede R2-Aktion holt sich bei der Supabase Edge
+    // Function `r2-sign` (supabase/functions/r2-sign/index.ts) eine 5 Minuten
+    // gültige, signierte URL bzw. lässt sie serverseitig ausführen. Die Function
+    // prüft die Anmeldung (JWT). Ausrollen: supabase/SETUP.txt.
+    async r2Sign(payload) {
+        const basis = (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL) || '';
+        if (!basis) throw new Error('Verbindung zu Supabase fehlt.');
+        if (!window.supabaseClient) throw new Error('Nicht angemeldet.');
+        let token = '';
+        try { const { data } = await window.supabaseClient.auth.getSession(); token = data && data.session ? data.session.access_token : ''; }
+        catch (e) { /* unten abgefangen */ }
+        if (!token) throw new Error('Deine Anmeldung ist abgelaufen — bitte neu anmelden.');
+        let res;
+        try {
+            res = await fetch(basis.replace(/\/+$/, '') + '/functions/v1/r2-sign', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                body: JSON.stringify(payload)
+            });
+        } catch (e) { throw new Error('Dateidienst nicht erreichbar (r2-sign). Ist die Edge Function ausgerollt? ' + e.message); }
+        let daten = null;
+        try { daten = await res.json(); } catch (e) { /* kein JSON */ }
+        if (!res.ok) {
+            const msg = (daten && daten.error) || ('HTTP ' + res.status);
+            throw new Error(res.status === 404 ? 'Edge Function r2-sign ist nicht ausgerollt (supabase/SETUP.txt).' : 'Dateidienst: ' + msg);
+        }
+        return daten || {};
+    },
+
+    // Alle Schlüssel unter einem Präfix (z. B. 'vorgaenge/<id>/').
+    async listFiles(prefix) {
+        const d = await this.r2Sign({ action: 'list', prefix: prefix || '' });
+        return d.keys || [];
     },
 
     // Zielmaße wie bisher — nur der Weg dorthin ist ein anderer.
@@ -214,28 +230,15 @@ window.FileUploadService = {
         // --- CLOUDFLARE R2 PROVIDER ---
         if (provider === 'cloudflare-r2') {
             try {
-                const s3 = await this._r2Client();
-
-                const R2_BUCKET_NAME = window.R2_BUCKET_NAME || 'dateien';
-                const R2_PUBLIC_URL = window.R2_PUBLIC_URL || 'https://pub-28aab7dd73f540f38b6358d78f889a27.r2.dev';
-
                 console.log(`Uploading ${fileToUpload.name} to Cloudflare R2...`);
-
-                const params = {
-                    Bucket: R2_BUCKET_NAME,
-                    Key: path,
-                    Body: fileToUpload,
-                    ContentType: fileToUpload.type
-                };
-
-                // putObject statt upload(): erzwingt einen einzelnen PUT-Request statt eines
-                // mehrteiligen (multipart) Uploads bei größeren Dateien. Multipart braucht zusätzliche
-                // CORS-Freigaben auf dem R2-Bucket, die dort fehlen können — das verursacht bei größeren
-                // Dokumenten "blocked"/CORS-Fehler im Browser, während kleine Fotos unauffällig bleiben.
-                await s3.putObject(params).promise();
+                const typ = fileToUpload.type || 'application/octet-stream';
+                // Ein einzelner PUT (kein Multipart) — der Bucket braucht dafür nur PUT in den CORS-Regeln.
+                const { uploadUrl, publicUrl } = await this.r2Sign({ action: 'upload', path, contentType: typ });
+                const res = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': typ }, body: fileToUpload });
+                if (!res.ok) throw new Error('R2 hat den Upload abgelehnt (HTTP ' + res.status + ').');
 
                 return {
-                    url: `${R2_PUBLIC_URL}/${path}`,
+                    url: publicUrl,
                     path: path,
                     size: fileToUpload.size,
                     type: fileToUpload.type,
@@ -353,11 +356,10 @@ window.FileUploadService = {
      */
     async downloadFile(path, { bucket } = {}) {
         if (!path) throw new Error('Kein Pfad angegeben.');
-        const s3 = await this._r2Client();
-        const Bucket = bucket || window.R2_BUCKET_NAME || 'dateien';
-        const res = await s3.getObject({ Bucket, Key: path }).promise();
-        const typ = res.ContentType || 'application/octet-stream';
-        return new Blob([res.Body], { type: typ });
+        const { downloadUrl } = await this.r2Sign({ action: 'download', path });
+        const res = await fetch(downloadUrl);
+        if (!res.ok) throw new Error('Datei konnte nicht geladen werden (HTTP ' + res.status + ').');
+        return await res.blob();
     },
 
     /**
@@ -385,18 +387,10 @@ window.FileUploadService = {
 
         if (provider === 'cloudflare-r2') {
             try {
-                const s3 = await this._r2Client();
-
-                const R2_BUCKET_NAME = window.R2_BUCKET_NAME || 'dateien';
-
                 console.log(`Deleting ${path} from Cloudflare R2...`);
-
-                const params = {
-                    Bucket: R2_BUCKET_NAME,
-                    Key: path
-                };
-
-                await s3.deleteObject(params).promise();
+                const { deleteUrl } = await this.r2Sign({ action: 'delete', path });
+                const res = await fetch(deleteUrl, { method: 'DELETE' });
+                if (!res.ok && res.status !== 404) throw new Error('R2 hat das Löschen abgelehnt (HTTP ' + res.status + ').');
                 return { success: true, provider: 'cloudflare-r2' };
             } catch (err) {
                 console.error('Cloudflare R2 deletion failed:', err);
@@ -424,29 +418,13 @@ window.FileUploadService = {
 
         if (provider === 'cloudflare-r2') {
             try {
-                const s3 = await this._r2Client();
-
-                const R2_BUCKET_NAME = window.R2_BUCKET_NAME || 'dateien';
-
                 console.log(`Renaming (Copy + Delete) from ${oldPath} to ${newPath} in R2...`);
-
-                // 1. Copy file
-                await s3.copyObject({
-                    Bucket: R2_BUCKET_NAME,
-                    CopySource: encodeURIComponent(`${R2_BUCKET_NAME}/${oldPath}`),
-                    Key: newPath
-                }).promise();
-
-                // 2. Delete old file
-                await s3.deleteObject({
-                    Bucket: R2_BUCKET_NAME,
-                    Key: oldPath
-                }).promise();
-
+                // Kopieren + Löschen macht die Edge Function serverseitig.
+                const d = await this.r2Sign({ action: 'rename', fromPath: oldPath, toPath: newPath });
                 const R2_PUBLIC_URL = window.R2_PUBLIC_URL || 'https://pub-28aab7dd73f540f38b6358d78f889a27.r2.dev';
                 return {
                     success: true,
-                    url: `${R2_PUBLIC_URL}/${newPath}`,
+                    url: d.publicUrl || `${R2_PUBLIC_URL}/${newPath}`,
                     path: newPath,
                     provider: 'cloudflare-r2'
                 };

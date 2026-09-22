@@ -1688,6 +1688,7 @@
             { key: 'links', label: 'Verknüpfungen', count: totalLinksCount },
             { key: 'tasks', label: 'Vorgänge', count: tasksList.length },
             { key: 'appointments', label: 'Termine', count: (state.detail.appointments || []).length },
+            { key: 'mails', label: 'Mails' },
             { key: 'history', label: 'Historie', count: historyCount }
         ];
 
@@ -1703,6 +1704,7 @@
                     </div>
                 </div>
                 <div class="ab-detail-actions">
+                    <button class="ab-btn ab-btn-ghost ab-btn-ki" data-ab-action="ai-summary" data-ab-id="${esc(state.currentId)}" title="Vergangenheit, offene Vorgänge und nächste Schritte — von der KI zusammengefasst">✨ Zusammenfassung</button>
                     <button class="ab-btn ab-btn-ghost" data-ab-action="plan-route" data-ab-id="${esc(state.currentId)}">${ic('route', 16)} Route planen</button>
                     <button class="ab-btn ab-btn-ghost" data-ab-action="edit" data-ab-id="${esc(state.currentId)}">${ic('edit', 16)} Bearbeiten</button>
                     <button class="ab-btn ab-btn-danger delete-permission-required" data-ab-action="delete" data-ab-id="${esc(state.currentId)}">${ic('trash', 16)} Löschen</button>
@@ -1730,6 +1732,7 @@
             case 'links': return renderLinksTab();
             case 'tasks': return renderTasksTab();
             case 'appointments': return renderAppointmentsTab();
+            case 'mails': return renderMailsTab(a);
             case 'history': return renderHistoryTab();
             default: return renderOverviewTab(a);
         }
@@ -2309,6 +2312,20 @@
             style="color:#38bdf8;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line><line x1="12" y1="14" x2="12" y2="18"></line><line x1="10" y1="16" x2="14" y2="16"></line></svg>
         </button>`;
+    }
+
+    // Mails aus Outlook zu dieser Adresse — gezeichnet von js/mail-view.js
+    // (window.addressMailsRender), sobald der Platzhalter im DOM steht.
+    function renderMailsTab(a) {
+        const adressen = [a.email].concat(Array.isArray(a.emails_extra) ? a.emails_extra : [])
+            .concat((state.detail.contacts || []).map(c => c.email))
+            .map(e => (e || '').trim().toLowerCase()).filter(Boolean);
+        const eindeutig = Array.from(new Set(adressen));
+        setTimeout(() => {
+            const el = document.getElementById('ab-mails-tab');
+            if (el && typeof window.addressMailsRender === 'function') window.addressMailsRender(el, eindeutig, a.name || '');
+        }, 0);
+        return `<div id="ab-mails-tab" class="ab-mails-tab" data-adressen="${esc(eindeutig.join(','))}"><div class="ab-empty"><div class="ab-empty-title">Wird geladen …</div></div></div>`;
     }
 
     function renderAppointmentsTab() {
@@ -3467,6 +3484,7 @@
                 : 'Kontaktimport geprüft (keine leeren Felder zu ergänzen)';
 
             await addHistoryEntry(String(a.id), 'system', summaryText, null, true);
+            try { document.dispatchEvent(new CustomEvent('addressbook:changed', { detail: { id: a.id } })); } catch (e) { /* egal */ }
 
             closeAbOverlay();
             closeFormModal();
@@ -3515,6 +3533,7 @@
         state.addresses.push(data);
         state.byId.set(String(data.id), data);
         await addHistoryEntry(String(data.id), 'system', 'Adresse angelegt', null, true);
+        try { document.dispatchEvent(new CustomEvent('addressbook:changed', { detail: { id: data.id } })); } catch (e) { /* egal */ }
         // Rückwärtskompatibel: Einzelobjekt oder Array erlaubt.
         const list = Array.isArray(pendingContacts) ? pendingContacts : (pendingContacts ? [pendingContacts] : []);
         const valid = list.filter(c => c && c.name);
@@ -3772,11 +3791,18 @@
         const company = p.org || '';
         const person = p.name || '';
         const companyMatches = findImportAddressMatches(p);
+        // Firma auch über die Mail-Domain schon hinterlegter Ansprechpartner finden
+        // (Outlook-Kontakte sind Personen; die Firmenadresse hat oft keine eigene Mail).
+        (await findCompaniesByContactDomain(p.email)).forEach(m => {
+            if (!companyMatches.some(x => String(x.addr.id) === String(m.addr.id))) companyMatches.push(m);
+        });
         const dupPayload = { name: company || person, email: p.email, phone: p.phone || p.mobile, zip_code: p.zip, street: p.street, city: p.city };
         const dupes = findDuplicateAddresses(dupPayload).filter(d => !companyMatches.some(m => String(m.addr.id) === String(d.addr.id)));
         const contactMatches = await findExistingContacts(p);
 
         const allMatches = getCombinedImportMatches(p, companyMatches, dupes, contactMatches);
+        // Personen-Kontakt (Outlook): Ziel ist „Ansprechpartner an der Firma", nicht „neue Adresse"
+        const personImport = !!(person && (!company || normCompany(company) !== normCompany(person)));
 
         // Editierbare Vorschau: alle Felder klar beschriftet
         const impFields = [
@@ -3840,9 +3866,19 @@
             <div class="ab-form-actions" style="margin-top:16px; flex-wrap:wrap; gap:8px;">
                 <button type="button" class="ab-btn ab-btn-ghost" id="ab-prev-cancel">Abbrechen</button>
                 <button type="button" class="ab-btn ${allMatches.length ? 'ab-btn-ghost' : 'ab-btn-primary'}" id="ab-prev-fill">Ins Formular übernehmen</button>
-                ${allMatches.length ? '<button type="button" class="ab-btn ab-btn-primary" id="ab-prev-complement">Fehlende Daten ergänzen</button>' : ''}
-                ${allMatches.length ? '<button type="button" class="ab-btn ab-btn-ghost" id="ab-prev-attach">Als Ansprechpartner hinterlegen</button>' : ''}
+                ${allMatches.length ? `<button type="button" class="ab-btn ${personImport ? 'ab-btn-ghost' : 'ab-btn-primary'}" id="ab-prev-complement">Fehlende Daten ergänzen</button>` : ''}
+                ${allMatches.length ? `<button type="button" class="ab-btn ${personImport ? 'ab-btn-primary' : 'ab-btn-ghost'}" id="ab-prev-attach">Als Ansprechpartner hinterlegen</button>` : ''}
             </div>`);
+
+        // Steht die Person bei der gewählten Firma schon? Dann „aktualisieren" statt doppelt anlegen.
+        const attachLabel = () => {
+            const btn = el.querySelector('#ab-prev-attach'); if (!btn) return;
+            const sel = el.querySelector('input[name="ab-attach-company"]:checked');
+            const m = allMatches.find(x => sel && String(x.addr.id) === sel.value) || allMatches[0];
+            btn.textContent = (m && m.contacts && m.contacts.length) ? 'Ansprechpartner aktualisieren' : 'Als Ansprechpartner hinterlegen';
+        };
+        attachLabel();
+        el.querySelectorAll('input[name="ab-attach-company"]').forEach(r => r.addEventListener('change', attachLabel));
 
         // Liest die (evtl. korrigierten) Werte aus der Vorschau.
         const readImp = () => {
@@ -3869,8 +3905,48 @@
         if (attachBtn) attachBtn.addEventListener('click', async () => {
             const sel = el.querySelector('input[name="ab-attach-company"]:checked');
             const targetId = sel ? sel.value : (allMatches.length ? allMatches[0].addr.id : null);
-            if (targetId) await attachContactToCompany(targetId, readImp());
+            if (!targetId) return;
+            const m = allMatches.find(x => String(x.addr.id) === String(targetId));
+            const vorhanden = m && m.contacts && m.contacts[0];
+            if (vorhanden) await updateContactFromImport(targetId, vorhanden.id, readImp());
+            else await attachContactToCompany(targetId, readImp());
         });
+    }
+
+    // Firmen, bei denen schon ein Ansprechpartner mit derselben Mail-Domain steht.
+    async function findCompaniesByContactDomain(email) {
+        const domain = ((email || '').toLowerCase().split('@')[1] || '').trim();
+        if (!domain || /^(gmail|googlemail|web|gmx|t-online|outlook|hotmail|live|yahoo|icloud|me|aol|freenet|posteo|mail)\./.test(domain)) return [];
+        try {
+            const { data, error } = await sb().from('customer_contacts').select('customer_id').ilike('email', '%@' + domain).limit(50);
+            if (error) throw error;
+            const ids = [...new Set((data || []).map(r => String(r.customer_id)))];
+            return ids.map(id => state.byId.get(id)).filter(Boolean)
+                .map(a => ({ addr: a, score: 0.5, reasons: ['Ansprechpartner mit gleicher E-Mail-Domain'] }));
+        } catch (e) { console.warn('Domain-Suche fehlgeschlagen:', e); return []; }
+    }
+
+    // Vorhandenen Ansprechpartner ergänzen — nur leere Felder füllen, nichts überschreiben.
+    async function updateContactFromImport(customerId, contactId, p) {
+        try {
+            const { data: alt, error: e1 } = await sb().from('customer_contacts').select('*').eq('id', contactId).single();
+            if (e1) throw e1;
+            const patch = {};
+            [['position', p.title], ['department', p.department], ['phone', p.phone], ['mobile', p.mobile], ['email', p.email], ['notes', p.note]]
+                .forEach(([k, v]) => { if (v && !(alt && alt[k])) patch[k] = v; });
+            if (Object.keys(patch).length) {
+                const { error: e2 } = await sb().from('customer_contacts').update(patch).eq('id', contactId);
+                if (e2) throw e2;
+                await addHistoryEntry(String(customerId), 'system', `Ansprechpartner „${alt.name || ''}“ aus Kontaktimport ergänzt (${Object.keys(patch).join(', ')})`, null, true);
+            }
+            closeAbOverlay();
+            closeFormModal();
+            openDetail(String(customerId), 'contacts');
+            toast(Object.keys(patch).length ? 'Ansprechpartner ergänzt.' : 'Ansprechpartner ist bereits vollständig hinterlegt.');
+        } catch (e) {
+            console.error(e);
+            window.showToast('Konnte Ansprechpartner nicht aktualisieren: ' + (e.message || e));
+        }
     }
 
     function fillAddressFormFromParsed(p) {
@@ -5444,6 +5520,37 @@
             window.showToast('Fehler beim Löschen: ' + (err.message || err));
         }
     };
+    // Outlook-Kontakt (js/mail-view.js) in die Import-Vorschau geben — gleiche
+    // Dublettenprüfung und Felder wie beim .vcf-Drop.
+    window.showOutlookContactImport = async (p) => {
+        if (!state.addresses || !state.addresses.length) {
+            if (typeof window.loadAddressbook === 'function') await window.loadAddressbook();
+        }
+        showImportPreview(p);
+    };
+
+    // Alles, was das Detail gerade geladen hat — für die KI-Zusammenfassung
+    // (js/ai-address-summary.js). Nur lesend; die Zusammenfassung ist ein
+    // Fenster über dem Detail, das dieselben Daten sieht wie die Reiter.
+    window.abDetailDaten = function () {
+        if (!state.currentId) return null;
+        const byId = id => state.byId.get(String(id)) || null;
+        return {
+            id: state.currentId,
+            adresse: byId(state.currentId),
+            ansprechpartner: state.detail.contacts || [],
+            // Kontakte der verknüpften Adressen — für die Pseudonymisierung
+            verknuepfteKontakte: [...(state.detail.linkedContacts || new Map()).values()].flat(),
+            maschinen: state.detail.allClusterMachines || state.detail.machines || [],
+            verknuepfte: [...(state.detail.clusterMeta || new Map()).keys()].map(byId).filter(Boolean),
+            notizen: state.detail.notes || [],
+            maschinenHistorie: state.detail.machineHistoryEntries || [],
+            vorgaenge: state.detail.processes || [],
+            angeboteByProcess: state.detail.angeboteByProcess || {},
+            termine: state.detail.appointments || []
+        };
+    };
+
     // Öffnet das Adress-Detail erneut, z. B. nachdem im Vorgangs-Modal
     // gespeichert wurde. tab = 'tasks' springt direkt auf die Vorgänge.
     window.openAddressbookDetail = async (id, tab) => {
@@ -5554,6 +5661,9 @@
                 break;
             case 'plan-route':
                 planRouteForAddress(id);
+                break;
+            case 'ai-summary':
+                if (typeof window.openAddressSummary === 'function') window.openAddressSummary(id);
                 break;
             case 'select-mode':
                 setSelectMode(!state.selectMode);

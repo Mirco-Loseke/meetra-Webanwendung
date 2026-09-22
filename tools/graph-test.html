@@ -4,14 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Microsoft Graph — Testseite</title>
+    <title>Outlook in der Webapp — Vorschau</title>
     <!-- ======================================================
          NUR ZUM AUSPROBIEREN. Diese Datei gehoert nicht zur App
          und kann jederzeit geloescht werden. Sie haengt an
          nichts: keine Datenbank, kein Supabase, keine Aenderung
          an euren Daten. Sie meldet sich bei Microsoft an und
-         zeigt, was ueber Microsoft Graph moeglich waere:
-         Kontakte lesen/anlegen und eine Mail senden.
+         zeigt, wie Posteingang, Adressbuch mit Mail-Reiter und
+         Mail schreiben in der Webapp aussehen koennten.
 
          WICHTIG: nur ueber http(s) oeffnen, nicht per
          Doppelklick (file://) — die Anmeldung braucht eine
@@ -19,264 +19,597 @@
          ====================================================== -->
     <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.4/lib/msal-browser.min.js"></script>
     <style>
-        :root { color-scheme: dark; }
-        body { margin: 0; padding: 24px; background: #0b1220; color: #e5e7eb;
-               font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; line-height: 1.5; }
-        .wrap { max-width: 900px; margin: 0 auto; }
-        h1 { font-size: 1.5rem; margin: 0 0 4px; }
-        .sub { color: #94a3b8; font-size: 0.9rem; margin-bottom: 24px; }
-        .karte { background: #111a2e; border: 1px solid rgba(255,255,255,0.1);
-                 border-radius: 12px; padding: 16px 18px; margin-bottom: 16px; }
-        .karte h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em;
-                    color: #94a3b8; margin: 0 0 12px; }
-        label { display: block; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 6px; }
-        input[type=text] { width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 15px;
-                           border-radius: 8px; border: 1px solid rgba(255,255,255,0.15);
-                           background: rgba(255,255,255,0.04); color: #fff; }
-        button { padding: 10px 16px; margin: 4px 6px 4px 0; border-radius: 8px; cursor: pointer;
-                 border: 1px solid rgba(255,255,255,0.15); background: rgba(255,255,255,0.06);
-                 color: #e5e7eb; font-size: 0.9rem; font-weight: 600; }
-        button:hover:not(:disabled) { background: rgba(255,255,255,0.12); }
-        button:disabled { opacity: 0.4; cursor: not-allowed; }
-        button.haupt { background: #2563eb; border-color: #2563eb; color: #fff; }
-        pre { background: #060b16; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px;
-              padding: 12px; overflow: auto; max-height: 460px; font-size: 12px; white-space: pre-wrap;
-              word-break: break-word; }
-        code { background: rgba(255,255,255,0.08); padding: 1px 6px; border-radius: 4px; font-size: 0.86em; }
-        .status { font-size: 0.9rem; color: #94a3b8; margin-left: 4px; }
-        ol { padding-left: 20px; }
-        li { margin-bottom: 6px; }
-        .warn { color: #fbbf24; }
+        :root {
+            color-scheme: dark;
+            --bg: #0b1220; --panel: rgba(255,255,255,0.04); --line: rgba(255,255,255,0.09);
+            --text: #e5e7eb; --muted: #94a3b8; --accent: #2563eb; --rot: #be1e2d; --gruen: #10a068;
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: radial-gradient(1200px 600px at 20% -10%, #14213d, var(--bg)); color: var(--text);
+               font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; line-height: 1.45; min-height: 100vh; }
+        button { font: inherit; cursor: pointer; }
+        input, textarea { font: inherit; color: #fff; background: rgba(255,255,255,0.05); border: 1px solid var(--line);
+                          border-radius: 8px; padding: 9px 11px; width: 100%; }
+        input:focus, textarea:focus { outline: none; border-color: var(--accent); }
+
+        /* Kopfzeile */
+        .top { display: flex; align-items: center; gap: 14px; padding: 12px 20px; border-bottom: 1px solid var(--line);
+               background: rgba(255,255,255,0.03); backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 5; }
+        .top h1 { font-size: 1rem; margin: 0; font-weight: 700; letter-spacing: 0.01em; }
+        .top .sub { font-size: 0.75rem; color: var(--muted); }
+        .top .spacer { flex: 1; }
+        .konto { display: flex; align-items: center; gap: 10px; font-size: 0.85rem; color: var(--muted); }
+        .avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-weight: 700;
+                  font-size: 0.8rem; color: #fff; background: linear-gradient(135deg, var(--rot), #7f1d1d); flex: none; }
+        .btn { padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line); background: rgba(255,255,255,0.06);
+               color: var(--text); font-weight: 600; font-size: 0.85rem; }
+        .btn:hover { background: rgba(255,255,255,0.12); }
+        .btn.haupt { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .btn.rot { background: var(--rot); border-color: var(--rot); color: #fff; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* Einrichtungskarte (nur vor der Anmeldung) */
+        .setup { max-width: 640px; margin: 48px auto; padding: 24px; border: 1px solid var(--line); border-radius: 14px;
+                 background: var(--panel); }
+        .setup h2 { margin: 0 0 6px; font-size: 1.1rem; }
+        .setup p { color: var(--muted); font-size: 0.9rem; margin: 0 0 14px; }
+        .setup label { display: block; font-size: 0.8rem; color: var(--muted); margin: 12px 0 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+        .setup code { background: rgba(255,255,255,0.08); padding: 1px 6px; border-radius: 4px; font-size: 0.85em; }
+        .setup ol { padding-left: 20px; font-size: 0.85rem; color: #cbd5e1; }
+        .fehler { color: #fca5a5; font-size: 0.85rem; margin-top: 10px; white-space: pre-wrap; }
+
+        /* App-Layout */
+        .app { display: none; height: calc(100vh - 57px); }
+        .app.aktiv { display: grid; grid-template-columns: 200px 1fr; }
+        .side { border-right: 1px solid var(--line); padding: 14px 10px; background: rgba(0,0,0,0.15); }
+        .side button { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 10px 12px;
+                       border-radius: 10px; border: 0; background: transparent; color: var(--muted); font-weight: 600; font-size: 0.9rem; }
+        .side button svg { width: 18px; height: 18px; flex: none; }
+        .side button.aktiv { background: rgba(37,99,235,0.18); color: #fff; }
+        .side button:hover:not(.aktiv) { background: rgba(255,255,255,0.05); color: #fff; }
+        .side .hinweis { font-size: 0.72rem; color: var(--muted); margin-top: 18px; padding: 0 12px; line-height: 1.5; }
+        .view { display: none; height: 100%; min-height: 0; }
+        .view.aktiv { display: grid; }
+
+        /* Zweispaltig: Liste | Detail */
+        .split { grid-template-columns: minmax(300px, 380px) 1fr; }
+        .liste { border-right: 1px solid var(--line); overflow-y: auto; }
+        .liste-kopf { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line);
+                      position: sticky; top: 0; background: rgba(11,18,32,0.9); backdrop-filter: blur(8px); z-index: 2; }
+        .liste-kopf h2 { font-size: 0.95rem; margin: 0; flex: 1; }
+        .liste-kopf input { width: auto; flex: 1; padding: 7px 10px; font-size: 0.85rem; }
+        .detail { overflow-y: auto; padding: 22px 28px; }
+        .leer { color: var(--muted); font-size: 0.9rem; padding: 40px; text-align: center; }
+
+        /* Mail-Zeile */
+        .mail { display: grid; grid-template-columns: 38px 1fr auto; gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--line);
+                cursor: pointer; align-items: start; }
+        .mail:hover { background: rgba(255,255,255,0.04); }
+        .mail.aktiv { background: rgba(37,99,235,0.16); }
+        .mail .avatar { width: 36px; height: 36px; font-size: 0.75rem; background: linear-gradient(135deg, #1e3a8a, #2563eb); }
+        .mail .wer { font-size: 0.88rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mail .betreff { font-size: 0.85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mail .vorschau { font-size: 0.78rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .mail .datum { font-size: 0.72rem; color: var(--muted); white-space: nowrap; }
+        .mail.ungelesen .wer, .mail.ungelesen .betreff { color: #fff; }
+        .mail.ungelesen .betreff::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+                                            background: var(--accent); margin-right: 6px; vertical-align: middle; }
+        .mail .clip { font-size: 0.75rem; color: var(--muted); }
+
+        /* Mail-Detail */
+        .mail-kopf h1 { font-size: 1.25rem; margin: 0 0 14px; }
+        .mail-meta { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; padding-bottom: 14px;
+                     border-bottom: 1px solid var(--line); margin-bottom: 18px; }
+        .mail-meta .avatar { width: 44px; height: 44px; background: linear-gradient(135deg, #1e3a8a, #2563eb); }
+        .mail-meta .name { font-weight: 600; }
+        .mail-meta .adr, .mail-meta .an, .mail-meta .d { font-size: 0.8rem; color: var(--muted); }
+        .mail-body { font-size: 0.92rem; line-height: 1.6; }
+        .mail-body iframe { width: 100%; min-height: 60vh; border: 0; background: #fff; border-radius: 8px; }
+        .mail-body pre { white-space: pre-wrap; font: inherit; margin: 0; }
+        .anhang { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid var(--line);
+                  border-radius: 8px; font-size: 0.8rem; margin: 0 8px 8px 0; background: rgba(255,255,255,0.04); }
+        .mail-aktionen { display: flex; gap: 8px; margin-bottom: 18px; }
+        .kunden-treffer { padding: 10px 14px; border-radius: 10px; margin-bottom: 18px; font-size: 0.85rem; display: flex;
+                          align-items: center; gap: 10px; }
+        .kunden-treffer.ja { background: rgba(16,160,104,0.14); border: 1px solid rgba(16,160,104,0.4); }
+        .kunden-treffer.nein { background: rgba(255,255,255,0.04); border: 1px solid var(--line); color: var(--muted); }
+
+        /* Adressbuch */
+        .kontakt { display: grid; grid-template-columns: 38px 1fr; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line);
+                   cursor: pointer; align-items: center; }
+        .kontakt:hover { background: rgba(255,255,255,0.04); }
+        .kontakt.aktiv { background: rgba(37,99,235,0.16); }
+        .kontakt .avatar { width: 36px; height: 36px; font-size: 0.75rem; background: linear-gradient(135deg, var(--gruen), #065f46); }
+        .kontakt .n { font-size: 0.9rem; font-weight: 600; }
+        .kontakt .f { font-size: 0.78rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .buchstabe { padding: 4px 14px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted);
+                     background: rgba(0,0,0,0.2); position: sticky; top: 49px; }
+        .k-kopf { display: grid; grid-template-columns: 64px 1fr auto; gap: 16px; align-items: center; margin-bottom: 18px; }
+        .k-kopf .avatar { width: 64px; height: 64px; font-size: 1.2rem; background: linear-gradient(135deg, var(--gruen), #065f46); }
+        .k-kopf h1 { margin: 0; font-size: 1.35rem; }
+        .k-kopf .firma { color: var(--muted); font-size: 0.9rem; }
+        .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+        .tabs button { padding: 9px 14px; border: 0; background: transparent; color: var(--muted); font-weight: 600; font-size: 0.85rem;
+                       border-bottom: 2px solid transparent; margin-bottom: -1px; }
+        .tabs button.aktiv { color: #fff; border-bottom-color: var(--rot); }
+        .tabs button .z { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 6px; border-radius: 9px; font-size: 0.7rem;
+                          background: rgba(255,255,255,0.1); text-align: center; }
+        .felder { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 24px; }
+        .feld .l { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+        .feld .w { font-size: 0.92rem; }
+        .feld .w a { color: #93c5fd; text-decoration: none; }
+        .k-mails .mail { grid-template-columns: 1fr auto; padding: 10px 0; }
+        .richtung { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 1px 6px; border-radius: 4px;
+                    margin-right: 6px; vertical-align: middle; }
+        .richtung.ein { background: rgba(37,99,235,0.25); color: #bfdbfe; }
+        .richtung.aus { background: rgba(16,160,104,0.25); color: #a7f3d0; }
+
+        /* Schreiben */
+        .schreiben { max-width: 760px; padding: 24px 28px; overflow-y: auto; }
+        .schreiben h2 { margin: 0 0 16px; font-size: 1.1rem; }
+        .schreiben label { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 12px 0 5px; }
+        .schreiben textarea { min-height: 220px; resize: vertical; }
+        .schreiben .fuss { display: flex; gap: 10px; align-items: center; margin-top: 16px; }
+        .schreiben .status { font-size: 0.85rem; color: var(--muted); }
+
+        .laden { color: var(--muted); font-size: 0.85rem; padding: 14px; }
+        @media (max-width: 800px) {
+            .app.aktiv { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+            .side { display: flex; gap: 4px; padding: 8px; border-right: 0; border-bottom: 1px solid var(--line); }
+            .side button { width: auto; padding: 8px 10px; }
+            .side .hinweis { display: none; }
+            .split { grid-template-columns: 1fr; }
+            .detail { display: none; }
+            .split.zeigt-detail .liste { display: none; }
+            .split.zeigt-detail .detail { display: block; }
+        }
     </style>
 </head>
 
 <body>
-    <div class="wrap">
-        <h1>Microsoft Graph — Testseite</h1>
-        <div class="sub">Gehört nicht zur App. Ändert nichts an euren Daten. Nur zum Ausprobieren mit einem
-            privaten Microsoft-Konto.</div>
-
-        <div class="karte">
-            <h2>Schritt 1 — Anwendungs-ID eintragen</h2>
-            <label for="clientId">Anwendungs-ID (Client ID) aus der Registrierung in Microsoft Entra</label>
-            <input type="text" id="clientId" placeholder="z. B. 11111111-2222-3333-4444-555555555555">
-            <div style="margin-top:10px;">
-                <button class="haupt" onclick="anmelden()">Mit Microsoft anmelden</button>
-                <button onclick="abmelden()">Abmelden</button>
-                <span class="status" id="wer">nicht angemeldet</span>
+    <div class="top">
+        <div>
+            <h1>meetra Webapp · Outlook-Vorschau</h1>
+            <div class="sub">Testseite — liest live aus deinem Outlook, speichert nichts, ändert nichts.</div>
+        </div>
+        <div class="spacer"></div>
+        <div class="konto" id="konto-anzeige" style="display:none;">
+            <div class="avatar" id="konto-avatar">?</div>
+            <div>
+                <div id="konto-name" style="color:#fff;font-weight:600;"></div>
+                <div id="konto-mail"></div>
             </div>
-            <p style="font-size:0.82rem; color:#94a3b8; margin-bottom:0;">
-                Als Rückleitungsziel (Redirect URI, Typ <strong>SPA</strong>) muss in der Registrierung genau
-                diese Adresse stehen: <code id="redirect"></code>
-            </p>
-        </div>
-
-        <div class="karte">
-            <h2>Schritt 2 — Ausprobieren</h2>
-            <button onclick="kontakteLesen()" disabled data-braucht-anmeldung>Kontakte lesen</button>
-            <button onclick="kontaktAnlegen()" disabled data-braucht-anmeldung>Testkontakt anlegen</button>
-            <button onclick="ordnerLesen()" disabled data-braucht-anmeldung>Kontaktordner anzeigen</button>
-            <button onclick="mailSenden()" disabled data-braucht-anmeldung>Testmail an mich senden</button>
-            <button onclick="felderZeigen()" disabled data-braucht-anmeldung>Nur Feldnamen auflisten</button>
-        </div>
-
-        <div class="karte">
-            <h2>Ausgabe</h2>
-            <pre id="ausgabe">Noch nichts abgerufen.</pre>
-        </div>
-
-        <div class="karte">
-            <h2>Vorher bei Microsoft einrichten</h2>
-            <ol style="font-size:0.9rem; color:#cbd5e1;">
-                <li><a href="https://entra.microsoft.com" target="_blank" rel="noopener"
-                       style="color:#60a5fa;">entra.microsoft.com</a> öffnen, mit dem privaten Microsoft-Konto anmelden.</li>
-                <li><strong>Anwendungen → App-Registrierungen → Neue Registrierung</strong></li>
-                <li>Name frei wählen, z. B. „meetra Test".</li>
-                <li>Unterstützte Kontotypen: <strong>Konten in einem beliebigen Organisationsverzeichnis und
-                    persönliche Microsoft-Konten</strong>.</li>
-                <li>Plattform <strong>Einzelseitige Anwendung (SPA)</strong>, Rückleitungs-URI:
-                    <code id="redirect2"></code></li>
-                <li>Registrieren. Auf der Übersichtsseite die <strong>Anwendungs-ID (Client)</strong> kopieren
-                    und oben eintragen.</li>
-            </ol>
-            <p style="font-size:0.85rem; margin-bottom:0;" class="warn">
-                Kein Client Secret anlegen — eine Seite im Browser darf keins haben. Die Berechtigungen
-                (Mail.Send, Contacts.ReadWrite) bestätigst du beim ersten Anmelden im Fenster von Microsoft.
-            </p>
+            <button class="btn" onclick="abmelden()">Abmelden</button>
         </div>
     </div>
 
+    <!-- ===== Einrichtung ===== -->
+    <div class="setup" id="setup">
+        <h2>Mit Outlook verbinden</h2>
+        <p>Einmalig die Anwendungs-ID aus der App-Registrierung eintragen, dann anmelden. Die Berechtigungen
+           (Mails lesen, Mails senden, Kontakte) bestätigst du im Microsoft-Fenster.</p>
+        <label for="clientId">Anwendungs-ID (Client)</label>
+        <input type="text" id="clientId" placeholder="z. B. 11111111-2222-3333-4444-555555555555">
+        <div style="margin-top:14px;display:flex;gap:10px;align-items:center;">
+            <button class="btn haupt" id="btn-anmelden" onclick="anmelden()">Mit Microsoft anmelden</button>
+            <span style="font-size:0.8rem;color:var(--muted);">Rückleitungs-URI (SPA): <code id="redirect"></code></span>
+        </div>
+        <div class="fehler" id="setup-fehler"></div>
+        <details style="margin-top:18px;">
+            <summary style="cursor:pointer;font-size:0.85rem;color:var(--muted);">Wie richte ich die App-Registrierung ein?</summary>
+            <ol>
+                <li><a href="https://portal.azure.com/#view/Microsoft_AAD_RegisteredApps/CreateApplicationBlade" target="_blank" rel="noopener" style="color:#60a5fa;">Formular „Anwendung registrieren"</a> öffnen.</li>
+                <li>Name frei, Kontotyp „…beliebigen Organisationsverzeichnis <strong>und persönliche Microsoft-Konten</strong>".</li>
+                <li>Umleitungs-URI: Plattform <strong>Single-Page-Webanwendung (SPA)</strong>, Adresse <code id="redirect2"></code>.</li>
+                <li>Registrieren → Übersicht → <strong>Anwendungs-ID (Client)</strong> kopieren, oben eintragen.</li>
+            </ol>
+        </details>
+    </div>
+
+    <!-- ===== App ===== -->
+    <div class="app" id="app">
+        <nav class="side">
+            <button class="aktiv" data-view="posteingang" onclick="zeigeView('posteingang')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                Posteingang
+            </button>
+            <button data-view="adressbuch" onclick="zeigeView('adressbuch')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><circle cx="12" cy="9" r="2.5"/><path d="M8 15c0-2 1.8-3 4-3s4 1 4 3"/></svg>
+                Adressbuch
+            </button>
+            <button data-view="schreiben" onclick="zeigeView('schreiben')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                Mail schreiben
+            </button>
+            <div class="hinweis">
+                So könnte es in der Webapp aussehen: Der Posteingang zeigt oben an, ob der Absender im Adressbuch ist.
+                Im Adressbuch hat jeder Kontakt einen Reiter „Mails" mit allem, was mit ihm hin- und herging.
+            </div>
+        </nav>
+
+        <!-- Posteingang -->
+        <section class="view split aktiv" id="view-posteingang">
+            <div class="liste">
+                <div class="liste-kopf">
+                    <h2>Posteingang</h2>
+                    <button class="btn" onclick="posteingangLaden()" title="Neu laden">↻</button>
+                </div>
+                <div id="mail-liste"><div class="laden">Wird geladen …</div></div>
+            </div>
+            <div class="detail" id="mail-detail"><div class="leer">Mail auswählen</div></div>
+        </section>
+
+        <!-- Adressbuch -->
+        <section class="view split" id="view-adressbuch">
+            <div class="liste">
+                <div class="liste-kopf">
+                    <input type="text" id="kontakt-suche" placeholder="Kontakt suchen …" oninput="kontakteFiltern()">
+                    <button class="btn" onclick="kontakteLaden()" title="Neu laden">↻</button>
+                </div>
+                <div id="kontakt-liste"><div class="laden">Wird geladen …</div></div>
+            </div>
+            <div class="detail" id="kontakt-detail"><div class="leer">Kontakt auswählen</div></div>
+        </section>
+
+        <!-- Schreiben -->
+        <section class="view" id="view-schreiben">
+            <div class="schreiben">
+                <h2>Neue Mail</h2>
+                <label for="s-an">An</label>
+                <input type="text" id="s-an" placeholder="name@firma.de, weitere@firma.de">
+                <label for="s-betreff">Betreff</label>
+                <input type="text" id="s-betreff" placeholder="Betreff">
+                <label for="s-text">Text</label>
+                <textarea id="s-text" placeholder="Hallo …"></textarea>
+                <div class="fuss">
+                    <button class="btn rot" id="s-senden" onclick="mailSenden()">Senden</button>
+                    <button class="btn" onclick="anMichSelbst()">An mich selbst (Test)</button>
+                    <span class="status" id="s-status">Geht über dein Outlook-Postfach raus und liegt danach in „Gesendete Elemente".</span>
+                </div>
+            </div>
+        </section>
+    </div>
+
     <script>
-        const BERECHTIGUNGEN = ['User.Read', 'Mail.Send', 'Contacts.ReadWrite'];
+        const BERECHTIGUNGEN = ['User.Read', 'Mail.Read', 'Mail.Send', 'Contacts.Read'];
         const SCHLUESSEL = 'graph_test_client_id';
         let anwendung = null;   // MSAL-Instanz. NICHT "msal" nennen — so heisst die Bibliothek selbst.
         let konto = null;
+        let kontakte = [];      // alle geladenen Kontakte
+        let mails = [];         // Posteingang
+        let kontaktNachAdresse = new Map(); // email (klein) -> Kontakt
 
         const redirectUri = location.origin + location.pathname;
         document.getElementById('redirect').textContent = redirectUri;
         document.getElementById('redirect2').textContent = redirectUri;
         document.getElementById('clientId').value = localStorage.getItem(SCHLUESSEL) || '';
 
-        function zeige(was) {
-            document.getElementById('ausgabe').textContent =
-                typeof was === 'string' ? was : JSON.stringify(was, null, 2);
-        }
-
-        function knoepfe(an) {
-            document.querySelectorAll('[data-braucht-anmeldung]').forEach(b => { b.disabled = !an; });
-        }
-
-        // Die Anmeldebibliothek kommt von einem Microsoft-Server. Ist der nicht
-        // erreichbar (kein Netz, Firewall, Werbeblocker), soll das hier stehen
-        // und nicht als "msal is not defined" in der Konsole verschwinden.
         if (typeof msal === 'undefined') {
-            zeige('Die Anmeldebibliothek von Microsoft konnte nicht geladen werden '
-                + '(cdn.jsdelivr.net). Ohne sie geht keine Anmeldung.\n\n'
-                + 'Mögliche Gründe: keine Internetverbindung, Firewall oder ein '
-                + 'Werbe-/Skriptblocker im Browser.');
-            document.querySelector('button.haupt').disabled = true;
+            document.getElementById('setup-fehler').textContent =
+                'Die Anmeldebibliothek von Microsoft konnte nicht geladen werden (cdn.jsdelivr.net). '
+                + 'Ohne sie geht keine Anmeldung — Internet, Firewall oder Skriptblocker prüfen.';
+            document.getElementById('btn-anmelden').disabled = true;
         }
 
+        // ---------- Anmeldung ----------
         function client() {
-            if (typeof msal === 'undefined') {
-                throw new Error('Die Anmeldebibliothek von Microsoft ist nicht geladen (cdn.jsdelivr.net nicht erreichbar).');
-            }
+            if (typeof msal === 'undefined') throw new Error('Anmeldebibliothek nicht geladen.');
             const id = document.getElementById('clientId').value.trim();
-            if (!id) throw new Error('Bitte oben die Anwendungs-ID eintragen.');
+            if (!id) throw new Error('Bitte die Anwendungs-ID eintragen.');
             localStorage.setItem(SCHLUESSEL, id);
             if (!anwendung || anwendung.config.auth.clientId !== id) {
                 anwendung = new msal.PublicClientApplication({
-                    auth: {
-                        clientId: id,
-                        // "common" = private Microsoft-Konten UND Firmenkonten
-                        authority: 'https://login.microsoftonline.com/common',
-                        redirectUri: redirectUri
-                    },
-                    cache: { cacheLocation: 'sessionStorage' }
+                    auth: { clientId: id, authority: 'https://login.microsoftonline.com/common', redirectUri },
+                    cache: { cacheLocation: 'localStorage' }
                 });
             }
             return anwendung;
         }
 
         async function anmelden() {
+            const f = document.getElementById('setup-fehler');
+            f.textContent = '';
             try {
-                if (location.protocol === 'file:') {
-                    throw new Error('Diese Seite muss über http(s) geöffnet werden, nicht per Doppelklick.');
-                }
-                const c = client();
-                const antwort = await c.loginPopup({ scopes: BERECHTIGUNGEN, prompt: 'select_account' });
+                if (location.protocol === 'file:') throw new Error('Diese Seite muss über http(s) geöffnet werden, nicht per Doppelklick.');
+                const antwort = await client().loginPopup({ scopes: BERECHTIGUNGEN, prompt: 'select_account' });
                 konto = antwort.account;
-                document.getElementById('wer').textContent = 'angemeldet als ' + (konto.username || konto.name);
-                knoepfe(true);
-                zeige({ angemeldet: konto.username, erteilteBerechtigungen: antwort.scopes });
+                angemeldet();
             } catch (e) {
-                zeige('Anmeldung fehlgeschlagen:\n' + (e && e.message ? e.message : e));
+                f.textContent = 'Anmeldung fehlgeschlagen:\n' + (e && e.message ? e.message : e);
             }
         }
+
+        function angemeldet() {
+            document.getElementById('setup').style.display = 'none';
+            document.getElementById('app').classList.add('aktiv');
+            const k = document.getElementById('konto-anzeige');
+            k.style.display = 'flex';
+            document.getElementById('konto-name').textContent = konto.name || '';
+            document.getElementById('konto-mail').textContent = konto.username || '';
+            document.getElementById('konto-avatar').textContent = initialen(konto.name || konto.username);
+            kontakteLaden().then(posteingangLaden);
+        }
+
+        // Beim Laden: vorhandene Anmeldung still fortsetzen (so wie es die Webapp taete).
+        (async function fortsetzen() {
+            if (typeof msal === 'undefined' || !localStorage.getItem(SCHLUESSEL)) return;
+            try {
+                const c = client();
+                const konten = c.getAllAccounts();
+                if (!konten.length) return;
+                konto = konten[0];
+                await c.acquireTokenSilent({ scopes: BERECHTIGUNGEN, account: konto }); // prueft, ob das Ticket noch gilt
+                angemeldet();
+            } catch (e) { konto = null; /* Ticket abgelaufen -> normal anmelden */ }
+        })();
 
         function abmelden() {
             if (anwendung && konto) anwendung.logoutPopup({ account: konto });
             konto = null;
-            knoepfe(false);
-            document.getElementById('wer').textContent = 'nicht angemeldet';
+            document.getElementById('app').classList.remove('aktiv');
+            document.getElementById('konto-anzeige').style.display = 'none';
+            document.getElementById('setup').style.display = '';
         }
 
         async function token() {
             const c = client();
             const anfrage = { scopes: BERECHTIGUNGEN, account: konto };
-            try {
-                const a = await c.acquireTokenSilent(anfrage);
-                return a.accessToken;
-            } catch (e) {
-                const a = await c.acquireTokenPopup(anfrage);
-                return a.accessToken;
-            }
+            try { return (await c.acquireTokenSilent(anfrage)).accessToken; }
+            catch (e) { return (await c.acquireTokenPopup(anfrage)).accessToken; }
         }
 
         async function graph(pfad, methode, rumpf) {
             const t = await token();
             const res = await fetch('https://graph.microsoft.com/v1.0' + pfad, {
                 method: methode || 'GET',
-                headers: {
-                    Authorization: 'Bearer ' + t,
-                    'Content-Type': 'application/json'
-                },
+                headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' },
                 body: rumpf ? JSON.stringify(rumpf) : undefined
             });
             const text = await res.text();
             let daten = null;
             try { daten = text ? JSON.parse(text) : null; } catch (e) { daten = text; }
-            if (!res.ok) throw new Error('HTTP ' + res.status + '\n' + JSON.stringify(daten, null, 2));
+            if (!res.ok) throw new Error('HTTP ' + res.status + ' — ' + ((daten && daten.error && daten.error.message) || text));
             return daten;
         }
 
-        async function kontakteLesen() {
-            try {
-                zeige('Wird geladen …');
-                zeige(await graph('/me/contacts?$top=5'));
-            } catch (e) { zeige(String(e.message || e)); }
+        // ---------- Helfer ----------
+        function initialen(s) {
+            const t = (s || '?').replace(/<.*?>/g, '').trim().split(/[\s.@_-]+/).filter(Boolean);
+            return ((t[0] || '?')[0] + (t[1] ? t[1][0] : '')).toUpperCase();
+        }
+        function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+        function datumKurz(iso) {
+            if (!iso) return '';
+            const d = new Date(iso), heute = new Date();
+            const gleicherTag = d.toDateString() === heute.toDateString();
+            if (gleicherTag) return d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            const diff = (heute - d) / 86400000;
+            if (diff < 7) return d.toLocaleDateString('de-DE', { weekday: 'short' });
+            return d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: d.getFullYear() === heute.getFullYear() ? undefined : '2-digit' });
+        }
+        function datumLang(iso) { return iso ? new Date(iso).toLocaleString('de-DE', { dateStyle: 'full', timeStyle: 'short' }) : ''; }
+        function adressenVon(k) { return (k.emailAddresses || []).map(e => (e.address || '').toLowerCase()).filter(Boolean); }
+        function kontaktZuAdresse(adr) { return kontaktNachAdresse.get((adr || '').toLowerCase()) || null; }
+        function kontaktName(k) { return k.displayName || [k.givenName, k.surname].filter(Boolean).join(' ') || (adressenVon(k)[0] || 'Ohne Namen'); }
+
+        function zeigeView(name) {
+            document.querySelectorAll('.side button').forEach(b => b.classList.toggle('aktiv', b.dataset.view === name));
+            document.querySelectorAll('.view').forEach(v => v.classList.toggle('aktiv', v.id === 'view-' + name));
         }
 
-        // Zeigt nur die Feldnamen — praktisch, um die Struktur weiterzugeben,
-        // ohne echte Kontaktdaten preiszugeben.
-        async function felderZeigen() {
+        // ---------- Posteingang ----------
+        const MAILFELDER = '$select=id,subject,from,toRecipients,receivedDateTime,isRead,bodyPreview,hasAttachments,webLink';
+
+        async function posteingangLaden() {
+            const box = document.getElementById('mail-liste');
+            box.innerHTML = '<div class="laden">Wird geladen …</div>';
             try {
-                zeige('Wird geladen …');
-                const d = await graph('/me/contacts?$top=1');
-                const eintrag = (d.value && d.value[0]) || null;
-                if (!eintrag) { zeige('Keine Kontakte vorhanden — erst „Testkontakt anlegen" drücken.'); return; }
-                const felder = Object.keys(eintrag).map(k => {
-                    const w = eintrag[k];
-                    const art = Array.isArray(w) ? 'Liste' : (w && typeof w === 'object' ? 'Objekt' : typeof w);
-                    const unter = (w && typeof w === 'object' && !Array.isArray(w)) ? ' { ' + Object.keys(w).join(', ') + ' }' : '';
-                    return `${k}  —  ${art}${unter}`;
-                });
-                zeige(felder.join('\n'));
-            } catch (e) { zeige(String(e.message || e)); }
+                const d = await graph('/me/mailFolders/inbox/messages?$top=40&$orderby=receivedDateTime desc&' + MAILFELDER);
+                mails = d.value || [];
+                if (!mails.length) { box.innerHTML = '<div class="leer">Posteingang ist leer.</div>'; return; }
+                box.innerHTML = mails.map(m => mailZeileHtml(m, false)).join('');
+            } catch (e) { box.innerHTML = '<div class="leer">' + esc(e.message) + '</div>'; }
         }
 
-        async function ordnerLesen() {
-            try {
-                zeige('Wird geladen …');
-                zeige(await graph('/me/contactFolders'));
-            } catch (e) { zeige(String(e.message || e)); }
+        function mailZeileHtml(m, imKontakt) {
+            const von = (m.from && m.from.emailAddress) || {};
+            const eigene = (konto && konto.username || '').toLowerCase();
+            const ausgehend = (von.address || '').toLowerCase() === eigene;
+            const gegenseite = ausgehend
+                ? ((m.toRecipients || []).map(r => r.emailAddress.name || r.emailAddress.address).join(', ') || '—')
+                : (von.name || von.address || '—');
+            const wer = imKontakt
+                ? '<span class="richtung ' + (ausgehend ? 'aus' : 'ein') + '">' + (ausgehend ? 'Gesendet' : 'Erhalten') + '</span>' + esc(m.subject || '(kein Betreff)')
+                : esc(gegenseite);
+            return '<div class="mail' + (m.isRead ? '' : ' ungelesen') + '" data-id="' + esc(m.id) + '" onclick="mailOeffnen(this)">'
+                + (imKontakt ? '' : '<div class="avatar">' + esc(initialen(gegenseite)) + '</div>')
+                + '<div>'
+                + '<div class="wer">' + wer + '</div>'
+                + (imKontakt ? '' : '<div class="betreff">' + esc(m.subject || '(kein Betreff)') + '</div>')
+                + '<div class="vorschau">' + esc((m.bodyPreview || '').replace(/\s+/g, ' ')) + '</div>'
+                + '</div>'
+                + '<div style="text-align:right;"><div class="datum">' + esc(datumKurz(m.receivedDateTime)) + '</div>'
+                + (m.hasAttachments ? '<div class="clip">📎</div>' : '') + '</div>'
+                + '</div>';
         }
 
-        async function kontaktAnlegen() {
+        async function mailOeffnen(el) {
+            const id = el.dataset.id;
+            const kasten = el.closest('.split');
+            kasten.querySelectorAll('.mail').forEach(x => x.classList.toggle('aktiv', x === el));
+            kasten.classList.add('zeigt-detail');
+            const ziel = kasten.querySelector('.detail');
+            ziel.innerHTML = '<div class="laden">Wird geladen …</div>';
             try {
-                zeige('Wird angelegt …');
-                zeige(await graph('/me/contacts', 'POST', {
-                    givenName: 'Max',
-                    surname: 'Mustermann (meetra Test)',
-                    companyName: 'Muster Recycling GmbH',
-                    jobTitle: 'Betriebsleiter',
-                    emailAddresses: [{ address: 'max@example.com', name: 'Max Mustermann' }],
-                    businessPhones: ['0441 1234567'],
-                    mobilePhone: '0171 1234567',
-                    businessAddress: {
-                        street: 'Windmühlenweg 9', postalCode: '26203',
-                        city: 'Wardenburg', countryOrRegion: 'Deutschland'
-                    },
-                    personalNotes: 'Testeintrag der meetra-Webapp — kann gelöscht werden.'
-                }));
-            } catch (e) { zeige(String(e.message || e)); }
+                const m = await graph('/me/messages/' + encodeURIComponent(id) + '?$select=id,subject,from,toRecipients,ccRecipients,receivedDateTime,body,hasAttachments,webLink');
+                let anhaenge = [];
+                if (m.hasAttachments) {
+                    try { anhaenge = (await graph('/me/messages/' + encodeURIComponent(id) + '/attachments?$select=name,size,contentType')).value || []; } catch (e) { }
+                }
+                const von = (m.from && m.from.emailAddress) || {};
+                const k = kontaktZuAdresse(von.address);
+                const an = (m.toRecipients || []).map(r => r.emailAddress.name || r.emailAddress.address).join(', ');
+                const cc = (m.ccRecipients || []).map(r => r.emailAddress.name || r.emailAddress.address).join(', ');
+                const zurueck = '<button class="btn" style="margin-bottom:12px;" onclick="this.closest(\'.split\').classList.remove(\'zeigt-detail\')">← Zurück</button>';
+                ziel.innerHTML = zurueck
+                    + '<div class="mail-kopf"><h1>' + esc(m.subject || '(kein Betreff)') + '</h1></div>'
+                    + '<div class="mail-meta">'
+                    + '<div class="avatar">' + esc(initialen(von.name || von.address)) + '</div>'
+                    + '<div><div class="name">' + esc(von.name || von.address) + '</div>'
+                    + '<div class="adr">' + esc(von.address || '') + '</div>'
+                    + '<div class="an">An: ' + esc(an) + (cc ? ' · Cc: ' + esc(cc) : '') + '</div></div>'
+                    + '<div class="d">' + esc(datumLang(m.receivedDateTime)) + '</div>'
+                    + '</div>'
+                    + (k
+                        ? '<div class="kunden-treffer ja"><span>✓</span><span>Im Adressbuch: <strong>' + esc(kontaktName(k)) + '</strong>'
+                          + (k.companyName ? ' · ' + esc(k.companyName) : '') + '</span>'
+                          + '<span style="flex:1"></span><button class="btn" onclick="kontaktOeffnenPerId(\'' + esc(k.id) + '\')">Adresse öffnen</button></div>'
+                        : '<div class="kunden-treffer nein"><span>–</span><span>Absender nicht im Adressbuch.</span>'
+                          + '<span style="flex:1"></span><button class="btn" disabled title="In der Webapp: Kunde suchen und zuordnen">Zuordnen …</button></div>')
+                    + '<div class="mail-aktionen">'
+                    + '<button class="btn" onclick="antworten(' + esc(JSON.stringify(von.address || '')) + ',' + esc(JSON.stringify(m.subject || '')) + ')">Antworten</button>'
+                    + '<a class="btn" style="text-decoration:none" href="' + esc(m.webLink || '#') + '" target="_blank" rel="noopener">In Outlook öffnen</a>'
+                    + '</div>'
+                    + (anhaenge.length ? '<div>' + anhaenge.map(a => '<span class="anhang">📎 ' + esc(a.name) + ' <span style="color:var(--muted)">' + Math.round((a.size || 0) / 1024) + ' KB</span></span>').join('') + '</div>' : '')
+                    + '<div class="mail-body" id="mail-body"></div>';
+                const body = document.getElementById('mail-body');
+                if (m.body && m.body.contentType === 'html') {
+                    const f = document.createElement('iframe');
+                    f.setAttribute('sandbox', '');   // kein Skript aus der Mail
+                    f.srcdoc = m.body.content;
+                    body.appendChild(f);
+                } else {
+                    body.innerHTML = '<pre>' + esc(m.body ? m.body.content : '') + '</pre>';
+                }
+                el.classList.remove('ungelesen');
+            } catch (e) { ziel.innerHTML = '<div class="leer">' + esc(e.message) + '</div>'; }
         }
+
+        function antworten(an, betreff) {
+            document.getElementById('s-an').value = an;
+            document.getElementById('s-betreff').value = /^(AW|RE):/i.test(betreff) ? betreff : 'AW: ' + betreff;
+            document.getElementById('s-text').value = '';
+            zeigeView('schreiben');
+            document.getElementById('s-text').focus();
+        }
+
+        // ---------- Adressbuch ----------
+        async function kontakteLaden() {
+            const box = document.getElementById('kontakt-liste');
+            box.innerHTML = '<div class="laden">Wird geladen …</div>';
+            try {
+                let alle = [], pfad = '/me/contacts?$top=200&$orderby=displayName&$select=id,displayName,givenName,surname,companyName,jobTitle,emailAddresses,businessPhones,mobilePhone,businessAddress,personalNotes';
+                while (pfad && alle.length < 1000) {
+                    const d = await graph(pfad);
+                    alle = alle.concat(d.value || []);
+                    pfad = d['@odata.nextLink'] ? d['@odata.nextLink'].replace('https://graph.microsoft.com/v1.0', '') : null;
+                }
+                kontakte = alle.sort((a, b) => kontaktName(a).localeCompare(kontaktName(b), 'de'));
+                kontaktNachAdresse = new Map();
+                kontakte.forEach(k => adressenVon(k).forEach(a => kontaktNachAdresse.set(a, k)));
+                kontakteFiltern();
+            } catch (e) { box.innerHTML = '<div class="leer">' + esc(e.message) + '</div>'; }
+        }
+
+        function kontakteFiltern() {
+            const q = document.getElementById('kontakt-suche').value.trim().toLowerCase();
+            const box = document.getElementById('kontakt-liste');
+            const liste = kontakte.filter(k => !q || (kontaktName(k) + ' ' + (k.companyName || '') + ' ' + adressenVon(k).join(' ')).toLowerCase().includes(q));
+            if (!liste.length) { box.innerHTML = '<div class="leer">' + (kontakte.length ? 'Kein Treffer.' : 'Keine Kontakte in diesem Outlook-Konto.') + '</div>'; return; }
+            let html = '', letzter = '';
+            liste.forEach(k => {
+                const b = kontaktName(k)[0].toUpperCase();
+                if (b !== letzter) { html += '<div class="buchstabe">' + esc(b) + '</div>'; letzter = b; }
+                html += '<div class="kontakt" data-id="' + esc(k.id) + '" onclick="kontaktOeffnen(this)">'
+                    + '<div class="avatar">' + esc(initialen(kontaktName(k))) + '</div>'
+                    + '<div><div class="n">' + esc(kontaktName(k)) + '</div>'
+                    + '<div class="f">' + esc(k.companyName || adressenVon(k)[0] || '') + '</div></div></div>';
+            });
+            box.innerHTML = html;
+        }
+
+        function kontaktOeffnenPerId(id) {
+            zeigeView('adressbuch');
+            const el = document.querySelector('.kontakt[data-id="' + id.replace(/"/g, '\\"') + '"]');
+            if (el) { el.scrollIntoView({ block: 'center' }); kontaktOeffnen(el); }
+        }
+
+        async function kontaktOeffnen(el) {
+            const k = kontakte.find(x => x.id === el.dataset.id);
+            if (!k) return;
+            const kasten = el.closest('.split');
+            kasten.querySelectorAll('.kontakt').forEach(x => x.classList.toggle('aktiv', x === el));
+            kasten.classList.add('zeigt-detail');
+            const ziel = document.getElementById('kontakt-detail');
+            const adr = k.businessAddress || {};
+            const adrText = [adr.street, [adr.postalCode, adr.city].filter(Boolean).join(' '), adr.countryOrRegion].filter(Boolean).join(', ');
+            const feld = (l, w) => w ? '<div class="feld"><div class="l">' + l + '</div><div class="w">' + w + '</div></div>' : '';
+            ziel.innerHTML = '<button class="btn" style="margin-bottom:12px;" onclick="this.closest(\'.split\').classList.remove(\'zeigt-detail\')">← Zurück</button>'
+                + '<div class="k-kopf"><div class="avatar">' + esc(initialen(kontaktName(k))) + '</div>'
+                + '<div><h1>' + esc(kontaktName(k)) + '</h1><div class="firma">' + esc([k.jobTitle, k.companyName].filter(Boolean).join(' · ')) + '</div></div>'
+                + '<button class="btn rot" onclick="antworten(' + esc(JSON.stringify(adressenVon(k)[0] || '')) + ', \'\')">Mail schreiben</button></div>'
+                + '<div class="tabs">'
+                + '<button class="aktiv" onclick="kTab(this,\'stamm\')">Stammdaten</button>'
+                + '<button onclick="kTab(this,\'mails\')">Mails <span class="z" id="k-mail-zahl">…</span></button>'
+                + '</div>'
+                + '<div id="k-stamm" class="felder">'
+                + feld('E-Mail', adressenVon(k).map(a => '<a href="mailto:' + esc(a) + '">' + esc(a) + '</a>').join('<br>'))
+                + feld('Telefon', (k.businessPhones || []).map(esc).join('<br>'))
+                + feld('Mobil', esc(k.mobilePhone))
+                + feld('Firma', esc(k.companyName))
+                + feld('Adresse', esc(adrText))
+                + feld('Notizen', esc(k.personalNotes))
+                + '</div>'
+                + '<div id="k-mails" class="k-mails" style="display:none"><div class="laden">Wird gesucht …</div></div>';
+            kontaktMailsLaden(k);
+        }
+
+        function kTab(btn, name) {
+            btn.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('aktiv', b === btn));
+            document.getElementById('k-stamm').style.display = name === 'stamm' ? '' : 'none';
+            document.getElementById('k-mails').style.display = name === 'mails' ? '' : 'none';
+        }
+
+        // Genau das, was der Reiter "Mails" an einer Adresse in der Webapp taete:
+        // alle Mails, an denen eine der Kontakt-Adressen beteiligt ist — ueber alle Ordner.
+        async function kontaktMailsLaden(k) {
+            const box = document.getElementById('k-mails');
+            const zahl = document.getElementById('k-mail-zahl');
+            const adressen = adressenVon(k);
+            if (!adressen.length) { box.innerHTML = '<div class="leer">Kontakt hat keine E-Mail-Adresse.</div>'; zahl.textContent = '0'; return; }
+            try {
+                const suche = adressen.map(a => 'from:' + a + ' OR to:' + a).join(' OR ');
+                const d = await graph('/me/messages?$search=' + encodeURIComponent('"' + suche + '"') + '&$top=50&' + MAILFELDER);
+                const liste = (d.value || []).sort((a, b) => (b.receivedDateTime || '').localeCompare(a.receivedDateTime || ''));
+                zahl.textContent = liste.length + (d['@odata.nextLink'] ? '+' : '');
+                box.innerHTML = liste.length ? liste.map(m => mailZeileHtml(m, true)).join('') : '<div class="leer">Noch kein Mailverkehr mit diesem Kontakt.</div>';
+            } catch (e) { box.innerHTML = '<div class="leer">' + esc(e.message) + '</div>'; zahl.textContent = '!'; }
+        }
+
+        // ---------- Schreiben ----------
+        function anMichSelbst() { document.getElementById('s-an').value = konto ? konto.username : ''; }
 
         async function mailSenden() {
+            const st = document.getElementById('s-status');
+            const an = document.getElementById('s-an').value.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean);
+            const betreff = document.getElementById('s-betreff').value.trim();
+            const text = document.getElementById('s-text').value;
+            if (!an.length) { st.textContent = 'Bitte Empfänger eintragen.'; return; }
+            const btn = document.getElementById('s-senden');
+            btn.disabled = true; st.textContent = 'Wird gesendet …';
             try {
-                const an = konto && konto.username;
-                if (!an) { zeige('Erst anmelden.'); return; }
-                zeige('Wird gesendet …');
                 await graph('/me/sendMail', 'POST', {
                     message: {
-                        subject: 'Test aus der meetra-Webapp',
-                        body: { contentType: 'Text', content: 'Testlauf über Microsoft Graph. Wenn diese Mail ankommt, funktioniert der Versand.' },
-                        toRecipients: [{ emailAddress: { address: an } }]
+                        subject: betreff,
+                        body: { contentType: 'Text', content: text },
+                        toRecipients: an.map(a => ({ emailAddress: { address: a } }))
                     },
                     saveToSentItems: true
                 });
-                zeige('Gesendet an ' + an + '.\nDie Mail liegt jetzt auch im Ordner „Gesendet".');
-            } catch (e) { zeige(String(e.message || e)); }
+                st.textContent = 'Gesendet an ' + an.join(', ') + ' — liegt jetzt in „Gesendete Elemente".';
+                document.getElementById('s-betreff').value = ''; document.getElementById('s-text').value = '';
+            } catch (e) { st.textContent = 'Fehler: ' + e.message; }
+            finally { btn.disabled = false; }
         }
     </script>
 </body>

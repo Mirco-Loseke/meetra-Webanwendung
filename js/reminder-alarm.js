@@ -123,11 +123,13 @@
 
         // 1) Kalendereinträge mit Uhrzeit (heute)
         try {
-            const { data, error } = await sb()
+            let { data, error } = await sb()
                 .from('maintenance_events')
-                .select('*')
+                .select('*, customers(name, zip_code, city)')
                 .eq('event_date', heuteKey())
                 .limit(200);
+            // customer_id-Spalte fehlt evtl. (Migration nicht gelaufen) — dann ohne Adresse.
+            if (error) ({ data, error } = await sb().from('maintenance_events').select('*').eq('event_date', heuteKey()).limit(200));
             if (error) throw error;
 
             // Wer ist eingeladen? Daraus ergibt sich, wen es etwas angeht.
@@ -152,11 +154,14 @@
                     || String(ev.user_id) === uid();
                 if (!meins) return;
 
+                let zeit = hhmm(wann);
+                if (ev.end_time) zeit += '–' + String(ev.end_time).slice(0, 5);
                 treffer.push({
                     key: 'event:' + ev.id,
                     titel: ev.title || 'Termin',
-                    zeit: hhmm(wann),
+                    zeit: zeit,
                     notiz: ev.description || '',
+                    adresse: adresseText(ev.customers),
                     ort: ev.location_label || '',
                     art: (ev.maintenance_types || 'Termin'),
                     zielTyp: 'event',
@@ -179,8 +184,9 @@
                 .gte('remind_at', new Date(frueheste).toISOString())
                 .lte('remind_at', new Date(jetzt).toISOString())
                 .limit(100);
-            let { data, error } = await abfrage('id, title, remind_at, status, assigned_users, user_id, created_by_user, remark');
-            // remark/created_by_user kommen aus Migrationen — fehlen sie, ohne sie.
+            let { data, error } = await abfrage(PROC_SPALTEN + ', customers(name, zip_code, city)');
+            // customers-Join / remark / created_by_user kommen aus Migrationen — fehlen sie, ohne sie.
+            if (error) ({ data, error } = await abfrage(PROC_SPALTEN));
             if (error) ({ data, error } = await abfrage('id, title, remind_at, status, assigned_users, user_id'));
             if (error) throw error;
 
@@ -190,28 +196,112 @@
                 const t = wann.getTime();
                 if (t > jetzt || t < frueheste) return;
                 if (p.status === 'erledigt' || p.status === 'abgeschlossen') return;
+                if (!procMeins(p)) return;
 
-                const meins = istMeins(p.assigned_users)
-                    || String(p.user_id) === uid()
-                    || String(p.created_by_user) === uid();
-                if (!meins) return;
-
-                treffer.push({
+                treffer.push(Object.assign(procInfos(p), {
                     key: 'proc:' + p.id + ':' + t,
                     titel: p.title || 'Vorgang',
                     zeit: hhmm(wann),
-                    notiz: p.remark || '',
-                    ort: '',
                     art: 'Vorgang',
                     zielTyp: 'process',
                     zielId: p.id
-                });
+                }));
             });
         } catch (e) {
             console.warn('Wecker: Vorgänge nicht prüfbar:', e);
         }
 
+        // 3) Schritt-Erinnerungen (steps[].remind_at) — liegen im JSONB und
+        //    lassen sich nicht serverseitig auf einen Zeitpunkt filtern.
+        //    Deshalb nur alle SCHRITT_TAKT aus den offenen Vorgängen gelesen und
+        //    im Speicher gehalten; jeder Prüflauf schaut nur in den Speicher.
+        try {
+            const schritte = await schrittErinnerungen();
+            schritte.forEach(s => {
+                if (s.t > jetzt || s.t < frueheste) return;
+                treffer.push(s.eintrag);
+            });
+        } catch (e) {
+            console.warn('Wecker: Schritt-Erinnerungen nicht prüfbar:', e);
+        }
+
         return treffer;
+    }
+
+    const PROC_SPALTEN = 'id, title, remind_at, status, assigned_users, user_id, created_by_user, remark, '
+        + 'customer_id, contact_name, status_updates, steps';
+
+    function procMeins(p) {
+        return istMeins(p.assigned_users)
+            || String(p.user_id) === uid()
+            || String(p.created_by_user) === uid();
+    }
+
+    function adresseText(k) {
+        if (!k || !k.name) return '';
+        const ort = [k.zip_code, k.city].filter(Boolean).join(' ');
+        return k.name + (ort ? ' · ' + ort : '');
+    }
+
+    // Was auf der Karte über den Vorgang stehen soll: Adresse, Ansprechpartner,
+    // letzter Stand (statt der Bemerkung — der Stand ist meist aktueller),
+    // offene Schritte.
+    function procInfos(p) {
+        const stand = Array.isArray(p.status_updates) && p.status_updates.length
+            ? (p.status_updates[0].text || '') : '';
+        const schritte = Array.isArray(p.steps) ? p.steps : [];
+        const offen = schritte.filter(s => !s.done).length;
+        return {
+            adresse: adresseText(p.customers),
+            kontakt: p.contact_name || '',
+            notiz: stand || p.remark || '',
+            ort: '',
+            schritte: schritte.length ? `${offen} von ${schritte.length} Schritten offen` : ''
+        };
+    }
+
+    const SCHRITT_TAKT = 5 * 60 * 1000;
+    let schrittCache = { am: 0, liste: [] };
+
+    async function schrittErinnerungen() {
+        if (Date.now() - schrittCache.am < SCHRITT_TAKT) return schrittCache.liste;
+        schrittCache.am = Date.now();
+        // Nur Vorgänge mit mindestens einem OFFENEN Schritt (jsonb @> [{"done":false}]):
+        // 25 statt 113 KB alle 5 Minuten. Der Stand-Verlauf (status_updates) bleibt
+        // hier weg — für die Erinnerung zählt der Schritt, nicht der letzte Stand.
+        const SCHRITT_SPALTEN = 'id, title, remind_at, status, assigned_users, user_id, created_by_user, remark, customer_id, contact_name, steps';
+        const abfrage = (spalten, filter) => {
+            let q = sb().from('internal_processes').select(spalten).neq('status', 'erledigt').not('steps', 'is', null);
+            if (filter) q = q.contains('steps', JSON.stringify([{ done: false }]));
+            return q.limit(300);
+        };
+        let { data, error } = await abfrage(SCHRITT_SPALTEN + ', customers(name, zip_code, city)', true);
+        if (error) ({ data, error } = await abfrage(SCHRITT_SPALTEN, true));
+        if (error) ({ data, error } = await abfrage(SCHRITT_SPALTEN, false));
+        if (error) throw error;
+        const liste = [];
+        (data || []).forEach(p => {
+            if (!procMeins(p)) return;
+            (Array.isArray(p.steps) ? p.steps : []).forEach((s, i) => {
+                if (!s.remind_at || s.done) return;
+                const wann = new Date(s.remind_at);
+                if (isNaN(wann)) return;
+                liste.push({
+                    t: wann.getTime(),
+                    eintrag: Object.assign(procInfos(p), {
+                        key: 'step:' + p.id + ':' + i + ':' + wann.getTime(),
+                        titel: s.text || 'Schritt',
+                        untertitel: p.title || 'Vorgang',
+                        zeit: hhmm(wann),
+                        art: 'Schritt',
+                        zielTyp: 'process',
+                        zielId: p.id
+                    })
+                });
+            });
+        });
+        schrittCache.liste = liste;
+        return liste;
     }
 
     // ---------------------------------------------------------------
@@ -240,12 +330,18 @@
                 <span class="alarm-time">${esc(eintrag.zeit)}</span>
                 <span class="alarm-kind">${esc(eintrag.art)}</span>
             </div>
-            <div class="alarm-title">${esc(eintrag.titel)}</div>
+            <div class="alarm-title" title="Öffnen">${esc(eintrag.titel)}</div>
+            ${eintrag.untertitel ? `<div class="alarm-sub">${esc(eintrag.untertitel)}</div>` : ''}
+            ${eintrag.adresse ? `<div class="alarm-address">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                <span>${esc(eintrag.adresse)}${eintrag.kontakt ? ` <em>· ${esc(eintrag.kontakt)}</em>` : ''}</span>
+            </div>` : (eintrag.kontakt ? `<div class="alarm-sub">${esc(eintrag.kontakt)}</div>` : '')}
             ${eintrag.ort ? `<div class="alarm-sub">${esc(eintrag.ort)}</div>` : ''}
             ${eintrag.notiz ? `<div class="alarm-note">${esc(eintrag.notiz)}</div>` : ''}
+            ${eintrag.schritte ? `<div class="alarm-steps">${esc(eintrag.schritte)}</div>` : ''}
             <div class="alarm-actions">
-                <button type="button" class="alarm-btn alarm-btn-snooze" aria-expanded="false">Später erinnern</button>
-                <button type="button" class="alarm-btn alarm-btn-edit">Bearbeiten</button>
+                <button type="button" class="alarm-btn alarm-btn-snooze" aria-expanded="false" title="Später erinnern">Später</button>
+                <button type="button" class="alarm-btn alarm-btn-edit">Öffnen</button>
                 <button type="button" class="alarm-btn alarm-btn-ok">Verstanden</button>
             </div>
             <div class="alarm-snooze-list" hidden>
@@ -253,10 +349,12 @@
             </div>`;
 
         karte.querySelector('.alarm-btn-ok').addEventListener('click', () => karte.remove());
-        karte.querySelector('.alarm-btn-edit').addEventListener('click', () => {
+        const oeffnen = () => {
             karte.remove();
             window.oeffneErinnerungsZiel(eintrag.zielTyp, eintrag.zielId);
-        });
+        };
+        karte.querySelector('.alarm-btn-edit').addEventListener('click', oeffnen);
+        karte.querySelector('.alarm-title').addEventListener('click', oeffnen);   // Titel = Öffnen
         // Die Auswahl klappt erst auf Klick auf — fünf Knöpfe von Anfang an
         // machen die Karte unruhig und man verklickt sich.
         const spaeterBox = karte.querySelector('.alarm-snooze-list');
@@ -326,7 +424,7 @@
         if (typeof window.notificationsPushEnabled !== 'function' || !window.notificationsPushEnabled()) return;
         const titel = '⏰ ' + eintrag.titel;
         const optionen = {
-            body: [eintrag.zeit + ' Uhr', eintrag.ort, eintrag.notiz].filter(Boolean).join('\n'),
+            body: [eintrag.zeit + ' Uhr', eintrag.untertitel, eintrag.adresse, eintrag.ort, eintrag.notiz].filter(Boolean).join('\n'),
             tag: eintrag.key,
             icon: 'assets/icons/meetra_arrows_icon.png',
             badge: 'assets/icons/meetra_arrows_icon.png',

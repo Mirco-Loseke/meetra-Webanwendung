@@ -1,0 +1,198 @@
+<!-- ========================================================= -->
+<!-- ======================== MAIL =========================== -->
+<!-- Outlook-Postfach live über Microsoft Graph: Posteingang,   -->
+<!-- Outlook-Kontakte (Suche + Übernahme ins Adressbuch),      -->
+<!-- Mail schreiben. Logik: js/mail-view.js, Anmeldung:        -->
+<!-- js/outlook-graph.js, Stil: css/views/mail.css             -->
+<!-- ========================================================= -->
+<section id="mail" class="view hidden">
+    <!-- Kopfzeile: Titel · Reiter · Konto · Vollbild -->
+    <div class="mv-kopf">
+        <h1 class="mv-titel">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="4" width="20" height="16" rx="2" />
+                <path d="m2 7 10 6 10-6" />
+            </svg>Mail
+        </h1>
+        <nav class="mv-tabs" role="tablist">
+            <button class="mv-tab active" data-tab="posteingang">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+                <span>Posteingang</span>
+            </button>
+            <button class="mv-tab" data-tab="kontakte">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><circle cx="12" cy="9" r="2.5"/><path d="M8 15c0-2 1.8-3 4-3s4 1 4 3"/></svg>
+                <span>Outlook-Kontakte</span>
+            </button>
+            <button class="mv-tab" data-tab="schreiben">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                <span>Schreiben</span>
+            </button>
+        </nav>
+        <div class="mv-konto" id="mv-konto">
+            <!-- js/mail-view.js: Anzeige des angemeldeten Outlook-Kontos -->
+        </div>
+        <button class="mv-icon-btn" id="mv-vollbild" title="Vollbild — Menü und Kopfleiste ausblenden (Esc beendet)" aria-label="Vollbild">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+        </button>
+    </div>
+
+    <!-- Nicht verbunden -->
+    <div class="mv-leer" id="mv-nicht-verbunden">
+        <h3>Outlook ist noch nicht verbunden</h3>
+        <p id="mv-nicht-verbunden-text">Melde dich einmal mit deinem Microsoft-Konto an, dann erscheinen hier
+            Posteingang, Outlook-Kontakte und „Mail schreiben".</p>
+        <div class="mv-leer-aktionen">
+            <button class="btn-primary" id="mv-btn-anmelden">Mit Microsoft anmelden</button>
+            <button class="btn-secondary" data-target="settings-outlook">Einrichten …</button>
+        </div>
+    </div>
+
+    <!-- Verbunden -->
+    <div class="mv-app" id="mv-app">
+        <!-- Posteingang -->
+        <div class="mv-panel mv-split active" id="mv-panel-posteingang">
+            <div class="mv-liste">
+                <div class="mv-liste-kopf">
+                    <input type="text" id="mv-mail-suche" placeholder="Durchsuchen …" autocomplete="off">
+                    <button class="mv-icon-btn" id="mv-mail-reload" title="Neu laden">↻</button>
+                </div>
+                <!-- Ordnerwahl: js/mail-view.js lädt /me/mailFolders/<id>/messages -->
+                <div class="mv-ordner" role="tablist">
+                    <button class="active" data-ordner="inbox">Posteingang</button>
+                    <button data-ordner="sentitems">Gesendet</button>
+                    <button data-ordner="drafts">Entwürfe</button>
+                </div>
+                <div id="mv-mail-liste"></div>
+                <div class="mv-mehr" id="mv-mail-mehr" style="display:none;">
+                    <button class="btn-secondary" id="mv-mail-mehr-btn">Weitere laden</button>
+                </div>
+            </div>
+            <div class="mv-detail" id="mv-mail-detail"><div class="mv-platzhalter">Mail auswählen</div></div>
+        </div>
+
+        <!-- Outlook-Kontakte -->
+        <div class="mv-panel mv-split" id="mv-panel-kontakte">
+            <div class="mv-liste">
+                <div class="mv-liste-kopf">
+                    <input type="text" id="mv-kontakt-suche" placeholder="Name, Firma, E-Mail, Ort …" autocomplete="off">
+                    <button class="mv-icon-btn" id="mv-kontakt-reload" title="Neu laden">↻</button>
+                </div>
+                <div class="mv-kontakt-info text-muted-sm" id="mv-kontakt-info"></div>
+                <div id="mv-kontakt-liste"></div>
+            </div>
+            <div class="mv-detail" id="mv-kontakt-detail"><div class="mv-platzhalter">Kontakt auswählen</div></div>
+        </div>
+
+        <!-- Schreiben: Aufbau wie das Outlook-Fenster — Leiste oben, Kopfzeilen, Text füllt den Rest -->
+        <div class="mv-panel mv-schreiben" id="mv-panel-schreiben">
+            <div class="mv-s-leiste">
+                <button class="btn-primary mv-s-senden" id="mv-s-senden">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                    Senden
+                </button>
+                <button class="btn-secondary" id="mv-s-leeren">Verwerfen</button>
+                <button class="btn-secondary" id="mv-s-outlook" title="Als Entwurf in Outlook öffnen — mit allem, was hier steht">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    In Outlook öffnen
+                </button>
+                <span class="text-muted-sm mv-s-status" id="mv-s-status"></span>
+            </div>
+            <div class="mv-s-kopf">
+                <div class="mv-s-zeile">
+                    <label for="mv-s-von">Von</label>
+                    <div class="mv-s-von" id="mv-s-von"></div>
+                </div>
+                <div class="mv-s-zeile">
+                    <label for="mv-s-an">An</label>
+                    <input type="text" id="mv-s-an" placeholder="Empfänger — mehrere mit Komma trennen" autocomplete="off">
+                    <div class="mv-s-schalter">
+                        <button type="button" id="mv-s-cc-an">Cc</button>
+                        <button type="button" id="mv-s-bcc-an">Bcc</button>
+                    </div>
+                </div>
+                <div class="mv-s-zeile" id="mv-s-cc-zeile" hidden>
+                    <label for="mv-s-cc">Cc</label>
+                    <input type="text" id="mv-s-cc" placeholder="Kopie an" autocomplete="off">
+                </div>
+                <div class="mv-s-zeile" id="mv-s-bcc-zeile" hidden>
+                    <label for="mv-s-bcc">Bcc</label>
+                    <input type="text" id="mv-s-bcc" placeholder="Blindkopie an" autocomplete="off">
+                </div>
+                <div class="mv-s-zeile">
+                    <label for="mv-s-betreff">Betreff</label>
+                    <input type="text" id="mv-s-betreff" placeholder="Betreff hinzufügen" autocomplete="off">
+                </div>
+            </div>
+            <!-- Editor: Quill (lib/quill.min.js) — Leiste im Outlook-Aufbau, weiße Schreibfläche.
+                 Anhänge gehen als fileAttachment über Graph mit (js/mail-view.js: anhaenge). -->
+            <div class="mv-s-toolbar" id="mv-s-toolbar" data-no-enhance>
+                <span class="ql-formats">
+                    <select class="ql-font" title="Schriftart">
+                        <option value="calibri" selected>Calibri</option>
+                        <option value="arial">Arial</option>
+                        <option value="verdana">Verdana</option>
+                        <option value="segoe">Segoe UI</option>
+                        <option value="times">Times New Roman</option>
+                        <option value="georgia">Georgia</option>
+                        <option value="courier">Courier New</option>
+                    </select>
+                    <select class="ql-size" title="Schriftgröße">
+                        <option value="8pt">8</option>
+                        <option value="9pt">9</option>
+                        <option value="10pt">10</option>
+                        <option value="11pt">11</option>
+                        <option value="12pt" selected>12</option>
+                        <option value="14pt">14</option>
+                        <option value="16pt">16</option>
+                        <option value="18pt">18</option>
+                        <option value="20pt">20</option>
+                        <option value="24pt">24</option>
+                        <option value="28pt">28</option>
+                        <option value="36pt">36</option>
+                    </select>
+                </span>
+                <span class="ql-formats">
+                    <button class="ql-bold" title="Fett (Strg+B)"></button>
+                    <button class="ql-italic" title="Kursiv (Strg+I)"></button>
+                    <button class="ql-underline" title="Unterstrichen (Strg+U)"></button>
+                    <button class="ql-strike" title="Durchgestrichen"></button>
+                </span>
+                <span class="ql-formats">
+                    <select class="ql-color" title="Schriftfarbe"></select>
+                    <select class="ql-background" title="Textmarker"></select>
+                </span>
+                <span class="ql-formats">
+                    <button class="ql-list" value="bullet" title="Aufzählung"></button>
+                    <button class="ql-list" value="ordered" title="Nummerierung"></button>
+                    <button class="ql-indent" value="-1" title="Einzug verkleinern"></button>
+                    <button class="ql-indent" value="+1" title="Einzug vergrößern"></button>
+                </span>
+                <span class="ql-formats">
+                    <select class="ql-align" title="Ausrichtung"></select>
+                </span>
+                <span class="ql-formats">
+                    <button class="ql-link" title="Link einfügen"></button>
+                    <button class="ql-image" title="Bild einfügen"></button>
+                    <button class="ql-blockquote" title="Zitat"></button>
+                </span>
+                <span class="ql-formats">
+                    <button class="ql-clean" title="Formatierung entfernen"></button>
+                </span>
+                <span class="ql-formats mv-s-toolbar-rechts">
+                    <button type="button" class="mv-s-anhang-btn" id="mv-s-anhang-btn" title="Datei anhängen">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                        Anhängen
+                    </button>
+                    <input type="file" id="mv-s-anhang-input" multiple hidden>
+                    <button type="button" class="mv-s-anhang-btn" id="mv-s-signatur-btn" title="Signatur einfügen">Signatur</button>
+                </span>
+            </div>
+            <div class="mv-s-anhaenge" id="mv-s-anhaenge" hidden></div>
+            <div class="mv-s-editor-wrap" id="mv-s-editor-wrap">
+                <div id="mv-s-text"></div>
+                <div class="mv-s-drop" id="mv-s-drop">Dateien hier ablegen</div>
+            </div>
+        </div>
+    </div>
+</section>

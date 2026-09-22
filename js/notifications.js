@@ -348,12 +348,15 @@
         const back = lookbackDays(P);
         const inRange = (diff, before) => diff !== null && diff <= before && diff >= -back;
 
+        const PROC_FELDER = 'id, title, status, process_date, created_at, remind_at, assigned_users, user_id, customer_id, contact_name, workshop_order_number, steps';
         // --- Vorgänge (internal_processes) ---
         let processes = [];
         if (P.processes) try {
             let { data, error } = await sb()
                 .from('internal_processes')
-                .select('*, machines(name, manufacturer, serial), customers(id, name)')
+                // Nur die Felder, die unten gelesen werden — kein select('*'): status_updates,
+                // attachments und remark wogen ~200 KB je Abruf, alle 5 Minuten, in jedem Browser.
+                .select(PROC_FELDER + ', machines(name, manufacturer, serial), customers(id, name)')
                 .neq('status', 'erledigt')
                 .order('process_date', { ascending: false })
                 .limit(300);
@@ -361,7 +364,7 @@
                 // customers-Join fehlt evtl. noch (Migration nicht gelaufen)
                 ({ data, error } = await sb()
                     .from('internal_processes')
-                    .select('*, machines(name, manufacturer, serial)')
+                    .select(PROC_FELDER + ', machines(name, manufacturer, serial)')
                     .neq('status', 'erledigt')
                     .order('process_date', { ascending: false })
                     .limit(300));
@@ -429,6 +432,8 @@
 
             item.title = p.title || 'Unbenannter Vorgang';
             item.subject = subject;
+            // Adresse eigens ausweisen — `subject` zeigt bei Maschinenbezug nur die Maschine.
+            item.address = (p.customers && p.customers.name) ? p.customers.name + (p.contact_name ? ' · ' + p.contact_name : '') : '';
             item.targetType = 'process';
             item.targetId = p.id;
             out.push(item);
@@ -448,6 +453,7 @@
                     sortAt: new Date(s.remind_at).getTime(),
                     title: (s.text || 'Schritt') + ' — ' + (p.title || 'Vorgang'),
                     subject: subject,
+                    address: (p.customers && p.customers.name) ? p.customers.name + (p.contact_name ? " · " + p.contact_name : "") : "",
                     targetType: 'process',
                     targetId: p.id
                 });
@@ -688,16 +694,24 @@
         // mir gehört: in dieser App heißt das ID ODER Name in `technicians`,
         // weil dort mal das eine, mal das andere steht (siehe CLAUDE.md).
         if (P.service) try {
-            const { data, error } = await sb()
+            // customer_signed (generierte Spalte, supabase_add_service_signed_flag.sql) statt des
+            // Base64-Bilds customer_signature — das waren ~130 KB je Abruf, alle 5 Minuten.
+            const svcLaden = (flag) => sb()
                 .from('service_entries')
-                .select('id, title, date, created_at, technicians, customer_signature, machine_id, machines(name, manufacturer, serial)')
+                .select('id, title, date, created_at, technicians, ' + flag + ', machine_id, machines(name, manufacturer, serial)')
                 .order('date', { ascending: false })
                 .limit(300);
+            let { data, error } = await svcLaden('customer_signed');
+            if (error && /customer_signed/i.test(error.message || '')) {
+                // Migration noch nicht gelaufen — Rückfall auf das Bild
+                ({ data, error } = await svcLaden('customer_signature'));
+                if (data) data.forEach(s => { s.customer_signed = !!s.customer_signature; });
+            }
             if (!error && data) {
                 const me = String(uid);
                 const meName = (currentUser() && currentUser().name) ? String(currentUser().name) : null;
                 data.forEach(s => {
-                    if (s.customer_signature) return; // unterschrieben, alles gut
+                    if (s.customer_signed) return; // unterschrieben, alles gut
                     const techs = Array.isArray(s.technicians) ? s.technicians.map(String) : [];
                     if (techs.length && !techs.includes(me) && !(meName && techs.includes(meName))) return;
                     if (!techs.length) return; // niemand zuständig -> nicht meine Baustelle
@@ -882,14 +896,29 @@
         const badge = document.getElementById('notif-badge');
         const bell = document.getElementById('notif-bell-btn');
         if (!badge || !bell) return;
-        const n = unreadCount();
+        // Die Zahl zählt nur Dringendes (überfällig + heute), ungelesen.
+        // „Demnächst"/„Zur Kenntnis" ließen sie vorher auf 20+ anschwellen —
+        // dann schaut niemand mehr hin. Rot bei Überfälligem, sonst gelb;
+        // ist nur Unwichtiges ungelesen, bleibt ein Punkt ohne Zahl.
+        const read = readKeys();
+        const offen = items.filter(n => !read.has(n.key));
+        const ueberfaellig = offen.filter(n => n.severity === 'overdue').length;
+        const heute = offen.filter(n => n.severity === 'today').length;
+        const n = ueberfaellig + heute;
+        bell.classList.toggle('has-unread', offen.length > 0);
+        bell.classList.toggle('has-overdue', ueberfaellig > 0);
+        badge.classList.toggle('is-warning', ueberfaellig === 0 && heute > 0);
+        badge.classList.toggle('is-dot', n === 0 && offen.length > 0);
         if (n > 0) {
             badge.textContent = n > 99 ? '99+' : String(n);
+            badge.title = `${ueberfaellig} überfällig, ${heute} heute` + (offen.length - n ? `, ${offen.length - n} weitere` : '');
             badge.style.display = 'flex';
-            bell.classList.add('has-unread');
+        } else if (offen.length > 0) {
+            badge.textContent = '';
+            badge.title = `${offen.length} ungelesen (nicht dringend)`;
+            badge.style.display = 'flex';
         } else {
             badge.style.display = 'none';
-            bell.classList.remove('has-unread');
         }
     }
 
@@ -914,7 +943,8 @@
                     <span class="notif-sev-badge" style="color:${sev.color}; background:${sev.bg}; border-color:${sev.border};">${esc(sev.label)}</span>
                 </span>
                 <span class="notif-item-title">${esc(n.title)}</span>
-                ${n.subject ? `<span class="notif-item-subject">${esc(n.subject)}</span>` : ''}
+                ${n.address ? `<span class="notif-item-address">${esc(n.address)}</span>` : ''}
+                ${n.subject && n.subject !== n.address ? `<span class="notif-item-subject">${esc(n.subject)}</span>` : ''}
                 <span class="notif-item-meta" style="color:${sev.color};">${esc(n.meta)}</span>
             </span>
             ${n.actionsHtml || ''}
@@ -1003,8 +1033,11 @@
             const rows = sichtbar.filter(n => n.severity === g.sev);
             if (!rows.length) return;
             const sev = SEVERITY[g.sev];
-            html += `<div class="notif-group-title" style="color:${sev.color};">${g.title} <span>${rows.length}</span></div>`;
-            html += rows.map(n => itemHtml(n, read.has(n.key))).join('');
+            // „Zur Kenntnis" ist standardmäßig zugeklappt — sonst schiebt das
+            // Unwichtige das Dringende aus dem Blick. Klick auf den Titel klappt auf.
+            const zu = g.sev === 'info' && !window._notifInfoOffen;
+            html += `<div class="notif-group-title${g.sev === 'info' ? ' is-toggle' : ''}${zu ? ' is-collapsed' : ''}" style="color:${sev.color};"${g.sev === 'info' ? ' onclick="window._notifInfoOffen = !window._notifInfoOffen; window.refreshNotifications && window.refreshNotifications({ push: false, nurZeichnen: true });"' : ''}>${g.title} <span>${rows.length}</span>${g.sev === 'info' ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto; transform:rotate(${zu ? '-90' : '0'}deg); transition:transform .2s;"><polyline points="6 9 12 15 18 9"></polyline></svg>` : ''}</div>`;
+            if (!zu) html += rows.map(n => itemHtml(n, read.has(n.key))).join('');
         });
         if (!sichtbar.length) {
             html += '<div class="notif-empty"><strong>Nichts in dieser Sorte</strong><span>Oben auf „Alles" tippen, um wieder alle zu sehen.</span></div>';
@@ -1145,6 +1178,7 @@
     // opts.push === false -> keine Systemmeldungen auslösen. Das nutzt das
     // Öffnen des Panels: wer gerade hinschaut, braucht keine Meldung obendrauf.
     async function refresh(opts) {
+        if (opts && opts.nurZeichnen) { render(); return; }   // nur neu zeichnen (Auf-/Zuklappen)
         if (!currentUserId()) { items = []; render(); updateBadge(); return; }
         currentAbsence(); // Lücke feststellen, BEVOR der Heartbeat sie überschreibt
         isLoading = true;
@@ -1173,12 +1207,17 @@
     let cache = { at: 0, data: null };
     window.collectImportantItems = async function (opts) {
         opts = opts || {};
-        const maxAge = opts.maxAgeMs === undefined ? 30000 : opts.maxAgeMs;
+        // Beim Start fragen Dashboard und Glocke kurz nacheinander — ein laufendes
+        // Einsammeln wird geteilt, und auch „immer frisch" (maxAgeMs 0) nimmt ein
+        // höchstens 5 s altes Ergebnis. Sonst gingen ~330 KB doppelt über die Leitung.
+        const maxAge = Math.max(opts.maxAgeMs === undefined ? 30000 : opts.maxAgeMs, 5000);
         if (cache.data && (Date.now() - cache.at) < maxAge) return cache.data;
-        const data = await collect();
-        cache = { at: Date.now(), data };
-        return data;
+        if (collectLauf) return collectLauf;
+        collectLauf = collect().then(data => { cache = { at: Date.now(), data }; collectLauf = null; return data; })
+            .catch(e => { collectLauf = null; throw e; });
+        return collectLauf;
     };
+    let collectLauf = null;
 
     window.toggleNotificationPanel = function (event) {
         if (event) event.stopPropagation();
@@ -1454,20 +1493,28 @@
         const client = sb();
         if (!client || typeof client.channel !== 'function') return;
 
+        // Die Listen selbst (Vorgänge, Aufgaben, Serviceberichte) pflegen ihre
+        // Realtime-Kanäle in js/app-init.js zeilenweise nach. Hier wurde früher
+        // bei JEDER Änderung zusätzlich komplett neu geladen (fetchProcesses mit
+        // Joins + fetchTasks + fetchServiceEntries) und dazu die Glocke mit ihren
+        // neun Abfragen — das hob die Egress-Sparmaßnahmen wieder auf. Jetzt: nur
+        // die Glocke, gebündelt (frühestens 20 s nach der letzten Änderung) und
+        // nur, wenn der Tab sichtbar ist; ein verdeckter Tab holt beim nächsten
+        // Sichtbarwerden nach.
+        let sammelTimer = null, nachholen = false;
+        const gebuendelt = () => {
+            if (document.hidden) { nachholen = true; return; }
+            clearTimeout(sammelTimer);
+            sammelTimer = setTimeout(() => { if (!isOpen) refresh({ push: true }); }, 20000);
+        };
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && nachholen) { nachholen = false; gebuendelt(); }
+        });
         try {
             client.channel('public-updates')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'internal_processes' }, () => {
-                    if (typeof window.fetchProcesses === 'function') window.fetchProcesses();
-                    refresh();
-                })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, () => {
-                    if (typeof window.fetchTasks === 'function') window.fetchTasks();
-                    refresh();
-                })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'service_entries' }, () => {
-                    if (typeof window.fetchServiceEntries === 'function') window.fetchServiceEntries();
-                    refresh();
-                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'internal_processes' }, gebuendelt)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, gebuendelt)
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'service_entries' }, gebuendelt)
                 .subscribe((status) => {
                     if (status === 'SUBSCRIBED') {
                         console.log('[Realtime] Live updates subscribed successfully.');
@@ -1487,7 +1534,8 @@
         refresh();
         setupRealtimeSubscriptions();
         // Regelmäßig aktualisieren, damit Fristen von selbst hochkommen.
-        setInterval(() => { if (!isOpen) refresh(); }, 5 * 60 * 1000);
+        // Verdeckter Tab (Fernseher im Hintergrund, zweites Fenster) lädt nicht mit.
+        setInterval(() => { if (!isOpen && !document.hidden) refresh(); }, 5 * 60 * 1000);
     }
 
     if (document.readyState === 'loading') {
