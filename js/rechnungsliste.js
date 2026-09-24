@@ -73,7 +73,7 @@
                     onblur="window.rechnungenUpdateText('${esc(i.id)}', this.textContent)"
                     data-orig="${esc(i.text)}">${esc(i.text)}</span>
                 <span class="rechnungen-meta" title="${i.done ? 'erledigt' : 'eingetragen'}${i.done && i.done_by ? ' von ' + esc(i.done_by) : (!i.done && i.created_by ? ' von ' + esc(i.created_by) : '')}">${datumKurz(i.done ? i.done_at : i.created_at)}</span>
-                <button type="button" class="workshop-del delete-permission-required" title="Löschen" onclick="window.rechnungenDelete('${esc(i.id)}')">
+                <button type="button" class="workshop-del delete-permission-required" data-del-area="rechnungen" title="Löschen" onclick="window.rechnungenDelete('${esc(i.id)}')">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>`).join('');

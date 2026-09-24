@@ -395,9 +395,11 @@
                 'home', 'tasks', 'machines', 'workshop', 'service', 'protocols',
                 'settings-etiketten', 'documents', 'listen', 'history', 'accounting', 'calendar', 'timeline', 'settings',
                 'users', 'categories', 'protocol-templates', 'settings-textbausteine',
-                'settings-firmeneinstellungen', 'settings-import', 'settings-uvv-wartungsplaene', 'settings-ai', 'settings-outlook',
+                'settings-firmeneinstellungen', 'settings-import', 'settings-uvv-wartungsplaene', 'settings-ai', 'settings-outlook', 'settings-datenschutz',
                 // kein Ansichts-Ziel, sondern die Leiste in „Vorgänge" (js/rechnungsliste.js)
-                'rechnungsliste'
+                'rechnungsliste',
+                // Reiter „Belege" an der Adresse (Umsätze aus Sage) — Standard AUS, siehe js/users.js
+                'belege'
             ];
 
             function updateLastViewed(machineId) {

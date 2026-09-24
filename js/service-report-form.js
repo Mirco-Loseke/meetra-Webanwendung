@@ -651,9 +651,25 @@
         document.addEventListener('DOMContentLoaded', function () {
             const origOpenServicebericht = window.openServiceberichtModal;
             if (typeof origOpenServicebericht !== 'function') return;
-            window.openServiceberichtModal = function () {
+            window.openServiceberichtModal = function (daten) {
                 const res = origOpenServicebericht.apply(this, arguments);
                 serviceberichtIsDirty = false;
+                // Neuer Bericht: die Unterschriften-Vorschau des vorher geöffneten
+                // Berichts stehen lassen wäre irreführend — das versteckte Feld ist
+                // leer, das Bild aber noch zu sehen. populateServiceberichtForm()
+                // läuft hier nicht (es steigt bei fehlenden Daten sofort aus).
+                if (!daten) {
+                    [['signature-preview-img', 'signature-placeholder', 'btn-clear-signature'],
+                     ['tech-signature-preview-img', 'tech-signature-placeholder', 'btn-clear-tech-signature']]
+                        .forEach(([imgId, phId, btnId]) => {
+                            const img = document.getElementById(imgId), ph = document.getElementById(phId), btn = document.getElementById(btnId);
+                            const wert = document.getElementById(imgId === 'signature-preview-img' ? 'service-customer-signature' : 'service-tech-signature');
+                            if (wert && wert.value) return;   // z. B. hinterlegte Technikerunterschrift
+                            if (img) { img.src = ''; img.classList.add('hidden'); img.style.display = 'none'; }
+                            if (ph) ph.classList.remove('hidden');
+                            if (btn) btn.classList.add('hidden');
+                        });
+                }
                 const modal = document.getElementById('servicebericht-modal');
                 if (modal) {
                     modal.removeEventListener('input', onServiceberichtFieldChange);
@@ -910,12 +926,27 @@
             setVal('service-tech-sig-date', d.tech_sig_date);
             setVal('service-customer-sig-date', d.customer_sig_date);
             if (d.tech_signature) window._techSigIsAutofilled = false;
+            // Vorschaubild setzen ODER zurücksetzen. Das Zurücksetzen fehlte: wer einen
+            // unterschriebenen Bericht schloss und einen neuen anlegte, sah dort weiter
+            // die fremde Unterschrift — gespeichert wurde sie nicht, aber es sah so aus.
             const showSig = (imgId, phId, btnId, val) => {
                 const img = document.getElementById(imgId), ph = document.getElementById(phId), btn = document.getElementById(btnId);
-                if (val) { if (img) { img.src = val; img.classList.remove('hidden'); img.style.display = 'block'; } if (ph) ph.classList.add('hidden'); if (btn) btn.classList.remove('hidden'); }
+                if (val) {
+                    if (img) { img.src = val; img.classList.remove('hidden'); img.style.display = 'block'; }
+                    if (ph) ph.classList.add('hidden');
+                    if (btn) btn.classList.remove('hidden');
+                } else {
+                    if (img) { img.src = ''; img.classList.add('hidden'); img.style.display = 'none'; }
+                    if (ph) ph.classList.remove('hidden');
+                    if (btn) btn.classList.add('hidden');
+                }
             };
             showSig('tech-signature-preview-img', 'tech-signature-placeholder', 'btn-clear-tech-signature', d.tech_signature);
-            showSig('customer-signature-preview-img', 'customer-signature-placeholder', 'btn-clear-customer-signature', d.customer_signature);
+            // Die Kundenunterschrift heißt im Markup OHNE Präfix („signature-preview-img",
+            // index.html). Hier standen „customer-…"-IDs, die es nie gab — die gespeicherte
+            // Unterschrift blieb beim Bearbeiten deshalb unsichtbar, obwohl sie im
+            // versteckten Feld und im PDF vorhanden war.
+            showSig('signature-preview-img', 'signature-placeholder', 'btn-clear-signature', d.customer_signature);
 
             // Techniker (Closure-Variable selectedTechs)
             try {

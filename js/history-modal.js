@@ -527,8 +527,12 @@
                            <input type="date" value="${item.date.toISOString().split('T')[0]}" style="position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none;" onchange="${datumAendernFn}">`
                         : `<div class="history-date-line">${dateStr}</div>`;
                     // Use string comparison or conversion to avoid UUID type mismatch if table expects Integer
-                    const deleteBtn = (isAdmin && item.id) ? `
-                            <button onclick="window.deleteHistoryEntry('${item.id}', '${item.itemType || 'manual'}')" class="btn-icon-circular delete" title="Löschen">
+                    // Löschen hängt am Recht „Historie einer Maschine", nicht mehr am
+                    // Namen des Nutzers — sonst zeigte die Liste anderen Löschknöpfe
+                    // gar nicht, obwohl sie das Recht hatten (und umgekehrt).
+                    const darfLoeschen = typeof window.canDeleteArea === 'function' ? window.canDeleteArea('historie') : true;
+                    const deleteBtn = (darfLoeschen && item.id) ? `
+                            <button onclick="window.deleteHistoryEntry('${item.id}', '${item.itemType || 'manual'}')" class="btn-icon-circular delete delete-permission-required" data-del-area="historie" title="Löschen">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                             </button>
                         ` : '';
@@ -1209,7 +1213,10 @@
                     saveBtn.innerHTML = `${iconHtml} Änderungen speichern`;
                 }
                 if (deleteBtn) {
-                    deleteBtn.style.display = 'flex';
+                    // Nur zeigen, wenn der Nutzer Historien-Einträge löschen darf —
+                    // der Inline-Style schlägt jede CSS-Regel, deshalb hier prüfen.
+                    const darf = typeof window.canDeleteArea === 'function' ? window.canDeleteArea('historie') : true;
+                    deleteBtn.style.display = darf ? 'flex' : 'none';
                 }
 
                 // 5. Handle existing photos

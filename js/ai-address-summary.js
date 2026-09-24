@@ -15,8 +15,9 @@
 (function () {
     'use strict';
 
-    const MAX_ZEICHEN = 60000;      // ~15k Token Eingabe — bei Gemini kein Problem
-    const MAX_EINTRAEGE = 120;      // Historie/Notizen: die neuesten zuerst
+    // Weniger Eingabe = schnellere Antwort. Erledigte Vorgänge gehen nur als Kopfzeile raus.
+    const MAX_ZEICHEN = 24000;      // ~6k Token Eingabe
+    const MAX_EINTRAEGE = 50;       // Historie/Notizen: die neuesten zuerst
 
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const toast = (m, t) => (typeof window.showToast === 'function' ? window.showToast(m, t) : console.log(m));
@@ -73,13 +74,16 @@
         const vorg = (D.vorgaenge || []).slice().sort((x, y) => (x.status === 'erledigt') - (y.status === 'erledigt') || new Date(y.process_date || y.created_at || 0) - new Date(x.process_date || x.created_at || 0));
         if (vorg.length) {
             zeilen.push('\n## VORGÄNGE (' + vorg.length + ', davon offen: ' + vorg.filter(p => p.status !== 'erledigt').length + ')');
-            vorg.slice(0, 60).forEach(p => {
+            const offen = vorg.filter(p => p.status !== 'erledigt');
+            const erledigt = vorg.filter(p => p.status === 'erledigt').slice(0, 20);
+            offen.slice(0, 30).concat(erledigt).forEach(p => {
                 const ang = D.angeboteByProcess[String(p.id)];
                 const m = p.machine_id ? mById.get(String(p.machine_id)) : null;
                 const status = p.status === 'erledigt' ? 'ERLEDIGT' : (p.status === 'in_bearbeitung' || p.status === 'wartet') ? 'IN BEARBEITUNG' : 'OFFEN';
                 const zust = nutzerNamen(p.assigned_users) || p.assigned_to || p.responsible || '';
                 const kopf = ['[' + status + ']', datum(p.process_date || p.created_at), ART[p.process_type] ? '(' + ART[p.process_type] + ')' : '', ang ? 'Angebot ' + (ang.belegnummer || '') + (ang.nettobetrag ? ' ' + Number(ang.nettobetrag).toLocaleString('de-DE') + ' € netto' : '') + (ang.status ? ' (' + ang.status + ')' : '') : '', p.title || p.subject || p.name || '(ohne Titel)', m ? '· ' + maschinenLabel(m) : '', zust ? '· zuständig ' + zust : '', p.remind_at ? '· Wiedervorlage ' + datum(p.remind_at) : '', p.due_date || p.deadline ? '· fällig ' + datum(p.due_date || p.deadline) : ''].filter(Boolean).join(' ');
                 zeilen.push('- ' + kopf);
+                if (p.status === 'erledigt') return;   // Erledigtes: Kopfzeile reicht
                 const txt = textVon(p, ['remark', 'description', 'notes', 'text']);
                 if (txt) zeilen.push('  ' + kurz(txt, 300));
                 const schritte = Array.isArray(p.steps) ? p.steps : [];
@@ -118,7 +122,55 @@
 
         let text = zeilen.join('\n');
         if (text.length > MAX_ZEICHEN) text = text.slice(0, MAX_ZEICHEN) + '\n… (älterer Verlauf gekürzt)';
+        // Umsatz steht am Ende, aber vor dem Kürzen geschützt (klein, fertig gerechnet).
+        if (D.umsatzText) text += '\n\n' + D.umsatzText;
         return text;
+    }
+
+    // ---------- Umsatz aus den Sage-Rechnungen (Tabelle rechnungen) ----------
+    // Nur für Nutzer mit permissions.belege. Die Summen rechnet der Browser —
+    // an die KI gehen nur Jahreswerte und Entwicklung, keine einzelnen Belege.
+    function darfBelege() {
+        let p = window.activeUser && window.activeUser.permissions;
+        if (typeof p === 'string') { try { p = JSON.parse(p); } catch (e) { p = null; } }
+        return !!(p && p.belege === true);
+    }
+
+    async function umsatzText(customerId) {
+        if (!darfBelege() || !customerId) return '';
+        try {
+            const { data, error } = await window.supabaseClient.from('rechnungen')
+                .select('belegjahr, belegdatum, netto').eq('customer_id', customerId);
+            if (error || !data || !data.length) return '';
+            const euro = v => Math.round(v).toLocaleString('de-DE') + ' €';
+            const heute = new Date(); const jahr = heute.getFullYear();
+            const stichtag = (heute.getMonth() + 1) * 100 + heute.getDate();   // MMTT
+            const jeJahr = {}, anzahl = {};
+            let ytd = 0, vjZeitraum = 0;
+            data.forEach(r => {
+                const j = r.belegjahr || Number(String(r.belegdatum || '').slice(0, 4));
+                if (!j) return;
+                const n = Number(r.netto) || 0;
+                jeJahr[j] = (jeJahr[j] || 0) + n; anzahl[j] = (anzahl[j] || 0) + 1;
+                const mt = r.belegdatum ? Number(String(r.belegdatum).slice(5, 7) + String(r.belegdatum).slice(8, 10)) : 0;
+                if (j === jahr) ytd += n;
+                if (j === jahr - 1 && mt && mt <= stichtag) vjZeitraum += n;
+            });
+            const pro = (a, b) => b ? (a >= b ? '+' : '') + Math.round((a - b) / Math.abs(b) * 100) + ' %' : 'kein Vorjahreswert';
+            const jahre = Object.keys(jeJahr).map(Number).sort();
+            const z = ['## UMSATZ (netto, aus Sage-Rechnungen, fertig gerechnet — Zahlen exakt übernehmen)'];
+            jahre.forEach((j, i) => {
+                const vor = jeJahr[j - 1];
+                z.push('- ' + j + (j === jahr ? ' (bis heute)' : '') + ': ' + euro(jeJahr[j]) + ' aus ' + anzahl[j] + ' Belegen'
+                    + (j !== jahr && i > 0 && vor !== undefined ? ' · ggü. Vorjahr ' + pro(jeJahr[j], vor) : ''));
+            });
+            if (jeJahr[jahr] !== undefined || vjZeitraum) {
+                z.push('- Vergleich gleicher Zeitraum: ' + jahr + ' bis heute ' + euro(ytd) + ' vs. ' + (jahr - 1) + ' bis zum selben Tag ' + euro(vjZeitraum) + ' · ' + pro(ytd, vjZeitraum));
+            }
+            const gesamt = data.reduce((s, r) => s + (Number(r.netto) || 0), 0);
+            z.push('- Gesamt seit ' + jahre[0] + ': ' + euro(gesamt) + ' aus ' + data.length + ' Belegen');
+            return z.join('\n');
+        } catch (e) { return ''; }
     }
 
     function systemPrompt() {
@@ -129,18 +181,21 @@ Du bekommst die gesammelten Daten zu EINER Kundenadresse und schreibst daraus ei
 Antworte auf Deutsch, in Markdown, mit genau diesen Abschnitten:
 
 ## Auf einen Blick
-3–5 Sätze: Wer ist der Kunde, welche Maschinen, wie ist die Beziehung (Stammkunde, Mieter, Neukunde, Probleme?), was ist gerade das Wichtigste.
+2–4 Sätze: Wer ist der Kunde, welche Maschinen, wie ist die Beziehung (Stammkunde, Mieter, Neukunde, Probleme?), was ist gerade das Wichtigste.
 
 ## Offene Vorgänge & nächste Schritte
 Je offenem Vorgang eine Zeile: **Titel** – Stand – wer ist dran – was ist konkret als Nächstes zu tun (aus den offenen Schritten). Überfällige oder lange liegengebliebene Dinge deutlich markieren (⚠️). Keine offenen Vorgänge → das sagen.
 
+## Umsatz
+NUR wenn die Daten einen Abschnitt UMSATZ enthalten (sonst diesen Abschnitt ganz weglassen): Umsatz je Jahr als kurze Liste, dann in einem Satz die Entwicklung (mehr/weniger, Prozent, Vergleich gleicher Zeitraum). Zahlen exakt übernehmen, nicht selbst rechnen, keine einzelnen Belege.
+
 ## Was bisher war
-Chronologisch, kurz (max. 10 Punkte): Kauf, Vermietungen, Wartungen, Reparaturen, Reklamationen, Angebote. Nur was in den Daten steht.
+Chronologisch, kurz (max. 6 Punkte): Kauf, Vermietungen, Wartungen, Reparaturen, Reklamationen, Angebote. Nur was in den Daten steht.
 
 ## Auffälligkeiten
 Wiederkehrende Probleme, überfällige Wartungen, alte offene Angebote ohne Antwort, fehlende Ansprechpartner, Termine demnächst. Gibt es nichts, schreib „Nichts Auffälliges".
 
-Regeln: Nichts erfinden — nur was in den Daten steht. Zahlen, Daten und Namen exakt übernehmen. Kurz und konkret, keine Floskeln. Wenn Daten fehlen, benenne das knapp.`;
+Regeln: Nichts erfinden — nur was in den Daten steht. Zahlen, Daten und Namen exakt übernehmen. Kurz und konkret, keine Floskeln, keine Einleitung und kein Schlusssatz. Wenn Daten fehlen, benenne das knapp.`;
     }
 
     // ---------- Markdown (klein) → HTML ----------
@@ -188,7 +243,7 @@ Regeln: Nichts erfinden — nur was in den Daten steht. Zahlen, Daten und Namen 
         document.getElementById('ab-ai-summary-raus').addEventListener('click', () => {
             const body = document.getElementById('ab-ai-summary-body');
             if (body.dataset.zeigtAnfrage === '1') { body.innerHTML = md(letzterText); body.dataset.zeigtAnfrage = ''; document.getElementById('ab-ai-summary-raus').textContent = 'Was geht raus?'; return; }
-            body.innerHTML = '<p class="text-muted-sm">So kam der Text beim KI-Anbieter an — Namen, Orte und Nummern sind ersetzt, die Zuordnung liegt nur in diesem Browser:</p><pre class="ab-ai-summary-roh">' + esc(letzteAnfrage || '(noch nichts gesendet)') + '</pre>';
+            body.innerHTML = '<p class="text-muted-sm">So kam der Text beim KI-Anbieter an — Namen, Orte und Nummern sind ersetzt, die Zuordnung liegt nur in diesem Browser:</p>' + (window.kiPseudonym && window.kiPseudonym.pruefHtml ? window.kiPseudonym.pruefHtml(letzteAnfrage || '(noch nichts gesendet)') : '<pre class="ab-ai-summary-roh">' + esc(letzteAnfrage || '(noch nichts gesendet)') + '</pre>');
             body.dataset.zeigtAnfrage = '1'; document.getElementById('ab-ai-summary-raus').textContent = 'Zusammenfassung zeigen';
         });
         document.getElementById('ab-ai-summary-copy').addEventListener('click', async () => {
@@ -238,13 +293,14 @@ Regeln: Nichts erfinden — nur was in den Daten steht. Zahlen, Daten und Namen 
                     .concat(Object.values(D.angeboteByProcess || {}).map(x => ({ wert: x.belegnummer, art: 'Beleg' })))
                     .concat((D.vorgaenge || []).map(x => ({ wert: x.workshop_order_number, art: 'Auftrag' })))
             }) : null;
+            D.umsatzText = await umsatzText(D.id);
             const roh = datenText(D);
             const anfrage = p ? p.maskieren(roh) : roh;
             letzteAnfrage = anfrage;
             const resp = await window.groqFetch({
                 messages: [{ role: 'system', content: systemPrompt() + (p ? '\n\n' + window.kiPseudonym.PROMPT_HINWEIS : '') }, { role: 'user', content: anfrage }],
                 temperature: 0.2,
-                max_tokens: 2000,
+                max_tokens: 1400,   // kürzere Antwort = schneller fertig
                 stream: true
             });
             // Gestreamt: der Text erscheint schon während des Schreibens (Platzhalter

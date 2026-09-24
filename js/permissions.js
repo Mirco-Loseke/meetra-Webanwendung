@@ -45,7 +45,7 @@
         // Zwei getrennte Verläufe, die vorher beide „Historien-Einträge" hießen:
         // die Historie einer MASCHINE (js/history-modal.js) und der Verlauf an
         // einer ADRESSE (customer_notes, js/addressbook.js).
-        { key: 'historie', label: 'Historie einer Maschine', what: ['Historien-Einträgen'] },
+        { key: 'historie', label: 'Historie einer Maschine (manuelle Einträge, Serviceberichte, Protokolle)', what: ['Historien-Einträgen'] },
         { key: 'adress_historie', label: 'Historie einer Adresse', what: ['Adress-Einträgen'] },
         { key: 'buchungen', label: 'Buchungen', what: ['Buchungen'] },
         { key: 'kategorien', label: 'Kategorien', what: ['Kategorien'] },
@@ -60,9 +60,11 @@
         { key: 'schritte', label: 'Vorgangs-Schritte', what: ['Schritten'] },
         { key: 'stand', label: 'Stand-Einträge', what: ['Stand-Einträgen'] },
         { key: 'erinnerungen', label: 'Erinnerungen', what: ['Erinnerungen'] },
+        { key: 'protokolle', label: 'Protokolle (Eingang, Abnahme)', what: ['Protokollen'] },
         { key: 'pruefpunkte', label: 'Prüfpunkte', what: ['Prüfpunkten'] },
         { key: 'fotos', label: 'Fotos', what: ['Fotos'] },
         { key: 'wartungsplaene', label: 'Wartungspläne', what: ['Wartungsplänen'] },
+        { key: 'aufgaben', label: 'Aufgaben', what: ['Aufgaben'] },
         { key: 'unteraufgaben', label: 'Unteraufgaben', what: ['Unteraufgaben'] },
         { key: 'werkstatt', label: 'Werkstatt-Einträge', what: ['Werkstatt-Einträgen'] },
         { key: 'rechnungen', label: 'Rechnungsliste', what: ['Rechnungs-Einträgen'] },
@@ -80,6 +82,37 @@
         });
         return map;
     })();
+
+    // Stille Prüfung ohne Meldung — für das Ein-/Ausblenden von Knöpfen.
+    // bereich = Schlüssel aus DELETE_AREAS (z. B. 'historie'), leer = nur der
+    // Hauptschalter. Gleiche Regel wie canDelete(), nur ohne Toast.
+    window.canDeleteArea = function (bereich) {
+        const perms = readPerms(window.activeUser || window.currentUser || null);
+        if (perms && perms.can_delete === false) return false;
+        if (bereich && perms && perms['del_' + bereich] === false) return false;
+        return true;
+    };
+
+    // Kontrolle in der Browser-Konsole: window.rechteDiagnose()
+    // Zeigt, welcher Nutzer gerade gilt, welche Bereiche gesperrt sind und ob
+    // diese (neue) Fassung der Datei überhaupt geladen ist. Ohne die Zeile
+    // „Stand 2026-09-22" läuft noch eine alte Fassung aus dem Cache.
+    window.rechteDiagnose = function () {
+        const u = window.activeUser || window.currentUser || null;
+        const perms = readPerms(u) || {};
+        const gesperrt = window.DELETE_AREAS.filter(a => perms['del_' + a.key] === false).map(a => a.key);
+        const erlaubt = window.DELETE_AREAS.filter(a => perms['del_' + a.key] !== false).map(a => a.key);
+        const d = {
+            stand: '2026-09-22 (Bereichs-Ausblendung aktiv)',
+            benutzer: u ? u.name : '(keiner)',
+            hauptschalter_loeschen: perms.can_delete !== false,
+            gesperrt, erlaubt,
+            body_klassen: [...document.body.classList].filter(c => c === 'disable-delete' || c.startsWith('del-off-')),
+            knoepfe_im_dom: document.querySelectorAll('[data-del-area]').length
+        };
+        console.table({ Stand: d.stand, Benutzer: d.benutzer, 'Hauptschalter Löschen': d.hauptschalter_loeschen, 'gesperrte Bereiche': gesperrt.join(', ') || '–' });
+        return d;
+    };
 
     // =========================================================
     // ZENTRALE LÖSCHBERECHTIGUNG
@@ -138,6 +171,14 @@
             document.body.classList.remove('disable-delete');
         }
 
+        // Je gesperrtem Bereich eine Klasse am <body> („del-off-historie"). Die
+        // zugehörige CSS-Regel blendet alle Knöpfe mit data-del-area="historie"
+        // aus — auch die, die erst später gezeichnet werden. Damit gilt überall
+        // dieselbe Regel: Haken weg ⇒ Knopf weg, nicht erst eine Meldung beim Klick.
+        window.DELETE_AREAS.forEach(function (a) {
+            document.body.classList.toggle('del-off-' + a.key, perms['del_' + a.key] === false);
+        });
+
         // Erste erlaubte Sidebar-Ansicht als Ausweichziel, falls "home" verboten ist.
         // Sind ALLE Ansichten verboten, bleibt home als Notanker sichtbar.
         const sidebarTargets = Array.from(document.querySelectorAll('.sidebar-nav li a'))
@@ -187,4 +228,14 @@
             try { window.rechnungslisteRechtePruefen(); } catch (e) {}
         }
     };
+    // CSS-Regeln je Bereich einmal erzeugen (Bereiche stehen nur hier).
+    (function () {
+        const css = window.DELETE_AREAS.map(function (a) {
+            return 'body.del-off-' + a.key + ' [data-del-area="' + a.key + '"]';
+        }).join(', ') + ' { display: none !important; }';
+        const el = document.createElement('style');
+        el.id = 'del-area-styles';
+        el.textContent = css;
+        (document.head || document.documentElement).appendChild(el);
+    })();
 })();

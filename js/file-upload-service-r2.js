@@ -16,18 +16,34 @@ window.FileUploadService = {
         const basis = (typeof SUPABASE_URL !== 'undefined' && SUPABASE_URL) || '';
         if (!basis) throw new Error('Verbindung zu Supabase fehlt.');
         if (!window.supabaseClient) throw new Error('Nicht angemeldet.');
-        let token = '';
-        try { const { data } = await window.supabaseClient.auth.getSession(); token = data && data.session ? data.session.access_token : ''; }
-        catch (e) { /* unten abgefangen */ }
+        // Token holen; läuft es in weniger als 60 s ab oder lehnt die Function es ab
+        // (Tab lag lange im Hintergrund, Auto-Refresh verpasst), einmal erneuern.
+        const tokenHolen = async (erneuern) => {
+            try {
+                if (erneuern) { const { data } = await window.supabaseClient.auth.refreshSession(); return data && data.session ? data.session.access_token : ''; }
+                const { data } = await window.supabaseClient.auth.getSession();
+                const s = data && data.session;
+                if (s && s.expires_at && s.expires_at * 1000 - Date.now() < 60000) return tokenHolen(true);
+                return s ? s.access_token : '';
+            } catch (e) { return ''; }
+        };
+        const senden = async (token) => {
+            try {
+                return await fetch(basis.replace(/\/+$/, '') + '/functions/v1/r2-sign', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                    body: JSON.stringify(payload)
+                });
+            } catch (e) { throw new Error('Dateidienst nicht erreichbar (r2-sign). Ist die Edge Function ausgerollt? ' + e.message); }
+        };
+        let token = await tokenHolen(false);
         if (!token) throw new Error('Deine Anmeldung ist abgelaufen — bitte neu anmelden.');
-        let res;
-        try {
-            res = await fetch(basis.replace(/\/+$/, '') + '/functions/v1/r2-sign', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                body: JSON.stringify(payload)
-            });
-        } catch (e) { throw new Error('Dateidienst nicht erreichbar (r2-sign). Ist die Edge Function ausgerollt? ' + e.message); }
+        let res = await senden(token);
+        if (res.status === 401) {
+            token = await tokenHolen(true);
+            if (!token) throw new Error('Deine Anmeldung ist abgelaufen — bitte neu anmelden.');
+            res = await senden(token);
+        }
         let daten = null;
         try { daten = await res.json(); } catch (e) { /* kein JSON */ }
         if (!res.ok) {

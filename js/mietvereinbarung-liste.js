@@ -121,7 +121,7 @@
             <div class="miet-liste-knoepfe">
                 ${v.pdf_url ? `<button type="button" class="btn-secondary" onclick="window.mietListePdf('${esc(v.pdf_url)}')" title="PDF ansehen">PDF</button>` : ''}
                 <button type="button" class="btn-primary" onclick="window.mietListeBearbeiten('${esc(v.id)}')">Bearbeiten</button>
-                <button type="button" class="btn-secondary delete-permission-required miet-liste-weg" onclick="window.mietListeLoeschen('${esc(v.id)}')" title="Löschen">&times;</button>
+                <button type="button" class="btn-secondary delete-permission-required" data-del-area="mietvereinbarungen miet-liste-weg" onclick="window.mietListeLoeschen('${esc(v.id)}')" title="Löschen">&times;</button>
             </div>
         </div>`;
     }

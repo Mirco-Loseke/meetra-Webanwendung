@@ -177,6 +177,43 @@
         return daten;
     };
 
+    // Graph-Aufruf mit ZUSÄTZLICHEN Berechtigungen (z. B. Files.ReadWrite für
+    // den OneDrive-Eingang). Bewusst nicht in BERECHTIGUNGEN: sonst scheitert
+    // die normale Anmeldung, solange die Berechtigung in Entra noch fehlt.
+    // Microsoft fragt beim ersten Mal per Popup nach Zustimmung.
+    // interaktiv = false (Hintergrund-Timer): kein Popup — der Browser würde es
+    // ohne Klick ohnehin blockieren; dann Fehler mit err.zustimmung = true.
+    window.graphFetchMit = async function (zusatz, pfad, methode, rumpf, interaktiv) {
+        if (!konto) throw new Error('Nicht bei Microsoft angemeldet.');
+        const c = client();
+        const anfrage = { scopes: zusatz, account: konto };
+        let t;
+        try { t = (await c.acquireTokenSilent(anfrage)).accessToken; }
+        catch (e) {
+            if (!interaktiv) {
+                const err = new Error('Zustimmung zu ' + zusatz.join(', ') + ' fehlt noch.');
+                err.zustimmung = true;
+                throw err;
+            }
+            t = (await c.acquireTokenPopup(anfrage)).accessToken;
+        }
+        const url = /^https?:/i.test(pfad) ? pfad : GRAPH + pfad;
+        const res = await fetch(url, {
+            method: methode || 'GET',
+            headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' },
+            body: rumpf ? JSON.stringify(rumpf) : undefined
+        });
+        const text = await res.text();
+        let daten = null;
+        try { daten = text ? JSON.parse(text) : null; } catch (e) { daten = text; }
+        if (!res.ok) {
+            const err = new Error((daten && daten.error && daten.error.message) || text || ('HTTP ' + res.status));
+            err.status = res.status;
+            throw err;
+        }
+        return daten;
+    };
+
     // Alle Seiten einer Liste einsammeln (max. Zeilen als Bremse).
     window.graphAlle = async function (pfad, max) {
         let alle = [], weiter = pfad;

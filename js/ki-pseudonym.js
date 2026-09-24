@@ -133,7 +133,8 @@
             // Telefon: mit Ländervorwahl, oder 0… mit Trennzeichen zwischen den Gruppen. Reine
             // Ziffernfolgen (Seriennummern, Zeitstempel, Dateinamen) und Beträge bleiben unberührt.
             { re: /(?<![\d.,€\w])(?:(?:\+49|0049)[\s\/-]?\d[\d\s\/-]{5,}\d|0\d{2,5}[\s\/-]+\d[\d\s\/-]{2,}\d)(?![\d.,]*\s?€)(?!\w)(?!\.\d)/g, ersatz: '[Telefon]' },
-            { re: /\b[A-ZÄÖÜ][\wäöüß.-]+(?:straße|strasse|str\.|weg|allee|platz|gasse|ring|damm|ufer)\s*\d+[a-z]?\b/gi, ersatz: '[Straße]' }
+            // „Ahlhorner Str. 137", „Hauptstraße 5", „Am Ring 3" — Leerzeichen vor dem Straßenwort erlaubt
+            { re: /\b[A-ZÄÖÜ][\wäöüß.-]+(?:\s?-?)(?:straße|strasse|str\.|weg|allee|platz|gasse|ring|damm|ufer)\s*\d+[a-z]?\b/gi, ersatz: '[Straße]' }
         ];
 
         function maskieren(text) {
@@ -261,6 +262,58 @@
     const PROMPT_HINWEIS = 'Personenbezogene und identifizierende Angaben sind durch Platzhalter ersetzt (Ansprechpartner A/B/…, Mitarbeiter 1/2/…, Person 1/…, Firma K1/…, Ort 1/…, Kundennr 1, Seriennr 1/…, Beleg 1/…, [E-Mail], [Telefon], [Straße]). '
         + 'Verwende diese Platzhalter in deiner Antwort GENAU so, wie sie vorkommen — nicht umschreiben, nicht abkürzen, nicht auflösen.';
 
+    // ---- Kontrolle: Hat die Maskierung alles erwischt? ----
+    // Durchsucht den MASKIERTEN Text nach Resten, die nach Personenbezug aussehen:
+    // bekannte Kunden-/Mitarbeiternamen (sicher übersehen), dazu Muster wie
+    // „Herr X", „… GmbH", Mail, Telefon, Straße, PLZ + Ort (Verdacht).
+    // Liefert { html, ersetzt, verdacht }: Platzhalter grün, Verdachtsstellen rot.
+    const PH_RE = /\b(?:Ansprechpartner [A-Z]{1,3}|Mitarbeiter \d+|Person \d+|Firma K\d+|Ort \d+|Kundennr \d+|Adressnr \d+|Seriennr \d+|Beleg \d+|Rechnung \d+|Auftrag \d+|Nr \d+)\b|\[(?:E-Mail|Telefon|Straße)\]/g;
+    function pruefen(text) {
+        const t = String(text || '');
+        const funde = [];   // { von, bis, grund }
+        const merk = (re, grund, filter) => { let m; re.lastIndex = 0; while ((m = re.exec(t))) { if (!filter || filter(m)) funde.push({ von: m.index, bis: m.index + m[0].length, grund }); } };
+        // Sicher übersehen: Namen, die die App kennt
+        const bekannt = [];
+        ((typeof window.customerCacheSync === 'function' ? window.customerCacheSync() : []) || []).forEach(c => { if (c && c.name && c.name.trim().length >= 4) bekannt.push({ n: c.name.trim(), g: 'Kundenname nicht ersetzt' }); });
+        (window.userList || []).forEach(u => { if (u && u.name && u.name.trim().length >= 4) bekannt.push({ n: u.name.trim(), g: 'Mitarbeitername nicht ersetzt' }); });
+        bekannt.forEach(b => merk(new RegExp('(?<![\\wäöüß])' + escRe(b.n) + '(?![\\wäöüß])', 'g'), b.g));
+        // Verdacht nach Muster
+        merk(new RegExp(ANREDE + '\\s+[A-ZÄÖÜ][\\wäöüß-]{2,}', 'g'), 'Anrede + Name', m => !/\b(Ansprechpartner|Mitarbeiter|Person)\b/.test(m[0]));
+        merk(/\b[A-ZÄÖÜ][\wäöüß&.-]+(?:\s+[A-ZÄÖÜ&][\wäöüß&.-]+){0,3}\s+(?:GmbH|AG|KG|OHG|GbR|e\.K\.|e\.V\.|UG|mbH|Co\.)\b[\w.& ]*/g, 'Firmenname', m => !/^Firma K\d+/.test(m[0]));
+        merk(/[\w.+-]+@[\w-]+\.[\w.-]+/g, 'E-Mail');
+        merk(/(?<![\d.,€\w])(?:\+49|0049|0\d{2,5}[\s\/-])[\d\s\/-]{5,}\d(?![\d.,]*\s?€)(?!\w)/g, 'Telefon');
+        merk(/\b[A-ZÄÖÜ][\wäöüß.-]+(?:\s?-?)(?:straße|strasse|str\.|weg|allee|platz|gasse|ring|damm|ufer)\s*\d+[a-z]?\b/gi, 'Straße');
+        merk(/\b\d{5}\s+[A-ZÄÖÜ][a-zäöüß]{2,}(?:[ -][A-ZÄÖÜ][a-zäöüß]{2,})?\b/g, 'PLZ + Ort');
+        // Platzhalter selbst dürfen nie als Verdacht gelten
+        const ph = []; let m; PH_RE.lastIndex = 0;
+        while ((m = PH_RE.exec(t))) ph.push({ von: m.index, bis: m.index + m[0].length });
+        const inPh = f => ph.some(p => f.von < p.bis && f.bis > p.von);
+        const verdacht = funde.filter(f => !inPh(f)).sort((a, b) => a.von - b.von);
+        // Überlappende Verdachtsfunde zusammenlegen
+        const marken = [];
+        [...ph.map(p => ({ von: p.von, bis: p.bis, art: 'ph' })), ...verdacht.map(v => ({ von: v.von, bis: v.bis, art: 'v', grund: v.grund }))]
+            .sort((a, b) => a.von - b.von)
+            .forEach(x => { const l = marken[marken.length - 1]; if (l && x.von < l.bis) { l.bis = Math.max(l.bis, x.bis); if (x.art === 'v' && l.art === 'v' && !l.grund.includes(x.grund)) l.grund += ', ' + x.grund; } else marken.push(Object.assign({}, x)); });
+        const e = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        let html = '', pos = 0;
+        marken.forEach(x => {
+            html += e(t.slice(pos, x.von));
+            html += x.art === 'ph' ? '<mark class="ki-ps-ph">' + e(t.slice(x.von, x.bis)) + '</mark>' : '<mark class="ki-ps-verdacht" title="' + e(x.grund) + '">' + e(t.slice(x.von, x.bis)) + '</mark>';
+            pos = x.bis;
+        });
+        html += e(t.slice(pos));
+        return { html, ersetzt: ph.length, verdacht: marken.filter(x => x.art === 'v').length, funde: marken.filter(x => x.art === 'v').map(x => ({ text: t.slice(x.von, x.bis), grund: x.grund })) };
+    }
+    // Fertiger Block für „Was geht raus?": Ampel-Zeile + markierter Text.
+    function pruefHtml(text) {
+        const r = pruefen(text);
+        const e = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const kopf = r.verdacht
+            ? '<div class="ki-ps-ampel ki-ps-ampel-rot">⚠️ ' + r.verdacht + ' Stelle' + (r.verdacht > 1 ? 'n' : '') + ' sieht noch nach Personenbezug aus (rot markiert — bitte prüfen):<ul>' + r.funde.slice(0, 12).map(f => '<li><b>' + e(f.text) + '</b> <span class="text-muted-sm">' + e(f.grund) + '</span></li>').join('') + (r.funde.length > 12 ? '<li>…</li>' : '') + '</ul></div>'
+            : '<div class="ki-ps-ampel ki-ps-ampel-gruen">✅ Keine Reste erkannt — ' + r.ersetzt + ' Platzhalter im Text (grün). Geprüft: bekannte Kunden- und Mitarbeiternamen, Anreden, Firmenzusätze, E-Mail, Telefon, Straße, PLZ + Ort.</div>';
+        return kopf + '<pre class="ab-ai-summary-roh ki-ps-markiert">' + r.html + '</pre>';
+    }
+
     // Kurzer Hinweis unter einer KI-Vorschau: „🔒 12 Angaben ersetzt · Details" —
     // Details klappen den Bericht (was → welcher Platzhalter) und den gesendeten Text auf.
     function hinweisHtml() {
@@ -275,10 +328,10 @@
         if (!box) return false;
         if (!box.hidden) { box.hidden = true; a.textContent = 'Details'; return false; }
         const e = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-        box.innerHTML = (letztes ? letztes.p.berichtHtml() : '') + '<details class="ki-ps-raus"><summary>Was ging raus?</summary><pre>' + e(letztes ? letztes.gesendet : '') + '</pre></details>';
+        box.innerHTML = (letztes ? letztes.p.berichtHtml() : '') + '<details class="ki-ps-raus"><summary>Was ging raus?</summary>' + pruefHtml(letztes ? letztes.gesendet : '') + '</details>';
         box.hidden = false; a.textContent = 'Details ausblenden';
         return false;
     };
 
-    window.kiPseudonym = { erzeugen, fetchMaskiert, standardKontext, hinweisHtml, PROMPT_HINWEIS, get letztes() { return letztes; } };
+    window.kiPseudonym = { erzeugen, fetchMaskiert, standardKontext, hinweisHtml, pruefen, pruefHtml, PROMPT_HINWEIS, get letztes() { return letztes; } };
 })();

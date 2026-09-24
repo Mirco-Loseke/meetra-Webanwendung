@@ -951,10 +951,14 @@ window.loadChecklistPayload = function(payload) {
         });
     }
 
-    // Re-render UI selector and tables
-    const categoryText = clCategoryText();
-    if (categoryText.includes('wartung') || categoryText.includes('uvv') || categoryText.includes('einweisung')) {
-        window.populateChecklistSelector();
+    // Weiter über evaluateChecklistVisibility statt nur zu zeichnen: passt die
+    // Kategorie des Berichts nicht zu Wartung/UVV/Einweisung, wandern mitgeladene
+    // Protokolle in den Merker und sind damit weder sichtbar noch im PDF. Vorher
+    // wurden sie aus dem Payload aktiviert und landeten auch bei einem reinen
+    // Reparatur-Bericht wieder in der Ausgabe.
+    if (typeof window.evaluateChecklistVisibility === 'function') {
+        window.evaluateChecklistVisibility();
+    } else {
+        window.renderActiveChecklists();
     }
-    window.renderActiveChecklists();
 };

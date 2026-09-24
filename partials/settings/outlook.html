@@ -52,6 +52,24 @@
         </div>
     </div>
 
+    <!-- OneDrive-Eingang → Angebote (js/onedrive-angebote.js) -->
+    <div class="glass-card os-card">
+        <h3>OneDrive-Eingang für Angebote</h3>
+        <p class="text-muted-sm">PDFs in diesem OneDrive-Ordner werden automatisch dem Angebot mit passender Nummer
+            (Dateiname oder Text der PDF) zugeordnet und an dessen Vorgang gehängt. Danach verschiebt die App sie in den
+            Unterordner <code>zugeordnet</code>. Läuft, solange die App in einem Browser offen ist, in dem der Haken gesetzt ist.</p>
+        <div class="os-id-zeile">
+            <input type="text" id="oda-ordner" class="glass-form-input" placeholder="Pfad ab OneDrive-Stamm, z. B. Angebote/Eingang" autocomplete="off" spellcheck="false">
+            <button class="btn-primary" id="oda-pruefen">Jetzt prüfen</button>
+        </div>
+        <label class="os-hinweis"><input type="checkbox" id="oda-aktiv"> In diesem Browser automatisch alle 5 Minuten prüfen</label>
+        <p class="text-muted-sm os-hinweis" id="oda-status"></p>
+        <div id="oda-offen"></div>
+        <p class="text-muted-sm os-hinweis">Einmalig nötig: in Entra unter <strong>API-Berechtigungen</strong> →
+            Microsoft Graph → Delegiert → <strong>Files.ReadWrite</strong> hinzufügen (ggf. „Administratorzustimmung erteilen"),
+            dann hier „Jetzt prüfen" klicken und im Microsoft-Fenster zustimmen.</p>
+    </div>
+
     <div class="glass-card os-card">
         <h3>Einrichtung in Microsoft Entra</h3>
         <ol class="os-schritte">

@@ -123,13 +123,18 @@
 
         // 1) Kalendereinträge mit Uhrzeit (heute)
         try {
-            let { data, error } = await sb()
-                .from('maintenance_events')
-                .select('*, customers(name, zip_code, city)')
-                .eq('event_date', heuteKey())
-                .limit(200);
-            // customer_id-Spalte fehlt evtl. (Migration nicht gelaufen) — dann ohne Adresse.
-            if (error) ({ data, error } = await sb().from('maintenance_events').select('*').eq('event_date', heuteKey()).limit(200));
+            // Adressname per Join — fehlt die Verknüpfung (Migration nicht gelaufen),
+            // wird das gemerkt und beim nächsten Mal gleich ohne Join gefragt
+            // (window.dbKannDas, js/app-core.js). Sonst gäbe es alle 20 s einen 400er.
+            const evJoin = typeof window.dbKannDas !== 'function' || window.dbKannDas('ev_customers');
+            const evAbfrage = (spalten) => sb().from('maintenance_events').select(spalten).eq('event_date', heuteKey()).limit(200);
+            let { data, error } = await evAbfrage(evJoin ? '*, customers(name, zip_code, city)' : '*');
+            if (error && evJoin) {
+                if (typeof window.dbKannDasMerken === 'function') window.dbKannDasMerken('ev_customers', false);
+                ({ data, error } = await evAbfrage('*'));
+            } else if (!error && evJoin && typeof window.dbKannDasMerken === 'function') {
+                window.dbKannDasMerken('ev_customers', true);
+            }
             if (error) throw error;
 
             // Wer ist eingeladen? Daraus ergibt sich, wen es etwas angeht.
@@ -184,9 +189,16 @@
                 .gte('remind_at', new Date(frueheste).toISOString())
                 .lte('remind_at', new Date(jetzt).toISOString())
                 .limit(100);
-            let { data, error } = await abfrage(PROC_SPALTEN + ', customers(name, zip_code, city)');
-            // customers-Join / remark / created_by_user kommen aus Migrationen — fehlen sie, ohne sie.
-            if (error) ({ data, error } = await abfrage(PROC_SPALTEN));
+            // customers-Join / remark / created_by_user kommen aus Migrationen — fehlen sie,
+            // wird das gemerkt (js/app-core.js) statt es bei jedem Lauf erneut zu versuchen.
+            const procJoin = typeof window.dbKannDas !== 'function' || window.dbKannDas('proc_customers');
+            let { data, error } = await abfrage(procJoin ? PROC_SPALTEN + ', customers(name, zip_code, city)' : PROC_SPALTEN);
+            if (error && procJoin) {
+                if (typeof window.dbKannDasMerken === 'function') window.dbKannDasMerken('proc_customers', false);
+                ({ data, error } = await abfrage(PROC_SPALTEN));
+            } else if (!error && procJoin && typeof window.dbKannDasMerken === 'function') {
+                window.dbKannDasMerken('proc_customers', true);
+            }
             if (error) ({ data, error } = await abfrage('id, title, remind_at, status, assigned_users, user_id'));
             if (error) throw error;
 
@@ -275,8 +287,12 @@
             if (filter) q = q.contains('steps', JSON.stringify([{ done: false }]));
             return q.limit(300);
         };
-        let { data, error } = await abfrage(SCHRITT_SPALTEN + ', customers(name, zip_code, city)', true);
-        if (error) ({ data, error } = await abfrage(SCHRITT_SPALTEN, true));
+        const schrittJoin = typeof window.dbKannDas !== 'function' || window.dbKannDas('proc_customers');
+        let { data, error } = await abfrage(schrittJoin ? SCHRITT_SPALTEN + ', customers(name, zip_code, city)' : SCHRITT_SPALTEN, true);
+        if (error && schrittJoin) {
+            if (typeof window.dbKannDasMerken === 'function') window.dbKannDasMerken('proc_customers', false);
+            ({ data, error } = await abfrage(SCHRITT_SPALTEN, true));
+        }
         if (error) ({ data, error } = await abfrage(SCHRITT_SPALTEN, false));
         if (error) throw error;
         const liste = [];

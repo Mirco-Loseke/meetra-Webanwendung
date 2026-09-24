@@ -142,6 +142,12 @@
         window.renderSelectedServiceCategories = function () {
             syncServiceCategoriesFromInput();
             window.renderServiceCategoryList();
+            // Beschriftung und Prüfpläne genauso nachziehen wie beim Klick im Menü.
+            // Ohne diesen Aufruf blieb beim Öffnen eines gespeicherten Berichts die
+            // Prüfplan-Auswertung aus: bei „Wartung"/„UVV"/„Einweisung" tauchten die
+            // passenden Protokolle nicht auf, und ein Bericht mit nur „Reparatur"
+            // zeigte noch die Protokolle des zuvor geöffneten Berichts.
+            updateServiceCategoryUI();
         };
 
         window.selectServiceCategory = function (id, name) {

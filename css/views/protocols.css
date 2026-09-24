@@ -1782,3 +1782,27 @@ tr.completed-task td {
 .task-quick-complete.completed svg {
     color: #fff;
 }
+
+/* KI-Zusammenfassung auf der Maschinenkarte (js/ai-machine-summary.js) — wie .btn-edit-card, lila */
+.btn-ki-card {
+    width: 40px !important;
+    height: 40px !important;
+    min-height: auto !important;
+    flex: none !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(139, 92, 246, 0.85) !important;
+    border: 2px solid rgba(196, 181, 253, 0.6) !important;
+    color: #fff !important;
+    font-size: 1.1rem;
+    border-radius: var(--radius-circle) !important;
+    cursor: pointer;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s, box-shadow 0.3s !important;
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.5) !important;
+}
+.btn-ki-card:hover {
+    transform: scale(1.12);
+    background: rgba(139, 92, 246, 0.95) !important;
+    box-shadow: 0 4px 18px rgba(139, 92, 246, 0.5) !important;
+}

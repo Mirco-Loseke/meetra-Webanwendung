@@ -1,5 +1,6 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { AwsClient } from 'https://esm.sh/aws4fetch@1.0.20';
+// npm: statt esm.sh — esm.sh lieferte beim Ausrollen "Module not found" (2026-09-23).
+import { createClient } from 'npm:@supabase/supabase-js@2';
+import { AwsClient } from 'npm:aws4fetch@1.0.20';
 
 const R2_ACCOUNT_ID = Deno.env.get('R2_ACCOUNT_ID')!;
 const R2_ACCESS_KEY = Deno.env.get('R2_ACCESS_KEY')!;

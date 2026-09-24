@@ -2124,8 +2124,10 @@ details.category-group-details[open] .group-chevron {
     .task-card-header .task-card-machine {
         min-width: 0 !important;
         white-space: normal !important;
-        overflow-wrap: anywhere !important;
+        overflow-wrap: break-word !important;
+        word-break: normal !important;
     }
+    .task-card-header > div:first-child { word-break: normal !important; }
 
     /* Seitenränder: die Innenabstände stapelten sich auf dem Handy —
        #main-content 32px + #settings/#home 24px = 56px je Seite. Von 375px

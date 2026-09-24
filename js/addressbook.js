@@ -1543,12 +1543,13 @@
                 // js/listen.js): der Vorgang wird in der Historie als „Angebot …"
                 // gezeichnet und ersetzt dort den alten Einzel-Eintrag.
                 state.detail.angeboteByProcess = {};
+                state.detail.angeboteListeByProcess = {};
                 const pIds = state.detail.processes.map(p => p.id);
                 if (pIds.length) {
                     const { data: ang, error: angErr } = await sb().from('angebote')
                         .select('id, belegnummer, belegdatum, nettobetrag, ek_betrag, realisierbar, status, process_id, machine_id, machine_label, customers(name)')
                         .in('process_id', pIds);
-                    if (!angErr) (ang || []).forEach(a => { state.detail.angeboteByProcess[String(a.process_id)] = a; });
+                    if (!angErr) (ang || []).forEach(a => { state.detail.angeboteByProcess[String(a.process_id)] = a;  (state.detail.angeboteListeByProcess[String(a.process_id)] = state.detail.angeboteListeByProcess[String(a.process_id)] || []).push(a); });
                 }
             } catch (err) {
                 console.warn('Vorgänge zur Adresse konnten nicht geladen werden:', err.message || err);
@@ -1691,6 +1692,13 @@
             { key: 'mails', label: 'Mails' },
             { key: 'history', label: 'Historie', count: historyCount }
         ];
+        if (darfBelegeSehen()) {
+            const geladen = belegeCache.get(state.currentId);
+            const anzahl = geladen ? geladen.zeilen.length : belegeAnzahl.get(state.currentId);
+            if (anzahl === undefined) zaehleBelege(state.currentId);
+            tabs.push({ key: 'belege', label: 'Belege', count: anzahl === null ? undefined : anzahl });
+        }
+        else if (state.detailTab === 'belege') state.detailTab = 'overview';
 
         body.innerHTML = `
             <header class="ab-detail-head">
@@ -1707,7 +1715,7 @@
                     <button class="ab-btn ab-btn-ghost ab-btn-ki" data-ab-action="ai-summary" data-ab-id="${esc(state.currentId)}" title="Vergangenheit, offene Vorgänge und nächste Schritte — von der KI zusammengefasst">✨ Zusammenfassung</button>
                     <button class="ab-btn ab-btn-ghost" data-ab-action="plan-route" data-ab-id="${esc(state.currentId)}">${ic('route', 16)} Route planen</button>
                     <button class="ab-btn ab-btn-ghost" data-ab-action="edit" data-ab-id="${esc(state.currentId)}">${ic('edit', 16)} Bearbeiten</button>
-                    <button class="ab-btn ab-btn-danger delete-permission-required" data-ab-action="delete" data-ab-id="${esc(state.currentId)}">${ic('trash', 16)} Löschen</button>
+                    <button class="ab-btn ab-btn-danger delete-permission-required" data-del-area="adressen" data-ab-action="delete" data-ab-id="${esc(state.currentId)}">${ic('trash', 16)} Löschen</button>
                 </div>
             </header>
 
@@ -1733,6 +1741,7 @@
             case 'tasks': return renderTasksTab();
             case 'appointments': return renderAppointmentsTab();
             case 'mails': return renderMailsTab(a);
+            case 'belege': return renderBelegeTab();
             case 'history': return renderHistoryTab();
             default: return renderOverviewTab(a);
         }
@@ -1981,7 +1990,7 @@
                 </div>
                 <div class="ab-sub-card-actions">
                     <button class="ab-icon-btn" data-ab-action="contact-edit" data-ab-id="${esc(c.id)}" title="Bearbeiten">${ic('edit', 15)}</button>
-                    <button class="ab-icon-btn ab-danger delete-permission-required" data-ab-action="contact-delete" data-ab-id="${esc(c.id)}" title="Löschen">${ic('trash', 15)}</button>
+                    <button class="ab-icon-btn ab-danger delete-permission-required" data-del-area="ansprechpartner" data-ab-action="contact-delete" data-ab-id="${esc(c.id)}" title="Löschen">${ic('trash', 15)}</button>
                 </div>
             </div>
             <div class="ab-sub-card-body">
@@ -2094,7 +2103,7 @@
                 ${readonly ? '' : `
                 <div class="ab-sub-card-actions-column">
                     <button class="ab-icon-btn" data-ab-action="custom-machine-edit" data-ab-id="${esc(cm.id)}" title="Bearbeiten">${ic('edit', 15)}</button>
-                    <button class="ab-icon-btn ab-danger delete-permission-required" data-ab-action="custom-machine-delete" data-ab-id="${esc(cm.id)}" title="Löschen">${ic('trash', 15)}</button>
+                    <button class="ab-icon-btn ab-danger delete-permission-required" data-del-area="maschinen" data-ab-action="custom-machine-delete" data-ab-id="${esc(cm.id)}" title="Löschen">${ic('trash', 15)}</button>
                 </div>`}
             </div>
             <div class="ab-sub-card-body">
@@ -2277,7 +2286,7 @@
                     </div>
                     <div class="ab-sub-card-actions">
                         ${e.other ? `<button class="ab-icon-btn" data-ab-action="open" data-ab-id="${esc(e.otherId)}" title="Adresse öffnen">${ic('edit', 15)}</button>` : ''}
-                        ${e.direct ? `<button class="ab-icon-btn ab-danger delete-permission-required" data-ab-action="link-delete" data-ab-id="${esc(e.link.id)}" title="Verknüpfung entfernen">${ic('trash', 15)}</button>` : ''}
+                        ${e.direct ? `<button class="ab-icon-btn ab-danger delete-permission-required" data-del-area="verknuepfungen" data-ab-action="link-delete" data-ab-id="${esc(e.link.id)}" title="Verknüpfung entfernen">${ic('trash', 15)}</button>` : ''}
                     </div>
                 </div>
                 ${e.direct && e.link.note ? `<div class="ab-sub-card-body"><div class="ab-muted ab-small">${esc(e.link.note)}</div></div>` : ''}
@@ -2328,6 +2337,106 @@
         return `<div id="ab-mails-tab" class="ab-mails-tab" data-adressen="${esc(eindeutig.join(','))}"><div class="ab-empty"><div class="ab-empty-title">Wird geladen …</div></div></div>`;
     }
 
+    // ---------- Reiter „Belege": Rechnungsbelege aus Sage (Tabelle rechnungen) ----------
+    // Befüllt nur der Sage-Abgleich (tools/sage-sync.ps1). Geladen wird erst beim
+    // Öffnen des Reiters und nur für diese Adresse. Sichtbar nur mit permissions.belege.
+    function darfBelegeSehen() {
+        const u = window.activeUser;
+        if (!u) return false;
+        let p = u.permissions;
+        if (typeof p === 'string') { try { p = JSON.parse(p); } catch (e) { p = null; } }
+        return !!(p && p.belege === true);
+    }
+
+    const belegeCache = new Map();   // customer_id → { zeilen, fehler }
+    const belegeAnzahl = new Map();  // customer_id → Anzahl (für die Zahl am Reiter, ohne Zeilen zu laden)
+
+    async function zaehleBelege(customerId) {
+        belegeAnzahl.set(customerId, null);
+        try {
+            const { count, error } = await window.supabaseClient.from('rechnungen')
+                .select('id', { count: 'exact', head: true }).eq('customer_id', customerId);
+            if (error) throw error;
+            belegeAnzahl.set(customerId, count || 0);
+        } catch (e) {
+            belegeAnzahl.set(customerId, 0);
+            return;
+        }
+        if (state.currentId === customerId) renderDetail();
+    }
+
+    async function ladeBelege(customerId) {
+        try {
+            const { data, error } = await window.supabaseClient.from('rechnungen')
+                .select('id, belegart, belegnummer, belegjahr, belegdatum, netto, mwst, brutto, notiz')
+                .eq('customer_id', customerId)
+                .order('belegdatum', { ascending: false });
+            if (error) throw error;
+            belegeCache.set(customerId, { zeilen: data || [] });
+        } catch (e) {
+            const fehlt = /rechnungen/.test(e.message || '') && /exist|find/.test(e.message || '');
+            belegeCache.set(customerId, { zeilen: [], fehler: fehlt
+                ? 'Die Tabelle fehlt noch — supabase/supabase_add_rechnungen.sql in Supabase ausführen.'
+                : (e.message || String(e)) });
+        }
+        if (state.currentId === customerId && state.detailTab === 'belege') renderDetail();
+    }
+
+    function renderBelegeTab() {
+        const cid = state.currentId;
+        const eintrag = belegeCache.get(cid);
+        if (!eintrag) {
+            belegeCache.set(cid, null);
+            ladeBelege(cid);
+            return '<div class="ab-empty"><div class="ab-empty-title">Belege werden geladen …</div></div>';
+        }
+        if (eintrag === null) return '<div class="ab-empty"><div class="ab-empty-title">Belege werden geladen …</div></div>';
+        if (eintrag.fehler) return `<div class="ab-empty"><div class="ab-empty-title">Belege konnten nicht geladen werden</div><div class="ab-muted ab-small" style="margin-top:6px;">${esc(eintrag.fehler)}</div></div>`;
+
+        const zeilen = eintrag.zeilen;
+        if (!zeilen.length) return '<div class="ab-empty"><div class="ab-empty-title">Keine Rechnungsbelege</div><div class="ab-muted ab-small" style="margin-top:6px;">Aus Sage kommen Rechnungen, Direktrechnungen, Stornos und Gutschriften ab 2023.</div></div>';
+
+        const geld = v => (v === null || v === undefined) ? '–'
+            : Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+        const jahr = new Date().getFullYear();
+        const summe = f => zeilen.filter(f).reduce((s, z) => s + (Number(z.netto) || 0), 0);
+        const jahrVon = z => z.belegjahr || (z.belegdatum ? Number(String(z.belegdatum).slice(0, 4)) : null);
+        const kachel = (titel, wert) => `
+            <div class="ab-belege-kachel">
+                <div class="ab-belege-kachel-titel">${esc(titel)}</div>
+                <div class="ab-belege-kachel-wert${wert < 0 ? ' ab-belege-minus' : ''}">${geld(wert)}</div>
+            </div>`;
+
+        return `
+        <div class="ab-belege">
+            <div class="ab-belege-kacheln">
+                ${kachel('Umsatz ' + jahr + ' (netto)', summe(z => jahrVon(z) === jahr))}
+                ${kachel('Umsatz ' + (jahr - 1) + ' (netto)', summe(z => jahrVon(z) === jahr - 1))}
+                ${kachel('Umsatz gesamt seit 2023 (netto)', summe(() => true))}
+            </div>
+            <div class="ab-belege-tabelle-wrap">
+                <table class="ab-belege-tabelle">
+                    <thead><tr>
+                        <th>Nr.</th><th>Art</th><th>Datum</th>
+                        <th class="ab-belege-zahl">Netto</th><th class="ab-belege-zahl">MwSt</th><th class="ab-belege-zahl">Brutto</th>
+                    </tr></thead>
+                    <tbody>
+                        ${zeilen.map(z => `
+                        <tr>
+                            <td><strong>${esc(z.belegnummer)}</strong></td>
+                            <td>${esc(z.belegart)}</td>
+                            <td>${z.belegdatum ? formatDate(z.belegdatum) : '–'}</td>
+                            <td class="ab-belege-zahl${Number(z.netto) < 0 ? ' ab-belege-minus' : ''}">${geld(z.netto)}</td>
+                            <td class="ab-belege-zahl${Number(z.mwst) < 0 ? ' ab-belege-minus' : ''}">${geld(z.mwst)}</td>
+                            <td class="ab-belege-zahl${Number(z.brutto) < 0 ? ' ab-belege-minus' : ''}"><strong>${geld(z.brutto)}</strong></td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>
+            <div class="ab-muted ab-small" style="margin-top:8px;">${zeilen.length} Belege aus Sage · Storno und Gutschrift als Minus · Stand des letzten Abgleichs</div>
+        </div>`;
+    }
+
     function renderAppointmentsTab() {
         const list = (state.detail.appointments || []).slice();
         const machinesMap = new Map((state.detail.allClusterMachines || state.detail.machines || []).map(m => [String(m.id), m]));
@@ -2369,7 +2478,7 @@
                         ${ev.title ? `<strong>${esc(ev.title)}</strong>` : ''}
                         <button class="ab-icon-btn" title="Termin bearbeiten"
                             onclick="event.stopPropagation(); window.editAddressAppointment('${esc(ev.id)}')" style="margin-left:auto;">${ic('edit', 14)}</button>
-                        <button class="ab-icon-btn ab-danger delete-permission-required" title="Termin löschen"
+                        <button class="ab-icon-btn ab-danger delete-permission-required" data-del-area="termine" title="Termin löschen"
                             onclick="event.stopPropagation(); window.deleteAddressAppointment('${esc(ev.id)}')">${ic('trash', 14)}</button>
                     </div>
                     ${ev.history_ref ? `<div class="ab-timeline-text" style="color:rgba(255,255,255,0.6); font-style:italic;">Bezug: ${esc(ev.history_ref)}</div>` : ''}
@@ -2624,7 +2733,7 @@
                         ${n.title ? `<strong>${esc(n.title)}</strong>` : ''}
                         <span class="ab-muted ab-small">${esc(item.dateStr)}${n.author ? ' · ' + esc(n.author) : ''}</span>
                         ${appointmentIconBtn(`${meta.label}${n.title ? ': ' + n.title : ''} (${item.dateStr})`, null)}
-                        <button class="ab-icon-btn ab-danger ab-timeline-del delete-permission-required" data-ab-action="note-delete" data-ab-id="${esc(n.id)}" title="Eintrag löschen">${ic('trash', 14)}</button>
+                        <button class="ab-icon-btn ab-danger ab-timeline-del delete-permission-required" data-del-area="adress_historie" data-ab-action="note-delete" data-ab-id="${esc(n.id)}" title="Eintrag löschen">${ic('trash', 14)}</button>
                     </div>
                     ${n.body ? `<div class="ab-timeline-text">${esc(n.body)}</div>` : ''}
                 </div>
@@ -2709,9 +2818,9 @@
                         <a href="${esc(f.url || '#')}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Öffnen"
                            style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#34d399; font-weight:600; font-size:0.84rem; text-decoration:none;">${esc(f.name || 'Datei')}</a>
                         <a href="${esc(f.url || '#')}" download="${esc(f.name || '')}" onclick="event.stopPropagation()" title="Herunterladen"
-                           style="flex-shrink:0; color:rgba(255,255,255,0.6); display:flex;">${ic('download', 14)}</a>
+                           class="ab-dok-icon ab-dok-download">${ic('download', 14)}</a>
                         <span onclick="event.stopPropagation(); window.addressbookDokumentMailen('${esc(mh.processId)}', '${esc(String(f.id))}')" title="Per E-Mail senden"
-                              style="flex-shrink:0; cursor:pointer; color:rgba(255,255,255,0.6); display:flex;">${ic('mail', 14)}</span>
+                              class="ab-dok-icon ab-dok-mail">${ic('mail', 14)}</span>
                     </div>`).join('')}
                 </div>` : '';
 
@@ -2827,9 +2936,9 @@
                         <a href="${esc(f.url || '#')}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Öffnen"
                            style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#34d399; font-weight:600; font-size:0.84rem; text-decoration:none;">${esc(f.name || 'Datei')}</a>
                         <a href="${esc(f.url || '#')}" download="${esc(f.name || '')}" onclick="event.stopPropagation()" title="Herunterladen"
-                           style="flex-shrink:0; color:rgba(255,255,255,0.6); display:flex;">${ic('download', 14)}</a>
+                           class="ab-dok-icon ab-dok-download">${ic('download', 14)}</a>
                         <span onclick="event.stopPropagation(); window.addressbookDokumentMailen('${esc(p.id)}', '${esc(String(f.id))}')" title="Per E-Mail senden (Standard-Mailprogramm)"
-                              style="flex-shrink:0; cursor:pointer; color:rgba(255,255,255,0.6); display:flex;">${ic('mail', 14)}</span>
+                              class="ab-dok-icon ab-dok-mail">${ic('mail', 14)}</span>
                     </div>`).join('')}
                 </div>` : '';
             // Stände des Vorgangs: Anzahl + letzter Eintrag immer sichtbar,
@@ -2869,13 +2978,16 @@
                     ${dokHtml}
                 </div>` : (dokHtml || (maschineName ? `<div class="ab-muted ab-small" style="margin-top:6px;">Maschine: <span style="color:#34d399;">${esc(maschineName)}</span></div>` : ''));
 
+            const kombi = !!state.detail.kombiModus;
+            const gewaehlt = kombi && state.detail.kombiAuswahl && state.detail.kombiAuswahl.has(String(p.id));
             return `
-            <div class="ab-sub-card">
+            <div class="ab-sub-card${gewaehlt ? ' ab-kombi-gewaehlt' : ''}"${kombi ? ` data-ab-action="proc-kombi-toggle" data-ab-id="${esc(p.id)}" style="cursor:pointer;"` : ''}>
                 <div class="ab-sub-card-head">
+                    ${kombi ? `<label class="ab-kombi-check" onclick="event.stopPropagation()"><input type="checkbox" data-ab-action="proc-kombi-toggle" data-ab-id="${esc(p.id)}" ${gewaehlt ? 'checked' : ''}></label>` : ''}
                     <div class="ab-link-icon" style="color:${ang ? '#facc15' : '#a78bfa'}; border-color:${ang ? 'rgba(250,204,21,0.35)' : 'rgba(167,139,250,0.3)'}; background:${ang ? 'rgba(250,204,21,0.1)' : 'rgba(167,139,250,0.1)'};">${ic('note', 18)}</div>
                     <div class="ab-sub-card-title">
                         <div class="ab-sub-name">
-                            <span>${esc(ang ? ('Angebot ' + (ang.belegnummer || '')) : (p.title || 'Unbenannter Vorgang'))}</span>
+                            <span>${esc(ang ? ('Angebot ' + ((state.detail.angeboteListeByProcess || {})[String(p.id)] || [ang]).map(x => x.belegnummer || '').filter(Boolean).join(' + ')) : (p.title || 'Unbenannter Vorgang'))}</span>
                             <span class="ab-pill ${st.cls}" style="border-color:${st.color}66; color:${st.color}; background:${st.color}1a;">${esc(st.label)}</span>
                         </div>
                         <div class="ab-muted ab-small" style="margin-top:4px;">
@@ -2898,7 +3010,7 @@
                         </div>` : ''}
                     </div>
                     <div class="ab-sub-card-actions">
-                        <button class="ab-icon-btn" data-ab-action="open-task-main" data-ab-id="${esc(p.id)}" title="Im Vorgänge-Modul öffnen">${ic('edit', 15)}</button>
+                        <button class="ab-icon-btn ab-icon-btn-glow" data-ab-action="open-task-main" data-ab-id="${esc(p.id)}" title="Im Vorgänge-Modul öffnen">${ic('edit', 15)}</button>
                     </div>
                 </div>
                 ${p.remark ? `<div class="ab-sub-card-body"><div class="ab-muted ab-small">${esc(p.remark)}</div></div>` : ''}
@@ -2917,13 +3029,92 @@
                     <span style="font-size:1.05rem;">✨</span>
                     KI-Erfassung
                 </button>
+                ${procList.length > 1 ? `<button class="ab-btn ab-btn-secondary${state.detail.kombiModus ? ' active' : ''}" data-ab-action="proc-kombi" title="Mehrere Vorgänge zu einem zusammenführen: Titel, Schritte, Stände, Dokumente und Angebote werden zusammengelegt">${ic('link', 15)} Vorgänge kombinieren</button>` : ''}
                 <button class="ab-btn ab-btn-primary" data-ab-action="task-new">${ic('plus', 16)} Vorgang erstellen</button>
             </div>
         </div>
+        ${state.detail.kombiModus ? `<div class="ab-kombi-leiste"><span><strong>${(state.detail.kombiAuswahl || new Set()).size}</strong> ausgewählt — Vorgänge anklicken, die zu einem werden sollen. Der älteste bleibt bestehen und bekommt alles aus den anderen.</span><div style="display:flex; gap:8px;"><button class="ab-btn ab-btn-secondary" data-ab-action="proc-kombi-cancel">Abbrechen</button><button class="ab-btn ab-btn-primary" data-ab-action="proc-kombi-go" ${(state.detail.kombiAuswahl || new Set()).size < 2 ? 'disabled' : ''}>${ic('link', 15)} Zusammenführen</button></div></div>` : ''}
         ${migrationHint}
         ${procList.length
             ? `<div class="ab-sub-grid">${rows}</div>`
             : (migrationHint ? '' : '<div class="ab-empty"><div class="ab-empty-title">Noch keine Vorgänge</div><div class="ab-empty-text">Erstelle Vorgänge für diese Adresse. Sie liegen in derselben Tabelle wie die Vorgänge auf der Vorgänge-Seite und erscheinen dort unter dem Firmennamen.</div></div>')}`;
+    }
+
+    // ---- Vorgänge zusammenführen ----
+    // Der älteste gewählte Vorgang bleibt (Ziel), alle anderen gehen in ihn auf:
+    // Titel aneinander, Schritte/Stände/Dokumente/Zuständige zusammengelegt (ohne
+    // Doppelte), Texte untereinander, Maschine/Kunde/Erinnerung vom Ziel oder
+    // dem ersten, der eines hat. Angebote (angebote.process_id) zeigen danach
+    // alle auf das Ziel — die Angebotsliste öffnet damit denselben Vorgang und
+    // zeigt dieselben Stände und Dokumente. Die Quellen werden gelöscht.
+    async function vorgaengeZusammenfuehren() {
+        const ids = [...(state.detail.kombiAuswahl || [])];
+        const alle = (state.detail.processes || []).filter(p => ids.includes(String(p.id)));
+        if (alle.length < 2) { window.showToast('Mindestens zwei Vorgänge auswählen.'); return; }
+        const zeit = p => new Date(p.process_date || p.created_at || 0).getTime();
+        alle.sort((a, b) => zeit(a) - zeit(b));
+        const ziel = alle[0], quellen = alle.slice(1);
+        const angebote = state.detail.angeboteListeByProcess || {};
+        const angAlle = alle.flatMap(p => angebote[String(p.id)] || []);
+        const frage = `${alle.length} Vorgänge zu einem zusammenführen?\n\nBleibt: „${ziel.title || 'Unbenannter Vorgang'}“\nGehen darin auf: ${quellen.map(q => '„' + (q.title || 'Unbenannter Vorgang') + '“').join(', ')}\n\nSchritte, Stände, Dokumente, Zuständige und Texte werden zusammengelegt${angAlle.length ? `, ${angAlle.length} Angebot(e) hängen danach an dem einen Vorgang` : ''}. Die anderen Vorgänge werden gelöscht. Das lässt sich nicht rückgängig machen.`;
+        if (!confirm(frage)) return;
+
+        const ohneDoppel = (listen, key) => {
+            const gesehen = new Set();
+            return [].concat(...listen.map(l => Array.isArray(l) ? l : [])).filter(e => { const k = key(e); if (gesehen.has(k)) return false; gesehen.add(k); return true; });
+        };
+        const texte = (feld) => [ziel, ...quellen].map(p => String(p[feld] || '').trim()).filter(Boolean);
+        const felder = {
+            title: [...new Set(alle.map(p => (p.title || '').trim()).filter(Boolean))].join(' + ') || ziel.title,
+            steps: ohneDoppel(alle.map(p => p.steps), s => (s && s.id) || JSON.stringify(s)),
+            assigned_users: ohneDoppel(alle.map(p => p.assigned_users), u => String(u)),
+            status_updates: ohneDoppel(alle.map(p => p.status_updates), u => (u && (u.at + '|' + (u.text || u.note))) || JSON.stringify(u))
+                .sort((x, y) => String(y.at || '').localeCompare(String(x.at || ''))),
+            status_log: ohneDoppel(alle.map(p => p.status_log), u => (u && (u.at + '|' + u.text)) || JSON.stringify(u))
+                .sort((x, y) => String(x.at || '').localeCompare(String(y.at || ''))),
+            attachments: ohneDoppel(alle.map(p => p.attachments), f => (f && (f.path || f.url || f.id)) || JSON.stringify(f))
+        };
+        const desc = [...new Set(texte('description'))]; if (desc.length) felder.description = desc.join('\n\n— — —\n\n');
+        const rem = [...new Set(texte('remark'))]; if (rem.length) felder.remark = rem.join('\n\n— — —\n\n');
+        ['machine_id', 'customer_id', 'contact_name', 'workshop_order_number', 'sender', 'recipient'].forEach(f => {
+            const erster = alle.find(p => p[f]); if (erster && !ziel[f]) felder[f] = erster[f];
+        });
+        // Erinnerung: die am weitesten in der Zukunft liegende gewinnt
+        const erinnerungen = alle.map(p => p.remind_at).filter(Boolean).sort((a, b) => new Date(b) - new Date(a));
+        if (erinnerungen.length) felder.remind_at = erinnerungen[0];
+        // Ist einer noch offen, bleibt das Ergebnis offen
+        const offen = alle.find(p => p.status !== 'erledigt');
+        if (offen) felder.status = offen.status || 'offen';
+
+        try {
+            let { error } = await sb().from('internal_processes').update(felder).eq('id', ziel.id);
+            // Fehlende Spalten (ältere Datenbank) nicht zum Abbruch machen
+            if (error && /column|Spalte/i.test(error.message || '')) {
+                ['status_log', 'attachments', 'remark', 'contact_name', 'sender', 'recipient', 'workshop_order_number', 'remind_at', 'status_updates'].forEach(k => { if (new RegExp(k).test(error.message)) delete felder[k]; });
+                ({ error } = await sb().from('internal_processes').update(felder).eq('id', ziel.id));
+            }
+            if (error) throw error;
+            const qIds = quellen.map(q => q.id);
+            const { error: aErr } = await sb().from('angebote').update({ process_id: ziel.id }).in('process_id', qIds);
+            if (aErr) console.warn('Angebote umhängen:', aErr.message);
+            const { error: dErr } = await sb().from('internal_processes').delete().in('id', qIds);
+            if (dErr) throw dErr;
+            // Lokal nachziehen — Vorgänge-Seite und Angebotsliste laden ohnehin per Realtime nach
+            if (window.eventsState && Array.isArray(window.eventsState.processes)) {
+                window.eventsState.processes = window.eventsState.processes.filter(p => !qIds.includes(p.id));
+                const z = window.eventsState.processes.find(p => String(p.id) === String(ziel.id)); if (z) Object.assign(z, felder);
+            }
+            if (window.angeboteByProcess) qIds.forEach(id => delete window.angeboteByProcess[String(id)]);
+            if (window.angeboteListeByProcess) { window.angeboteListeByProcess[String(ziel.id)] = angAlle.slice(); qIds.forEach(id => delete window.angeboteListeByProcess[String(id)]); }
+            if (typeof window.fetchAngebote === 'function') { try { window.fetchAngebote(true); } catch (e) { /* egal */ } }
+            state.detail.kombiModus = false; state.detail.kombiAuswahl = new Set();
+            window.showToast(`${alle.length} Vorgänge zusammengeführt.`);
+            await loadDetailData(state.currentId);
+            renderDetail();
+            document.dispatchEvent(new CustomEvent('addressbook:changed', { detail: { id: state.currentId } }));
+        } catch (err) {
+            window.showToast('Zusammenführen fehlgeschlagen: ' + (err.message || err));
+        }
     }
 
     // Öffnet das echte Vorgangs-Modal aus dem Vorgänge-Modul, nur an diese
@@ -2954,7 +3145,7 @@
                     <span class="ab-pill" style="border-color:${meta.color}55; color:${meta.color}">${esc(meta.label)}</span>
                     ${n.title ? `<strong>${esc(n.title)}</strong>` : ''}
                     <span class="ab-muted ab-small">${esc(formatDate(n.entry_date) || formatDateTime(n.created_at))}${n.author ? ' · ' + esc(n.author) : ''}</span>
-                    <button class="ab-icon-btn ab-danger ab-timeline-del delete-permission-required" data-ab-action="note-delete" data-ab-id="${esc(n.id)}" title="Eintrag löschen">${ic('trash', 14)}</button>
+                    <button class="ab-icon-btn ab-danger ab-timeline-del delete-permission-required" data-del-area="adress_historie" data-ab-action="note-delete" data-ab-id="${esc(n.id)}" title="Eintrag löschen">${ic('trash', 14)}</button>
                 </div>
                 ${n.body ? `<div class="ab-timeline-text">${esc(n.body)}</div>` : ''}
             </div>
@@ -5593,6 +5784,8 @@
                 break;
             case 'tab':
                 state.detailTab = el.getAttribute('data-ab-tab');
+                // Belege bei jedem Öffnen des Reiters frisch laden (Abgleich läuft alle 15 min).
+                if (state.detailTab === 'belege') belegeCache.delete(state.currentId);
                 renderDetail();
                 break;
             case 'new':
@@ -5701,6 +5894,26 @@
                 }
                 break;
             }
+            case 'proc-kombi':
+                state.detail.kombiModus = !state.detail.kombiModus;
+                state.detail.kombiAuswahl = new Set();
+                renderDetail();
+                break;
+            case 'proc-kombi-cancel':
+                state.detail.kombiModus = false;
+                state.detail.kombiAuswahl = new Set();
+                renderDetail();
+                break;
+            case 'proc-kombi-toggle': {
+                if (el.tagName !== 'INPUT') e.preventDefault();
+                const s = state.detail.kombiAuswahl = state.detail.kombiAuswahl || new Set();
+                if (s.has(String(id))) s.delete(String(id)); else s.add(String(id));
+                renderDetail();
+                break;
+            }
+            case 'proc-kombi-go':
+                vorgaengeZusammenfuehren();
+                break;
             case 'open-task-main':
                 // Vorgang im Vorgänge-Modul öffnen (internal_processes)
                 closeModal('addressbook-detail-modal');

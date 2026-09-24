@@ -140,6 +140,28 @@
         return `${datum}, ${zeit} Uhr${letzterImport.by ? ' · ' + escapeHtml(letzterImport.by) : ''}`;
     }
 
+    // Nur beim Sage-Abgleich (tools/sage-sync.ps1): nächster Lauf und letzter Fehler.
+    // Liegt der nächste Lauf mehr als 10 min zurück, läuft der Abgleich nicht
+    // (Rechner aus, Aufgabe angehalten) — dann rot „überfällig".
+    function abgleichStatusHtml() {
+        if (!letzterImport) return '';
+        const uhr = s => new Date(s).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr';
+        const teile = [];
+        const n = letzterImport.naechste ? new Date(letzterImport.naechste) : null;
+        if (n && !isNaN(n)) {
+            const ueberfaellig = Date.now() - n.getTime() > 10 * 60 * 1000;
+            const tag = n.toDateString() === new Date().toDateString() ? '' : n.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' }) + ', ';
+            teile.push(ueberfaellig
+                ? `<strong style="color:#f87171;">nächste Aktualisierung überfällig (war ${tag}${uhr(n)})</strong>`
+                : `<strong style="color:rgba(255,255,255,0.85);">nächste Aktualisierung: ${tag}${uhr(n)}</strong>`);
+        }
+        if (letzterImport.status === 'fehler' && letzterImport.fehler) {
+            const wann = letzterImport.fehler_at && !isNaN(new Date(letzterImport.fehler_at)) ? ' ' + uhr(letzterImport.fehler_at) : '';
+            teile.push(`<strong style="color:#f87171;">⚠ Fehler${wann}: ${escapeHtml(letzterImport.fehler)}</strong>`);
+        }
+        return teile.length ? ' · ' + teile.join(' · ') : '';
+    }
+
     // Werktage (Mo–Fr) seit dem letzten Import. Ohne Import: unendlich.
     function werktageSeitImport() {
         if (!letzterImport || !letzterImport.at) return Infinity;
@@ -165,7 +187,7 @@
             : 'Wann zuletzt ein Belegimport aus Sage 100 stattgefunden hat';
         return `<span title="${escapeHtml(hinweis)}" style="display:inline-flex; align-items:center; gap:6px; font-size:0.72rem; ${alt
             ? 'color:#f87171; font-weight:800; padding:3px 10px; border-radius:999px; background:rgba(248,113,113,0.12); border:1px solid rgba(248,113,113,0.5);'
-            : 'color:rgba(255,255,255,0.5);'}">${alt ? '<span style="display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; background:#f87171; color:#fff; font-size:0.7rem; font-weight:900;">!</span>' : ''}zuletzt aktualisiert: ${text}${alt && isFinite(tage) ? ` (${tage} Werktage)` : ''}</span>`;
+            : 'color:rgba(255,255,255,0.5);'}">${alt ? '<span style="display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; background:#f87171; color:#fff; font-size:0.7rem; font-weight:900;">!</span>' : ''}zuletzt aktualisiert: ${text}${alt && isFinite(tage) ? ` (${tage} Werktage)` : ''}${abgleichStatusHtml()}</span>`;
     }
 
     // ------------------------------------------------------------------
@@ -2094,7 +2116,7 @@
                             <th style="padding:10px; text-align:left; font-size:0.85rem; color:#fff; font-weight:700;">Stand</th>
                             <th style="padding:10px; text-align:left; font-size:0.85rem; color:#fff; font-weight:700;">Dokumente</th>
                             <th style="padding:10px; text-align:left; font-size:0.85rem; color:#fff; font-weight:700;">Erinnerung</th>
-                            <th class="delete-permission-required" style="padding:10px; text-align:center; font-size:0.85rem; color:#fff; font-weight:700; width:36px;"></th>
+                            <th class="delete-permission-required" data-del-area="angebote" style="padding:10px; text-align:center; font-size:0.85rem; color:#fff; font-weight:700; width:36px;"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2152,7 +2174,7 @@
                                 <td style="padding:12px 10px; font-size:0.95rem; min-width:200px;">${renderAngebotStandCell(a)}</td>
                                 <td class="angebot-dok-drop" data-angebot-id="${a.id}" style="padding:12px 10px; font-size:0.95rem; min-width:170px; position:relative; border-radius:10px; transition:background .15s, box-shadow .15s;">${renderAngebotDokumenteCell(a)}</td>
                                 <td style="padding:12px 10px; font-size:0.95rem; min-width:220px;">${renderAngebotErinnerungCell(a)}</td>
-                                <td class="delete-permission-required" style="padding:10px; text-align:center;">
+                                <td class="delete-permission-required" data-del-area="angebote" style="padding:10px; text-align:center;">
                                     <button onclick="window.deleteAngebot('${a.id}')" title="Angebot endgültig löschen"
                                         style="width:22px; height:22px; padding:0; border-radius:999px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#f87171; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -2354,7 +2376,7 @@
                         <div style="color:#fff; font-size:0.72rem; margin-bottom:3px;">${fmtTimestamp(n.created_at)}</div>
                         <textarea id="angebot-notiz-edit-${n.id}" class="glass-form-input" rows="5" style="width:100%; font-size:0.9rem; resize:vertical;">${escapeHtml(n.content)}</textarea>
                         <div style="display:flex; justify-content:flex-end; gap:6px; margin-top:6px;">
-                            <button type="button" onclick="event.stopPropagation(); window.deleteAngebotNotiz('${angebotId}', '${n.id}')" class="delete-permission-required" style="padding:4px 10px; font-size:0.75rem; border-radius:8px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#f87171; cursor:pointer; margin-right:auto;">Löschen</button>
+                            <button type="button" onclick="event.stopPropagation(); window.deleteAngebotNotiz('${angebotId}', '${n.id}')" class="delete-permission-required" data-del-area="notizen" style="padding:4px 10px; font-size:0.75rem; border-radius:8px; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#f87171; cursor:pointer; margin-right:auto;">Löschen</button>
                             <button type="button" onclick="event.stopPropagation(); window.cancelEditAngebotNotiz('${angebotId}')" class="btn-secondary" style="padding:4px 10px; font-size:0.75rem;">Abbrechen</button>
                             <button type="button" onclick="event.stopPropagation(); window.saveEditAngebotNotiz('${angebotId}', '${n.id}')" class="btn-primary" style="padding:4px 10px; font-size:0.75rem;">Speichern</button>
                         </div>

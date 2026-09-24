@@ -464,30 +464,31 @@
         if (P.tasks) try {
             const { data, error } = await sb()
                 .from('tasks')
-                .select('id, title, due_date, status, assigned_to, machines(name, manufacturer)')
+                .select('id, title, end_date, status, assigned_to, machines(name, manufacturer)')
                 .neq('status', 'completed')
-                .not('due_date', 'is', null)
+                .not('end_date', 'is', null)
                 .limit(200);
             if (!error && data) {
                 data.forEach(t => {
                     if (!isAssignedToMe(t.assigned_to)) return;
-                    const diff = dayDiff(t.due_date);
+                    const diff = dayDiff(t.end_date);
                     if (!inRange(diff, P.before)) return;
                     out.push({
-                        key: `task-due:${t.id}:${t.due_date}`,
+                        key: `task-due:${t.id}:${t.end_date}`,
                         kind: 'deadline',
                         severity: diff < 0 ? 'overdue' : (diff === 0 ? 'today' : 'soon'),
                         title: t.title || 'Unbenannte Aufgabe',
                         subject: t.machines ? `${t.machines.manufacturer || ''} ${t.machines.name || ''}`.trim() : '',
-                        meta: `Aufgabe · ${relLabel(diff)} · ${fmtDate(t.due_date)}`,
-                        sortAt: new Date(t.due_date).getTime(),
+                        meta: `Aufgabe · ${relLabel(diff)} · ${fmtDate(t.end_date)}`,
+                        sortAt: new Date(t.end_date).getTime(),
                         targetType: 'task',
                         targetId: t.id
                     });
                 });
             }
         } catch (err) {
-            // tasks.due_date evtl. nicht vorhanden -> Aufgaben still überspringen
+            // Aufgaben haben KEIN due_date (siehe CLAUDE.md) — der Endtermin steht in
+            // end_date, gepflegt über das Aufgaben-Fenster und die Timeline.
             console.warn('Benachrichtigungen: Aufgaben nicht ladbar:', err.message || err);
         }
 
@@ -644,10 +645,15 @@
         // selbst eintrage, hat keine Teilnehmerzeile — und tauchte deshalb
         // nirgends auf. Genau der gehört mir und sonst niemandem.
         if (P.appointments) try {
-            const { data, error } = await sb()
-                .from('maintenance_events')
-                .select('*, customers(name)')
-                .limit(400);
+            // Adressname per Join; fehlt die Verknüpfung (Migration supabase_add_event_customer.sql),
+            // wird das gemerkt und künftig gleich ohne Join gefragt (js/app-core.js).
+            const evJoin = typeof window.dbKannDas !== 'function' || window.dbKannDas('ev_customers');
+            const evAbfrage = (spalten) => sb().from('maintenance_events').select(spalten).limit(400);
+            let { data, error } = await evAbfrage(evJoin ? '*, customers(name)' : '*');
+            if (error && evJoin) {
+                if (typeof window.dbKannDasMerken === 'function') window.dbKannDasMerken('ev_customers', false);
+                ({ data, error } = await evAbfrage('*'));
+            }
             if (!error && data) {
                 data.forEach(ev => {
                     // Termin, nicht Wartung: maintenance_events enthält beides,
@@ -701,12 +707,16 @@
                 .select('id, title, date, created_at, technicians, ' + flag + ', machine_id, machines(name, manufacturer, serial)')
                 .order('date', { ascending: false })
                 .limit(300);
-            let { data, error } = await svcLaden('customer_signed');
-            if (error && /customer_signed/i.test(error.message || '')) {
-                // Migration noch nicht gelaufen — Rückfall auf das Bild
+            // Fehlt die Spalte (Migration supabase_add_service_signed_flag.sql nicht gelaufen),
+            // wird das gemerkt — sonst gäbe es alle 5 Minuten einen 400er in der Konsole.
+            const signFlag = typeof window.dbKannDas !== 'function' || window.dbKannDas('service_customer_signed');
+            let { data, error } = await svcLaden(signFlag ? 'customer_signed' : 'customer_signature');
+            if (error && signFlag && /customer_signed/i.test(error.message || '')) {
+                if (typeof window.dbKannDasMerken === 'function') window.dbKannDasMerken('service_customer_signed', false);
                 ({ data, error } = await svcLaden('customer_signature'));
-                if (data) data.forEach(s => { s.customer_signed = !!s.customer_signature; });
             }
+            if (data && !signFlag) data.forEach(s => { s.customer_signed = !!s.customer_signature; });
+            if (data && signFlag && data.length && !('customer_signed' in data[0])) data.forEach(s => { s.customer_signed = !!s.customer_signature; });
             if (!error && data) {
                 const me = String(uid);
                 const meName = (currentUser() && currentUser().name) ? String(currentUser().name) : null;

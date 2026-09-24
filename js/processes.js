@@ -125,13 +125,16 @@ window.fetchProcesses = async function() {
             // EINE Abfrage statt Häppchen je 200 Vorgänge — schneller, und
             // verknüpfte Angebote gibt es nur mit process_id.
             const map = {};
+            const liste = {};
             const { data: ang, error: angErr } = await window.supabaseClient
                 .from('angebote')
                 .select('*, customers(name), angebot_notizen(id, content, created_at)')
                 .not('process_id', 'is', null);
             if (angErr) console.info('Angebote zu Vorgängen nicht geladen:', angErr.message);
-            (ang || []).forEach(a => { map[String(a.process_id)] = a; });
+            (ang || []).forEach(a => { map[String(a.process_id)] = a;  (liste[String(a.process_id)] = liste[String(a.process_id)] || []).push(a); });
             window.angeboteByProcess = map;
+            // Nach „Vorgänge kombinieren" (js/addressbook.js) hängen mehrere Angebote an einem Vorgang
+            window.angeboteListeByProcess = liste;
             // Erinnerung Vorgang → Angebot abgleichen (nur bei Abweichung wird geschrieben).
             if (typeof window.angebotErinnerungNachVorgang === 'function') {
                 processes.forEach(p => { if (map[String(p.id)]) window.angebotErinnerungNachVorgang(p); });
@@ -599,7 +602,7 @@ window.renderProcesses = function(targetId, opts) {
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
                         ${rlabel} ${rd.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}, ${rd.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr
                     </span>
-                    <button type="button" class="delete-permission-required" onclick="event.stopPropagation(); window.clearProcessRemind('${p.id}')" title="Erinnerung entfernen" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:999px; width:22px; height:22px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
+                    <button type="button" class="delete-permission-required" data-del-area="erinnerungen" onclick="event.stopPropagation(); window.clearProcessRemind('${p.id}')" title="Erinnerung entfernen" style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:999px; width:22px; height:22px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                     </button>
                 </div>`;
@@ -637,7 +640,7 @@ window.renderProcesses = function(targetId, opts) {
                         <div style="display:flex; align-items:center; gap:8px; margin-top:3px; flex-wrap:wrap;">
                             <span style="font-size:0.72rem; color:rgba(255,255,255,0.45);">${escStep(u.by || 'Unbekannt')}</span>
                             <input type="datetime-local" value="${window.isoToLocalInput(u.at)}" onclick="event.stopPropagation(); try{this.showPicker()}catch(e){}" onchange="window.updateProcessCardStandDate('${p.id}', ${i}, this.value)" title="Zeitpunkt ändern" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; color-scheme:dark; border-radius:8px; padding:2px 6px; font-size:0.72rem; cursor:pointer;">
-                            <button type="button" class="delete-permission-required" onclick="event.stopPropagation(); window.deleteProcessCardStand('${p.id}', ${i})" title="Eintrag löschen" style="margin-left:auto; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; width:22px; height:22px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
+                            <button type="button" class="delete-permission-required" data-del-area="stand" onclick="event.stopPropagation(); window.deleteProcessCardStand('${p.id}', ${i})" title="Eintrag löschen" style="margin-left:auto; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:6px; width:22px; height:22px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;">
                                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                             </button>
                         </div>
@@ -784,7 +787,7 @@ window.renderProcesses = function(targetId, opts) {
                         <button onclick="window.openEditProcessModal('${p.id}')" class="btn-icon-soft" title="Bearbeiten" style="background: rgba(255,255,255,0.05); color: #60a5fa; border: 1px solid rgba(255,255,255,0.1); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"></path></svg>
                         </button>
-                        <button onclick="window.deleteProcess('${p.id}')" class="btn-icon-soft delete-permission-required" title="Löschen" style="background: rgba(255,255,255,0.05); color: #ef4444; border: 1px solid rgba(255,255,255,0.1); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+                        <button onclick="window.deleteProcess('${p.id}')" class="btn-icon-soft delete-permission-required" data-del-area="vorgaenge" title="Löschen" style="background: rgba(255,255,255,0.05); color: #ef4444; border: 1px solid rgba(255,255,255,0.1); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
                         </button>
                     </div>

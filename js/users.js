@@ -325,6 +325,9 @@ window.editUser = function (id) {
         const cb = document.getElementById('perm-' + key);
         if (cb) cb.checked = perms[key] !== false;
     });
+    // Belege (Umsätze) nur mit ausdrücklichem Haken — fehlender Schlüssel = aus.
+    const cbBelege = document.getElementById('perm-belege');
+    if (cbBelege) cbBelege.checked = perms.belege === true;
     document.getElementById('perm-delete').checked = perms.can_delete !== false;
 
     // Lösch-Bereiche einzeln: Liste kommt aus js/permissions.js, damit sie nur

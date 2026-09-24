@@ -458,3 +458,8 @@ body.mv-vollbild #mv-vollbild { background: #1e3a8a; border-color: var(--mv-akze
     .mv-konto-wahl { max-width: 150px; }
     #mv-konto-plus { display: none; }
 }
+
+/* KI-Knöpfe in der Mail-Detailansicht (Antwort entwerfen, Vorgang aus Mail) */
+.mv-mail-aktionen .mv-ki-btn { border-color: rgba(167,139,250,0.5); color: #c4b5fd; }
+.mv-mail-aktionen .mv-ki-btn:hover { background: rgba(167,139,250,0.14); color: #fff; }
+.mv-mail-aktionen .mv-ki-btn:disabled { opacity: 0.6; cursor: wait; }

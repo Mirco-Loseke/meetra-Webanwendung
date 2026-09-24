@@ -1,0 +1,274 @@
+<!-- Datenschutz: Verarbeitungsverzeichnis und Dienstleister — Inhalt aus dem Quelltext
+     abgeleitet (js/*.js, supabase/, sw.js). Ändert sich die Technik, gehört die
+     Änderung auch hierher. Kein JS nötig, reines Markup. -->
+<section id="settings-datenschutz" class="view hidden">
+    <div class="users-header-container">
+        <h1>Datenschutz</h1>
+        <div class="users-header-actions">
+            <button class="btn-secondary" onclick="window.print()">Drucken / als PDF sichern</button>
+            <button class="btn-back-custom" data-target="settings">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 12H5"></path>
+                    <path d="M12 19l-7-7 7-7"></path>
+                </svg>
+                ZURÜCK
+            </button>
+        </div>
+    </div>
+
+    <div class="ds-seite">
+
+        <div class="glass-card ds-karte ds-hinweis">
+            <h3>Wozu diese Seite</h3>
+            <p>Hier steht, <strong>welche personenbezogenen Daten die Webapp verarbeitet, wo sie
+                liegen, wer sie zu sehen bekommt und wie lange sie bleiben</strong>. Die Angaben sind aus
+                dem Quelltext der App abgeleitet und beschreiben den technischen Ist-Stand.</p>
+            <p>Das ist die <strong>Grundlage</strong> für das Verzeichnis von Verarbeitungstätigkeiten
+                (Art. 30 DSGVO) und für die Auftragsverarbeitungsverträge (Art. 28 DSGVO) — es ersetzt
+                beides nicht. Die Verträge müssen mit jedem unten genannten Dienstleister geschlossen
+                und aufbewahrt werden; das Verzeichnis braucht zusätzlich Angaben, die nicht aus der
+                Software hervorgehen (Verantwortlicher, Zwecke im Unternehmen, Rechtsgrundlagen,
+                Löschfristen aus HGB/AO, technisch-organisatorische Maßnahmen).</p>
+            <p class="ds-stand">Technischer Stand: <strong>22.09.2026</strong> · Bei Änderungen an
+                Diensten, Tabellen oder Schnittstellen diese Seite mit anpassen.</p>
+        </div>
+
+        <!-- ------------------------------------------------------------ -->
+        <div class="glass-card ds-karte">
+            <h3>1 · Welche Daten die App verarbeitet</h3>
+
+            <h4>Beschäftigte (Nutzer der App)</h4>
+            <ul>
+                <li><strong>Anmeldedaten:</strong> E-Mail-Adresse und Passwort (verschlüsselt gespeichert,
+                    für uns nicht lesbar) sowie Zeitpunkt der letzten Anmeldung — verwaltet von Supabase Auth.</li>
+                <li><strong>Profil:</strong> Name, Initialen, Farbe, optionales Foto, optionale PIN,
+                    Rolle, Berechtigungen, gespeicherte Unterschrift (Bild) — Tabelle <code>users</code>.</li>
+                <li><strong>Tätigkeitsbezug:</strong> wer einen Eintrag angelegt, geändert, abgehakt oder
+                    unterschrieben hat, wem Aufgaben und Vorgänge zugewiesen sind, Abwesenheiten
+                    (Urlaub/Krank) in der Timeline, Arbeitszeiten in Serviceberichten.</li>
+                <li><strong>KI-Nutzung:</strong> Anzahl der Anfragen je Nutzer und Tag
+                    (Tabelle <code>ai_usage</code>, für die Tagesgrenze).</li>
+            </ul>
+            <p class="ds-warn">Diese Daten lassen Rückschlüsse auf die Arbeitsleistung einzelner
+                Beschäftigter zu. Dafür gelten § 26 BDSG und gegebenenfalls Mitbestimmungsrechte.</p>
+
+            <h4>Kunden, Lieferanten und deren Ansprechpartner</h4>
+            <ul>
+                <li><strong>Stammdaten:</strong> Firma, Anschrift, Kundennummer, Telefon, E-Mail,
+                    Notizen, Koordinaten der Adresse — <code>customers</code>, <code>customer_contacts</code>,
+                    <code>customer_links</code>, <code>customer_notes</code>.</li>
+                <li><strong>Geschäftsvorfälle:</strong> Vorgänge mit Schritten und Ständen, Angebote und
+                    Angebotsnotizen, Rechnungsliste, Buchhaltung, Mietvereinbarungen mit Unterschriften und
+                    Fotos, Termine — <code>internal_processes</code>, <code>angebote</code>,
+                    <code>angebot_notizen</code>, <code>invoice_todos</code>, <code>accounting</code>,
+                    <code>rental_agreements</code>, <code>maintenance_events</code>,
+                    <code>event_participants</code>.</li>
+                <li><strong>Technik beim Kunden:</strong> Maschinen mit Standort, Betriebsstunden und
+                    Historie, Serviceberichte samt Unterschrift des Kunden, Protokolle, Fotos —
+                    <code>machines</code>, <code>service_entries</code>, <code>manual_history_entries</code>,
+                    <code>intake_protocols</code>, <code>acceptance_protocols</code>,
+                    <code>protocol_checkpoints</code>, <code>protocol_photos</code>,
+                    <code>documents</code>, <code>document_folders</code>.</li>
+                <li><strong>Zuordnung von E-Mail-Adressen</strong> zu Adressen für die Mail-Ansicht —
+                    <code>mail_zuordnungen</code>.</li>
+            </ul>
+
+            <h4>Nicht personenbezogen</h4>
+            <p>Kategorien, Vorlagen, Prüfpläne, Etiketten-Artikel, Werkstatt-Liste, gespeicherte Routen
+                und Einstellungen (<code>categories</code>, <code>protocol_templates</code>,
+                <code>task_*_templates</code>, <code>rental_templates</code>, <code>label_articles</code>,
+                <code>workshop_tasks</code>, <code>saved_routes</code>, <code>app_settings</code>) —
+                soweit dort keine Namen eingetragen werden.</p>
+        </div>
+
+        <!-- ------------------------------------------------------------ -->
+        <div class="glass-card ds-karte">
+            <h3>2 · Wo die Daten liegen (Auftragsverarbeiter)</h3>
+            <p>Mit jedem dieser Anbieter ist ein <strong>Auftragsverarbeitungsvertrag</strong> nötig.
+                Alle stellen Standardverträge online bereit; sie müssen abgeschlossen, gespeichert und
+                bei einer Prüfung vorgelegt werden können.</p>
+
+            <div class="ds-tabelle-wrap">
+                <table class="ds-tabelle">
+                    <thead>
+                        <tr><th>Dienst</th><th>Wofür</th><th>Welche Daten</th><th>Ort / Hinweis</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Supabase</strong><br><span class="ds-klein">Datenbank, Anmeldung, Edge Functions</span></td>
+                            <td>Die gesamte Fachdatenbank, Benutzerkonten, Live-Aktualisierung, KI- und Datei-Vermittlung</td>
+                            <td>alle oben genannten Daten</td>
+                            <td><strong>Serverstandort Irland (EU-Region, eu-west-1)</strong> — die Daten liegen damit innerhalb der EU. Der Konzern hat seinen Sitz in den USA; deshalb AV-Vertrag inkl. Standardvertragsklauseln abschlie&szlig;en</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Cloudflare R2</strong><br><span class="ds-klein">Dateispeicher</span></td>
+                            <td>PDFs, Fotos, Dokumente, Mietvereinbarungen</td>
+                            <td>Dateien mit Kunden- und Maschinenbezug, Unterschriften</td>
+                            <td>Upload-Adressen werden serverseitig signiert (Edge Function <code>r2-sign</code>); Schlüssel liegen nicht im Browser. Öffentliche Datei-Adressen sind nicht erraten-, aber weitergebbar</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Vercel</strong><br><span class="ds-klein">Auslieferung der App</span></td>
+                            <td>Hosting von HTML, CSS, JavaScript</td>
+                            <td>keine Inhaltsdaten; technisch IP-Adresse und Zugriffsprotokolle</td>
+                            <td>US-Anbieter, EU-Standorte verfügbar</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Microsoft 365 / Graph</strong><br><span class="ds-klein">Mail-Ansicht</span></td>
+                            <td>Posteingang lesen, Mails senden, Outlook-Kontakte durchsuchen</td>
+                            <td>E-Mails samt Inhalt und Anhängen, Kontaktdaten</td>
+                            <td>Die Mails bleiben im Postfach — die App zeigt sie nur an und kopiert sie nicht in die Datenbank. Beim Übernehmen eines Kontakts ins Adressbuch werden Daten bewusst kopiert</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Google Gemini</strong><br><span class="ds-klein">KI-Funktionen</span></td>
+                            <td>Zusammenfassungen, Briefing, Erfassung aus Freitext, Mail-Antwortentwurf</td>
+                            <td>nur der jeweils gesendete Text — <strong>pseudonymisiert</strong> (siehe Abschnitt 4)</td>
+                            <td>Aufruf über die eigene Edge Function <code>ki-proxy</code>; der Schlüssel liegt serverseitig. Verarbeitung außerhalb der EU möglich</td>
+                        </tr>
+                        <tr>
+                            <td><strong>OpenStreetMap / Nominatim</strong><br><span class="ds-klein">Karte und Adresssuche</span></td>
+                            <td>Adresse → Koordinaten, Kartenkacheln, Routen (OSRM), Ortssuche (Photon)</td>
+                            <td>die gesuchte Anschrift und die IP-Adresse des Geräts</td>
+                            <td>Gemeinnützige bzw. offene Dienste ohne Vertragsbeziehung. Ein Kundenname wird nicht mitgeschickt, wohl aber die Anschrift</td>
+                        </tr>
+                        <tr>
+                            <td><strong>CDN-Dienste</strong><br><span class="ds-klein">cdnjs, jsDelivr, unpkg, esm.sh</span></td>
+                            <td>einzelne Programmbibliotheken (z. B. Lesen von .msg-Dateien)</td>
+                            <td>keine Inhaltsdaten; technisch IP-Adresse</td>
+                            <td>Die meisten Bibliotheken und alle Schriften liegen lokal im Projekt</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <p class="ds-warn"><strong>Offene Punkte:</strong> AV-Verträge mit Supabase, Cloudflare,
+                Vercel und Google abschlie&szlig;en bzw. auffrischen;
+                für die Kartendienste eine Entscheidung dokumentieren (nutzen und im Verzeichnis
+                nennen oder abschalten).</p>
+        </div>
+
+        <!-- ------------------------------------------------------------ -->
+        <div class="glass-card ds-karte">
+            <h3>3 · Was im Browser des Geräts bleibt</h3>
+            <ul>
+                <li><strong>Anmeldesitzung</strong> (Token von Supabase) — bis zur Abmeldung.</li>
+                <li><strong>Offline-Vorrat:</strong> Maschinen, Kategorien, Benutzer und Serviceberichte
+                    werden zwischengespeichert, damit die App ohne Netz nutzbar ist. Auf einem verlorenen
+                    Gerät sind diese Daten ohne Anmeldung nicht sichtbar, liegen aber im Browserspeicher.</li>
+                <li><strong>Entwürfe:</strong> angefangene Aufgaben und KI-Eingaben überstehen ein
+                    versehentliches Neuladen.</li>
+                <li><strong>Einstellungen:</strong> zuletzt gewählter Benutzer, Ansicht, Sortierung,
+                    Kartenebene, Anwendungs-ID für Outlook, Mail-Signatur, Benachrichtigungs-Vorlieben.</li>
+                <li><strong>Pseudonym-Tabelle der KI:</strong> nur im Arbeitsspeicher, verschwindet beim
+                    Schließen der Seite.</li>
+            </ul>
+            <p>Der Browserspeicher lässt sich über „Websitedaten löschen" leeren; beim Abmelden endet
+                die Sitzung. <strong>Firmengeräte sollten verschlüsselt und mit Bildschirmsperre
+                betrieben werden</strong> — das ist die eigentliche Schutzmaßnahme.</p>
+        </div>
+
+        <!-- ------------------------------------------------------------ -->
+        <div class="glass-card ds-karte">
+            <h3>4 · Künstliche Intelligenz</h3>
+            <p>KI-Funktionen gibt es an diesen Stellen: Zusammenfassung einer Adresse, Zusammenfassung
+                einer Maschine, Tages-/Wochen-Briefing, Erfassung aus Freitext, Vorgang aus einer Mail,
+                Antwortentwurf auf eine Mail.</p>
+            <ul>
+                <li>Jede Anfrage läuft über die eigene Edge Function <code>ki-proxy</code>; der Schlüssel
+                    des Anbieters liegt auf dem Server, nicht im Browser.</li>
+                <li><strong>Vor dem Senden werden Namen, Firmen, Orte, Kunden-, Serien- und
+                    Belegnummern, Telefonnummern, E-Mail-Adressen und Straßen durch Platzhalter
+                    ersetzt</strong> („Ansprechpartner A", „Firma K1", „Ort 1"). Die Zuordnung bleibt
+                    ausschließlich im Browser und wird nicht übertragen; die Antwort wird lokal
+                    zurückübersetzt.</li>
+                <li>Jede Vorschau hat den Knopf <strong>„Was geht raus?"</strong> — dort steht der Text
+                    genau so, wie er beim Anbieter ankommt, mit farblicher Kontrolle, ob etwas übersehen
+                    wurde.</li>
+                <li>Die KI entscheidet nichts selbstständig: Sie schlägt vor, gespeichert oder gesendet
+                    wird erst nach Klick. Eine automatisierte Entscheidung im Sinne von Art. 22 DSGVO
+                    findet nicht statt.</li>
+            </ul>
+            <p class="ds-warn">Vollständig anonym ist der gesendete Text nicht: Freitexte können
+                Angaben enthalten, die kein Muster erkennt. Wer sicher gehen will, prüft vor dem Senden
+                mit „Was geht raus?".</p>
+        </div>
+
+        <!-- ------------------------------------------------------------ -->
+        <div class="glass-card ds-karte">
+            <h3>5 · Wer was sehen und löschen darf</h3>
+            <ul>
+                <li>Ohne Anmeldung ist <strong>kein</strong> Zugriff auf Daten möglich.</li>
+                <li>Je Benutzer wird in der Benutzerverwaltung festgelegt, welche <strong>Ansichten</strong>
+                    sichtbar sind und in welchen <strong>Bereichen gelöscht</strong> werden darf.</li>
+                <li>Angemeldete Benutzer können grundsätzlich alle Fachdaten <strong>lesen</strong> —
+                    die App ist für ein Team gebaut, das miteinander arbeitet, nicht für abgeschottete
+                    Mandanten.</li>
+                <li>Das Löschen wird zusätzlich <strong>in der Datenbank</strong> geprüft
+                    (Row Level Security, Migration <code>supabase_add_rls_loeschrechte.sql</code>) — dort,
+                    wo sie bereits eingeschaltet ist. Sonst gilt die Prüfung nur in der Oberfläche.</li>
+                <li>Änderungen an Adressen werden protokolliert (Verlauf je Adresse).</li>
+            </ul>
+        </div>
+
+        <!-- ------------------------------------------------------------ -->
+        <div class="glass-card ds-karte">
+            <h3>6 · Aufbewahrung und Löschung</h3>
+            <p>Die App löscht <strong>nichts automatisch</strong>. Alles bleibt, bis es jemand von Hand
+                entfernt. Für die Praxis bedeutet das:</p>
+            <ul>
+                <li>Geschäftsunterlagen (Angebote, Rechnungen, Serviceberichte, Verträge) unterliegen den
+                    handels- und steuerrechtlichen Fristen — meist 6 oder 10 Jahre. Vorher dürfen sie
+                    nicht gelöscht werden.</li>
+                <li>Daten ohne solche Pflicht — etwa Notizen zu Ansprechpartnern, alte Telefonvermerke,
+                    Fotos ohne Beleg — sind zu löschen, sobald sie nicht mehr gebraucht werden.
+                    <strong>Dafür ist eine regelmäßige Durchsicht festzulegen</strong>, z. B. einmal jährlich.</li>
+                <li>Beschäftigtendaten: Konto bei Austritt in Supabase deaktivieren. Der Name bleibt an
+                    alten Einträgen stehen, damit die Historie nachvollziehbar bleibt.</li>
+                <li>Gelöschte Dateien verschwinden endgültig aus dem Dateispeicher (kein Papierkorb).</li>
+                <li>Sicherungen der Datenbank (Skript <code>backup/backup.bat</code>) liegen dort, wo sie
+                    abgelegt werden — der Ablageort gehört mit ins Verzeichnis, ebenso die Löschfrist für
+                    alte Sicherungen.</li>
+            </ul>
+        </div>
+
+        <!-- ------------------------------------------------------------ -->
+        <div class="glass-card ds-karte">
+            <h3>7 · Rechte betroffener Personen — wo die Daten stehen</h3>
+            <p>Fragt eine Person nach Auskunft, Berichtigung oder Löschung, sind diese Stellen zu prüfen:</p>
+            <ul>
+                <li><strong>Adressbuch:</strong> Adresse öffnen → Stammdaten, Ansprechpartner,
+                    Verknüpfungen, Notizen, Verlauf, Termine, Vorgänge, Dokumente.</li>
+                <li><strong>Maschinen:</strong> Maschine → Historie (Serviceberichte, Protokolle,
+                    manuelle Einträge, Fotos) und Mietvereinbarungen.</li>
+                <li><strong>Listen:</strong> Angebote und Buchhaltung.</li>
+                <li><strong>Mail:</strong> liegt im Postfach, nicht in der App — dort suchen.</li>
+                <li><strong>Dateien:</strong> Dokumente-Ansicht sowie die PDFs an Berichten und Verträgen.</li>
+            </ul>
+            <p>Die Suche im Adressbuch und die Maschinen-Historie decken die meisten Fälle ab. Eine
+                automatische Gesamtauskunft auf Knopfdruck gibt es nicht.</p>
+        </div>
+
+        <!-- ------------------------------------------------------------ -->
+        <div class="glass-card ds-karte">
+            <h3>8 · Meldepflicht bei einer Datenpanne</h3>
+            <p>Geht ein Gerät mit angemeldeter Sitzung verloren, werden Daten an falsche Empfänger
+                gesendet oder gelangen Zugangsdaten in fremde Hände, gilt eine Frist von
+                <strong>72 Stunden</strong> zur Meldung an die Aufsichtsbehörde (Art. 33 DSGVO).
+                Sofortmaßnahmen: Passwort des betroffenen Kontos ändern, Sitzungen in Supabase beenden,
+                Vorgang mit Zeitpunkt und Umfang schriftlich festhalten.</p>
+        </div>
+
+        <div class="glass-card ds-karte ds-hinweis">
+            <h3>Was als Nächstes zu tun ist</h3>
+            <ol>
+                <li>AV-Verträge abschließen bzw. erneuern: Supabase, Cloudflare, Vercel, Google, Microsoft.</li>
+                <li>Diese Seite als Anlage in das Verzeichnis von Verarbeitungstätigkeiten übernehmen und
+                    um Verantwortlichen, Zwecke, Rechtsgrundlagen und Fristen ergänzen.</li>
+                <li>Löschroutine festlegen (wer prüft wann was) und in der App umsetzen.</li>
+                <li>Bei Unsicherheit die Texte durch eine Datenschutzberatung prüfen lassen — diese Seite
+                    beschreibt die Technik, sie ist keine Rechtsberatung.</li>
+            </ol>
+        </div>
+
+    </div>
+</section>

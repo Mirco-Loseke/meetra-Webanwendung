@@ -406,6 +406,17 @@ input[type='month']::-webkit-calendar-picker-indicator:hover {
     transform: translateY(-1px);
 }
 
+/* Offene Vorgänge bei verknüpften Adressen (js/process-open-hints.js): eigener oranger Kasten. */
+.proc-open-hint-verknuepft {
+    margin: 12px -4px 4px;
+    padding: 10px 12px;
+    border: 1px solid rgba(249, 115, 22, 0.6);
+    background: rgba(249, 115, 22, 0.1);
+    border-radius: var(--radius-md, 10px);
+}
+.proc-open-hint-verknuepft .proc-open-hint-head { color: #fb923c; }
+.proc-open-hint-adresse { color: #fb923c; font-weight: 700; }
+
 /* Handy: Knopf unter den Text, sonst bleibt für den Titel nichts übrig. */
 @media (max-width: 768px) {
     .proc-open-hint-row {

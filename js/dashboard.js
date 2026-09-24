@@ -475,7 +475,7 @@ window.renderDashboard = async function() {
             <!-- Heute wichtig + Grafen -->
             <div class="dash-main-grid">
                 <div class="maint-chart-card" style="margin-bottom:0;">
-                    <p class="maint-chart-title">Heute wichtig</p>
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;"><p class="maint-chart-title" style="margin-bottom:0;">Heute wichtig</p><button type="button" class="ki-briefing-btn" onclick="window.openKiBriefing('heute')" title="KI-Briefing: Termine, Wartungen, Vorgänge und Aufgaben für heute, die nächsten Tage oder die Woche">✨ Briefing</button></div>
                     <div style="display:flex; flex-direction:column; gap:6px;">${todoHtml}</div>
                 </div>
                 <div style="display:flex; flex-direction:column; gap:12px;">

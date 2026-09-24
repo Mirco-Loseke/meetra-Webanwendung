@@ -102,6 +102,8 @@ lassen als eine Migration auszulassen.
 | Datei | Wofür |
 |---|---|
 | `supabase_add_ai_usage.sql` | KI-Verbrauch je Nutzer und Tag |
+| `supabase_add_customer_sage_stand.sql` | Sage-Abgleich: letzter Sage-Stand je Adresse (Handänderungen bleiben) |
+| `supabase_add_rechnungen.sql` | Sage-Abgleich: Rechnungsbelege je Adresse (Reiter „Belege", Recht `belege`) |
 
 ## Mail (Outlook / Microsoft Graph)
 
@@ -118,7 +120,14 @@ Liegen unter `supabase/functions/`, werden über die Supabase CLI ausgerollt:
 | Function | Wofür | Anleitung |
 |---|---|---|
 | `r2-sign` | Signierte Upload-URLs für Cloudflare R2 — keine Credentials mehr im Browser | `SETUP.txt` |
+| `sage-sync` | Sage-Abgleich (tools/sage-sync.ps1): nur Adressen/Angebote lesen/anlegen/ändern, Token statt Service-Key, ohne Verify JWT | `SETUP_SAGE_SYNC.txt` |
 | `groq-proxy` | KI-Anfragen; hängt den Groq-Schlüssel serverseitig an | `SETUP_GROQ.txt` |
+
+## Rechte in der Datenbank
+
+| Datei | Wofür |
+|---|---|
+| `supabase_add_rls_loeschrechte.sql` | Löschrechte aus `users.permissions` per RLS durchsetzen. Block 1 (Grundlage, `users.is_admin`, Funktionen) einmal; danach je Tabelle `select app_rls_loeschschutz('tabelle', 'bereich')`, Rückweg `app_rls_zuruecksetzen('tabelle')`, Übersicht `app_rls_status`. **Schrittweise, keine Downtime** |
 
 ## Wichtige Regel für neue Migrationen
 

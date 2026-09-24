@@ -70,6 +70,7 @@ Reihenfolge der ausgelagerten Module:
 | Mail: Outlook-Anmeldung (MSAL) + `graphFetch` | `js/outlook-graph.js`, `lib/msal-browser.min.js` |
 | Mail: Ansicht Posteingang / Outlook-Kontakte / Schreiben | `js/mail-view.js`, `partials/views/mail.html`, `css/views/mail.css` |
 | Mail: Einstellungen → Outlook (Anwendungs-ID, Anmelden) | `js/outlook-settings.js`, `partials/settings/outlook.html` |
+| Einstellungen → Datenschutz (Verarbeitungsverzeichnis, Dienstleister) | `partials/settings/datenschutz.html`, `css/views/datenschutz.css` |
 
 ## Zuerst hier nachschlagen (spart das Durchsuchen)
 - **`FUNKTIONEN.txt`** — Nachschlagewerk mit 1.500+ Funktionen: `name → datei:zeile`.
@@ -163,6 +164,20 @@ erst beim ersten Treffer fortlaufend vergeben. **Neue KI-Stelle ⇒ `fetchMaskie
 `groqFetch`.** Nicht angebunden: `accounting.js` (Lieferantenrechnungen, Bilder) und
 `pdf-i18n.js` (Übersetzung).
 Die Regel „nie Datenbestände an die KI" gilt damit nur noch für unpseudonymisierte Daten.
+**KI-Zusammenfassung einer Maschine** (`js/ai-machine-summary.js`, ✨ auf der
+Maschinenkarte und im Kopf der Historie, `openMachineSummary(id)`): lädt selbst
+Serviceberichte, `manual_history_entries`, `maintenance_events`, Vorgänge und
+`rental_agreements` der Maschine, pseudonymisiert, streamt.
+**KI-Briefing** (`js/ai-briefing.js`, `openKiBriefing('heute'|'tage3'|'woche')`, Knopf
+„✨ Briefing" im Dashboard-Block „Heute wichtig" und im Kopf der Glocke): lädt serverseitig
+auf den Zeitraum gefiltert `maintenance_events` (+`event_participants`), fällige
+`machines.next_maintenance`, offene Vorgänge (Wiedervorlage/Schritt-Erinnerung), geplante
+`tasks`/`subtasks`, `service_entries`, Miete (JSONB, Client-Filter), `angebote.erinnerung`,
+`workshop_tasks`; Schalter „Nur meine Einträge". Sitzungs-Cache je Zeitraum, 10 min.
+**Streaming (2026-09-22):** `ki-proxy` reicht bei `stream:true` die SSE-Antwort durch;
+`window.kiAntwortLesen(resp, onText)` (`groq-proxy.js`) liest gestreamt **oder** JSON
+(falls die Function noch alt ausgerollt ist). Beide Zusammenfassungen nutzen das —
+der Text steht schon während des Schreibens im Fenster. **Function neu ausrollen.**
 
 Alte Fassung (Groq, bis 2026-09-21):
 
@@ -259,7 +274,7 @@ formfüllenden Feldern zusätzlich `.menu-block`. Ausgewählter Eintrag: `.selec
 einem Inline-`style` suchen.
 
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v592 (Stand 2026-09-22) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v620 (Stand 2026-09-23) — bei jeder Änderung hochzählen.
 
 **Mietvereinbarung (Stand 2026-08-25).** Der Bogen wird gespeichert: PDF per
 html2canvas je `.miet-page` + jsPDF, Ablage in R2 unter
@@ -325,6 +340,16 @@ einem `innerHTML` und Klick-Delegation (`.pm-item`). Angebote: „Maschine
 bearbeiten" tauscht nur die Zelle (`rerenderAngebotMachineCell`), nicht die
 ganze Liste. `getMachineName(id)` läuft über `window.machineById` — niemals
 in Schleifen `machineList.find(...)` schreiben.
+
+**Prüfpläne beim Öffnen eines Berichts (2026-09-22).** `renderSelectedServiceCategories`
+(`js/service-list.js`) ruft jetzt `updateServiceCategoryUI()` — vorher wurde beim Öffnen
+eines gespeicherten Berichts nur der Text gesetzt, die Prüfplan-Auswertung lief nicht
+(Wartung/UVV/Einweisung zeigte keine Protokolle, ein Reparatur-Bericht zeigte noch die
+des vorher geöffneten). `loadChecklistPayload` (`js/checklists.js`) geht am Ende über
+`evaluateChecklistVisibility()`, damit mitgeladene Protokolle bei unpassender Kategorie in
+den Merker wandern statt ins PDF. **Kundenunterschrift:** die Wiederherstellung sprach
+`customer-signature-preview-img` an — im Markup heißt sie `signature-preview-img`; neuer
+Bericht setzt die Vorschaubilder jetzt zurück.
 
 **Prüfpläne im Servicebericht folgen einer festen Regel (2026-09-16).**
 `populateChecklistSelector` (`js/checklists.js`) baut die aktiven Pläne bei
@@ -400,5 +425,37 @@ Schriften laufen als Style-Attributor mit Kurznamen (`calibri`, `arial` …); `t
 übersetzt sie beim Versand in echte Schriftstapel. Anhänge: ≤3 MB als `fileAttachment`,
 größer per Upload-Session; mit Anhang wird immer Entwurf → Anhänge → `/send` gefahren.
 Signatur je Browser in `localStorage['outlook_signatur']` (Einstellungen → Outlook).
+**KI in der Mail-Ansicht (2026-09-22):** „✨ Vorgang aus Mail" →
+`window.openAiCaptureFromMail(mail)` (`ai-quick-capture.js`, Bereich `vorgaenge`,
+`mailKontext`): Mail-Prompt-Baustein, jede Vorgangskarte bekommt Von/An, Kunde
+(`customer_id`/`contact_name` aus `kundeZuAdresse`) und die Original-Mail unter der
+KI-Zusammenfassung. „✨ Antwort entwerfen" → `antwortEntwerfen` (`mail-view.js`):
+Kundenkontext (Maschinen, offene Vorgänge) + Mailkern (`mailKern` schneidet Zitate
+ab) → Entwurf landet über `schreibenVorbelegen(…, entwurfHtml)` im Editor, Platzhalter
+`[Termin]` u. ä. für alles, was die KI nicht weiß. Gesendet wird nie automatisch.
 **Fallstrick:** `js/select-enhance.js` baut jedes `<select>` um — auch Quills
 Toolbar-Selects, die dann unsichtbar werden. Toolbar-Container brauchen `data-no-enhance`.
+
+**Vorgänge kombinieren (2026-09-22).** Adresse → Vorgänge → Knopf „Vorgänge kombinieren"
+(`state.detail.kombiModus`, `vorgaengeZusammenfuehren()` in `js/addressbook.js`): der
+älteste gewählte Vorgang bleibt, Titel „A + B", Schritte/Stände/`status_log`/Dokumente/
+Zuständige ohne Doppelte, Texte untereinander, `angebote.process_id` der Quellen → Ziel,
+Quellen gelöscht. Dadurch hängen **mehrere Angebote an einem Vorgang**:
+`window.angeboteListeByProcess` (`processes.js`, Array je Vorgang) neben dem alten
+`angeboteByProcess` (nur eines); `renderProcessAngebotBlock` zeichnet je Angebot einen
+Block, das Adressbuch hält `state.detail.angeboteListeByProcess`. Angebotsliste und
+Angebotsdokumente brauchen nichts Neues — sie lesen je Angebot über `process_id` denselben
+Vorgang (Stände, `attachments`).
+
+**OneDrive-Eingang → Angebote (2026-09-22).** `js/onedrive-angebote.js`: fragt alle 5 min
+(nur wenn je Browser eingeschaltet, Einstellungen → Outlook) einen OneDrive-Ordner per Graph ab,
+ordnet PDFs über `angebote.belegnummer` zu (Dateiname, sonst PDF-Text nahe „Angebot/Beleg"),
+hängt sie an `internal_processes.attachments` des Angebots-Vorgangs und verschiebt sie nach
+`<Ordner>/zugeordnet`. Nicht Zuordenbares bleibt liegen und steht dort in einer Liste.
+Braucht **Files.ReadWrite** (delegiert) in Entra — bewusst über `graphFetchMit` extra
+angefordert, nicht in `BERECHTIGUNGEN`, damit die Mail-Anmeldung ohne diese Berechtigung weiterläuft.
+
+**Service Worker wird jetzt registriert (2026-09-22).** `sw.js` war fertig, aber nie angemeldet —
+jeder Start lud ~6 MB/179 Dateien, `navigator.serviceWorker.ready` hing ewig. Registrierung am Ende
+von `js/app-core.js` (nur http/https). Gemessen lokal: 2. Start 0 KB Netz, alles aus dem Cache.
+Folge: **ohne `?v=N`-Hochzählen kommt eine JS/CSS-Änderung jetzt wirklich nie an.**

@@ -2574,7 +2574,7 @@
                                     onmouseout="this.style.transform='scale(1)'; this.style.background='rgba(16,185,129,0.85)'">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
                                 </button>` : ''}
-                                 <button class="btn-icon-circular delete delete-permission-required" title="Löschen"
+                                 <button class="btn-icon-circular delete delete-permission-required" data-del-area="protokolle" title="Löschen"
                                          style="flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(239, 68, 68, 0.85); border: 2.5px solid rgba(252, 165, 165, 0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 18px rgba(239, 68, 68, 0.6); backdrop-filter: blur(12px); padding: 0;"
                                          onclick="event.stopPropagation(); window.deleteProtocol('${p.id}', '${p.type}')"
                                          onmouseover="this.style.transform='scale(1.08)'; this.style.background='rgba(239, 68, 68, 0.95)'; this.style.boxShadow='0 4px 24px rgba(239, 68, 68, 0.7)'; this.style.borderColor='rgba(252, 165, 165, 1)'"
@@ -2623,10 +2623,7 @@
     };
 
     window.deleteProtocol = async function(protocolId, protocolType) {
-        if (window.activeUser && window.activeUser.permissions && window.activeUser.permissions.can_delete === false) {
-            window.showToast('Keine Berechtigung zum Löschen von Protokollen.');
-            return;
-        }
+        if (typeof window.canDelete === 'function' && !window.canDelete('Protokollen')) return;
         if (!window.supabaseClient) { window.showToast('Datenbank nicht verbunden'); return; }
         if (!confirm('Möchten Sie dieses Protokoll und alle zugehörigen Dateien (PDF, Bilder) wirklich unwiderruflich löschen?')) {
             return;

@@ -414,7 +414,7 @@
                         style="background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.35); color:#60a5fa; border-radius:9px; width:32px; height:32px; cursor:pointer; flex-shrink:0;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                     </button>` : ''}
-                ${loeschen ? `<button type="button" class="delete-permission-required" onclick="event.stopPropagation(); ${loeschen}" title="Vorlage löschen"
+                ${loeschen ? `<button type="button" class="delete-permission-required" data-del-area="mietvereinbarungen" onclick="event.stopPropagation(); ${loeschen}" title="Vorlage löschen"
                         style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:9px; width:32px; height:32px; cursor:pointer; flex-shrink:0;">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>
                     </button>` : ''}

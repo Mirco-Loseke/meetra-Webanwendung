@@ -140,6 +140,48 @@ tr.completed-task td {
     line-height: 1.2;
 }
 
+/* Schmale Karte (iPad, 2/3 Spalten, Handy): Titel + Knöpfe oben, Bild darunter.
+   Richtet sich nach der KARTEN-Breite, nicht nach dem Bildschirm — sonst
+   quetschte das Bild den Titel bei mehreren Spalten auf einen Buchstaben pro Zeile.
+   Fallback für ältere Geräte ohne Container-Queries: responsive.css (≤768px).
+   Die Masse am <img> stehen inline in js/tasks.js — daher !important. */
+.task-card {
+    container: taskcard / inline-size;
+}
+.task-card-machine {
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: normal;
+    hyphens: auto;
+}
+@container taskcard (max-width: 560px) {
+    .task-card-header {
+        flex-wrap: wrap !important;
+    }
+    /* Zeile 1: Titel über die volle Breite. Zeile 2: Bild mittig, Knöpfe rechts. */
+    .task-card-header > div:first-child {
+        order: 1 !important;
+        flex: 0 0 100% !important;
+        min-width: 0 !important;
+        word-break: normal !important;
+    }
+    .task-card-header .task-card-machine-thumb {
+        order: 2 !important;
+        width: 109px !important;
+        height: 109px !important;
+        margin: 0 auto !important;
+    }
+    .task-card-header .task-card-actions {
+        order: 3 !important;
+        flex: 0 0 auto !important;
+        align-self: flex-start !important;
+        margin-left: auto;
+    }
+    .task-card-header .task-card-machine {
+        font-size: 1.1rem !important;
+    }
+}
+
 .priority-badge {
     font-size: var(--fs-2xs);
     font-weight: 800;

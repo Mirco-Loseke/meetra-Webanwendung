@@ -442,6 +442,8 @@
                         Historie
                     </button>
 
+                    <button class="btn-ki-card" onclick="if(typeof event !== 'undefined' && event.stopPropagation) event.stopPropagation(); window.openMachineSummary('${machine.id}')" title="KI-Zusammenfassung: Historie, Wartung, Probleme">✨</button>
+
                     <button class="btn-edit-card" onclick="if(typeof event !== 'undefined' && event.stopPropagation) event.stopPropagation(); window.openEditStammdaten(${machine.id})" title="Bearbeiten">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -449,7 +451,7 @@
                         </svg>
                     </button>
 
-                    <button class="btn-delete-card delete-permission-required" onclick="if(typeof event !== 'undefined' && event.stopPropagation) event.stopPropagation(); deleteMachine('${machine.id}')" title="Maschine löschen">
+                    <button class="btn-delete-card delete-permission-required" data-del-area="maschinen" onclick="if(typeof event !== 'undefined' && event.stopPropagation) event.stopPropagation(); deleteMachine('${machine.id}')" title="Maschine löschen">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M3 6h18"></path>
                             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path>

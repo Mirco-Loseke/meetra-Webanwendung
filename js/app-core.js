@@ -192,3 +192,56 @@
         });
 
         console.log('Inline Script Loaded');
+
+// ============================================================================
+//  GEDÄCHTNIS FÜR FEHLENDE SPALTEN UND VERKNÜPFUNGEN
+// ============================================================================
+//  Mehrere Abfragen holen Zusatzangaben mit, die es je nach Stand der
+//  Migrationen gar nicht gibt: den Adressnamen per Join (customers(...)) oder
+//  eine einzelne Spalte (service_entries.customer_signed). Supabase antwortet
+//  dann mit 400, die Abfrage wird ohne den Teil wiederholt — das funktioniert,
+//  kostete aber bei JEDEM Aufruf eine vergebliche Anfrage samt roter Meldung
+//  in der Konsole. Wecker und Benachrichtigungen laufen im Takt, entsprechend
+//  voll war das Fehlerprotokoll.
+//
+//  window.dbKannDas(schluessel)        -> false, sobald es einmal nicht ging
+//  window.dbKannDasMerken(schluessel, ob)
+//  Der Merker liegt in localStorage; nach einer nachgeholten Migration einmal
+//  window.dbMerkerZuruecksetzen() aufrufen (oder den Eintrag löschen).
+// ============================================================================
+(function () {
+    'use strict';
+    const SCHLUESSEL = 'meetra_db_kann';
+    function stand() {
+        try { return JSON.parse(localStorage.getItem(SCHLUESSEL) || '{}'); } catch (e) { return {}; }
+    }
+    window.dbKannDas = function (was) { return stand()[was] !== false; };
+    window.dbKannDasMerken = function (was, ob) {
+        try {
+            const s = stand();
+            s[was] = !!ob;
+            localStorage.setItem(SCHLUESSEL, JSON.stringify(s));
+        } catch (e) { /* privater Modus: dann eben jedes Mal probieren */ }
+    };
+    window.dbMerkerZuruecksetzen = function () {
+        try { localStorage.removeItem(SCHLUESSEL); localStorage.removeItem('meetra_customers_join'); } catch (e) { }
+        return 'Merker geleert — beim nächsten Laden wird alles erneut probiert.';
+    };
+})();
+
+// ==========================================================
+// SERVICE WORKER ANMELDEN (sw.js)
+// ==========================================================
+// sw.js (Zwischenspeicher „zuerst Cache" für alle ?v=N-Dateien, Offline-
+// Rückfall, Klick auf Windows-Meldungen) war fertig, wurde aber nirgends
+// registriert — jeder Start lud rund 6 MB / 180 Dateien neu, und
+// navigator.serviceWorker.ready (reminder-alarm.js, assignment-handoff.js)
+// wartete ewig. Nur über http(s); per file:// gibt es keine Service Worker.
+(function () {
+    if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
+    window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').catch(function (e) {
+            console.warn('Service Worker nicht registriert:', e);
+        });
+    });
+})();

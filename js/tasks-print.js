@@ -72,7 +72,7 @@
             const gesamt = (t.subtasks || []).length;
             return `
             <label class="tp-row">
-                <input type="checkbox" class="tp-task" value="${esc(t.id)}" checked>
+                <input type="checkbox" class="tp-task" value="${esc(t.id)}">
                 <span class="tp-row-body">
                     ${kopf ? `<span class="tp-row-head">${esc(kopf)}</span>` : ''}
                     <span class="tp-row-title">${esc(t.title || 'Ohne Titel')}</span>
@@ -97,8 +97,8 @@
             <div class="tp-section">
                 <div class="tp-label">Aufteilung auf der Seite</div>
                 <div class="tp-layout-choice">
-                    <label><input type="radio" name="tp-cols" value="1"> <span>1 Aufgabe pro A4-Seite</span></label>
-                    <label><input type="radio" name="tp-cols" value="2" checked> <span>2 nebeneinander</span></label>
+                    <label><input type="radio" name="tp-cols" value="1" checked> <span>1 Aufgabe pro A4-Seite</span></label>
+                    <label><input type="radio" name="tp-cols" value="2"> <span>2 nebeneinander</span></label>
                     <label><input type="radio" name="tp-cols" value="3"> <span>3 nebeneinander</span></label>
                 </div>
             </div>
@@ -116,13 +116,13 @@
 
             <div class="tp-section">
                 <label class="tp-row tp-row-extra">
-                    <input type="checkbox" id="tp-extra-on" onchange="window.taskPrintToggleExtra(this.checked)">
+                    <input type="checkbox" id="tp-extra-on" checked onchange="window.taskPrintToggleExtra(this.checked)">
                     <span class="tp-row-body">
                         <span class="tp-row-title">Freie Felder hinzufügen</span>
                         <span class="tp-row-sub">Leere Zeilen zum Ausfüllen, unter der Überschrift „Ergänzungen"</span>
                     </span>
                     <span class="tp-extra-count">
-                        <input type="number" id="tp-extra-n" min="1" max="30" value="3" disabled
+                        <input type="number" id="tp-extra-n" min="1" max="30" value="3"
                                onclick="event.preventDefault(); event.stopPropagation();">
                         <span>Zeilen</span>
                     </span>

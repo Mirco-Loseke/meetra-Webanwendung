@@ -531,16 +531,17 @@
                 ${task.machines && task.machines.image_url ? `<img src="${task.machines.image_url}" alt="" class="task-card-machine-thumb" onclick="event.stopPropagation(); window.openMachineDetails && window.openMachineDetails('${task.machine_id}')" style="width:121px; height:121px; border-radius:8px; object-fit:cover; flex-shrink:0; align-self:center; margin:0 auto; border:1px solid rgba(255,255,255,0.12); cursor:pointer;" onerror="this.remove()">` : ''}
                 <div class="task-card-actions" style="display: flex; gap: 6px; align-items: center;">
                     ${window.cinemaHideButtonHtml(task.id)}
-                    <button id="star-card-${task.id}" onclick="event.stopPropagation(); window.saveTaskAsQuickTemplate('${task.id}')" title="Als Schnellvorlage speichern"
-                        class="btn-star-premium btn-premium-action">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    <button onclick="event.stopPropagation(); window.openAiTaskExtend && window.openAiTaskExtend('${task.id}')" title="Mit KI erweitern (Unteraufgaben diktieren)"
+                        class="btn-ai-premium btn-premium-action">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"></path>
+                            <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"></path>
                         </svg>
                     </button>
                     <button onclick="event.stopPropagation(); window.openTaskModal('${task.id}')" title="Bearbeiten" style="width:32px; height:32px; border-radius:50%; background: rgba(59,130,246,0.2); border: 1.5px solid rgba(59,130,246,0.5); color: #60a5fa; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.4)'" onmouseout="this.style.background='rgba(59,130,246,0.2)'">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
                     </button>
-                    <button class="delete-permission-required" onclick="event.stopPropagation(); window.deleteTask('${task.id}')" title="Löschen" style="width:32px; height:32px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
+                    <button class="delete-permission-required" data-del-area="aufgaben" onclick="event.stopPropagation(); window.deleteTask('${task.id}')" title="Löschen" style="width:32px; height:32px; border-radius:50%; background: rgba(239,68,68,0.2); border: 1.5px solid rgba(239,68,68,0.5); color: #f87171; display:flex; align-items:center; justify-content:center; cursor:pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(239,68,68,0.4)'" onmouseout="this.style.background='rgba(239,68,68,0.2)'">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     </button>
                 </div>
@@ -1531,10 +1532,7 @@
     };
 
     window.deleteTask = async function (taskId) {
-        if (window.activeUser && window.activeUser.permissions && window.activeUser.permissions.can_delete === false) {
-            window.showToast('Keine Berechtigung zum Löschen von Aufgaben.');
-            return;
-        }
+        if (typeof window.canDelete === 'function' && !window.canDelete('Aufgaben')) return;
         if (!confirm('Möchten Sie diese Aufgabe wirklich unwiderruflich löschen?')) return;
 
         try {

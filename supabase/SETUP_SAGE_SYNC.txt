@@ -1,0 +1,61 @@
+================================================================================
+  meetra Webapp — Sage-Abgleich ohne Generalschluessel: Edge Function "sage-sync"
+================================================================================
+
+Stand 2026-09-23. Das Skript tools/sage-sync.ps1 schreibt nicht mehr mit dem
+Service-Role-Key, sondern nur noch ueber diese Function. Sie erlaubt:
+  - customers / angebote lesen (nur die Abgleich-Spalten)
+  - customers / angebote anlegen und aendern (nur erlaubte Spalten)
+  - den Zeitstempel "zuletzt aktualisiert · Server" setzen
+Nicht moeglich: loeschen, andere Tabellen, andere Spalten.
+
+Function:  supabase/functions/sage-sync/index.ts
+Projekt:   rtnpyziwyaqrlfazxkyr
+Voraussetzung: Migration supabase_add_customer_sage_stand.sql ist gelaufen.
+
+
+SCHRITT 1 — Token erzeugen (PowerShell, auf dem Rechner mit dem Skript)
+--------------------------------------------------------------------------------
+Erzeugt einen Zufallswert, traegt ihn in tools/sage-sync.config.ps1 ein und legt
+ihn in die Zwischenablage (er erscheint nirgends auf dem Bildschirm):
+
+  $b = New-Object byte[] 48; [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($b)
+  $t = [Convert]::ToBase64String($b) -replace '[+/=]',''
+  Set-Content tools\sage-sync.config.ps1 "`$SupabaseUrl = 'https://rtnpyziwyaqrlfazxkyr.supabase.co'`n`$SyncToken   = '$t'" -Encoding UTF8
+  Set-Clipboard $t
+
+Damit ist auch der alte Service-Key aus der Config verschwunden.
+
+
+SCHRITT 2 — Secret setzen
+--------------------------------------------------------------------------------
+https://supabase.com/dashboard/project/rtnpyziwyaqrlfazxkyr/functions/secrets
+  Key:   SAGE_SYNC_TOKEN
+  Value: Strg+V (aus Schritt 1)
+Danach die Zwischenablage leeren (z. B. irgendein Wort kopieren).
+
+
+SCHRITT 3 — Function ausrollen
+--------------------------------------------------------------------------------
+https://supabase.com/dashboard/project/rtnpyziwyaqrlfazxkyr/functions
+→ "Deploy a new function" → "Via Editor"
+→ Function name: sage-sync
+→ Inhalt von supabase/functions/sage-sync/index.ts einfuegen → Deploy
+→ In den Details der Function "Verify JWT" AUSSCHALTEN
+  (das Skript meldet sich mit dem Token an, nicht mit einem Benutzer-Login).
+
+
+SCHRITT 4 — Testen
+--------------------------------------------------------------------------------
+  powershell -ExecutionPolicy Bypass -File tools/sage-sync.ps1
+Probelauf, schreibt nichts. Laeuft er durch, arbeitet die geplante Aufgabe ab
+dem naechsten Lauf automatisch ueber die Function.
+
+
+SCHRITT 5 — Alten Schluessel entwerten
+--------------------------------------------------------------------------------
+Der Service-Key lag im OneDrive-Ordner und im Terminal-Verlauf.
+- War es ein neuer Schluessel (sb_secret_...): unter Project Settings → API Keys
+  loeschen.
+- War es der alte service_role (eyJ...): nur ueber "JWT-Secret erneuern" — das
+  macht auch den anon-Key in der App ungueltig. Nur zusammen planen.

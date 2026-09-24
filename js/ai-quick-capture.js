@@ -483,9 +483,14 @@
     // nicht zu erklären, was ein Vorgang ist. Das spart bei jeder Anfrage
     // mehrere hundert Token und macht die Antwort eindeutiger.
     let captureBereich = 'alles';
+    // Kommt die Eingabe aus der Mail-Ansicht (js/mail-view.js), stehen hier Absender,
+    // Empfänger, Kunde und der Mailtext — die KI bekommt einen Mail-Baustein im Prompt,
+    // die Vorschau übernimmt Von/An und Kunde in jede Vorgangskarte.
+    let mailKontext = null;
 
     window.openAiCaptureModal = function (bereich) {
         captureBereich = (bereich === 'aufgaben' || bereich === 'vorgaenge') ? bereich : 'alles';
+        mailKontext = null;
         const modal = ensureModal();
         window.resetAiCapture();
 
@@ -511,6 +516,7 @@
 
     window.closeAiCaptureModal = function () {
         if (window.stopSpeechInput) window.stopSpeechInput();
+        mailKontext = null;
         const modal = document.getElementById('ai-capture-modal');
         if (!modal) return;
         modal.classList.remove('show');
@@ -693,6 +699,17 @@ Regeln:
 Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passen. Keine erfundenen Fakten, keine Wiederholung des Titels als Schritt. Lieber ein leeres Array als unpassende/erzwungene Schritte.`);
         }
 
+        if (mailKontext) {
+            teile.push(`Die Eingabe ist eine EINGEGANGENE E-MAIL (Betreff, Von, An, Datum, Inhalt). Daraus ergibt sich in der Regel GENAU EIN Vorgang — mehrere nur bei klar getrennten Anliegen.
+- title: das Anliegen in wenigen Worten, nicht der Betreff wörtlich, kein "AW:/WG:".
+- process_type nach INHALT: Störung/Defekt → repair, Wartungswunsch → maintenance, Angebots-/Preisanfrage → offer, Teile-/Maschinenbestellung → order, Beschwerde/Mängel → complaint, Terminwunsch/Besuch → appointment, reine Information → note.
+- remark: 2–4 Sätze Zusammenfassung mit allen harten Fakten aus der Mail: Was will der Absender, welche Maschine/Seriennummer, welches Problem, welche Frist oder Wunschtermin, was wird von uns erwartet. Keine Grußformeln.
+- machine_hint: Maschinenbezeichnung oder Seriennummer aus der Mail, sonst leer.
+- Bittet der Absender um Rückmeldung bis zu einem Datum oder nennt eine Frist → remind_at auf diesen Tag 08:00 setzen. Nennt er einen konkreten Besuchstermin → appointment.
+- steps: die konkreten Schritte, die sich für UNS aus der Mail ergeben (z. B. "Ersatzteil-Verfügbarkeit prüfen", "Angebot erstellen", "Termin vorschlagen", "Rückmeldung an Absender"). Maximal 4.
+- Signaturen, rechtliche Hinweise und zitierte ältere Mails ignorieren.`);
+        }
+
         teile.push(`- Bekannte Maschinen (Auszug): ${machineHintList || 'keine'}.`);
 
         const systemPrompt = teile.join('\n\n');
@@ -751,6 +768,7 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
                 aufgaben: (willAufgaben && Array.isArray(parsed.aufgaben)) ? parsed.aufgaben : [],
                 vorgaenge: (willVorgaenge && Array.isArray(parsed.vorgaenge)) ? parsed.vorgaenge : []
             };
+            if (mailKontext) mailFelderUebernehmen(lastResult);
 
             // Vorhandene offene Aufgaben & Vorgänge laden (für "hinzufügen statt neu anlegen")
             try {
@@ -874,11 +892,12 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
                 const t = typeLabels[v.process_type] ? v.process_type : 'other';
                 const vUserIds = matchUserIds(v.assignee_hint);
                 html += `
-                <div class="ai-cap-card" data-kind="process" data-index="${i}" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:1rem; margin-bottom:0.75rem;">
+                <div class="ai-cap-card" data-kind="process" data-index="${i}" data-customer-id="${escapeHtml(v.customer_id || '')}" data-contact-name="${escapeHtml(v.contact_name || '')}" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:1rem; margin-bottom:0.75rem;">
                     <label style="display:flex; align-items:center; gap:8px; margin-bottom:0.6rem; cursor:pointer;">
                         <input type="checkbox" class="ai-cap-include" checked style="width:18px;height:18px;accent-color:#818cf8;">
                         <span style="font-size:0.7rem; font-weight:800; color:#a5b4fc; text-transform:uppercase; letter-spacing:1px;">Vorgang</span>
                     </label>
+                    ${v.customer_name ? `<div style="display:inline-flex; align-items:center; gap:6px; margin-bottom:0.5rem; padding:3px 10px; border-radius:20px; font-size:0.78rem; font-weight:700; background:rgba(52,211,153,0.12); color:#34d399; border:1px solid rgba(52,211,153,0.35);">🏢 Kunde: ${escapeHtml(v.customer_name)}${v.contact_name ? ' · ' + escapeHtml(v.contact_name) : ''}</div>` : ''}
                     <input type="text" class="ai-cap-title glass-form-input" value="${escapeHtml(v.title || '')}" placeholder="Titel" style="width:100%; box-sizing:border-box; font-weight:700; margin-bottom:0.5rem;">
                     <select class="ai-cap-type glass-form-input" style="width:100%; box-sizing:border-box; margin-bottom:0.5rem;">${typeOptions(t)}</select>
                     <select class="ai-cap-machine glass-form-input" style="width:100%; box-sizing:border-box; margin-bottom:0.5rem;">${machineOptions(mId)}</select>
@@ -1196,13 +1215,14 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
                             // (Spalte description) — ein Bemerkungsfeld gibt es nicht mehr.
                             description: remark, sender, recipient, assigned_users: assignedArr, steps: editedSteps
                         };
+                        if (card.dataset.customerId) { payload.customer_id = card.dataset.customerId; payload.contact_name = card.dataset.contactName || null; }
                         if (remindRaw) payload.remind_at = new Date(remindRaw).toISOString();
 
                         let { error, data } = await window.insertMitErsteller('internal_processes', payload);
                         // Spalte remind_at fehlt noch -> Vorgang trotzdem anlegen.
-                        if (error && /remind_at/.test(error.message || '')) {
+                        if (error && /remind_at|customer_id|contact_name/.test(error.message || '')) {
                             const reduced = { ...payload };
-                            delete reduced.remind_at;
+                            delete reduced.remind_at; delete reduced.customer_id; delete reduced.contact_name;
                             ({ error, data } = await window.insertMitErsteller('internal_processes', reduced));
                         }
                         if (error) throw error;
@@ -1713,6 +1733,39 @@ Regeln:
         } finally {
             if (btn) { btn.disabled = false; btn.innerHTML = '<span>✨</span> Schritte vorschlagen'; }
         }
+    };
+
+    // ---- Aus der Mail-Ansicht (Outlook / Graph) --------------------------------
+    // Von/An, Kunde und Original-Mail in jede von der KI gelieferte Vorgangskarte
+    // schreiben. Liefert die KI nichts, gibt es trotzdem eine Karte aus dem Betreff.
+    function mailFelderUebernehmen(res) {
+        const mk = mailKontext; if (!mk) return;
+        if (!res.vorgaenge.length) res.vorgaenge.push({ title: mk.subject.replace(/^\s*(AW|WG|RE|FW|FWD):\s*/i, ''), process_type: 'email_incoming', remark: '', steps: [] });
+        const original = '— Original-Mail vom ' + (mk.receivedAt ? new Date(mk.receivedAt).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '') + ' —\n' + mk.body.slice(0, 6000);
+        res.vorgaenge.forEach(v => {
+            v.sender = mk.fromName && mk.fromAddress ? mk.fromName + ' <' + mk.fromAddress + '>' : (mk.fromAddress || mk.fromName || '');
+            v.recipient = mk.to || '';
+            v.remark = ((v.remark || '').trim() ? v.remark.trim() + '\n\n' : '') + original;
+            v.customer_id = mk.customerId || null;
+            v.customer_name = mk.customerName || '';
+            v.contact_name = mk.contactName || '';
+            v._fromMsg = true;
+        });
+    }
+
+    // Einstieg aus js/mail-view.js („✨ Vorgang aus Mail"): Fenster öffnen, Mailtext
+    // eintragen und sofort analysieren — der Nutzer sieht direkt die Vorschau.
+    window.openAiCaptureFromMail = function (mail) {
+        window.openAiCaptureModal('vorgaenge');
+        mailKontext = Object.assign({ subject: '', fromName: '', fromAddress: '', to: '', receivedAt: '', body: '', customerId: null, customerName: '', contactName: '' }, mail || {});
+        const ta = document.getElementById('ai-capture-text');
+        const kopf = ['Betreff: ' + mailKontext.subject, 'Von: ' + (mailKontext.fromName ? mailKontext.fromName + ' <' + mailKontext.fromAddress + '>' : mailKontext.fromAddress), mailKontext.to ? 'An: ' + mailKontext.to : '', mailKontext.receivedAt ? 'Datum: ' + new Date(mailKontext.receivedAt).toLocaleString('de-DE') : ''].filter(Boolean).join('\n');
+        if (ta) ta.value = kopf + '\n\n' + mailKontext.body.slice(0, 12000);
+        const titel = document.getElementById('ai-capture-title');
+        if (titel) titel.textContent = 'KI-Erfassung — Vorgang aus Mail';
+        // Der Mailtext ist kein Diktat-Entwurf — nicht in localStorage merken
+        window.aiCapClearDraft();
+        setTimeout(() => window.runAiCapture(), 50);
     };
 
     window.processAiCaptureMsgFile = function (file) {

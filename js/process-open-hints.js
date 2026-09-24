@@ -55,6 +55,54 @@
         return [m.machine_number, m.manufacturer, m.model].filter(Boolean).join(' · ');
     }
 
+    // ---- Verknüpfte Adressen (customer_links, auch über mehrere Stufen) ----
+    // Einmal je Adresse geladen und gemerkt; wenige Zeilen je Abfrage.
+    const verknuepftCache = new Map();   // customerId → Set der verknüpften IDs (ohne sich selbst); null = lädt
+
+    async function ladeVerknuepfte(customerId, prefix) {
+        verknuepftCache.set(customerId, null);
+        const gesehen = new Set([String(customerId)]);
+        let front = [String(customerId)];
+        try {
+            for (let stufe = 0; stufe < 4 && front.length; stufe++) {
+                const liste = front.join(',');
+                const { data, error } = await window.supabaseClient.from('customer_links')
+                    .select('customer_id, linked_customer_id')
+                    .or(`customer_id.in.(${liste}),linked_customer_id.in.(${liste})`);
+                if (error) throw error;
+                const neu = [];
+                (data || []).forEach(l => [l.customer_id, l.linked_customer_id].forEach(x => {
+                    const k = String(x);
+                    if (x && !gesehen.has(k)) { gesehen.add(k); neu.push(k); }
+                }));
+                front = neu;
+            }
+        } catch (e) { console.warn('Verknüpfte Adressen nicht geladen:', e); }
+        gesehen.delete(String(customerId));
+        verknuepftCache.set(customerId, gesehen);
+        // Noch dieselbe Adresse gewählt? Dann Hinweis neu zeichnen.
+        if (String((el(prefix + '-customer-id') || {}).value || '') === String(customerId)) window.renderProcessOpenHints(prefix);
+    }
+
+    function adressName(id) {
+        const k = (typeof window.customerCacheSync === 'function' ? window.customerCacheSync() : []).find(c => String(c.id) === String(id));
+        return k ? k.name : 'verknüpfte Adresse';
+    }
+
+    // Offene Vorgänge der verknüpften Adressen (ohne die gewählte selbst).
+    function findVerknuepfte(prefix, customerId, schonGezeigt) {
+        if (!customerId) return [];
+        if (!verknuepftCache.has(customerId)) { ladeVerknuepfte(customerId, prefix); return []; }
+        const ids = verknuepftCache.get(customerId);
+        if (!ids || !ids.size) return [];
+        const ownId = (el('edit-process-id') || {}).value || '';
+        return (window.eventsState && window.eventsState.processes ? window.eventsState.processes : [])
+            .filter(p => p && p.status !== 'erledigt' && ids.has(String(p.customer_id || ''))
+                && !(prefix === 'edit-process' && ownId && String(p.id) === String(ownId))
+                && !schonGezeigt.includes(p))
+            .sort((a, b) => new Date(b.process_date || 0) - new Date(a.process_date || 0));
+    }
+
     // Alle offenen Vorgänge zur gewählten Maschine bzw. Adresse.
     function findOpenProcesses(prefix) {
         const machineId = (el(prefix + '-machine-select') || {}).value || '';
@@ -115,7 +163,8 @@
         if (!box) return;
 
         const { list, machineId, customerId } = findOpenProcesses(prefix);
-        if (!list.length) {
+        const beiVerknuepften = findVerknuepfte(prefix, customerId, list);
+        if (!list.length && !beiVerknuepften.length) {
             box.style.display = 'none';
             box.innerHTML = '';
             return;
@@ -128,14 +177,14 @@
         const zurAdresse = customerId ? list.filter(p => String(p.customer_id || '') === String(customerId)) : [];
         const zurMaschine = machineId ? list.filter(p => String(p.machine_id || '') === String(machineId) && !zurAdresse.includes(p)) : [];
 
-        const zeile = (p) => {
+        const zeile = (p, mitAdresse) => {
             const meta = STATUS_META[p.status] || { label: p.status || 'Offen', color: '#94a3b8' };
             const tage = ageInDays(p.process_date);
             const altText = tage !== null && tage > 7 ? `<span class="proc-open-hint-old">seit ${tage} Tagen</span>` : '';
             return `
                 <div class="proc-open-hint-row">
                     <div class="proc-open-hint-main">
-                        <div class="proc-open-hint-title">${esc(p.title || 'Ohne Titel')}</div>
+                        <div class="proc-open-hint-title">${esc(p.title || 'Ohne Titel')}${mitAdresse ? ` <span class="proc-open-hint-adresse">· ${esc(adressName(p.customer_id))}</span>` : ''}</div>
                         <div class="proc-open-hint-meta">
                             <span class="proc-open-hint-status" style="color:${meta.color}; border-color:${meta.color};">${esc(meta.label)}</span>
                             <span>${esc(formatDate(p.process_date))}</span>
@@ -153,12 +202,22 @@
                     <summary class="proc-open-hint-head" style="cursor:pointer; list-style:none; display:flex; align-items:center; gap:8px;">
                         <span class="proc-open-hint-chevron" style="display:inline-block; transition:transform .15s;">▸</span>${kopf}
                     </summary>
-                    ${eintraege.map(zeile).join('')}
+                    ${eintraege.map(p => zeile(p, false)).join('')}
                 </details>`;
         };
+        // Oranger Kasten: offene Vorgänge bei verknüpften Adressen (z. B. Mutterfirma, Standort).
+        const verknuepftGruppe = !beiVerknuepften.length ? '' : `
+            <details class="proc-open-hint-group proc-open-hint-verknuepft" open>
+                <summary class="proc-open-hint-head" style="cursor:pointer; list-style:none; display:flex; align-items:center; gap:8px;">
+                    <span class="proc-open-hint-chevron" style="display:inline-block; transition:transform .15s;">▸</span>${beiVerknuepften.length === 1 ? 'Offener Vorgang bei einer verknüpften Adresse' : beiVerknuepften.length + ' offene Vorgänge bei verknüpften Adressen'}
+                </summary>
+                ${beiVerknuepften.slice(0, 8).map(p => zeile(p, true)).join('')}
+                ${beiVerknuepften.length > 8 ? `<div class="proc-open-hint-meta" style="padding:4px 2px;">… und ${beiVerknuepften.length - 8} weitere</div>` : ''}
+            </details>`;
 
         const maschinenText = machineLabel(machineId) ? ' (' + esc(machineLabel(machineId)) + ')' : '';
         box.innerHTML = gruppe(zurAdresse, 'zu dieser Adresse', true)
+            + verknuepftGruppe
             + gruppe(zurMaschine, 'zu dieser Maschine' + maschinenText, false);
         box.style.display = 'block';
 

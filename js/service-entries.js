@@ -54,8 +54,13 @@ window.fetchServiceEntries = async function() {
         6000 // 6 Sekunden Timeout
     );
     try {
-        let result = await laden(SPALTEN + ', customer_signed');
-        if (result.error && /customer_signed/i.test(result.error.message || '')) result = await laden(SPALTEN);
+        // Fehlende Spalte merken (js/app-core.js) statt bei jedem Laden einen 400er zu erzeugen.
+        const signFlag = typeof window.dbKannDas !== 'function' || window.dbKannDas('service_customer_signed');
+        let result = await laden(signFlag ? SPALTEN + ', customer_signed' : SPALTEN);
+        if (result.error && signFlag && /customer_signed/i.test(result.error.message || '')) {
+            if (typeof window.dbKannDasMerken === 'function') window.dbKannDasMerken('service_customer_signed', false);
+            result = await laden(SPALTEN);
+        }
         data = result.data; error = result.error;
     } catch (timeoutErr) {
         error = timeoutErr;
@@ -847,7 +852,7 @@ window.renderServiceEntries = function () {
                                 </svg>
                             </button>
                             ` : ''}
-                            <button class="btn-icon-circular delete delete-permission-required" onclick="deleteServiceEntry(${e.id})" title="Löschen"
+                            <button class="btn-icon-circular delete delete-permission-required" data-del-area="historie" onclick="deleteServiceEntry(${e.id})" title="Löschen"
                                 style="flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(239, 68, 68, 0.85); border: 2.5px solid rgba(252, 165, 165, 0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 18px rgba(239, 68, 68, 0.6); backdrop-filter: blur(12px); padding: 0;">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M3 6h18"></path>

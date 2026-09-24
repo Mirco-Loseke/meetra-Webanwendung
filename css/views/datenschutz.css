@@ -1,0 +1,44 @@
+/* ==========================================================================
+   Einstellungen → Datenschutz (partials/settings/datenschutz.html)
+   Lesetext, deshalb schmale Spalte und ruhige Typografie statt Karten-Raster.
+   ========================================================================== */
+.ds-seite { max-width: 980px; display: flex; flex-direction: column; gap: var(--space-4); }
+.ds-karte { padding: var(--space-5); }
+.ds-karte h3 { margin: 0 0 var(--space-3); font-size: var(--fs-lg); color: #fff; font-family: 'Outfit', sans-serif; }
+.ds-karte h4 { margin: var(--space-4) 0 var(--space-2); font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: 0.6px; color: #93c5fd; }
+.ds-karte h4:first-of-type { margin-top: var(--space-2); }
+.ds-karte p { margin: 0 0 var(--space-3); line-height: 1.6; color: var(--text-2); }
+.ds-karte ul, .ds-karte ol { margin: 0 0 var(--space-3); padding-left: 1.25rem; color: var(--text-2); line-height: 1.6; }
+.ds-karte li { margin: 5px 0; }
+.ds-karte strong { color: var(--text-1); }
+.ds-karte code { background: rgba(255,255,255,0.08); padding: 1px 6px; border-radius: 5px; font-size: 0.86em; color: #a5b4fc; }
+.ds-klein { font-size: var(--fs-xs); color: var(--text-3); }
+.ds-stand { font-size: var(--fs-sm); color: var(--text-3); margin-bottom: 0 !important; }
+
+/* Hinweiskästen: blau = Einordnung, rot = offener Punkt */
+.ds-hinweis { border-color: rgba(96,165,250,0.4); background: rgba(59,130,246,0.07); }
+.ds-warn { padding: 10px 14px; border-radius: var(--radius-sm); background: rgba(239,68,68,0.1);
+           border: 1px solid rgba(239,68,68,0.35); color: #fca5a5; }
+.ds-warn strong { color: #fecaca; }
+
+/* Tabelle der Dienstleister — auf dem Handy waagerecht scrollbar statt gequetscht */
+.ds-tabelle-wrap { overflow-x: auto; margin-bottom: var(--space-3); }
+.ds-tabelle { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); min-width: 620px; }
+.ds-tabelle th { text-align: left; padding: 9px 12px; color: #fff; font-weight: 700;
+                 border-bottom: 2px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.04); }
+.ds-tabelle td { padding: 10px 12px; vertical-align: top; color: var(--text-2); line-height: 1.5;
+                 border-bottom: 1px solid rgba(255,255,255,0.08); }
+.ds-tabelle tr:last-child td { border-bottom: 0; }
+
+/* Drucken: Glas und Farben weg, damit die Anlage lesbar auf Papier kommt */
+@media print {
+    body * { visibility: hidden; }
+    #settings-datenschutz, #settings-datenschutz * { visibility: visible; }
+    #settings-datenschutz { position: absolute; inset: 0; }
+    #settings-datenschutz .users-header-actions { display: none; }
+    .ds-karte { background: #fff !important; border: 1px solid #ccc !important; box-shadow: none !important;
+                backdrop-filter: none !important; break-inside: avoid; }
+    .ds-karte, .ds-karte p, .ds-karte li, .ds-tabelle td { color: #111 !important; }
+    .ds-karte h3, .ds-karte h4, .ds-tabelle th { color: #000 !important; }
+    .ds-tabelle { min-width: 0; }
+}

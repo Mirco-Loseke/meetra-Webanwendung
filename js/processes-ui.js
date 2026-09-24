@@ -1151,8 +1151,16 @@
             return n === null ? '' : n.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         };
 
+        // Ein Vorgang kann mehrere Angebote tragen (Zusammenführen in js/addressbook.js):
+        // je Angebot ein Block. angeboteByProcess hält den frischesten Stand des einzelnen.
         window.renderProcessAngebotBlock = function (proc, modus) {
-            const a = window.angeboteByProcess && window.angeboteByProcess[String(proc.id)];
+            const frisch = window.angeboteByProcess && window.angeboteByProcess[String(proc.id)];
+            const liste = ((window.angeboteListeByProcess && window.angeboteListeByProcess[String(proc.id)]) || []).slice();
+            if (frisch) { const i = liste.findIndex(x => String(x.id) === String(frisch.id)); if (i === -1) liste.push(frisch); else liste[i] = frisch; }
+            if (liste.length > 1) return liste.map(x => renderEinAngebotBlock(proc, modus, x)).join('');
+            return renderEinAngebotBlock(proc, modus, liste[0] || null);
+        };
+        function renderEinAngebotBlock(proc, modus, a) {
             if (!a) {
                 if (modus !== 'modal') return '';
                 // Noch kein Angebot am Vorgang: eines aus der Angebotsliste suchen
@@ -1206,7 +1214,7 @@
                         ${spanne !== null ? feld('Spanne', `<div style="height:32px; display:flex; align-items:center; justify-content:flex-end; font-weight:800; font-size:0.9rem; color:${spannePct !== null && spannePct < 10 ? '#F87171' : '#22c55e'};">${angZahl(spanne)} €${spannePct !== null ? ` <span style="font-size:0.72rem; margin-left:5px; opacity:0.8;">${spannePct.toLocaleString('de-DE', { maximumFractionDigits: 1 })} %</span>` : ''}</div>`) : ''}
                     </div>
                 </div>`;
-        };
+        }
 
         // Vom Vorgang zum Angebot: Fenster zu, Angebotsliste auf, nach der
         // Belegnummer gefiltert (navigateToAngebot in js/listen.js).
@@ -1382,6 +1390,8 @@
             window.angeboteByProcess = window.angeboteByProcess || {};
             window.angeboteByProcess[String(processId)] = data;
             if (quelle) delete window.angeboteByProcess[String(quelle.id)];
+            window.angeboteListeByProcess = window.angeboteListeByProcess || {};
+            { const l = window.angeboteListeByProcess[String(processId)] = window.angeboteListeByProcess[String(processId)] || []; if (!l.some(x => String(x.id) === String(data.id))) l.push(data); if (quelle) delete window.angeboteListeByProcess[String(quelle.id)]; }
             const titel = document.getElementById('edit-process-title-input');
             if (titel) titel.value = titelNeu;
             const boxA = document.getElementById('edit-process-angebot-block');
@@ -1574,7 +1584,7 @@
                     <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap;">
                         <input type="datetime-local" value="${window.isoToLocalInput(u.at)}" onchange="window.updateProcessStatusUpdateDate(${i}, this.value)" onclick="try{this.showPicker()}catch(e){}" title="Zeitpunkt ändern — klicken zum Ändern" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; color-scheme:dark; border-radius:8px; padding:4px 8px; font-size:0.78rem; cursor:pointer;">
                         <span style="font-size:0.75rem; color:rgba(255,255,255,0.5);">${esc(u.by || 'Unbekannt')}</span>
-                        <button type="button" class="delete-permission-required" onclick="window.deleteProcessStatusUpdate(${i})" title="Eintrag löschen" style="margin-left:auto; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:8px; width:26px; height:26px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
+                        <button type="button" class="delete-permission-required" data-del-area="stand" onclick="window.deleteProcessStatusUpdate(${i})" title="Eintrag löschen" style="margin-left:auto; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:8px; width:26px; height:26px; cursor:pointer; display:inline-flex; align-items:center; justify-content:center;">
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>
                         </button>
                     </div>
@@ -1903,7 +1913,7 @@
                 </div>
                 <input type="datetime-local" id="proc-remind-pop-input" value="${start}" style="width:100%; box-sizing:border-box; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.18); color:#fff; color-scheme:dark; border-radius:10px; padding:9px 10px; font-size:0.9rem;">
                 <div style="display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:12px;">
-                    ${gesetzt ? `<button type="button" id="proc-remind-pop-del" class="delete-permission-required" title="Erinnerung löschen" style="width:38px; height:38px; display:inline-flex; align-items:center; justify-content:center; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.4); color:#f87171; border-radius:10px; cursor:pointer; padding:0;">
+                    ${gesetzt ? `<button type="button" id="proc-remind-pop-del" class="delete-permission-required" data-del-area="erinnerungen" title="Erinnerung löschen" style="width:38px; height:38px; display:inline-flex; align-items:center; justify-content:center; background:rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.4); color:#f87171; border-radius:10px; cursor:pointer; padding:0;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path></svg>
                     </button>` : '<span></span>'}
                     <button type="button" id="proc-remind-pop-ok" title="Speichern" style="width:38px; height:38px; display:inline-flex; align-items:center; justify-content:center; background:rgba(251,191,36,0.2); border:1px solid rgba(251,191,36,0.6); color:#fde68a; border-radius:10px; cursor:pointer; padding:0;">

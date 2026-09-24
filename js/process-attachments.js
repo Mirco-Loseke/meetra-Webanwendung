@@ -186,7 +186,7 @@
                 '<span class="proc-att-ic">' + symbol(f.type, f.name) + '</span>' +
                 '<a class="proc-att-name" href="' + esc(f.url) + '" target="_blank" rel="noopener" title="Öffnen">' + esc(f.name) + '</a>' +
                 '<span class="proc-att-meta">' + esc(groesse(f.size)) + (wann ? ' · ' + esc(wann) : '') + (f.by ? ' · ' + esc(f.by) : '') + '</span>' +
-                '<button type="button" class="proc-att-del delete-permission-required" title="Löschen" ' +
+                '<button type="button" class="proc-att-del delete-permission-required" data-del-area="dokumente" title="Löschen" ' +
                     'onclick="window.deleteProcessAttachment(\'' + esc(f.id) + '\')">&times;</button>' +
             '</div>';
         }).join('');
