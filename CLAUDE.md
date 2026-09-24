@@ -71,6 +71,8 @@ Reihenfolge der ausgelagerten Module:
 | Mail: Ansicht Posteingang / Outlook-Kontakte / Schreiben | `js/mail-view.js`, `partials/views/mail.html`, `css/views/mail.css` |
 | Mail: Einstellungen → Outlook (Anwendungs-ID, Anmelden) | `js/outlook-settings.js`, `partials/settings/outlook.html` |
 | Einstellungen → Datenschutz (Verarbeitungsverzeichnis, Dienstleister) | `partials/settings/datenschutz.html`, `css/views/datenschutz.css` |
+| Einstellungen: Übersicht (Gruppen, Suche) + einheitlicher Kopf aller Unterseiten + Mietvorlagen-Liste/-Editor | `partials/settings/settings.html`, `css/views/einstellungen.css`, `js/einstellungen.js` |
+| Benutzer bearbeiten (Reiter, Schalter, „Rechte übernehmen von") | `partials/modals/user-edit-modal.html`, `css/views/user-edit.css`, `js/users.js` |
 
 ## Zuerst hier nachschlagen (spart das Durchsuchen)
 - **`FUNKTIONEN.txt`** — Nachschlagewerk mit 1.500+ Funktionen: `name → datei:zeile`.
@@ -274,7 +276,7 @@ formfüllenden Feldern zusätzlich `.menu-block`. Ausgewählter Eintrag: `.selec
 einem Inline-`style` suchen.
 
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v620 (Stand 2026-09-23) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v640 (Stand 2026-09-24) — bei jeder Änderung hochzählen.
 
 **Mietvereinbarung (Stand 2026-08-25).** Der Bogen wird gespeichert: PDF per
 html2canvas je `.miet-page` + jsPDF, Ablage in R2 unter
@@ -425,6 +427,7 @@ Schriften laufen als Style-Attributor mit Kurznamen (`calibri`, `arial` …); `t
 übersetzt sie beim Versand in echte Schriftstapel. Anhänge: ≤3 MB als `fileAttachment`,
 größer per Upload-Session; mit Anhang wird immer Entwurf → Anhänge → `/send` gefahren.
 Signatur je Browser in `localStorage['outlook_signatur']` (Einstellungen → Outlook).
+**Freigabe vor dem Senden (2026-09-24):** beide Mail-KI-Knöpfe rufen `fetchMaskiert(payload, extra, { pruefen: true })` → Fenster „Das geht an die KI" (`freigabeFragen` in `ki-pseudonym.js`): Original mit rot unterstrichenen Ersetzungen (`maskierenMarkiert`), orange = Verdacht aus `pruefen()`, Umschalter auf den Sendetext; Abbrechen wirft `err.abgebrochen`.
 **KI in der Mail-Ansicht (2026-09-22):** „✨ Vorgang aus Mail" →
 `window.openAiCaptureFromMail(mail)` (`ai-quick-capture.js`, Bereich `vorgaenge`,
 `mailKontext`): Mail-Prompt-Baustein, jede Vorgangskarte bekommt Von/An, Kunde

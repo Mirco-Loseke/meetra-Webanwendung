@@ -101,11 +101,17 @@
         setz('z-index', '100000');
 
         const t0 = trigger.getBoundingClientRect();
-        menu.style.removeProperty('max-height');
-        const hoehe = Math.min(menu.offsetHeight || 250, 260);
         const platzUnten = window.innerHeight - t0.bottom - LUFT - RAND;
         const platzOben = t0.top - LUFT - RAND;
-        const nachOben = platzUnten < hoehe && platzOben > platzUnten;
+        // Richtung nur beim Aufklappen festlegen — beim Nachführen (Rollen)
+        // neu zu entscheiden ließ das Menü zwischen oben und unten springen.
+        let nachOben = menu.dataset.richtung === 'oben';
+        if (!menu.dataset.richtung) {
+            menu.style.removeProperty('max-height');
+            const hoehe = Math.min(menu.offsetHeight || 250, 260);
+            nachOben = platzUnten < hoehe && platzOben > platzUnten;
+            menu.dataset.richtung = nachOben ? 'oben' : 'unten';
+        }
         setz('max-height', Math.min(260, Math.max(140, nachOben ? platzOben : platzUnten)) + 'px');
         setz('overflow-y', 'auto');
 
@@ -128,6 +134,7 @@
         ['position', 'left', 'top', 'right', 'bottom', 'width', 'min-width',
             'margin', 'max-height', 'overflow-y', 'z-index']
             .forEach(p => menu.style.removeProperty(p));
+        delete menu.dataset.richtung;
     }
 
     function setupFilterDropdowns() {
@@ -165,10 +172,12 @@
         });
 
         // Offene Menüs beim Rollen/Größenändern mitführen (capture: auch im Modal).
-        const nachfuehren = () => {
+        const nachfuehren = (e) => {
             Object.keys(triggers).forEach(id => {
                 const trigger = document.getElementById(id);
                 const menu = document.getElementById(triggers[id]);
+                // Rollen IN der Liste verschiebt den Auslöser nicht.
+                if (e && e.target && e.target.nodeType === 1 && menu && menu.contains(e.target)) return;
                 if (trigger && menu && menu.style.display === 'block') menuFreistellen(trigger, menu);
             });
         };
@@ -193,6 +202,7 @@
             if (error) throw error;
             allTasks = data || [];
             allTasks.forEach(subtasksSortieren);
+            cinemaHiddenAbgleichen();
 
             // Fetch protocol metadata for machines in current tasks
             const machineIds = [...new Set(allTasks.map(t => t.machine_id).filter(Boolean))];
@@ -2271,10 +2281,31 @@
     // ==========================================
     // Auge oben rechts auf der Karte. Durchgestrichenes Auge = die Karte
     // läuft im Kino-Modus nicht mit, überall sonst bleibt sie sichtbar.
-    // Bewusst gerätebezogen (localStorage, wie cinemaColumns und
-    // cinemaShowWorkshop): der Kino-Modus ist die Fernseher-Darstellung in
-    // der Werkstatt, was dort durchläuft, geht andere Geräte nichts an.
+    // Gespeichert an der Aufgabe (tasks.cinema_hidden), damit jedes Gerät —
+    // vor allem der Fernseher — sieht, was ausgeblendet ist; Realtime
+    // (applyTaskRealtime) zeichnet die Karte überall neu. Fehlt die Spalte
+    // (Migration supabase_add_task_cinema_hidden.sql), bleibt es wie früher
+    // gerätebezogen im localStorage.
     const CINEMA_HIDDEN_KEY = 'cinemaHiddenTasks';
+    let cinemaSpalte = null;   // null = unbekannt, true/false nach dem Laden
+
+    function taskZuId(id) { return allTasks.find(t => String(t.id) === String(id)); }
+
+    // Nach dem Laden: Spalte vorhanden? Dann alte Gerätewerte einmalig übernehmen.
+    async function cinemaHiddenAbgleichen() {
+        if (!allTasks.length) return;
+        cinemaSpalte = 'cinema_hidden' in allTasks[0];
+        if (!cinemaSpalte || !cinemaHidden.size) return;
+        const ids = Array.from(cinemaHidden).filter(id => { const t = taskZuId(id); return t && !t.cinema_hidden; });
+        if (ids.length) {
+            const { error } = await window.supabaseClient.from('tasks').update({ cinema_hidden: true }).in('id', ids);
+            if (error) { console.warn('Kino-Ausblendung nicht übernommen:', error.message); return; }
+            ids.forEach(id => { const t = taskZuId(id); if (t) t.cinema_hidden = true; });
+            renderTasks();
+        }
+        cinemaHidden.clear();
+        try { localStorage.removeItem(CINEMA_HIDDEN_KEY); } catch (e) { }
+    }
 
     function readCinemaHidden() {
         try {
@@ -2289,6 +2320,7 @@
     let cinemaHidden = readCinemaHidden();
 
     window.isTaskCinemaHidden = function (id) {
+        if (cinemaSpalte) { const t = taskZuId(id); return !!(t && t.cinema_hidden); }
         return cinemaHidden.has(String(id));
     };
 
@@ -2305,24 +2337,39 @@
                 </button>`;
     };
 
-    window.toggleTaskCinemaHidden = function (id) {
-        const key = String(id);
-        if (cinemaHidden.has(key)) cinemaHidden.delete(key);
-        else cinemaHidden.add(key);
-
-        try { localStorage.setItem(CINEMA_HIDDEN_KEY, JSON.stringify(Array.from(cinemaHidden))); } catch (e) { }
-
-        // Nur die eine Karte anfassen — ein Neuaufbau des Boards würde im
-        // laufenden Kino-Modus mitten im Scrollen springen.
+    // Nur die eine Karte anfassen — ein Neuaufbau des Boards würde im
+    // laufenden Kino-Modus mitten im Scrollen springen.
+    function cinemaKarteAktualisieren(key) {
         const card = document.getElementById('task-' + key);
-        if (card) {
-            card.classList.toggle('cinema-hidden', cinemaHidden.has(key));
-            const btn = document.getElementById('cinema-hide-' + key);
-            if (btn) btn.outerHTML = window.cinemaHideButtonHtml(key);
+        if (!card) return;
+        card.classList.toggle('cinema-hidden', window.isTaskCinemaHidden(key));
+        const btn = document.getElementById('cinema-hide-' + key);
+        if (btn) btn.outerHTML = window.cinemaHideButtonHtml(key);
+    }
+
+    window.toggleTaskCinemaHidden = async function (id) {
+        const key = String(id);
+        const neu = !window.isTaskCinemaHidden(key);
+        const t = taskZuId(key);
+
+        if (cinemaSpalte && t) {
+            t.cinema_hidden = neu;
+            cinemaKarteAktualisieren(key);
+            const { error } = await window.supabaseClient.from('tasks').update({ cinema_hidden: neu }).eq('id', t.id);
+            if (error) {
+                t.cinema_hidden = !neu;
+                cinemaKarteAktualisieren(key);
+                if (typeof window.showToast === 'function') window.showToast('Ausblenden nicht gespeichert: ' + error.message, 'error');
+                return;
+            }
+        } else {
+            if (neu) cinemaHidden.add(key); else cinemaHidden.delete(key);
+            try { localStorage.setItem(CINEMA_HIDDEN_KEY, JSON.stringify(Array.from(cinemaHidden))); } catch (e) { }
+            cinemaKarteAktualisieren(key);
         }
 
         if (typeof window.showToast === 'function') {
-            window.showToast(cinemaHidden.has(key)
+            window.showToast(neu
                 ? 'Aufgabe läuft im Kino-Modus nicht mehr mit.'
                 : 'Aufgabe läuft im Kino-Modus wieder mit.');
         }

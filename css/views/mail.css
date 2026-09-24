@@ -463,3 +463,37 @@ body.mv-vollbild #mv-vollbild { background: #1e3a8a; border-color: var(--mv-akze
 .mv-mail-aktionen .mv-ki-btn { border-color: rgba(167,139,250,0.5); color: #c4b5fd; }
 .mv-mail-aktionen .mv-ki-btn:hover { background: rgba(167,139,250,0.14); color: #fff; }
 .mv-mail-aktionen .mv-ki-btn:disabled { opacity: 0.6; cursor: wait; }
+
+/* ---- Anhang aus der App (js/mail-anhang-app.js) — Mailprogramm-Optik, kein Glas ---- */
+.maa-backdrop { position: fixed; inset: 0; z-index: 100002; display: flex; align-items: center; justify-content: center; padding: var(--space-4); background: rgba(2, 6, 23, 0.7); }
+.maa-box { width: min(860px, 100%); height: min(80vh, 760px); display: flex; flex-direction: column; background: #0f172a; border: 1px solid var(--glass-border); border-radius: var(--radius-md); box-shadow: var(--shadow-3); overflow: hidden; }
+.maa-kopf { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--glass-border); }
+.maa-kopf h3 { margin: 0; font-size: var(--fs-md); }
+.maa-x { background: none; border: none; color: var(--text-2); font-size: 22px; line-height: 1; cursor: pointer; padding: 4px 8px; border-radius: var(--radius-sm); }
+.maa-x:hover { background: rgba(255, 255, 255, 0.08); color: var(--text-1); }
+.maa-leiste { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--glass-border); }
+.maa-tabs { display: flex; gap: 2px; background: rgba(255, 255, 255, 0.05); border-radius: var(--radius-sm); padding: 3px; }
+.maa-tab { border: none; background: transparent; color: var(--text-2); font: inherit; font-size: var(--fs-sm); font-weight: var(--fw-semibold); padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+.maa-tab em { font-style: normal; font-size: var(--fs-2xs); opacity: 0.7; margin-left: 4px; }
+.maa-tab.aktiv { background: #1e293b; color: var(--text-1); }
+#maa-suche { flex: 1 1 260px; min-width: 0; height: 36px; padding: 0 12px; border-radius: var(--radius-sm); border: 1px solid var(--glass-border); background: #1e293b; color: var(--text-1); font: inherit; font-size: var(--fs-sm); }
+.maa-nur { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); color: var(--text-2); cursor: pointer; white-space: nowrap; }
+.maa-liste { flex: 1; overflow-y: auto; padding: var(--space-2); }
+.maa-zeile { display: flex; align-items: center; gap: var(--space-3); padding: 9px var(--space-3); border-radius: var(--radius-sm); cursor: pointer; border: 1px solid transparent; }
+.maa-zeile:hover { background: rgba(255, 255, 255, 0.04); }
+.maa-zeile.an { background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.35); }
+.maa-zeile input { width: 16px; height: 16px; accent-color: #3b82f6; flex: 0 0 auto; }
+.maa-ico { flex: 0 0 auto; width: 42px; text-align: center; font-size: 10px; font-weight: 800; letter-spacing: 0.5px; padding: 6px 0; border-radius: 4px; background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+.maa-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-sm); }
+.maa-text b { font-weight: var(--fw-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.maa-text small { color: var(--text-3); font-size: var(--fs-xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.maa-chip { font-style: normal; font-size: var(--fs-2xs); padding: 1px 8px; border-radius: 99px; background: rgba(16, 185, 129, 0.15); color: #6ee7b7; margin-left: 6px; }
+.maa-gr { flex: 0 0 auto; color: var(--text-3); font-size: var(--fs-xs); }
+.maa-mehr { padding: var(--space-4); text-align: center; color: var(--text-3); font-size: var(--fs-sm); }
+.maa-fuss { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--glass-border); }
+.maa-fuss #maa-info { flex: 1; }
+@media (max-width: 768px) {
+    .maa-backdrop { padding: 0; }
+    .maa-box { height: 100%; border-radius: 0; }
+    .maa-gr { display: none; }
+}

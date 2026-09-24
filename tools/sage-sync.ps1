@@ -332,21 +332,30 @@ FROM dbo.KHKArchivVKBelege x WHERE x.Belegart = 'Angebot' AND x.Belegdatum >= '$
 "@
     # Dieselbe Belegnummer kann in Belegen UND Archiv stehen -> nur einmal nehmen.
     # Entwuerfe haben kurze Nummern (z. B. 241); verschickte Angebote 5-stellig (30018).
+    # Eindeutig ist Nummer + Jahr: Sage vergibt die Angebotsnummern jedes Jahr neu
+    # (Migration supabase_angebote_belegjahr.sql, Spalte angebote.belegjahr).
+    function AngSchluessel($nr, $datum) {
+        $j = '0'
+        if ($datum -is [DateTime]) { $j = $datum.ToString('yyyy') }
+        elseif ($datum) { $j = ([string]$datum).Substring(0, 4) }
+        return "$nr|$j"
+    }
     $gesehen = @{}; $entwuerfe = 0
     $sage = @(SageFrage $sqlAng | Where-Object {
         $n = Text $_.Nr
-        if (-not $n -or $gesehen.ContainsKey($n)) { $false }
+        $k = AngSchluessel $n $_.Belegdatum
+        if (-not $n -or $gesehen.ContainsKey($k)) { $false }
         elseif ($n -notmatch '^\d{5,}$') { $entwuerfe++; $false }
-        else { $gesehen[$n] = $true; $true }
+        else { $gesehen[$k] = $true; $true }
     })
     if ($entwuerfe -gt 0) { Sag ("  {0} Entwuerfe (ohne endgueltige Nummer) uebersprungen" -f $entwuerfe) }
     Sag ("  Sage: {0} Angebote ab {1} (inkl. Archiv, ohne Doppelte)" -f $sage.Count, $AngeboteAb)
 
     $vorhanden = SupaHolen 'angebote?select=id,belegnummer,belegdatum,kundenmatchcode,nettobetrag,bruttobetrag,customer_id'
     $nachNr = @{}
-    foreach ($a in $vorhanden) { $nachNr[[string]$a.belegnummer] = $a }
+    foreach ($a in $vorhanden) { $nachNr[(AngSchluessel ([string]$a.belegnummer) $a.belegdatum)] = $a }
 
-    $wieder = @($sage | Where-Object { $nachNr.ContainsKey([string]$_.Nr) }).Count
+    $wieder = @($sage | Where-Object { $nachNr.ContainsKey((AngSchluessel (Text $_.Nr) $_.Belegdatum)) }).Count
     Sag ("  Supabase: {0} Angebote - davon {1} per Belegnummer wiedererkannt" -f $vorhanden.Count, $wieder)
     if ($vorhanden.Count -gt 0 -and $wieder -lt ($vorhanden.Count * 0.5)) {
         Sag "  ACHTUNG: wenig Uebereinstimmung - Format der Belegnummer pruefen, sonst entstehen Doppelte!" 'Red'
@@ -356,15 +365,8 @@ FROM dbo.KHKArchivVKBelege x WHERE x.Belegart = 'Angebot' AND x.Belegdatum >= '$
     foreach ($r in $sage) {
         $nr = Text $r.Nr
         if (-not $nr) { continue }
-        $alt = $nachNr[[string]$nr]
-        # Sage vergibt die Angebotsnummern jedes Jahr neu (30041 gab es 2024,
-        # 2025 und 2026). Gleiche Nummer aus einem ANDEREN Jahr ist ein anderes
-        # Angebot - nicht ueberschreiben, sondern melden.
-        if ($alt -and $alt.belegdatum -and $r.Belegdatum -is [DateTime] -and
-            ([string]$alt.belegdatum).Substring(0, 4) -ne $r.Belegdatum.ToString('yyyy')) {
-            $jahrKonflikt += ("{0}  Sage {1} / Webapp {2}" -f $nr, $r.Belegdatum.ToString('dd.MM.yyyy'), $alt.belegdatum)
-            continue
-        }
+        # Gleiche Nummer aus einem anderen Jahr ist ein anderes Angebot -> eigener Schluessel.
+        $alt = $nachNr[(AngSchluessel $nr $r.Belegdatum)]
 
         # Handzuordnung in der App hat Vorrang - nur leere Verknuepfungen fuellen.
         $kid = $null
@@ -554,10 +556,16 @@ if (($Nur -eq 'alles' -or $Nur -eq 'pdf') -and $AngebotePdfOrdner) {
         foreach ($d in $dateien) {
             $nummern = @([regex]::Matches($d.BaseName, '(?<!\d)\d{5}(?!\d)') | ForEach-Object { $_.Value } | Select-Object -Unique)
             $kandidaten = @($nummern | ForEach-Object { $nachNr[$_] } | Where-Object { $_ })
-            # Gleiche Nummer aus mehreren Jahren: das Jahr der Datei entscheidet.
+            # Gleiche Nummer aus mehreren Jahren: Jahr im Dateinamen ("Angebot 2027-30041"),
+            # sonst Aenderungsjahr der Datei, sonst das neueste Angebot.
             if ($kandidaten.Count -gt 1) {
-                $jahr = $d.LastWriteTime.ToString('yyyy')
-                $kandidaten = @($kandidaten | Where-Object { "$($_.belegdatum)".StartsWith($jahr) })
+                $mJahr = [regex]::Match($d.BaseName, '(?<!\d)20\d\d(?!\d)')
+                $jahr = if ($mJahr.Success) { $mJahr.Value } else { $d.LastWriteTime.ToString('yyyy') }
+                $imJahr = @($kandidaten | Where-Object { "$($_.belegdatum)".StartsWith($jahr) })
+                if ($imJahr.Count -ge 1) { $kandidaten = $imJahr }
+                if (@($kandidaten | ForEach-Object { [string]$_.belegnummer } | Select-Object -Unique).Count -eq 1) {
+                    $kandidaten = @($kandidaten | Sort-Object { "$($_.belegdatum)" } -Descending | Select-Object -First 1)
+                }
             }
             if ($kandidaten.Count -ne 1) {
                 $grund = if ($kandidaten.Count -eq 0) { 'kein passendes Angebot' } else { 'mehrere Angebote passen' }
@@ -577,7 +585,11 @@ if (($Nur -eq 'alles' -or $Nur -eq 'pdf') -and $AngebotePdfOrdner) {
             if ($r.status -eq 'hochladen') {
                 Invoke-WebRequest -UseBasicParsing -Method Put -Uri $r.uploadUrl -InFile $d.FullName -ContentType 'application/pdf' | Out-Null
                 $f = Api (@{ aktion = 'pdf_fertig'; key = $r.key } + $info)
-                Sag ("     ANGEHAENGT: {0} -> Angebot {1}" -f $d.Name, $f.belegnummer) 'Green'
+                if ($f.status -eq 'ersetzt') {
+                    Sag ("     ERSETZT:    {0} -> Angebot {1} (alte Fassung geloescht)" -f $d.Name, $f.belegnummer) 'Green'
+                } else {
+                    Sag ("     ANGEHAENGT: {0} -> Angebot {1}" -f $d.Name, $f.belegnummer) 'Green'
+                }
             } elseif ($r.status -eq 'vorhanden') {
                 Sag ("     SCHON DA:   {0} -> Angebot {1} (nicht erneut hochgeladen)" -f $d.Name, $r.belegnummer)
             } else {

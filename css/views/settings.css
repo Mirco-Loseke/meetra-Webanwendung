@@ -280,7 +280,7 @@
 
 @media (max-width: 992px) {
     .categories-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr); /* 1fr allein wächst auf die Mindestbreite des Inhalts — auf dem Handy 17px zu breit */
     }
 }
 

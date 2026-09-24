@@ -3067,14 +3067,18 @@
             window.computeRolledNextMaintenance = function (lastDateStr, intervalMonths, referenceDate) {
                 const parts = String(lastDateStr).split('-');
                 const next = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
-                const months = parseInt(intervalMonths, 10) || 12;
+                // Negatives/kaputtes Intervall oder Datum hätte die Schleife unten
+                // endlos laufen lassen („Seite reagiert nicht" beim Start).
+                let months = parseInt(intervalMonths, 10);
+                if (!(months > 0)) months = 12;
                 next.setMonth(next.getMonth() + months);
 
                 const GRACE_MONTHS = 3;
                 const now = referenceDate || new Date();
                 let graceLimit = new Date(next);
                 graceLimit.setMonth(graceLimit.getMonth() + GRACE_MONTHS);
-                while (graceLimit < now) {
+                let notbremse = 0;
+                while (graceLimit < now && notbremse++ < 1200) {
                     next.setMonth(next.getMonth() + months);
                     graceLimit = new Date(next);
                     graceLimit.setMonth(graceLimit.getMonth() + GRACE_MONTHS);

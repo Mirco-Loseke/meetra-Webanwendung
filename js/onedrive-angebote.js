@@ -57,16 +57,25 @@
         const kandidaten = new Set();
         (t.match(/\d{4,}/g) || []).forEach(z => kandidaten.add(norm(z)));
         (t.match(/\d+(?:[-\/. ]\d+)+/g) || []).forEach(z => kandidaten.add(norm(z)));
-        kandidaten.forEach(k => { const a = index.get(k); if (a) gefunden.set(a.id, a); });
-        return Array.from(gefunden.values());
+        kandidaten.forEach(k => { (index.get(k) || []).forEach(a => gefunden.set(a.id, a)); });
+        let liste = Array.from(gefunden.values());
+        // Sage vergibt Angebotsnummern jedes Jahr neu: gleiche Nummer aus mehreren
+        // Jahren → das Jahr im Text entscheidet („Angebot 2027-30041"), sonst das neueste.
+        if (liste.length > 1 && new Set(liste.map(a => norm(a.belegnummer))).size === 1) {
+            const jahre = (t.match(/\b20\d\d\b/g) || []);
+            const imJahr = liste.filter(a => a.belegdatum && jahre.includes(String(a.belegdatum).slice(0, 4)));
+            liste = imJahr.length === 1 ? imJahr
+                : [liste.slice().sort((a, b) => String(b.belegdatum || '').localeCompare(String(a.belegdatum || '')))[0]];
+        }
+        return liste;
     }
 
     async function angeboteIndex() {
         const { data, error } = await window.supabaseClient
-            .from('angebote').select('id, belegnummer, process_id');
+            .from('angebote').select('id, belegnummer, belegdatum, process_id');
         if (error) throw error;
-        const idx = new Map();
-        (data || []).forEach(a => { const n = norm(a.belegnummer); if (n.length >= 4) idx.set(n, a); });
+        const idx = new Map();   // Nummer → Angebote (mehrere Jahre möglich)
+        (data || []).forEach(a => { const n = norm(a.belegnummer); if (n.length >= 4) { if (!idx.has(n)) idx.set(n, []); idx.get(n).push(a); } });
         return idx;
     }
 

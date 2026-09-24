@@ -18,14 +18,15 @@
 # ==========================================================
 param(
     [string]$Ziel  = 'C:\meetra-sync',
-    [string]$Konto = "$env:USERDOMAIN\$env:USERNAME"
+    [string]$Konto = "$env:USERDOMAIN\$env:USERNAME",
+    [switch]$MitWaechter   # zusaetzlich: Ordner-Waechter fuer Angebots-PDFs (sofort statt alle 30 min)
 )
 $ErrorActionPreference = 'Stop'
 $quelle = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 Write-Host "`n1) Ordner $Ziel" -ForegroundColor Cyan
 New-Item -ItemType Directory -Force $Ziel | Out-Null
-foreach ($f in 'sage-sync.ps1', 'sage-sync.config.ps1') {
+foreach ($f in @('sage-sync.ps1', 'sage-sync.config.ps1') + $(if ($MitWaechter) { 'sage-pdf-waechter.ps1' } else { @() })) {
     if (-not (Test-Path (Join-Path $quelle $f))) { throw "Fehlt neben diesem Skript: $f" }
     if ((Resolve-Path $quelle).Path -ne (Resolve-Path $Ziel).Path) { Copy-Item (Join-Path $quelle $f) $Ziel -Force }
 }
@@ -53,3 +54,17 @@ Register-ScheduledTask -TaskName 'meetra Sage-Abgleich' -Action $aktion -Trigger
 Write-Host "   angelegt - Mo-Fr 07:30 bis 17:00 alle 30 Minuten." -ForegroundColor Green
 Get-ScheduledTask -TaskName 'meetra Sage-Abgleich' | Get-ScheduledTaskInfo | ForEach-Object { Write-Host "   naechster Lauf: $($_.NextRunTime)" -ForegroundColor Green }
 Write-Host "   Protokoll: $Ziel\sage-sync.log`n"
+
+if ($MitWaechter) {
+    Write-Host "`n5) Ordner-Waechter fuer Angebots-PDFs (laeuft dauerhaft, startet mit dem Server)" -ForegroundColor Cyan
+    $wAktion = New-ScheduledTaskAction -Execute 'powershell.exe' -WorkingDirectory $Ziel `
+        -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$Ziel\sage-pdf-waechter.ps1`""
+    $wStart = New-ScheduledTaskTrigger -AtStartup
+    $wOpt = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit ([TimeSpan]::Zero) `
+        -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 5)
+    Register-ScheduledTask -TaskName 'meetra PDF-Waechter' -Action $wAktion -Trigger $wStart -Settings $wOpt `
+        -User $cred.UserName -Password $cred.GetNetworkCredential().Password -RunLevel Limited -Force | Out-Null
+    Stop-ScheduledTask -TaskName 'meetra PDF-Waechter' -ErrorAction SilentlyContinue
+    Start-ScheduledTask -TaskName 'meetra PDF-Waechter'
+    Write-Host "   laeuft - neue PDFs werden nach etwa 10 Sekunden zugeordnet." -ForegroundColor Green
+}

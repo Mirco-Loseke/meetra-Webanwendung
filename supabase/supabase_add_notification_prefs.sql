@@ -13,7 +13,7 @@
 -- ===========================================================================
 
 CREATE TABLE IF NOT EXISTS public.notification_preferences (
-    user_id    uuid PRIMARY KEY,
+    user_id    text PRIMARY KEY,   -- public.users.id ist eine Zahl; uuid war falsch (Fix: supabase_fix_notification_prefs_user_id.sql)
     prefs      jsonb NOT NULL DEFAULT '{}'::jsonb,
     updated_at timestamptz NOT NULL DEFAULT now()
 );

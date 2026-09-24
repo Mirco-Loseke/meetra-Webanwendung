@@ -144,7 +144,7 @@
     <link rel="stylesheet" href="css/base/reset.css?v=2">
     <link rel="stylesheet" href="css/base/brand-accents.css?v=1">
     <link rel="stylesheet" href="css/components/navigation.css?v=1">
-    <link rel="stylesheet" href="css/components/modals.css?v=9">
+    <link rel="stylesheet" href="css/components/modals.css?v=11">
     <link rel="stylesheet" href="css/components/process-attachments.css?v=1">
     <link rel="stylesheet" href="css/components/buttons.css?v=2">
     <link rel="stylesheet" href="css/components/forms.css?v=6">
@@ -160,12 +160,13 @@
     <link rel="stylesheet" href="css/components/sprachwahl.css?v=1">
     <link rel="stylesheet" href="css/views/documents.css?v=2">
     <link rel="stylesheet" href="css/views/protocols.css?v=2">
-    <link rel="stylesheet" href="css/views/tasks.css?v=5">
+    <link rel="stylesheet" href="css/views/tasks.css?v=6">
     <link rel="stylesheet" href="css/views/service-reports.css?v=4">
     <link rel="stylesheet" href="css/views/machines.css?v=1">
     <link rel="stylesheet" href="css/views/timeline.css?v=45">
     <link rel="stylesheet" href="css/views/procurement.css?v=1">
-    <link rel="stylesheet" href="css/views/settings.css?v=6">
+    <link rel="stylesheet" href="css/views/settings.css?v=7">
+    <link rel="stylesheet" href="css/views/user-edit.css?v=1">
     <link rel="stylesheet" href="css/views/accounting.css?v=1">
     <link rel="stylesheet" href="css/views/workshop.css?v=1">
     <link rel="stylesheet" href="css/views/workshop-tasks.css?v=4">
@@ -177,9 +178,9 @@
     <link rel="stylesheet" href="css/views/routenplanung.css?v=5">
     <!-- Quill-Editor (Mail schreiben, Signatur) — vor mail.css, damit dessen Umfärbung gewinnt -->
     <link rel="stylesheet" href="lib/quill.snow.css?v=1">
-    <link rel="stylesheet" href="css/views/mail.css?v=15">
+    <link rel="stylesheet" href="css/views/mail.css?v=17">
     <link rel="stylesheet" href="css/views/datenschutz.css?v=1">
-    <link rel="stylesheet" href="css/base/responsive.css?v=19">
+    <link rel="stylesheet" href="css/base/responsive.css?v=22">
 
     <!-- ========================================================= -->
     <!-- ============ EINBINDUNG DER HTML-BAUSTEINE ============== -->
@@ -297,6 +298,7 @@
     <link rel="stylesheet" href="css/components/dropdown-look.css?v=5">
     <!-- MIETVEREINBARUNG (1/3) — eigenstaendig, diese Zeile loeschen = weg -->
     <link rel="stylesheet" href="css/views/mietvereinbarung.css?v=31">
+    <link rel="stylesheet" href="css/views/einstellungen.css?v=15">
 
     <!-- @partial:modals/pin-prompt-modal.html -->
         <!-- PIN Prompt Modal -->
@@ -321,105 +323,153 @@
         </div>
     <!-- /@partial:modals/pin-prompt-modal.html -->
     <!-- @partial:modals/user-edit-modal.html -->
-        <!-- Edit User Modal -->
-        <div id="user-edit-modal"
-            style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999999; backdrop-filter: blur(10px); flex-direction: column; align-items: center; justify-content: center;">
-            <div class="glass-card" style="padding: 2.5rem; max-width: 500px; width: 90%; position: relative; max-height: 90vh; overflow-y: auto; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px); border: 1px solid var(--glass-border); border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
-                <button onclick="closeEditUserModal()"
-                    style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; color: white; cursor: pointer;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </button>
-                <h2 style="margin-bottom: 1.5rem;">Benutzer bearbeiten</h2>
+        <!-- Edit User Modal — Aufbau: Kopf (Avatar, Name, Zusammenfassung) · Reiter links ·
+             Inhalt rechts (scrollt) · Fußleiste. Stile: css/views/user-edit.css, Logik: js/users.js.
+             IDs edit-user-* / perm-* nicht umbenennen — saveUserEdit sammelt alle
+             input[id^=perm-] unter #edit-permissions-section. -->
+        <div id="user-edit-modal" class="ue-backdrop" style="display: none;">
+            <div class="ue-dialog" role="dialog" aria-modal="true" aria-labelledby="ue-titel">
                 <input type="hidden" id="edit-user-id">
 
-                <div class="form-group">
-                    <label>Name</label>
-                    <input type="text" id="edit-user-name" class="glass-input">
-                </div>
-
-                <div class="form-group">
-                    <label>E-Mail-Adresse (für Supabase-Login im Hintergrund)</label>
-                    <input type="email" id="edit-user-email" class="glass-input" placeholder="Z.B. name@company.de">
-                </div>
-
-                <div class="form-group">
-                    <label>PIN (Optional, 4-8 Ziffern)</label>
-                    <input type="text" id="edit-user-pin" class="glass-input" placeholder="Z.B. 1234 oder leer lassen">
-                </div>
-
-                <div class="form-group">
-                    <label style="display: block; margin-bottom: 0.5rem;">Unterschrift</label>
-                    <div id="user-signature-preview-container" style="border: 2px dashed rgba(255,255,255,0.15); border-radius: 12px; height: 120px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.25); cursor: pointer; position: relative; margin-bottom: 0.5rem;" onclick="window.openUserSignaturePad()">
-                        <span id="user-signature-placeholder" style="color: rgba(255,255,255,0.45); font-size: 0.9rem;">👉 Klicken zum Unterschreiben</span>
-                        <img id="user-signature-preview-img" class="hidden" style="max-height: 100%; max-width: 100%; object-fit: contain; padding: 10px;">
-                        <button type="button" id="btn-clear-user-signature" class="hidden" onclick="event.stopPropagation(); window.clearUserSignature()" style="position: absolute; top: 8px; right: 8px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; border-radius: 6px; padding: 2px 8px; font-size: 0.75rem; cursor: pointer; transition: all 0.2s;">Löschen</button>
+                <header class="ue-kopf">
+                    <div class="ue-avatar" id="ue-avatar">?</div>
+                    <div class="ue-kopf-text">
+                        <h2 id="ue-titel">Benutzer bearbeiten</h2>
+                        <div class="ue-kopf-sub" id="ue-kopf-sub"></div>
                     </div>
-                    <input type="hidden" id="edit-user-signature">
-                    <p style="font-size: 0.78rem; color: rgba(255,255,255,0.4); margin: 0;">Wird bei neuen Serviceberichten automatisch als Techniker-Unterschrift vorausgefüllt.</p>
-                </div>
+                    <button type="button" class="ue-x" onclick="closeEditUserModal()" title="Schließen (Esc)">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </header>
 
-                <div id="edit-permissions-section" class="form-group" style="margin-top: 1.5rem;">
-                    <label class="perm-heading">Berechtigungen</label>
+                <div class="ue-rumpf">
+                    <nav class="ue-reiter" id="ue-reiter">
+                        <button type="button" class="ue-tab aktiv" data-ue-tab="profil">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                            <span>Profil</span>
+                        </button>
+                        <button type="button" class="ue-tab ue-tab-perm" data-ue-tab="ansichten">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+                            <span>Ansichten</span><em class="ue-zahl" id="perm-count-sidebar"></em>
+                        </button>
+                        <button type="button" class="ue-tab ue-tab-perm" data-ue-tab="einstellungen">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+                            <span>Einstellungen</span><em class="ue-zahl" id="perm-count-settings"></em>
+                        </button>
+                        <button type="button" class="ue-tab ue-tab-perm ue-tab-gefahr" data-ue-tab="loeschen">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
+                            <span>Löschrechte</span><em class="ue-zahl" id="perm-count-delete"></em>
+                        </button>
 
-                    <!-- Einklappbar: die drei Blöcke sind lang geworden. <details> statt
-                         eigener JS-Logik — der Zustand ist nur fürs Auge. -->
-                    <details class="perm-group" open>
-                        <summary class="perm-group-head">
-                            <span>Hauptmenü — Ansichten</span>
-                            <span class="perm-group-count" id="perm-count-sidebar"></span>
-                        </summary>
-                        <div id="perm-sidebar-pages" class="perm-grid"></div>
-                    </details>
-
-                    <details class="perm-group" id="perm-settings-subpages-box">
-                        <summary class="perm-group-head">
-                            <span>Einstellungen — Unterseiten</span>
-                            <span class="perm-group-count" id="perm-count-settings"></span>
-                        </summary>
-                        <div class="perm-grid">
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-users"> Benutzerverwaltung</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-categories"> Kategorien</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-protocol-templates"> Protokollvorlagen</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-settings-textbausteine"> Textbausteine</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-settings-firmeneinstellungen"> Firmendaten</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-settings-import"> Import</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-settings-uvv-wartungsplaene"> UVV &amp; Wartungspläne</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-settings-ai"> KI-Konfiguration</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-settings-outlook"> Outlook-Verbindung</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-settings-datenschutz"> Datenschutz</label>
+                        <div class="ue-uebernehmen ue-tab-perm" id="ue-uebernehmen-box">
+                            <label for="ue-uebernehmen">Rechte übernehmen von</label>
+                            <select id="ue-uebernehmen" data-no-enhance></select>
+                            <small>Kopiert alle Schalter — gespeichert wird erst mit „Speichern".</small>
                         </div>
-                    </details>
+                    </nav>
 
-                    <details class="perm-group" open>
-                        <summary class="perm-group-head">
-                            <span>Zusatzlisten</span>
-                        </summary>
-                        <div class="perm-grid">
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-rechnungsliste"> Rechnungsliste (unter Vorgänge)</label>
-                            <label class="row-clickable"><input class="clickable" type="checkbox" id="perm-belege"> Belege an der Adresse (Rechnungen, Umsätze aus Sage)</label>
+                    <div class="ue-inhalt">
+                        <!-- PROFIL -->
+                        <section class="ue-seite aktiv" data-ue-seite="profil">
+                            <div class="ue-felder">
+                                <div class="ue-feld">
+                                    <label for="edit-user-name">Name</label>
+                                    <input type="text" id="edit-user-name" class="glass-input">
+                                </div>
+                                <div class="ue-feld">
+                                    <label for="edit-user-email">E-Mail-Adresse <span class="ue-hint">Anmeldung &amp; Löschrechte in der Datenbank</span></label>
+                                    <input type="email" id="edit-user-email" class="glass-input" placeholder="name@meetra-recycling.de">
+                                </div>
+                                <div class="ue-feld">
+                                    <label for="edit-user-pin">PIN <span class="ue-hint">optional, 4–8 Ziffern</span></label>
+                                    <input type="text" id="edit-user-pin" class="glass-input" placeholder="leer lassen = keine PIN" inputmode="numeric">
+                                </div>
+                            </div>
+
+                            <div class="ue-feld">
+                                <label>Unterschrift <span class="ue-hint">wird in neuen Serviceberichten als Techniker-Unterschrift vorbelegt</span></label>
+                                <div id="user-signature-preview-container" class="ue-unterschrift" onclick="window.openUserSignaturePad()">
+                                    <span id="user-signature-placeholder">✍️ Klicken zum Unterschreiben</span>
+                                    <img id="user-signature-preview-img" class="hidden" alt="Unterschrift">
+                                    <button type="button" id="btn-clear-user-signature" class="hidden ue-mini-gefahr" onclick="event.stopPropagation(); window.clearUserSignature()">Entfernen</button>
+                                </div>
+                                <input type="hidden" id="edit-user-signature">
+                            </div>
+                        </section>
+
+                        <div id="edit-permissions-section">
+                            <!-- ANSICHTEN (Hauptmenü, aus der Sidebar erzeugt) + Zusatzlisten -->
+                            <section class="ue-seite" data-ue-seite="ansichten">
+                                <div class="ue-abschnitt-kopf">
+                                    <div>
+                                        <h3>Hauptmenü</h3>
+                                        <p>Welche Bereiche der Benutzer in der Seitenleiste sieht.</p>
+                                    </div>
+                                    <div class="ue-alle"><button type="button" data-ue-alle="perm-sidebar-pages" data-an="1">Alle an</button><button type="button" data-ue-alle="perm-sidebar-pages" data-an="0">Alle aus</button></div>
+                                </div>
+                                <div id="perm-sidebar-pages" class="ue-raster"></div>
+
+                                <div class="ue-abschnitt-kopf ue-abstand">
+                                    <div>
+                                        <h3>Zusatzlisten</h3>
+                                        <p>Sonderbereiche, die nicht in der Seitenleiste stehen.</p>
+                                    </div>
+                                </div>
+                                <div class="ue-raster">
+                                    <label class="ue-toggle"><span class="ue-toggle-text">Rechnungsliste<small>ausklappbar unter Vorgänge</small></span><input type="checkbox" id="perm-rechnungsliste"><span class="ue-switch"></span></label>
+                                    <label class="ue-toggle"><span class="ue-toggle-text">Belege an der Adresse<small>Rechnungen &amp; Umsätze aus Sage</small></span><input type="checkbox" id="perm-belege"><span class="ue-switch"></span></label>
+                                </div>
+                            </section>
+
+                            <!-- EINSTELLUNGEN — Unterseiten -->
+                            <section class="ue-seite" data-ue-seite="einstellungen">
+                                <div class="ue-abschnitt-kopf">
+                                    <div>
+                                        <h3>Einstellungen</h3>
+                                        <p>Welche Unterseiten unter „Einstellungen" erreichbar sind.</p>
+                                    </div>
+                                    <div class="ue-alle"><button type="button" data-ue-alle="perm-settings-subpages-box" data-an="1">Alle an</button><button type="button" data-ue-alle="perm-settings-subpages-box" data-an="0">Alle aus</button></div>
+                                </div>
+                                <div id="perm-settings-subpages-box" class="ue-raster">
+                                    <label class="ue-toggle"><span class="ue-toggle-text">Benutzerverwaltung</span><input type="checkbox" id="perm-users"><span class="ue-switch"></span></label>
+                                    <label class="ue-toggle"><span class="ue-toggle-text">Kategorien</span><input type="checkbox" id="perm-categories"><span class="ue-switch"></span></label>
+                                    <label class="ue-toggle"><span class="ue-toggle-text">Protokollvorlagen</span><input type="checkbox" id="perm-protocol-templates"><span class="ue-switch"></span></label>
+                                    <label class="ue-toggle"><span class="ue-toggle-text">Textbausteine</span><input type="checkbox" id="perm-settings-textbausteine"><span class="ue-switch"></span></label>
+                                    <label class="ue-toggle"><span class="ue-toggle-text">Firmendaten</span><input type="checkbox" id="perm-settings-firmeneinstellungen"><span class="ue-switch"></span></label>
+                                    <label class="ue-toggle"><span class="ue-toggle-text">Import</span><input type="checkbox" id="perm-settings-import"><span class="ue-switch"></span></label>
+                                    <label class="ue-toggle"><span class="ue-toggle-text">UVV &amp; Wartungspläne</span><input type="checkbox" id="perm-settings-uvv-wartungsplaene"><span class="ue-switch"></span></label>
+                                    <label class="ue-toggle"><span class="ue-toggle-text">KI-Konfiguration</span><input type="checkbox" id="perm-settings-ai"><span class="ue-switch"></span></label>
+                                    <label class="ue-toggle"><span class="ue-toggle-text">Outlook-Verbindung</span><input type="checkbox" id="perm-settings-outlook"><span class="ue-switch"></span></label>
+                                    <label class="ue-toggle"><span class="ue-toggle-text">Datenschutz</span><input type="checkbox" id="perm-settings-datenschutz"><span class="ue-switch"></span></label>
+                                </div>
+                            </section>
+
+                            <!-- LÖSCHRECHTE -->
+                            <section class="ue-seite" data-ue-seite="loeschen">
+                                <label class="ue-master">
+                                    <span class="ue-toggle-text">Darf Einträge löschen<small>Hauptschalter — aus heißt: nirgends löschen. Wird auch in der Datenbank durchgesetzt.</small></span>
+                                    <input type="checkbox" id="perm-delete"><span class="ue-switch"></span>
+                                </label>
+
+                                <div class="ue-abschnitt-kopf ue-abstand">
+                                    <div>
+                                        <h3>Bereiche</h3>
+                                        <p>An = darf in diesem Bereich löschen.</p>
+                                    </div>
+                                    <div class="ue-alle"><button type="button" data-ue-alle="perm-delete-areas" data-an="1">Alle an</button><button type="button" data-ue-alle="perm-delete-areas" data-an="0">Alle aus</button></div>
+                                </div>
+                                <!-- Bereiche kommen aus window.DELETE_AREAS (js/permissions.js) -->
+                                <div id="perm-delete-areas" class="ue-raster"></div>
+                            </section>
                         </div>
-                    </details>
-
-                    <details class="perm-group perm-group-danger">
-                        <summary class="perm-group-head">
-                            <span>Löschen</span>
-                            <span class="perm-group-count" id="perm-count-delete"></span>
-                        </summary>
-                        <label class="perm-delete-master"><input class="clickable" type="checkbox" id="perm-delete"> Einträge löschen</label>
-                        <p class="perm-delete-hint">Ohne diesen Haken darf der Benutzer nichts löschen. Ist er gesetzt, lässt sich unten
-                            jeder Bereich einzeln sperren — abgehakt heißt „darf löschen".</p>
-                        <!-- Bereiche kommen aus window.DELETE_AREAS (js/permissions.js) -->
-                        <div id="perm-delete-areas" class="perm-grid"></div>
-                    </details>
+                    </div>
                 </div>
 
-                <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
-                    <button class="btn-secondary" onclick="closeEditUserModal()">Abbrechen</button>
-                    <button class="btn-primary" onclick="saveUserEdit()">Speichern</button>
-                </div>
+                <footer class="ue-fuss">
+                    <span class="ue-fuss-info" id="ue-fuss-info"></span>
+                    <button type="button" class="btn-secondary" onclick="closeEditUserModal()">Abbrechen</button>
+                    <button type="button" class="btn-primary" onclick="saveUserEdit()">Speichern</button>
+                </footer>
             </div>
         </div>
     <!-- /@partial:modals/user-edit-modal.html -->
@@ -2089,6 +2139,10 @@
                                         Anhängen
                                     </button>
                                     <input type="file" id="mv-s-anhang-input" multiple hidden>
+                                    <button type="button" class="mv-s-anhang-btn" id="mv-s-anhang-app-btn" title="Angebot oder Dokument aus der App anhängen (js/mail-anhang-app.js)">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                                        Aus der App
+                                    </button>
                                     <button type="button" class="mv-s-anhang-btn" id="mv-s-signatur-btn" title="Signatur einfügen">Signatur</button>
                                 </span>
                             </div>
@@ -2106,263 +2160,107 @@
                                 <!-- ========================================================= -->
                                 <!-- ================== EINSTELLUNGEN ======================== -->
                                 <!-- ========================================================= -->
+                                <!-- Übersicht in Gruppen. Jede Kachel: .settings-card + data-target
+                                     (Klick → switchView in js/app-init.js, Rechte in js/permissions.js).
+                                     Farbe je Kachel über --ic. Stile: css/views/einstellungen.css -->
                                 <section id="settings" class="view hidden">
-                                    <div style="margin-bottom: 2rem;">
-                                        <h1>Einstellungen</h1>
+                                    <div class="est-kopf">
+                                        <div>
+                                            <h1>Einstellungen</h1>
+                                            <p class="est-untertitel">Team, Stammdaten, Vorlagen und Verbindungen der App</p>
+                                        </div>
+                                        <label class="est-suche">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                            <input type="search" id="est-suche" placeholder="Einstellung suchen …" autocomplete="off">
+                                        </label>
                                     </div>
 
-                                    <div class="settings-grid">
-                                        <!-- User Management Card -->
-                                        <div class="settings-card" data-target="users">
-                                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
-                                                <div class="settings-icon-container users-icon">
-                                                    <!-- Users with Gear Icon -->
-                                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                                                        <path
-                                                            d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
-                                                        <circle cx="19" cy="19" r="3" fill="var(--color-white)" />
-                                                        <path
-                                                            d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1a5.52 5.52 0 0 0-1.69-.98l-.38-2.65A.488.488 0 0 0 14 2h-4c-.28 0-.5.22-.55.5l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.05.29.27.5.55.5h4c.28 0 .5-.22.55-.5l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.61l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"
-                                                            transform="scale(0.5) translate(24, 24)" fill="#2e7d32" />
-                                                    </svg>
-                                                </div>
-                                                <h2
-                                                    style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">
-                                                    Benutzer<wbr>verwaltung</h2>
+                                    <div class="est-gruppe">
+                                        <h2 class="est-gruppe-titel">Team &amp; Zugriff</h2>
+                                        <div class="settings-grid est-raster">
+                                            <div class="settings-card est-karte" data-target="users" style="--ic:#34d399">
+                                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                                                <div class="est-text"><h2>Benutzerverwaltung</h2><p class="settings-card-desc">Benutzer, Ansichten und Löschrechte</p></div>
+                                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
                                             </div>
-                                            <div class="settings-content">
-                                                <p class="settings-card-desc">Benutzer hinzufügen,<wbr> bearbeiten oder entfernen</p>
+                                            <div class="settings-card est-karte" data-target="settings-datenschutz" style="--ic:#2dd4bf">
+                                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div>
+                                                <div class="est-text"><h2>Datenschutz</h2><p class="settings-card-desc">Welche Daten wo verarbeitet werden — Verarbeitungsverzeichnis</p></div>
+                                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
                                             </div>
                                         </div>
-
-                                        <!-- Categories Card -->
-                                        <div class="settings-card" data-target="categories">
-                                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
-                                                <div class="settings-icon-container categories-icon">
-                                                    <!-- Tag Icon -->
-                                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                                                        <path
-                                                            d="M21.41 11.58l-9-9C12.05 2.22 11.55 2 11 2H4c-1.1 0-2 .9-2 2v7c0 .55.22 1.05.59 1.42l9 9c.36.36.86.58 1.41.58.55 0 1.05-.22 1.41-.59l7-7c.37-.36.59-.86.59-1.41 0-.55-.23-1.06-.59-1.42zM5.5 7C4.67 7 4 6.33 4 5.5S4.67 4 5.5 4 7 4.67 7 5.5 6.33 7 5.5 7z" />
-                                                    </svg>
-                                                </div>
-                                                <h2
-                                                    style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">
-                                                    Kategorien</h2>
-                                            </div>
-                                            <div class="settings-content">
-                                                <p class="settings-card-desc">Maschinenkategorien verwalten</p>
-                                            </div>
-                                        </div>
-
-                                        <!-- Protocol Templates Card -->
-                                        <div class="settings-card" data-target="protocol-templates">
-                                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
-                                                <div class="settings-icon-container"
-                                                    style="background: rgba(59, 130, 246, 0.1); color: #3b82f6; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0;">
-                                                    <!-- Document Icon -->
-                                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                                        <polyline points="14 2 14 8 20 8"></polyline>
-                                                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                                                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                                                        <polyline points="10 9 9 9 8 9"></polyline>
-                                                    </svg>
-                                                </div>
-                                                <h2
-                                                    style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">
-                                                    Protokoll<wbr>vorlagen</h2>
-                                            </div>
-                                            <div class="settings-content">
-                                                <p class="settings-card-desc">Templates für Abnahme-<wbr> und Eingangsprotokolle</p>
-                                            </div>
-                                        </div>
-
-                                        <!-- Text Snippets (Textbausteine) Card -->
-                                        <div class="settings-card" data-target="settings-textbausteine">
-                                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
-                                                <div class="settings-icon-container"
-                                                    style="background: rgba(16, 185, 129, 0.1); color: #10b981; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0;">
-                                                    <!-- List Icon -->
-                                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                                                    </svg>
-                                                </div>
-                                                <h2
-                                                    style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">
-                                                    Textbausteine</h2>
-                                            </div>
-                                            <div class="settings-content">
-                                                <p class="settings-card-desc">Vorlagen für Übergruppen und Unteraufgaben</p>
-                                            </div>
-                                        </div>
-
-                                        <!-- Firmendaten Card -->
-                                        <div class="settings-card" data-target="settings-firmeneinstellungen">
-                                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
-                                                <div class="settings-icon-container"
-                                                    style="background: rgba(245, 158, 11, 0.1); color: #f59e0b; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0;">
-                                                    <!-- Briefcase Icon -->
-                                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-                                                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-                                                    </svg>
-                                                </div>
-                                                <h2
-                                                    style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">
-                                                    Firmendaten</h2>
-                                            </div>
-                                            <div class="settings-content">
-                                                <p class="settings-card-desc">Eigene Firmenadresse für die Routenplanung verwalten</p>
-                                            </div>
-                                        </div>
-
-                                        <!-- Import Card -->
-                                        <div class="settings-card" data-target="settings-import">
-                                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
-                                                <div class="settings-icon-container"
-                                                    style="background: rgba(16, 185, 129, 0.1); color: #10b981; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0;">
-                                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                                                        <polyline points="7 10 12 15 17 10"></polyline>
-                                                        <line x1="12" y1="15" x2="12" y2="3"></line>
-                                                    </svg>
-                                                </div>
-                                                <h2
-                                                    style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">
-                                                    Import</h2>
-                                            </div>
-                                            <div class="settings-content">
-                                                <p class="settings-card-desc">Adress- und Artikelimport</p>
-                                            </div>
-                                        </div>
-
-                                        <!-- UVV & Wartungspläne Card -->
-                                        <div class="settings-card" data-target="settings-uvv-wartungsplaene">
-                                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
-                                                <div class="settings-icon-container"
-                                                    style="background: rgba(16, 185, 129, 0.12); color: #10b981; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0;">
-                                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                        <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"></path>
-                                                        <rect x="9" y="3" width="6" height="4" rx="1"></rect>
-                                                        <path d="m9 12 2 2 4-4"></path>
-                                                    </svg>
-                                                </div>
-                                                <h2 style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">UVV, Wartungs&shy;pläne &amp; Einweisung</h2>
-                                            </div>
-                                            <div class="settings-content">
-                                                <p class="settings-card-desc">Prüf- &amp; Wartungspläne verwalten und Maschinen zuordnen</p>
-                                            </div>
-                                        </div>
-
-                                        <!-- MIETVEREINBARUNG — Karte loeschen = Punkt verschwindet -->
-                                        <div class="settings-card" data-target="miet-vorlagen">
-                                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
-                                                <div class="settings-icon-container"
-                                                    style="background: rgba(52, 211, 153, 0.12); color: #34d399; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0;">
-                                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                                        <polyline points="14 2 14 8 20 8"></polyline>
-                                                        <line x1="16" y1="13" x2="8" y2="13"></line>
-                                                        <line x1="16" y1="17" x2="8" y2="17"></line>
-                                                    </svg>
-                                                </div>
-                                                <h2 style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">Mietverein&shy;barungen</h2>
-                                            </div>
-                                            <div class="settings-content">
-                                                <p class="settings-card-desc">Aufbau und Texte je Maschinentyp anpassen</p>
-                                            </div>
-                                        </div>
-
-                                        <!-- KI-Konfiguration Card -->
-                                        <div class="settings-card" data-target="settings-ai">
-                                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
-                                                <div class="settings-icon-container"
-                                                    style="background: rgba(147, 197, 253, 0.1); color: #93c5fd; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0;">
-                                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                        <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
-                                                        <rect x="9" y="9" width="6" height="6"></rect>
-                                                        <line x1="9" y1="1" x2="9" y2="4"></line>
-                                                        <line x1="15" y1="1" x2="15" y2="4"></line>
-                                                        <line x1="9" y1="20" x2="9" y2="23"></line>
-                                                        <line x1="15" y1="20" x2="15" y2="23"></line>
-                                                        <line x1="20" y1="9" x2="23" y2="9"></line>
-                                                        <line x1="20" y1="15" x2="23" y2="15"></line>
-                                                        <line x1="1" y1="9" x2="4" y2="9"></line>
-                                                        <line x1="1" y1="15" x2="4" y2="15"></line>
-                                                    </svg>
-                                                </div>
-                                                <h2
-                                                    style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">
-                                                    KI-Konfiguration</h2>
-                                            </div>
-                                            <div class="settings-content">
-                                                <p class="settings-card-desc">Anbieter, Verbindung und Modell der KI-Funktionen</p>
-                                            </div>
-                                        </div>
-
-                                        <!-- Datenschutz Card -->
-                                        <div class="settings-card" data-target="settings-datenschutz">
-                                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
-                                                <div class="settings-icon-container"
-                                                    style="background: rgba(52, 211, 153, 0.1); color: #34d399; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0;">
-                                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                                                        <path d="M9 12l2 2 4-4"></path>
-                                                    </svg>
-                                                </div>
-                                                <h2 style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">
-                                                    Datenschutz</h2>
-                                            </div>
-                                            <div class="settings-content">
-                                                <p class="settings-card-desc">Welche Daten wo verarbeitet werden &mdash; Grundlage f&uuml;r Verarbeitungsverzeichnis und AV-Vertr&auml;ge</p>
-                                            </div>
-                                        </div>
-
-                                        <!-- Outlook Card -->
-                                        <div class="settings-card" data-target="settings-outlook">
-                                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
-                                                <div class="settings-icon-container"
-                                                    style="background: rgba(96, 165, 250, 0.1); color: #60a5fa; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0;">
-                                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                        <rect x="2" y="4" width="20" height="16" rx="2"></rect>
-                                                        <path d="m2 7 10 6 10-6"></path>
-                                                    </svg>
-                                                </div>
-                                                <h2 style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">
-                                                    Outlook</h2>
-                                            </div>
-                                            <div class="settings-content">
-                                                <p class="settings-card-desc">Microsoft-Konto verbinden: Posteingang, Kontakte und Mailversand in der App</p>
-                                            </div>
-                                        </div>
-
-                                        <!-- Etikettendrucker Card -->
-                                        <div class="settings-card" data-target="settings-etiketten">
-                                            <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 1rem;">
-                                                <div class="settings-icon-container"
-                                                    style="background: rgba(236, 72, 153, 0.1); color: #ec4899; width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.3s ease; flex-shrink: 0;">
-                                                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                                        <path d="M20.59 13.41 11 3.83a2 2 0 0 0-1.41-.58H4a1 1 0 0 0-1 1v5.59a2 2 0 0 0 .58 1.41l9.58 9.59a2 2 0 0 0 2.83 0l4.6-4.6a2 2 0 0 0 0-2.83Z"></path>
-                                                        <circle cx="7.5" cy="7.5" r="1.5"></circle>
-                                                    </svg>
-                                                </div>
-                                                <h2 style="margin: 0; font-size: 1.4rem; color: #fff; font-family: 'Outfit', sans-serif;">
-                                                    Etikettendrucker</h2>
-                                            </div>
-                                            <div class="settings-content">
-                                                <p class="settings-card-desc">Artikel- &amp; Palettenetiketten erstellen und drucken</p>
-                                            </div>
-                                        </div>
-
                                     </div>
 
+                                    <div class="est-gruppe">
+                                        <h2 class="est-gruppe-titel">Stammdaten</h2>
+                                        <div class="settings-grid est-raster">
+                                            <div class="settings-card est-karte" data-target="settings-firmeneinstellungen" style="--ic:#fbbf24">
+                                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
+                                                <div class="est-text"><h2>Firmendaten</h2><p class="settings-card-desc">Eigene Firmenadresse, Start der Routenplanung</p></div>
+                                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                                            </div>
+                                            <div class="settings-card est-karte" data-target="categories" style="--ic:#f87171">
+                                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></div>
+                                                <div class="est-text"><h2>Kategorien</h2><p class="settings-card-desc">Maschinenkategorien und Serien</p></div>
+                                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                                            </div>
+                                            <div class="settings-card est-karte" data-target="settings-import" style="--ic:#a3e635">
+                                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+                                                <div class="est-text"><h2>Import</h2><p class="settings-card-desc">Adressen und Artikel einlesen</p></div>
+                                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                                            </div>
+                                        </div>
+                                    </div>
 
-                        </section>
+                                    <div class="est-gruppe">
+                                        <h2 class="est-gruppe-titel">Vorlagen &amp; Formulare</h2>
+                                        <div class="settings-grid est-raster">
+                                            <div class="settings-card est-karte" data-target="protocol-templates" style="--ic:#60a5fa">
+                                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+                                                <div class="est-text"><h2>Protokollvorlagen</h2><p class="settings-card-desc">Eingangs- und Abnahmeprotokolle</p></div>
+                                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                                            </div>
+                                            <div class="settings-card est-karte" data-target="settings-uvv-wartungsplaene" style="--ic:#10b981">
+                                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+                                                <div class="est-text"><h2>UVV &amp; Wartungspläne</h2><p class="settings-card-desc">Prüf- und Wartungspläne, Zuordnung zu Maschinen</p></div>
+                                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                                            </div>
+                                            <div class="settings-card est-karte" data-target="miet-vorlagen" style="--ic:#34d399">
+                                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg></div>
+                                                <div class="est-text"><h2>Mietvereinbarungen</h2><p class="settings-card-desc">Bogen, Prüfpunkte, Tagessätze und Vertragstext je Maschinentyp</p></div>
+                                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                                            </div>
+                                            <div class="settings-card est-karte" data-target="settings-textbausteine" style="--ic:#22d3ee">
+                                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+                                                <div class="est-text"><h2>Textbausteine</h2><p class="settings-card-desc">Vorlagen für Übergruppen und Unteraufgaben</p></div>
+                                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                                            </div>
+                                            <div class="settings-card est-karte" data-target="settings-etiketten" style="--ic:#f472b6">
+                                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></div>
+                                                <div class="est-text"><h2>Etiketten</h2><p class="settings-card-desc">Artikel- und Palettenetiketten drucken</p></div>
+                                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="est-gruppe">
+                                        <h2 class="est-gruppe-titel">Verbindungen</h2>
+                                        <div class="settings-grid est-raster">
+                                            <div class="settings-card est-karte" data-target="settings-outlook" style="--ic:#60a5fa">
+                                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+                                                <div class="est-text"><h2>Outlook</h2><p class="settings-card-desc">Microsoft-Konto: Posteingang, Kontakte, Mailversand</p></div>
+                                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                                            </div>
+                                            <div class="settings-card est-karte" data-target="settings-ai" style="--ic:#a78bfa">
+                                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8L20 10l-6.1 1.2L12 17l-1.9-5.8L4 10l6.1-1.2z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></div>
+                                                <div class="est-text"><h2>KI-Konfiguration</h2><p class="settings-card-desc">Anbieter, Verbindung und Modell der KI</p></div>
+                                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="est-leer" id="est-leer" hidden>Keine Einstellung gefunden.</div>
+                                </section>
                 <!-- /@partial:settings/settings.html -->
 
         <!-- @partial:settings/etiketten.html -->
@@ -3738,12 +3636,12 @@
                     </button>
                 </div>
             </div>
-            <p style="color: rgba(255,255,255,0.45); font-size: 0.9rem; margin-top: 1rem;">
+            <p class="mvl-intro">
                 Jede Vorlage legt einen eigenen Bogen fest — Beschriftungen, Prüfspalten, Baugruppen,
-                Fotopositionen und Vertragstext. Über den Maschinentyp wird sie automatisch gezogen,
+                Fotopositionen, Tagessätze und Vertragstext. Über den Maschinentyp wird sie automatisch gezogen,
                 wenn an einer solchen Maschine eine Mietvereinbarung angelegt wird.
             </p>
-            <div id="miet-vorlagen-liste" class="card-grid" style="margin-top: 1.5rem;">
+            <div id="miet-vorlagen-liste" class="mvl-raster">
                 <div class="empty-state" style="grid-column: 1 / -1; text-align: center; padding: 3rem; color: rgba(255,255,255,0.4);">
                     Lade Vorlagen …
                 </div>
@@ -4854,11 +4752,11 @@
             ]);
         };
     </script>
-    <script src="js/dashboard.js?v=2"></script>
+    <script src="js/dashboard.js?v=3"></script>
     <script src="js/app-core.js?v=8"></script>
     <script src="js/lookup-cache.js?v=1"></script>
     <script src="js/photo-dedupe.js?v=3"></script>
-    <script src="js/app-init.js?v=25"></script>
+    <script src="js/app-init.js?v=26"></script>
     <script src="js/settings-uvv-plans.js?v=1"></script>
     <script src="js/machine-details-modal.js?v=3"></script>
     <script src="js/machine-modal.js?v=6"></script>
@@ -6586,7 +6484,7 @@
             style="max-width: 900px; position: relative; background: rgba(10,15,30,0.97); backdrop-filter: blur(40px); border: 1px solid rgba(255,255,255,0.1); padding-top: 1.25rem;">
             <div class="modal-header" style="margin-bottom: 0.5rem; display: flex; justify-content: flex-start; align-items: flex-start;">
                 <h2 id="task-modal-title" style="margin: 0; font-size: 1.3rem;">Aufgabe bearbeiten</h2>
-                <button class="btn-close-modal task-modal-close" onclick="closeTaskModal()" style="margin: -0.75rem -0.75rem 0 auto; font-size: 1.8rem;">&times;</button>
+                <button class="btn-close-modal task-modal-close" onclick="closeTaskModal()" style="margin: -0.75rem -0.25rem 0 auto; font-size: 1.8rem;">&times;</button>
             </div>
             <div class="modal-body">
                 <!-- Optimized Multi-column grid -->
@@ -6715,18 +6613,19 @@
     <script src="js/machines-grouped.js?v=53"></script>
     <script src="js/protocols.js?v=56"></script>
     <!-- MIETVEREINBARUNG (2/3) — eigenstaendig, diese Zeile loeschen = weg -->
-    <script src="js/mietvereinbarung-vorlagen.js?v=14"></script>
+    <script src="js/mietvereinbarung-vorlagen.js?v=18"></script>
+    <script src="js/einstellungen.js?v=1"></script>
     <script src="js/mietvereinbarung.js?v=44"></script>
     <script src="js/mietvereinbarung-liste.js?v=2"></script>
 
     </main>
     </div><!-- End main-wrapper -->
 
-    <script src="js/tasks.js?v=33"></script>
+    <script src="js/tasks.js?v=35"></script>
     <script src="js/workshop-tasks.js?v=4"></script>
     <script src="js/rechnungsliste.js?v=3"></script>
     <script src="js/tasks-print.js?v=13"></script>
-    <script src="js/task_templates.js?v=100"></script>
+    <script src="js/task_templates.js?v=101"></script>
     <!-- Spracheingabe für die KI-Felder — muss vor den KI-Modulen stehen,
          die beim Aufbau ihrer Modals window.micButtonHtml() aufrufen. -->
     <script src="js/speech-input.js?v=3"></script>
@@ -6734,10 +6633,10 @@
          ai-quick-capture.js, ai-address-task.js und accounting.js stehen —
          die rufen window.groqFetch() auf. -->
     <script src="js/groq-proxy.js?v=6"></script>
-    <script src="js/ki-pseudonym.js?v=10"></script>
+    <script src="js/ki-pseudonym.js?v=15"></script>
     <script src="js/ki-einstellungen.js?v=2"></script>
-    <script src="js/ai-quick-capture.js?v=27"></script>
-    <script src="js/ai-task-extend.js?v=1"></script>
+    <script src="js/ai-quick-capture.js?v=30"></script>
+    <script src="js/ai-task-extend.js?v=5"></script>
     <script>
         window.addEventListener('load', () => {
             if (typeof window.initTaskTemplates === 'function') {
@@ -7502,9 +7401,10 @@
     <script src="js/address-history.js?v=2"></script>
     <script src="js/addressbook.js?v=79"></script>
     <script src="js/outlook-graph.js?v=4"></script>
-    <script src="js/mail-view.js?v=9"></script>
+    <script src="js/mail-view.js?v=13"></script>
+    <script src="js/mail-anhang-app.js?v=2"></script>
     <script src="js/outlook-settings.js?v=3"></script>
-    <script src="js/onedrive-angebote.js?v=1"></script>
+    <script src="js/onedrive-angebote.js?v=2"></script>
     <script src="js/addressbook-live.js?v=4"></script>
     <script src="js/process-autosave.js?v=3"></script>
     <script src="js/task-autosave.js?v=3"></script>
@@ -7513,12 +7413,12 @@
     <script src="js/ai-address-task.js?v=14"></script>
     <script src="js/ai-address-summary.js?v=9"></script>
     <script src="js/ai-machine-summary.js?v=3"></script>
-    <script src="js/ai-briefing.js?v=1"></script>
+    <script src="js/ai-briefing.js?v=2"></script>
     <!-- Termine mit Teilnehmern: liefert die Bausteine, die Benachrichtigungen,
          Kalender und Routenplanung darunter benutzen. -->
     <script src="js/appointment-invite.js?v=2"></script>
     <script src="js/appointments.js?v=6"></script>
-    <script src="js/notifications.js?v=19"></script>
+    <script src="js/notifications.js?v=20"></script>
 
     <script src="js/notification-settings.js?v=2"></script>
     <!-- Minutengenauer Wecker fuer Erinnerungen mit Uhrzeit. Muss NACH
@@ -7531,7 +7431,7 @@
          laufen — mit doppelt registrierten Event-Handlern. -->
     <script src="js/routeplanner.js?v=2"></script>
     <script src="js/routenplanung.js?v=19"></script>
-    <script src="js/listen.js?v=54"></script>
+    <script src="js/listen.js?v=55"></script>
 
     <script src="js/labels.js?v=2"></script>
     <script src="js/offline-service.js?v=1"></script>
@@ -8458,7 +8358,7 @@
     <!-- /@partial:modals/picker-modals.html -->
 
 <script src="js/auth.js?v=1"></script>
-<script src="js/users.js?v=5"></script>
+<script src="js/users.js?v=6"></script>
 <script src="js/machines-grouped.js?v=53"></script>
 <script src="js/timeline-view.js?v=77"></script>
 <script src="js/voice-dictation.js?v=2"></script>

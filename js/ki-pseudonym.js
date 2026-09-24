@@ -130,6 +130,13 @@
         const unbekannt = new Map();   // "Herr Schulze" → Person 1
         const MUSTER = [
             { re: /[\w.+-]+@[\w-]+\.[\w.-]+/g, ersatz: '[E-Mail]' },
+            // Firmendaten aus Signaturen/Fußzeilen
+            { re: /\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){3,7}(?:[ ]?[A-Z0-9]{1,3})?\b/g, ersatz: '[IBAN]' },
+            { re: /\b(?:USt-?Id(?:Nr)?\.?|Umsatzsteuer-?ID|VAT(?: ID)?)[:\s]*[A-Z]{2}\s?[\dA-Z]{8,12}\b/gi, ersatz: '[USt-ID]' },
+            { re: /\b(?:HRB|HRA)\s?\d{3,6}\b/g, ersatz: '[Handelsregister]' },
+            { re: /\b(?:https?:\/\/|www\.)[^\s<>()"]*[^\s<>()".,;:!?]/gi, ersatz: '[Web]' },
+            // Kfz-Kennzeichen „OL-AB 123", „OL AB 1234E"
+            { re: /\b[A-ZÄÖÜ]{1,3}[- ][A-Z]{1,2}[ ]?\d{1,4}[EH]?\b/g, ersatz: '[Kennzeichen]' },
             // Telefon: mit Ländervorwahl, oder 0… mit Trennzeichen zwischen den Gruppen. Reine
             // Ziffernfolgen (Seriennummern, Zeitstempel, Dateinamen) und Beträge bleiben unberührt.
             { re: /(?<![\d.,€\w])(?:(?:\+49|0049)[\s\/-]?\d[\d\s\/-]{5,}\d|0\d{2,5}[\s\/-]+\d[\d\s\/-]{2,}\d)(?![\d.,]*\s?€)(?!\w)(?!\.\d)/g, ersatz: '[Telefon]' },
@@ -137,10 +144,18 @@
             { re: /\b[A-ZÄÖÜ][\wäöüß.-]+(?:\s?-?)(?:straße|strasse|str\.|weg|allee|platz|gasse|ring|damm|ufer)\s*\d+[a-z]?\b/gi, ersatz: '[Straße]' }
         ];
 
-        function maskieren(text) {
+        // marken (optional): statt des Platzhalters eine Marke \u0001i\u0002 setzen und
+        // { orig, ph } merken — daraus baut maskierenMarkiert() die Freigabe-Ansicht
+        // (Original mit rot unterstrichenen Ersetzungen) und den Sendetext.
+        function maskieren(text, marken) {
+            const mk = (ganz, ph) => {
+                if (!marken) return ph;
+                marken.push({ orig: ganz, ph });
+                return '\u0001' + (marken.length - 1) + '\u0002';
+            };
             let t = String(text == null ? '' : text);
-            regeln.forEach(r => { t = t.replace(r.re, () => zaehl(r.ersatz)); });
-            MUSTER.forEach(m => { t = t.replace(m.re, () => { anzahl++; treffer.set(m.ersatz, (treffer.get(m.ersatz) || 0) + 1); return m.ersatz; }); });
+            regeln.forEach(r => { t = t.replace(r.re, g => mk(g, zaehl(r.ersatz))); });
+            MUSTER.forEach(m => { t = t.replace(m.re, g => { anzahl++; treffer.set(m.ersatz, (treffer.get(m.ersatz) || 0) + 1); return mk(g, m.ersatz); }); });
             const person = (ganz, schluessel) => {
                 if (!unbekannt.has(schluessel)) unbekannt.set(schluessel, merke(ganz, 'Person'));
                 return zaehl(unbekannt.get(schluessel));
@@ -148,13 +163,19 @@
             // „Herr Schulze", der nirgends hinterlegt ist → „Person 1" (stabil je Sitzung)
             t = t.replace(new RegExp(ANREDE + '\\s+([A-ZÄÖÜ][\\wäöüß-]{2,})', 'g'), (ganz, nachname) => {
                 if (/^(Ansprechpartner|Mitarbeiter|Person|Firma)$/.test(nachname)) return ganz;
-                return person(ganz, nachname);
+                return mk(ganz, person(ganz, nachname));
             });
             // „vom Jürgen Huber", „mit Anna Schmidt": Vor- und Nachname hinter einer Präposition,
             // beide groß und nur Buchstaben (Maschinen wie „BACKHUS A50" fallen durch).
             t = t.replace(/\b(vom|von|mit|bei|an|für|durch|Kontakt:?|Ansprechpartner:?)\s+([A-ZÄÖÜ][a-zäöüß-]{2,})\s+([A-ZÄÖÜ][a-zäöüß-]{2,})(?![\wäöüß])/g, (ganz, prep, v, n) => {
                 if (/^(Ansprechpartner|Mitarbeiter|Person|Firma)$/.test(v)) return ganz;
-                return prep + ' ' + person(v + ' ' + n, n);
+                return prep + ' ' + mk(v + ' ' + n, person(v + ' ' + n, n));
+            });
+            // Signatur: Name in der Zeile nach der Grußformel („Viele Grüße\nPeter Maurer").
+            t = t.replace(/((?:Grüße|Grüßen|Gruß|Gruss|Grüsse|MfG|Regards|Cheers|Servus|Beste Grüße)[^\n]{0,30}\n[ \t]*)([A-ZÄÖÜ][a-zäöüß-]+(?:[ \t]+[A-ZÄÖÜ][a-zäöüß-]+){1,2})[ \t]*(?=\r?\n|$)/g, (ganz, davor, name) => {
+                if (/^(Ansprechpartner|Mitarbeiter|Person|Firma|Ort)\b/.test(name)) return ganz;
+                const teile = name.split(/\s+/);
+                return davor + mk(name, person(name, teile[teile.length - 1]));
             });
             // Nummern im Freitext, die nirgends als Liste vorliegen: „#632", „SN 632", „Angebot 30065",
             // „Auftrag 4711" → eigene Platzhalter, die zurückübersetzt werden.
@@ -163,8 +184,8 @@
                 if (!unbekannt.has(key)) unbekannt.set(key, merke(wert, art));
                 return zaehl(unbekannt.get(key));
             };
-            t = t.replace(/(?<![\wäöüß])(?:#|S\/N\s*|SN\s*|Serien-?Nr\.?\s*|Seriennummer\s*)(\d{2,}[\w-]*)/gi, (ganz, w) => nummer('Seriennr', w));
-            t = t.replace(/\b(Angebot(?:s-?Nr\.?)?|Beleg(?:-?Nr\.?)?|Rechnung(?:s-?Nr\.?)?|Auftrag(?:s-?Nr\.?)?|AB)\s+(\d{4,8})\b/g, (ganz, wort, w) => wort + ' ' + nummer(/Rechnung/i.test(wort) ? 'Rechnung' : /Auftrag|AB/.test(wort) ? 'Auftrag' : 'Beleg', w));
+            t = t.replace(/(?<![\wäöüß])(?:#|S\/N\s*|SN\s*|Serien-?Nr\.?\s*|Seriennummer\s*)(\d{2,}[\w-]*)/gi, (ganz, w) => mk(ganz, nummer('Seriennr', w)));
+            t = t.replace(/\b(Angebot(?:s-?Nr\.?)?|Beleg(?:-?Nr\.?)?|Rechnung(?:s-?Nr\.?)?|Auftrag(?:s-?Nr\.?)?|AB)\s+(\d{4,8})\b/g, (ganz, wort, w) => wort + ' ' + mk(w, nummer(/Rechnung/i.test(wort) ? 'Rechnung' : /Auftrag|AB/.test(wort) ? 'Auftrag' : 'Beleg', w)));
 
             // Zuletzt: bloße Nachnamen aller bekannten Personen („Email von Huber") — erst jetzt,
             // damit Firmennamen („Huber Recyclingtechnik") vorher schon ersetzt sind.
@@ -174,9 +195,27 @@
                 const teile = orig.replace(new RegExp('^' + ANREDE + '\\s+'), '').split(/\s+/);
                 const nachname = teile[teile.length - 1];
                 if (!nachname || nachname.length < 4 || !/^[A-ZÄÖÜ]/.test(nachname)) return;
-                t = t.replace(new RegExp('(?<![\\wäöüß])' + escRe(nachname) + '(?![\\wäöüß])', 'g'), () => zaehl(ph));
+                t = t.replace(new RegExp('(?<![\\wäöüß])' + escRe(nachname) + '(?![\\wäöüß])', 'g'), g => mk(g, zaehl(ph)));
             });
             return t;
+        }
+
+        // Für die Freigabe vor dem Senden: { text } = was rausgeht (wie maskieren),
+        // { html } = Original, jede Ersetzung rot unterstrichen (Tooltip: Platzhalter).
+        function maskierenMarkiert(text) {
+            const marken = [];
+            const roh = maskieren(text, marken);
+            const e = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            const MARKE = /\u0001(\d+)\u0002/g;
+            const alsText = s => s.replace(MARKE, (g, i) => marken[+i].ph);
+            const alsOrig = s => s.replace(MARKE, (g, i) => alsOrig(marken[+i].orig));
+            const alsHtml = s => s.split(/(\u0001\d+\u0002)/).map(teil => {
+                const m = /^\u0001(\d+)\u0002$/.exec(teil);
+                if (!m) return e(teil);
+                const x = marken[+m[1]];
+                return '<span class="ki-ps-ersetzt" title="wird zu: ' + e(x.ph) + '">' + e(alsOrig(x.orig)) + '</span>';
+            }).join('');
+            return { text: alsText(roh), html: alsHtml(roh), ersetzt: marken.length };
         }
 
         function demaskieren(text) {
@@ -210,7 +249,7 @@
         }
 
         return {
-            maskieren, demaskieren, bericht, berichtHtml,
+            maskieren: t => maskieren(t), maskierenMarkiert, demaskieren, bericht, berichtHtml,
             get anzahl() { return anzahl; },
             get platzhalter() { return [...rueck.keys()]; }
         };
@@ -235,14 +274,27 @@
     // Antwort demaskiert. Liefert eine Response, deren json()/text() den
     // rückübersetzten Inhalt tragen. Das Pseudonym-Objekt hängt als resp.pseudonym
     // dran (für Bericht/Anzahl), zusätzlich in window.kiPseudonym.letztes.
+    // opts.pruefen: vor dem Senden das Freigabe-Fenster zeigen (Mail-Ansicht).
+    // Abbrechen wirft einen Fehler mit .abgebrochen = true. Dieselbe Anfrage
+    // (z. B. Modell-Wechsel/Limit-Wiederholung) wird nur einmal abgefragt.
     let letztes = null;
-    async function fetchMaskiert(payload, extra) {
+    let freigegeben = { sig: '', bis: 0 };
+    async function fetchMaskiert(payload, extra, opts) {
         const p = erzeugen(standardKontext(extra));
+        const markiert = (payload.messages || []).map(m => typeof m.content === 'string' ? p.maskierenMarkiert(m.content) : null);
         const body = Object.assign({}, payload, {
             messages: (payload.messages || []).map((m, i) => Object.assign({}, m, {
-                content: typeof m.content === 'string' ? p.maskieren(m.content) + (i === 0 && m.role === 'system' ? '\n\n' + PROMPT_HINWEIS : '') : m.content
+                content: markiert[i] ? markiert[i].text + (i === 0 && m.role === 'system' ? '\n\n' + PROMPT_HINWEIS : '') : m.content
             }))
         });
+        if (opts && opts.pruefen) {
+            const sig = body.messages.filter(m => m.role !== 'system').map(m => m.content).join('\u0000');
+            if (!(freigegeben.sig === sig && Date.now() < freigegeben.bis)) {
+                const ok = await freigabeFragen(payload.messages || [], markiert, body.messages, opts.titel);
+                if (!ok) { const err = new Error('Nicht an die KI gesendet (abgebrochen).'); err.abgebrochen = true; throw err; }
+                freigegeben = { sig, bis: Date.now() + 5 * 60 * 1000 };
+            }
+        }
         letztes = { p, gesendet: body.messages.map(m => m.content).join('\n\n---\n\n') };
         const resp = await window.groqFetch(body);
         let text = '';
@@ -259,7 +311,7 @@
     }
 
     // Hinweistext für den System-Prompt, damit das Modell die Platzhalter unverändert lässt.
-    const PROMPT_HINWEIS = 'Personenbezogene und identifizierende Angaben sind durch Platzhalter ersetzt (Ansprechpartner A/B/…, Mitarbeiter 1/2/…, Person 1/…, Firma K1/…, Ort 1/…, Kundennr 1, Seriennr 1/…, Beleg 1/…, [E-Mail], [Telefon], [Straße]). '
+    const PROMPT_HINWEIS = 'Personenbezogene und identifizierende Angaben sind durch Platzhalter ersetzt (Ansprechpartner A/B/…, Mitarbeiter 1/2/…, Person 1/…, Firma K1/…, Ort 1/…, Kundennr 1, Seriennr 1/…, Beleg 1/…, [E-Mail], [Telefon], [Straße], [Web] …). '
         + 'Verwende diese Platzhalter in deiner Antwort GENAU so, wie sie vorkommen — nicht umschreiben, nicht abkürzen, nicht auflösen.';
 
     // ---- Kontrolle: Hat die Maskierung alles erwischt? ----
@@ -267,7 +319,7 @@
     // bekannte Kunden-/Mitarbeiternamen (sicher übersehen), dazu Muster wie
     // „Herr X", „… GmbH", Mail, Telefon, Straße, PLZ + Ort (Verdacht).
     // Liefert { html, ersetzt, verdacht }: Platzhalter grün, Verdachtsstellen rot.
-    const PH_RE = /\b(?:Ansprechpartner [A-Z]{1,3}|Mitarbeiter \d+|Person \d+|Firma K\d+|Ort \d+|Kundennr \d+|Adressnr \d+|Seriennr \d+|Beleg \d+|Rechnung \d+|Auftrag \d+|Nr \d+)\b|\[(?:E-Mail|Telefon|Straße)\]/g;
+    const PH_RE = /\b(?:Ansprechpartner [A-Z]{1,3}|Mitarbeiter \d+|Person \d+|Firma K\d+|Ort \d+|Kundennr \d+|Adressnr \d+|Seriennr \d+|Beleg \d+|Rechnung \d+|Auftrag \d+|Nr \d+)\b|\[(?:E-Mail|Telefon|Straße|IBAN|USt-ID|Handelsregister|Web|Kennzeichen)\]/g;
     function pruefen(text) {
         const t = String(text || '');
         const funde = [];   // { von, bis, grund }
@@ -284,6 +336,9 @@
         merk(/(?<![\d.,€\w])(?:\+49|0049|0\d{2,5}[\s\/-])[\d\s\/-]{5,}\d(?![\d.,]*\s?€)(?!\w)/g, 'Telefon');
         merk(/\b[A-ZÄÖÜ][\wäöüß.-]+(?:\s?-?)(?:straße|strasse|str\.|weg|allee|platz|gasse|ring|damm|ufer)\s*\d+[a-z]?\b/gi, 'Straße');
         merk(/\b\d{5}\s+[A-ZÄÖÜ][a-zäöüß]{2,}(?:[ -][A-ZÄÖÜ][a-zäöüß]{2,})?\b/g, 'PLZ + Ort');
+        // Zeile nur aus „Vorname Nachname" (Signatur, Unterschrift ohne Grußformel)
+        merk(/^[ \t]*[A-ZÄÖÜ][a-zäöüß-]{2,}(?:[ \t]+[A-ZÄÖÜ][a-zäöüß-]{2,}){1,2}[ \t]*$/gm, 'Name in eigener Zeile?',
+            m => !/^\s*(Viele|Beste|Liebe|Freundliche|Mit|Sehr|Hallo|Guten|Moin)\b/.test(m[0]));
         // Platzhalter selbst dürfen nie als Verdacht gelten
         const ph = []; let m; PH_RE.lastIndex = 0;
         while ((m = PH_RE.exec(t))) ph.push({ von: m.index, bis: m.index + m[0].length });
@@ -312,6 +367,69 @@
             ? '<div class="ki-ps-ampel ki-ps-ampel-rot">⚠️ ' + r.verdacht + ' Stelle' + (r.verdacht > 1 ? 'n' : '') + ' sieht noch nach Personenbezug aus (rot markiert — bitte prüfen):<ul>' + r.funde.slice(0, 12).map(f => '<li><b>' + e(f.text) + '</b> <span class="text-muted-sm">' + e(f.grund) + '</span></li>').join('') + (r.funde.length > 12 ? '<li>…</li>' : '') + '</ul></div>'
             : '<div class="ki-ps-ampel ki-ps-ampel-gruen">✅ Keine Reste erkannt — ' + r.ersetzt + ' Platzhalter im Text (grün). Geprüft: bekannte Kunden- und Mitarbeiternamen, Anreden, Firmenzusätze, E-Mail, Telefon, Straße, PLZ + Ort.</div>';
         return kopf + '<pre class="ab-ai-summary-roh ki-ps-markiert">' + r.html + '</pre>';
+    }
+
+    // ---- Freigabe-Fenster: „Das geht an die KI" ----
+    // Zeigt je Nachricht (ohne den Systemtext) das ORIGINAL: rot unterstrichen,
+    // was ersetzt wird; orange, was nach der Ersetzung noch nach Personenbezug
+    // aussieht (pruefen() auf dem Sendetext). Umschalter „So sieht es die KI".
+    function freigabeFragen(orig, markiert, gesendet, titel) {
+        return new Promise(resolve => {
+            const e = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+            const idx = orig.map((m, i) => i).filter(i => orig[i].role !== 'system' && markiert[i]);
+            let ersetzt = 0, verdacht = 0;
+            const teile = idx.map(i => {
+                const r = pruefen(gesendet[i].content);
+                ersetzt += markiert[i].ersetzt;
+                verdacht += r.verdacht;
+                // Verdachtsstellen auch im Original markieren (gleicher Wortlaut, nur außerhalb der Ersetzungen)
+                let html = markiert[i].html;
+                [...new Set(r.funde.map(f => f.text))].sort((a, b) => b.length - a.length).forEach(f => {
+                    const fe = e(f).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    html = html.split(/(<span class="ki-ps-ersetzt"[^>]*>.*?<\/span>)/).map(s => /^<span class="ki-ps-ersetzt"/.test(s) ? s
+                        : s.replace(new RegExp(fe, 'g'), '<mark class="ki-ps-verdacht" title="Evtl. übersehen — geht so an die KI">' + e(f) + '</mark>')).join('');
+                });
+                return { orig: html, raus: r.html };
+            });
+            const el = document.createElement('div');
+            el.className = 'modal-backdrop show active ki-freigabe';
+            el.style.zIndex = '100001';
+            el.innerHTML = `
+                <div class="modal-content" style="max-width:760px; max-height:92vh; display:flex; flex-direction:column;">
+                    <h2 style="margin:0 0 4px;">🔒 Das geht an die KI${titel ? ' — ' + e(titel) : ''}</h2>
+                    <div class="text-muted-sm" style="margin-bottom:10px;">Erst nach „An KI senden" verlässt der Text das Gerät (über euren Server an den KI-Anbieter).</div>
+                    <div class="ki-freigabe-legende">
+                        <span><span class="ki-ps-ersetzt">rot unterstrichen</span> = wird ersetzt (${ersetzt})</span>
+                        <span><mark class="ki-ps-verdacht">orange</mark> = evtl. übersehen, geht so raus (${verdacht})</span>
+                    </div>
+                    ${verdacht ? `<div class="ki-ps-ampel ki-ps-ampel-rot" style="margin:8px 0;">⚠️ ${verdacht} Stelle${verdacht > 1 ? 'n' : ''} sieht noch nach Personenbezug aus. Im Zweifel abbrechen.</div>` : `<div class="ki-ps-ampel ki-ps-ampel-gruen" style="margin:8px 0;">✅ Keine Reste erkannt.</div>`}
+                    <div class="ki-freigabe-tabs">
+                        <button type="button" class="aktiv" data-sicht="orig">Original mit Markierungen</button>
+                        <button type="button" data-sicht="raus">So sieht es die KI</button>
+                    </div>
+                    <div class="ki-freigabe-text" style="flex:1; overflow:auto;">
+                        ${teile.map(t => `<pre class="ki-ps-markiert" data-sicht="orig">${t.orig}</pre><pre class="ki-ps-markiert" data-sicht="raus" hidden>${t.raus}</pre>`).join('<hr>')}
+                    </div>
+                    <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:12px; flex-wrap:wrap;">
+                        <button type="button" class="ab-btn ab-btn-ghost" data-ab="nein">Abbrechen</button>
+                        <button type="button" class="ab-btn ab-btn-primary" data-ab="ja">An KI senden</button>
+                    </div>
+                </div>`;
+            const fertig = ok => { el.remove(); document.removeEventListener('keydown', taste, true); resolve(ok); };
+            const taste = ev => { if (ev.key === 'Escape') { ev.stopPropagation(); fertig(false); } };
+            el.addEventListener('click', ev => {
+                if (ev.target === el) return fertig(false);
+                const ab = ev.target.closest('[data-ab]');
+                if (ab) return fertig(ab.dataset.ab === 'ja');
+                const tab = ev.target.closest('.ki-freigabe-tabs [data-sicht]');
+                if (tab) {
+                    el.querySelectorAll('.ki-freigabe-tabs button').forEach(b => b.classList.toggle('aktiv', b === tab));
+                    el.querySelectorAll('pre[data-sicht]').forEach(p => { p.hidden = p.dataset.sicht !== tab.dataset.sicht; });
+                }
+            });
+            document.addEventListener('keydown', taste, true);
+            document.body.appendChild(el);
+        });
     }
 
     // Kurzer Hinweis unter einer KI-Vorschau: „🔒 12 Angaben ersetzt · Details" —

@@ -1,0 +1,420 @@
+/* ==========================================================
+   EINSTELLUNGEN — Übersicht, einheitlicher Kopf der Unterseiten,
+   Mietvereinbarungs-Vorlagen (Liste + Editor).
+   Übersicht: partials/settings/settings.html (.est-*)
+   Suche/Abschnitts-Navigation: js/einstellungen.js, js/mietvereinbarung-vorlagen.js
+   Wird NACH settings.css und mietvereinbarung.css geladen.
+   ========================================================== */
+
+/* ---------- Übersicht ---------- */
+#settings .est-kopf {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-6);
+}
+#settings .est-kopf h1 { margin: 0; }
+.est-untertitel { margin: var(--space-1) 0 0; color: var(--text-3); font-size: var(--fs-sm); }
+
+.est-suche {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: min(340px, 100%);
+    padding: 0 var(--space-3);
+    height: 42px;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.04);
+    transition: border-color var(--dur-fast), background var(--dur-fast);
+}
+.est-suche:focus-within { border-color: rgba(16, 160, 104, 0.6); background: rgba(255, 255, 255, 0.07); }
+.est-suche svg { width: 16px; height: 16px; color: var(--text-3); flex: 0 0 auto; }
+.est-suche input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text-1);
+    font: inherit;
+    font-size: var(--fs-sm);
+}
+
+.est-gruppe { margin-bottom: var(--space-6); }
+.est-gruppe-titel {
+    margin: 0 0 var(--space-3);
+    font-size: var(--fs-xs) !important;
+    font-weight: var(--fw-bold);
+    letter-spacing: var(--ls-caps);
+    text-transform: uppercase;
+    color: var(--text-3);
+}
+#settings .est-raster {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
+    gap: var(--space-3) !important;
+}
+
+#settings .settings-card.est-karte {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-4);
+    min-height: 0;
+    height: auto;
+    padding: var(--space-4) var(--space-4);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+    box-shadow: none;
+    cursor: pointer;
+    transform: none;
+    transition: background var(--dur-fast), border-color var(--dur-fast), transform var(--dur-fast);
+}
+#settings .settings-card.est-karte:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: color-mix(in srgb, var(--ic, #10b981) 45%, transparent);
+    transform: translateY(-1px);
+}
+.est-icon {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-md);
+    display: grid;
+    place-items: center;
+    color: var(--ic, #10b981);
+    background: color-mix(in srgb, var(--ic, #10b981) 14%, transparent);
+}
+.est-icon svg { width: 22px; height: 22px; }
+.est-text { flex: 1; min-width: 0; }
+#settings .est-text h2 {
+    margin: 0;
+    font-size: var(--fs-md);
+    font-weight: var(--fw-semibold);
+    color: var(--text-1);
+    line-height: var(--lh-snug);
+}
+#settings .est-text .settings-card-desc {
+    margin: 2px 0 0;
+    font-size: var(--fs-xs);
+    color: var(--text-3);
+    line-height: var(--lh-snug);
+}
+.est-pfeil { flex: 0 0 auto; width: 16px; height: 16px; color: var(--text-3); transition: transform var(--dur-fast), color var(--dur-fast); }
+.est-karte:hover .est-pfeil { transform: translateX(3px); color: var(--ic, #10b981); }
+.est-leer { padding: var(--space-8); text-align: center; color: var(--text-3); }
+
+/* ---------- Einheitlicher Kopf aller Unterseiten ----------
+   Titel links · Aktionen rechts · „← Zurück" als letzter Knopf ganz rechts.
+   display:contents hebt die Aktionen direkt in die Kopfzeile, damit sie
+   gemeinsam mit dem Titel umbrechen können (Handy). */
+:is(#users, #categories, #protocol-templates, #miet-vorlagen, #miet-vorlage-editor, section[id^="settings-"]) > .users-header-container {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-3) !important;
+    padding-bottom: var(--space-4);
+    margin-bottom: var(--space-5);
+    border-bottom: 1px solid var(--glass-border);
+}
+:is(#users, #categories, #protocol-templates, #miet-vorlagen, #miet-vorlage-editor, section[id^="settings-"]) > .users-header-container > .users-header-actions {
+    display: contents !important;
+}
+:is(#users, #categories, #protocol-templates, #miet-vorlagen, #miet-vorlage-editor, section[id^="settings-"]) > .users-header-container > h1 {
+    order: 0;
+    flex: 1 1 240px;
+    width: auto !important;
+    min-width: 0;
+    margin: 0 !important;
+    font-size: var(--fs-2xl);
+    line-height: var(--lh-tight);
+}
+:is(#users, #categories, #protocol-templates, #miet-vorlagen, #miet-vorlage-editor, section[id^="settings-"]) > .users-header-container > .users-header-actions > * {
+    order: 1;
+    margin: 0 !important;
+}
+:is(#users, #categories, #protocol-templates, #miet-vorlagen, #miet-vorlage-editor, section[id^="settings-"]) .users-header-container .btn-back-custom {
+    order: 2 !important;
+    flex: 0 0 auto;
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    display: inline-flex !important;
+    align-items: center;
+    gap: 8px !important;
+    height: 40px !important;
+    padding: 0 16px !important;
+    border-radius: var(--radius-md) !important;
+    font-size: 0 !important;           /* Markup-Text „ZURÜCK" aus, ::after schreibt „Zurück" */
+    letter-spacing: 0 !important;
+    background: transparent !important;
+    border: 1px solid var(--glass-border) !important;
+    color: var(--text-2) !important;
+    box-shadow: none !important;
+}
+:is(#users, #categories, #protocol-templates, #miet-vorlagen, #miet-vorlage-editor, section[id^="settings-"]) .users-header-container .btn-back-custom:hover {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: var(--text-1) !important;
+}
+:is(#users, #categories, #protocol-templates, #miet-vorlagen, #miet-vorlage-editor, section[id^="settings-"]) .users-header-container .btn-back-custom svg {
+    width: 15px;
+    height: 15px;
+    margin: 0 !important;
+}
+/* ---------- Mietvereinbarungen: Übersicht ---------- */
+.mvl-intro { margin: 0 0 var(--space-5); max-width: 760px; color: var(--text-3); font-size: var(--fs-sm); line-height: var(--lh-normal); }
+#miet-vorlagen-liste.mvl-raster {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--space-3);
+    margin-top: 0 !important;
+}
+.mvl-karte {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+    cursor: pointer;
+    transition: background var(--dur-fast), border-color var(--dur-fast), transform var(--dur-fast);
+}
+.mvl-karte:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(16, 160, 104, 0.45); transform: translateY(-1px); }
+.mvl-karte.standard { border-style: dashed; }
+.mvl-zeile { display: flex; align-items: center; gap: var(--space-3); }
+.mvl-icon {
+    flex: 0 0 auto;
+    width: 42px; height: 42px;
+    border-radius: var(--radius-md);
+    display: grid; place-items: center;
+    color: #34d399;
+    background: rgba(16, 185, 129, 0.14);
+}
+.mvl-karte.standard .mvl-icon { color: var(--text-3); background: rgba(255, 255, 255, 0.06); }
+.mvl-icon svg { width: 20px; height: 20px; }
+.mvl-titel { flex: 1; min-width: 0; margin: 0; font-size: var(--fs-md); font-weight: var(--fw-semibold); color: var(--text-1); overflow-wrap: anywhere; }
+.mvl-unter { margin: 0; font-size: var(--fs-xs); color: var(--text-3); line-height: var(--lh-snug); }
+.mvl-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.mvl-chip { padding: 3px 10px; border-radius: var(--radius-pill); background: rgba(255, 255, 255, 0.06); color: var(--text-2); font-size: var(--fs-2xs); }
+.mvl-chip.gruen { background: rgba(16, 185, 129, 0.14); color: #6ee7b7; }
+
+/* kleine Symbol-Knöpfe (Kopieren, Löschen, Entfernen) — auch im Editor */
+.mv-ikon {
+    flex: 0 0 auto;
+    width: 34px; height: 34px;
+    display: inline-grid; place-items: center;
+    padding: 0;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-2);
+    cursor: pointer;
+    transition: background var(--dur-fast), color var(--dur-fast), border-color var(--dur-fast);
+}
+.mv-ikon svg { width: 15px; height: 15px; }
+.mv-ikon:hover { background: rgba(255, 255, 255, 0.1); color: var(--text-1); }
+.mv-ikon.blau:hover { color: #60a5fa; border-color: rgba(59, 130, 246, 0.45); background: rgba(59, 130, 246, 0.12); }
+.mv-ikon.rot:hover { color: #f87171; border-color: rgba(239, 68, 68, 0.45); background: var(--danger-soft); }
+.mv-ikon:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ---------- Mietvereinbarungen: Editor ----------
+   Links Abschnitts-Navigation (bleibt stehen), rechts die Karten. */
+.mve-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: var(--space-6); align-items: start; }
+.mve-nav {
+    position: relative;
+    will-change: transform;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: var(--space-2);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.02);
+}
+.mve-nav a {
+    display: flex; align-items: center; gap: var(--space-2);
+    padding: 9px var(--space-3);
+    border-radius: var(--radius-sm);
+    color: var(--text-2);
+    font-size: var(--fs-sm);
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    transition: background var(--dur-fast), color var(--dur-fast);
+}
+.mve-nav a:hover { background: rgba(255, 255, 255, 0.05); color: var(--text-1); }
+.mve-nav a.aktiv { background: rgba(16, 185, 129, 0.12); color: var(--text-1); border-left-color: #10b981; }
+.mve-nav a em { margin-left: auto; font-style: normal; font-size: var(--fs-2xs); color: var(--text-3); }
+
+.mve-inhalt .miet-editor-grid { display: flex !important; flex-direction: column; gap: var(--space-4); }
+.mve-inhalt .miet-editor-card { scroll-margin-top: var(--space-4); }
+
+/* Unterkästen (Baugruppe, Abschnitt, Tagessatz) */
+.mve-box {
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: var(--radius-md);
+    background: rgba(0, 0, 0, 0.15);
+    padding: var(--space-3) var(--space-4);
+    margin-bottom: var(--space-3);
+}
+.mve-box-kopf { display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-3); }
+.mve-box-kopf input { flex: 1; font-weight: var(--fw-bold); }
+.mve-liste-zeile { display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-2); }
+.mve-liste-zeile > input, .mve-liste-zeile > textarea { flex: 1; min-width: 0; }
+.mve-nr { width: 28px; flex: 0 0 auto; text-align: center; color: var(--text-3); font-weight: var(--fw-bold); font-size: var(--fs-xs); }
+.mve-punkt { padding: var(--space-2) 0 var(--space-2) var(--space-3); border-left: 2px solid rgba(255, 255, 255, 0.08); margin: 0 0 var(--space-2) var(--space-1); }
+.mve-punkt + .mve-punkt { margin-top: var(--space-2); }
+.mve-schalter { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--text-2); white-space: nowrap; cursor: pointer; user-select: none; }
+.mve-schalter input { accent-color: #10b981; width: 16px; height: 16px; }
+.mve-hint { margin: 0 0 var(--space-3); font-size: var(--fs-xs); color: var(--text-3); line-height: var(--lh-normal); }
+.mve-plus {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px;
+    border-radius: var(--radius-pill);
+    border: 1px dashed rgba(16, 185, 129, 0.5);
+    background: transparent;
+    color: #34d399;
+    font: inherit;
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
+}
+.mve-plus:hover { background: rgba(16, 185, 129, 0.1); border-style: solid; }
+
+/* ---------- Handy ---------- */
+@media (max-width: 900px) {
+    .mve-layout { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
+    .mve-nav {
+        z-index: 5;
+        flex-direction: row;
+        overflow-x: auto;
+        background: #0f172a;
+        -webkit-overflow-scrolling: touch;
+    }
+    .mve-nav a { flex: 0 0 auto; white-space: nowrap; border-left: none; border-bottom: 2px solid transparent; }
+    .mve-nav a.aktiv { border-bottom-color: #10b981; }
+    .mve-nav a em { display: none; }
+}
+@media (max-width: 768px) {
+    #settings .est-kopf { margin-bottom: var(--space-4); }
+    .est-suche { width: 100%; }
+    #settings .est-raster { grid-template-columns: 1fr !important; }
+    #settings .settings-card.est-karte { padding: var(--space-3); }
+    :is(#users, #categories, #protocol-templates, #miet-vorlagen, #miet-vorlage-editor, section[id^="settings-"]) > .users-header-container > h1 { font-size: var(--fs-xl); flex-basis: calc(100% - 60px); }
+    #miet-vorlagen-liste.mvl-raster { grid-template-columns: 1fr; }
+    .mve-box { padding: var(--space-3); }
+}
+
+#settings .est-karte.est-aus { display: none !important; }
+
+/* Aktions-Knöpfe im Kopf: responsive.css zieht .btn-add-bg bis 1024px auf 100% —
+   im Kopf neben dem Titel sollen sie ihre eigene Breite behalten (erst am Handy voll). */
+@media (min-width: 769px) {
+    :is(#users, #categories, #protocol-templates, #miet-vorlagen, #miet-vorlage-editor, section[id^="settings-"]) > .users-header-container > .users-header-actions > * {
+        width: auto !important;
+        flex: 0 0 auto;
+    }
+}
+
+/* Handy: Aktions-Knöpfe im Kopf nebeneinander statt je eine volle Zeile */
+@media (max-width: 768px) {
+    :is(#users, #categories, #protocol-templates, #miet-vorlagen, #miet-vorlage-editor, section[id^="settings-"]) > .users-header-container > .users-header-actions > *:not(.btn-back-custom) {
+        flex: 1 1 140px;
+        width: auto !important;
+        min-width: 0;
+        justify-content: center;
+    }
+    #settings-etiketten #label-etiketten-actions { display: flex !important; flex-direction: row !important; flex: 1 1 200px !important; gap: var(--space-2) !important; }
+    #settings-etiketten #label-etiketten-actions > * { flex: 1 1 0; width: auto !important; }
+    .mve-liste-zeile .mve-schalter { font-size: var(--fs-2xs); }
+    .mve-punkt .mve-liste-zeile { flex-wrap: wrap; }
+    .mve-punkt .mve-liste-zeile > input { flex-basis: 100%; }
+}
+
+/* Editor-Karten nie breiter als die Spalte (alte Handy-Regeln setzten Ränder/Breiten) */
+.mve-inhalt .miet-editor-card { min-width: 0; max-width: 100%; box-sizing: border-box; margin-left: 0 !important; margin-right: 0 !important; }
+.mve-box-kopf > input, .mve-liste-zeile > input, .mve-liste-zeile > textarea { min-width: 0 !important; width: auto !important; }
+
+:is(#users, #categories, #protocol-templates, #miet-vorlagen, #miet-vorlage-editor, section[id^="settings-"]) .users-header-container .btn-back-custom::after {
+    content: "Zurück";
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+}
+@media (max-width: 768px) {
+    :is(#users, #categories, #protocol-templates, #miet-vorlagen, #miet-vorlage-editor, section[id^="settings-"]) > .users-header-container > h1 { flex: 1 1 100% !important; font-size: var(--fs-xl); }
+    :is(#users, #categories, #protocol-templates, #miet-vorlagen, #miet-vorlage-editor, section[id^="settings-"]) .users-header-container .btn-back-custom { order: 0 !important; padding: 0 12px !important; }
+}
+
+/* ---------- Breite am PC nutzen (Prüfung 2026-09-24, 1600px) ---------- */
+/* Benutzer: Kartenraster statt 1400px breiter Einzelzeilen */
+@media (min-width: 900px) {
+    #users .user-list {
+        display: grid !important;
+        grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+        gap: var(--space-3);
+    }
+    #users .user-list > .user-item { margin: 0 !important; }
+}
+
+/* Outlook: die Kästen zweispaltig statt je 720px untereinander */
+@media (min-width: 1100px) {
+    #settings-outlook:not(.hidden) {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-4);
+        align-items: start;
+    }
+    #settings-outlook > .users-header-container { grid-column: 1 / -1; }
+    #settings-outlook > :not(.users-header-container) { grid-column: auto; }
+    #settings-outlook .os-card { max-width: none; margin-top: 0; }
+}
+
+/* KI + Datenschutz: breiter */
+#settings-ai > .glass-card { max-width: 1100px !important; }
+.ds-seite { max-width: 1200px; }
+
+/* Firmendaten: Beschriftung über dem Feld, zwei Spalten, volle Feldbreite */
+#firmendaten-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4) var(--space-5);
+    max-width: 1100px;
+    align-items: end;
+}
+#firmendaten-form > * { margin: 0 !important; }
+#firmendaten-form .form-group { display: flex !important; flex-direction: column !important; align-items: stretch !important; gap: var(--space-2); }
+#firmendaten-form .form-group > label { width: auto !important; margin: 0 !important; }
+#firmendaten-form input, #firmendaten-form select { width: 100% !important; max-width: none !important; }
+#firmendaten-form > button, #firmendaten-form > .btn-primary { grid-column: 1 / -1; justify-self: start; }
+@media (max-width: 768px) {
+    #firmendaten-form { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* Editor: Leiste steht, Inhalt scrollt im eigenen Bereich (Höhe setzt mveHoehe()).
+   Alle Karten volle Breite — mietvereinbarung.css gab ihnen unterschiedliche Breiten. */
+.mve-inhalt {
+    position: relative;               /* offsetTop der Karten bezieht sich hierauf */
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: var(--space-2);
+}
+.mve-inhalt .miet-editor-grid > .miet-editor-card {
+    width: 100% !important;
+    max-width: none !important;
+    align-self: stretch !important;
+    flex: 0 0 auto !important;
+}
+.mve-nav { will-change: auto; transform: none !important; max-height: 100%; overflow-y: auto; }
+.mve-inhalt::-webkit-scrollbar { width: 8px; }
+.mve-inhalt::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: var(--radius-pill); }
+.mve-inhalt::-webkit-scrollbar-track { background: transparent; }
+@media (max-width: 900px) {
+    .mve-inhalt { padding-right: 0; }
+    .mve-nav { max-height: none; overflow-y: hidden; }
+}

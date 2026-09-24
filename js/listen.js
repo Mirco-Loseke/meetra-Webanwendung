@@ -3646,16 +3646,19 @@
             // Vorab ermitteln, welche Belegnummern bereits existieren — nur fuer WIRKLICH NEUE
             // Angebote sollen Realisierbar (5%) und Status ("Warten auf Reaktion") vorbelegt werden.
             // Bestehende Angebote werden dadurch nicht angefasst (siehe Kommentar unten beim Upsert).
-            const allBelegnummern = angeboteToUpsert.map(a => a.belegnummer);
+            // Eindeutig ist Nummer + Jahr (Sage vergibt die Nummern jedes Jahr neu,
+            // Migration supabase_angebote_belegjahr.sql).
+            const schluessel = a => a.belegnummer + '|' + String(a.belegdatum || '').slice(0, 4);
+            const allBelegnummern = [...new Set(angeboteToUpsert.map(a => a.belegnummer))];
             const existingBelegnummern = new Set();
             for (let i = 0; i < allBelegnummern.length; i += 500) {
                 const slice = allBelegnummern.slice(i, i + 500);
                 const { data: existingRows, error: existingErr } = await window.supabaseClient
                     .from('angebote')
-                    .select('belegnummer')
+                    .select('belegnummer, belegdatum')
                     .in('belegnummer', slice);
                 if (existingErr) throw existingErr;
-                (existingRows || []).forEach(r => existingBelegnummern.add(r.belegnummer));
+                (existingRows || []).forEach(r => existingBelegnummern.add(schluessel(r)));
             }
 
             for (let i = 0; i < total; i += chunkSize) {
@@ -3666,18 +3669,24 @@
                 // bewusst nicht im Upsert-Payload (siehe angeboteToUpsert oben).
                 const { error } = await window.supabaseClient
                     .from('angebote')
-                    .upsert(chunk, { onConflict: 'belegnummer' });
+                    .upsert(chunk, { onConflict: 'belegnummer,belegjahr' });
 
                 if (error) throw error;
 
                 // Fuer neu angelegte Angebote in diesem Chunk direkt im Anschluss die Standardwerte
                 // setzen (separater Update-Call, damit bestehende Angebote garantiert unangetastet bleiben).
-                const newBelegnummernInChunk = chunk.map(c => c.belegnummer).filter(bn => !existingBelegnummern.has(bn));
-                if (newBelegnummernInChunk.length > 0) {
-                    const { error: defaultsErr } = await window.supabaseClient
-                        .from('angebote')
+                // Je Jahr, damit gleiche Nummern aus Vorjahren nicht mitgetroffen werden.
+                const neuNachJahr = {};
+                chunk.filter(c => !existingBelegnummern.has(schluessel(c))).forEach(c => {
+                    const j = String(c.belegdatum || '').slice(0, 4);
+                    (neuNachJahr[j] = neuNachJahr[j] || []).push(c.belegnummer);
+                });
+                for (const [j, nummern] of Object.entries(neuNachJahr)) {
+                    let q = window.supabaseClient.from('angebote')
                         .update({ realisierbar: 5, status: 'Warten auf Reaktion' })
-                        .in('belegnummer', newBelegnummernInChunk);
+                        .in('belegnummer', nummern);
+                    q = j ? q.gte('belegdatum', j + '-01-01').lte('belegdatum', j + '-12-31') : q.is('belegdatum', null);
+                    const { error: defaultsErr } = await q;
                     if (defaultsErr) throw defaultsErr;
                 }
 

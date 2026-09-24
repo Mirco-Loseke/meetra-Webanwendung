@@ -487,6 +487,15 @@
     // Empfänger, Kunde und der Mailtext — die KI bekommt einen Mail-Baustein im Prompt,
     // die Vorschau übernimmt Von/An und Kunde in jede Vorgangskarte.
     let mailKontext = null;
+    // Zusätzliche Namen fürs Ersetzen (Outlook-Kontakte, Ansprechpartner, Absender-Domain)
+    async function mailNamenExtra() {
+        const mk = mailKontext || {};
+        const n = window.mailKiNamen ? await window.mailKiNamen(mk.fromAddress) : { kontakte: [], firmen: [] };
+        return {
+            kontakte: [mk.fromName, mk.contactName].filter(Boolean).concat(n.kontakte),
+            firmen: [mk.customerName].filter(Boolean).concat(n.firmen)
+        };
+    }
 
     window.openAiCaptureModal = function (bereich) {
         captureBereich = (bereich === 'aufgaben' || bereich === 'vorgaenge') ? bereich : 'alles';
@@ -729,7 +738,7 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
                 // JSON input" und die ganze Eingabe war umsonst.
                 max_tokens: 4096,
                 response_format: { type: 'json_object' }
-            });
+            }, mailKontext ? await mailNamenExtra() : undefined, mailKontext ? { pruefen: true, titel: 'Vorgang aus Mail' } : undefined);
         }
 
         try {
@@ -788,6 +797,7 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
             console.error('AI Capture Fehler:', err);
             if (status) status.style.display = 'none';
             if (inp) inp.style.display = 'block';
+            if (err && err.abgebrochen) { window.showToast('Nicht an die KI gesendet.'); return; }
             window.showToast('Fehler bei der KI-Analyse: ' + (err.message || err));
         }
     };

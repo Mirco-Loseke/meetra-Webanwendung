@@ -316,7 +316,7 @@ window.editUser = function (id) {
             seen.add(target);
             const label = (a.textContent || target).replace(/\s+/g, ' ').trim() || target;
             const checked = perms[target] !== false ? 'checked' : '';
-            return `<label class="row-clickable"><input class="clickable" type="checkbox" id="perm-${target}" ${checked}> ${label}</label>`;
+            return ueToggle('perm-' + target, label, '', checked);
         }).join('');
     }
 
@@ -337,15 +337,105 @@ window.editUser = function (id) {
         const areas = window.DELETE_AREAS || [];
         areaBox.innerHTML = areas.map(a => {
             const checked = perms['del_' + a.key] !== false ? 'checked' : '';
-            return `<label class="row-clickable"><input class="clickable" type="checkbox" id="perm-del_${a.key}" ${checked}> ${a.label}</label>`;
+            // „Historie einer Maschine (manuelle Einträge, …)" → Titel + Zusatz in klein
+            const m = /^(.*?)\s*\((.*)\)\s*$/.exec(a.label);
+            return ueToggle('perm-del_' + a.key, m ? m[1] : a.label, m ? m[2] : '', checked);
         }).join('');
+    }
+
+    // Kopf: Avatar, Name, Mail
+    const av = document.getElementById('ue-avatar');
+    if (av) {
+        av.textContent = (user.initials || (user.name || '?').split(' ').map(n => n[0]).join('').slice(0, 2)).toUpperCase();
+        av.style.background = user.color || '#334155';
+    }
+    const titel = document.getElementById('ue-titel');
+    if (titel) titel.textContent = user.name || 'Benutzer bearbeiten';
+
+    // Rechte-Reiter nur für den Admin; sonst nur das Profil
+    document.querySelectorAll('#user-edit-modal .ue-tab-perm').forEach(el => { el.style.display = isAdmin ? '' : 'none'; });
+    ueTabZeigen('profil');
+
+    // „Rechte übernehmen von …"
+    const sel = document.getElementById('ue-uebernehmen');
+    if (sel) {
+        sel.innerHTML = '<option value="">— Benutzer wählen —</option>' + userList
+            .filter(u => String(u.id) !== String(user.id))
+            .map(u => `<option value="${u.id}">${ueEsc(u.name || '')}</option>`).join('');
     }
 
     syncDeletePermUi();
     updatePermCounts();
+    ueStartZustand = ueZustand();
+    ueGeaendert();
 
     document.getElementById('user-edit-modal').style.display = 'flex';
 };
+
+// ---- Bausteine des Bearbeiten-Fensters (css/views/user-edit.css) ----
+function ueEsc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function ueToggle(id, text, zusatz, checked) {
+    return `<label class="ue-toggle"><span class="ue-toggle-text">${ueEsc(text)}${zusatz ? `<small>${ueEsc(zusatz)}</small>` : ''}</span>`
+        + `<input type="checkbox" id="${id}" ${checked}><span class="ue-switch"></span></label>`;
+}
+function ueTabZeigen(name) {
+    document.querySelectorAll('#user-edit-modal .ue-tab').forEach(t => t.classList.toggle('aktiv', t.dataset.ueTab === name));
+    document.querySelectorAll('#user-edit-modal .ue-seite').forEach(s => s.classList.toggle('aktiv', s.dataset.ueSeite === name));
+    const inhalt = document.querySelector('#user-edit-modal .ue-inhalt');
+    if (inhalt) inhalt.scrollTop = 0;
+}
+// Fingerabdruck aller Eingaben — für „ungespeicherte Änderungen"
+let ueStartZustand = '';
+function ueZustand() {
+    const m = document.getElementById('user-edit-modal');
+    if (!m) return '';
+    return [...m.querySelectorAll('input')].map(i => i.id + '=' + (i.type === 'checkbox' ? i.checked : i.value)).join('|');
+}
+function ueGeaendert() {
+    const info = document.getElementById('ue-fuss-info');
+    if (!info) return;
+    const neu = ueZustand() !== ueStartZustand;
+    info.textContent = neu ? '● Ungespeicherte Änderungen' : 'Keine Änderungen';
+    info.classList.toggle('geaendert', neu);
+    updatePermCounts();
+}
+
+document.addEventListener('click', (e) => {
+    const modal = document.getElementById('user-edit-modal');
+    if (!modal || !modal.contains(e.target)) return;
+    const tab = e.target.closest('.ue-tab');
+    if (tab) { ueTabZeigen(tab.dataset.ueTab); return; }
+    const alle = e.target.closest('[data-ue-alle]');
+    if (alle) {
+        const box = document.getElementById(alle.dataset.ueAlle);
+        if (box) box.querySelectorAll('input[type="checkbox"]:not(:disabled)').forEach(cb => { cb.checked = alle.dataset.an === '1'; });
+        updatePermCounts(); ueGeaendert();
+        return;
+    }
+    // Klick auf den abgedunkelten Rand schließt (wie bei den anderen Fenstern)
+    if (e.target === modal) window.closeEditUserModal();
+});
+document.addEventListener('input', (e) => { if (e.target.closest && e.target.closest('#user-edit-modal')) ueGeaendert(); });
+document.addEventListener('keydown', (e) => {
+    const modal = document.getElementById('user-edit-modal');
+    if (e.key === 'Escape' && modal && modal.style.display === 'flex') window.closeEditUserModal();
+});
+document.addEventListener('change', (e) => {
+    if (e.target.id !== 'ue-uebernehmen' || !e.target.value) return;
+    const quelle = userList.find(u => String(u.id) === String(e.target.value));
+    e.target.value = '';
+    if (!quelle) return;
+    const p = (quelle.permissions && typeof quelle.permissions === 'object') ? quelle.permissions : {};
+    document.querySelectorAll('#edit-permissions-section input[type="checkbox"][id^="perm-"]').forEach(cb => {
+        const key = cb.id === 'perm-delete' ? 'can_delete' : cb.id.slice(5);
+        // gleiche Regeln wie beim Öffnen: fehlend = an, außer „belege" (fehlend = aus)
+        cb.checked = key === 'belege' ? p[key] === true : p[key] !== false;
+    });
+    syncDeletePermUi(); updatePermCounts(); ueGeaendert();
+    window.showToast && window.showToast('Rechte von ' + quelle.name + ' übernommen — noch nicht gespeichert.');
+});
 
 // Ohne den Hauptschalter „Einträge löschen" sind die Bereichs-Haken wirkungslos —
 // dann werden sie ausgegraut, damit niemand dort vergeblich klickt.
@@ -377,9 +467,25 @@ function updatePermCounts() {
     set('perm-count-settings', count(document.getElementById('perm-settings-subpages-box')));
 
     const master = document.getElementById('perm-delete');
-    set('perm-count-delete', master && !master.checked
-        ? 'gesperrt'
-        : count(document.getElementById('perm-delete-areas')));
+    const delTxt = master && !master.checked ? 'gesperrt' : count(document.getElementById('perm-delete-areas'));
+    set('perm-count-delete', delTxt);
+
+    // Zusammenfassung im Kopf
+    const sub = document.getElementById('ue-kopf-sub');
+    if (sub) {
+        const mail = document.getElementById('edit-user-email');
+        const sec = document.getElementById('edit-permissions-section');
+        const teile = [];
+        if (mail && mail.value) teile.push('<span>' + ueEsc(mail.value) + '</span>');
+        if (sec && document.querySelector('#user-edit-modal .ue-tab-perm') && document.querySelector('#user-edit-modal .ue-tab-perm').style.display !== 'none') {
+            const ans = count(document.getElementById('perm-sidebar-pages'));
+            if (ans) teile.push('<span class="ue-chip">' + ans + ' Ansichten</span>');
+            teile.push(master && !master.checked
+                ? '<span class="ue-chip gefahr">Löschen gesperrt</span>'
+                : '<span class="ue-chip ' + (delTxt && delTxt.startsWith('0 ') ? 'gefahr' : 'ok') + '">Löschen: ' + delTxt + ' Bereiche</span>');
+        }
+        sub.innerHTML = teile.join('');
+    }
 }
 
 // Ein Listener für den ganzen Abschnitt — die Haken werden teils erst beim
@@ -390,7 +496,9 @@ document.addEventListener('change', (e) => {
     updatePermCounts();
 });
 
-window.closeEditUserModal = function () {
+window.closeEditUserModal = function (ohneFrage) {
+    if (ohneFrage !== true && ueZustand() !== ueStartZustand
+        && !confirm('Änderungen an diesem Benutzer verwerfen?')) return;
     document.getElementById('user-edit-modal').style.display = 'none';
 };
 
@@ -453,7 +561,7 @@ window.saveUserEdit = async function () {
     if (error) {
         window.showToast('Fehler beim Aktualisieren: ' + (error.message || JSON.stringify(error)));
     } else {
-        closeEditUserModal();
+        closeEditUserModal(true);
         fetchUsers();
     }
 };

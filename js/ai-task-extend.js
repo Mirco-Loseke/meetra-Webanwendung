@@ -24,6 +24,37 @@
         return n;
     }
 
+    // Maschinenart (z. B. „Kompostumsetzer") aus dem Maschinen-Index.
+    function kategorie(t) {
+        const m = t && t.machine_id && typeof window.machineById === 'function' ? window.machineById(t.machine_id) : null;
+        return m && m.category ? String(m.category) : '';
+    }
+
+    // „Lernen" ohne eigene Tabelle: Unteraufgaben früherer Aufgaben an
+    // Maschinen derselben Art (sonst desselben Modells) zählen und die
+    // häufigsten mitgeben. Wächst mit jeder angelegten Aufgabe mit; nutzt nur
+    // die schon geladenen Aufgaben (kein Serverruf).
+    function werkstattErfahrung(t, kat) {
+        const alle = (typeof window.getAllTasks === 'function' ? window.getAllTasks() : []) || [];
+        const modell = t.machines ? String(t.machines.name || '').toLowerCase() : '';
+        const passt = x => {
+            if (String(x.id) === String(t.id) || !x.machine_id) return false;
+            if (kat) return kategorie(x) === kat;
+            return modell && x.machines && String(x.machines.name || '').toLowerCase() === modell;
+        };
+        const zaehler = new Map();
+        alle.filter(passt).forEach(x => (x.subtasks || []).forEach(s => {
+            const titel = String(s.title || '').trim();
+            if (!titel) return;
+            const k = titel.toLowerCase();
+            const e = zaehler.get(k) || { titel, n: 0 };
+            e.n++;
+            zaehler.set(k, e);
+        }));
+        return [...zaehler.values()].sort((a, b) => b.n - a.n).slice(0, 30)
+            .map(e => `- ${e.titel} (${e.n})`).join('\n');
+    }
+
     function gruppenOptionen(sel) {
         const n = gruppen();
         if (sel && !n.includes(sel)) n.push(sel);
@@ -49,10 +80,10 @@
                 </p>
                 <textarea id="ate-input" rows="6" placeholder="z. B. Hydraulikschlauch am Kipper tauschen, Ölstand prüfen, Kabelbaum am Bedienpult neu verlegen, danach Probelauf …"
                           style="width:100%; padding:12px; border-radius:12px; border:1px solid var(--glass-border); background:rgba(255,255,255,0.05); color:var(--color-text); font-family:var(--font-sans); font-size:0.9rem; resize:vertical; box-sizing:border-box;"></textarea>
-                <div style="display:flex; gap:10px; margin-top:12px;">
+                <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:12px;">
                     <button type="button" class="ab-btn ab-btn-ghost" data-ate-close style="flex:0 0 auto;">Abbrechen</button>
                     ${window.micButtonHtml ? window.micButtonHtml('ate-input') : ''}
-                    <button type="button" id="ate-analyze" class="ab-btn ab-btn-primary" style="flex:1;"><span>✨</span> Unteraufgaben vorschlagen</button>
+                    <button type="button" id="ate-analyze" class="ab-btn ab-btn-primary" style="flex:1 1 200px;"><span>✨</span> Unteraufgaben vorschlagen</button>
                 </div>
                 ${window.micStatusHtml ? window.micStatusHtml('ate-input') : ''}
                 <div id="ate-preview" style="display:none; margin-top:16px; padding:14px; border-radius:14px; border:1px solid rgba(167,139,250,0.35); background:rgba(167,139,250,0.06);"></div>
@@ -106,18 +137,21 @@
 
         const t = aktuelleAufgabe;
         const m = t.machines;
+        const kat = kategorie(t);
         const vorhanden = (t.subtasks || []).map(s => `- [${s.supergroup || 'Allgemein'}] ${s.title}`).join('\n') || '(keine)';
-        const systemPrompt = `Du ergänzt eine Werkstatt-Aufgabe um Unteraufgaben. Antworte NUR mit JSON:
-{ "subtasks": [ { "title": "Arbeitsschritt", "supergroup": "Übergruppe" } ] }
+        const ueblich = werkstattErfahrung(t, kat);
+        const systemPrompt = `Du bist erfahrener Werkstattmeister für Recycling- und Kompostiermaschinen (Kompostumsetzer, Siebanlagen, Zerkleinerer, Schaufeln, Anbaugeräte). Du ergänzt eine Werkstatt-Aufgabe um Unteraufgaben. Antworte NUR mit JSON:
+{ "subtasks": [ { "title": "Arbeitsschritt", "supergroup": "Übergruppe" } ],
+  "ideen":    [ { "title": "Arbeitsschritt", "supergroup": "Übergruppe", "grund": "kurz, warum" } ] }
 Regeln:
-- Jede genannte Tätigkeit wird eine eigene, kurze Unteraufgabe im Imperativ ("Hydraulikschlauch tauschen").
+- "subtasks": NUR Tätigkeiten, die wörtlich unter "Neu zu ergänzen" stehen — je eine kurze Unteraufgabe im Imperativ ("Hydraulikschlauch tauschen"). Nichts aus Aufgabentitel, vorhandenen Unteraufgaben oder Werkstatt-Erfahrung; alles Weitere gehört in "ideen".
+- "ideen": genau 6 zusätzliche Arbeitsschritte, an die der Mechaniker denken sollte, obwohl er sie nicht genannt hat — Vorarbeiten (z. B. reinigen, abkleben, demontieren), Folgearbeiten (z. B. Schmieren, Spannung einstellen, Schrauben nachziehen), Prüfungen und Abschluss (z. B. Probelauf, Maschine im Einsatz testen, Sichtprüfung, Fotos/Doku). Passend zur Maschinenart. Nutze die Werkstatt-Erfahrung unten, wenn vorhanden. "grund" höchstens 8 Wörter.
 - "supergroup": wähle die thematisch passendste aus dieser Liste, sonst "Allgemein": ${gruppen().join(', ')}
-- Nichts doppelt anlegen, was unten schon als Unteraufgabe steht.
-- Nichts erfinden, was nicht im Text steht.`;
-        const kontext = `Aufgabe: ${t.title || ''}${m ? '\nMaschine: ' + [m.manufacturer, m.name].filter(Boolean).join(' ') : ''}
+- Nichts doppelt anlegen, was schon als Unteraufgabe existiert, und Ideen nicht doppelt zu "subtasks".`;
+        const kontext = `Aufgabe: ${t.title || ''}${m ? '\nMaschine: ' + [m.manufacturer, m.name].filter(Boolean).join(' ') : ''}${kat ? '\nMaschinenart: ' + kat : ''}
 Vorhandene Unteraufgaben:
 ${vorhanden}
-
+${ueblich ? `\nWerkstatt-Erfahrung — früher bei ${kat || 'ähnlichen Maschinen'} angelegt (Anzahl):\n${ueblich}\n` : ''}
 Neu zu ergänzen:
 ${input}`;
 
@@ -125,7 +159,7 @@ ${input}`;
             const holen = window.kiPseudonym ? window.kiPseudonym.fetchMaskiert : window.groqFetch;
             const resp = await holen({
                 model: localStorage.getItem('groq_model') || FALLBACK_MODEL,
-                temperature: 0.1,
+                temperature: 0.4,
                 max_tokens: 2048,
                 response_format: { type: 'json_object' },
                 messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: kontext }]
@@ -137,9 +171,16 @@ ${input}`;
             if (a >= 0 && b > a) text = text.slice(a, b + 1);
             const res = JSON.parse(text);
             const schonDa = new Set((t.subtasks || []).map(s => String(s.title || '').trim().toLowerCase()));
-            vorschlaege = (Array.isArray(res.subtasks) ? res.subtasks : [])
-                .map(s => typeof s === 'string' ? { title: s, supergroup: 'Allgemein' } : { title: String(s.title || '').trim(), supergroup: s.supergroup || 'Allgemein' })
-                .filter(s => s.title && !schonDa.has(s.title.toLowerCase()));
+            const lesen = (arr, idee) => (Array.isArray(arr) ? arr : [])
+                .map(s => typeof s === 'string' ? { title: s, supergroup: 'Allgemein' } : { title: String(s.title || '').trim(), supergroup: s.supergroup || 'Allgemein', grund: String(s.grund || '').trim() })
+                .map(s => Object.assign(s, { idee }))
+                .filter(s => {
+                    const k = s.title.toLowerCase();
+                    if (!s.title || schonDa.has(k)) return false;
+                    schonDa.add(k);
+                    return true;
+                });
+            vorschlaege = lesen(res.subtasks, false).concat(lesen(res.ideen, true));
             zeigen();
         } catch (err) {
             window.showToast && window.showToast('KI-Analyse fehlgeschlagen: ' + (err.message || err));
@@ -156,16 +197,22 @@ ${input}`;
             box.style.display = 'block'; actions.style.display = 'none';
             return;
         }
+        // Genanntes ist vorausgewählt; Ideen der KI muss man bewusst anhaken.
+        const zeile = (s, i) => `
+                <div class="ate-row" data-i="${i}" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                    <input type="checkbox" class="ate-on" ${s.idee ? '' : 'checked'} style="width:18px; height:18px; flex-shrink:0; accent-color:#a78bfa;">
+                    <div style="flex:1 1 180px; min-width:0;">
+                        <input type="text" class="ate-title glass-form-input" value="${esc(s.title)}" style="width:100%; box-sizing:border-box;">
+                        ${s.idee && s.grund ? `<div style="font-size:0.74rem; color:rgba(255,255,255,0.5); margin:3px 0 0 4px;">💡 ${esc(s.grund)}</div>` : ''}
+                    </div>
+                    <select class="ate-group glass-form-input" style="flex:0 1 32%; min-width:130px; margin-left:auto; box-sizing:border-box; font-size:0.82rem;">${gruppenOptionen(s.supergroup)}</select>
+                </div>`;
+        const kopf = txt => `<div style="font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:#a78bfa; margin:4px 0 8px;">${txt}</div>`;
+        const genannt = vorschlaege.map((s, i) => [s, i]).filter(([s]) => !s.idee);
+        const ideen = vorschlaege.map((s, i) => [s, i]).filter(([s]) => s.idee);
         box.innerHTML = `
-            <div style="font-size:0.72rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px; color:#a78bfa; margin-bottom:8px;">${vorschlaege.length} neue Unteraufgaben</div>
-            <div style="display:flex; flex-direction:column; gap:6px;">
-                ${vorschlaege.map((s, i) => `
-                <div class="ate-row" data-i="${i}" style="display:flex; gap:8px; align-items:center;">
-                    <input type="checkbox" class="ate-on" checked style="width:18px; height:18px; flex-shrink:0; accent-color:#a78bfa;">
-                    <input type="text" class="ate-title glass-form-input" value="${esc(s.title)}" style="flex:1; min-width:0; box-sizing:border-box;">
-                    <select class="ate-group glass-form-input" style="flex:0 0 32%; box-sizing:border-box; font-size:0.82rem;">${gruppenOptionen(s.supergroup)}</select>
-                </div>`).join('')}
-            </div>`;
+            ${genannt.length ? kopf(`${genannt.length} aus deinem Text`) + `<div style="display:flex; flex-direction:column; gap:6px;">${genannt.map(([s, i]) => zeile(s, i)).join('')}</div>` : ''}
+            ${ideen.length ? `<div style="margin-top:${genannt.length ? 14 : 0}px;">${kopf(`💡 ${ideen.length} Vorschläge der KI — zum Übernehmen anhaken`)}</div><div style="display:flex; flex-direction:column; gap:6px;">${ideen.map(([s, i]) => zeile(s, i)).join('')}</div>` : ''}`;
         box.style.display = 'block';
         actions.style.display = 'flex';
     }

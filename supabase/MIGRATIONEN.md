@@ -110,6 +110,8 @@ lassen als eine Migration auszulassen.
 | Datei | Wofür |
 |---|---|
 | `supabase_add_mail_zuordnungen.sql` | Ansicht „Mail": Absender-Adresse → Kunde von Hand zugeordnet (Rückfall ohne Tabelle: localStorage) |
+| `supabase_add_task_cinema_hidden.sql` | Aufgaben: „Im Kino-Modus ausblenden" für alle Geräte (`tasks.cinema_hidden`; ohne Spalte Rückfall localStorage) |
+| `supabase_angebote_belegjahr.sql` | Angebote eindeutig über **Belegnummer + Jahr** (Sage vergibt Nummern jährlich neu). **Vor dem 01.01.2027 ausführen** — sonst lehnt die DB neue Angebote mit Vorjahresnummer ab |
 
 ---
 
@@ -128,6 +130,8 @@ Liegen unter `supabase/functions/`, werden über die Supabase CLI ausgerollt:
 | Datei | Wofür |
 |---|---|
 | `supabase_add_rls_loeschrechte.sql` | Löschrechte aus `users.permissions` per RLS durchsetzen. Block 1 (Grundlage, `users.is_admin`, Funktionen) einmal; danach je Tabelle `select app_rls_loeschschutz('tabelle', 'bereich')`, Rückweg `app_rls_zuruecksetzen('tabelle')`, Übersicht `app_rls_status`. **Schrittweise, keine Downtime** |
+| `supabase_rls_loeschrechte_alle.sql` | **Abschluss:** schaltet den Löschschutz für alle Tabellen auf einmal ein (Bereich je Tabelle abgeglichen mit `canDelete` in der App). Bewusst offen: `subtasks`, `protocol_checkpoints`, `protocol_photos`, `event_participants` — die App löscht dort beim Speichern und schreibt neu |
+| `supabase_fix_notification_prefs_user_id.sql` | Reparatur: `notification_preferences.user_id` uuid → text (Benutzer-IDs sind Zahlen; vorher HTTP 400, Einstellungen nur lokal) |
 
 ## Wichtige Regel für neue Migrationen
 

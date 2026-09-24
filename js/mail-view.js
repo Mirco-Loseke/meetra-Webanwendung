@@ -330,8 +330,50 @@
         const marken = [/^\s*-{2,}\s*Ursprüngliche Nachricht/im, /^\s*Von:\s.+\n\s*Gesendet:/im, /^\s*Am .+ schrieb .+:\s*$/im, /^\s*On .+ wrote:\s*$/im, /^\s*From:\s.+\n\s*Sent:/im, /^\s*-{2,}\s*Original Message/im];
         let ende = t.length;
         marken.forEach(re => { const x = re.exec(t); if (x && x.index > 40 && x.index < ende) ende = x.index; });
-        return t.slice(0, ende).trim();
+        return signaturWeg(t.slice(0, ende)).trim();
     }
+    // Alles nach der letzten Grußformel weg (Name, Position, Firma, HRB, IBAN …) —
+    // für die KI wertlos, für den Datenschutz das Heikelste. Die Grußzeile bleibt.
+    function signaturWeg(text) {
+        const re = /^[ \t]*(?:Mit freundlichen Grüßen|Freundliche Grüße|Viele Grüße|Beste Grüße|Liebe Grüße|Schöne Grüße|Herzliche Grüße|Gruß|Grüße|MfG|Best regards|Kind regards|Regards|Met vriendelijke groet)[^\n]{0,20}$/gim;
+        let letzte = null, m;
+        while ((m = re.exec(text))) letzte = m;
+        if (!letzte || letzte.index < 20) return text;
+        return text.slice(0, letzte.index + letzte[0].length) + '\n[Signatur entfernt]';
+    }
+    // Namen für die Pseudonymisierung: Outlook-Kontakte (einmal laden, bleibt im
+    // Browser), Ansprechpartner des Adressbuchs, Firma aus der Absender-Domain.
+    // Nichts davon geht an die KI — es sind nur die Suchbegriffe fürs Ersetzen.
+    let kiNamenCache = null;
+    async function kiNamen(absender) {
+        if (!kiNamenCache) {
+            const kontakte = [], firmen = [];
+            try {
+                if (!S.kontakteGeladen && window.graphAlle) {
+                    S.kontakte = await window.graphAlle('/me/contacts?$top=500&$select=id,displayName,givenName,surname,companyName,emailAddresses', 10000);
+                    S.kontakteGeladen = true;
+                }
+                (S.kontakte || []).forEach(k => {
+                    const n = k.displayName || [k.givenName, k.surname].filter(Boolean).join(' ');
+                    if (n && !/@/.test(n)) kontakte.push(n);
+                    if (k.companyName) firmen.push(k.companyName);
+                });
+            } catch (e) { console.warn('KI: Outlook-Kontakte nicht ladbar', e); }
+            try {
+                const { data } = await window.supabaseClient.from('customer_contacts').select('name');
+                (data || []).forEach(c => { if (c.name) kontakte.push(c.name); });
+            } catch (e) { /* egal */ }
+            kiNamenCache = { kontakte, firmen };
+        }
+        const firmen = kiNamenCache.firmen.slice();
+        const dom = domainVon(absender || '');
+        if (dom && !FREEMAIL.test(dom)) {
+            const kern = dom.replace(/\.[a-z]{2,}$/i, '').split('.').pop();
+            if (kern && kern.length >= 5) { firmen.push(kern); if (/-/.test(kern)) firmen.push(kern.replace(/-/g, ' ')); }
+        }
+        return { kontakte: kiNamenCache.kontakte, firmen };
+    }
+    window.mailKiNamen = kiNamen;
     // Kundenkontext für die KI: Kunde, dessen Maschinen, offene Vorgänge — knapp
     async function kundenKontext(adr) {
         const t = kundeZuAdresse(adr);
@@ -382,7 +424,10 @@
             const resp = await (window.kiPseudonym ? window.kiPseudonym.fetchMaskiert : window.groqFetch)({
                 messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
                 temperature: 0.4, max_tokens: 1200
-            }, { kontakte: [von.name, kk.kontakt && kk.kontakt.name].filter(Boolean), firmen: kk.kunde ? [kk.kunde.name] : [] });
+            }, await (async () => {
+                const n = await kiNamen(von.address);
+                return { kontakte: [von.name, kk.kontakt && kk.kontakt.name].filter(Boolean).concat(n.kontakte), firmen: (kk.kunde ? [kk.kunde.name] : []).concat(n.firmen) };
+            })(), { pruefen: true, titel: 'Antwort entwerfen' });
             if (!resp.ok) { let e = 'HTTP ' + resp.status; try { const j = await resp.json(); e = (j.error && j.error.message) || e; } catch (_) { } throw new Error(e); }
             const d = await resp.json();
             const entwurf = (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content || '').trim();
@@ -391,6 +436,7 @@
             schreibenVorbelegen(von.address || '', antwortBetreff(m), zitatVon(m, von), html);
             $('mv-s-status').textContent = '✨ KI-Entwurf — bitte lesen, Platzhalter in [eckigen Klammern] ersetzen, dann senden.' + (window.kiPseudonym && window.kiPseudonym.letztes ? ' 🔒 ' + window.kiPseudonym.letztes.p.anzahl + ' Angaben vor dem Senden an die KI ersetzt.' : '');
         } catch (e) {
+            if (e.abgebrochen) { toast('Nicht an die KI gesendet.'); return; }
             toast('Entwurf fehlgeschlagen: ' + e.message, 'error');
         } finally {
             if (btn) { btn.disabled = false; btn.textContent = '✨ Antwort entwerfen'; }
@@ -854,6 +900,16 @@
         // Anhänge: Knopf, Dateiauswahl, Drag & Drop auf die Schreibfläche, Entfernen
         $('mv-s-anhang-btn').addEventListener('click', () => $('mv-s-anhang-input').click());
         $('mv-s-anhang-input').addEventListener('change', e => { dateienHinzufuegen(e.target.files); e.target.value = ''; });
+        // Angebot/Dokument aus der App (js/mail-anhang-app.js) — Kunde aus dem ersten Empfänger
+        window.mailDateienHinzufuegen = dateienHinzufuegen;
+        const appBtn = $('mv-s-anhang-app-btn');
+        if (appBtn) appBtn.addEventListener('click', async () => {
+            if (typeof window.mailAnhangAusApp !== 'function') { toast('Modul nicht geladen.', 'error'); return; }
+            try { await indexBauen(); } catch (e) { /* ohne Kundenerkennung weiter */ }
+            const adr = (($('mv-s-an') || {}).value || '').split(/[,;]/)[0].replace(/.*</, '').replace(/>.*/, '').trim();
+            const t = adr ? kundeZuAdresse(adr) : null;
+            window.mailAnhangAusApp({ kunde: t && t.kunde ? { id: t.kunde.id, name: t.kunde.name } : null });
+        });
         $('mv-s-anhaenge').addEventListener('click', e => {
             const b = e.target.closest('button[data-i]'); if (!b) return;
             anhaenge.splice(Number(b.dataset.i), 1); anhaengeZeichnen();

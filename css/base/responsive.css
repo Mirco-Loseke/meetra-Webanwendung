@@ -2046,6 +2046,7 @@ details.category-group-details[open] .group-chevron {
     #tasks .tasks-with-workshop {
         display: flex !important;
         flex-direction: column !important;
+        align-items: stretch !important; /* sonst schrumpfen die Spalten auf ihren Inhalt (Karten 100px breit) */
         gap: 1rem !important;
     }
     #tasks #tasks-board {
@@ -2088,7 +2089,11 @@ details.category-group-details[open] .group-chevron {
        per order/flex-basis in eine eigene Zeile darunter und wird 10% kleiner
        (121 → 109px). `flex: 0 0 100%` erzwingt den Umbruch, `max-width`
        klammert es wieder auf 109px, die auto-Ränder zentrieren es.
-       Die Masse am <img> steht inline in js/tasks.js — daher !important. */
+       Die Masse am <img> steht inline in js/tasks.js — daher !important.
+       Nur noch Ersatz für Geräte ohne Container-Queries — sonst gilt die
+       Kartenbreiten-Regel in views/tasks.css; beide zusammen setzten das Bild
+       neben den Titel und quetschten ihn auf ~50px. */
+    @supports not (container-type: inline-size) {
     .task-card-header {
         flex-wrap: wrap !important;
         align-items: flex-start !important;
@@ -2118,6 +2123,7 @@ details.category-group-details[open] .group-chevron {
         height: 109px !important;
         margin: 10px auto 0 auto !important;
         align-self: center !important;
+    }
     }
     /* Maschinentitel: darf umbrechen und lange Namen trennen, statt
        abgeschnitten oder über den Rand geschoben zu werden. */
@@ -2587,4 +2593,15 @@ details.category-group-details[open] .group-chevron {
     #processes .proc-sort-label { flex-basis: 100%; }
     #accounting .calendar-view-tabs { flex-wrap: wrap !important; max-width: 100%; }
     #accounting .calendar-view-tabs > * { flex: 1 1 auto; min-width: 0; }
+}
+
+/* Einstellungen auf dem Handy (Prüfung 2026-09-24): KI-Auswahlfeld hatte
+   min-width 200px + 130px Beschriftung, die Etiketten-Zeilen brachen nicht um
+   — beides ragte über den Rand. */
+@media (max-width: 768px) {
+    #settings-ai .ki-zeile > * { min-width: 0 !important; max-width: 100%; }
+    #settings-ai .ki-zeile .glass-form-input,
+    #settings-ai .ki-zeile > div { flex: 1 1 100% !important; min-width: 0 !important; }
+    #settings-etiketten .label-article-row { flex-wrap: wrap !important; }
+    #settings-etiketten .label-article-row > * { min-width: 0; }
 }

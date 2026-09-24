@@ -5,7 +5,9 @@
 //   anlegen  customers / angebote, nur erlaubte Spalten
 //   aendern  customers / angebote per id, nur erlaubte Spalten
 //   stempel  app_settings.angebote_last_import = { at, by: 'Server' }
-// Kein Löschen, keine anderen Tabellen. Ausrollen OHNE „Verify JWT".
+// Kein Löschen, keine anderen Tabellen. Ausnahme pdf_*: legt einem Angebot ohne
+// Vorgang einen an (internal_processes) und hängt die PDF dort an.
+// Ausrollen OHNE „Verify JWT".
 // npm: statt esm.sh — esm.sh lieferte beim Ausrollen "Module not found" (2026-09-23).
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { AwsClient } from 'npm:aws4fetch@1.0.20';
@@ -97,16 +99,50 @@ Deno.serve(async (req) => {
         if (!p.angebot_id || !name.toLowerCase().endsWith('.pdf') || !(size > 0) || size > 25 * 1024 * 1024 || !/^[0-9a-f]{64}$/.test(sha)) {
             return antwort({ error: 'Ungültige Angaben' }, 400);
         }
-        const { data: ang, error: e1 } = await db.from('angebote').select('id, belegnummer, process_id').eq('id', p.angebot_id).maybeSingle();
+        const { data: ang, error: e1 } = await db.from('angebote').select('id, belegnummer, belegdatum, customer_id, machine_id, process_id').eq('id', p.angebot_id).maybeSingle();
         if (e1) return antwort({ error: e1.message }, 500);
         if (!ang) return antwort({ status: 'kein_angebot' });
-        if (!ang.process_id) return antwort({ status: 'kein_vorgang' });
+        // Frisch importiertes Angebot hat noch keinen Vorgang — den legte bisher
+        // erst die Webapp beim Öffnen der Angebotsliste an (angebotVorgaengeAnlegen
+        // in js/listen.js), die PDF blieb bis dahin liegen. Jetzt hier, gleiche Felder.
+        if (!ang.process_id) {
+            const jetzt = new Date().toISOString();
+            const { data: proc, error: eP } = await db.from('internal_processes').insert({
+                title: ('Angebot ' + (ang.belegnummer ?? '')).trim(),
+                process_type: 'offer',
+                process_date: ang.belegdatum ? new Date(ang.belegdatum + 'T08:00:00').toISOString() : jetzt,
+                machine_id: ang.machine_id ?? null,
+                customer_id: ang.customer_id ?? null,
+                status: 'offen',
+                assigned_users: [],
+                steps: [],
+                status_updates: [],
+            }).select('id').single();
+            if (eP || !proc) return antwort({ error: 'Vorgang nicht angelegt: ' + (eP?.message ?? '') }, 500);
+            // Gleichzeitig von der Webapp angelegt? Wer process_id zuerst setzt, gewinnt.
+            const { data: upd } = await db.from('angebote').update({ process_id: proc.id })
+                .eq('id', ang.id).is('process_id', null).select('process_id');
+            if (!upd || !upd.length) {
+                await db.from('internal_processes').delete().eq('id', proc.id);
+                const { data: neu } = await db.from('angebote').select('process_id').eq('id', ang.id).maybeSingle();
+                if (!neu?.process_id) return antwort({ status: 'kein_vorgang' });
+                ang.process_id = neu.process_id;
+            } else {
+                ang.process_id = proc.id;
+            }
+        }
         const { data: proc, error: e2 } = await db.from('internal_processes').select('attachments').eq('id', ang.process_id).maybeSingle();
         if (e2) return antwort({ error: e2.message }, 500);
         const liste: Record<string, unknown>[] = Array.isArray(proc?.attachments) ? proc!.attachments : [];
         const schonDa = liste.some(f => !f.step_id && (f.sha256 === sha
-            || (Number(f.size) === size && String(f.name ?? '').toLowerCase().endsWith('.pdf'))));
+            || (!f.sha256 && Number(f.size) === size && String(f.name ?? '').toLowerCase().endsWith('.pdf'))));
         if (schonDa) return antwort({ status: 'vorhanden', belegnummer: ang.belegnummer });
+        // Ältere Fassung DIESES Angebots, die der Abgleich selbst hochgeladen hat?
+        // (Von Hand hochgeladene PDFs werden nie ersetzt. Ältere Einträge ohne
+        // angebot_id erkennt man an der Belegnummer im Dateinamen.)
+        const altePdf = (f: Record<string, unknown>) => f.by === 'Sage-Abgleich' && !f.step_id && f.sha256 !== sha
+            && (String(f.angebot_id ?? '') === String(ang.id)
+                || (!f.angebot_id && String(f.name ?? '').includes(String(ang.belegnummer))));
 
         const praefix = `vorgaenge/${ang.process_id}/`;
         if (b.aktion === 'pdf_pruefen') {
@@ -114,18 +150,32 @@ Deno.serve(async (req) => {
             const ziel = new URL(`https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${R2_BUCKET}/${key}`);
             ziel.searchParams.set('X-Amz-Expires', '300');
             const signiert = await aws.sign(new Request(ziel.toString(), { method: 'PUT', headers: { 'Content-Type': 'application/pdf' } }), { aws: { signQuery: true } });
-            return antwort({ status: 'hochladen', uploadUrl: signiert.url, key, belegnummer: ang.belegnummer });
+            return antwort({ status: 'hochladen', uploadUrl: signiert.url, key, belegnummer: ang.belegnummer, ersetzt: liste.some(altePdf) });
         }
 
         const key = String(p.key ?? '');
         if (!key.startsWith(praefix) || key.includes('..')) return antwort({ error: 'Ungültiger Schlüssel' }, 400);
-        liste.push({
+        const alte = liste.filter(altePdf);
+        const neu = liste.filter(f => !altePdf(f));
+        neu.push({
             id: 'att_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
             name, url: `${R2_PUBLIC_URL}/${key}`, path: key, size, type: 'application/pdf',
-            at: new Date().toISOString(), by: 'Sage-Abgleich', step_id: null, sha256: sha,
+            at: new Date().toISOString(), by: 'Sage-Abgleich', step_id: null, sha256: sha, angebot_id: ang.id,
         });
-        const { error: e3 } = await db.from('internal_processes').update({ attachments: liste }).eq('id', ang.process_id);
-        return e3 ? antwort({ error: e3.message }, 500) : antwort({ status: 'angehaengt', belegnummer: ang.belegnummer });
+        const { error: e3 } = await db.from('internal_processes').update({ attachments: neu }).eq('id', ang.process_id);
+        if (e3) return antwort({ error: e3.message }, 500);
+        // Alte Fassung(en) endgültig aus dem Speicher löschen — erst NACH dem Speichern
+        // des neuen Eintrags, damit nie ein Verweis ins Leere zeigt.
+        let geloescht = 0;
+        for (const f of alte) {
+            const pfad = String(f.path ?? '');
+            if (!pfad.startsWith(praefix) || pfad.includes('..')) continue;
+            try {
+                const r = await aws.fetch(`https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${R2_BUCKET}/${pfad}`, { method: 'DELETE' });
+                if (r.ok || r.status === 404) geloescht++;
+            } catch { /* Eintrag ist schon ersetzt; Datei bleibt dann nur als Leiche im Speicher */ }
+        }
+        return antwort({ status: alte.length ? 'ersetzt' : 'angehaengt', belegnummer: ang.belegnummer, geloescht });
     }
 
     const t = SPALTEN[b.tabelle ?? ''];

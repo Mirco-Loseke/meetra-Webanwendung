@@ -399,29 +399,26 @@
     // Kartenname der eingebauten Vorlage, solange nichts gespeichert ist.
     const STANDARD_NAME = 'Mietvereinbarung Siebtrommel';
 
-    function karte(titel, unterzeile, gespeichert, oeffnen, loeschen, kopieren) {
+    // chips: [Maschinentypen, „N Prüfpunkte"] — Stile .mvl-* in css/views/einstellungen.css
+    function karte(titel, chips, gespeichert, oeffnen, loeschen, kopieren) {
+        const [typen, punkte] = chips;
+        const ohneTyp = !gespeichert || /kein Maschinentyp/.test(typen);
         return `
-        <div class="settings-card" onclick="${oeffnen}">
-            <div style="display:flex; align-items:center; gap:12px; margin-bottom:1rem;">
-                <div class="settings-icon-container" style="background:${gespeichert ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.06)'}; color:${gespeichert ? '#10b981' : 'rgba(255,255,255,0.45)'}; width:48px; height:48px; border-radius:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                        <polyline points="14 2 14 8 20 8"></polyline>
-                    </svg>
-                </div>
-                <h2 style="margin:0; font-size:1.2rem; color:#fff; font-family:'Outfit',sans-serif; word-break:break-word; flex:1;">${esc(titel)}</h2>
-                ${kopieren ? `<button type="button" onclick="event.stopPropagation(); ${kopieren}" title="Vorlage kopieren"
-                        style="background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.35); color:#60a5fa; border-radius:9px; width:32px; height:32px; cursor:pointer; flex-shrink:0;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                    </button>` : ''}
-                ${loeschen ? `<button type="button" class="delete-permission-required" data-del-area="mietvereinbarungen" onclick="event.stopPropagation(); ${loeschen}" title="Vorlage löschen"
-                        style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); color:#ef4444; border-radius:9px; width:32px; height:32px; cursor:pointer; flex-shrink:0;">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>
-                    </button>` : ''}
+        <div class="mvl-karte${gespeichert ? '' : ' standard'}" onclick="${oeffnen}">
+            <div class="mvl-zeile">
+                <div class="mvl-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg></div>
+                <h2 class="mvl-titel">${esc(titel)}</h2>
+                ${kopieren ? `<button type="button" class="mv-ikon blau" onclick="event.stopPropagation(); ${kopieren}" title="Vorlage kopieren">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>` : ''}
+                ${loeschen ? `<button type="button" class="mv-ikon rot delete-permission-required" data-del-area="mietvereinbarungen" onclick="event.stopPropagation(); ${loeschen}" title="Vorlage löschen">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>` : ''}
             </div>
-            <div class="settings-content">
-                <p class="settings-card-desc">${esc(unterzeile)}</p>
+            <div class="mvl-chips">
+                ${gespeichert ? '' : '<span class="mvl-chip">Eingebaute Standardvorlage</span>'}
+                <span class="mvl-chip${ohneTyp ? '' : ' gruen'}">${esc(typen)}</span>
+                <span class="mvl-chip">${esc(punkte)}</span>
             </div>
+            <p class="mvl-unter">${gespeichert ? 'Klicken zum Bearbeiten' : 'Klicken, um daraus eine eigene Vorlage zu machen'}</p>
         </div>`;
     }
 
@@ -452,14 +449,14 @@
         const karten = vorlagen.length
             ? vorlagen.map(v => karte(
                 v.name,
-                `${kategorieName(v)} · ${punkte(v.config)} Prüfpunkte`,
+                [kategorieName(v), `${punkte(v.config)} Prüfpunkte`],
                 true,
                 `window.openMietVorlage('${esc(v.id)}')`,
                 `window.mietVorlageLoeschen('${esc(v.id)}')`,
                 `window.mietVorlageKopieren('${esc(v.id)}')`)).join('')
             : karte(
                 STANDARD_NAME,
-                `Standardvorlage · ${punkte(null)} Prüfpunkte`,
+                ['Siebtrommel', `${punkte(null)} Prüfpunkte`],
                 false,
                 `window.openMietVorlage('standard')`,
                 null,
@@ -557,11 +554,21 @@
 
         // breit=true: Abschnitt nimmt beide Spalten ein (siehe
         // .miet-editor-grid in css/views/mietvereinbarung.css).
-        const abschnitt = (titel, inhalt, breit) => `
-            <div class="miet-editor-card${breit ? ' wide' : ''}">
+        // Jeder Abschnitt bekommt eine Anker-ID für die Navigation links
+        // (.mve-nav, css/views/einstellungen.css); anzahl = kleine Zahl daneben.
+        const navEintraege = [];
+        const abschnitt = (titel, inhalt, breit, anzahl) => {
+            const id = 'mve-' + navEintraege.length;
+            navEintraege.push({ id, titel, anzahl });
+            return `
+            <div class="miet-editor-card${breit ? ' wide' : ''}" id="${id}">
                 <h3>${esc(titel)}</h3>
                 <div class="miet-editor-body">${inhalt}</div>
             </div>`;
+        };
+        const MUELL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>';
+        const weg = (onclick, title, aus) => `<button type="button" class="mv-ikon rot" title="${esc(title)}" onclick="${onclick}" ${aus ? 'disabled' : ''}>${MUELL}</button>`;
+        const plus = (onclick, text) => `<button type="button" class="mve-plus" onclick="${onclick}">+ ${esc(text)}</button>`;
 
         const feldZeile = (label, pfad, wert) => `
             <div class="miet-editor-row">
@@ -629,66 +636,64 @@
 
         // --- Spalten
         const spalten = `
-            <p style="font-size:0.8rem; color:rgba(255,255,255,0.45); margin:0 0 12px;">
+            <p class="mve-hint">
                 Die erste Spalte gilt als Übergabe, die zweite als Rücknahme. Weitere Spalten
                 erscheinen zusätzlich auf dem Bogen.
             </p>
             ${c.spalten.map((s, i) => `
-            <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
-                <span style="width:24px; color:rgba(255,255,255,0.35); font-weight:800;">${i + 1}</span>
-                <input class="glass-form-input" value="${esc(s.label)}" style="flex:1;"
+            <div class="mve-liste-zeile">
+                <span class="mve-nr">${i + 1}</span>
+                <input class="glass-form-input" value="${esc(s.label)}"
                        oninput="window.mietVorlageSpalte(${i}, this.value)">
-                <button class="btn-secondary" style="padding:6px 12px;" onclick="window.mietVorlageSpalteWeg(${i})" ${c.spalten.length <= 1 ? 'disabled' : ''}>Entfernen</button>
+                ${weg(`window.mietVorlageSpalteWeg(${i})`, 'Spalte entfernen', c.spalten.length <= 1)}
             </div>`).join('')}
-            <button class="btn-secondary" onclick="window.mietVorlageSpalteNeu()">+ Spalte</button>`;
+            ${plus('window.mietVorlageSpalteNeu()', 'Spalte')}`;
 
         // --- Baugruppen
         const baugruppen = c.baugruppen.map((g, gi) => `
-            <div style="border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:14px; margin-bottom:12px;">
-                <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
-                    <input class="glass-form-input" value="${esc(g.gruppe)}" style="flex:1; font-weight:700;"
+            <div class="mve-box">
+                <div class="mve-box-kopf">
+                    <input class="glass-form-input" value="${esc(g.gruppe)}"
                            oninput="window.mietVorlageGruppe(${gi}, this.value)">
-                    <button class="btn-secondary" style="padding:6px 12px;" onclick="window.mietVorlageGruppeWeg(${gi})">Gruppe löschen</button>
+                    ${weg(`window.mietVorlageGruppeWeg(${gi})`, 'Baugruppe löschen')}
                 </div>
                 ${(g.punkte || []).map((roh, pi) => {
                     const p = window.mietPunktLesen(roh);
                     return `
-                <div style="padding-left:16px; margin-bottom:10px;">
-                    <div style="display:flex; gap:8px; align-items:center;">
-                        <input class="glass-form-input" value="${esc(p.text)}" style="flex:1;"
+                <div class="mve-punkt">
+                    <div class="mve-liste-zeile">
+                        <input class="glass-form-input" value="${esc(p.text)}"
                                oninput="window.mietVorlagePunkt(${gi}, ${pi}, this.value)">
-                        <label style="display:flex; align-items:center; gap:6px; font-size:0.78rem; color:rgba(255,255,255,0.5); white-space:nowrap;"
-                               title="Optional: steht grau auf dem Bogen und wird nur gedruckt, wenn etwas angekreuzt ist.">
-                            <input type="checkbox" ${p.optional ? 'checked' : ''} style="accent-color:#10b981;"
+                        <label class="mve-schalter" title="Optional: steht grau auf dem Bogen und wird nur gedruckt, wenn etwas angekreuzt ist.">
+                            <input type="checkbox" ${p.optional ? 'checked' : ''}
                                    onchange="window.mietVorlagePunktOptional(${gi}, ${pi}, this.checked)"> Optional
                         </label>
-                        <button class="btn-secondary" style="padding:6px 12px;" onclick="window.mietVorlagePunktWeg(${gi}, ${pi})">&times;</button>
+                        ${weg(`window.mietVorlagePunktWeg(${gi}, ${pi})`, 'Prüfpunkt entfernen')}
                     </div>
-                    <div style="display:flex; gap:8px; align-items:center; margin-top:5px;">
-                        <input class="glass-form-input" value="${esc(p.optionen.join('; '))}" style="flex:1; font-size:0.84rem;"
+                    <div class="mve-liste-zeile" style="margin-bottom:0;">
+                        <input class="glass-form-input" value="${esc(p.optionen.join('; '))}" style="font-size:var(--fs-sm);"
                                placeholder="Ausführungen zur Auswahl, mit Semikolon getrennt — z. B. 12 mm; 25 mm; 40 mm"
                                oninput="window.mietVorlagePunktOptionen(${gi}, ${pi}, this.value)">
-                        <label style="display:flex; align-items:center; gap:6px; font-size:0.78rem; color:rgba(255,255,255,0.5); white-space:nowrap;"
-                               title="Mehrere Ausführungen gleichzeitig auswählbar.">
-                            <input type="checkbox" ${p.mehrfach ? 'checked' : ''} style="accent-color:#10b981;"
+                        <label class="mve-schalter" title="Mehrere Ausführungen gleichzeitig auswählbar.">
+                            <input type="checkbox" ${p.mehrfach ? 'checked' : ''}
                                    onchange="window.mietVorlagePunktMehrfach(${gi}, ${pi}, this.checked)"> Mehrfach
                         </label>
                     </div>
                 </div>`;
                 }).join('')}
-                <button class="btn-secondary" style="margin-left:16px;" onclick="window.mietVorlagePunktNeu(${gi})">+ Prüfpunkt</button>
+                ${plus(`window.mietVorlagePunktNeu(${gi})`, 'Prüfpunkt')}
             </div>`).join('')
-            + `<button class="btn-secondary" onclick="window.mietVorlageGruppeNeu()">+ Baugruppe</button>`;
+            + plus('window.mietVorlageGruppeNeu()', 'Baugruppe');
 
         // --- Fotos
         const fotos = c.fotos.map((f, i) => `
-            <div style="display:flex; gap:8px; align-items:center; margin-bottom:6px;">
-                <span style="width:52px; color:rgba(255,255,255,0.35); font-weight:800; font-size:0.8rem;">Bild ${i + 1}</span>
-                <input class="glass-form-input" value="${esc(f)}" style="flex:1;"
+            <div class="mve-liste-zeile">
+                <span class="mve-nr">${i + 1}</span>
+                <input class="glass-form-input" value="${esc(f)}"
                        oninput="window.mietVorlageFoto(${i}, this.value)">
-                <button class="btn-secondary" style="padding:6px 12px;" onclick="window.mietVorlageFotoWeg(${i})">&times;</button>
+                ${weg(`window.mietVorlageFotoWeg(${i})`, 'Position entfernen')}
             </div>`).join('')
-            + `<button class="btn-secondary" onclick="window.mietVorlageFotoNeu()">+ Position</button>`;
+            + plus('window.mietVorlageFotoNeu()', 'Position');
 
         // --- Tagessätze nach Ausstattung
         // Zur Auswahl stehen alle Ausführungen der Prüfpunkte und alle
@@ -697,14 +702,14 @@
         const bedingungWahl = preisBedingungen();
         const bedingungText = (b) => b.verbaut ? b.punkt + ' verbaut' : b.punkt + ': ' + b.option;
         const preise = `
-            <p style="font-size:0.8rem; color:rgba(255,255,255,0.45); margin:0 0 12px;">
+            <p class="mve-hint">
                 Der Tagessatz wird auf dem Bogen automatisch eingetragen, sobald die gewählten
                 Ausführungen und angekreuzten Optionen zu einer Regel passen. Es gilt die Regel mit den
                 meisten zutreffenden Bedingungen; eine Regel ohne Bedingung ist der Grundpreis.
                 Der Betrag am Bogen bleibt von Hand änderbar.
             </p>
             ${(c.preise || []).map((r, ri) => `
-            <div style="border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:12px 14px; margin-bottom:10px;">
+            <div class="mve-box">
                 <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                     <input class="glass-form-input" value="${esc(r.tagessatz || '')}" style="width:170px; font-weight:700;"
                            placeholder="z. B. 450,00 €/Tag"
@@ -723,43 +728,109 @@
                         <option value="">+ Bedingung …</option>
                         ${bedingungWahl.map((b, wi) => `<option value="${wi}">${esc(bedingungText(b))}</option>`).join('')}
                     </select>
-                    <button class="btn-secondary" style="padding:6px 12px; margin-left:auto;" onclick="window.mietVorlagePreisWeg(${ri})">&times;</button>
+                    <span style="margin-left:auto;">${weg(`window.mietVorlagePreisWeg(${ri})`, 'Tagessatz entfernen')}</span>
                 </div>
             </div>`).join('')}
-            ${bedingungWahl.length ? '' : `<p style="font-size:0.8rem; color:rgba(255,255,255,0.4);">
+            ${bedingungWahl.length ? '' : `<p class="mve-hint">
                 Bedingungen brauchen Prüfpunkte mit Ausführungen (z. B. Siebkorb: 40 x 110; 60 x 110)
                 oder optionale Prüfpunkte (z. B. Kaskadensieb) — siehe „Baugruppen und Prüfpunkte".</p>`}
-            <button class="btn-secondary" onclick="window.mietVorlagePreisNeu()">+ Tagessatz</button>`;
+            ${plus('window.mietVorlagePreisNeu()', 'Tagessatz')}`;
 
         // --- Vertragstext
         const texte = feldZeile('Überschrift', 'texte.titel', c.texte.titel)
             + c.texte.abschnitte.map((a, ai) => `
-            <div style="border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:14px; margin:12px 0;">
-                <div style="display:flex; gap:8px; margin-bottom:10px;">
-                    <input class="glass-form-input" value="${esc(a.titel || '')}" style="flex:1; font-weight:700;"
+            <div class="mve-box" style="margin-top:12px;">
+                <div class="mve-box-kopf">
+                    <span class="mve-nr">§${ai + 1}</span>
+                    <input class="glass-form-input" value="${esc(a.titel || '')}"
                            oninput="window.mietVorlageAbschnitt(${ai}, this.value)">
-                    <button class="btn-secondary" style="padding:6px 12px;" onclick="window.mietVorlageAbschnittWeg(${ai})">Abschnitt löschen</button>
+                    ${weg(`window.mietVorlageAbschnittWeg(${ai})`, 'Abschnitt löschen')}
                 </div>
                 ${(a.absaetze || []).map((p, pi) => `
-                <div style="display:flex; gap:8px; margin-bottom:8px;">
-                    <textarea class="glass-form-input" rows="3" style="flex:1; resize:vertical;"
+                <div class="mve-liste-zeile" style="align-items:flex-start;">
+                    <textarea class="glass-form-input" rows="3" style="resize:vertical;"
                               oninput="window.mietVorlageAbsatz(${ai}, ${pi}, this.value)">${esc(p)}</textarea>
-                    <button class="btn-secondary" style="padding:6px 12px; align-self:flex-start;" onclick="window.mietVorlageAbsatzWeg(${ai}, ${pi})">&times;</button>
+                    ${weg(`window.mietVorlageAbsatzWeg(${ai}, ${pi})`, 'Absatz entfernen')}
                 </div>`).join('')}
-                <button class="btn-secondary" onclick="window.mietVorlageAbsatzNeu(${ai})">+ Absatz</button>
+                ${plus(`window.mietVorlageAbsatzNeu(${ai})`, 'Absatz')}
             </div>`).join('')
-            + `<button class="btn-secondary" onclick="window.mietVorlageAbschnittNeu()">+ Abschnitt</button>`;
+            + `<div style="margin-top:12px;">${plus('window.mietVorlageAbschnittNeu()', 'Abschnitt')}</div>`;
 
-        box.innerHTML = `<div class="miet-editor-grid">`
-            + abschnitt('Grunddaten', kopf, true)
+        const punkteGesamt = c.baugruppen.reduce((n, g) => n + (g.punkte || []).length, 0);
+        const karten = abschnitt('Grunddaten', kopf, true)
+            + abschnitt('Baugruppen und Prüfpunkte', baugruppen, false, punkteGesamt)
+            + abschnitt('Prüfspalten', spalten, false, c.spalten.length)
+            + abschnitt('Fotopositionen', fotos, false, c.fotos.length)
+            + abschnitt('Tagessätze nach Ausstattung', preise, true, (c.preise || []).length)
+            + abschnitt('Vertragstext', texte, true, c.texte.abschnitte.length)
             + abschnitt('Überschriften der Abschnitte', bloecke)
-            + abschnitt('Prüfspalten', spalten)
-            + abschnitt('Baugruppen und Prüfpunkte', baugruppen)
-            + abschnitt('Fotopositionen', fotos)
-            + abschnitt('Beschriftungen der Zeilen', felder)
-            + abschnitt('Tagessätze nach Ausstattung', preise, true)
-            + abschnitt('Vertragstext', texte, true)
-            + `</div>`;
+            + abschnitt('Beschriftungen der Zeilen', felder);
+
+        // Neu zeichnen (z. B. nach „+ Prüfpunkt"): Scrollstand des Inhalts behalten
+        const altInhalt = box.querySelector('.mve-inhalt');
+        const scrollAlt = altInhalt ? altInhalt.scrollTop : 0;
+        box.innerHTML = `<div class="mve-layout">
+            <nav class="mve-nav" id="mve-nav">${navEintraege.map((n, i) =>
+                `<a href="#${n.id}" data-mve="${n.id}" class="${i === 0 ? 'aktiv' : ''}">${esc(n.titel)}${n.anzahl != null ? `<em>${n.anzahl}</em>` : ''}</a>`).join('')}</nav>
+            <div class="mve-inhalt"><div class="miet-editor-grid">${karten}</div></div>
+        </div>`;
+        mveNavVerdrahten(scrollAlt);
+    }
+
+    // Abschnitts-Navigation. Aufbau wie in Desktop-Programmen: die Leiste links
+    // steht, nur der Inhalt rechts (.mve-inhalt) scrollt in einem eigenen Bereich
+    // bis zum unteren Fensterrand. (position:sticky greift hier nicht, weil
+    // #main-content overflow:auto hat, aber nicht selbst scrollt — ein
+    // Nachschieben per Skript ruckelte sichtbar.)
+
+    function mveHoehe() {
+        const inhalt = document.querySelector('#miet-vorlage-editor-inhalt .mve-inhalt');
+        if (!inhalt || !inhalt.offsetParent) return;
+        const oben = inhalt.getBoundingClientRect().top;
+        let h = Math.max(320, Math.floor(window.innerHeight - oben - 16));
+        inhalt.style.height = h + 'px';
+        // Abstände unterhalb (Innenabstand von #main-content) würden die Seite
+        // sonst ein paar Pixel scrollbar machen → zweiter Scrollbalken
+        const zuViel = document.body.scrollHeight - window.innerHeight;
+        if (zuViel > 0 && h - zuViel >= 320) inhalt.style.height = (h - zuViel) + 'px';
+    }
+    window.addEventListener('resize', mveHoehe);
+    function mveNavVerdrahten(scrollAlt) {
+        const nav = document.getElementById('mve-nav');
+        const inhalt = document.querySelector('#miet-vorlage-editor-inhalt .mve-inhalt');
+        if (!nav || !inhalt) return;
+        // Seite nach oben, dann den Inhaltsbereich bis zum Fensterrand ziehen
+        const seite = document.scrollingElement || document.documentElement;
+        seite.scrollTop = 0;
+        document.body.scrollTop = 0;
+        mveHoehe();
+        requestAnimationFrame(mveHoehe);
+        if (scrollAlt) inhalt.scrollTop = scrollAlt;
+
+        nav.onclick = (e) => {
+            const a = e.target.closest('a[data-mve]');
+            if (!a) return;
+            e.preventDefault();
+            const ziel = document.getElementById(a.dataset.mve);
+            if (ziel) inhalt.scrollTo({ top: ziel.offsetTop - 4, behavior: 'smooth' });
+        };
+        // Markierung: der letzte Abschnitt, dessen Anfang oben erreicht ist
+        // (am Ende des Scrollbereichs immer der letzte). Bewegt nichts, schaltet nur die Klasse.
+        const karten = [...inhalt.querySelectorAll('.miet-editor-card[id]')];
+        let zuletzt = '';
+        const markieren = () => {
+            const y = inhalt.scrollTop + 40;
+            let id = karten.length ? karten[0].id : '';
+            karten.forEach(k => { if (k.offsetTop <= y) id = k.id; });
+            if (inhalt.scrollTop + inhalt.clientHeight >= inhalt.scrollHeight - 2 && karten.length) id = karten[karten.length - 1].id;
+            if (id === zuletzt) return;
+            zuletzt = id;
+            nav.querySelectorAll('a').forEach(a => a.classList.toggle('aktiv', a.dataset.mve === id));
+            const aktiv = nav.querySelector('a.aktiv');
+            if (aktiv && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = aktiv.offsetLeft - 8;
+        };
+        inhalt.onscroll = markieren;
+        markieren();
     }
 
     // ------------------------------------------------------

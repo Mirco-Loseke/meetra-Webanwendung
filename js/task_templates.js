@@ -793,18 +793,44 @@
         renderQTBuilder();
     };
 
+    // Vorlagen-Menü aufklappen und auf dem Bildschirm halten. Lange Vorlagen
+    // machten die Liste breiter als das Handy; rechtsbündig am Knopf lag sie
+    // dann links außerhalb. Ursprüngliche Ausrichtung bleibt, wenn sie passt.
+    function snippetMenuOeffnen(dropdown) {
+        if (!dropdown.dataset.origLeft) {
+            dropdown.dataset.origLeft = dropdown.style.left || 'auto';
+            dropdown.dataset.origRight = dropdown.style.right || 'auto';
+        }
+        dropdown.style.left = dropdown.dataset.origLeft;
+        dropdown.style.right = dropdown.dataset.origRight;
+        dropdown.style.maxWidth = (window.innerWidth - 24) + 'px';
+        dropdown.classList.remove('hidden');
+        const RAND = 8;
+        let r = dropdown.getBoundingClientRect();
+        if (r.left < RAND) {
+            dropdown.style.right = 'auto';
+            dropdown.style.left = '0';
+            r = dropdown.getBoundingClientRect();
+        }
+        if (r.right > window.innerWidth - RAND) {
+            const links = parseFloat(getComputedStyle(dropdown).left) || 0;
+            dropdown.style.right = 'auto';
+            dropdown.style.left = (links - (r.right - (window.innerWidth - RAND))) + 'px';
+        }
+    }
+
     window.toggleQTGroupDropdown = function(gIdx) {
         const dropdown = document.getElementById(`qt-group-dropdown-${gIdx}`);
         const isHidden = dropdown.classList.contains('hidden');
         document.querySelectorAll('.snippet-dropdown').forEach(d => d.classList.add('hidden'));
-        if (isHidden) dropdown.classList.remove('hidden');
+        if (isHidden) snippetMenuOeffnen(dropdown);
     };
 
     window.toggleQTSubtaskDropdown = function(gIdx, sIdx) {
         const dropdown = document.getElementById(`qt-subtask-dropdown-${gIdx}-${sIdx}`);
         const isHidden = dropdown.classList.contains('hidden');
         document.querySelectorAll('.snippet-dropdown').forEach(d => d.classList.add('hidden'));
-        if (isHidden) dropdown.classList.remove('hidden');
+        if (isHidden) snippetMenuOeffnen(dropdown);
     };
 
     window.selectQTGroupName = function(gIdx, name) {
@@ -1315,7 +1341,7 @@
         const dropdown = document.getElementById(`snippet-dropdown-${gIdx}`);
         const isHidden = dropdown.classList.contains('hidden');
         document.querySelectorAll('.snippet-dropdown').forEach(d => d.classList.add('hidden'));
-        if (isHidden) dropdown.classList.remove('hidden');
+        if (isHidden) snippetMenuOeffnen(dropdown);
     };
 
     window.addSnippetToGroup = function (gIdx, title) {
