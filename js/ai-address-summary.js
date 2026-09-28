@@ -48,6 +48,14 @@
     }
 
     // ---------- Daten → kompakter Text für die KI ----------
+    // „(N Fotos)" hinter einem Eintrag — Zählung aus js/ai-machine-summary.js (window.kiFotoAnzahl).
+    function fotos(x) {
+        // Serviceberichte kommen im Adressbuch verpackt an (rawService, js/addressbook.js).
+        const liste = x && (x.files || x.attachments || x.photos || x.images || (x.rawService && x.rawService.files));
+        const n = typeof window.kiFotoAnzahl === 'function' ? window.kiFotoAnzahl(liste) : 0;
+        return n ? ' (' + n + (n === 1 ? ' Foto' : ' Fotos') + ')' : '';
+    }
+
     function datenText(D) {
         const a = D.adresse || {};
         const heute = new Date();
@@ -81,7 +89,7 @@
                 const m = p.machine_id ? mById.get(String(p.machine_id)) : null;
                 const status = p.status === 'erledigt' ? 'ERLEDIGT' : (p.status === 'in_bearbeitung' || p.status === 'wartet') ? 'IN BEARBEITUNG' : 'OFFEN';
                 const zust = nutzerNamen(p.assigned_users) || p.assigned_to || p.responsible || '';
-                const kopf = ['[' + status + ']', datum(p.process_date || p.created_at), ART[p.process_type] ? '(' + ART[p.process_type] + ')' : '', ang ? 'Angebot ' + (ang.belegnummer || '') + (ang.nettobetrag ? ' ' + Number(ang.nettobetrag).toLocaleString('de-DE') + ' € netto' : '') + (ang.status ? ' (' + ang.status + ')' : '') : '', p.title || p.subject || p.name || '(ohne Titel)', m ? '· ' + maschinenLabel(m) : '', zust ? '· zuständig ' + zust : '', p.remind_at ? '· Wiedervorlage ' + datum(p.remind_at) : '', p.due_date || p.deadline ? '· fällig ' + datum(p.due_date || p.deadline) : ''].filter(Boolean).join(' ');
+                const kopf = ['[' + status + ']', datum(p.process_date || p.created_at), ART[p.process_type] ? '(' + ART[p.process_type] + ')' : '', ang ? 'Angebot ' + (ang.belegnummer || '') + (ang.nettobetrag ? ' ' + Number(ang.nettobetrag).toLocaleString('de-DE') + ' € netto' : '') + (ang.status ? ' (' + ang.status + ')' : '') : '', (p.title || p.subject || p.name || '(ohne Titel)') + fotos(p), m ? '· ' + maschinenLabel(m) : '', zust ? '· zuständig ' + zust : '', p.remind_at ? '· Wiedervorlage ' + datum(p.remind_at) : '', p.due_date || p.deadline ? '· fällig ' + datum(p.due_date || p.deadline) : ''].filter(Boolean).join(' ');
                 zeilen.push('- ' + kopf);
                 if (p.status === 'erledigt') return;   // Erledigtes: Kopfzeile reicht
                 const txt = textVon(p, ['remark', 'description', 'notes', 'text']);
@@ -107,12 +115,12 @@
 
         // Verlauf: Adress-Notizen + Maschinenhistorie, neueste zuerst, gedeckelt
         const verlauf = [];
-        (D.notizen || []).forEach(n => verlauf.push({ t: new Date(n.entry_date || n.created_at).getTime() || 0, s: datum(n.entry_date || n.created_at) + ' ' + (n.entry_type && n.entry_type !== 'note' ? '[' + n.entry_type + '] ' : '') + kurz(textVon(n, ['body', 'text', 'content', 'title', 'description']), 260) }));
+        (D.notizen || []).forEach(n => verlauf.push({ t: new Date(n.entry_date || n.created_at).getTime() || 0, s: datum(n.entry_date || n.created_at) + ' ' + (n.entry_type && n.entry_type !== 'note' ? '[' + n.entry_type + '] ' : '') + (fotos(n) ? fotos(n).trim() + ' ' : '') + kurz(textVon(n, ['body', 'text', 'content', 'title', 'description']), 260) }));
         (D.maschinenHistorie || []).forEach(h => {
             const m = h.machine_id ? mById.get(String(h.machine_id)) : null;
             const art = h.type || h.entry_type || (h.date ? 'Servicebericht' : 'Eintrag');
             const txt = textVon(h, ['description', 'work_description', 'problem', 'problem_description', 'text', 'notes', 'title', 'remarks']);
-            verlauf.push({ t: new Date(h.created_at || h.entry_date || h.date).getTime() || 0, s: datum(h.created_at || h.entry_date || h.date) + ' [' + art + '] ' + (m ? maschinenLabel(m) + ': ' : '') + kurz(txt, 260) + (h.hours ? ' (' + h.hours + ' h)' : '') });
+            verlauf.push({ t: new Date(h.created_at || h.entry_date || h.date).getTime() || 0, s: datum(h.created_at || h.entry_date || h.date) + ' [' + art + ']' + fotos(h) + ' ' + (m ? maschinenLabel(m) + ': ' : '') + kurz(txt, 260) + (h.hours ? ' (' + h.hours + ' h)' : '') });
         });
         verlauf.sort((x, y) => y.t - x.t);
         if (verlauf.length) {
@@ -195,7 +203,8 @@ Chronologisch, kurz (max. 6 Punkte): Kauf, Vermietungen, Wartungen, Reparaturen,
 ## Auffälligkeiten
 Wiederkehrende Probleme, überfällige Wartungen, alte offene Angebote ohne Antwort, fehlende Ansprechpartner, Termine demnächst. Gibt es nichts, schreib „Nichts Auffälliges".
 
-Regeln: Nichts erfinden — nur was in den Daten steht. Zahlen, Daten und Namen exakt übernehmen. Kurz und konkret, keine Floskeln, keine Einleitung und kein Schlusssatz. Wenn Daten fehlen, benenne das knapp.`;
+Regeln: Nichts erfinden — nur was in den Daten steht. Zahlen, Daten und Namen exakt übernehmen. Kurz und konkret, keine Floskeln, keine Einleitung und kein Schlusssatz. Wenn Daten fehlen, benenne das knapp.
+Fotos: Steht in den Daten bei einem Eintrag „(N Fotos)" bzw. „(1 Foto)", schreibe das bei JEDER Erwähnung dieses Serviceberichts, Historien-Eintrags, Vorgangs oder dieser Notiz genau so in Klammern dahinter, z. B. „12.03.2026 Reparatur Hydraulik (3 Fotos)". Ohne diese Angabe keine Klammer.`;
     }
 
     // ---------- Markdown (klein) → HTML ----------

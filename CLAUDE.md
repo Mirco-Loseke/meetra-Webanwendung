@@ -276,7 +276,7 @@ formfüllenden Feldern zusätzlich `.menu-block`. Ausgewählter Eintrag: `.selec
 einem Inline-`style` suchen.
 
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v663 (Stand 2026-09-28) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v664 (Stand 2026-09-28) — bei jeder Änderung hochzählen.
 
 **Meldungs-Takt (2026-09-28).** `js/meldungs-takt.js`: Wecker, Vorgangs-Quittung und
 Glocke reihen ihre Meldungen per `meldungsTakt.einreihen(key, zeigen, aktion)` ein —

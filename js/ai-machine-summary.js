@@ -41,14 +41,28 @@
         const m = (typeof window.machineById === 'function' && window.machineById(machineId)) || (window.machineList || []).find(x => String(x.id) === String(machineId)) || null;
         const q = (t, sel) => sb.from(t).select(sel).eq('machine_id', machineId).then(r => r.data || []).catch(() => []);
         const [berichte, historie, wartungen, vorgaenge, mieten] = await Promise.all([
-            q('service_entries', 'id, title, date, created_at, description, operating_hours, checklist_payload'),
-            q('manual_history_entries', 'id, type, title, content, remark, created_at, end_date, created_by'),
+            q('service_entries', 'id, title, date, created_at, description, operating_hours, checklist_payload, files'),
+            q('manual_history_entries', 'id, type, title, content, remark, created_at, end_date, created_by, files'),
             q('maintenance_events', 'id, title, event_date, start_date, maintenance_types, description'),
-            q('internal_processes', 'id, title, status, process_type, process_date, created_at, remark, steps, assigned_users'),
+            q('internal_processes', 'id, title, status, process_type, process_date, created_at, remark, steps, assigned_users, attachments'),
             q('rental_agreements', 'id, title, data, created_at')
         ]);
         return { id: machineId, maschine: m, berichte, historie, wartungen, vorgaenge, mieten };
     }
+
+    // Anzahl Fotos in einer Datei-Liste (files / attachments): Bildtyp oder Bild-Endung.
+    const BILD = /\.(jpe?g|png|gif|webp|heic|heif|bmp|tiff?)(\?|#|$)/i;
+    function fotoAnzahl(liste) {
+        if (!Array.isArray(liste)) return 0;
+        return liste.filter(f => {
+            if (!f) return false;
+            if (typeof f === 'string') return BILD.test(f);
+            if (f.type && /^image\//i.test(f.type)) return true;
+            return BILD.test(f.name || f.file_name || f.url || f.path || '');
+        }).length;
+    }
+    window.kiFotoAnzahl = fotoAnzahl;   // auch für js/ai-address-summary.js
+    const fotos = liste => { const n = fotoAnzahl(liste); return n ? ' (' + n + (n === 1 ? ' Foto' : ' Fotos') + ')' : ''; };
 
     // ---------- Daten → kompakter Text für die KI ----------
     function datenText(D) {
@@ -83,7 +97,7 @@
             zeilen.push('\n## OFFENE VORGÄNGE (' + offen.length + ')');
             offen.slice(0, 20).forEach(p => {
                 const zust = Array.isArray(p.assigned_users) ? p.assigned_users.map(nutzerName).filter(Boolean).join(', ') : '';
-                zeilen.push('- ' + datum(p.process_date || p.created_at) + ' ' + kurz(p.title || '(ohne Titel)', 120) + (zust ? ' · zuständig ' + zust : '') + (p.remark ? ' — ' + kurz(p.remark, 200) : ''));
+                zeilen.push('- ' + datum(p.process_date || p.created_at) + ' ' + kurz(p.title || '(ohne Titel)', 120) + fotos(p.attachments) + (zust ? ' · zuständig ' + zust : '') + (p.remark ? ' — ' + kurz(p.remark, 200) : ''));
                 (Array.isArray(p.steps) ? p.steps : []).slice(0, 10).forEach(s => zeilen.push('  ' + (s.done ? '[x]' : '[ ]') + ' ' + kurz(s.text, 140)));
             });
         }
@@ -102,14 +116,14 @@
         D.berichte.forEach(b => {
             const cp = b.checklist_payload;
             const plaene = cp && Array.isArray(cp.checklists) ? cp.checklists.map(c => c.title || c.name).filter(Boolean).join(', ') : (cp && cp.title ? cp.title : '');
-            verlauf.push({ t: new Date(b.date || b.created_at).getTime() || 0, s: datum(b.date || b.created_at) + ' [Servicebericht] ' + kurz(b.title || '', 100) + (plaene ? ' (Prüfplan: ' + kurz(plaene, 80) + ')' : '') + (b.description ? ': ' + kurz(b.description, 300) : '') + (b.operating_hours ? ' (' + b.operating_hours + ' h)' : '') });
+            verlauf.push({ t: new Date(b.date || b.created_at).getTime() || 0, s: datum(b.date || b.created_at) + ' [Servicebericht] ' + kurz(b.title || '', 100) + fotos(b.files) + (plaene ? ' (Prüfplan: ' + kurz(plaene, 80) + ')' : '') + (b.description ? ': ' + kurz(b.description, 300) : '') + (b.operating_hours ? ' (' + b.operating_hours + ' h)' : '') });
         });
         D.historie.forEach(h => {
             if (h.type === 'hours') return;
             const txt = [h.title, h.content, h.remark].filter(Boolean).join(' — ');
-            verlauf.push({ t: new Date(h.created_at).getTime() || 0, s: datum(h.created_at) + ' [' + (TYP[h.type] || 'Eintrag') + '] ' + kurz(txt, 280) + (h.end_date ? ' (bis ' + datum(h.end_date) + ')' : '') + (h.created_by && nutzerName(h.created_by) ? ' · ' + nutzerName(h.created_by) : '') });
+            verlauf.push({ t: new Date(h.created_at).getTime() || 0, s: datum(h.created_at) + ' [' + (TYP[h.type] || 'Eintrag') + ']' + fotos(h.files) + ' ' + kurz(txt, 280) + (h.end_date ? ' (bis ' + datum(h.end_date) + ')' : '') + (h.created_by && nutzerName(h.created_by) ? ' · ' + nutzerName(h.created_by) : '') });
         });
-        D.vorgaenge.filter(p => p.status === 'erledigt').forEach(p => verlauf.push({ t: new Date(p.process_date || p.created_at).getTime() || 0, s: datum(p.process_date || p.created_at) + ' [Vorgang erledigt] ' + kurz(p.title || '', 120) + (p.remark ? ' — ' + kurz(p.remark, 160) : '') }));
+        D.vorgaenge.filter(p => p.status === 'erledigt').forEach(p => verlauf.push({ t: new Date(p.process_date || p.created_at).getTime() || 0, s: datum(p.process_date || p.created_at) + ' [Vorgang erledigt] ' + kurz(p.title || '', 120) + fotos(p.attachments) + (p.remark ? ' — ' + kurz(p.remark, 160) : '') }));
         verlauf.sort((a, b) => b.t - a.t);
         if (verlauf.length) {
             zeilen.push('\n## VERLAUF (neueste zuerst, ' + Math.min(verlauf.length, MAX_EINTRAEGE) + ' von ' + verlauf.length + ')');
@@ -143,7 +157,8 @@ Offene Vorgänge, geplante Termine, laufende Miete, offene Schritte — je eine 
 ## Verlauf kurz
 Chronologisch, max. 8 Punkte: Auslieferung, Wartungen, Reparaturen, Vermietungen, Werkstattaufenthalte.
 
-Regeln: Nichts erfinden — nur was in den Daten steht. Zahlen, Daten und Bezeichnungen exakt übernehmen. Kurz und konkret, keine Floskeln.`;
+Regeln: Nichts erfinden — nur was in den Daten steht. Zahlen, Daten und Bezeichnungen exakt übernehmen. Kurz und konkret, keine Floskeln.
+Fotos: Steht in den Daten hinter einem Eintrag „(N Fotos)" bzw. „(1 Foto)", schreibe das bei JEDER Erwähnung dieses Serviceberichts, Historien-Eintrags oder Vorgangs genau so in Klammern dahinter, z. B. „12.03.2026 Reparatur Hydraulik (3 Fotos)". Ohne diese Angabe keine Klammer.`;
     }
 
     // ---------- Markdown (klein) → HTML ----------
