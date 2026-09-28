@@ -118,14 +118,22 @@
 
         let resp;
         try {
-            resp = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + token
-                },
-                body: JSON.stringify(payload)
-            });
+            // Google meldet bei Überlast 503 („high demand") — meist nur kurz.
+            // Zwei weitere Versuche nach 2 s bzw. 4 s, bevor aufgegeben wird.
+            // (Die ki-proxy weicht zusätzlich selbst auf freie Modelle aus.)
+            for (let versuch = 0; ; versuch++) {
+                resp = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify(payload)
+                });
+                if (resp.status !== 503 || versuch >= 2) break;
+                console.warn('KI überlastet (503) — neuer Versuch in ' + (2 * (versuch + 1)) + ' s');
+                await new Promise(r => setTimeout(r, 2000 * (versuch + 1)));
+            }
         } catch (e) {
             // „Failed to fetch" heißt hier fast immer: die Function ist unter
             // /functions/v1/ki-proxy nicht ausgerollt (CORS-Preflight bekommt 404).
@@ -144,6 +152,7 @@
             else if (resp.status === 500 && /GEMINI_API_KEY|GROQ_API_KEY|api key|apikey/i.test(detail)) hinweis = 'Auf dem Server fehlt der KI-Schlüssel (Secret GEMINI_API_KEY bzw. GROQ_API_KEY).';
             else if (/invalid api key|invalid_api_key|authentication/i.test(detail)) hinweis = 'Der auf dem Server hinterlegte KI-Schlüssel ist ungültig oder widerrufen — neuen Key erzeugen und als Secret (GEMINI_API_KEY / GROQ_API_KEY) setzen.';
             else if (resp.status === 429) hinweis = limitText(detail, resp.headers.get('retry-after'));
+            else if (resp.status === 503 || /high demand|overloaded|UNAVAILABLE/i.test(detail + text)) hinweis = 'Die KI (Google) ist gerade überlastet — dreimal versucht. Bitte in ein, zwei Minuten noch einmal.';
             else if (/model.*not found|decommissioned/i.test(detail)) hinweis = 'Das KI-Modell gibt es bei Groq nicht mehr — Modellname in der Function prüfen.';
             if (hinweis) {
                 return fehlerAntwort(hinweis + (detail ? ' [' + resp.status + ': ' + String(detail).slice(0, 200) + ']' : ' [' + resp.status + ']'), resp.status, resp.headers.get('retry-after'));

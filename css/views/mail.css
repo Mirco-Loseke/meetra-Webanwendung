@@ -497,3 +497,62 @@ body.mv-vollbild #mv-vollbild { background: #1e3a8a; border-color: var(--mv-akze
     .maa-box { height: 100%; border-radius: 0; }
     .maa-gr { display: none; }
 }
+
+/* Rechtsklick-Menü an einer Mail (js/mail-view.js: mailKontextmenu / vorgangWaehlen).
+   Hängt an <body>, deshalb ohne #mail-Präfix. Basis: .menu-panel aus dropdowns.css. */
+.mv-km {
+    position: fixed;
+    z-index: 10050;
+    min-width: 260px;
+    max-width: 340px;
+    padding: var(--space-1) 0;
+}
+.mv-km-wahl { width: 380px; max-width: calc(100vw - 16px); }
+.mv-km-kopf {
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    color: var(--text-1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mv-km-kopf span {
+    display: block;
+    font-size: var(--fs-xs);
+    font-weight: 400;
+    color: var(--text-3);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.mv-km .menu-list li { cursor: pointer; font-size: var(--fs-sm); }
+.mv-km .menu-list li.mv-km-trenner {
+    height: 1px;
+    padding: 0;
+    margin: var(--space-1) 0;
+    background: rgba(255, 255, 255, 0.08);
+    pointer-events: none;
+}
+.mv-km-suche {
+    display: block;
+    width: calc(100% - 2 * var(--space-3));
+    margin: var(--space-2) var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-xs);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-1);
+    font-size: var(--fs-sm);
+}
+.mv-km-liste { max-height: 320px; overflow-y: auto; }
+.mv-km-liste li { display: flex; flex-direction: column; gap: 2px; }
+.mv-km-gruppe {
+    padding: var(--space-1) var(--space-3);
+    font-size: var(--fs-2xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-3);
+}
+.mv-km-leer { padding: var(--space-2) var(--space-3); font-size: var(--fs-xs); color: var(--text-3); }
+.mv-km-fuss { border-top: 1px solid rgba(255, 255, 255, 0.08); }

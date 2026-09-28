@@ -1107,6 +1107,8 @@
     // fasst der kurze Aufschub die Routenabfragen zusammen — statt für jeden
     // Zwischenschritt einmal OSRM zu fragen und die Linie neu zu zeichnen.
     let routeLineTimer = null;
+    let routeLegPoints = null;    // Punkte der letzten OSRM-Route (Firmensitz + Stopps)
+    let routeLegMinutes = null;   // Fahrminuten je Etappe dazwischen
     function scheduleRouteLine() {
         if (routeLineTimer) clearTimeout(routeLineTimer);
         routeLineTimer = setTimeout(() => { routeLineTimer = null; updateRouteLine(); }, 150);
@@ -1172,6 +1174,9 @@
             routeLine.bringToBack();
 
             routeMetrics = { km: route.distance / 1000, min: route.duration / 60, estimated: false };
+            // Fahrzeit je Etappe für den Tourenzettel (Ankunftszeiten).
+            routeLegPoints = points.slice();
+            routeLegMinutes = Array.isArray(route.legs) ? route.legs.map(l => (l.duration || 0) / 60) : null;
             routeGeometry = simplifyGeometry(latlngs);
             buildRouteSegments();
             renderRouteSummary();
@@ -1337,6 +1342,8 @@
         const saveBtn = document.getElementById('rp2-save-btn');
         if (optimizeBtn) optimizeBtn.disabled = stops.length < 2;
         if (saveBtn) saveBtn.disabled = stops.length === 0;
+        const printBtn = document.getElementById('rp2-print-btn');
+        if (printBtn) printBtn.disabled = stops.length === 0;
 
         if (stops.length === 0) {
             list.innerHTML = '<div class="rp2-hint">Noch keine Stopps ausgewählt — oben nach Kunde, Ort, PLZ, Straße oder Maschine suchen.</div>';
@@ -2183,6 +2190,136 @@
         localStorage.setItem(LS_ROUTES_KEY, JSON.stringify(list));
     }
 
+    // ---------------------------------------------------------------
+    // Tourenzettel drucken: alle Stopps in Reihenfolge, Adresse, Ansprechpartner,
+    // geplante Ankunft und freie Notizzeilen. Ankunft = Abfahrt + Fahrzeit der
+    // OSRM-Etappen (ohne Straßendaten: Luftlinie × 1,3 bei 70 km/h) + Aufenthalt
+    // je vorherigem Stopp. Abfahrt und Aufenthalt merkt sich der Browser.
+    // ---------------------------------------------------------------
+    const DRUCK_KEY = 'meetra_rp_druck';
+
+    function druckEinstellungen() {
+        try { return Object.assign({ abfahrt: '07:30', aufenthalt: 60 }, JSON.parse(localStorage.getItem(DRUCK_KEY) || '{}')); }
+        catch (e) { return { abfahrt: '07:30', aufenthalt: 60 }; }
+    }
+
+    // Fahrminuten vom Start bis zu jedem Stopp (ohne Aufenthalte), je Stopp-ID.
+    function fahrzeitenBisStopp() {
+        const res = new Map();
+        const osrmPasst = routeLegMinutes && routeLegPoints && routeLegPoints.length === routeLegMinutes.length + 1;
+        let summe = 0, vorher = hqInfo && typeof hqInfo.lat === 'number' ? hqInfo : null;
+        stops.forEach(s => {
+            if (typeof s.lat !== 'number' || typeof s.lng !== 'number') { res.set(s.id, null); return; }
+            const i = osrmPasst ? routeLegPoints.indexOf(s) : -1;
+            if (i > 0) summe += routeLegMinutes[i - 1];
+            else if (vorher) summe += haversineKm(vorher.lat, vorher.lng, s.lat, s.lng) * 1.3 / 70 * 60;
+            res.set(s.id, vorher || i > 0 ? summe : null);
+            vorher = s;
+        });
+        return res;
+    }
+
+    function druckDialog() {
+        if (!stops.length) return;
+        const e = druckEinstellungen();
+        const alt = document.getElementById('rp2-druck-dialog');
+        if (alt) alt.remove();
+        const box = document.createElement('div');
+        box.id = 'rp2-druck-dialog';
+        box.className = 'rp2-druck-backdrop';
+        box.innerHTML = `
+            <div class="rp2-druck-karte" role="dialog" aria-label="Tourenzettel drucken">
+                <h3>Tourenzettel drucken</h3>
+                <p class="text-muted-sm">${stops.length} ${stops.length === 1 ? 'Stopp' : 'Stopps'} in der aktuellen Reihenfolge.</p>
+                <label>Abfahrt am Start <input type="time" id="rp2-druck-abfahrt" value="${esc(e.abfahrt)}"></label>
+                <label>Aufenthalt je Stopp (Min.) <input type="number" id="rp2-druck-aufenthalt" min="0" step="15" value="${esc(String(e.aufenthalt))}"></label>
+                <label class="rp2-druck-check"><input type="checkbox" id="rp2-druck-ohne-zeit"> Ankunftszeit leer lassen (von Hand eintragen)</label>
+                <div class="rp2-druck-knoepfe">
+                    <button class="rp2-btn rp2-btn-sm" data-druck="abbrechen">Abbrechen</button>
+                    <button class="rp2-btn rp2-btn-sm rp2-btn-primary" data-druck="los">Drucken</button>
+                </div>
+            </div>`;
+        document.body.appendChild(box);
+        box.addEventListener('click', ev => {
+            const b = ev.target.closest('[data-druck]');
+            if (ev.target === box || (b && b.dataset.druck === 'abbrechen')) { box.remove(); return; }
+            if (!b) return;
+            const einst = {
+                abfahrt: document.getElementById('rp2-druck-abfahrt').value || '07:30',
+                aufenthalt: Math.max(0, parseInt(document.getElementById('rp2-druck-aufenthalt').value, 10) || 0)
+            };
+            try { localStorage.setItem(DRUCK_KEY, JSON.stringify(einst)); } catch (err) { /* nur Komfort */ }
+            const ohneZeit = document.getElementById('rp2-druck-ohne-zeit').checked;
+            box.remove();
+            tourenzettelDrucken(einst, ohneZeit);
+        });
+    }
+
+    function tourenzettelDrucken(einst, ohneZeit) {
+        const [h, m] = einst.abfahrt.split(':').map(n => parseInt(n, 10) || 0);
+        const start = h * 60 + m;
+        const fahrt = fahrzeitenBisStopp();
+        const uhr = min => { const t = Math.round(min / 5) * 5; return String(Math.floor(t / 60) % 24).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'); };
+
+        const zeilen = stops.map((s, i) => {
+            const kontakte = contactsByCustomer.get(String(s.customerId)) || [];
+            const k = kontakte[0];
+            const tel = k ? (k.mobile || k.phone) : null;
+            const maschinen = machineCountByCustomer.get(String(s.customerId)) || 0;
+            const f = fahrt.get(s.id);
+            const ankunft = ohneZeit || f == null ? '' : 'ca. ' + uhr(start + f + i * einst.aufenthalt) + ' Uhr';
+            // Adresse steht als "Straße, PLZ Ort" — für den Zettel auf zwei Zeilen.
+            const teile = String(s.address || '').split(',').map(t => t.trim()).filter(Boolean);
+            return `<section class="stopp">
+                <div class="nr">${i + 1}</div>
+                <div class="inhalt">
+                    <div class="kopf"><strong>${esc(s.label)}</strong><span class="zeit">${ankunft ? esc(ankunft) : 'Ankunft: ________ Uhr'}</span></div>
+                    <div>${teile.map(esc).join('<br>')}</div>
+                    ${k ? `<div class="kontakt">Ansprechpartner: ${esc(k.name || '')}${k.position ? ' · ' + esc(k.position) : ''}${tel ? ' · Tel. ' + esc(tel) : ''}</div>` : ''}
+                    ${maschinen ? `<div class="kontakt">${maschinen} ${maschinen === 1 ? 'Maschine' : 'Maschinen'} vor Ort</div>` : ''}
+                    <div class="notiz"><span>Notizen:</span><i></i><i></i><i></i></div>
+                </div>
+            </section>`;
+        }).join('');
+
+        const heute = new Date().toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+        const summe = [
+            typeof routeMetrics.km === 'number' ? fmtKm(routeMetrics.km) + (routeMetrics.estimated ? ' Luftlinie' : '') : '',
+            typeof routeMetrics.min === 'number' ? fmtMin(routeMetrics.min) + ' Fahrzeit' : ''
+        ].filter(Boolean).join(' · ');
+        const html = `<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><title>Tourenzettel ${esc(heute)}</title>
+            <style>
+                @page { size: A4; margin: 14mm 12mm; }
+                * { box-sizing: border-box; }
+                body { font: 10.5pt/1.4 Arial, Helvetica, sans-serif; color: #111; margin: 0; }
+                h1 { font-size: 15pt; margin: 0 0 2px; }
+                .unter { color: #444; margin-bottom: 10px; font-size: 9.5pt; }
+                .stopp { display: flex; gap: 10px; border: 1px solid #999; border-radius: 4px; padding: 8px 10px; margin-bottom: 8px; break-inside: avoid; page-break-inside: avoid; }
+                .nr { flex: 0 0 26px; height: 26px; border-radius: 50%; background: #111; color: #fff; font-weight: bold; display: flex; align-items: center; justify-content: center; }
+                .inhalt { flex: 1; min-width: 0; }
+                .kopf { display: flex; justify-content: space-between; gap: 10px; font-size: 11.5pt; }
+                .zeit { white-space: nowrap; font-weight: bold; }
+                .kontakt { color: #333; font-size: 9.5pt; margin-top: 2px; }
+                .notiz { margin-top: 6px; font-size: 9pt; color: #555; }
+                .notiz i { display: block; border-bottom: 1px solid #bbb; height: 22px; }
+                .knopf { position: fixed; top: 10px; right: 10px; padding: 8px 14px; font-size: 11pt; }
+                @media print { .knopf { display: none; } }
+            </style></head><body>
+            <button class="knopf" onclick="window.print()">Drucken</button>
+            <h1>Tourenzettel · ${esc(heute)}</h1>
+            <div class="unter">${hqInfo ? 'Start: ' + esc(hqInfo.name || '') + (hqInfo.address ? ', ' + esc(hqInfo.address) : '') + (ohneZeit ? '' : ' · Abfahrt ' + esc(einst.abfahrt) + ' Uhr') + ' · ' : ''}${stops.length} Stopps${summe ? ' · ' + esc(summe) : ''}${ohneZeit ? '' : ' · Aufenthalt je Stopp ' + einst.aufenthalt + ' Min.'}</div>
+            ${zeilen}
+            </body></html>`;
+
+        const w = window.open('', '_blank');
+        if (!w) { window.showToast && window.showToast('Das Druckfenster wurde blockiert — bitte Pop-ups für diese Seite erlauben.', 'error'); return; }
+        w.document.open();
+        w.document.write(html);
+        w.document.close();
+        w.focus();
+        setTimeout(() => { try { w.print(); } catch (e) { /* Knopf im Fenster bleibt */ } }, 300);
+    }
+
     function saveRouteDialog() {
         if (!stops.length) return;
         const suggestion = currentRouteName || `Tour ${new Date().toLocaleDateString('de-DE')}`;
@@ -2547,6 +2684,7 @@
             case 'export-google': window.rp2ExportGoogleMaps(); break;
             case 'export-apple': window.rp2ExportAppleMaps(); break;
             case 'save-route': saveRouteDialog(); break;
+            case 'print-route': druckDialog(); break;
             case 'load-route-dialog': loadRouteDialog(); break;
             case 'load-route': applySavedRoute(id); break;
             case 'delete-route': deleteSavedRoute(id); break;

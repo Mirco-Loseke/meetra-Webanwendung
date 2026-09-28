@@ -29,7 +29,8 @@
     const TABLE = 'assignment_responses';
     // 60 s statt 20 s: die Abfrage zieht alle offenen Vorgänge samt Schritten —
     // dreimal pro Minute in jedem Browser war ein spürbarer Teil des Egress.
-    const TAKT = 60 * 1000;
+    // 2 min: neue Zuweisungen kommen sofort per Realtime, der Takt ist nur das Netz darunter.
+    const TAKT = 120 * 1000;
     const MORGENS_STUNDE = 8;        // „morgen" heißt: morgen früh um 8
 
     // Später-Erinnern-Auswahl. Minuten, oder morgens = fester Zeitpunkt.
@@ -239,6 +240,29 @@
         return !!behaelter().querySelector(`[data-alarm-key="${CSS.escape(key)}"]`);
     }
 
+    // Über den Meldungs-Takt (js/meldungs-takt.js): höchstens eine pro Minute,
+    // Knöpfe der Windows-Meldung wirken wie die der Karte.
+    function melden(key, zeigen, aktion) {
+        if (schonDa(key)) return;
+        if (window.meldungsTakt) window.meldungsTakt.einreihen(key, zeigen, aktion);
+        else zeigen();
+    }
+
+    function karteMelden(row) {
+        melden('handoff:' + row.id, () => karteZeigen(row), was => {
+            if (was === 'jetzt' || was === '') annehmen(row);
+            else if (was === 'weg') annehmen(row, false);
+            else if (was === 'spaeter') spaeter(row, SPAETER[1]);
+        });
+    }
+
+    function rueckmeldungMelden(row) {
+        melden('handoff-ack:' + row.id, () => rueckmeldungZeigen(row), was => {
+            alsGesehenMerken(row);
+            if (was === '' || was === 'oeffnen') zielOeffnen(row.target_id);
+        });
+    }
+
     function karteZeigen(row) {
         const key = 'handoff:' + row.id;
         if (schonDa(key)) return;
@@ -258,6 +282,7 @@
             <div class="alarm-sub">${istSchritt ? 'Schritt' : 'Vorgang'} dir zugewiesen${esc(von)}</div>
             <div class="alarm-actions">
                 <button type="button" class="alarm-btn handoff-later">Später erinnern</button>
+                <button type="button" class="alarm-btn handoff-weg" title="Übernehmen, ohne den Vorgang jetzt zu öffnen — keine weitere Erinnerung">Später erledigen</button>
                 <button type="button" class="alarm-btn alarm-btn-ok handoff-now">Jetzt erledigen</button>
             </div>
             <div class="handoff-snooze" hidden>
@@ -267,6 +292,11 @@
         karte.querySelector('.handoff-now').addEventListener('click', () => {
             karte.remove();
             annehmen(row);
+        });
+        // Schnell wegklicken: gilt als erhalten, öffnet nichts, erinnert nicht mehr.
+        karte.querySelector('.handoff-weg').addEventListener('click', () => {
+            karte.remove();
+            annehmen(row, false);
         });
 
         // Die Auswahl klappt erst auf Klick auf — fünf Knöpfe von Anfang an
@@ -285,7 +315,11 @@
         behaelter().appendChild(karte);
         requestAnimationFrame(() => karte.classList.add('show'));
         systemMeldung(istSchritt ? '☑️ Schritt für dich' : '📋 Vorgang für dich',
-            (row.title || 'Vorgang') + (von ? '\n' + von.trim() : ''), key, row.target_id);
+            (row.title || 'Vorgang') + (von ? '\n' + von.trim() : ''), key, row.target_id, [
+                { action: 'jetzt', title: 'Jetzt erledigen' },
+                { action: 'spaeter', title: 'Später erinnern (' + SPAETER[1].label + ')' },
+                { action: 'weg', title: 'Später erledigen' }
+            ]);
     }
 
     function rueckmeldungZeigen(row) {
@@ -319,7 +353,10 @@
 
         behaelter().appendChild(karte);
         requestAnimationFrame(() => karte.classList.add('show'));
-        systemMeldung('✅ ' + wer + ' hat den ' + was + ' erhalten', row.title || 'Vorgang', key, row.target_id);
+        systemMeldung('✅ ' + wer + ' hat den ' + was + ' erhalten', row.title || 'Vorgang', key, row.target_id, [
+            { action: 'oeffnen', title: 'Ansehen' },
+            { action: 'ok', title: 'Alles klar' }
+        ]);
     }
 
     // Ein Schritt hat keine eigene Ansicht — er liegt als JSON im Vorgang.
@@ -341,8 +378,12 @@
     // Meldung außerhalb des Browserfensters. Gleicher Weg wie beim Wecker:
     // über den Service Worker, weil new Notification(...) in Chrome auf
     // manchen Systemen still verworfen wird.
-    async function systemMeldung(titel, text, key, zielId) {
+    async function systemMeldung(titel, text, key, zielId, knoepfe) {
         if (typeof window.notificationsPushEnabled !== 'function' || !window.notificationsPushEnabled()) return;
+        if (window.meldungsTakt) {
+            window.meldungsTakt.system(titel, { body: text, tag: key, data: { zielTyp: 'process', zielId: String(zielId) } }, knoepfe);
+            return;
+        }
         const optionen = {
             body: text,
             tag: key,
@@ -367,7 +408,7 @@
     // =========================================================
     // AKTIONEN
     // =========================================================
-    async function annehmen(row) {
+    async function annehmen(row, oeffnen) {
         try {
             const { error } = await sb().from(TABLE).update({
                 status: 'angenommen',
@@ -378,13 +419,13 @@
             if (error) throw error;
             if (window.showToast) {
                 window.showToast((row.target_type === 'step' ? 'Schritt' : 'Vorgang') +
-                    ' übernommen — der Ersteller wird benachrichtigt.', 'success');
+                    (oeffnen === false ? ' für später übernommen' : ' übernommen') + ' — der Ersteller wird benachrichtigt.', 'success');
             }
         } catch (e) {
             fehlgeschlagen(e);
             if (window.showToast) window.showToast('Die Rückmeldung konnte nicht gespeichert werden.', 'error');
         }
-        zielOeffnen(row.target_id);
+        if (oeffnen !== false) zielOeffnen(row.target_id);
     }
 
     async function spaeter(row, wahl) {
@@ -414,6 +455,7 @@
     // =========================================================
     async function pruefen() {
         if (laeuft || tabelleFehlt || !sb() || uid() == null) return;
+        if (window.istHauptTab && !window.istHauptTab()) return;   // nur ein Tab je Browser
         laeuft = true;
         try {
             // Neue Zuweisungen ändern sich selten — nicht bei jedem Takt die
@@ -425,8 +467,8 @@
                 await zeilenNachziehen();
             }
             if (tabelleFehlt) return;
-            (await offeneHolen()).forEach(karteZeigen);
-            (await rueckmeldungenHolen()).forEach(rueckmeldungZeigen);
+            (await offeneHolen()).forEach(karteMelden);
+            (await rueckmeldungenHolen()).forEach(rueckmeldungMelden);
         } catch (e) {
             console.warn('Vorgangs-Quittung: Prüfung fehlgeschlagen:', e);
         } finally {
@@ -442,8 +484,15 @@
         const client = sb();
         if (!client || typeof client.channel !== 'function') return;
         try {
+            // Nur Zeilen, die mich betreffen (an mich / von mir vergeben) — vorher löste
+            // jede Quittung irgendeines Kollegen in jedem Browser zwei Abfragen aus.
+            // Gebündelt: mehrere Änderungen kurz hintereinander = eine Prüfung.
+            let buendel = null;
+            const spaeterPruefen = () => { clearTimeout(buendel); buendel = setTimeout(pruefen, 3000); };
+            const meine = String(uid());
             client.channel('assignment-responses-live')
-                .on('postgres_changes', { event: '*', schema: 'public', table: TABLE }, () => { pruefen(); })
+                .on('postgres_changes', { event: '*', schema: 'public', table: TABLE, filter: 'user_id=eq.' + meine }, spaeterPruefen)
+                .on('postgres_changes', { event: '*', schema: 'public', table: TABLE, filter: 'invited_by=eq.' + meine }, spaeterPruefen)
                 .subscribe();
         } catch (e) { /* ohne Realtime bleibt der 20-Sekunden-Takt */ }
     }

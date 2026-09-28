@@ -485,7 +485,8 @@
     // wartet bewusst kurz, bis der angemeldete Benutzer feststeht.
     function badgeStarten() {
         setTimeout(() => { window.refreshAppointmentInviteBadge(); }, 2500);
-        setInterval(() => { window.refreshAppointmentInviteBadge(); }, 120000);
+        // Nur sichtbarer Tab: der Zähler ist reine Anzeige.
+        setInterval(() => { if (!document.hidden) window.refreshAppointmentInviteBadge(); }, 120000);
     }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', badgeStarten);

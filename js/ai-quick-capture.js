@@ -1416,7 +1416,7 @@ Schema:
   "date_start": "Datum im Format YYYY-MM-DD, falls genannt, sonst leer",
   "date_end": "Datum im Format YYYY-MM-DD, NUR falls ein Zeitraum über mehrere Tage genannt wird, sonst leer",
   "assignee_hint": "Name(n) der zuständigen Techniker/Mitarbeiter, falls genannt — mehrere mit Komma trennen, sonst leer",
-  "beschreibung": "ausformulierte Fehlerbeschreibung / Kurzbeschreibung des Einsatzes, in ganzen Sätzen",
+  "beschreibung": "NUR der Fehler bzw. Anlass des Einsatzes (was war kaputt/auffällig, warum gerufen), kurz in ganzen Sätzen — sonst leer",
   "arbeiten": [ "kurze Beschreibung einer durchgeführten Arbeit" ],
   "materialien": [ { "bezeichnung": "Material/Ersatzteil", "menge": "z.B. 2 Stk oder 10L, sonst leer" } ]
 }
@@ -1425,7 +1425,10 @@ Regeln:
 - arbeiten: JEDE einzeln genannte durchgeführte Tätigkeit als eigener kurzer Eintrag (z.B. "Ölwechsel durchgeführt", "Luftfilter getauscht"). Nichts erfinden, nur was im Text steht. Korrigiere Rechtschreibfehler, Bedeutung unverändert.
 - materialien: nur tatsächlich genannte Materialien/Ersatzteile mit Menge falls angegeben, sonst leeres Feld "menge". Keine Materialien erfinden.
 - assignee_hint: nur setzen, wenn im Text ein Name als ausführender/zuständiger Techniker erkennbar ist (z.B. "Ich war bei...", "Max hat ... erledigt", "durchgeführt von ..."). Namen NICHT erfinden.
-- beschreibung: Formuliere aus dem gesamten Eingabetext einen zusammenhängenden, sachlichen Fließtext für die "Fehlerbeschreibung / Kurzbeschreibung Einsatz" eines Servicebericht-Formulars — deutlich ausführlicher als die reine Stichpunktliste der "arbeiten", aber NUR basierend auf tatsächlich genannten Informationen (Symptom/Grund des Einsatzes, was festgestellt wurde, was unternommen wurde). Keine Fakten, Zahlen oder Ursachen erfinden, die nicht im Text stehen. Rechtschreibung korrigieren, professioneller Tonfall.
+- beschreibung: Das Feld "Fehlerbeschreibung / Kurzbeschreibung Einsatz". Hier gehört NUR hinein, was im Text als Fehler, Störung, Symptom oder Anlass des Einsatzes genannt ist (z. B. "Maschine verliert Öl", "Förderband läuft nicht an", "jährliche Wartung fällig") und ggf. eine genannte festgestellte Ursache.
+  NICHT hinein: durchgeführte Arbeiten (die stehen in "arbeiten"), Materialien, Datum, Techniker, Maschinenname, Floskeln oder Einleitungen wie "Im Rahmen des Einsatzes …".
+  Nichts wiederholen, nichts ausschmücken, keine Vermutungen, keine Ursachen oder Folgen erfinden. Kurz und sachlich (meist 1–2 Sätze), Rechtschreibung korrigieren.
+  Steht im Text kein Fehler/Anlass, bleibt beschreibung LEER ("").
 - ZAHLEN und SERIENNUMMERN NIEMALS ändern — exakt übernehmen.
 - Wenn kein Datum genannt ist, date_start und date_end leer lassen (nicht raten, nicht heutiges Datum einsetzen).
 - Wenn nur EIN Tag genannt ist, date_end leer lassen.

@@ -26,7 +26,8 @@
 (function () {
     'use strict';
 
-    const PRUEF_INTERVALL = 20 * 1000;   // wie oft geprüft wird
+    // 60 s statt 20 s: Erinnerungen sind minutengenau, jede Abfrage ist eine Supabase-Logzeile.
+    const PRUEF_INTERVALL = 60 * 1000;   // wie oft geprüft wird
     const NACHLAUF_MIN = 30;             // so lange gilt Verpasstes noch als „jetzt"
     const KEY_PREFIX = 'meetra_alarm_gezeigt_';
     const SNOOZE_KEY = 'meetra_alarm_spaeter_';
@@ -395,6 +396,24 @@
         systemMeldung(eintrag);
     }
 
+    // Knopf in der Windows-Meldung — gleiche Wirkung wie auf der Karte.
+    function aktion(eintrag, was) {
+        if (was === 'spaeter') {
+            spaeterMerken(eintrag, SPAETER[0].min);
+            if (window.showToast) window.showToast(`Erinnerung in ${SPAETER[0].label} noch einmal.`);
+        } else if (was === '' || was === 'oeffnen') {
+            window.oeffneErinnerungsZiel(eintrag.zielTyp, eintrag.zielId);
+        }
+        // 'ok' = Verstanden: nichts weiter, die Karte ist schon weg.
+    }
+
+    // Über den Meldungs-Takt: höchstens eine Meldung pro Minute (js/meldungs-takt.js).
+    function melden(eintrag, danach) {
+        const t = window.meldungsTakt;
+        if (!t) { zeigen(eintrag); if (danach) danach(); return; }
+        t.einreihen(eintrag.key, () => { zeigen(eintrag); if (danach) danach(); }, was => aktion(eintrag, was));
+    }
+
     // ---------------------------------------------------------------
     // "Bearbeiten": direkt zu dem, worum es geht
     // ---------------------------------------------------------------
@@ -438,6 +457,18 @@
     // bleibt im Info-Center stehen, statt nach Sekunden zu verschwinden.
     async function systemMeldung(eintrag) {
         if (typeof window.notificationsPushEnabled !== 'function' || !window.notificationsPushEnabled()) return;
+        if (window.meldungsTakt) {
+            window.meldungsTakt.system('⏰ ' + eintrag.titel, {
+                body: [eintrag.zeit + ' Uhr', eintrag.untertitel, eintrag.adresse, eintrag.ort, eintrag.notiz].filter(Boolean).join('\n'),
+                tag: eintrag.key,
+                data: { zielTyp: eintrag.zielTyp, zielId: String(eintrag.zielId) }
+            }, [
+                { action: 'oeffnen', title: 'Öffnen' },
+                { action: 'spaeter', title: 'Später (' + SPAETER[0].label + ')' },
+                { action: 'ok', title: 'Verstanden' }
+            ]);
+            return;
+        }
         const titel = '⏰ ' + eintrag.titel;
         const optionen = {
             body: [eintrag.zeit + ' Uhr', eintrag.untertitel, eintrag.adresse, eintrag.ort, eintrag.notiz].filter(Boolean).join('\n'),
@@ -469,6 +500,7 @@
     // ---------------------------------------------------------------
     async function pruefen() {
         if (laeuft || !uid()) return;
+        if (window.istHauptTab && !window.istHauptTab()) return;   // nur ein Tab je Browser
         laeuft = true;
         try {
             const gezeigt = gezeigtLaden();
@@ -479,7 +511,7 @@
             const offen = [];
             verschoben.forEach(x => {
                 if (!x || !x.eintrag) return;
-                if (Date.now() >= x.faellig) zeigen(x.eintrag);
+                if (Date.now() >= x.faellig) melden(x.eintrag);
                 else offen.push(x);
             });
             if (offen.length !== verschoben.length) spaeterSpeichern(offen);
@@ -487,15 +519,17 @@
 
             // 2) Was jetzt regulär fällig ist.
             const liste = await faellige();
-            let geaendert = false;
             liste.forEach(e => {
                 if (wartet.has(e.key)) return;      // liegt auf „Später"
                 if (gezeigt.has(e.key)) return;
-                zeigen(e);
-                gezeigt.add(e.key);
-                geaendert = true;
+                // Erst beim tatsächlichen Anzeigen als gezeigt merken — sonst
+                // ginge ein noch wartender Eintrag beim Neuladen verloren.
+                melden(e, () => {
+                    const g = gezeigtLaden();
+                    g.add(e.key);
+                    gezeigtSpeichern(g);
+                });
             });
-            if (geaendert) gezeigtSpeichern(gezeigt);
         } catch (e) {
             console.warn('Wecker: Prüfung fehlgeschlagen:', e);
         } finally {

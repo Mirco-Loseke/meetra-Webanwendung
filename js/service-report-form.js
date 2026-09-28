@@ -46,9 +46,12 @@
                 return;
             }
             serviceberichtIsDirty = false;
-            if (currentEditingServiceId) {
-                window.releaseServiceberichtLock(currentEditingServiceId);
+            const sperrId = window.currentEditingServiceId || currentEditingServiceId;
+            if (sperrId) {
+                window.releaseServiceberichtLock(sperrId);
             }
+            // Keine ID über das Schließen hinaus mitschleppen (siehe saveServiceberichtData).
+            currentEditingServiceId = null;
             const modal = document.getElementById('servicebericht-modal');
             if (modal) {
                 modal.removeEventListener('input', onServiceberichtFieldChange);
@@ -576,6 +579,7 @@
         };
 
         window.toggleTechnician = function (id) {
+            const vorherErster = selectedTechs.length > 0 ? selectedTechs[0] : null;
             const idx = selectedTechs.indexOf(id);
             if (idx > -1) {
                 selectedTechs.splice(idx, 1);
@@ -585,16 +589,23 @@
             const hiddenInput = document.getElementById('selected-technician-ids');
             if (hiddenInput) hiddenInput.value = JSON.stringify(selectedTechs);
             renderTechDropdown();
-            applyAutoTechSignature();
+            applyAutoTechSignature(vorherErster);
         };
 
         // Füllt die Techniker-Unterschrift mit der hinterlegten Unterschrift des ersten
         // ausgewählten Technikers (bei mehreren Technikern bewusst nur einer, nicht alle).
-        // Rührt eine vom Nutzer selbst gezeichnete/gelöschte Unterschrift nicht an.
-        async function applyAutoTechSignature() {
+        // Wechselt der Techniker (Timo → Gerd), wechselt die Unterschrift mit — auch in
+        // einem gespeicherten Bericht, sofern dort die hinterlegte Unterschrift des
+        // bisherigen Technikers steht. Eine von Hand gezeichnete bleibt unangetastet.
+        async function applyAutoTechSignature(vorherErster) {
             const techSigInput = document.getElementById('service-tech-signature');
             if (!techSigInput) return;
-            if (techSigInput.value && !window._techSigIsAutofilled) return;
+            if (techSigInput.value && !window._techSigIsAutofilled) {
+                if (vorherErster == null || typeof window.userSignatur !== 'function') return;
+                if (String(selectedTechs[0]) === String(vorherErster)) return;   // Erster unverändert
+                const alteSig = (await window.userSignatur(vorherErster)) || '';
+                if (!alteSig || techSigInput.value !== alteSig) return;          // von Hand gezeichnet
+            }
 
             const primaryTechId = selectedTechs.length > 0 ? selectedTechs[0] : null;
             // Unterschriftsbild wird nicht mehr mit der Nutzerliste geladen, sondern hier nachgeholt.
@@ -1087,9 +1098,15 @@
             // window.currentEditingServiceId. Ohne diese Übernahme bliebe die lokale
             // Variable null -> Speichern liefe fälschlich als INSERT und legte einen
             // DOPPELTEN Bericht an, statt den bestehenden zu aktualisieren.
-            if (window.currentEditingServiceId != null && window.currentEditingServiceId !== '') {
-                currentEditingServiceId = window.currentEditingServiceId;
-            }
+            //
+            // IMMER übernehmen — auch wenn es null ist. Früher nur bei gesetzter ID:
+            // öffnete man danach einen NEUEN Bericht (openServiceberichtModal(null),
+            // z. B. über die KI-Erfassung), stand hier noch die ID des zuvor
+            // bearbeiteten Berichts. Das Speichern lief dann als UPDATE auf den
+            // alten Bericht und überschrieb ihn mit Maschine und Inhalt des neuen —
+            // der alte Bericht war „verschwunden".
+            currentEditingServiceId = (window.currentEditingServiceId != null && window.currentEditingServiceId !== '')
+                ? window.currentEditingServiceId : null;
 
             const machineId = document.getElementById('selected-machine-id').value;
             const dateStart = document.getElementById('service-date-start').value;
@@ -1110,6 +1127,13 @@
             // ── Offline path ───────────────────────────────────────────────
             if (window.offlineService && await window.isLikelyOffline()) {
                 const reportDataOffline = window._applyServiceEditGuard(window._buildServiceReportData());
+                // Offline dieselbe Absicherung: Update nur auf den geöffneten Bericht.
+                if (currentEditingServiceId && (!window._serviceReportBaseline
+                    || String(window._serviceReportBaseline.id) !== String(currentEditingServiceId)
+                    || window._serviceReportBaseline.is_finalized)) {
+                    window.showToast('Gespeichert wurde nicht: die Bericht-Zuordnung ist unklar. Bitte Fenster schließen und neu öffnen.', 'error');
+                    throw new Error('update_blockiert');
+                }
                 const action   = (typeof currentEditingServiceId !== 'undefined' && currentEditingServiceId) ? 'update' : 'insert';
                 const serverId = (typeof currentEditingServiceId !== 'undefined') ? currentEditingServiceId : null;
                 const baseline = window._serviceReportBaseline || null;
@@ -1235,9 +1259,23 @@
                 // If it already has PDF fields, keep them during normal save
                 const { data: currentRecord } = await supabaseClient
                     .from('service_entries')
-                    .select('pdf_url, pdf_path, pdf_created_at')
+                    .select('pdf_url, pdf_path, pdf_created_at, is_finalized, machine_id')
                     .eq('id', currentEditingServiceId)
                     .single();
+                // Schutz vor Überschreiben eines FREMDEN Berichts: geschrieben wird nur,
+                // wenn die ID zu genau dem Bericht gehört, der geöffnet wurde (Baseline),
+                // er nicht abgeschlossen ist und die Maschine noch dieselbe ist.
+                // (Vorfall 2026-09-28: abgeschlossener EYS-Bericht mit Backhus überschrieben.)
+                const base = window._serviceReportBaseline;
+                const fremd = !base || String(base.id) !== String(currentEditingServiceId);
+                if (fremd || (currentRecord && currentRecord.is_finalized)
+                    || (currentRecord && base && String(currentRecord.machine_id) !== String(base.machine_id))) {
+                    console.error('Servicebericht-Speichern blockiert:', { currentEditingServiceId, baseline: base && base.id, record: currentRecord });
+                    window.showToast(currentRecord && currentRecord.is_finalized
+                        ? 'Gespeichert wurde nicht: der Ziel-Bericht ist abgeschlossen. Bitte Fenster schließen und den Bericht neu anlegen.'
+                        : 'Gespeichert wurde nicht: die Bericht-Zuordnung ist unklar. Bitte Fenster schließen und neu öffnen — nichts wurde überschrieben.', 'error');
+                    throw new Error('update_blockiert');
+                }
                 if (currentRecord) {
                     reportData.pdf_url = currentRecord.pdf_url;
                     reportData.pdf_path = currentRecord.pdf_path;
@@ -1258,6 +1296,9 @@
                 if (!dbError && insertData && insertData.length > 0) {
                     currentEditingServiceId = insertData[0].id;
                     window.currentEditingServiceId = insertData[0].id; // beide synchron halten
+                    // Ab jetzt ist das „der geöffnete Bericht" — sonst würde das nächste
+                    // Speichern (z. B. beim Abschließen) von der Absicherung oben blockiert.
+                    window._serviceReportBaseline = Object.assign({}, reportData, { id: insertData[0].id });
                 }
             }
 

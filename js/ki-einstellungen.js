@@ -12,6 +12,33 @@
     const $ = id => document.getElementById(id);
     const toast = m => (typeof window.showToast === 'function' ? window.showToast(m) : console.log(m));
 
+    // Status der Server-Modelle (ki-proxy → app_settings.ki_modell_status)
+    async function modellStatus() {
+        const box = $('ki-modell-status'); if (!box || !window.supabaseClient) return;
+        box.textContent = 'Wird geladen …';
+        try {
+            const { data, error } = await window.supabaseClient.from('app_settings').select('value').eq('key', 'ki_modell_status').maybeSingle();
+            if (error) throw error;
+            const v = data && data.value, modelle = v && v.modelle ? Object.entries(v.modelle) : [];
+            if (!modelle.length) { box.textContent = 'Noch keine Daten — erscheint nach der ersten KI-Anfrage mit der neuen ki-proxy.'; return; }
+            const e = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+            const jetzt = Date.now();
+            const zeit = iso => { const d = iso ? new Date(String(iso).split(' · ').pop()) : null; return d && !isNaN(d) ? d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '–'; };
+            modelle.sort((a, b) => ((a[1].gesperrtBis || 0) > jetzt) - ((b[1].gesperrtBis || 0) > jetzt) || (a[1].ms || 9e9) - (b[1].ms || 9e9));
+            box.innerHTML = '<table class="ki-status-tabelle"><thead><tr><th>Modell</th><th>Zustand</th><th>Ø Antwort</th><th>OK / Fehler</th><th>Zuletzt OK</th></tr></thead><tbody>'
+                + modelle.map(([m, z]) => {
+                    const gesperrt = (z.gesperrtBis || 0) > jetzt;
+                    const min = gesperrt ? Math.ceil((z.gesperrtBis - jetzt) / 60000) : 0;
+                    return '<tr><td><code>' + e(m) + '</code></td><td>' + (gesperrt
+                        ? '<span class="ki-st rot" title="' + e(z.letzterFehler || '') + '">pausiert, noch ' + min + ' min</span>'
+                        : '<span class="ki-st gruen">bereit</span>') + '</td><td>' + (z.ms ? (z.ms / 1000).toFixed(1).replace('.', ',') + ' s' : '–')
+                        + '</td><td>' + (z.ok || 0) + ' / ' + (z.fehler || 0) + '</td><td>' + zeit(z.zuletzt) + '</td></tr>';
+                }).join('') + '</tbody></table>'
+                + '<div class="text-muted-sm" style="margin-top:6px;">Stand: ' + zeit(v.aktualisiert) + '</div>';
+        } catch (err) { box.textContent = 'Nicht ladbar: ' + (err.message || err); }
+    }
+    window.kiModellStatus = modellStatus;
+
     function felderZeigen() {
         const box = $('ki-gemini-felder'); if (!box) return;
         box.hidden = $('ki-anbieter').value !== 'gemini';
@@ -73,6 +100,10 @@
         $('ki-anbieter').addEventListener('change', felderZeigen);
         $('ki-gemini-modelle').addEventListener('click', modelleLaden);
         $('ki-anbieter-speichern').addEventListener('click', speichern);
+        if ($('ki-status-laden')) $('ki-status-laden').addEventListener('click', modellStatus);
+        // Beim Öffnen von Einstellungen → KI den Stand frisch holen
+        const karte = document.querySelector('.settings-card[data-target="settings-ai"]');
+        if (karte) karte.addEventListener('click', () => setTimeout(modellStatus, 50));
         laden();
     });
 })();

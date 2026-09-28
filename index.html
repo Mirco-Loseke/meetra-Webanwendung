@@ -144,9 +144,10 @@
     <link rel="stylesheet" href="css/base/reset.css?v=2">
     <link rel="stylesheet" href="css/base/brand-accents.css?v=1">
     <link rel="stylesheet" href="css/components/navigation.css?v=1">
-    <link rel="stylesheet" href="css/components/modals.css?v=11">
+    <link rel="stylesheet" href="css/components/modals.css?v=13">
+    <link rel="stylesheet" href="css/components/ai-capture.css?v=2">
     <link rel="stylesheet" href="css/components/process-attachments.css?v=1">
-    <link rel="stylesheet" href="css/components/buttons.css?v=2">
+    <link rel="stylesheet" href="css/components/buttons.css?v=3">
     <link rel="stylesheet" href="css/components/forms.css?v=6">
     <link rel="stylesheet" href="css/components/notifications.css?v=8">
     <link rel="stylesheet" href="css/components/reminder-alarm.css?v=6">
@@ -174,11 +175,11 @@
     <link rel="stylesheet" href="css/views/tasks-print.css?v=3">
     <link rel="stylesheet" href="css/views/dashboard.css?v=1">
     <link rel="stylesheet" href="css/views/listen.css?v=3">
-    <link rel="stylesheet" href="css/views/addressbook.css?v=24">
-    <link rel="stylesheet" href="css/views/routenplanung.css?v=5">
+    <link rel="stylesheet" href="css/views/addressbook.css?v=26">
+    <link rel="stylesheet" href="css/views/routenplanung.css?v=6">
     <!-- Quill-Editor (Mail schreiben, Signatur) — vor mail.css, damit dessen Umfärbung gewinnt -->
     <link rel="stylesheet" href="lib/quill.snow.css?v=1">
-    <link rel="stylesheet" href="css/views/mail.css?v=17">
+    <link rel="stylesheet" href="css/views/mail.css?v=18">
     <link rel="stylesheet" href="css/views/datenschutz.css?v=1">
     <link rel="stylesheet" href="css/base/responsive.css?v=22">
 
@@ -298,7 +299,7 @@
     <link rel="stylesheet" href="css/components/dropdown-look.css?v=5">
     <!-- MIETVEREINBARUNG (1/3) — eigenstaendig, diese Zeile loeschen = weg -->
     <link rel="stylesheet" href="css/views/mietvereinbarung.css?v=31">
-    <link rel="stylesheet" href="css/views/einstellungen.css?v=15">
+    <link rel="stylesheet" href="css/views/einstellungen.css?v=16">
 
     <!-- @partial:modals/pin-prompt-modal.html -->
         <!-- PIN Prompt Modal -->
@@ -2828,6 +2829,17 @@
                             </div>
                         </div>
 
+                        <!-- Welche Gemini-Modelle der Server gerade nutzt (ki-proxy stellt selbst um,
+                             Stand in app_settings.ki_modell_status; js/ki-einstellungen.js) -->
+                        <div class="ki-status-box">
+                            <div class="ki-status-kopf">
+                                <span>Modelle auf dem Server</span>
+                                <button type="button" class="btn-secondary" id="ki-status-laden">Aktualisieren</button>
+                            </div>
+                            <p class="text-muted-sm" style="margin: 4px 0 10px;">Der Server wählt automatisch das schnellste freie Modell. Überlastete werden 10 Minuten übersprungen.</p>
+                            <div id="ki-modell-status" class="text-muted-sm">Noch keine Daten.</div>
+                        </div>
+
                         <div style="margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.1);">
                             <div style="font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.4); margin-bottom: 8px;">
                                 Für die Verwaltung
@@ -3795,6 +3807,16 @@
                                 </svg>
                                 Speichern
                             </button>
+                            <!-- Tourenzettel drucken: js/routenplanung.js, druckDialog -->
+                            <button class="rp2-btn rp2-btn-sm" id="rp2-print-btn" data-rp2-action="print-route" disabled>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                                    <rect x="6" y="14" width="12" height="8"></rect>
+                                </svg>
+                                Drucken
+                            </button>
                             <button class="rp2-btn rp2-btn-sm" data-rp2-action="load-route-dialog">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -4753,18 +4775,18 @@
         };
     </script>
     <script src="js/dashboard.js?v=3"></script>
-    <script src="js/app-core.js?v=8"></script>
+    <script src="js/app-core.js?v=9"></script>
     <script src="js/lookup-cache.js?v=1"></script>
     <script src="js/photo-dedupe.js?v=3"></script>
-    <script src="js/app-init.js?v=26"></script>
+    <script src="js/app-init.js?v=28"></script>
     <script src="js/settings-uvv-plans.js?v=1"></script>
     <script src="js/machine-details-modal.js?v=3"></script>
     <script src="js/machine-modal.js?v=6"></script>
-    <script src="js/service-report-form.js?v=13"></script>
+    <script src="js/service-report-form.js?v=16"></script>
     <script src="js/service-list.js?v=4"></script>
     <script src="js/history-modal.js?v=207"></script>
     <script src="js/calendar-events.js?v=6"></script>
-    <script src="js/processes-ui.js?v=44"></script>
+    <script src="js/processes-ui.js?v=45"></script>
     <!-- Dokumente an Vorgaengen/Schritten. Nutzt window.FileUploadService
          (js/file-upload-service-r2.js, weiter UNTEN geladen) — das ist in
          Ordnung, weil der Dienst erst beim Hochladen angefasst wird. -->
@@ -4776,11 +4798,11 @@
     <script src="js/processes.js?v=138"></script>
     <script src="js/service-reports.js?v=2"></script>
     <script src="js/service-entries.js?v=16"></script>
-    <script src="js/service-picker.js?v=1"></script>
+    <script src="js/service-picker.js?v=2"></script>
     <script src="js/worklog-tables.js?v=3"></script>
     <script src="js/signature-pads.js?v=1"></script>
     <script src="js/pdf-i18n.js?v=5"></script>
-    <script src="js/servicebericht-pdf.js?v=14"></script>
+    <script src="js/servicebericht-pdf.js?v=15"></script>
     <!-- Modal: Service Action Choice (View or Create) - Moved to root for better centering -->
     <div id="work-log-summary-modal" class="modal-backdrop hidden" style="z-index: 10001;">
         <div class="modal-content" style="max-width: 700px; width: 90%; padding: 1.5rem;">
@@ -6615,13 +6637,13 @@
     <!-- MIETVEREINBARUNG (2/3) — eigenstaendig, diese Zeile loeschen = weg -->
     <script src="js/mietvereinbarung-vorlagen.js?v=18"></script>
     <script src="js/einstellungen.js?v=1"></script>
-    <script src="js/mietvereinbarung.js?v=44"></script>
+    <script src="js/mietvereinbarung.js?v=45"></script>
     <script src="js/mietvereinbarung-liste.js?v=2"></script>
 
     </main>
     </div><!-- End main-wrapper -->
 
-    <script src="js/tasks.js?v=35"></script>
+    <script src="js/tasks.js?v=36"></script>
     <script src="js/workshop-tasks.js?v=4"></script>
     <script src="js/rechnungsliste.js?v=3"></script>
     <script src="js/tasks-print.js?v=13"></script>
@@ -6632,10 +6654,10 @@
     <!-- Alle KI-Anfragen laufen über die eigene Edge Function. Muss vor
          ai-quick-capture.js, ai-address-task.js und accounting.js stehen —
          die rufen window.groqFetch() auf. -->
-    <script src="js/groq-proxy.js?v=6"></script>
+    <script src="js/groq-proxy.js?v=7"></script>
     <script src="js/ki-pseudonym.js?v=15"></script>
-    <script src="js/ki-einstellungen.js?v=2"></script>
-    <script src="js/ai-quick-capture.js?v=30"></script>
+    <script src="js/ki-einstellungen.js?v=3"></script>
+    <script src="js/ai-quick-capture.js?v=31"></script>
     <script src="js/ai-task-extend.js?v=5"></script>
     <script>
         window.addEventListener('load', () => {
@@ -7396,18 +7418,18 @@
     <script src="js/checklists.js?v=7"></script>
     <script src="js/protokoll-liste.js?v=3"></script>
     <script src="js/customers.js?v=8"></script>
-    <script src="js/autosave.js?v=1"></script>
+    <script src="js/autosave.js?v=2"></script>
     <script src="js/unsaved-guard.js?v=1"></script>
     <script src="js/address-history.js?v=2"></script>
-    <script src="js/addressbook.js?v=79"></script>
+    <script src="js/addressbook.js?v=82"></script>
     <script src="js/outlook-graph.js?v=4"></script>
-    <script src="js/mail-view.js?v=13"></script>
+    <script src="js/mail-view.js?v=14"></script>
     <script src="js/mail-anhang-app.js?v=2"></script>
     <script src="js/outlook-settings.js?v=3"></script>
     <script src="js/onedrive-angebote.js?v=2"></script>
-    <script src="js/addressbook-live.js?v=4"></script>
+    <script src="js/addressbook-live.js?v=5"></script>
     <script src="js/process-autosave.js?v=3"></script>
-    <script src="js/task-autosave.js?v=3"></script>
+    <script src="js/task-autosave.js?v=4"></script>
     <script src="js/task-drafts.js?v=1"></script>
     <script src="js/process-open-hints.js?v=5"></script>
     <script src="js/ai-address-task.js?v=14"></script>
@@ -7417,21 +7439,22 @@
     <!-- Termine mit Teilnehmern: liefert die Bausteine, die Benachrichtigungen,
          Kalender und Routenplanung darunter benutzen. -->
     <script src="js/appointment-invite.js?v=2"></script>
-    <script src="js/appointments.js?v=6"></script>
-    <script src="js/notifications.js?v=20"></script>
+    <script src="js/appointments.js?v=7"></script>
+    <script src="js/notifications.js?v=21"></script>
 
     <script src="js/notification-settings.js?v=2"></script>
     <!-- Minutengenauer Wecker fuer Erinnerungen mit Uhrzeit. Muss NACH
          notifications.js stehen: nutzt window.notificationsPushEnabled. -->
-    <script src="js/reminder-alarm.js?v=8"></script>
-    <script src="js/assignment-handoff.js?v=3"></script>
+    <script src="js/meldungs-takt.js?v=1"></script>
+    <script src="js/reminder-alarm.js?v=10"></script>
+    <script src="js/assignment-handoff.js?v=6"></script>
     <script src="js/calendar-widget.js?v=20"></script>
     <!-- tasks.js und processes.js werden bereits weiter oben geladen (vor ihren
          jeweiligen Folgemodulen). Ein zweites Einbinden ließ beide Module doppelt
          laufen — mit doppelt registrierten Event-Handlern. -->
     <script src="js/routeplanner.js?v=2"></script>
-    <script src="js/routenplanung.js?v=19"></script>
-    <script src="js/listen.js?v=55"></script>
+    <script src="js/routenplanung.js?v=20"></script>
+    <script src="js/listen.js?v=57"></script>
 
     <script src="js/labels.js?v=2"></script>
     <script src="js/offline-service.js?v=1"></script>
@@ -7959,7 +7982,11 @@
                         <div style="color: rgba(167,139,250,0.8); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; margin-bottom: 4px;">Vorgang zu Adresse</div>
                         <div style="display:flex; align-items:center; gap:8px; color:#a78bfa; font-weight:800; font-size:1.15rem;">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                            <span id="edit-process-address-name">-</span>
+                            <span id="edit-process-address-name" style="flex:1; min-width:0;">-</span>
+                            <button type="button" id="edit-process-address-open" class="process-adresse-oeffnen" onclick="window.processAdresseOeffnen()" title="Adresse im Adressbuch öffnen">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                                Adresse öffnen
+                            </button>
                         </div>
                     </div>
 

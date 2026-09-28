@@ -21,16 +21,24 @@
             const serviceDateStartEl = document.getElementById('service-date-start');
             const techSigDateEl = document.getElementById('service-tech-sig-date');
             const custSigDateEl = document.getElementById('service-customer-sig-date');
+            // Maßstab ist der Wert, den „Datum (von)" VOR der Änderung hatte (beim Fokus
+            // gemerkt): stand das Unterschriftsdatum auf genau diesem Tag, zieht es mit.
+            // Wurde es unten bewusst abweichend gesetzt, bleibt es stehen. Vorher galt nur
+            // ein Merker, der erst nach der ersten Änderung gesetzt war — bei einem
+            // gespeicherten Bericht zog das Datum deshalb nie mit.
             if (serviceDateStartEl && techSigDateEl && custSigDateEl) {
+                let vorher = serviceDateStartEl.value;
+                const merken = () => { vorher = serviceDateStartEl.value; };
+                serviceDateStartEl.addEventListener('focus', merken);
+                serviceDateStartEl.addEventListener('pointerdown', merken);
                 serviceDateStartEl.addEventListener('change', () => {
                     const newVal = serviceDateStartEl.value;
                     if (!newVal) return;
-                    if (!techSigDateEl.value || techSigDateEl.value === window._serviceDateStartAutoVal) {
-                        techSigDateEl.value = newVal;
-                    }
-                    if (!custSigDateEl.value || custSigDateEl.value === window._serviceDateStartAutoVal) {
-                        custSigDateEl.value = newVal;
-                    }
+                    const alt = vorher || window._serviceDateStartAutoVal;
+                    [techSigDateEl, custSigDateEl].forEach(el => {
+                        if (!el.value || el.value === alt) el.value = newVal;
+                    });
+                    vorher = newVal;
                     window._serviceDateStartAutoVal = newVal;
                 });
             }

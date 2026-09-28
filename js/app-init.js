@@ -2115,6 +2115,12 @@
                         // applyProcessRealtime) — das komplette Neuladen kostete
                         // je Änderung mehrere MB Egress. Bei offenem Fenster oder
                         // Fehler wie bisher gebündelt komplett laden.
+                        // Fenster offen: nur merken, WELCHE Vorgänge sich geändert haben —
+                        // beim Schließen werden genau diese einzeln nachgeladen statt alles.
+                        if (processFensterOffen() && typeof window.applyProcessRealtime === 'function') {
+                            const pid = (payload.new && payload.new.id) || (payload.old && payload.old.id);
+                            if (pid != null) { _processesGeaendert.set(String(pid), payload); return; }
+                        }
                         if (processFensterOffen() || typeof window.applyProcessRealtime !== 'function') {
                             try { window.scheduleProcessesRefetch(); } catch (e) { console.error('Realtime internal_processes Fehler:', e); }
                             return;
@@ -2174,7 +2180,16 @@
                     window.fetchProcesses();
                 }, 1200);   // Änderungsschwall (z. B. Zusammenführen, Import) nur einmal laden
             };
+            const _processesGeaendert = new Map();   // id -> letztes Realtime-Ereignis, solange ein Fenster offen ist
             window.processesRefetchIfPending = function () {
+                if (_processesGeaendert.size && !_processesRefetchPending) {
+                    const liste = Array.from(_processesGeaendert.values());
+                    _processesGeaendert.clear();
+                    Promise.all(liste.map(p => window.applyProcessRealtime(p).catch(() => false)))
+                        .then(ok => { if (ok.some(x => !x)) window.scheduleProcessesRefetch(); });
+                    return;
+                }
+                _processesGeaendert.clear();
                 if (!_processesRefetchPending) return;
                 _processesRefetchPending = false;
                 window.scheduleProcessesRefetch();
@@ -3611,7 +3626,13 @@
             }
 
             if (serviceFileInput) {
-                serviceFileInput.onchange = (e) => handleServiceFiles(e.target.files);
+                // Danach leeren — sonst meldet Android beim erneuten Wählen
+                // desselben Bildes keine Änderung.
+                serviceFileInput.onchange = async (e) => {
+                    const dateien = Array.from(e.target.files || []);
+                    e.target.value = '';
+                    await handleServiceFiles(dateien);
+                };
             }
 
             // --- Initial View Activation ---

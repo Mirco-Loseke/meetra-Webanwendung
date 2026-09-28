@@ -1461,10 +1461,36 @@
         if (!window.notificationsPushEnabled()) {
             const appts = urgent.filter(n => n.kind === 'appointment');
             appts.forEach(n => {
-                if (typeof window.showToast === 'function') window.showToast(`${n.title} — ${n.meta}`);
+                const zeigen = () => { if (typeof window.showToast === 'function') window.showToast(`${n.title} — ${n.meta}`); };
+                if (window.meldungsTakt) window.meldungsTakt.einreihen('glocke:' + n.key, zeigen);
+                else zeigen();
                 pushed[n.key] = Date.now();
             });
             if (appts.length) savePushed(pushed);
+            return;
+        }
+
+        // Über den Meldungs-Takt (js/meldungs-takt.js): eine nach der anderen, mit Knöpfen.
+        if (window.meldungsTakt) {
+            urgent.forEach(n => {
+                const key = 'glocke:' + n.key;
+                window.meldungsTakt.einreihen(key, () => {
+                    if (readKeys().has(n.key)) return;   // inzwischen unter der Glocke gelesen
+                    window.meldungsTakt.system(n.title, {
+                        body: [n.subject, n.meta].filter(Boolean).join('\n'),
+                        tag: key,
+                        requireInteraction: false
+                    }, [
+                        { action: 'oeffnen', title: 'Ansehen' },
+                        { action: 'gelesen', title: 'Gelesen' }
+                    ]);
+                }, was => {
+                    if (was === 'gelesen') markRead(n.key);
+                    else { window.focus(); goTo(n.targetType, n.targetId, n.key); }
+                });
+                pushed[n.key] = Date.now();
+            });
+            savePushed(pushed);
             return;
         }
 

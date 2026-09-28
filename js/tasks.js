@@ -243,6 +243,7 @@
     //   * Die Scrollposition bleibt erhalten (Fernseher/Kinomodus).
     let _tasksRefetchTimer = null;
     let _tasksRefetchPending = false;
+    const _tasksGeaendert = new Set();   // Aufgaben-IDs, geändert während ein Fenster offen war
 
     function taskModalOpen() {
         const m = document.getElementById('task-modal');
@@ -273,7 +274,8 @@
         clearTimeout(_taskEinzelTimer[taskId]);
         _taskEinzelTimer[taskId] = setTimeout(async () => {
             delete _taskEinzelTimer[taskId];
-            if (taskModalOpen()) { _tasksRefetchPending = true; return; }
+            // Fenster offen: nur die Aufgabe merken, beim Schließen einzeln nachladen.
+            if (taskModalOpen()) { _tasksGeaendert.add(String(taskId)); return; }
             try {
                 const { data, error } = await window.supabaseClient
                     .from('tasks')
@@ -311,6 +313,13 @@
     // Wurde während eines offenen Fensters etwas geändert, nach dem Schließen
     // nachziehen — sonst steht die Tafel bis zum nächsten Ereignis auf altem Stand.
     window.tasksRefetchIfPending = function () {
+        if (_tasksGeaendert.size && !_tasksRefetchPending) {
+            const ids = Array.from(_tasksGeaendert);
+            _tasksGeaendert.clear();
+            ids.forEach(id => window.applyTaskRealtime('tasks', { eventType: 'UPDATE', new: { id: id } }));
+            return;
+        }
+        _tasksGeaendert.clear();
         if (!_tasksRefetchPending) return;
         _tasksRefetchPending = false;
         window.scheduleTasksRefetch();

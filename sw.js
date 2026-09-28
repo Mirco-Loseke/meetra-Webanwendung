@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meetra-app-v640';
+const CACHE_NAME = 'meetra-app-v660';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
@@ -11,6 +11,7 @@ const PRECACHE = [
     'js/calendar-widget.js',
     'js/notifications.js',
     'js/notification-settings.js',
+    'js/meldungs-takt.js',
     'js/reminder-alarm.js',
     'js/assignment-handoff.js',
     'css/components/reminder-alarm.css',
@@ -31,6 +32,7 @@ const PRECACHE = [
     'css/base/responsive.css',
     'css/components/navigation.css',
     'css/components/modals.css',
+    'css/components/ai-capture.css',
     'css/components/buttons.css',
     'css/components/forms.css',
     'css/components/notifications.css',
@@ -378,20 +380,27 @@ self.addEventListener('fetch', event => {
 // Ist die App schon offen, wird das vorhandene Fenster nach vorn geholt,
 // statt einen zweiten Tab aufzumachen. Zusaetzlich wird der Seite gesagt,
 // welcher Eintrag gemeint war — js/reminder-alarm.js oeffnet ihn dann.
+// Knöpfe in der Meldung (actions) laufen ebenfalls hierüber: event.action
+// ist dann 'jetzt', 'spaeter', 'weg' … und js/meldungs-takt.js führt dieselbe
+// Aktion aus wie der Knopf auf der Karte in der App. Nur „Öffnen"/„Jetzt"
+// holt das Fenster nach vorn — „Später" soll nicht aus der Arbeit reißen.
 self.addEventListener('notificationclick', (event) => {
-    const ziel = (event.notification && event.notification.data) || {};
-    event.notification.close();
+    const n = event.notification;
+    const ziel = (n && n.data) || {};
+    const aktion = event.action || '';
+    const key = n && n.tag;
+    n.close();
+    const vorHolen = aktion === '' || aktion === 'jetzt' || aktion === 'oeffnen';
     event.waitUntil(
         self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((liste) => {
-            for (const client of liste) {
-                if ('focus' in client) {
-                    if (ziel.zielId && client.postMessage) {
-                        client.postMessage({ type: 'alarm-open', zielTyp: ziel.zielTyp, zielId: ziel.zielId });
-                    }
-                    return client.focus();
-                }
+            const client = liste.find(c => 'focus' in c);
+            if (client) {
+                client.postMessage({ type: 'meldung-aktion', key, aktion, zielTyp: ziel.zielTyp, zielId: ziel.zielId });
+                return vorHolen ? client.focus() : undefined;
             }
-            if (self.clients.openWindow) return self.clients.openWindow('./index.html');
+            if (!self.clients.openWindow) return;
+            const q = new URLSearchParams({ meldung: key || '', aktion, zielTyp: ziel.zielTyp || '', zielId: ziel.zielId || '' });
+            return self.clients.openWindow('./index.html?' + q.toString());
         })
     );
 });

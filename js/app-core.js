@@ -245,3 +245,21 @@
         });
     });
 })();
+
+// ==========================================================
+// Haupt-Tab: nur EIN Tab je Browser fragt regelmäßig ab
+// ==========================================================
+// Wecker, Vorgangs-Quittung, Glocke und Einladungs-Zähler liefen in jedem
+// offenen Tab — drei Tabs = dreifache Anfragen und dreifache Supabase-Logs.
+// Der Tab, der die Sperre hält, ist der Haupt-Tab; schließt er, übernimmt
+// automatisch der nächste. Ohne Web Locks (file://, Altgeräte) gilt jeder Tab.
+(function () {
+    var haupt = !(navigator.locks && navigator.locks.request);
+    window.istHauptTab = function () { return haupt; };
+    if (haupt) return;
+    navigator.locks.request('meetra-haupt-tab', function () {
+        haupt = true;
+        document.dispatchEvent(new CustomEvent('haupttab:uebernommen'));
+        return new Promise(function () { /* bis der Tab schließt */ });
+    }).catch(function () { haupt = true; });
+})();

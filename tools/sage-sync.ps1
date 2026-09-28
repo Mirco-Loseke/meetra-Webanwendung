@@ -130,6 +130,40 @@ function Schluessel($s) {
     return $t
 }
 
+# Firmenname ohne Rechtsform: "Dallmann GmbH, H. - Strassen- und Tiefbau GmbH & Co" und
+# "... GmbH & Co. KG" ergeben denselben Kern. Vorher zaehlte nur der exakte Name.
+function NamensKern($s) {
+    if (-not $s) { return $null }
+    $t = " " + ("$s".ToLower() -replace 'ß', 'ss' -replace '[^a-z0-9äöü]+', ' ') + " "
+    foreach ($w in @('gmbh', 'mbh', 'co', 'kg', 'ag', 'ug', 'ohg', 'gbr', 'ek', 'e', 'k', 'inh', 'und', 'haftungsbeschraenkt', 'haftungsbeschränkt', 'gesellschaft', 'ges', 'firma', 'fa', 'strassen', 'str')) {
+        $t = $t -replace (" $w(?= )"), ' '
+    }
+    $t = ($t -replace '\s+', '')
+    if ($t.Length -lt 4) { return $null }
+    return $t
+}
+# Erstes aussagekraeftiges Wort des Namens ("dallmann") - fuer den Abgleich ueber die Anschrift.
+function ErstesWort($s) {
+    if (-not $s) { return $null }
+    foreach ($w in ("$s".ToLower() -replace 'ß', 'ss' -split '[^a-z0-9äöü]+')) {
+        if ($w.Length -ge 3 -and @('die', 'der', 'das', 'fa', 'firma', 'gmbh', 'und') -notcontains $w) { return $w }
+    }
+    return $null
+}
+# Strasse vereinheitlicht: "Industriestraße 32" = "Industriestr. 32" = "Industriestrasse 32".
+function StrassenSchluessel($s) {
+    if (-not $s) { return $null }
+    $t = "$s".ToLower() -replace 'ß', 'ss' -replace 'strasse', 'str' -replace '[^a-z0-9äöü]', ''
+    if ($t.Length -lt 4) { return $null }
+    return $t
+}
+function TelSchluessel($s) {
+    if (-not $s) { return $null }
+    $t = ("$s" -replace '^\+49', '0' -replace '^0049', '0' -replace '[^0-9]', '')
+    if ($t.Length -lt 7) { return $null }
+    return $t
+}
+
 function Text($v) {
     if ($null -eq $v -or $v -is [DBNull]) { return $null }
     $s = "$v".Trim()
@@ -187,8 +221,9 @@ WHERE a.Aktiv <> 0
     Sag ("  Supabase: {0} Adressen, davon {1} mit Adressnummer" -f $vorhanden.Count, $nachNr.Count)
 
     # Rueckfall fuer Adressen ohne Adressnummer (von Hand angelegt):
-    # Kundennummer -> Matchcode -> Name+PLZ. Nur eindeutige Treffer zaehlen.
-    $idx = @{ kd = @{}; mc = @{}; np = @{} }
+    # Kundennummer -> Matchcode -> Name+PLZ -> Namenskern+PLZ -> Strasse+PLZ+erstes
+    # Namenswort -> Telefon+PLZ. Nur eindeutige Treffer zaehlen.
+    $idx = @{ kd = @{}; mc = @{}; np = @{}; kp = @{}; sp = @{}; tp = @{} }
     function Merke($art, $key, $c) {
         if (-not $key) { return }
         if ($idx[$art].ContainsKey($key)) { $idx[$art][$key] = 'MEHRDEUTIG' } else { $idx[$art][$key] = $c }
@@ -197,7 +232,14 @@ WHERE a.Aktiv <> 0
         if ($c.address_number) { continue }
         Merke 'kd' (Schluessel $c.customer_number) $c
         Merke 'mc' (Schluessel $c.matchcode) $c
-        if ($c.zip_code) { Merke 'np' ((Schluessel $c.name) + '|' + (Schluessel $c.zip_code)) $c }
+        if ($c.zip_code) {
+            $p = Schluessel $c.zip_code
+            Merke 'np' ((Schluessel $c.name) + '|' + $p) $c
+            $k = NamensKern $c.name;        if ($k) { Merke 'kp' ($k + '|' + $p) $c }
+            $st = StrassenSchluessel $c.street; $w = ErstesWort $c.name
+            if ($st -and $w) { Merke 'sp' ($st + '|' + $p + '|' + $w) $c }
+            $tel = TelSchluessel $c.phone;  if ($tel) { Merke 'tp' ($tel + '|' + $p) $c }
+        }
     }
     $vergeben = @{}
 
@@ -235,7 +277,10 @@ WHERE a.Aktiv <> 0
             $schl = @(
                 @('kd', (Schluessel $zeile.customer_number)),
                 @('mc', (Schluessel $zeile.matchcode)),
-                @('np', $(if ($plz) { (Schluessel $name) + '|' + (Schluessel $plz) } else { $null }))
+                @('np', $(if ($plz) { (Schluessel $name) + '|' + (Schluessel $plz) } else { $null })),
+                @('kp', $(if ($plz -and (NamensKern $name)) { (NamensKern $name) + '|' + (Schluessel $plz) } else { $null })),
+                @('sp', $(if ($plz -and (StrassenSchluessel $strasse) -and (ErstesWort $name)) { (StrassenSchluessel $strasse) + '|' + (Schluessel $plz) + '|' + (ErstesWort $name) } else { $null })),
+                @('tp', $(if ($plz -and (TelSchluessel $r.Telefon)) { (TelSchluessel $r.Telefon) + '|' + (Schluessel $plz) } else { $null }))
             )
             foreach ($s in $schl) {
                 if (-not $s[1]) { continue }

@@ -1,0 +1,81 @@
+/* ==========================================================
+   KI-Erfassung (js/ai-quick-capture.js, #ai-capture-modal)
+   Die Karten werden per JS mit Inline-Stilen gebaut (je Feld 100% Breite,
+   0.5rem Abstand) — hier wird daraus ein luftiges Raster:
+   Vorgang: Titel voll · Typ | Maschine · Zuständig | Dokument · Rest voll.
+   Inline-Stile ohne !important → diese Regeln gewinnen mit !important.
+   ========================================================== */
+
+#ai-capture-modal > .modal-content {
+    max-width: 1100px !important;
+    width: 96% !important;
+}
+
+/* Abstand zwischen den Karten */
+#ai-capture-modal .ai-cap-card { margin-bottom: var(--space-4) !important; }
+
+/* ---- Vorgangskarte ---- */
+#ai-capture-modal .ai-cap-card[data-kind="process"] {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-4) var(--space-5);
+    padding: var(--space-5) !important;
+}
+#ai-capture-modal .ai-cap-card[data-kind="process"] > * {
+    grid-column: 1 / -1;
+    margin: 0 !important;
+    min-width: 0;
+}
+/* nebeneinander */
+#ai-capture-modal .ai-cap-card[data-kind="process"] > .ai-cap-type,
+#ai-capture-modal .ai-cap-card[data-kind="process"] > .ai-cap-machine,
+#ai-capture-modal .ai-cap-card[data-kind="process"] > div:has(> select.ai-cap-type),
+#ai-capture-modal .ai-cap-card[data-kind="process"] > div:has(> select.ai-cap-machine),
+#ai-capture-modal .ai-cap-card[data-kind="process"] > div:has(> .ai-cap-assignee),
+#ai-capture-modal .ai-cap-card[data-kind="process"] > div:has(> .proc-att-open-btn) {
+    grid-column: auto;
+}
+/* Kundenschild nicht über die ganze Breite ziehen */
+#ai-capture-modal .ai-cap-card[data-kind="process"] > div[style*="inline-flex"] { justify-self: start; }
+/* Dokument-Knopf auf Höhe des Zuständig-Felds */
+#ai-capture-modal .ai-cap-card[data-kind="process"] > div:has(> .proc-att-open-btn) { align-self: end; }
+#ai-capture-modal .ai-cap-card[data-kind="process"] .proc-att-open-btn { height: 44px; }
+/* Von | An behalten ihren Abstand */
+#ai-capture-modal .ai-cap-card[data-kind="process"] > div:has(> .ai-cap-sender) { gap: var(--space-4) !important; }
+#ai-capture-modal .ai-cap-card[data-kind="process"] > .ai-cap-remark { min-height: 110px; }
+/* Erinnerung / Termin */
+#ai-capture-modal .ai-cap-card[data-kind="process"] > div:has(> div > .ai-cap-remind) { gap: var(--space-4) !important; }
+
+/* ---- Aufgabenkarte: gleicher Rhythmus, einspaltig ---- */
+#ai-capture-modal .ai-cap-card[data-kind="task"] {
+    display: flex !important;
+    flex-direction: column;
+    gap: var(--space-3);
+    padding: var(--space-5) !important;
+}
+#ai-capture-modal .ai-cap-card[data-kind="task"] > * { margin-top: 0 !important; margin-bottom: 0 !important; }
+
+/* ---- Felder: kompakter, einheitliche Höhe ---- */
+#ai-capture-modal .ai-cap-card .glass-form-input:not(textarea) {
+    min-height: 44px;
+    height: 44px;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    font-size: var(--fs-sm) !important;
+}
+#ai-capture-modal .ai-cap-card .ai-cap-title { font-size: var(--fs-md) !important; }
+#ai-capture-modal .ai-cap-card textarea.glass-form-input { font-size: var(--fs-sm) !important; line-height: var(--lh-normal); }
+
+/* Überschriften kleiner Blöcke (Zuständig, Erinnerung …) */
+#ai-capture-modal .ai-cap-card div[style*="text-transform:uppercase"] { margin-bottom: 6px !important; }
+
+/* Schritte-Liste */
+#ai-capture-modal .ai-cap-proc-steps-list { gap: var(--space-2) !important; }
+
+@media (max-width: 768px) {
+    #ai-capture-modal .ai-cap-card[data-kind="process"] { grid-template-columns: minmax(0, 1fr); padding: var(--space-4) !important; gap: var(--space-3); }
+    #ai-capture-modal .ai-cap-card[data-kind="process"] > * { grid-column: 1 / -1 !important; }
+}
+
+/* „+ Schritt hinzufügen" nur so breit wie nötig */
+#ai-capture-modal .ai-cap-card[data-kind="process"] > button:last-child { justify-self: start; }

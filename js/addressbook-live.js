@@ -46,6 +46,7 @@
         autosave = window.createAutosave({
             table: 'customers',
             delay: AUTOSAVE_DELAY,
+            returnRow: true,
             statusClass: 'ab-autosave-status',
             statusHost: () => document.querySelector('#addressbook-form .ab-form-actions'),
             // Dasselbe Modal wird auch für Ansprechpartner, Notizen usw.

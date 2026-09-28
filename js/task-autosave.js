@@ -30,7 +30,7 @@
 
     // Entprellung für die Unteraufgaben. Etwas länger als beim Formular:
     // beim Umsortieren per Drag & Drop fallen mehrere Änderungen hintereinander an.
-    const SUBTASK_DELAY = 700;
+    const SUBTASK_DELAY = 1500;   // jeder Lauf löscht und schreibt alle Unteraufgaben neu
 
     function el(id) { return document.getElementById(id); }
     function v(id) { const e = el(id); return e ? e.value : ''; }
@@ -155,7 +155,8 @@
                 if (error) throw error;
             }
             lastSubtaskJson = json;
-            if (typeof window.fetchTasks === 'function') window.fetchTasks();
+            // Kein fetchTasks() mehr: das lud bei jeder Tipp-Pause ALLE Aufgaben samt
+            // Unteraufgaben. Die Liste zieht beim Schließen nach (nur diese Aufgabe).
         } catch (err) {
             console.error('Auto-Speichern (subtasks) fehlgeschlagen:', err);
             window.showToast('Unteraufgaben nicht gespeichert: ' + (err.message || err), 'error');
@@ -267,7 +268,10 @@
                         .then(() => saveSubtasks(true, id))
                         .finally(() => {
                             autosave.detach();
-                            if (typeof window.fetchTasks === 'function') window.fetchTasks();
+                            // Nur die bearbeitete Aufgabe nachladen (js/tasks.js), nicht alle.
+                            const einzeln = typeof window.applyTaskRealtime === 'function'
+                                && window.applyTaskRealtime('tasks', { eventType: 'UPDATE', new: { id: id } });
+                            if (!einzeln && typeof window.fetchTasks === 'function') window.fetchTasks();
                         });
                     if (typeof window.markTaskClean === 'function') window.markTaskClean();
                     return origClose.call(this, true);

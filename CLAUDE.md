@@ -276,7 +276,15 @@ formfüllenden Feldern zusätzlich `.menu-block`. Ausgewählter Eintrag: `.selec
 einem Inline-`style` suchen.
 
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v640 (Stand 2026-09-24) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v660 (Stand 2026-09-28) — bei jeder Änderung hochzählen.
+
+**Meldungs-Takt (2026-09-28).** `js/meldungs-takt.js`: Wecker, Vorgangs-Quittung und
+Glocke reihen ihre Meldungen per `meldungsTakt.einreihen(key, zeigen, aktion)` ein —
+erste sofort, dann frühestens alle 60 s (`ABSTAND`). Windows-Meldungen mit Knöpfen
+(`meldungsTakt.system`, `actions`, Chrome max. 2) → `sw.js` postet `meldung-aktion` →
+dieselbe Aktion wie auf der Karte. Karte weg ⇒ Windows-Meldung zu (MutationObserver auf
+`#alarm-stack`); Aktion in Windows ⇒ Karte weg + aus der Schlange. App geschlossen ⇒
+`index.html?meldung=…&aktion=…`. **Neue Meldung ⇒ über `meldungsTakt`, nie direkt.**
 
 **Mietvereinbarung (Stand 2026-08-25).** Der Bogen wird gespeichert: PDF per
 html2canvas je `.miet-page` + jsPDF, Ablage in R2 unter
@@ -388,6 +396,9 @@ filtert serverseitig auf fällige Zeitpunkte mit wenigen Spalten, Quittung alle
 erzwingt), Timeline lädt frühestens nach 3 min neu. **Regel:** keine Abfrage
 in einer Schleife/Timer mit `select('*')` ohne serverseitigen Filter, kein
 Komplett-Neuladen als Reaktion auf ein Realtime-Ereignis.
+**Servicebericht überschrieb fremden Bericht (behoben 2026-09-28):** `saveServiceberichtData` übernahm `window.currentEditingServiceId` nur, wenn gesetzt — nach einem bearbeiteten Bericht blieb die lokale ID stehen, ein danach NEU angelegter Bericht (z. B. KI-Erfassung) lief als UPDATE auf den alten und überschrieb ihn (Maschine, Inhalt). Jetzt wird immer übernommen (auch null) und beim Schließen geleert. **Wahrheit ist `window.currentEditingServiceId`.**
+**Auto-Speichern & Egress (2026-09-28):** `createAutosave` schreibt ohne Antwortkörper (nur `returnRow: true` holt die Zeile, z. Z. nur Adressbuch), Entprellung 1 s; Unteraufgaben 1,5 s und **kein** `fetchTasks()` mehr je Speichern. Während ein Vorgangs-/Aufgaben-Fenster offen ist, merkt sich Realtime nur die geänderten IDs (`_processesGeaendert`, `_tasksGeaendert`) und lädt beim Schließen genau diese einzeln nach statt alles.
+**Log-Ingestion (2026-09-28):** jede Anfrage = eine Supabase-Logzeile (Free: 1 GB, Sperre ab 2027). `window.istHauptTab()` (`app-core.js`, Web Locks): Wecker und Vorgangs-Quittung fragen nur im Haupt-Tab je Browser ab; Wecker 60 s statt 20 s, Quittung 120 s, deren Realtime nur auf eigene Zeilen gefiltert und gebündelt; Einladungs-Zähler nur im sichtbaren Tab. **Neuer Timer mit Abfrage ⇒ `istHauptTab()` bzw. `document.hidden` prüfen.**
 **Nachtrag 2026-09-21:** Benachrichtigungen (`notifications.js`, alle 5 min) laden
 Vorgänge nur mit den gelesenen Spalten (`PROC_FELDER`) und Serviceberichte mit
 `customer_signed` statt des Base64-Bilds; Wecker-Schritte nur Vorgänge mit offenem
@@ -436,6 +447,7 @@ KI-Zusammenfassung. „✨ Antwort entwerfen" → `antwortEntwerfen` (`mail-view
 Kundenkontext (Maschinen, offene Vorgänge) + Mailkern (`mailKern` schneidet Zitate
 ab) → Entwurf landet über `schreibenVorbelegen(…, entwurfHtml)` im Editor, Platzhalter
 `[Termin]` u. ä. für alles, was die KI nicht weiß. Gesendet wird nie automatisch.
+**Rechtsklick auf eine Mail (2026-09-28):** eigenes Menü (`mailKontextmenu` in `mail-view.js`, hängt an `<body>`): Antworten, ✨ Antwort, ✨ Vorgang, Vorgang erstellen (`vorgangOhneKi`, Anlegen-Fenster vorbelegt), „Zu Vorgang hinzufügen" (`vorgangWaehlen`: erst offene Vorgänge der erkannten Adresse, sonst Suche über alle offenen) → Mail als neuer Stand (`status_updates`); unbekannte Absender werden dabei dem Kunden des Vorgangs zugeordnet.
 **Fallstrick:** `js/select-enhance.js` baut jedes `<select>` um — auch Quills
 Toolbar-Selects, die dann unsichtbar werden. Toolbar-Container brauchen `data-no-enhance`.
 

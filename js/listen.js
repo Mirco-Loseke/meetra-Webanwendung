@@ -509,6 +509,47 @@
         const liste = proc && Array.isArray(proc.attachments) ? proc.attachments : [];
         return liste.filter(f => !f.step_id);
     }
+    // Download-Name: „Angebot <Belegnummer>.pdf" statt „<ID>_Angebot_2026-30016.pdf".
+    // Mehrere Dokumente am Angebot: ab dem zweiten mit „(2)", „(3)" …
+    function angebotDateiName(a, f) {
+        const orig = String(f.name || 'Dokument');
+        const ext = (orig.match(/\.[a-z0-9]{1,5}$/i) || [''])[0];
+        const nr = String(a.belegnummer || '').trim();
+        if (!nr) return orig.replace(/^[0-9a-f-]{8,}[_\s-]+/i, '').replace(/_/g, ' ');
+        let alle = [];
+        try { alle = angebotDokumente(a); } catch (e) { alle = []; }
+        const docs = alle.filter(d => (String(d.name || '').match(/\.[a-z0-9]{1,5}$/i) || [''])[0].toLowerCase() === ext.toLowerCase());
+        const idx = docs.findIndex(d => String(d.id) === String(f.id));
+        return 'Angebot ' + nr + (idx > 0 ? ' (' + (idx + 1) + ')' : '') + ext;
+    }
+    // Lädt per fetch als Blob — das download-Attribut greift bei R2 (fremder
+    // Ursprung) nicht, der Browser öffnete die Datei nur im Tab.
+    window.angebotDateiName = angebotDateiName;
+    window.angebotDokumentHerunterladen = async function (angebotId, fileId) {
+        const a = (angeboteList || []).find(x => String(x.id) === String(angebotId));
+        const f = a && angebotDokumente(a).find(d => String(d.id) === String(fileId));
+        if (!f || !f.url) return;
+        await window.dateiHerunterladen(f.url, angebotDateiName(a, f));
+    };
+    window.dateiHerunterladen = async function (url, name) {
+        const f = { url };
+        try {
+            const resp = await fetch(f.url);
+            if (!resp.ok) throw new Error('HTTP ' + resp.status);
+            const blobUrl = URL.createObjectURL(await resp.blob());
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = name;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+        } catch (e) {
+            console.error('Download fehlgeschlagen:', e);
+            if (window.showToast) window.showToast('Download fehlgeschlagen — Datei wird stattdessen geöffnet.');
+            window.open(f.url, '_blank', 'noopener');
+        }
+    };
     function renderAngebotDokumenteCell(a) {
         const proc = vorgangZu(a);
         if (!proc) return '';
@@ -517,7 +558,7 @@
             <div style="display:flex; align-items:center; gap:5px; min-width:0;">
                 <a href="${escapeHtml(f.url || '#')}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="${escapeHtml(f.name || '')} öffnen"
                    style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#34d399; font-size:0.82rem; font-weight:600; text-decoration:none;">${escapeHtml(f.name || 'Datei')}</a>
-                <a href="${escapeHtml(f.url || '#')}" download="${escapeHtml(f.name || '')}" onclick="event.stopPropagation()" title="Herunterladen"
+                <a href="${escapeHtml(f.url || '#')}" onclick="event.stopPropagation(); event.preventDefault(); window.angebotDokumentHerunterladen('${a.id}', '${escapeHtml(String(f.id))}')" title="Herunterladen"
                    style="flex-shrink:0; color:rgba(255,255,255,0.55); display:flex;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></a>
                 <span onclick="event.stopPropagation(); window.angebotDokumentMailen('${a.id}', '${escapeHtml(String(f.id))}')" title="Per E-Mail senden"
                       style="flex-shrink:0; cursor:pointer; color:rgba(255,255,255,0.55); display:flex;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg></span>
@@ -797,6 +838,7 @@
     }
     window.angebotMailEntwurfMitAnhang = async function (angebotLike, datei) {
         const v = window.angebotMailVorlage(angebotLike, null);
+        datei = Object.assign({}, datei, { name: angebotDateiName(angebotLike, datei) });
         try {
             await emlEntwurf(v.betreff, v.text, datei);
             window.showToast('E-Mail-Entwurf „' + v.betreff + '.eml" heruntergeladen — Datei öffnen, dann steht der Entwurf in Outlook mit dem Angebot im Anhang.');

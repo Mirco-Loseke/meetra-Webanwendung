@@ -477,3 +477,16 @@
 .ki-freigabe-tabs button.aktiv { background: rgba(167,139,250,0.2); border-color: rgba(167,139,250,0.6); color: var(--text-1); }
 .ki-freigabe-text pre { white-space: pre-wrap; word-break: break-word; margin: 0; font-family: inherit; font-size: var(--fs-sm); line-height: 1.55; }
 .ki-freigabe-text hr { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: var(--space-3) 0; }
+
+/* KI-Fenster mit eigenem Scrollbereich (max-height:90vh inline). Die Regel
+   .modal-content { overflow: visible !important } oben (für Aufklappmenüs in
+   Vorgangs-/Termin-Fenstern) ließ hier die KI-Vorschläge unten aus dem Kasten
+   laufen. Diese Fenster haben nur native Auswahlfelder → Scrollen ist sicher. */
+#ai-task-extend-modal > .modal-content,
+#ab-ai-task-modal > .modal-content {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: contain;
+}
+/* breiter, damit die Vorschlagstitel nicht abgeschnitten werden */
+#ai-task-extend-modal > .modal-content { max-width: 880px !important; width: 94% !important; }

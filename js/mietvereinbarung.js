@@ -1050,7 +1050,7 @@
     function pdfDateiName() {
         const wer = sauber(daten.mieter.name) || 'ohne-mieter';
         const wann = (daten.miete.abholdatum || heute()).split('-').reverse().join('.');
-        return `mietvereinbarung-${wer}-${wann}.pdf`;
+        return `Mietvereinbarung-${wer}-${wann}.pdf`;
     }
 
     async function ladeHtml2Canvas() {

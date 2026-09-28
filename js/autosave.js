@@ -20,7 +20,9 @@
 
     // Kurz genug, dass ein Feldwechsel sofort wirkt, lang genug, dass eine
     // Gruppe Checkboxen in einem Rutsch rausgeht.
-    const DEFAULT_DELAY = 250;
+    // 1 s: beim Tippen geht erst nach einer kurzen Pause etwas raus. Jeder Schreibvorgang
+    // löst Realtime bei allen Clients aus, die die Zeile dann nachladen (Egress).
+    const DEFAULT_DELAY = 1000;
 
     function sameValue(a, b) {
         const na = a === undefined ? null : a;
@@ -49,6 +51,8 @@
      *                    nicht gibt — sie fliegen bei Fehlermeldung raus
      *   onSaved(row)     optional: nach erfolgreichem Speichern
      *   delay            optional: Entprellung in ms
+     *   returnRow        optional: gespeicherte Zeile zurückholen (für onSaved(row));
+     *                    sonst ohne Antwortkörper — spart Egress bei großen Zeilen
      */
     window.createAutosave = function (cfg) {
         const delay = cfg.delay || DEFAULT_DELAY;
@@ -107,7 +111,8 @@
                 // Fehlende Spalten (Migration noch nicht eingespielt) einzeln
                 // aussortieren, statt den ganzen Schreibvorgang zu verlieren.
                 for (let i = 0; i <= (cfg.optionalColumns || []).length; i++) {
-                    const res = await window.supabaseClient.from(cfg.table).update(attempt).eq('id', currentId).select().maybeSingle();
+                    const q = window.supabaseClient.from(cfg.table).update(attempt).eq('id', currentId);
+                    const res = cfg.returnRow ? await q.select().maybeSingle() : await q;
                     error = res.error;
                     if (!error) {
                         last = job.payload;

@@ -67,6 +67,17 @@
                     </div>
                 </div>
 
+                <!-- Welche Gemini-Modelle der Server gerade nutzt (ki-proxy stellt selbst um,
+                     Stand in app_settings.ki_modell_status; js/ki-einstellungen.js) -->
+                <div class="ki-status-box">
+                    <div class="ki-status-kopf">
+                        <span>Modelle auf dem Server</span>
+                        <button type="button" class="btn-secondary" id="ki-status-laden">Aktualisieren</button>
+                    </div>
+                    <p class="text-muted-sm" style="margin: 4px 0 10px;">Der Server wählt automatisch das schnellste freie Modell. Überlastete werden 10 Minuten übersprungen.</p>
+                    <div id="ki-modell-status" class="text-muted-sm">Noch keine Daten.</div>
+                </div>
+
                 <div style="margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid rgba(255,255,255,0.1);">
                     <div style="font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.4); margin-bottom: 8px;">
                         Für die Verwaltung

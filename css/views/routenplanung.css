@@ -1027,3 +1027,43 @@ select.rp2-input option {
     text-align: center;
     box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.9);
 }
+
+/* Tourenzettel-Dialog (js/routenplanung.js: druckDialog). Hängt an <body>. */
+.rp2-druck-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 10060;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4);
+    background: rgba(0, 0, 0, 0.6);
+}
+.rp2-druck-karte {
+    width: 100%;
+    max-width: 380px;
+    padding: var(--space-5);
+    border-radius: var(--radius-lg);
+    background: #1e293b;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: var(--shadow-3);
+    color: var(--text-1);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+.rp2-druck-karte h3 { margin: 0; font-size: var(--fs-lg); }
+.rp2-druck-karte p { margin: 0; }
+.rp2-druck-karte label { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); font-size: var(--fs-md); }
+.rp2-druck-karte input[type="time"],
+.rp2-druck-karte input[type="number"] {
+    width: 120px;
+    padding: var(--space-2);
+    border-radius: var(--radius-xs);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-1);
+    color-scheme: dark;
+}
+.rp2-druck-karte .rp2-druck-check { justify-content: flex-start; color: var(--text-2); font-size: var(--fs-sm); }
+.rp2-druck-knoepfe { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }

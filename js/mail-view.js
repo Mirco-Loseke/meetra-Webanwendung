@@ -232,6 +232,7 @@
     }
 
     function mailZeile(m, imKontakt) {
+        (S.mailById || (S.mailById = new Map())).set(m.id, m);
         const von = (m.from && m.from.emailAddress) || {};
         const ausgehend = (von.address || '').toLowerCase() === eigeneAdresse() || (!imKontakt && S.ordner !== 'inbox');
         const gegenAdr = ausgehend ? ((m.toRecipients || [])[0] || {}).emailAddress || {} : von;
@@ -441,6 +442,195 @@
         } finally {
             if (btn) { btn.disabled = false; btn.textContent = '✨ Antwort entwerfen'; }
         }
+    }
+
+    // ---------- Rechtsklick auf eine Mail ----------
+    // Eigenes Menü statt des Browser-Menüs: Antworten, KI-Antwort, Vorgang (mit/ohne KI),
+    // Mail an einen bestehenden Vorgang hängen. Beim Anhängen stehen zuerst die offenen
+    // Vorgänge der erkannten Adresse oben, darunter die Suche über alle offenen Vorgänge.
+    async function mailVoll(id) {
+        return window.graphFetch('/me/messages/' + encodeURIComponent(id) + '?$select=id,subject,from,toRecipients,ccRecipients,receivedDateTime,body,hasAttachments,webLink');
+    }
+    function anText(m) { return (m.toRecipients || []).map(r => r.emailAddress.name || r.emailAddress.address).join(', '); }
+    function vonVon(m) { return (m.from && m.from.emailAddress) || {}; }
+
+    function kmZu() {
+        const alt = document.getElementById('mv-kontextmenu');
+        if (alt) alt.remove();
+        document.removeEventListener('mousedown', kmAussen, true);
+        document.removeEventListener('keydown', kmTaste, true);
+        window.removeEventListener('blur', kmZu);
+    }
+    function kmAussen(e) { if (!e.target.closest('#mv-kontextmenu')) kmZu(); }
+    function kmTaste(e) { if (e.key === 'Escape') kmZu(); }
+
+    // An den Körper hängen: backdrop-filter der Ansicht verschiebt sonst position:fixed.
+    function kmPlatzieren(el, x, y) {
+        document.body.appendChild(el);
+        const r = el.getBoundingClientRect();
+        el.style.left = Math.max(8, Math.min(x, window.innerWidth - r.width - 8)) + 'px';
+        el.style.top = Math.max(8, Math.min(y, window.innerHeight - r.height - 8)) + 'px';
+    }
+
+    function mailKontextmenu(id, x, y) {
+        kmZu();
+        const kurz = (S.mailById && S.mailById.get(id)) || S.mails.find(m => m.id === id) || {};
+        const von = vonVon(kurz);
+        const treffer = kundeZuAdresse(von.address);
+        const el = document.createElement('div');
+        el.id = 'mv-kontextmenu';
+        el.className = 'menu-panel mv-km';
+        el.innerHTML = '<div class="mv-km-kopf">' + esc(kurz.subject || '(kein Betreff)') + '<span>'
+            + (treffer ? '✓ ' + esc(treffer.kunde.name) : esc(von.name || von.address || '')) + '</span></div>'
+            + '<ul class="menu-list">'
+            + '<li data-a="antworten">↩️ Antworten</li>'
+            + '<li data-a="ki-antwort">✨ Antwort mit KI entwerfen</li>'
+            + '<li class="mv-km-trenner"></li>'
+            + '<li data-a="anhaengen">📎 Zu Vorgang hinzufügen …</li>'
+            + '<li data-a="ki-vorgang">✨ Vorgang mit KI erstellen</li>'
+            + '<li data-a="vorgang">＋ Vorgang erstellen</li>'
+            + '<li class="mv-km-trenner"></li>'
+            + (treffer ? '<li data-a="adresse">🏢 Adresse öffnen</li>' : '')
+            + '<li data-a="outlook">↗️ In Outlook öffnen</li>'
+            + '</ul>';
+        kmPlatzieren(el, x, y);
+        el.addEventListener('click', async e => {
+            const li = e.target.closest('li[data-a]'); if (!li) return;
+            const a = li.dataset.a;
+            if (a === 'anhaengen') { vorgangWaehlen(id, x, y); return; }
+            kmZu();
+            if (a === 'adresse') { window.openAddressbookDetail && window.openAddressbookDetail(treffer.kunde.id); return; }
+            if (a === 'outlook') { if (kurz.webLink) window.open(kurz.webLink, '_blank', 'noopener'); return; }
+            try {
+                const m = await mailVoll(id);
+                const v = vonVon(m);
+                // Aus dem Mail-Reiter einer Adresse: erst in die Mail-Ansicht wechseln, dort liegt der Editor.
+                if ((a === 'antworten' || a === 'ki-antwort') && document.querySelector('.ab-mails-liste')) {
+                    schliesseAdressDetail();
+                    if (typeof window.switchView === 'function') window.switchView('mail');
+                }
+                if (a === 'antworten') schreibenVorbelegen(v.address || '', antwortBetreff(m), zitatVon(m, v));
+                else if (a === 'ki-antwort') { toast('✨ Entwurf wird geschrieben …'); await antwortEntwerfen(m, v, anText(m)); }
+                else if (a === 'ki-vorgang') mailZuVorgang(m, v, anText(m));
+                else if (a === 'vorgang') vorgangOhneKi(m, v);
+            } catch (err) { toast('Mail nicht ladbar: ' + err.message, 'error'); }
+        });
+        document.addEventListener('mousedown', kmAussen, true);
+        document.addEventListener('keydown', kmTaste, true);
+        window.addEventListener('blur', kmZu);
+    }
+
+    // Anlegen-Fenster mit Mail vorbelegt: Titel = Betreff, Art = E-Mail Eingang, Adresse erkannt.
+    function vorgangOhneKi(m, von) {
+        if (typeof window.openProcessAddModal !== 'function') { toast('Vorgänge nicht geladen.', 'error'); return; }
+        const t = kundeZuAdresse(von.address);
+        window.openProcessAddModal(t ? { customerId: t.kunde.id, customerName: t.kunde.name, contactName: t.kontakt ? t.kontakt.name || '' : (von.name || '') } : undefined);
+        const setze = (fid, wert) => { const f = $(fid); if (f) f.value = wert; };
+        setze('process-add-title-input', m.subject || '');
+        setze('process-add-type-select', 'email_incoming');
+        if (typeof window.syncProcessSelectDisplay === 'function') window.syncProcessSelectDisplay('process-add', 'type');
+        if (typeof window.updateEmailBodyVisibility === 'function') window.updateEmailBodyVisibility('process-add');
+        setze('process-add-sender-input', von.name ? von.name + ' <' + (von.address || '') + '>' : (von.address || ''));
+        setze('process-add-recipient-input', anText(m));
+        setze('process-add-body-input', mailKern(mailText(m)));
+        if (m.receivedDateTime) {
+            const d = new Date(m.receivedDateTime);
+            setze('process-add-date-input', new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
+        }
+    }
+
+    let vorgangsCache = { am: 0, liste: [] };
+    async function offeneVorgaenge() {
+        if (Date.now() - vorgangsCache.am < 60000) return vorgangsCache.liste;
+        const sp = 'id, title, status, customer_id, process_type, process_date, created_at, status_updates';
+        const q = s => window.supabaseClient.from('internal_processes').select(s)
+            .not('status', 'in', '("erledigt","abgeschlossen")').order('created_at', { ascending: false }).limit(1000);
+        let { data, error } = await q(sp + ', customers(name)');
+        if (error) ({ data, error } = await q(sp));
+        if (error) throw error;
+        vorgangsCache = { am: Date.now(), liste: data || [] };
+        return vorgangsCache.liste;
+    }
+
+    async function vorgangWaehlen(id, x, y) {
+        kmZu();
+        const kurz = (S.mailById && S.mailById.get(id)) || S.mails.find(m => m.id === id) || {};
+        const von = vonVon(kurz);
+        const treffer = kundeZuAdresse(von.address);
+        const el = document.createElement('div');
+        el.id = 'mv-kontextmenu';
+        el.className = 'menu-panel mv-km mv-km-wahl';
+        el.innerHTML = '<div class="mv-km-kopf">Zu Vorgang hinzufügen<span>' + esc(kurz.subject || '(kein Betreff)') + '</span></div>'
+            + '<input type="text" class="mv-km-suche" placeholder="' + (treffer ? 'Alle Vorgänge durchsuchen …' : 'Vorgang suchen (Titel, Kunde) …') + '" autocomplete="off">'
+            + '<div class="mv-km-liste"><div class="mv-laden">Vorgänge werden geladen …</div></div>'
+            + '<ul class="menu-list mv-km-fuss"><li data-a="ki-vorgang">✨ Neuen Vorgang mit KI erstellen</li><li data-a="vorgang">＋ Neuen Vorgang erstellen</li></ul>';
+        kmPlatzieren(el, x, y);
+        document.addEventListener('mousedown', kmAussen, true);
+        document.addEventListener('keydown', kmTaste, true);
+        const suche = el.querySelector('.mv-km-suche');
+        const box = el.querySelector('.mv-km-liste');
+        suche.focus();
+
+        let alle = [];
+        const kname = p => (p.customers && p.customers.name) || '';
+        const zeile = p => '<li data-pid="' + esc(p.id) + '"><strong>' + esc(p.title || 'Vorgang') + '</strong>'
+            + '<span class="text-muted-sm">' + esc([kname(p), p.process_date || p.created_at ? new Date(p.process_date || p.created_at).toLocaleDateString('de-DE') : ''].filter(Boolean).join(' · ')) + '</span></li>';
+        const zeichnen = () => {
+            const q = suche.value.trim().toLowerCase();
+            let html = '';
+            if (!q && treffer) {
+                const eigene = alle.filter(p => String(p.customer_id) === String(treffer.kunde.id));
+                html += '<div class="mv-km-gruppe">Offene Vorgänge · ' + esc(treffer.kunde.name) + '</div>'
+                    + (eigene.length ? '<ul class="menu-list">' + eigene.slice(0, 30).map(zeile).join('') + '</ul>'
+                        : '<div class="mv-km-leer">Keine offenen Vorgänge an dieser Adresse — oben suchen oder neu anlegen.</div>');
+            } else {
+                const woerter = q.split(/\s+/).filter(Boolean);
+                const gef = alle.filter(p => { const t = ((p.title || '') + ' ' + kname(p)).toLowerCase(); return woerter.every(w => t.includes(w)); });
+                html += '<div class="mv-km-gruppe">' + (q ? gef.length + ' Treffer' : 'Alle offenen Vorgänge') + '</div>'
+                    + (gef.length ? '<ul class="menu-list">' + gef.slice(0, 50).map(zeile).join('') + '</ul>' : '<div class="mv-km-leer">Kein Vorgang gefunden.</div>')
+                    + (gef.length > 50 ? '<div class="mv-km-leer">… ' + (gef.length - 50) + ' weitere — Suche verfeinern.</div>' : '');
+            }
+            box.innerHTML = html;
+        };
+        try { alle = await offeneVorgaenge(); } catch (e) { box.innerHTML = '<div class="mv-km-leer">' + esc(e.message) + '</div>'; return; }
+        if (!el.isConnected) return;
+        zeichnen();
+        suche.addEventListener('input', zeichnen);
+        suche.addEventListener('keydown', e => {
+            if (e.key !== 'Enter') return;
+            const erster = box.querySelector('li[data-pid]'); if (erster) erster.click();
+        });
+        el.addEventListener('click', async e => {
+            const neu = e.target.closest('li[data-a]');
+            const li = e.target.closest('li[data-pid]');
+            if (!neu && !li) return;
+            kmZu();
+            try {
+                const m = await mailVoll(id);
+                const v = vonVon(m);
+                if (neu) { if (neu.dataset.a === 'ki-vorgang') mailZuVorgang(m, v, anText(m)); else vorgangOhneKi(m, v); return; }
+                await mailAnVorgang(m, v, alle.find(p => String(p.id) === li.dataset.pid));
+            } catch (err) { toast('Nicht hinzugefügt: ' + err.message, 'error'); }
+        });
+    }
+
+    // Mail als neuer „Stand" oben in den Vorgang — mit Absender, Datum, Betreff und Mailkern.
+    async function mailAnVorgang(m, von, p) {
+        if (!p) return;
+        const { data, error } = await window.supabaseClient.from('internal_processes').select('status_updates').eq('id', p.id).single();
+        if (error) throw error;
+        const text = '📧 Mail von ' + (von.name || von.address || '?') + ' (' + new Date(m.receivedDateTime || Date.now()).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) + ')\n'
+            + 'Betreff: ' + (m.subject || '(kein Betreff)') + '\n\n' + mailKern(mailText(m)).slice(0, 4000);
+        const liste = [{ at: new Date().toISOString(), text, by: (window.activeUser && window.activeUser.name) || '' }]
+            .concat(Array.isArray(data && data.status_updates) ? data.status_updates : []);
+        const { error: e2 } = await window.supabaseClient.from('internal_processes').update({ status_updates: liste }).eq('id', p.id);
+        if (e2) throw e2;
+        p.status_updates = liste;
+        const imSpeicher = ((window.eventsState && window.eventsState.processes) || []).find(x => String(x.id) === String(p.id));
+        if (imSpeicher) imSpeicher.status_updates = liste;
+        // Unbekannte Adresse, Vorgang hat einen Kunden: Zuordnung für künftige Mails merken.
+        if (von.address && p.customer_id && !kundeZuAdresse(von.address)) zuordnungSpeichern(von.address, p.customer_id);
+        toast('Mail an „' + (p.title || 'Vorgang') + '" gehängt.', 'success');
     }
 
     function kundeBoxZeichnen(adr, name) {
@@ -872,6 +1062,12 @@
         $('mv-mail-suche').addEventListener('input', mailListeZeichnen);
         $('mv-mail-liste').addEventListener('click', e => {
             const z = e.target.closest('.mv-mail[data-id]'); if (z) mailOeffnen(z.dataset.id, $('mv-mail-detail'), $('mv-panel-posteingang'));
+        });
+        document.addEventListener('contextmenu', e => {
+            const z = e.target.closest('#mail .mv-mail[data-id], .ab-mails-liste .mv-mail[data-id]');
+            if (!z) return;
+            e.preventDefault();
+            mailKontextmenu(z.dataset.id, e.clientX, e.clientY);
         });
         $('mv-kontakt-reload').addEventListener('click', kontakteLaden);
         $('mv-kontakt-suche').addEventListener('input', kontakteZeichnen);

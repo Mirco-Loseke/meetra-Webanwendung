@@ -418,3 +418,15 @@
     .mve-inhalt { padding-right: 0; }
     .mve-nav { max-height: none; overflow-y: hidden; }
 }
+
+/* Einstellungen → KI: Status der Server-Modelle (js/ki-einstellungen.js) */
+.ki-status-box { margin-top: var(--space-6); padding-top: var(--space-5); border-top: 1px solid rgba(255, 255, 255, 0.1); }
+.ki-status-kopf { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); font-size: var(--fs-xs); font-weight: var(--fw-bold); text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-3); }
+.ki-status-tabelle { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.ki-status-tabelle th { text-align: left; font-size: var(--fs-2xs); font-weight: var(--fw-semibold); color: var(--text-3); text-transform: uppercase; letter-spacing: 0.4px; padding: 6px 8px; border-bottom: 1px solid var(--glass-border); }
+.ki-status-tabelle td { padding: 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); color: var(--text-2); }
+.ki-status-tabelle code { color: var(--text-1); font-size: var(--fs-xs); }
+.ki-st { display: inline-block; padding: 2px 9px; border-radius: var(--radius-pill); font-size: var(--fs-2xs); font-weight: var(--fw-semibold); }
+.ki-st.gruen { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; }
+.ki-st.rot { background: rgba(239, 68, 68, 0.15); color: #fca5a5; cursor: help; }
+@media (max-width: 768px) { .ki-status-tabelle th:nth-child(4), .ki-status-tabelle td:nth-child(4), .ki-status-tabelle th:nth-child(5), .ki-status-tabelle td:nth-child(5) { display: none; } }

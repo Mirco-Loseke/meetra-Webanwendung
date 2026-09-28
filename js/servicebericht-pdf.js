@@ -1596,7 +1596,7 @@
                     if (parts.length === 3) dateStr = `${parts[2]}.${parts[1]}.${parts[0]}`;
                 } catch(e){}
                 
-                let fileName = 'servicebericht';
+                let fileName = 'Servicebericht';
                 if (orderNum) {
                     fileName += `-${orderNum}`;
                 }

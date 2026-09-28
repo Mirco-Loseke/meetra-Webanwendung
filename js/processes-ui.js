@@ -2224,7 +2224,19 @@
             const sub = a ? [a.zip_code, a.city].filter(Boolean).join(' ') : '';
             label.textContent = n + (sub ? ' · ' + sub : '');
             banner.style.display = '';
+            const idFeld = document.getElementById('edit-process-customer-id');
+            const knopf = document.getElementById('edit-process-address-open');
+            if (knopf) knopf.style.display = ((a && a.id) || (idFeld && idFeld.value)) ? '' : 'none';
         }
+
+        // Knopf im Adress-Banner: Vorgang schließen, Adresse im Adressbuch öffnen.
+        window.processAdresseOeffnen = function () {
+            const idFeld = document.getElementById('edit-process-customer-id');
+            const id = idFeld && idFeld.value;
+            if (!id || typeof window.openAddressbookDetail !== 'function') return;
+            if (typeof window.closeEditProcessModal === 'function') window.closeEditProcessModal();
+            window.openAddressbookDetail(id);
+        };
 
         window.resetProcessAddressFields = function(prefix) {
             zeigeProcessAddressBanner(prefix, null, '');

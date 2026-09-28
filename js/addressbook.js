@@ -55,6 +55,7 @@
         ownCompanyTokens: null,
         ownCompanyNorm: '',
         contactCount: new Map(),
+        contactsByCustomer: new Map(),   // Adresse → Ansprechpartner (für die Suche oben)
         linkCount: new Map(),
         filtered: [],
         rendered: 0,
@@ -363,7 +364,9 @@
             const [addresses, machinesRows, contactRows, linkRows] = await Promise.all([
                 ladeAdressen(),
                 optional('Maschinen', fetchAllRows('machines', '*')),
-                optional('Ansprechpartner', fetchAllRows('customer_contacts', 'id, customer_id')),
+                // Vollständig (select * — Spaltennamen nicht raten), damit die Suche
+                // oben auch Ansprechpartner findet („Maurer" → seine Firma).
+                optional('Ansprechpartner', fetchAllRows('customer_contacts', '*')),
                 optional('Verknüpfungen', fetchAllRows('customer_links', 'id, customer_id, linked_customer_id'))
             ]);
 
@@ -411,11 +414,14 @@
             }
 
             state.contactCount = new Map();
+            state.contactsByCustomer = new Map();
             try {
                 const contacts = contactRows || [];
                 contacts.forEach(c => {
                     const key = String(c.customer_id);
                     state.contactCount.set(key, (state.contactCount.get(key) || 0) + 1);
+                    if (!state.contactsByCustomer.has(key)) state.contactsByCustomer.set(key, []);
+                    state.contactsByCustomer.get(key).push(c);
                 });
             } catch (err) {
                 console.warn('Adressbuch: Ansprechpartner-Tabelle nicht verfügbar (Migration ausgeführt?)', err);
@@ -954,12 +960,25 @@
     // ==========================================
     // FILTER + KARTENLISTE
     // ==========================================
+    // Suchtext eines Ansprechpartners (Spalten mit || statt fester Liste —
+    // was es nicht gibt, bleibt einfach leer).
+    function kontaktText(c) {
+        return [c.salutation, c.first_name, c.last_name, c.name, c.position, c.department,
+            c.email, c.phone, c.mobile].filter(Boolean).join(' ').toLowerCase();
+    }
+    // Ansprechpartner der Adresse, die zu mindestens einem Suchwort passen
+    function passendeKontakte(a, terms) {
+        if (!terms.length) return [];
+        return (state.contactsByCustomer.get(String(a.id)) || [])
+            .filter(c => { const t = kontaktText(c); return terms.some(w => t.includes(w)); });
+    }
     function matchesSearch(a, terms) {
         if (!terms.length) return true;
         const haystack = [
             a.name, a.matchcode, a.customer_number, a.address_number,
             a.street, a.zip_code, a.city, a.country, a.email, a.phone, a.website
-        ].filter(Boolean).join(' ').toLowerCase();
+        ].concat((state.contactsByCustomer.get(String(a.id)) || []).map(kontaktText))
+            .filter(Boolean).join(' ').toLowerCase();
         return terms.every(t => haystack.includes(t));
     }
 
@@ -1096,7 +1115,22 @@
                 ${a.website ? `<div class="ab-line">${ic('globe', 14)}<span>${esc(a.website)}</span></div>` : ''}
             </div>
 
-            ${chips.length ? `<div class="ab-card-chips">${chips.join('')}</div>` : ''}
+            ${(() => {
+                // Beim Suchen: welche Ansprechpartner haben gepasst? Klick → Reiter „Ansprechpartner"
+                const treffer = passendeKontakte(a, state.search.toLowerCase().split(/\s+/).filter(Boolean));
+                if (!treffer.length) return '';
+                return `<div class="ab-card-kontakte">${treffer.slice(0, 3).map(c => {
+                    const name = c.name || [c.first_name, c.last_name].filter(Boolean).join(' ') || c.email || 'Ansprechpartner';
+                    const zusatz = [c.position, c.phone || c.mobile, c.email].filter(Boolean).join(' · ');
+                    return `<button type="button" class="ab-card-kontakt" data-ab-action="card-contacts" data-ab-id="${esc(id)}" title="Ansprechpartner öffnen">
+                        ${ic('user', 13)}<span><b>${esc(name)}</b>${zusatz ? ' <small>' + esc(zusatz) + '</small>' : ''}</span></button>`;
+                }).join('')}${treffer.length > 3 ? `<span class="ab-card-kontakt-mehr">+${treffer.length - 3} weitere</span>` : ''}</div>`;
+            })()}
+
+            <div class="ab-card-fuss">
+                ${chips.length ? `<div class="ab-card-chips">${chips.join('')}</div>` : '<div></div>'}
+                ${state.selectMode ? '' : `<button type="button" class="ab-card-plus" data-ab-action="card-contact-new" data-ab-id="${esc(id)}" title="Neuen Ansprechpartner zu dieser Adresse anlegen">${ic('plus', 13)} Ansprechpartner</button>`}
+            </div>
         </article>`;
     }
 
@@ -1350,6 +1384,7 @@
                 if (error) throw error;
                 state.detail.contacts = data || [];
                 state.contactCount.set(id, state.detail.contacts.length);
+                state.contactsByCustomer.set(String(id), state.detail.contacts.slice());
             } catch (err) {
                 console.warn('Ansprechpartner konnten nicht geladen werden', err);
                 state.detail.contacts = [];
@@ -1768,7 +1803,7 @@
             <section class="ab-panel">
                 <h3>${ic('pin', 16)} Anschrift</h3>
                 ${addressBlock.length
-                ? `<div class="ab-address-block">${addressBlock.map(l => `<div>${esc(l)}</div>`).join('')}</div>
+                ? `<div class="ab-address-block">${addressBlock.map(l => `<div>${esc(l)}${kopierIcon(l)}</div>`).join('')}</div>
                        <a class="ab-btn ab-btn-ghost ab-maps" href="https://www.google.com/maps/search/?api=1&query=${mapsQuery}" target="_blank" rel="noopener">
                            <svg width="16" height="16" viewBox="0 0 24 24" fill="#EA4335"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z"/></svg>
                            Google Maps
@@ -1779,8 +1814,8 @@
             <section class="ab-panel">
                 <h3>${ic('phone', 16)} Kontakt</h3>
                 ${(a.phone || a.email || website || alleTelefone(a).length > 1 || alleMails(a).length > 1)
-                ? `${row('Telefon', alleTelefone(a).join(' '), alleTelefone(a).map(t => `<a href="tel:${esc(String(t).replace(/\s/g, ''))}">${esc(t)}</a>`).join('<br>'))}
-                       ${row('E-Mail', alleMails(a).join(' '), alleMails(a).map(m => `<a href="mailto:${esc(m)}">${esc(m)}</a>`).join('<br>'))}
+                ? `${row('Telefon', alleTelefone(a).join(' '), alleTelefone(a).map(t => `<a href="tel:${esc(String(t).replace(/\s/g, ''))}">${esc(t)}</a>${kopierIcon(t)}`).join('<br>'))}
+                       ${row('E-Mail', alleMails(a).join(' '), alleMails(a).map(m => `<a href="mailto:${esc(m)}">${esc(m)}</a>${kopierIcon(m)}`).join('<br>'))}
                        ${row('Webseite', website, website ? `<a href="${esc(website)}" target="_blank" rel="noopener">${esc(a.website)}</a>` : '')}`
                 : '<div class="ab-muted">Keine Kontaktdaten hinterlegt</div>'}
             </section>
@@ -1971,9 +2006,9 @@
                 </div>
             </div>
             <div class="ab-sub-card-body">
-                ${c.phone ? `<div class="ab-line">${ic('phone', 14)}<a href="tel:${esc(String(c.phone).replace(/\s/g, ''))}">${esc(c.phone)}</a></div>` : ''}
-                ${c.mobile ? `<div class="ab-line">${ic('phone', 14)}<a href="tel:${esc(String(c.mobile).replace(/\s/g, ''))}">${esc(c.mobile)} <span class="ab-muted ab-small">(mobil)</span></a></div>` : ''}
-                ${c.email ? `<div class="ab-line">${ic('mail', 14)}<a href="mailto:${esc(c.email)}">${esc(c.email)}</a></div>` : ''}
+                ${c.phone ? `<div class="ab-line">${ic('phone', 14)}<a href="tel:${esc(String(c.phone).replace(/\s/g, ''))}">${esc(c.phone)}</a>${kopierIcon(c.phone)}</div>` : ''}
+                ${c.mobile ? `<div class="ab-line">${ic('phone', 14)}<a href="tel:${esc(String(c.mobile).replace(/\s/g, ''))}">${esc(c.mobile)} <span class="ab-muted ab-small">(mobil)</span></a>${kopierIcon(c.mobile)}</div>` : ''}
+                ${c.email ? `<div class="ab-line">${ic('mail', 14)}<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>${kopierIcon(c.email)}</div>` : ''}
                 ${c.notes ? `<div class="ab-line ab-muted ab-small">${esc(c.notes)}</div>` : ''}
             </div>
         </div>`;
@@ -1994,9 +2029,9 @@
                 </div>
             </div>
             <div class="ab-sub-card-body">
-                ${c.phone ? `<div class="ab-line">${ic('phone', 14)}<a href="tel:${esc(String(c.phone).replace(/\s/g, ''))}">${esc(c.phone)}</a></div>` : ''}
-                ${c.mobile ? `<div class="ab-line">${ic('phone', 14)}<a href="tel:${esc(String(c.mobile).replace(/\s/g, ''))}">${esc(c.mobile)} <span class="ab-muted ab-small">(mobil)</span></a></div>` : ''}
-                ${c.email ? `<div class="ab-line">${ic('mail', 14)}<a href="mailto:${esc(c.email)}">${esc(c.email)}</a></div>` : ''}
+                ${c.phone ? `<div class="ab-line">${ic('phone', 14)}<a href="tel:${esc(String(c.phone).replace(/\s/g, ''))}">${esc(c.phone)}</a>${kopierIcon(c.phone)}</div>` : ''}
+                ${c.mobile ? `<div class="ab-line">${ic('phone', 14)}<a href="tel:${esc(String(c.mobile).replace(/\s/g, ''))}">${esc(c.mobile)} <span class="ab-muted ab-small">(mobil)</span></a>${kopierIcon(c.mobile)}</div>` : ''}
+                ${c.email ? `<div class="ab-line">${ic('mail', 14)}<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>${kopierIcon(c.email)}</div>` : ''}
                 ${c.notes ? `<div class="ab-line ab-muted ab-small">${esc(c.notes)}</div>` : ''}
             </div>
         </div>`;
@@ -2817,7 +2852,7 @@
                         <span style="flex-shrink:0;">📄</span>
                         <a href="${esc(f.url || '#')}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Öffnen"
                            style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#34d399; font-weight:600; font-size:0.84rem; text-decoration:none;">${esc(f.name || 'Datei')}</a>
-                        <a href="${esc(f.url || '#')}" download="${esc(f.name || '')}" onclick="event.stopPropagation()" title="Herunterladen"
+                        <a href="${esc(f.url || '#')}" onclick="event.stopPropagation(); event.preventDefault(); window.addressbookDokumentHerunterladen('${esc(mh.processId)}', '${esc(String(f.id))}')" title="Herunterladen"
                            class="ab-dok-icon ab-dok-download">${ic('download', 14)}</a>
                         <span onclick="event.stopPropagation(); window.addressbookDokumentMailen('${esc(mh.processId)}', '${esc(String(f.id))}')" title="Per E-Mail senden"
                               class="ab-dok-icon ab-dok-mail">${ic('mail', 14)}</span>
@@ -2859,6 +2894,17 @@
     // in der Angebotsliste: Teilen-Dialog mit Datei, wo der Browser das kann,
     // sonst Mailprogramm mit Betreff und Link (ein Anhang lässt sich aus dem
     // Browser heraus nicht direkt anhängen).
+    // Download direkt in den Download-Ordner; bei Angeboten als „Angebot <Nr>.pdf".
+    window.addressbookDokumentHerunterladen = function (processId, attId) {
+        const p = (state.detail.processes || []).find(x => String(x.id) === String(processId));
+        const f = p && Array.isArray(p.attachments) ? p.attachments.find(x => String(x.id) === String(attId)) : null;
+        if (!f || !f.url) return;
+        const ang = (state.detail.angeboteByProcess || {})[String(processId)];
+        const name = (ang && typeof window.angebotDateiName === 'function') ? window.angebotDateiName(ang, f) : (f.name || 'Dokument');
+        if (typeof window.dateiHerunterladen === 'function') window.dateiHerunterladen(f.url, name);
+        else window.open(f.url, '_blank', 'noopener');
+    };
+
     window.addressbookDokumentMailen = function (processId, attId) {
         const p = (state.detail.processes || []).find(x => String(x.id) === String(processId));
         const f = p && Array.isArray(p.attachments) ? p.attachments.find(x => String(x.id) === String(attId)) : null;
@@ -2935,7 +2981,7 @@
                         <span style="flex-shrink:0;">📄</span>
                         <a href="${esc(f.url || '#')}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Öffnen"
                            style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#34d399; font-weight:600; font-size:0.84rem; text-decoration:none;">${esc(f.name || 'Datei')}</a>
-                        <a href="${esc(f.url || '#')}" download="${esc(f.name || '')}" onclick="event.stopPropagation()" title="Herunterladen"
+                        <a href="${esc(f.url || '#')}" onclick="event.stopPropagation(); event.preventDefault(); window.addressbookDokumentHerunterladen('${esc(p.id)}', '${esc(String(f.id))}')" title="Herunterladen"
                            class="ab-dok-icon ab-dok-download">${ic('download', 14)}</a>
                         <span onclick="event.stopPropagation(); window.addressbookDokumentMailen('${esc(p.id)}', '${esc(String(f.id))}')" title="Per E-Mail senden (Standard-Mailprogramm)"
                               class="ab-dok-icon ab-dok-mail">${ic('mail', 14)}</span>
@@ -3176,8 +3222,32 @@
             </div>`;
         document.body.appendChild(el);
 
+        // Nur schließen, wenn Maus-Drücken UND Loslassen auf dem Hintergrund
+        // waren — sonst schloss Text markieren (im Feld drücken, außerhalb
+        // loslassen) das ganze Formular.
+        let downAufHintergrund = false;
+        el.addEventListener('mousedown', (e) => { downAufHintergrund = (e.target === el); });
         el.addEventListener('click', (e) => {
-            if (e.target === el) closeFormModal();
+            if (e.target === el && downAufHintergrund) closeFormModal();
+            downAufHintergrund = false;
+        });
+        // Kopieren-Knopf an den Feldern (siehe kopierKnoepfeSetzen)
+        el.addEventListener('click', (e) => {
+            const k = e.target.closest('.ab-copy-btn');
+            if (!k) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const feld = k.parentElement.querySelector('input, textarea');
+            const wert = feld ? String(feld.value || '').trim() : '';
+            if (!wert) return;
+            const fertig = () => {
+                k.classList.add('ok');
+                setTimeout(() => k.classList.remove('ok'), 1200);
+                if (window.showToast) window.showToast('Kopiert: ' + wert);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(wert).then(fertig).catch(() => { feld.select(); document.execCommand('copy'); fertig(); });
+            } else { feld.select(); document.execCommand('copy'); fertig(); }
         });
 
         document.getElementById('addressbook-form').addEventListener('submit', async (e) => {
@@ -3229,6 +3299,7 @@
         ensureFormModal();
         document.getElementById('addressbook-form-title').textContent = title;
         document.getElementById('addressbook-form-fields').innerHTML = fieldsHtml;
+        kopierKnoepfeSetzen(document.getElementById('addressbook-form-fields'));
         document.getElementById('addressbook-form-submit').textContent = submitLabel || 'Speichern';
         formSubmitHandler = onSubmit;
         const guard = ensureFormGuard();
@@ -3237,6 +3308,54 @@
         const first = document.querySelector('#addressbook-form-fields input, #addressbook-form-fields textarea');
         if (first) setTimeout(() => first.focus(), 80);
     }
+
+    // Kleines Kopieren-Symbol rechts in jedem Textfeld (Name, Straße, E-Mail …).
+    // Neu hinzugefügte Zeilen (weitere Mail/Telefon) bekommen es beim nächsten Öffnen.
+    function kopierKnoepfeSetzen(root) {
+        if (!root) return;
+        root.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input:not([type])').forEach(inp => {
+            if (inp.type === 'hidden' || inp.closest('.ab-copy-wrap')) return;
+            const wrap = document.createElement('span');
+            wrap.className = 'ab-copy-wrap';
+            inp.parentNode.insertBefore(wrap, inp);
+            wrap.appendChild(inp);
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'ab-copy-btn';
+            b.tabIndex = -1;
+            b.title = 'Kopieren';
+            b.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+            wrap.appendChild(b);
+        });
+    }
+
+    // Kopieren-Symbol hinter Telefon/E-Mail/Anschrift in der Detailansicht.
+    function kopierIcon(wert) {
+        const w = String(wert == null ? '' : wert).trim();
+        if (!w) return '';
+        return `<button type="button" class="ab-copy-inline" data-ab-copy="${esc(w)}" title="Kopieren"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>`;
+    }
+    document.addEventListener('click', (e) => {
+        const k = e.target.closest && e.target.closest('[data-ab-copy]');
+        if (!k) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const wert = k.getAttribute('data-ab-copy');
+        const fertig = () => {
+            k.classList.add('ok');
+            setTimeout(() => k.classList.remove('ok'), 1200);
+            if (window.showToast) window.showToast('Kopiert: ' + wert);
+        };
+        const notweg = () => {
+            const ta = document.createElement('textarea');
+            ta.value = wert; ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); } catch (err) { /* nichts */ }
+            ta.remove(); fertig();
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(wert).then(fertig).catch(notweg);
+        else notweg();
+    }, true);
 
     function closeFormModal(force) {
         // Beim Anlegen gibt es nichts, wohin automatisch gespeichert werden
@@ -5772,6 +5891,15 @@
             case 'open':
                 e.preventDefault();
                 openDetail(id);
+                break;
+            // Von der Karte in der Liste: Ansprechpartner zeigen / neuen anlegen
+            case 'card-contacts':
+                e.preventDefault(); e.stopPropagation();
+                openDetail(id, 'contacts');
+                break;
+            case 'card-contact-new':
+                e.preventDefault(); e.stopPropagation();
+                Promise.resolve(openDetail(id, 'contacts')).then(() => openContactForm(null));
                 break;
             case 'more':
                 renderAddressList('append');
