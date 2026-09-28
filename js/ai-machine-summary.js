@@ -162,6 +162,54 @@ Regeln: Nichts erfinden — nur was in den Daten steht. Zahlen, Daten und Bezeic
         return out.join('');
     }
 
+    // ---------- Drucken / als PDF speichern ----------
+    // Gemeinsam für Maschinen- und Adress-Zusammenfassung (js/ai-address-summary.js
+    // ruft window.zusammenfassungDrucken). Bewusst OHNE Hinweis auf KI, Modell,
+    // Token oder Pseudonymisierung — nur Titel, Angaben, Text, Stand.
+    // A4: Abschnitte brechen sauber um (Überschrift nie allein am Seitenende,
+    // Listenpunkte nicht zerteilt); das Titelbild steht oben rechts.
+    window.zusammenfassungDrucken = function (o) {
+        if (!o || !o.text) { toast('Noch keine Zusammenfassung zum Drucken.', 'error'); return; }
+        const heute = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const zeilen = (o.angaben || []).filter(Boolean).map(z => '<div>' + esc(z) + '</div>').join('');
+        const html = `<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><title>${esc(o.titel || 'Zusammenfassung')}</title>
+            <style>
+                @page { size: A4; margin: 16mm 14mm 16mm 16mm; }
+                * { box-sizing: border-box; }
+                body { font: 10.5pt/1.5 Arial, Helvetica, sans-serif; color: #111; margin: 0; }
+                .kopf { display: flex; justify-content: space-between; gap: 8mm; align-items: flex-start; border-bottom: 1.5px solid #222; padding-bottom: 4mm; margin-bottom: 5mm; }
+                .kopf h1 { font-size: 16pt; margin: 0 0 2mm; line-height: 1.25; }
+                .kopf .art { font-size: 9pt; text-transform: uppercase; letter-spacing: 0.08em; color: #555; margin-bottom: 1mm; }
+                .kopf .angaben { font-size: 10pt; color: #333; }
+                .kopf img { width: 55mm; max-height: 42mm; object-fit: cover; border-radius: 2mm; flex: 0 0 auto; }
+                h4 { font-size: 12pt; margin: 5mm 0 1.5mm; padding-bottom: 1mm; border-bottom: 1px solid #ccc; break-after: avoid; page-break-after: avoid; }
+                p { margin: 0 0 2mm; orphans: 3; widows: 3; }
+                ul { margin: 0 0 2mm; padding-left: 5mm; }
+                li { margin-bottom: 1mm; break-inside: avoid; page-break-inside: avoid; }
+                code { font-family: inherit; }
+                .fuss { margin-top: 6mm; font-size: 8.5pt; color: #666; }
+                .knopf { position: fixed; top: 10px; right: 10px; padding: 8px 14px; font-size: 11pt; }
+                @media print { .knopf { display: none; } }
+            </style></head><body>
+            <button class="knopf" onclick="window.print()">Drucken</button>
+            <div class="kopf">
+                <div><div class="art">${esc(o.art || 'Zusammenfassung')}</div><h1>${esc(o.titel || '')}</h1><div class="angaben">${zeilen}</div></div>
+                ${o.bild ? `<img src="${esc(o.bild)}" alt="">` : ''}
+            </div>
+            ${md(o.text)}
+            <div class="fuss">Stand ${esc(heute)}</div>
+            </body></html>`;
+        const w = window.open('', '_blank');
+        if (!w) { toast('Das Druckfenster wurde blockiert — bitte Pop-ups für diese Seite erlauben.', 'error'); return; }
+        w.document.open(); w.document.write(html); w.document.close(); w.focus();
+        // Mit Bild erst drucken, wenn es geladen ist — sonst fehlt es auf dem Blatt.
+        let gedruckt = false;
+        const los = () => { if (gedruckt) return; gedruckt = true; try { w.print(); } catch (e) { /* Knopf im Fenster bleibt */ } };
+        const img = w.document.querySelector('.kopf img');
+        if (img && !img.complete) { img.onload = img.onerror = () => setTimeout(los, 100); setTimeout(los, 4000); }
+        else setTimeout(los, 300);
+    };
+
     // ---------- Fenster ----------
     function fenster() {
         let el = document.getElementById('ma-ai-summary-modal');
@@ -181,6 +229,7 @@ Regeln: Nichts erfinden — nur was in den Daten steht. Zahlen, Daten und Bezeic
                     <span id="ma-ai-summary-meta" class="text-muted-sm" style="margin-right:auto; align-self:center;"></span>
                     <button type="button" class="ab-btn ab-btn-ghost" id="ma-ai-summary-raus" title="Zeigt den Text genau so, wie er an die KI gesendet wurde — nach der Pseudonymisierung">Was geht raus?</button>
                     <button type="button" class="ab-btn ab-btn-ghost" id="ma-ai-summary-copy">Kopieren</button>
+                    <button type="button" class="ab-btn ab-btn-ghost" id="ma-ai-summary-print" title="Drucken oder als PDF speichern">🖨️ Drucken</button>
                     <button type="button" class="ab-btn ab-btn-ghost" id="ma-ai-summary-again">Neu erzeugen</button>
                     <button type="button" class="ab-btn ab-btn-primary" data-mas-close>Schließen</button>
                 </div>
@@ -194,6 +243,22 @@ Regeln: Nichts erfinden — nur was in den Daten steht. Zahlen, Daten und Bezeic
             if (body.dataset.zeigtAnfrage === '1') { body.innerHTML = md(letzterText); body.dataset.zeigtAnfrage = ''; btn.textContent = 'Was geht raus?'; return; }
             body.innerHTML = '<p class="text-muted-sm">So kam der Text beim KI-Anbieter an — Namen, Orte und Nummern sind ersetzt, die Zuordnung liegt nur in diesem Browser:</p>' + (window.kiPseudonym && window.kiPseudonym.pruefHtml ? window.kiPseudonym.pruefHtml(letzteAnfrage || '(noch nichts gesendet)') : '<pre class="ab-ai-summary-roh">' + esc(letzteAnfrage || '(noch nichts gesendet)') + '</pre>');
             body.dataset.zeigtAnfrage = '1'; btn.textContent = 'Zusammenfassung zeigen';
+        });
+        document.getElementById('ma-ai-summary-print').addEventListener('click', () => {
+            const m = (typeof window.machineById === 'function' && window.machineById(aktuelleId))
+                || (window.machineList || []).find(x => String(x.id) === String(aktuelleId)) || {};
+            const kat = m.category_id && window.categoryList ? (window.categoryList.find(c => String(c.id) === String(m.category_id)) || {}).name : '';
+            window.zusammenfassungDrucken({
+                art: 'Maschinen-Übersicht',
+                titel: [m.manufacturer, m.name].filter(Boolean).join(' ') || label(m),
+                angaben: [
+                    [m.serial ? 'Seriennr. ' + m.serial : '', m.year ? 'Baujahr ' + m.year : '', kat].filter(Boolean).join(' · '),
+                    m.company ? 'Betreiber: ' + m.company : '',
+                    m.location_company && m.location_company !== m.company ? 'Standort: ' + m.location_company : ''
+                ],
+                bild: m.image_url || '',
+                text: letzterText
+            });
         });
         document.getElementById('ma-ai-summary-copy').addEventListener('click', async () => {
             try { await navigator.clipboard.writeText(letzterText || ''); toast('Zusammenfassung kopiert.', 'success'); }

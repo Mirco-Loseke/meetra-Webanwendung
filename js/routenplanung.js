@@ -2432,6 +2432,7 @@
                     <div class="rp2-saved-sub">${(r.stops || []).length} Stopps${r.total_km ? ' · ' + fmtKm(Number(r.total_km)) : ''}${r.created_at ? ' · ' + new Date(r.created_at).toLocaleDateString('de-DE') : ''}${r.author ? ' · ' + esc(r.author) : ''}</div>
                 </div>
                 <button class="rp2-btn rp2-btn-sm rp2-btn-primary" data-rp2-action="load-route" data-rp2-id="${esc(String(r.id))}">Laden</button>
+                <button class="rp2-icon-btn" data-rp2-action="print-saved-route" data-rp2-id="${esc(String(r.id))}" title="Laden und Tourenzettel drucken"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg></button>
                 <button class="rp2-icon-btn danger" data-rp2-action="delete-route" data-rp2-id="${esc(String(r.id))}" title="Löschen">${ic('trash', 15)}</button>
             </div>`).join('')}</div>`;
     }
@@ -2458,9 +2459,18 @@
         renderStops();
         scheduleMarkerRender();
         scheduleRouteLine();
-        loadStopExtras();
+        const extras = loadStopExtras();
         setStatus(`Route „${r.name}“ geladen.`);
         setTimeout(() => setStatus(''), 4000);
+        return extras;
+    }
+
+    // Drucken direkt aus der Liste „Route laden": Route übernehmen, Ansprechpartner
+    // abwarten (stehen auf dem Zettel), dann den Druckdialog öffnen. Die Fahrzeiten
+    // rechnet die Route währenddessen im Hintergrund.
+    async function savedRouteDrucken(id) {
+        try { await applySavedRoute(id); } catch (e) { /* Zettel geht auch ohne Kontakte */ }
+        druckDialog();
     }
 
     async function deleteSavedRoute(id) {
@@ -2685,6 +2695,7 @@
             case 'export-apple': window.rp2ExportAppleMaps(); break;
             case 'save-route': saveRouteDialog(); break;
             case 'print-route': druckDialog(); break;
+            case 'print-saved-route': savedRouteDrucken(id); break;
             case 'load-route-dialog': loadRouteDialog(); break;
             case 'load-route': applySavedRoute(id); break;
             case 'delete-route': deleteSavedRoute(id); break;

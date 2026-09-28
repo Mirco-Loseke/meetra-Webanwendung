@@ -233,6 +233,7 @@ Regeln: Nichts erfinden — nur was in den Daten steht. Zahlen, Daten und Namen 
                     <span id="ab-ai-summary-meta" class="text-muted-sm" style="margin-right:auto; align-self:center;"></span>
                     <button type="button" class="ab-btn ab-btn-ghost" id="ab-ai-summary-raus" title="Zeigt den Text genau so, wie er an die KI gesendet wurde — nach der Pseudonymisierung">Was geht raus?</button>
                     <button type="button" class="ab-btn ab-btn-ghost" id="ab-ai-summary-copy">Kopieren</button>
+                    <button type="button" class="ab-btn ab-btn-ghost" id="ab-ai-summary-print" title="Drucken oder als PDF speichern">🖨️ Drucken</button>
                     <button type="button" class="ab-btn ab-btn-ghost" id="ab-ai-summary-again">Neu erzeugen</button>
                     <button type="button" class="ab-btn ab-btn-primary" data-abs-close>Schließen</button>
                 </div>
@@ -245,6 +246,23 @@ Regeln: Nichts erfinden — nur was in den Daten steht. Zahlen, Daten und Namen 
             if (body.dataset.zeigtAnfrage === '1') { body.innerHTML = md(letzterText); body.dataset.zeigtAnfrage = ''; document.getElementById('ab-ai-summary-raus').textContent = 'Was geht raus?'; return; }
             body.innerHTML = '<p class="text-muted-sm">So kam der Text beim KI-Anbieter an — Namen, Orte und Nummern sind ersetzt, die Zuordnung liegt nur in diesem Browser:</p>' + (window.kiPseudonym && window.kiPseudonym.pruefHtml ? window.kiPseudonym.pruefHtml(letzteAnfrage || '(noch nichts gesendet)') : '<pre class="ab-ai-summary-roh">' + esc(letzteAnfrage || '(noch nichts gesendet)') + '</pre>');
             body.dataset.zeigtAnfrage = '1'; document.getElementById('ab-ai-summary-raus').textContent = 'Zusammenfassung zeigen';
+        });
+        // Druck-Layout liegt in js/ai-machine-summary.js (window.zusammenfassungDrucken).
+        document.getElementById('ab-ai-summary-print').addEventListener('click', () => {
+            if (typeof window.zusammenfassungDrucken !== 'function') { toast('Drucken ist gerade nicht verfügbar.', 'error'); return; }
+            const D = window.abDetailDaten ? window.abDetailDaten() : null;
+            const a = (D && D.adresse) || {};
+            window.zusammenfassungDrucken({
+                art: 'Adress-Übersicht',
+                titel: a.name || '',
+                angaben: [
+                    a.street || '',
+                    [a.zip_code, a.city].filter(Boolean).join(' '),
+                    [a.phone ? 'Tel. ' + a.phone : '', a.email || ''].filter(Boolean).join(' · '),
+                    a.address_number ? 'Adr.-Nr. ' + a.address_number : ''
+                ],
+                text: letzterText
+            });
         });
         document.getElementById('ab-ai-summary-copy').addEventListener('click', async () => {
             try { await navigator.clipboard.writeText(letzterText || ''); toast('Zusammenfassung kopiert.', 'success'); }

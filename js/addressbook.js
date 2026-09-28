@@ -3142,7 +3142,9 @@
             if (error) throw error;
             const qIds = quellen.map(q => q.id);
             const { error: aErr } = await sb().from('angebote').update({ process_id: ziel.id }).in('process_id', qIds);
-            if (aErr) console.warn('Angebote umhängen:', aErr.message);
+            // Scheitert das Umhängen, NICHT löschen — sonst hingen die Angebote an
+            // gelöschten Vorgängen (oder würden je nach Datenbank mitgelöscht).
+            if (aErr) throw new Error('Angebote konnten nicht umgehängt werden (' + aErr.message + ') — die Vorgänge wurden nicht gelöscht.');
             const { error: dErr } = await sb().from('internal_processes').delete().in('id', qIds);
             if (dErr) throw dErr;
             // Lokal nachziehen — Vorgänge-Seite und Angebotsliste laden ohnehin per Realtime nach

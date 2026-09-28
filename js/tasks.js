@@ -1334,10 +1334,10 @@
                 // Clear existing subtasks if editing
                 if (currentTask) {
                     await window.mergeSubtaskPlanung(taskId, allSubtasks);
-                    await window.supabaseClient.from('subtasks').delete().eq('task_id', taskId);
-                }
-
-                if (allSubtasks.length > 0) {
+                    // Erst neu schreiben, dann die alten löschen (js/app-core.js) —
+                    // scheitert das Schreiben, bleiben die bisherigen erhalten.
+                    await window.zeilenSicherErsetzen('subtasks', { task_id: taskId }, allSubtasks, window.insertSubtasks);
+                } else if (allSubtasks.length > 0) {
                     const { error: stError } = await window.insertSubtasks(allSubtasks);
                     if (stError) throw stError;
                 }

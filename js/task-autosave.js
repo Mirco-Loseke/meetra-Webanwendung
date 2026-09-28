@@ -147,13 +147,10 @@
             if (typeof window.mergeSubtaskPlanung === 'function') {
                 await window.mergeSubtaskPlanung(taskId, rows);
             }
-            await window.supabaseClient.from('subtasks').delete().eq('task_id', taskId);
-            if (flat.length) {
-                const { error } = typeof window.insertSubtasks === 'function'
-                    ? await window.insertSubtasks(rows)
-                    : await window.supabaseClient.from('subtasks').insert(rows);
-                if (error) throw error;
-            }
+            // Erst neu schreiben, dann die alten löschen (js/app-core.js) — scheitert
+            // das Schreiben, bleiben die bisherigen Unteraufgaben erhalten.
+            await window.zeilenSicherErsetzen('subtasks', { task_id: taskId }, rows,
+                typeof window.insertSubtasks === 'function' ? window.insertSubtasks : null);
             lastSubtaskJson = json;
             // Kein fetchTasks() mehr: das lud bei jeder Tipp-Pause ALLE Aufgaben samt
             // Unteraufgaben. Die Liste zieht beim Schließen nach (nur diese Aufgabe).

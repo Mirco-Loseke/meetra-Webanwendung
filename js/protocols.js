@@ -1418,28 +1418,19 @@
     async function saveCustomCheckpoints() {
         if (!currentProtocol.id) return;
 
-        // Delete existing custom checkpoints for this protocol
-        await window.supabaseClient
-            .from('protocol_checkpoints')
-            .delete()
-            .eq('protocol_id', currentProtocol.id)
-            .eq('protocol_type', currentProtocolType);
-
-        // Insert new ones
-        if (customCheckpoints.length > 0) {
-            const checkpointsToSave = customCheckpoints.map(cp => ({
-                protocol_id: currentProtocol.id,
-                protocol_type: currentProtocolType,
-                description: cp.description,
-                result: cp.result,
-                sort_order: cp.sort_order,
-                created_by: window.activeUser?.id || null
-            }));
-
-            await window.supabaseClient
-                .from('protocol_checkpoints')
-                .insert(checkpointsToSave);
-        }
+        // Erst neu schreiben, dann die alten löschen (js/app-core.js). Vorher:
+        // alles löschen und das Einfügen ungeprüft — ein Fehler dabei hieß,
+        // alle Prüfpunkte waren weg.
+        const checkpointsToSave = customCheckpoints.map(cp => ({
+            protocol_id: currentProtocol.id,
+            protocol_type: currentProtocolType,
+            description: cp.description,
+            result: cp.result,
+            sort_order: cp.sort_order,
+            created_by: window.activeUser?.id || null
+        }));
+        await window.zeilenSicherErsetzen('protocol_checkpoints',
+            { protocol_id: currentProtocol.id, protocol_type: currentProtocolType }, checkpointsToSave);
     }
 
     async function saveProtocolPhotos() {
@@ -1448,28 +1439,17 @@
         // Vor dem Schreiben aufräumen: sonst landen Doppelte in der Tabelle.
         protocolPhotos = window.PhotoDedupe.bereinigeListe(protocolPhotos);
 
-        // Delete existing photos for this protocol
-        await window.supabaseClient
-            .from('protocol_photos')
-            .delete()
-            .eq('protocol_id', currentProtocol.id)
-            .eq('protocol_type', currentProtocolType);
-
-        // Insert new ones
-        if (protocolPhotos.length > 0) {
-            const photosToSave = protocolPhotos.map(photo => ({
-                protocol_id: currentProtocol.id,
-                protocol_type: currentProtocolType,
-                file_name: photo.file_name,
-                file_url: photo.file_url,
-                file_size: photo.file_size,
-                uploaded_by: window.activeUser?.id || null
-            }));
-
-            await window.supabaseClient
-                .from('protocol_photos')
-                .insert(photosToSave);
-        }
+        // Erst neu schreiben, dann die alten löschen (js/app-core.js) — siehe oben.
+        const photosToSave = protocolPhotos.map(photo => ({
+            protocol_id: currentProtocol.id,
+            protocol_type: currentProtocolType,
+            file_name: photo.file_name,
+            file_url: photo.file_url,
+            file_size: photo.file_size,
+            uploaded_by: window.activeUser?.id || null
+        }));
+        await window.zeilenSicherErsetzen('protocol_photos',
+            { protocol_id: currentProtocol.id, protocol_type: currentProtocolType }, photosToSave);
     }
 
     async function loadProtocol(protocolId, type) {

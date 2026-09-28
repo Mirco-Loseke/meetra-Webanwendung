@@ -276,7 +276,7 @@ formfüllenden Feldern zusätzlich `.menu-block`. Ausgewählter Eintrag: `.selec
 einem Inline-`style` suchen.
 
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v660 (Stand 2026-09-28) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v663 (Stand 2026-09-28) — bei jeder Änderung hochzählen.
 
 **Meldungs-Takt (2026-09-28).** `js/meldungs-takt.js`: Wecker, Vorgangs-Quittung und
 Glocke reihen ihre Meldungen per `meldungsTakt.einreihen(key, zeigen, aktion)` ein —
@@ -397,6 +397,7 @@ erzwingt), Timeline lädt frühestens nach 3 min neu. **Regel:** keine Abfrage
 in einer Schleife/Timer mit `select('*')` ohne serverseitigen Filter, kein
 Komplett-Neuladen als Reaktion auf ein Realtime-Ereignis.
 **Servicebericht überschrieb fremden Bericht (behoben 2026-09-28):** `saveServiceberichtData` übernahm `window.currentEditingServiceId` nur, wenn gesetzt — nach einem bearbeiteten Bericht blieb die lokale ID stehen, ein danach NEU angelegter Bericht (z. B. KI-Erfassung) lief als UPDATE auf den alten und überschrieb ihn (Maschine, Inhalt). Jetzt wird immer übernommen (auch null) und beim Schließen geleert. **Wahrheit ist `window.currentEditingServiceId`.**
+**Nie „erst löschen, dann neu schreiben" (2026-09-28):** Zeilen, die zu einem Datensatz gehören (Unteraufgaben, Protokoll-Prüfpunkte/-Fotos), über `window.zeilenSicherErsetzen(tabelle, filter, rows, einfuegen?)` (`app-core.js`) ersetzen: neue einfügen, erst bei Erfolg alte per ID löschen. Löschen von Quellen (z. B. Vorgänge kombinieren) erst, wenn jedes Umhängen fehlerfrei war.
 **Auto-Speichern & Egress (2026-09-28):** `createAutosave` schreibt ohne Antwortkörper (nur `returnRow: true` holt die Zeile, z. Z. nur Adressbuch), Entprellung 1 s; Unteraufgaben 1,5 s und **kein** `fetchTasks()` mehr je Speichern. Während ein Vorgangs-/Aufgaben-Fenster offen ist, merkt sich Realtime nur die geänderten IDs (`_processesGeaendert`, `_tasksGeaendert`) und lädt beim Schließen genau diese einzeln nach statt alles.
 **Log-Ingestion (2026-09-28):** jede Anfrage = eine Supabase-Logzeile (Free: 1 GB, Sperre ab 2027). `window.istHauptTab()` (`app-core.js`, Web Locks): Wecker und Vorgangs-Quittung fragen nur im Haupt-Tab je Browser ab; Wecker 60 s statt 20 s, Quittung 120 s, deren Realtime nur auf eigene Zeilen gefiltert und gebündelt; Einladungs-Zähler nur im sichtbaren Tab. **Neuer Timer mit Abfrage ⇒ `istHauptTab()` bzw. `document.hidden` prüfen.**
 **Nachtrag 2026-09-21:** Benachrichtigungen (`notifications.js`, alle 5 min) laden

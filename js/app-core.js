@@ -263,3 +263,33 @@
         return new Promise(function () { /* bis der Tab schließt */ });
     }).catch(function () { haupt = true; });
 })();
+
+// ==========================================================
+// Zeilen SICHER ersetzen (statt „erst alles löschen, dann neu schreiben")
+// ==========================================================
+// Unteraufgaben, Protokoll-Prüfpunkte und -Fotos wurden gespeichert, indem
+// zuerst ALLE bisherigen Zeilen gelöscht und danach neu eingefügt wurden.
+// Scheiterte das Einfügen (Netz weg, Spaltenfehler), war alles verloren.
+// Jetzt: alte IDs merken → neue Zeilen einfügen → nur bei Erfolg die alten
+// löschen. Scheitert das Einfügen, bleibt der alte Stand vollständig stehen.
+//   filter: { spalte: wert, … }  — welche Zeilen zum Datensatz gehören
+//   einfuegen(rows): optional eigene Einfüge-Funktion, muss { error } liefern
+window.zeilenSicherErsetzen = async function (tabelle, filter, rows, einfuegen) {
+    var sb = window.supabaseClient;
+    var q = sb.from(tabelle).select('id');
+    Object.keys(filter).forEach(function (k) { q = q.eq(k, filter[k]); });
+    var alt = await q;
+    if (alt.error) throw alt.error;
+    var alteIds = (alt.data || []).map(function (r) { return r.id; });
+
+    if (rows && rows.length) {
+        var res = einfuegen ? await einfuegen(rows) : await sb.from(tabelle).insert(rows);
+        if (res && res.error) throw res.error;   // alte Zeilen bleiben unangetastet
+    }
+    if (alteIds.length) {
+        for (var i = 0; i < alteIds.length; i += 200) {
+            var del = await sb.from(tabelle).delete().in('id', alteIds.slice(i, i + 200));
+            if (del.error) throw del.error;
+        }
+    }
+};
