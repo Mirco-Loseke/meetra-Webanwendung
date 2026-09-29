@@ -1,10 +1,10 @@
-const CACHE_NAME = 'meetra-app-v672';
+const CACHE_NAME = 'meetra-app-v673';
 
-// App shell Ã¢â‚¬â€ lokal gecachte Dateien beim ersten Besuch
+// App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
     'index.html',
     // Die HTML-Bausteine aus partials/ stecken fest im index.html (node build.js)
-    // und mÃƒÂ¼ssen deshalb nicht einzeln gecacht werden.
+    // und müssen deshalb nicht einzeln gecacht werden.
     'css/style.css',
     'css/components/elements.css',
     'css/components/calendar-widget.css',
@@ -62,7 +62,7 @@ const PRECACHE = [
     'css/views/workshop.css',
     'css/views/dashboard.css',
     'css/views/listen.css',
-    // Achtung: cache.addAll() ist atomar Ã¢â‚¬â€ ein einziger 404 laesst den
+    // Achtung: cache.addAll() ist atomar — ein einziger 404 laesst den
     // gesamten Precache scheitern und die App hat offline nichts. Diese
     // beiden Pfade zeigten auf css/ statt css/views/ und haben genau das
     // ausgeloest. Neue Eintraege deshalb immer gegen die Platte pruefen.
@@ -190,7 +190,7 @@ const FALLBACK_HTML = `
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meetra Ã¢â‚¬â€ Offline</title>
+    <title>Meetra — Offline</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
@@ -232,7 +232,7 @@ const FALLBACK_HTML = `
 </head>
 <body>
     <div class="card">
-        <div class="icon">Ã°Å¸â€œÂ¡</div>
+        <div class="icon">📡</div>
         <h1>Keine Internetverbindung</h1>
         <p>Diese Seite ist offline noch nicht aufgerufen worden. Bitte verbinde dich mit dem Internet und versuche es erneut.</p>
         <button class="btn" onclick="window.location.reload()">Erneut versuchen</button>
@@ -253,14 +253,14 @@ self.addEventListener('install', event => {
     );
 });
 
-// Activate Event: Alte Caches aufrÃƒÂ¤umen
+// Activate Event: Alte Caches aufräumen
 self.addEventListener('activate', event => {
     event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(cache => {
                     if (cache !== CACHE_NAME) {
-                        console.log('[Service Worker] LÃƒÂ¶sche alten Cache:', cache);
+                        console.log('[Service Worker] Lösche alten Cache:', cache);
                         return caches.delete(cache);
                     }
                 })
@@ -269,7 +269,7 @@ self.addEventListener('activate', event => {
     );
 });
 
-// Fetch Event: Stale-While-Revalidate fÃƒÂ¼r App-Shell, Network-First fÃƒÂ¼r API
+// Fetch Event: Stale-While-Revalidate für App-Shell, Network-First für API
 self.addEventListener('fetch', event => {
     // Supabase API Requests: Nur Netzwerk (kein ServiceWorker-Interferieren)
     if (event.request.url.includes('supabase.co')) {
@@ -284,21 +284,21 @@ self.addEventListener('fetch', event => {
     // ------------------------------------------------------------------
     // Versionierte Dateien: ZUERST aus dem Cache
     // ------------------------------------------------------------------
-    // Alle JS- und CSS-Dateien werden mit ?v=N eingebunden. Ãƒâ€žndert sich
-    // eine Datei, wird die Nummer hochgezÃƒÂ¤hlt Ã¢â‚¬â€ die URL ist dann eine
+    // Alle JS- und CSS-Dateien werden mit ?v=N eingebunden. Ändert sich
+    // eine Datei, wird die Nummer hochgezählt — die URL ist dann eine
     // andere und liegt garantiert nicht im Cache. Deshalb ist "zuerst
     // Cache" hier gefahrlos und spart beim Start rund 120 Anfragen ans
     // Netz (gemessen: 155 Anfragen, 4,7 MB).
     //
-    // Bewusst NICHT fÃƒÂ¼r index.html: dort stehen die Versionsnummern, die
+    // Bewusst NICHT für index.html: dort stehen die Versionsnummern, die
     // Datei muss immer frisch kommen (weiter unten, Netz zuerst).
     const url = new URL(event.request.url);
     const istVersioniert = url.searchParams.has('v')
         && url.origin === self.location.origin
         && event.request.method === 'GET';
 
-    // html2canvas kommt vom CDN und wird nur fÃƒÂ¼r das PDF der
-    // Mietvereinbarung gebraucht. Beim ersten Mal holen und behalten Ã¢â‚¬â€
+    // html2canvas kommt vom CDN und wird nur für das PDF der
+    // Mietvereinbarung gebraucht. Beim ersten Mal holen und behalten —
     // danach ist es sofort da (auch bei schwachem Empfang und offline).
     if (url.hostname === 'cdnjs.cloudflare.com' && /html2canvas/.test(url.pathname)) {
         event.respondWith(
@@ -333,11 +333,11 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Alles ÃƒÅ“brige (index.html, Schriften, Bilder): Netz zuerst, Cache als RÃƒÂ¼ckfall
+    // Alles Übrige (index.html, Schriften, Bilder): Netz zuerst, Cache als Rückfall
     event.respondWith(
         fetch(event.request)
             .then(response => {
-                // Wenn die Antwort gÃƒÂ¼ltig ist, in Cache klonen und zurÃƒÂ¼ckgeben
+                // Wenn die Antwort gültig ist, in Cache klonen und zurückgeben
                 if (response && response.status === 200 && response.type === 'basic') {
                     const responseToCache = response.clone();
                     caches.open(CACHE_NAME).then(cache => {
@@ -352,11 +352,11 @@ self.addEventListener('fetch', event => {
                     if (cachedResponse) {
                         return cachedResponse;
                     }
-                    // Zweiter Versuch ohne ?v=N. Die PRECACHE-Liste enthÃƒÂ¤lt die
-                    // Dateien ohne Query, angefragt werden sie aber mit Ã¢â‚¬â€ ohne
-                    // diesen Schritt fehlt eine frisch hochgezÃƒÂ¤hlte Datei genau
+                    // Zweiter Versuch ohne ?v=N. Die PRECACHE-Liste enthält die
+                    // Dateien ohne Query, angefragt werden sie aber mit — ohne
+                    // diesen Schritt fehlt eine frisch hochgezählte Datei genau
                     // dann, wenn die App nach dem Update zuerst offline startet.
-                    // Lieber eine ÃƒÂ¤ltere Fassung ausliefern als gar keine.
+                    // Lieber eine ältere Fassung ausliefern als gar keine.
                     return caches.match(event.request, { ignoreSearch: true }).then(looseMatch => {
                         if (looseMatch) {
                             return looseMatch;
@@ -379,11 +379,11 @@ self.addEventListener('fetch', event => {
 // Ohne diesen Handler passiert beim Anklicken einer Windows-Meldung nichts.
 // Ist die App schon offen, wird das vorhandene Fenster nach vorn geholt,
 // statt einen zweiten Tab aufzumachen. Zusaetzlich wird der Seite gesagt,
-// welcher Eintrag gemeint war Ã¢â‚¬â€ js/reminder-alarm.js oeffnet ihn dann.
-// KnÃƒÂ¶pfe in der Meldung (actions) laufen ebenfalls hierÃƒÂ¼ber: event.action
-// ist dann 'jetzt', 'spaeter', 'weg' Ã¢â‚¬Â¦ und js/meldungs-takt.js fÃƒÂ¼hrt dieselbe
-// Aktion aus wie der Knopf auf der Karte in der App. Nur Ã¢â‚¬Å¾Ãƒâ€“ffnen"/Ã¢â‚¬Å¾Jetzt"
-// holt das Fenster nach vorn Ã¢â‚¬â€ Ã¢â‚¬Å¾SpÃƒÂ¤ter" soll nicht aus der Arbeit reiÃƒÅ¸en.
+// welcher Eintrag gemeint war — js/reminder-alarm.js oeffnet ihn dann.
+// Knöpfe in der Meldung (actions) laufen ebenfalls hierüber: event.action
+// ist dann 'jetzt', 'spaeter', 'weg' … und js/meldungs-takt.js führt dieselbe
+// Aktion aus wie der Knopf auf der Karte in der App. Nur „Öffnen"/„Jetzt"
+// holt das Fenster nach vorn — „Später" soll nicht aus der Arbeit reißen.
 self.addEventListener('notificationclick', (event) => {
     const n = event.notification;
     const ziel = (n && n.data) || {};

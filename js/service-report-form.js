@@ -813,8 +813,41 @@
             if (idx < 0) return;
             existingServiceFiles.splice(idx, 1);
             renderServiceFilePreviews();
-            if (typeof window.showToast === 'function') {
-                window.showToast('Ein gelöschtes Bild wurde aus dem Bericht entfernt – bitte speichern.');
+
+            // Sofort in der DB nachziehen — sonst zeigt die Liste weiter
+            // "1 Anhang", solange der Bericht nicht gespeichert wurde.
+            const entryId = window.currentEditingServiceId;
+            if (!entryId || !window.supabaseClient) return;
+            try {
+                const { data, error } = await window.supabaseClient
+                    .from('service_entries').select('files').eq('id', entryId).single();
+                if (error) throw error;
+                const neu = (Array.isArray(data.files) ? data.files : []).filter(f =>
+                    (typeof f === 'string' ? f : f && f.url) !== url);
+                const { error: upErr } = await window.supabaseClient
+                    .from('service_entries').update({ files: neu }).eq('id', entryId);
+                if (upErr) throw upErr;
+                try {
+                    await window.supabaseClient.from('documents')
+                        .update({ attachments: neu.filter(f => f && f.url).map(f => ({
+                            name: f.name || (f.url || '').split('/').pop(),
+                            url: f.url, path: f.path || null, type: f.type || ''
+                        })) })
+                        .eq('service_entry_id', entryId);
+                } catch (docErr) { console.warn('Anhänge am Dokument nicht aktualisierbar:', docErr && docErr.message); }
+
+                [window.allServiceEntries, window.serviceEntryList].forEach(list => {
+                    const eintrag = (list || []).find(x => String(x.id) === String(entryId));
+                    if (eintrag) eintrag.files = neu;
+                });
+                window[`_sf${entryId}`] = neu;
+                if (typeof window.renderServiceEntries === 'function') window.renderServiceEntries();
+                if (typeof window.showToast === 'function') window.showToast('Gelöschtes Bild aus dem Bericht entfernt.');
+            } catch (err) {
+                console.warn('Verwaisten Anhang nicht entfernbar:', err && err.message);
+                if (typeof window.showToast === 'function') {
+                    window.showToast('Ein gelöschtes Bild wurde aus dem Bericht entfernt – bitte speichern.');
+                }
             }
         }
 
