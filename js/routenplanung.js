@@ -2199,8 +2199,8 @@
     const DRUCK_KEY = 'meetra_rp_druck';
 
     function druckEinstellungen() {
-        try { return Object.assign({ abfahrt: '07:30', aufenthalt: 60 }, JSON.parse(localStorage.getItem(DRUCK_KEY) || '{}')); }
-        catch (e) { return { abfahrt: '07:30', aufenthalt: 60 }; }
+        try { return Object.assign({ abfahrt: '07:30', aufenthalt: 60, notizzeilen: 3 }, JSON.parse(localStorage.getItem(DRUCK_KEY) || '{}')); }
+        catch (e) { return { abfahrt: '07:30', aufenthalt: 60, notizzeilen: 3 }; }
     }
 
     // Fahrminuten vom Start bis zu jedem Stopp (ohne Aufenthalte), je Stopp-ID.
@@ -2233,6 +2233,7 @@
                 <p class="text-muted-sm">${stops.length} ${stops.length === 1 ? 'Stopp' : 'Stopps'} in der aktuellen Reihenfolge.</p>
                 <label>Abfahrt am Start <input type="time" id="rp2-druck-abfahrt" value="${esc(e.abfahrt)}"></label>
                 <label>Aufenthalt je Stopp (Min.) <input type="number" id="rp2-druck-aufenthalt" min="0" step="15" value="${esc(String(e.aufenthalt))}"></label>
+                <label>Notizzeilen je Stopp <input type="number" id="rp2-druck-zeilen" min="0" max="20" step="1" value="${esc(String(e.notizzeilen))}"></label>
                 <label class="rp2-druck-check"><input type="checkbox" id="rp2-druck-ohne-zeit"> Ankunftszeit leer lassen (von Hand eintragen)</label>
                 <div class="rp2-druck-knoepfe">
                     <button class="rp2-btn rp2-btn-sm" data-druck="abbrechen">Abbrechen</button>
@@ -2246,7 +2247,8 @@
             if (!b) return;
             const einst = {
                 abfahrt: document.getElementById('rp2-druck-abfahrt').value || '07:30',
-                aufenthalt: Math.max(0, parseInt(document.getElementById('rp2-druck-aufenthalt').value, 10) || 0)
+                aufenthalt: Math.max(0, parseInt(document.getElementById('rp2-druck-aufenthalt').value, 10) || 0),
+                notizzeilen: Math.min(20, Math.max(0, parseInt(document.getElementById('rp2-druck-zeilen').value, 10) || 0))
             };
             try { localStorage.setItem(DRUCK_KEY, JSON.stringify(einst)); } catch (err) { /* nur Komfort */ }
             const ohneZeit = document.getElementById('rp2-druck-ohne-zeit').checked;
@@ -2277,7 +2279,7 @@
                     <div>${teile.map(esc).join('<br>')}</div>
                     ${k ? `<div class="kontakt">Ansprechpartner: ${esc(k.name || '')}${k.position ? ' · ' + esc(k.position) : ''}${tel ? ' · Tel. ' + esc(tel) : ''}</div>` : ''}
                     ${maschinen ? `<div class="kontakt">${maschinen} ${maschinen === 1 ? 'Maschine' : 'Maschinen'} vor Ort</div>` : ''}
-                    <div class="notiz"><span>Notizen:</span><i></i><i></i><i></i></div>
+                    ${einst.notizzeilen > 0 ? `<div class="notiz"><span>Notizen:</span>${'<i></i>'.repeat(einst.notizzeilen)}</div>` : ''}
                 </div>
             </section>`;
         }).join('');
@@ -2301,7 +2303,7 @@
                 .zeit { white-space: nowrap; font-weight: bold; }
                 .kontakt { color: #333; font-size: 9.5pt; margin-top: 2px; }
                 .notiz { margin-top: 6px; font-size: 9pt; color: #555; }
-                .notiz i { display: block; border-bottom: 1px solid #bbb; height: 22px; }
+                .notiz i { display: block; border-bottom: 1px solid #aaa; height: 9mm; }   /* ~9 mm: bequem von Hand beschreibbar */
                 .knopf { position: fixed; top: 10px; right: 10px; padding: 8px 14px; font-size: 11pt; }
                 @media print { .knopf { display: none; } }
             </style></head><body>

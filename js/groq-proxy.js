@@ -172,36 +172,79 @@
             let d = null; try { d = await resp.json(); } catch (e) { /* egal */ }
             throw new Error((d && d.error && (d.error.message || d.error)) || ('HTTP ' + resp.status));
         }
+        // Rückgabe: { text, usage, vollstaendig, grund }
+        //   vollstaendig=false, wenn die Antwort abgeschnitten (Längenlimit) oder die
+        //   Verbindung mittendrin abgerissen ist bzw. zu lange nichts mehr kam.
+        //   grund: kurzer deutscher Text für den Hinweis im Fenster.
+        // Bricht der Strom ab, NACHDEM schon Text da war, wird nicht geworfen, sondern
+        // der Teiltext mit vollstaendig=false geliefert — so sieht der Nutzer, was kam,
+        // UND dass es nicht alles ist.
         const ct = resp.headers.get('content-type') || '';
         if (!/text\/event-stream/i.test(ct) || !resp.body) {
             const d = await resp.json();
-            const text = (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content || '').trim();
+            const c0 = d.choices && d.choices[0];
+            const text = (c0 && c0.message && c0.message.content || '').trim();
             if (!text) throw new Error('Die KI hat keinen Text geliefert.');
-            return { text, usage: d.usage || null };
+            const abgeschnitten = c0 && c0.finish_reason === 'length';
+            return { text, usage: d.usage || null, vollstaendig: !abgeschnitten, grund: abgeschnitten ? 'Die Antwort hat die maximale Länge erreicht.' : '' };
         }
+        const STILLE_MS = 45000;   // so lange ohne neue Daten ⇒ gilt als hängengeblieben
         const reader = resp.body.getReader();
         const dec = new TextDecoder();
-        let puffer = '', text = '', usage = null;
+        let puffer = '', text = '', usage = null, finish = null, fertigGemeldet = false, grund = '';
         for (;;) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            puffer += dec.decode(value, { stream: true });
+            let stille;
+            const zeitAus = new Promise(r => { stille = setTimeout(() => r({ zeitAus: true }), STILLE_MS); });
+            let teil;
+            try { teil = await Promise.race([reader.read(), zeitAus]); }
+            catch (e) { grund = 'Die Verbindung wurde unterbrochen.'; break; }
+            finally { clearTimeout(stille); }
+            if (teil.zeitAus) {
+                grund = 'Es kam ' + Math.round(STILLE_MS / 1000) + ' Sekunden lang nichts mehr — die Antwort ist hängengeblieben.';
+                try { reader.cancel(); } catch (e) { /* egal */ }
+                break;
+            }
+            if (teil.done) break;
+            puffer += dec.decode(teil.value, { stream: true });
             const zeilen = puffer.split(/\r?\n/);
             puffer = zeilen.pop();
             for (const z of zeilen) {
                 if (!z.startsWith('data:')) continue;
                 const roh = z.slice(5).trim();
-                if (!roh || roh === '[DONE]') continue;
+                if (!roh) continue;
+                if (roh === '[DONE]') { fertigGemeldet = true; continue; }
                 let d; try { d = JSON.parse(roh); } catch (e) { continue; }
-                if (d.error) throw new Error(d.error.message || 'KI-Fehler');
+                if (d.error) {
+                    if (text.trim()) { grund = 'Die KI hat mit einem Fehler abgebrochen: ' + (d.error.message || 'unbekannt'); break; }
+                    throw new Error(d.error.message || 'KI-Fehler');
+                }
                 if (d.usage) usage = d.usage;
-                const delta = d.choices && d.choices[0] && d.choices[0].delta && d.choices[0].delta.content;
+                const c0 = d.choices && d.choices[0];
+                if (c0 && c0.finish_reason) finish = c0.finish_reason;
+                const delta = c0 && c0.delta && c0.delta.content;
                 if (delta) { text += delta; if (onText) { try { onText(text); } catch (e) { /* egal */ } } }
             }
+            if (grund) break;
         }
         text = text.trim();
-        if (!text) throw new Error('Die KI hat keinen Text geliefert.');
-        return { text, usage };
+        if (!text) throw new Error(grund || 'Die KI hat keinen Text geliefert.');
+        if (!grund && finish === 'length') grund = 'Die Antwort hat die maximale Länge erreicht.';
+        if (!grund && finish && finish !== 'stop') grund = 'Die KI hat vorzeitig beendet (' + finish + ').';
+        // Weder Ende-Signal noch Abschlussgrund: der Strom ist einfach abgerissen.
+        if (!grund && !finish && !fertigGemeldet) grund = 'Die Verbindung ist vor dem Ende abgerissen.';
+        return { text, usage, vollstaendig: !grund, grund };
+    };
+
+    // Hinweis unter dem Text, solange noch gestreamt wird — verschwindet, sobald fertig.
+    window.kiSchreibtHtml = '<div class="ab-ai-summary-laden" style="margin-top:10px; opacity:0.8;"><span class="ab-ai-spinner"></span> wird noch geschrieben …</div>';
+
+    // Warnkasten unter einer unvollständigen Antwort (beide Zusammenfassungen).
+    window.kiUnvollstaendigHtml = function (grund) {
+        const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        return '<div class="ki-unvollstaendig" role="alert" style="margin-top:14px; padding:12px 14px; border-radius:10px; border:1px solid rgba(251,146,60,0.7); background:rgba(251,146,60,0.12); color:#fed7aa;">'
+            + '<strong style="color:#fb923c;">⚠️ Die Zusammenfassung ist NICHT vollständig.</strong><br>'
+            + esc(grund || 'Die Antwort wurde unterbrochen.') + ' Der Text oben endet mittendrin — es gibt mehr dazu. '
+            + 'Bitte auf <strong>„Neu erzeugen"</strong> klicken.</div>';
     };
 
     // Kurzer Selbsttest für die Einstellungen: läuft die Function, ist der

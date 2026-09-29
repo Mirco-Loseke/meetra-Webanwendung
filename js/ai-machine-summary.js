@@ -325,16 +325,23 @@ Fotos: Steht in den Daten hinter einem Eintrag „(N Fotos)" bzw. „(1 Foto)", 
             const resp = await window.groqFetch({
                 messages: [{ role: 'system', content: systemPrompt() + (p ? '\n\n' + window.kiPseudonym.PROMPT_HINWEIS : '') }, { role: 'user', content: anfrage }],
                 temperature: 0.2,
-                max_tokens: 1500,
+                max_tokens: 3000,   // 1500 schnitt lange Verläufe mittendrin ab
                 stream: true
             });
-            const erg = await window.kiAntwortLesen(resp, teil => { if (String(aktuelleId) === String(id)) body.innerHTML = md(p ? p.demaskieren(teil) : teil); });
+            const erg = await window.kiAntwortLesen(resp, teil => { if (String(aktuelleId) === String(id)) body.innerHTML = md(p ? p.demaskieren(teil) : teil) + (window.kiSchreibtHtml || ''); });
             if (String(aktuelleId) !== String(id)) return;
             let text = erg.text;
             if (p) text = p.demaskieren(text);
             letzterText = text;
             const zeit = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
             const schutz = p ? '🔒 ' + p.anzahl + ' Angaben vor dem Senden ersetzt' : '';
+            // Unvollständig (abgebrochen/abgeschnitten): deutlich sagen und NICHT
+            // zwischenspeichern — sonst käme beim nächsten Öffnen wieder der halbe Text.
+            if (erg.vollstaendig === false) {
+                body.innerHTML = md(text) + window.kiUnvollstaendigHtml(erg.grund);
+                meta.textContent = 'Stand ' + zeit + ' · unvollständig';
+                return;
+            }
             cache.set(String(id), { text, zeit, schutz, anfrage });
             body.innerHTML = md(text);
             const tok = erg.usage && erg.usage.total_tokens;

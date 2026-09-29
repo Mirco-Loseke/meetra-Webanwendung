@@ -1102,9 +1102,13 @@
         if (appBtn) appBtn.addEventListener('click', async () => {
             if (typeof window.mailAnhangAusApp !== 'function') { toast('Modul nicht geladen.', 'error'); return; }
             try { await indexBauen(); } catch (e) { /* ohne Kundenerkennung weiter */ }
-            const adr = (($('mv-s-an') || {}).value || '').split(/[,;]/)[0].replace(/.*</, '').replace(/>.*/, '').trim();
-            const t = adr ? kundeZuAdresse(adr) : null;
-            window.mailAnhangAusApp({ kunde: t && t.kunde ? { id: t.kunde.id, name: t.kunde.name } : null });
+            // ALLE Empfänger (An, dann Cc) prüfen — der erste erkannte Kunde gilt.
+            // Vorher zählte nur die erste Adresse im An-Feld.
+            const adressen = ['mv-s-an', 'mv-s-cc'].map(id => (($(id) || {}).value || ''))
+                .join(',').split(/[,;]/).map(a => a.replace(/.*</, '').replace(/>.*/, '').trim()).filter(Boolean);
+            let t = null;
+            for (const adr of adressen) { t = kundeZuAdresse(adr); if (t && t.kunde) break; }
+            window.mailAnhangAusApp({ kunde: t && t.kunde ? { id: t.kunde.id, name: t.kunde.name, matchcode: t.kunde.matchcode || '' } : null });
         });
         $('mv-s-anhaenge').addEventListener('click', e => {
             const b = e.target.closest('button[data-i]'); if (!b) return;

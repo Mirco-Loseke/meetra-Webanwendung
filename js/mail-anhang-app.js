@@ -46,7 +46,7 @@
             (anhaengeJe[a.process_id] || []).filter(f => f && (f.path || f.url) && !f.step_id).forEach(f => {
                 angebote.push({
                     key: 'a:' + (f.id || f.path || f.url), name: f.name || 'Datei', size: f.size, type: f.type,
-                    path: f.path, url: f.url, kundeId: a.customer_id,
+                    path: f.path, url: f.url, kundeId: a.customer_id, matchcode: a.kundenmatchcode,
                     titel: 'Angebot ' + (a.belegnummer || ''), unter: [firma, datum(a.belegdatum)].filter(Boolean).join(' · '),
                     suche: norm([f.name, a.belegnummer, firma].join(' '))
                 });
@@ -76,21 +76,78 @@
         return daten;
     }
 
+    // Gehört eine Zeile zur gewählten Firma? Über die Kunden-Verknüpfung ODER den
+    // Sage-Matchcode — viele Angebote tragen nur den Matchcode, keine customer_id.
+    const mc = s => String(s || '').toLowerCase().replace(/[^a-z0-9äöüß]/g, '');
+    function gehoertZuKunde(r) {
+        if (!kunde) return false;
+        if (r.kundeId != null && String(r.kundeId) === String(kunde.id)) return true;
+        return !!(kunde.matchcode && r.matchcode && mc(r.matchcode) === mc(kunde.matchcode));
+    }
+
+    // Angebote DIESER Firma gezielt nachladen — die allgemeine Liste endet bei den
+    // 600 neuesten, ältere Angebote der Firma fehlten sonst ganz.
+    async function kundenAngeboteNachladen() {
+        if (!kunde || !daten) return;
+        const sb = window.supabaseClient;
+        let q = sb.from('angebote').select('id, belegnummer, belegdatum, kundenmatchcode, customer_id, process_id, customers(name)')
+            .not('process_id', 'is', null).order('belegdatum', { ascending: false }).limit(300);
+        q = kunde.matchcode
+            ? q.or('customer_id.eq.' + kunde.id + ',kundenmatchcode.eq.' + JSON.stringify(kunde.matchcode))
+            : q.eq('customer_id', kunde.id);
+        const { data: ang, error } = await q;
+        if (error || !ang || !ang.length) return;
+        const schon = new Set(daten.angebote.map(r => r.key));
+        const ids = [...new Set(ang.map(a => a.process_id))];
+        const anhaengeJe = {};
+        for (let i = 0; i < ids.length; i += 150) {
+            const { data } = await sb.from('internal_processes').select('id, attachments').in('id', ids.slice(i, i + 150));
+            (data || []).forEach(p => { anhaengeJe[p.id] = Array.isArray(p.attachments) ? p.attachments : []; });
+        }
+        ang.forEach(a => {
+            const firma = (a.customers && a.customers.name) || a.kundenmatchcode || '';
+            (anhaengeJe[a.process_id] || []).filter(f => f && (f.path || f.url) && !f.step_id).forEach(f => {
+                const key = 'a:' + (f.id || f.path || f.url);
+                if (schon.has(key)) return;
+                schon.add(key);
+                daten.angebote.push({
+                    key, name: f.name || 'Datei', size: f.size, type: f.type,
+                    path: f.path, url: f.url, kundeId: a.customer_id, matchcode: a.kundenmatchcode,
+                    titel: 'Angebot ' + (a.belegnummer || ''), unter: [firma, datum(a.belegdatum)].filter(Boolean).join(' · '),
+                    suche: norm([f.name, a.belegnummer, firma].join(' '))
+                });
+            });
+        });
+    }
+
+    // Firma von Hand wählen, wenn der Empfänger nicht erkannt wurde (oder eine andere gemeint ist).
+    function firmaWahlZeichnen() {
+        const box = document.getElementById('maa-firma');
+        if (!box) return;
+        box.innerHTML = kunde
+            ? `<span class="maa-firma-akt">Firma: <b>${esc(kunde.name)}</b></span>
+               <label class="maa-nur"><input type="checkbox" id="maa-nur" ${nurKunde ? 'checked' : ''}> nur diese Firma</label>
+               <button type="button" class="maa-firma-weg" data-maa-firma-weg title="Andere Firma wählen">ändern</button>`
+            : `<span class="maa-firma-akt">Empfänger nicht im Adressbuch erkannt —</span>
+               <div class="maa-firma-suche"><input type="search" id="maa-firma-input" placeholder="Firma wählen, deren Angebote zuerst kommen …" autocomplete="off">
+               <ul class="maa-firma-liste" id="maa-firma-liste"></ul></div>`;
+    }
+
     function liste() {
         const box = document.getElementById('maa-liste');
         if (!box || !daten) return;
         const q = norm(document.getElementById('maa-suche').value).trim();
         let rows = daten[reiter];
-        if (nurKunde && kunde) rows = rows.filter(r => String(r.kundeId) === String(kunde.id));
+        if (nurKunde && kunde) rows = rows.filter(gehoertZuKunde);
         if (q) rows = rows.filter(r => q.split(/\s+/).every(w => r.suche.includes(w)));
-        // Dateien des erkannten Kunden zuerst
-        if (kunde && !nurKunde) rows = rows.slice().sort((a, b) => (String(b.kundeId) === String(kunde.id)) - (String(a.kundeId) === String(kunde.id)));
+        // Dateien der Firma zuerst (stabil: innerhalb bleibt „neueste zuerst")
+        if (kunde && !nurKunde) rows = rows.slice().sort((a, b) => gehoertZuKunde(b) - gehoertZuKunde(a));
         const gezeigt = rows.slice(0, 150);
         box.innerHTML = gezeigt.length ? gezeigt.map(r => `
             <label class="maa-zeile${gewaehlt.has(r.key) ? ' an' : ''}">
                 <input type="checkbox" data-key="${esc(r.key)}" ${gewaehlt.has(r.key) ? 'checked' : ''}>
                 <span class="maa-ico">${/pdf/i.test(r.type || r.name) ? 'PDF' : /image/i.test(r.type || '') ? 'BILD' : 'DATEI'}</span>
-                <span class="maa-text"><b>${esc(r.titel)}</b>${kunde && String(r.kundeId) === String(kunde.id) ? ' <em class="maa-chip">' + esc(kunde.name) + '</em>' : ''}
+                <span class="maa-text"><b>${esc(r.titel)}</b>${gehoertZuKunde(r) ? ' <em class="maa-chip">' + esc(kunde.name) + '</em>' : ''}
                     <small>${esc(r.name !== r.titel ? r.name + ' · ' : '')}${esc(r.unter)}</small></span>
                 <span class="maa-gr">${groesse(r.size)}</span>
             </label>`).join('') + (rows.length > 150 ? `<div class="maa-mehr">… ${rows.length - 150} weitere — Suche eingrenzen</div>` : '')
@@ -147,7 +204,7 @@
     window.mailAnhangAusApp = async function (kontext) {
         if (typeof window.mailDateienHinzufuegen !== 'function') { toast('Mail-Ansicht nicht bereit.', 'error'); return; }
         kunde = kontext && kontext.kunde ? kontext.kunde : null;
-        nurKunde = !!kunde;
+        nurKunde = false;   // Firma zuerst, darunter alle übrigen — „nur diese Firma" per Haken
         gewaehlt.clear();
         schliessen();
         const el = document.createElement('div');
@@ -165,8 +222,8 @@
                         <button type="button" class="maa-tab" data-r="dokumente">Dokumente <em></em></button>
                     </div>
                     <input type="search" id="maa-suche" placeholder="Suchen: Belegnummer, Kunde, Maschine, Dateiname …" autocomplete="off">
-                    ${kunde ? `<label class="maa-nur"><input type="checkbox" id="maa-nur" ${nurKunde ? 'checked' : ''}> nur ${esc(kunde.name)}</label>` : ''}
                 </div>
+                <div class="maa-firma" id="maa-firma"></div>
                 <div class="maa-liste" id="maa-liste"><div class="maa-mehr">Lade Angebote und Dokumente …</div></div>
                 <div class="maa-fuss">
                     <span id="maa-info" class="text-muted-sm">Nichts ausgewählt</span>
@@ -177,6 +234,17 @@
         document.body.appendChild(el);
         el.addEventListener('click', e => {
             if (e.target === el || e.target.closest('[data-maa-zu]')) return schliessen();
+            if (e.target.closest('[data-maa-firma-weg]')) { kunde = null; nurKunde = false; firmaWahlZeichnen(); liste(); const i = document.getElementById('maa-firma-input'); if (i) i.focus(); return; }
+            const wahl = e.target.closest('[data-maa-kunde]');
+            if (wahl) {
+                const k = (typeof window.customerCacheSync === 'function' ? window.customerCacheSync() : []).find(x => String(x.id) === wahl.dataset.maaKunde);
+                if (k) {
+                    kunde = { id: k.id, name: k.name, matchcode: k.matchcode || '' }; nurKunde = false;
+                    firmaWahlZeichnen(); liste();
+                    kundenAngeboteNachladen().then(liste).catch(() => { /* Liste bleibt */ });
+                }
+                return;
+            }
             const tab = e.target.closest('.maa-tab');
             if (tab) {
                 reiter = tab.dataset.r;
@@ -194,11 +262,20 @@
             zaehlen();
         });
         document.getElementById('maa-suche').addEventListener('input', liste);
+        // Firmensuche im Browser (js/lookup-cache.js), kein Serverruf pro Tastendruck.
+        el.addEventListener('input', e => {
+            if (e.target.id !== 'maa-firma-input') return;
+            const ul = document.getElementById('maa-firma-liste');
+            const q = e.target.value.trim();
+            const treffer = q.length >= 2 && typeof window.customerCacheSearchSync === 'function' ? window.customerCacheSearchSync(q, 8) : [];
+            ul.innerHTML = treffer.map(k => `<li data-maa-kunde="${esc(String(k.id))}"><b>${esc(k.name)}</b> <small>${esc([k.zip_code, k.city].filter(Boolean).join(' '))}</small></li>`).join('');
+        });
+        firmaWahlZeichnen();
         document.getElementById('maa-ok').addEventListener('click', anhaengen);
         el.addEventListener('keydown', e => { if (e.key === 'Escape') schliessen(); });
         reiter = 'angebote';
         setTimeout(() => document.getElementById('maa-suche').focus(), 50);
-        try { await laden(); liste(); }
+        try { await laden(); liste(); if (kunde) { await kundenAngeboteNachladen(); liste(); } }
         catch (e) { document.getElementById('maa-liste').innerHTML = '<div class="maa-mehr">Laden fehlgeschlagen: ' + esc(e.message || e) + '</div>'; }
     };
     // Nach Anlage/Löschen in der App beim nächsten Öffnen frisch laden

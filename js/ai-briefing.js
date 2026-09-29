@@ -309,16 +309,22 @@ Regeln: Nichts erfinden — nur was in den Daten steht. Daten, Uhrzeiten, Namen 
             const resp = await window.groqFetch({
                 messages: [{ role: 'system', content: systemPrompt(Z) + (p ? '\n\n' + window.kiPseudonym.PROMPT_HINWEIS : '') }, { role: 'user', content: anfrage }],
                 temperature: 0.2,
-                max_tokens: 1800,
+                max_tokens: 3000,
                 stream: true
             });
-            const erg = await window.kiAntwortLesen(resp, teil => { if (mein === lauf) body.innerHTML = md(p ? p.demaskieren(teil) : teil); });
+            const erg = await window.kiAntwortLesen(resp, teil => { if (mein === lauf) body.innerHTML = md(p ? p.demaskieren(teil) : teil) + (window.kiSchreibtHtml || ''); });
             if (mein !== lauf) return;
             let text = erg.text;
             if (p) text = p.demaskieren(text);
             letzterText = text;
             const zeit = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
             const schutz = p ? '🔒 ' + p.anzahl + ' Angaben vor dem Senden ersetzt' : '';
+            // Unvollständig (abgebrochen/abgeschnitten): deutlich sagen, nicht zwischenspeichern.
+            if (erg.vollstaendig === false) {
+                body.innerHTML = md(text) + window.kiUnvollstaendigHtml(erg.grund).replace('Die Zusammenfassung ist', 'Das Briefing ist');
+                meta.textContent = 'Stand ' + zeit + ' · unvollständig';
+                return;
+            }
             cache.set(key, { text, zeit, schutz, anfrage });
             body.innerHTML = md(text);
             const tok = erg.usage && erg.usage.total_tokens;

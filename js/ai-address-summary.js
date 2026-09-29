@@ -327,18 +327,25 @@ Fotos: Steht in den Daten bei einem Eintrag „(N Fotos)" bzw. „(1 Foto)", sch
             const resp = await window.groqFetch({
                 messages: [{ role: 'system', content: systemPrompt() + (p ? '\n\n' + window.kiPseudonym.PROMPT_HINWEIS : '') }, { role: 'user', content: anfrage }],
                 temperature: 0.2,
-                max_tokens: 1400,   // kürzere Antwort = schneller fertig
+                max_tokens: 3000,   // 1400 schnitt lange Übersichten mittendrin ab
                 stream: true
             });
             // Gestreamt: der Text erscheint schon während des Schreibens (Platzhalter
             // werden bei jedem Stück zurückübersetzt).
-            const erg = await window.kiAntwortLesen(resp, teil => { body.innerHTML = md(p ? p.demaskieren(teil) : teil); });
+            const erg = await window.kiAntwortLesen(resp, teil => { body.innerHTML = md(p ? p.demaskieren(teil) : teil) + (window.kiSchreibtHtml || ''); });
             const d = { usage: erg.usage };
             let text = erg.text;
             if (p) text = p.demaskieren(text);
             letzterText = text;
             const zeit = new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
             const schutz = p ? '🔒 ' + p.anzahl + ' personenbezogene Angaben vor dem Senden ersetzt' : '';
+            // Unvollständig (abgebrochen/abgeschnitten): deutlich sagen, nicht zwischenspeichern.
+            if (erg.vollstaendig === false) {
+                body.innerHTML = md(text) + window.kiUnvollstaendigHtml(erg.grund);
+                body.dataset.zeigtAnfrage = ''; document.getElementById('ab-ai-summary-raus').textContent = 'Was geht raus?';
+                meta.textContent = 'Stand ' + zeit + ' · unvollständig';
+                return;
+            }
             cache.set(String(aktuelleId), { text, zeit, schutz });
             body.innerHTML = md(text); body.dataset.zeigtAnfrage = ''; document.getElementById('ab-ai-summary-raus').textContent = 'Was geht raus?';
             const tok = d.usage && d.usage.total_tokens;
