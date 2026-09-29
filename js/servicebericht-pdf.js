@@ -1484,7 +1484,7 @@
             if (/nicht erreichbar|502|Failed to fetch|NetworkError/i.test(txt)) {
                 return 'Der KI-Dienst antwortet nicht. Unter Einstellungen → KI auf '
                     + '„Verbindung prüfen" tippen — meist ist die Edge Function '
-                    + 'groq-proxy noch nicht ausgerollt (siehe supabase/SETUP_GROQ.txt).';
+                    + 'ki-proxy noch nicht ausgerollt (siehe supabase/SETUP_KI.txt).';
             }
             if (/abgelaufen|401|angemeldet/i.test(txt)) {
                 return 'Die Anmeldung ist abgelaufen — einmal ab- und wieder anmelden.';

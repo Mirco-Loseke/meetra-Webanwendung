@@ -1177,7 +1177,7 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
 
                     // Vom Schritte-Editor der Karte übernehmen (Nutzer kann Vorschläge geprüft/geändert/entfernt haben)
                     const stepsPrefix = `aicap-proc-${card.dataset.index}`;
-                    const creatorName = window.activeUser?.name || window.currentUser?.name || null;
+                    const creatorName = window.activeUser?.name || null;
                     const nowIso = new Date().toISOString();
                     const editedSteps = (window.processSteps?.[stepsPrefix] || [])
                         .filter(s => (s.text || '').trim())
@@ -1190,8 +1190,8 @@ Maximal 4 Schritte, nur wenn sie inhaltlich wirklich zum genannten Vorgang passe
                         if (readErr) throw readErr;
                         const entry = {
                             text: remark ? `${title} — ${remark}` : title,
-                            user: window.activeUser?.name || window.currentUser?.name || 'Unbekannt',
-                            user_id: window.activeUser?.id || window.currentUser?.id || null,
+                            user: window.activeUser?.name || 'Unbekannt',
+                            user_id: window.activeUser?.id || null,
                             at: new Date().toISOString()
                         };
                         const newLog = [...(Array.isArray(cur?.status_log) ? cur.status_log : []), entry];

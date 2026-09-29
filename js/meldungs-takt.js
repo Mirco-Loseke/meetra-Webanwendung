@@ -20,7 +20,12 @@
     const ABSTAND = 60 * 1000;   // frühestens alle 60 s die nächste Meldung
     const ICON = 'assets/icons/meetra_arrows_icon.png';
 
+    const STUMM_KEY = 'meetra_geraet_stumm';   // je Gerät: gar keine Meldungen
+    const LEISTE_AB = 3;                       // ab so vielen Karten: „Später"-Leiste
+    const SPAETER_MIN = 30;                    // so lange ruhen Karten nach „Später"
+
     const schlange = [];          // [{ key, zeigen }]
+    let pauseBis = 0;             // Zeitstempel: bis dahin keine Karten zeigen
     const handler = new Map();    // key -> fn(aktion)
     const offenAusStart = new Map();   // key -> { aktion, zielTyp, zielId } (App war zu)
     let letzte = 0;
@@ -41,9 +46,36 @@
         } catch (e) { /* nichts offen */ }
     }
 
+    function geraetStumm() {
+        try { return localStorage.getItem(STUMM_KEY) === '1'; } catch (e) { return false; }
+    }
+
+    function geraetStummSetzen(an) {
+        try { if (an) localStorage.setItem(STUMM_KEY, '1'); else localStorage.removeItem(STUMM_KEY); } catch (e) { /* ohne Speicher */ }
+        if (an) {
+            // Alles, was schon ansteht oder offen ist, sofort weg.
+            schlange.length = 0;
+            const box = document.getElementById('alarm-stack');
+            if (box) box.querySelectorAll('[data-alarm-key]').forEach(el => el.remove());
+            systemAlleZu();
+        }
+    }
+
+    async function systemAlleZu() {
+        try {
+            if (!navigator.serviceWorker) return;
+            const reg = await navigator.serviceWorker.getRegistration();
+            if (!reg || typeof reg.getNotifications !== 'function') return;
+            (await reg.getNotifications()).forEach(n => n.close());
+        } catch (e) { /* nichts offen */ }
+    }
+
     function naechste() {
         timer = null;
         if (!schlange.length) return;
+        if (geraetStumm()) { schlange.length = 0; return; }
+        const ruhe = pauseBis - Date.now();
+        if (ruhe > 0) { timer = setTimeout(naechste, ruhe); return; }
         const warte = letzte + ABSTAND - Date.now();
         if (warte > 0) { timer = setTimeout(naechste, warte); return; }
         const m = schlange.shift();
@@ -55,6 +87,7 @@
     // aktion(aktionsName) behandelt Knöpfe der Windows-Meldung; '' = Klick auf die Meldung selbst.
     function einreihen(key, zeigen, aktion) {
         if (!key || typeof zeigen !== 'function') return;
+        if (geraetStumm()) return;
         if (typeof aktion === 'function') handler.set(key, aktion);
 
         // Wurde in Windows schon geklickt, während die App zu war: nicht mehr zeigen.
@@ -98,6 +131,7 @@
     // Windows-Meldung, möglichst mit Knöpfen. Knöpfe gehen nur über den
     // Service Worker; Chrome unter Windows zeigt höchstens Notification.maxActions (meist 2).
     async function system(titel, optionen, knoepfe) {
+        if (geraetStumm()) return;
         if (typeof window.notificationsPushEnabled !== 'function' || !window.notificationsPushEnabled()) return;
         const opt = Object.assign({
             icon: ICON,
@@ -136,7 +170,41 @@
                 const key = n.getAttribute && n.getAttribute('data-alarm-key');
                 if (key) systemZu(key);
             }));
+            leisteAktualisieren(box);
         }).observe(box, { childList: true });
+    }
+
+    // Viele Karten auf einmal: oben eine Leiste „Später", die alle Karten
+    // für SPAETER_MIN Minuten ausblendet — nichts wird erledigt oder gelöscht,
+    // die Karten kommen danach genau so wieder.
+    function leisteAktualisieren(box) {
+        const anzahl = box.querySelectorAll('[data-alarm-key]').length;
+        let leiste = box.querySelector('.alarm-spaeter-leiste');
+        if (anzahl < LEISTE_AB) { if (leiste) leiste.remove(); return; }
+        if (!leiste) {
+            leiste = document.createElement('div');
+            leiste.className = 'alarm-spaeter-leiste';
+            leiste.innerHTML = '<span></span><button type="button">Benachrichtigungen später</button>';
+            leiste.querySelector('button').addEventListener('click', spaeter);
+            box.appendChild(leiste);
+        }
+        leiste.querySelector('span').textContent = `${anzahl} Benachrichtigungen`;
+    }
+
+    function spaeter() {
+        const box = document.getElementById('alarm-stack');
+        if (!box) return;
+        pauseBis = Date.now() + SPAETER_MIN * 60000;
+        box.classList.add('alarm-pausiert');
+        if (timer) { clearTimeout(timer); timer = null; }
+        if (typeof window.showToast === 'function') {
+            window.showToast(`Benachrichtigungen ruhen ${SPAETER_MIN} Minuten.`);
+        }
+        setTimeout(() => {
+            pauseBis = 0;
+            box.classList.remove('alarm-pausiert');
+            if (!timer) naechste();
+        }, SPAETER_MIN * 60000);
     }
 
     if (navigator.serviceWorker) {
@@ -175,5 +243,5 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', beobachten);
     else beobachten();
 
-    window.meldungsTakt = { einreihen, istEingereiht, entfernen, system, ausfuehren };
+    window.meldungsTakt = { einreihen, istEingereiht, entfernen, system, ausfuehren, geraetStumm, geraetStummSetzen, spaeter };
 })();

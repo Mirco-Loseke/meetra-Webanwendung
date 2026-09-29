@@ -1557,11 +1557,13 @@
                 const { p, pos, bild } = auftrag;
                 const blob = await (await fetch(bild)).blob();
                 const name = `${p}-${sauber(pos)}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.jpg`;
-                const res = await mitWiederholung(
-                    () => window.FileUploadService.uploadFile(
-                        new File([blob], name, { type: 'image/jpeg' }),
-                        { bucket: 'dateien', path: `${basis}/fotos/${name}`, compress: false, provider: 'cloudflare-r2' }
-                    ), `Foto „${pos}"`, 45000);
+                // Wiederholung + Zeitgrenze je Versuch macht uploadFile selbst.
+                // Früher lag hier zusätzlich mitWiederholung mit 45 s um ALLE
+                // Versuche — die Zeitgrenze brach nichts ab, der zweite
+                // Durchgang lief neben dem ersten und verdoppelte die Last.
+                const res = await window.FileUploadService.uploadFile(
+                    new File([blob], name, { type: 'image/jpeg' }),
+                    { bucket: 'dateien', path: `${basis}/fotos/${name}`, compress: false, provider: 'cloudflare-r2' });
                 const eintrag = { phase: p, position: pos, url: res.url, path: res.path, name: `${pos} (${p === 'uebergabe' ? 'Übergabe' : 'Rücknahme'})` };
                 hochgeladeneFotos[`${p}|${pos}`] = { bild, eintrag };
                 ergebnis.push(eintrag);
@@ -1573,8 +1575,10 @@
         // das der Punkt, ab dem die Leitung und nicht mehr das Warten auf
         // die Antwort begrenzt. Mehr bringt nichts und lässt einzelne
         // Uploads in die Zeitgrenze laufen.
-        await Promise.all([arbeiter(), arbeiter(), arbeiter(),
-                           arbeiter(), arbeiter(), arbeiter()]);
+        // Handy (Mobilfunk): drei — sechs parallele Übertragungen führten dort
+        // zu Abbrüchen ("network failure").
+        const mobil = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent || '');
+        await Promise.all(Array.from({ length: mobil ? 3 : 6 }, arbeiter));
         return ergebnis;
     }
 

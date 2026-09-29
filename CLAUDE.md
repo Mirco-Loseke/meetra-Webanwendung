@@ -24,7 +24,7 @@ Die App muss auch per Doppelklick über `file://` laufen — deshalb klassische
 - `tools/` — Werkzeuge, die **nicht** zur App gehören: `karte.js` (erzeugt
   `ARCHITEKTUR.md`/`FUNKTIONEN.txt`) und `mietvereinbarung-vorschau.html`
   (öffnet den Mietbogen mit Beispieldaten, ohne Anmeldung und Datenbank).
-- `_backups/`, `backup/` — Altstände bzw. das DB-Backup-Skript, kein App-Code.
+- `backup/` — das DB-Backup-Skript, kein App-Code. (`_backups/` mit Altständen am 2026-09-29 gelöscht.)
 
 ## Ladereihenfolge (wichtig)
 `index.html` lädt die Module in einer festgelegten Reihenfolge, die der früheren
@@ -192,7 +192,7 @@ baut, nimmt `window.groqFetch(payload)` und niemals `fetch('…api.groq.com…')
 sonst wandert der Schlüssel wieder in den Client zurück.
 Die Function gibt Statuscode, `retry-after` und den JSON-Text von Groq
 **unverändert** zurück; die vorhandene Fehlerbehandlung greift dadurch weiter.
-Ausrollen und Secrets: `supabase/SETUP_GROQ.txt`. Einstellungen → KI hat kein
+Ausrollen und Secrets: früher `supabase/SETUP_GROQ.txt` (gelöscht 2026-09-29, samt Ordner `functions/groq-proxy`). Einstellungen → KI hat kein
 Eingabefeld mehr, nur noch „Verbindung prüfen".
 
 Beim Free Tier gilt: 30 Anfragen/Minute, **12.000 Token/Minute**, 100.000/Tag.
@@ -285,6 +285,7 @@ erste sofort, dann frühestens alle 60 s (`ABSTAND`). Windows-Meldungen mit Knö
 dieselbe Aktion wie auf der Karte. Karte weg ⇒ Windows-Meldung zu (MutationObserver auf
 `#alarm-stack`); Aktion in Windows ⇒ Karte weg + aus der Schlange. App geschlossen ⇒
 `index.html?meldung=…&aktion=…`. **Neue Meldung ⇒ über `meldungsTakt`, nie direkt.**
+Je Gerät stumm: `localStorage['meetra_geraet_stumm']` (Einstellungen → Benachrichtigungen, erster Schalter) — `einreihen`/`system`/`notificationsPushEnabled` melden dann nichts, die Glocke bleibt. Ab 3 Karten Leiste „Benachrichtigungen später": blendet `#alarm-stack` 30 min aus und hält die Schlange an.
 
 **Mietvereinbarung (Stand 2026-08-25).** Der Bogen wird gespeichert: PDF per
 html2canvas je `.miet-page` + jsPDF, Ablage in R2 unter
@@ -448,7 +449,7 @@ KI-Zusammenfassung. „✨ Antwort entwerfen" → `antwortEntwerfen` (`mail-view
 Kundenkontext (Maschinen, offene Vorgänge) + Mailkern (`mailKern` schneidet Zitate
 ab) → Entwurf landet über `schreibenVorbelegen(…, entwurfHtml)` im Editor, Platzhalter
 `[Termin]` u. ä. für alles, was die KI nicht weiß. Gesendet wird nie automatisch.
-**Rechtsklick auf eine Mail (2026-09-28):** eigenes Menü (`mailKontextmenu` in `mail-view.js`, hängt an `<body>`): Antworten, ✨ Antwort, ✨ Vorgang, Vorgang erstellen (`vorgangOhneKi`, Anlegen-Fenster vorbelegt), „Zu Vorgang hinzufügen" (`vorgangWaehlen`: erst offene Vorgänge der erkannten Adresse, sonst Suche über alle offenen) → Mail als neuer Stand (`status_updates`); unbekannte Absender werden dabei dem Kunden des Vorgangs zugeordnet.
+**Rechtsklick auf eine Mail (2026-09-28):** eigenes Menü (`mailKontextmenu` in `mail-view.js`, hängt an `<body>`): Antworten, ✨ Antwort, ✨ Vorgang, Vorgang erstellen (`vorgangOhneKi`, Anlegen-Fenster vorbelegt), „Zu Vorgang hinzufügen" (`vorgangWaehlen`: erst offene Vorgänge der erkannten Adresse, sonst Suche über alle offenen) → Mail als neuer Stand (`status_updates`); unbekannte Absender werden dabei dem Kunden des Vorgangs zugeordnet. Seit 2026-09-29 **nicht mehr als Stand**, sondern in `internal_processes.mails` (JSONB, Migration `supabase_add_process_mails.sql` MUSS laufen): je Mail Graph-`id`, `internetMessageId`, Betreff, Absender, Datum, `anhaenge`, `text` → `window.procMails(proc)`, Fenster „E-Mails" (`openProcessMailModal`, Reiter Liste/Ursprungs-Text), Kartensymbol zählt alle Mails; `window.mailInAppOeffnen(id, internetMessageId)` springt in die Mail-Ansicht (Rückfall-Suche über internetMessageId, weil die Graph-ID beim Verschieben wechselt).
 **Fallstrick:** `js/select-enhance.js` baut jedes `<select>` um — auch Quills
 Toolbar-Selects, die dann unsichtbar werden. Toolbar-Container brauchen `data-no-enhance`.
 

@@ -139,7 +139,6 @@
 
     function currentAuthor() {
         return (window.activeUser && window.activeUser.name)
-            || (window.currentUser && window.currentUser.name)
             || null;
     }
 

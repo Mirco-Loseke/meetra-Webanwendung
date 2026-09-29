@@ -465,6 +465,59 @@
             box.style.display = box.style.display === 'none' ? 'block' : 'none';
         };
 
+        // Maschinenstandort: Adressen aus dem Kunden-Cache durchsuchen.
+        // Freitext bleibt möglich (Baustelle o. ä.) — die Liste ist nur ein Angebot.
+        let serviceLocSuche = null;
+        const escLoc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        function serviceLocBoxZu() {
+            const box = document.getElementById('service-location-suggestions');
+            if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+        }
+
+        window.searchServiceLocation = function () {
+            clearTimeout(serviceLocSuche);
+            serviceLocSuche = setTimeout(async () => {
+                const input = document.getElementById('service-location-company');
+                const box = document.getElementById('service-location-suggestions');
+                if (!input || !box) return;
+                const q = input.value.trim();
+                if (q.length < 2 || typeof window.customerCacheSearch !== 'function') { serviceLocBoxZu(); return; }
+
+                const treffer = await window.customerCacheSearch(q, 10);
+                if (!treffer.length) { serviceLocBoxZu(); return; }
+
+                box.innerHTML = treffer.map((c, i) => {
+                    const label = c.matchcode ? `[${c.matchcode}] ${c.name || ''}` : (c.name || '');
+                    const adr = [c.street, [c.zip_code, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+                    return `<div class="svc-loc-item" data-i="${i}" style="padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer; color:#fff;">
+                        <div style="font-weight:700; font-size:0.95rem;">${escLoc(label)}</div>
+                        <div style="font-size:0.8rem; color:rgba(255,255,255,0.45); margin-top:2px;">${escLoc(adr)}</div>
+                    </div>`;
+                }).join('');
+                box.onmousedown = (e) => {
+                    const el = e.target.closest('.svc-loc-item');
+                    if (!el) return;
+                    e.preventDefault();
+                    const c = treffer[+el.dataset.i];
+                    document.getElementById('service-location-company').value = c.name || '';
+                    document.getElementById('service-location-street').value = c.street || '';
+                    document.getElementById('service-location-zip').value = c.zip_code || '';
+                    document.getElementById('service-location-city').value = c.city || '';
+                    document.getElementById('service-location-country').value = c.country || 'Deutschland';
+                    serviceLocBoxZu();
+                };
+                box.style.display = 'block';
+                if (typeof window.positionSuggestionsBoxFixed === 'function') {
+                    window.positionSuggestionsBoxFixed('service-location-company', 'service-location-suggestions');
+                }
+            }, 60);
+        };
+
+        document.addEventListener('focusout', (e) => {
+            if (e.target && e.target.id === 'service-location-company') setTimeout(serviceLocBoxZu, 150);
+        });
+
         // Maschinenstandort toggle
         window.toggleLocationFields = function() {
             const wrapper = document.getElementById('service-location-fields-wrapper');

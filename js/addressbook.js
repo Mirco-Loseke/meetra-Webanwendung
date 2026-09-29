@@ -228,7 +228,6 @@
 
     function currentAuthor() {
         return (window.activeUser && window.activeUser.name)
-            || (window.currentUser && window.currentUser.name)
             || null;
     }
 
@@ -1573,6 +1572,7 @@
                 const { data, error } = await procQuery.order('process_date', { ascending: false });
                 if (error) throw error;
                 state.detail.processes = data || [];
+                if (typeof window.procMailsAusStand === 'function') state.detail.processes.forEach(p => window.procMailsAusStand(p, true));
 
                 // Angebote, die an diesen Vorgängen hängen (Angebot = Vorgang,
                 // js/listen.js): der Vorgang wird in der Historie als „Angebot …"

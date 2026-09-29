@@ -344,8 +344,7 @@ TERMIN und ERINNERUNG auseinanderhalten:
             // Die Schritte liegen dort als JSONB direkt am Vorgang, nicht in einer
             // eigenen Tabelle. So taucht der Vorgang sowohl im Adressbuch als auch
             // auf der Vorgänge-Seite (unter dem Firmennamen) auf.
-            const creator = (window.activeUser && window.activeUser.name)
-                || (window.currentUser && window.currentUser.name) || null;
+            const creator = (window.activeUser && window.activeUser.name) || null;
             const nowIso = new Date().toISOString();
 
             const stepRows = subs.map((s, i) => ({
@@ -421,8 +420,7 @@ TERMIN und ERINNERUNG auseinanderhalten:
                     : '';
                 const dueText = dueDate ? ` (fällig ${fmtDeDate(dueDate)})` : '';
                 const bodyText = (description || lastInput || '') + stepsText;
-                const authorName = (window.activeUser && window.activeUser.name)
-                    || (window.currentUser && window.currentUser.name) || null;
+                const authorName = (window.activeUser && window.activeUser.name) || null;
                 const notePayload = {
                     customer_id: currentCustomerId,
                     entry_type: 'task',

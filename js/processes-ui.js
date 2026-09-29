@@ -918,7 +918,7 @@
             s.done = !s.done;
             if (s.done) {
                 s.done_at = new Date().toISOString();
-                s.done_by = (window.activeUser?.name) || (window.currentUser?.name) || null;
+                s.done_by = (window.activeUser?.name) || null;
             } else {
                 s.done_at = null;
                 s.done_by = null;
@@ -928,7 +928,7 @@
 
         window.addProcessStep = function(prefix) {
             if (!window.processSteps[prefix]) window.processSteps[prefix] = [];
-            const creator = (window.activeUser?.name) || (window.currentUser?.name) || null;
+            const creator = (window.activeUser?.name) || null;
             window.processSteps[prefix].push({ id: genStepId(), text: '', done: false, created_at: new Date().toISOString(), created_by: creator, done_at: null, done_by: null });
             window.renderProcessSteps(prefix);
             const list = document.getElementById(`${prefix}-steps-list`);
@@ -999,7 +999,7 @@
             step.done = !step.done;
             if (step.done) {
                 step.done_at = new Date().toISOString();
-                step.done_by = (window.activeUser?.name) || (window.currentUser?.name) || null;
+                step.done_by = (window.activeUser?.name) || null;
             } else {
                 step.done_at = null;
                 step.done_by = null;
@@ -1498,7 +1498,7 @@
                             <div style="min-width:0;">
                                 <h2 style="margin:0; color:#fff; font-size:1.6rem; font-weight:800; display:flex; align-items:center; gap:10px;">
                                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
-                                    E-Mail Inhalt
+                                    E-Mails
                                 </h2>
                                 <div id="process-mail-modal-subtitle" style="color:rgba(255,255,255,0.45); font-size:0.9rem; margin-top:4px; word-break:break-word;"></div>
                             </div>
@@ -1506,8 +1506,13 @@
                                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                             </button>
                         </div>
+                        <div class="proc-mail-tabs">
+                            <button type="button" data-reiter="liste" onclick="window.procMailReiter('liste')">E-Mails <span id="process-mail-tab-count"></span></button>
+                            <button type="button" data-reiter="text" onclick="window.procMailReiter('text')">Mail-Text (Ursprung)</button>
+                        </div>
+                        <div id="process-mail-modal-liste" class="proc-mail-liste"></div>
                         <textarea id="process-mail-modal-text" class="glass-input" spellcheck="false" style="flex:1; min-height:280px; max-height:60vh; resize:vertical; width:100%; box-sizing:border-box; font-size:0.9rem; line-height:1.5; white-space:pre-wrap; color:#fff;"></textarea>
-                        <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px; flex-shrink:0;">
+                        <div id="process-mail-modal-foot" style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px; flex-shrink:0;">
                             <button type="button" onclick="window.closeProcessMailModal()" style="padding:10px 18px; border-radius:10px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.16); color:rgba(255,255,255,0.8); font-weight:700; cursor:pointer;">Abbrechen</button>
                             <button type="button" id="process-mail-modal-save" onclick="window.saveProcessMailModal()" style="padding:10px 18px; border-radius:10px; background:rgba(167,139,250,0.25); border:1px solid rgba(167,139,250,0.7); color:#ddd6fe; font-weight:800; cursor:pointer;">Speichern</button>
                         </div>
@@ -1519,9 +1524,60 @@
             document.getElementById('process-mail-modal-subtitle').textContent = proc.title || 'Vorgang';
             const ta = document.getElementById('process-mail-modal-text');
             ta.value = proc.description || '';
+            const mails = window.procMails(proc);
+            document.getElementById('process-mail-tab-count').textContent = mails.length ? `(${mails.length})` : '';
+            document.getElementById('process-mail-modal-liste').innerHTML = procMailListeHtml(mails);
             modal.classList.remove('hidden');
             modal.style.display = 'flex';
-            requestAnimationFrame(() => { modal.classList.add('show'); ta.focus(); });
+            window.procMailReiter(mails.length ? 'liste' : 'text');
+            requestAnimationFrame(() => modal.classList.add('show'));
+        };
+
+        // Mails am Vorgang: eigenes Feld internal_processes.mails (js/mail-view.js →
+        // mailAnVorgang), nicht unter „Stand". Alt-Einträge (aus status_updates
+        // verschoben, Migration supabase_add_process_mails.sql) haben nur `text`
+        // im Format „📧 Mail von X (Datum)\nBetreff: …".
+        window.procMails = function (proc) {
+            const liste = Array.isArray(proc && proc.mails) ? proc.mails : [];
+            return liste.filter(Boolean).map(m => {
+                if (!m.alt) return m;
+                const kopf = (m.text || '').split('\n');
+                const von = (kopf[0].match(/^📧 Mail von (.*?)(?: \((.*)\))?$/) || []);
+                return { alt: true, from: von[1] || '', datumText: von[2] || '', date: m.at || '', subject: (kopf[1] || '').replace(/^Betreff: /, ''), anhaenge: [] };
+            }).sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+        };
+
+        const escMail = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        function procMailListeHtml(mails) {
+            if (!mails.length) return '<div class="proc-mail-leer">Noch keine Mail angehängt. In der Mail-Ansicht: Rechtsklick auf eine Mail → „Zu Vorgang hinzufügen".</div>';
+            return mails.map(m => {
+                const datum = m.date ? new Date(m.date).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : (m.datumText || '');
+                const anh = (m.anhaenge || []).map(a =>
+                    `<span class="proc-mail-anhang" title="${escMail(a.contentType || '')}">📎 ${escMail(a.name)} <em>${a.size >= 1048576 ? (a.size / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round((a.size || 0) / 1024)) + ' KB'}</em></span>`).join('');
+                const knopf = m.id
+                    ? `<button type="button" class="proc-mail-oeffnen" onclick="window.mailInAppOeffnen && window.mailInAppOeffnen('${escMail(m.id)}', '${escMail(m.internetMessageId || '')}')">Mail öffnen →</button>`
+                    : `<span class="proc-mail-alt" title="Vor dem 29.09.2026 angehängt — ohne Verweis auf die Mail">nur Text</span>`;
+                return `<div class="proc-mail-item">
+                    <div class="proc-mail-kopf">
+                        <div class="proc-mail-info">
+                            <strong>${escMail(m.subject || '(kein Betreff)')}</strong>
+                            <span>${escMail(m.from || m.fromAddress || '?')}${m.fromAddress && m.from ? ' &lt;' + escMail(m.fromAddress) + '&gt;' : ''} · ${escMail(datum)}</span>
+                        </div>
+                        ${knopf}
+                    </div>
+                    ${anh ? `<div class="proc-mail-anhaenge">${anh}</div>` : ''}
+                </div>`;
+            }).join('');
+        }
+
+        window.procMailReiter = function (reiter) {
+            const modal = document.getElementById('process-mail-modal');
+            if (!modal) return;
+            modal.querySelectorAll('.proc-mail-tabs button').forEach(b => b.classList.toggle('aktiv', b.dataset.reiter === reiter));
+            document.getElementById('process-mail-modal-liste').style.display = reiter === 'liste' ? '' : 'none';
+            document.getElementById('process-mail-modal-text').style.display = reiter === 'text' ? '' : 'none';
+            document.getElementById('process-mail-modal-foot').style.display = reiter === 'text' ? 'flex' : 'none';
         };
 
         window.closeProcessMailModal = function() {

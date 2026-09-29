@@ -1708,9 +1708,6 @@
         window.switchTaskView(view);
     };
 
-    // Beibehalten, weil ältere Aufrufer sie noch anstoßen — tut nichts mehr.
-    window.renderMyProcessesSection = function () { };
-
     function formatStatus(status) {
         const map = { 'open': 'Offen', 'in_progress': 'In Arbeit', 'completed': 'Fertig' };
         return map[status] || status;

@@ -18,6 +18,43 @@
     pointer-events: none;
 }
 
+/* Viele Karten: Leiste oben mit „Benachrichtigungen später" (js/meldungs-takt.js) */
+#alarm-stack.alarm-pausiert {
+    display: none;
+}
+
+.alarm-spaeter-leiste {
+    order: -1;
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3, 12px);
+    padding: var(--space-2, 8px) var(--space-2, 8px) var(--space-2, 8px) var(--space-4, 16px);
+    background: rgba(15, 23, 42, 0.97);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-lg, 14px);
+    box-shadow: var(--shadow-2, 0 12px 30px rgba(0, 0, 0, 0.5));
+    color: var(--text-2, rgba(255, 255, 255, 0.75));
+    font-size: var(--fs-sm, 0.85rem);
+    font-weight: 600;
+}
+
+.alarm-spaeter-leiste button {
+    background: var(--warning, #fbbf24);
+    color: #111827;
+    border: none;
+    border-radius: var(--radius-md, 10px);
+    padding: var(--space-2, 8px) var(--space-3, 12px);
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.alarm-spaeter-leiste button:hover {
+    filter: brightness(1.08);
+}
+
 .alarm-card {
     pointer-events: auto;
     background: linear-gradient(140deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.99));

@@ -6,6 +6,15 @@
 // die Reihenfolge der Skripte entspricht der fruaeheren Reihenfolge im
 // Inline-Block und darf nicht vertauscht werden.
 // ==========================================================
+
+        // Globales HTML-Escaping — u. a. js/protocols.js ruft es ohne eigene
+        // Definition auf (bis 2026-09-29 kam es aus js/accounting.js).
+        window.escapeHtml = window.escapeHtml || function (str) {
+            if (str === null || str === undefined) return '';
+            const div = document.createElement('div');
+            div.textContent = String(str);
+            return div.innerHTML;
+        };
         // Beim Wechsel von WLAN auf Mobilfunk (oder umgekehrt) kann navigator.onLine für einen
         // kurzen Moment "false" melden, obwohl gleich wieder eine Verbindung besteht (Handover).
         // Vor Aktionen, die deshalb fälschlich in den Offline-Modus wechseln würden (z.B. Speichern),

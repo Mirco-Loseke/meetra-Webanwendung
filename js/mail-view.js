@@ -449,8 +449,31 @@
     // Mail an einen bestehenden Vorgang hängen. Beim Anhängen stehen zuerst die offenen
     // Vorgänge der erkannten Adresse oben, darunter die Suche über alle offenen Vorgänge.
     async function mailVoll(id) {
-        return window.graphFetch('/me/messages/' + encodeURIComponent(id) + '?$select=id,subject,from,toRecipients,ccRecipients,receivedDateTime,body,hasAttachments,webLink');
+        return window.graphFetch('/me/messages/' + encodeURIComponent(id) + '?$select=id,internetMessageId,subject,from,toRecipients,ccRecipients,receivedDateTime,body,hasAttachments,webLink');
     }
+
+    // Aus einem Vorgang heraus eine gespeicherte Mail in der Mail-Ansicht öffnen.
+    // Die Graph-ID ändert sich, wenn die Mail in einen anderen Ordner wandert —
+    // dann über die internetMessageId neu suchen.
+    window.mailInAppOeffnen = async function (id, internetMessageId) {
+        if (typeof window.closeEditProcessModal === 'function') { try { window.closeEditProcessModal(); } catch (e) { /* egal */ } }
+        if (typeof window.switchView === 'function') window.switchView('mail');
+        let ziel = id;
+        try {
+            await window.graphFetch('/me/messages/' + encodeURIComponent(id) + '?$select=id');
+        } catch (e) {
+            ziel = null;
+            if (internetMessageId) {
+                try {
+                    const d = await window.graphFetch('/me/messages?$filter=' + encodeURIComponent("internetMessageId eq '" + internetMessageId.replace(/'/g, "''") + "'") + '&$select=id&$top=1');
+                    ziel = d.value && d.value[0] && d.value[0].id;
+                } catch (e2) { /* nicht gefunden */ }
+            }
+        }
+        if (!ziel) { toast('Mail nicht mehr im Postfach gefunden (gelöscht oder nicht angemeldet).', 'error'); return; }
+        tabWechseln('posteingang');
+        mailOeffnen(ziel, $('mv-mail-detail'), $('mv-panel-posteingang'));
+    };
     function anText(m) { return (m.toRecipients || []).map(r => r.emailAddress.name || r.emailAddress.address).join(', '); }
     function vonVon(m) { return (m.from && m.from.emailAddress) || {}; }
 
@@ -614,20 +637,42 @@
         });
     }
 
-    // Mail als neuer „Stand" oben in den Vorgang — mit Absender, Datum, Betreff und Mailkern.
+    // Mail an den Vorgang hängen — eigenes Feld internal_processes.mails, NICHT
+    // unter „Stand". Sichtbar über das Mail-Symbol der Karte (Fenster „E-Mails").
+    // Migration: supabase/supabase_add_process_mails.sql
     async function mailAnVorgang(m, von, p) {
         if (!p) return;
-        const { data, error } = await window.supabaseClient.from('internal_processes').select('status_updates').eq('id', p.id).single();
-        if (error) throw error;
-        const text = '📧 Mail von ' + (von.name || von.address || '?') + ' (' + new Date(m.receivedDateTime || Date.now()).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) + ')\n'
-            + 'Betreff: ' + (m.subject || '(kein Betreff)') + '\n\n' + mailKern(mailText(m)).slice(0, 4000);
-        const liste = [{ at: new Date().toISOString(), text, by: (window.activeUser && window.activeUser.name) || '' }]
-            .concat(Array.isArray(data && data.status_updates) ? data.status_updates : []);
-        const { error: e2 } = await window.supabaseClient.from('internal_processes').update({ status_updates: liste }).eq('id', p.id);
+        const { data, error } = await window.supabaseClient.from('internal_processes').select('mails').eq('id', p.id).single();
+        if (error) {
+            if (/mails/.test(error.message || '')) throw new Error('Spalte „mails" fehlt – Migration supabase_add_process_mails.sql ausführen.');
+            throw error;
+        }
+        let anhaenge = [];
+        if (m.hasAttachments) {
+            try {
+                anhaenge = ((await window.graphFetch('/me/messages/' + encodeURIComponent(m.id) + '/attachments?$select=name,size,contentType,isInline')).value || [])
+                    .filter(a => !a.isInline).map(a => ({ name: a.name, size: a.size || 0, contentType: a.contentType || '' }));
+            } catch (e) { /* ohne Anhangliste */ }
+        }
+        const mail = {
+            id: m.id, internetMessageId: m.internetMessageId || '', webLink: m.webLink || '',
+            subject: m.subject || '', from: von.name || '', fromAddress: von.address || '',
+            date: m.receivedDateTime || '', anhaenge,
+            text: mailKern(mailText(m)).slice(0, 4000),
+            at: new Date().toISOString(), by: (window.activeUser && window.activeUser.name) || ''
+        };
+        const bisher = Array.isArray(data && data.mails) ? data.mails : [];
+        if (bisher.some(x => x && (x.id === m.id || (mail.internetMessageId && x.internetMessageId === mail.internetMessageId)))) {
+            toast('Diese Mail hängt schon an „' + (p.title || 'Vorgang') + '".');
+            return;
+        }
+        const liste = [mail].concat(bisher);
+        const { error: e2 } = await window.supabaseClient.from('internal_processes').update({ mails: liste }).eq('id', p.id);
         if (e2) throw e2;
-        p.status_updates = liste;
+        p.mails = liste;
         const imSpeicher = ((window.eventsState && window.eventsState.processes) || []).find(x => String(x.id) === String(p.id));
-        if (imSpeicher) imSpeicher.status_updates = liste;
+        if (imSpeicher) imSpeicher.mails = liste;
+        if (typeof window.renderProcesses === 'function') window.renderProcesses();
         // Unbekannte Adresse, Vorgang hat einen Kunden: Zuordnung für künftige Mails merken.
         if (von.address && p.customer_id && !kundeZuAdresse(von.address)) zuordnungSpeichern(von.address, p.customer_id);
         toast('Mail an „' + (p.title || 'Vorgang') + '" gehängt.', 'success');

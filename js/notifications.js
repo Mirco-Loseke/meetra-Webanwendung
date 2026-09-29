@@ -87,7 +87,7 @@
     }
 
     function currentUser() {
-        return window.activeUser || window.currentUser || null;
+        return window.activeUser || null;
     }
 
     function currentUserId() {
@@ -1385,6 +1385,7 @@
     }
 
     window.notificationsPushEnabled = function () {
+        if (window.meldungsTakt && window.meldungsTakt.geraetStumm()) return false;
         return typeof Notification !== 'undefined' &&
             Notification.permission === 'granted' &&
             localStorage.getItem('meetra_push_enabled') !== 'off';

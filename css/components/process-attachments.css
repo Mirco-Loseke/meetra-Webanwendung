@@ -153,3 +153,121 @@
     .proc-att-item { flex-wrap: wrap; }
     .proc-att-meta { flex-basis: 100%; padding-left: 26px; }
 }
+
+/* ==========================================================
+   E-MAILS AM VORGANG — Fenster „E-Mails" (js/processes-ui.js,
+   openProcessMailModal): Reiter Liste / Ursprungs-Text
+   ========================================================== */
+.proc-mail-tabs {
+    display: flex;
+    gap: var(--space-1, 4px);
+    margin-bottom: var(--space-3, 12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+}
+
+.proc-mail-tabs button {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-3, rgba(255, 255, 255, 0.5));
+    font-weight: 700;
+    font-size: var(--fs-sm, 0.88rem);
+    padding: var(--space-2, 8px) var(--space-3, 12px);
+    cursor: pointer;
+    margin-bottom: -1px;
+}
+
+.proc-mail-tabs button.aktiv {
+    color: #ddd6fe;
+    border-bottom-color: #a78bfa;
+}
+
+.proc-mail-liste {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2, 8px);
+}
+
+.proc-mail-item {
+    border: 1px solid rgba(167, 139, 250, 0.22);
+    background: rgba(167, 139, 250, 0.06);
+    border-radius: var(--radius-md, 10px);
+    padding: var(--space-3, 12px);
+}
+
+.proc-mail-kopf {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3, 12px);
+}
+
+.proc-mail-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.proc-mail-info strong {
+    color: #fff;
+    word-break: break-word;
+}
+
+.proc-mail-info span {
+    color: var(--text-3, rgba(255, 255, 255, 0.5));
+    font-size: var(--fs-xs, 0.8rem);
+    word-break: break-word;
+}
+
+.proc-mail-oeffnen {
+    flex-shrink: 0;
+    background: rgba(167, 139, 250, 0.25);
+    border: 1px solid rgba(167, 139, 250, 0.7);
+    color: #ddd6fe;
+    border-radius: var(--radius-sm, 8px);
+    padding: 6px 12px;
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.proc-mail-oeffnen:hover {
+    background: rgba(167, 139, 250, 0.4);
+}
+
+.proc-mail-alt {
+    flex-shrink: 0;
+    font-size: var(--fs-xs, 0.75rem);
+    color: var(--text-3, rgba(255, 255, 255, 0.4));
+}
+
+.proc-mail-anhaenge {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: var(--space-2, 8px);
+}
+
+.proc-mail-anhang {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: var(--fs-xs, 0.78rem);
+    color: #fff;
+}
+
+.proc-mail-anhang em {
+    font-style: normal;
+    color: var(--text-3, rgba(255, 255, 255, 0.45));
+}
+
+.proc-mail-leer {
+    color: var(--text-3, rgba(255, 255, 255, 0.5));
+    padding: var(--space-4, 16px) 0;
+}

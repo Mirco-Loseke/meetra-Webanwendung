@@ -98,6 +98,7 @@ window.fetchProcesses = async function() {
         // „Wartet" gibt es seit 2026-09-16 nicht mehr — Altbestand zeigt sich als
         // „In Arbeit" (Datenbank: supabase_migrate_status_wartet.sql).
         processes.forEach(p => { if (p.status === 'wartet') p.status = 'in_bearbeitung'; });
+        processes.forEach(p => window.procMailsAusStand(p, true));
 
         const linkedIds = [...new Set(processes.map(p => p.linked_service_report_id).filter(Boolean))];
         if (linkedIds.length > 0) {
@@ -163,7 +164,31 @@ window.fetchProcesses = async function() {
 // App offen hat: der Egress bei Supabase schoss dadurch hoch. Jetzt wird nur
 // die geänderte Zeile geholt (ein paar KB). Fällt das aus, greift wie früher
 // das komplette Nachladen.
-const PROC_SELECT_VOLL = '*, machines(id, name, manufacturer, serial, year, company, operator_city, customer_id), customers(id, name)';
+// Mails gehören NICHT unter „Stand" (seit 2026-09-29 eigenes Feld `mails`).
+// Einträge, die noch in status_updates stehen (alte App-Version, Migration
+// nicht gegriffen), werden beim Laden herausgenommen und mit `speichern`
+// einmalig in der Datenbank umgehängt — so heilt sich der Bestand selbst.
+const MAIL_STAND = /^\s*📧\s*Mail von |^\s*Mail von [^\n]*\n\s*Betreff:/;
+window.procMailsAusStand = function (p, speichern) {
+    if (!p || !Array.isArray(p.status_updates)) return p;
+    const istMail = u => u && (u.mail || MAIL_STAND.test(u.text || ''));
+    const raus = p.status_updates.filter(istMail);
+    if (!raus.length) return p;
+    const vorhanden = Array.isArray(p.mails) ? p.mails : [];
+    const schonDa = new Set(vorhanden.map(m => m && (m.id || m.text)).filter(Boolean));
+    const neu = raus.map(u => u.mail ? u.mail : { alt: true, text: u.text, at: u.at })
+        .filter(m => !schonDa.has(m.id || m.text));
+    p.status_updates = p.status_updates.filter(u => !istMail(u));
+    p.mails = neu.concat(vorhanden);
+    if (speichern && window.supabaseClient && p.id != null) {
+        window.supabaseClient.from('internal_processes')
+            .update({ status_updates: p.status_updates, mails: p.mails }).eq('id', p.id)
+            .then(({ error }) => { if (error) console.warn('Mails aus Stand nicht umhängbar (Spalte mails fehlt?):', error.message); });
+    }
+    return p;
+};
+
+const PROC_SELECT_VOLL ='*, machines(id, name, manufacturer, serial, year, company, operator_city, customer_id), customers(id, name)';
 const PROC_SELECT_OHNE_KUNDE = '*, machines(id, name, manufacturer, serial, year, company, operator_city)';
 
 window.applyProcessRealtime = async function (payload) {
@@ -188,6 +213,7 @@ window.applyProcessRealtime = async function (payload) {
             .from('internal_processes').select(PROC_SELECT_OHNE_KUNDE).eq('id', id).maybeSingle());
     }
     if (row && row.status === 'wartet') row.status = 'in_bearbeitung';
+    if (row) window.procMailsAusStand(row, true);
     if (error) return false;
     if (!row) { // inzwischen gelöscht
         const i = list.findIndex(p => String(p.id) === String(id));
@@ -765,15 +791,21 @@ window.renderProcesses = function(targetId, opts) {
                             // Der Knopf erscheint nur, wenn wirklich etwas da ist —
                             // sonst stehen hier zu viele Symbole nebeneinander.
                             const mailText = (p.description || '').trim();
-                            if (!mailText) return '';
+                            const mails = typeof window.procMails === 'function' ? window.procMails(p) : [];
+                            if (!mailText && !mails.length) return '';
+                            const anzahl = mails.length || 1;
+                            const anhGesamt = mails.reduce((s, m) => s + ((m.anhaenge || []).length), 0);
+                            const popInhalt = mails.length
+                                ? mails.map(m => `<div style="padding:4px 0; border-bottom:1px solid rgba(255,255,255,0.06); white-space:normal;"><strong>${escStep(m.subject || '(kein Betreff)')}</strong><br><span style="color:rgba(255,255,255,0.5); font-size:0.78rem;">${escStep(m.from || m.fromAddress || '')}${(m.anhaenge || []).length ? ' · 📎 ' + m.anhaenge.length : ''}</span></div>`).join('')
+                                : escStep(mailText);
                             return `
                         <div style="position:relative; display:inline-flex;" onmouseenter="window.procPopShow(this, '.proc-remark-pop')" onmouseleave="window.procPopHide(this, '.proc-remark-pop')">
-                            <button type="button" onclick="event.stopPropagation(); window.openProcessMailModal('${p.id}')" class="btn-icon-soft" title="E-Mail ansehen / bearbeiten" style="position: relative; background: rgba(167,139,250,0.3); color: #a78bfa; border: 1px solid rgba(167,139,250,0.9); box-shadow: 0 0 14px rgba(167,139,250,0.75); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(167,139,250,0.4)'" onmouseout="this.style.background='rgba(167,139,250,0.3)'">
+                            <button type="button" onclick="event.stopPropagation(); window.openProcessMailModal('${p.id}')" class="btn-icon-soft" title="${anzahl} E-Mail(s)${anhGesamt ? ', ' + anhGesamt + ' Anhang/Anhänge' : ''} — ansehen" style="position: relative; background: rgba(167,139,250,0.3); color: #a78bfa; border: 1px solid rgba(167,139,250,0.9); box-shadow: 0 0 14px rgba(167,139,250,0.75); width: 34px; height: 34px; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s;" onmouseover="this.style.background='rgba(167,139,250,0.4)'" onmouseout="this.style.background='rgba(167,139,250,0.3)'">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>
-                                <span style="position: absolute; top: -6px; right: -6px; background: #a78bfa; color: #fff; font-size: 0.62rem; font-weight: 800; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #1e293b; box-shadow: 0 2px 8px rgba(167,139,250,0.7);">1</span>
+                                <span style="position: absolute; top: -6px; right: -6px; background: #a78bfa; color: #fff; font-size: 0.62rem; font-weight: 800; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #1e293b; box-shadow: 0 2px 8px rgba(167,139,250,0.7);">${anzahl}</span>
                             </button>
                             <div class="proc-remark-pop" style="display:none; position:absolute; bottom:calc(100% + 8px); right:0; z-index:60; width:420px; max-width:85vw; max-height:320px; overflow-y:auto; background:rgba(15,23,42,0.98); border:1px solid rgba(167,139,250,0.3); border-radius:12px; padding:12px 14px; box-shadow:0 12px 40px rgba(0,0,0,0.6); color:#fff; font-size:0.85rem; line-height:1.5; white-space:pre-wrap; word-break:break-word; text-align:left;">
-                                ${escStep(mailText)}
+                                ${popInhalt}
                             </div>
                         </div>`; })()}
                         ${(() => {

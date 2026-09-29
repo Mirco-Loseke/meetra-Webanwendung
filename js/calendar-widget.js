@@ -139,7 +139,7 @@
     // ---------------------------------------------------------------
     // Benutzer
     // ---------------------------------------------------------------
-    function currentUser() { return window.activeUser || window.currentUser || null; }
+    function currentUser() { return window.activeUser || null; }
 
     function currentUserId() {
         const u = currentUser();

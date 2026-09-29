@@ -87,7 +87,7 @@
     // bereich = Schlüssel aus DELETE_AREAS (z. B. 'historie'), leer = nur der
     // Hauptschalter. Gleiche Regel wie canDelete(), nur ohne Toast.
     window.canDeleteArea = function (bereich) {
-        const perms = readPerms(window.activeUser || window.currentUser || null);
+        const perms = readPerms(window.activeUser || null);
         if (perms && perms.can_delete === false) return false;
         if (bereich && perms && perms['del_' + bereich] === false) return false;
         return true;
@@ -98,7 +98,7 @@
     // diese (neue) Fassung der Datei überhaupt geladen ist. Ohne die Zeile
     // „Stand 2026-09-22" läuft noch eine alte Fassung aus dem Cache.
     window.rechteDiagnose = function () {
-        const u = window.activeUser || window.currentUser || null;
+        const u = window.activeUser || null;
         const perms = readPerms(u) || {};
         const gesperrt = window.DELETE_AREAS.filter(a => perms['del_' + a.key] === false).map(a => a.key);
         const erlaubt = window.DELETE_AREAS.filter(a => perms['del_' + a.key] !== false).map(a => a.key);
@@ -130,7 +130,7 @@
     // Hinweis: Das gilt nur im Browser. Eine serverseitige Absicherung
     // (RLS in Supabase) gibt es dafür bewusst nicht.
     window.canDelete = function (what) {
-        const user = window.activeUser || window.currentUser || null;
+        const user = window.activeUser || null;
         const perms = readPerms(user);
 
         const blockedByPerms = !!(perms && perms.can_delete === false);

@@ -138,3 +138,10 @@ window.machineLabel = function (m) {
     const serial = m.serial_number || m.serial;
     return [m.manufacturer, m.name, serial ? `#${serial}` : null, m.year ? `(${m.year})` : null].filter(Boolean).join(' ');
 };
+
+// Anzeigename per ID (bis 2026-09-29 in js/accounting.js).
+window.getMachineName = function (id) {
+    if (!id || !window.machineList) return '-';
+    const machine = window.machineById(id);
+    return machine ? window.machineLabel(machine) : '-';
+};

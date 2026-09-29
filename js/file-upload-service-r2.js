@@ -34,7 +34,11 @@ window.FileUploadService = {
                     headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
                     body: JSON.stringify(payload)
                 });
-            } catch (e) { throw new Error('Dateidienst nicht erreichbar (r2-sign). Ist die Edge Function ausgerollt? ' + e.message); }
+            } catch (e) {
+                const f = new Error('Upload-Freigabe (r2-sign) nicht erreichbar: ' + e.message);
+                f.schritt = 'Freigabe holen'; f.netz = true; f.roh = e;
+                throw f;
+            }
         };
         let token = await tokenHolen(false);
         if (!token) throw new Error('Deine Anmeldung ist abgelaufen — bitte neu anmelden.');
@@ -51,6 +55,83 @@ window.FileUploadService = {
             throw new Error(res.status === 404 ? 'Edge Function r2-sign ist nicht ausgerollt (supabase/SETUP.txt).' : 'Dateidienst: ' + msg);
         }
         return daten || {};
+    },
+
+    // Fehlerbericht: WELCHER Schritt, WARUM, unter welchen Bedingungen —
+    // damit eine Meldung vom Handy reicht, um die Ursache einzugrenzen.
+    // Der letzte Bericht liegt zusätzlich in localStorage['meetra_upload_fehler'].
+    _fehlerBericht({ schritt, fehler, datei, versuch, versuche, status }) {
+        const roh = (fehler && fehler.roh) || fehler || {};
+        const rohText = [roh.name, roh.message].filter(Boolean).join(': ') || String(fehler || '');
+        const netz = !!(fehler && fehler.netz) || /failed to fetch|network|load failed|abort/i.test(rohText);
+        const online = typeof navigator.onLine === 'boolean' ? navigator.onLine : null;
+        const c = navigator.connection || {};
+
+        let ursache;
+        if (status) ursache = `Server antwortet mit HTTP ${status}` + (status === 403 ? ' (Freigabe ungültig/abgelaufen oder CORS)' : status === 413 ? ' (Datei zu groß)' : status >= 500 ? ' (Störung beim Speicher)' : '');
+        else if (fehler && fehler.zeit) ursache = fehler.message;
+        else if (online === false) ursache = 'Handy ist offline (keine Internetverbindung)';
+        else if (netz) ursache = 'Verbindung während der Übertragung abgebrochen oder vom Browser blockiert';
+        else ursache = (fehler && fehler.message) || rohText;
+
+        const mb = datei && datei.size != null ? (datei.size / 1048576).toFixed(2).replace('.', ',') + ' MB' : '?';
+        const ua = navigator.userAgent || '';
+        const browser = (ua.match(/(SamsungBrowser|Edg|Firefox|OPR|Chrome|Version)\/[\d.]+/) || [''])[0].replace('Version', 'Safari');
+        const system = (ua.match(/Android [\d.]+|iPhone OS [\d_]+|Windows NT [\d.]+|Mac OS X [\d_]+/) || ['?'])[0];
+        const netzInfo = [
+            online === false ? 'offline' : 'online',
+            c.effectiveType ? 'Netz ' + c.effectiveType : '',
+            c.downlink ? c.downlink + ' Mbit/s' : '',
+            c.rtt ? 'Ping ' + c.rtt + ' ms' : '',
+            c.saveData ? 'Datensparmodus AN' : ''
+        ].filter(Boolean).join(', ');
+
+        const zeilen = [
+            `Hochladen fehlgeschlagen beim Schritt „${schritt}"` + (versuche ? ` (Versuch ${versuch}/${versuche})` : ''),
+            `Ursache: ${ursache}`,
+            `Datei: ${(datei && datei.name) || '?'} · ${mb} · ${(datei && datei.type) || 'ohne Typ'}`,
+            `Verbindung: ${netzInfo}`,
+            `Gerät: ${system} · ${browser || '?'} · Tab ${document.hidden ? 'im Hintergrund' : 'sichtbar'}`,
+            `Technisch: ${rohText}`,
+            `Zeit: ${new Date().toLocaleString('de-DE')}`
+        ];
+        const text = zeilen.join('\n');
+        try { localStorage.setItem('meetra_upload_fehler', text); } catch (e) { /* egal */ }
+        console.error(text, fehler);
+        this._fehlerZeigen(text);
+        const err = new Error(text);
+        err.bericht = text;
+        return err;
+    },
+
+    // Bericht sichtbar machen — unabhängig davon, wie der Aufrufer den Fehler
+    // anzeigt (manche kürzen auf einen Toast). Mehrere Fehler kurz
+    // hintereinander (paralleles Hochladen) landen im selben Fenster.
+    _fehlerZeigen(text) {
+        let box = document.getElementById('upload-fehler-bericht');
+        if (!box) {
+            box = document.createElement('div');
+            box.id = 'upload-fehler-bericht';
+            box.style.cssText = 'position:fixed;inset:0;z-index:100050;background:rgba(2,6,23,0.75);display:flex;align-items:center;justify-content:center;padding:16px;';
+            box.innerHTML = `
+                <div style="background:#0f172a;border:1px solid rgba(239,68,68,0.5);border-radius:14px;max-width:560px;width:100%;max-height:85vh;display:flex;flex-direction:column;color:#fff;box-shadow:0 24px 60px rgba(0,0,0,0.6);">
+                    <div style="padding:14px 16px;font-weight:800;border-bottom:1px solid rgba(255,255,255,0.1);">⚠️ Hochladen fehlgeschlagen</div>
+                    <pre class="ufb-text" style="margin:0;padding:14px 16px;overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:0.8rem;line-height:1.45;color:rgba(255,255,255,0.85);"></pre>
+                    <div style="display:flex;gap:8px;justify-content:flex-end;padding:12px 16px;border-top:1px solid rgba(255,255,255,0.1);">
+                        <button type="button" class="ufb-kopie" style="background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:8px 12px;font-weight:700;cursor:pointer;">Bericht kopieren</button>
+                        <button type="button" class="ufb-zu" style="background:#ef4444;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-weight:800;cursor:pointer;">Schließen</button>
+                    </div>
+                </div>`;
+            box.querySelector('.ufb-zu').onclick = () => box.remove();
+            box.querySelector('.ufb-kopie').onclick = async () => {
+                const t = box.querySelector('.ufb-text').textContent;
+                try { await navigator.clipboard.writeText(t); if (window.showToast) window.showToast('Bericht kopiert.'); }
+                catch (e) { if (window.showToast) window.showToast('Kopieren nicht möglich – bitte Bildschirmfoto machen.'); }
+            };
+            document.body.appendChild(box);
+        }
+        const pre = box.querySelector('.ufb-text');
+        pre.textContent = pre.textContent ? pre.textContent + '\n\n────────\n\n' + text : text;
     },
 
     // Alle Schlüssel unter einem Präfix (z. B. 'vorgaenge/<id>/').
@@ -249,9 +330,54 @@ window.FileUploadService = {
                 console.log(`Uploading ${fileToUpload.name} to Cloudflare R2...`);
                 const typ = fileToUpload.type || 'application/octet-stream';
                 // Ein einzelner PUT (kein Multipart) — der Bucket braucht dafür nur PUT in den CORS-Regeln.
-                const { uploadUrl, publicUrl } = await this.r2Sign({ action: 'upload', path, contentType: typ });
-                const res = await fetch(uploadUrl, { method: 'PUT', headers: { 'Content-Type': typ }, body: fileToUpload });
-                if (!res.ok) throw new Error('R2 hat den Upload abgelehnt (HTTP ' + res.status + ').');
+                // Mobilfunk bricht einzelne Anfragen gern kurz ab (Zellwechsel,
+                // Energiesparen) — der Browser meldet dann nur "network failure".
+                // Deshalb bis zu 4 Versuche, jeweils mit frisch signierter URL.
+                const VERSUCHE = 4;
+                let publicUrl = null;
+                let letzter = null;   // { schritt, fehler, status }
+                let v = 1;
+                for (; v <= VERSUCHE; v++) {
+                    let signiert;
+                    try {
+                        signiert = await this.r2Sign({ action: 'upload', path, contentType: typ });
+                    } catch (e) {
+                        letzter = { schritt: e.schritt || 'Freigabe holen', fehler: e };
+                        if (/abgelaufen|nicht ausgerollt|Nicht angemeldet/.test(e.message || '')) break;
+                        if (v < VERSUCHE) { await new Promise(r => setTimeout(r, 1000 * v * v)); }
+                        continue;
+                    }
+                    try {
+                        // Zeitgrenze je Versuch, die wirklich abbricht: 30 s + 20 s je MB.
+                        const abbruch = new AbortController();
+                        const grenze = 30000 + Math.ceil((fileToUpload.size || 0) / 1048576) * 20000;
+                        const uhr = setTimeout(() => abbruch.abort(), grenze);
+                        let res;
+                        try {
+                            res = await fetch(signiert.uploadUrl, { method: 'PUT', headers: { 'Content-Type': typ }, body: fileToUpload, signal: abbruch.signal });
+                        } catch (e) {
+                            if (e && e.name === 'AbortError') {
+                                const z = new Error(`Keine Antwort nach ${Math.round(grenze / 1000)} s – Übertragung abgebrochen (Verbindung zu langsam oder hängt)`);
+                                z.roh = e; z.netz = true; z.zeit = true;
+                                throw z;
+                            }
+                            throw e;
+                        } finally { clearTimeout(uhr); }
+                        if (res.ok) { publicUrl = signiert.publicUrl; break; }
+                        letzter = { schritt: 'Datei zum Speicher übertragen', fehler: new Error('HTTP ' + res.status), status: res.status };
+                        if (res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429) break;
+                    } catch (e) {
+                        letzter = { schritt: 'Datei zum Speicher übertragen', fehler: e };
+                    }
+                    if (v < VERSUCHE) {
+                        console.warn(`Upload ${fileToUpload.name}: Versuch ${v} fehlgeschlagen (${letzter.schritt}: ${letzter.fehler && letzter.fehler.message}), neuer Versuch …`);
+                        await new Promise(r => setTimeout(r, 1000 * v * v));
+                    }
+                }
+                if (!publicUrl) {
+                    throw this._fehlerBericht(Object.assign({ datei: fileToUpload, versuch: Math.min(v, VERSUCHE), versuche: VERSUCHE },
+                        letzter || { schritt: 'unbekannt', fehler: new Error('unbekannter Fehler') }));
+                }
 
                 return {
                     url: publicUrl,
@@ -328,6 +454,12 @@ window.FileUploadService = {
             return p;
         }
         for (let k = 0; k < Math.min(cpu, list.length); k++) rechnerFrei(this);
+
+        // Handy: 8 parallele Übertragungen überfordern Mobilfunk und Browser
+        // (Abbrüche mit "network failure"). Dort höchstens 3 gleichzeitig.
+        const mobil = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent || '')
+            || (navigator.connection && navigator.connection.type === 'cellular');
+        if (mobil) concurrency = Math.min(concurrency, 3);
 
         let naechsterZumSenden = 0;
         const sender = Array(Math.min(concurrency, list.length)).fill(null).map(async () => {

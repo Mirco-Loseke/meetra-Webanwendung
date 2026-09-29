@@ -49,29 +49,30 @@
     // wenn der Browser sie schlicht gesperrt hatte.
     function pushZustand() {
         if (typeof Notification === 'undefined') {
-            return { stufe: 'unmoeglich', titel: 'Dieser Browser kann keine Fenster anzeigen',
+            return { stufe: 'unmoeglich', titel: 'Dieser Browser kann keine Systemmeldungen anzeigen',
                      text: 'Es bleibt bei der Liste unter der Glocke.' };
         }
         if (Notification.permission === 'denied') {
-            return { stufe: 'gesperrt', titel: 'Der Browser blockiert Fenster',
+            return { stufe: 'gesperrt', titel: 'Der Browser blockiert Systemmeldungen',
                      text: 'Das lässt sich nur in den Browser-Einstellungen für diese Seite wieder freigeben (Schloss-Symbol in der Adressleiste → Benachrichtigungen → Zulassen).' };
         }
         if (Notification.permission !== 'granted') {
-            return { stufe: 'ungefragt', titel: 'Fenster sind noch nicht erlaubt',
+            return { stufe: 'ungefragt', titel: 'Systemmeldungen (Windows/Handy) sind noch nicht erlaubt',
                      text: 'Einmalige Erlaubnis nötig. Bis dahin erscheint alles nur unter der Glocke.' };
         }
         if (localStorage.getItem('meetra_push_enabled') === 'off') {
-            return { stufe: 'aus', titel: 'Fenster sind ausgeschaltet',
+            return { stufe: 'aus', titel: 'Systemmeldungen sind ausgeschaltet',
                      text: 'Der Browser würde sie erlauben — hier sind sie abgeschaltet.' };
         }
-        return { stufe: 'an', titel: 'Fenster sind eingeschaltet',
-                 text: 'Dringendes meldet sich auch, wenn die App nicht im Vordergrund ist.' };
+        return { stufe: 'an', titel: 'Systemmeldungen (Windows/Handy) sind eingeschaltet',
+                 text: 'Dringendes meldet sich als Benachrichtigung von Windows bzw. vom Handy – auch wenn die App im Hintergrund ist.' };
     }
 
     function html() {
         const P = prefs();
         const z = pushZustand();
         const pushMoeglich = z.stufe === 'an';
+        const stumm = !!(window.meldungsTakt && window.meldungsTakt.geraetStumm());
 
         return `
         <div class="notifset-card">
@@ -86,6 +87,20 @@
             </div>
 
             <div class="notifset-body">
+                <!-- 0) Dieses Gerät ganz stumm (je Browser, z. B. Handy unterwegs) -->
+                <section class="notifset-block">
+                    <div class="notifset-row notifset-row-stumm${stumm ? '' : ' is-off'}">
+                        <div class="notifset-label">
+                            <strong>Keine Benachrichtigungen für dieses Gerät</strong>
+                            <span>Gilt nur für dieses Gerät bzw. diesen Browser, z. B. das Handy unterwegs. Auf dem PC kommen sie weiter. Die Glocke zeigt alles trotzdem an.</span>
+                        </div>
+                        <label class="notifset-switch" title="Auf diesem Gerät keine Karten und keine Windows-/Handy-Meldungen">
+                            <input type="checkbox" ${stumm ? 'checked' : ''} onchange="window.notifSettingsStumm(this.checked)">
+                            <span></span>
+                        </label>
+                    </div>
+                </section>
+
                 <!-- 1) Systemmeldungen: Zustand + Schalter -->
                 <section class="notifset-block notifset-push notifset-push-${z.stufe}">
                     <div class="notifset-push-text">
@@ -95,7 +110,7 @@
                     ${z.stufe === 'unmoeglich' || z.stufe === 'gesperrt' ? '' : `
                         <button type="button" class="notifset-btn ${pushMoeglich ? 'is-off' : 'is-on'}"
                             onclick="window.notifSettingsTogglePush(event)">
-                            ${pushMoeglich ? 'Fenster ausschalten' : 'Fenster erlauben'}
+                            ${pushMoeglich ? 'Systemmeldungen ausschalten' : 'Systemmeldungen erlauben'}
                         </button>`}
                 </section>
 
@@ -105,8 +120,8 @@
                     <div class="notifset-table">
                         <div class="notifset-row notifset-row-head">
                             <span></span>
-                            <span title="Erscheint in der Liste unter der Glocke">Glocke</span>
-                            <span title="Zusätzlich eine Meldung des Betriebssystems">Fenster</span>
+                            <span title="Erscheint in der Liste, die sich beim Klick auf die Glocke oben öffnet, und zählt bei der Zahl an der Glocke mit">In der Glocke</span>
+                            <span title="Zusätzlich eine Benachrichtigung von Windows bzw. vom Handy – auch wenn die App im Hintergrund ist">Windows-/Handy-Meldung</span>
                             <span title="Nach wie vielen Stunden darf sich derselbe Eintrag erneut melden? 0 = nur einmal">Erneut</span>
                         </div>
                         ${SORTEN.map(s => {
@@ -119,11 +134,11 @@
                                     <strong>${esc(s.label)}</strong>
                                     <span>${esc(s.info)}</span>
                                 </div>
-                                <label class="notifset-switch" title="In der Glocke anzeigen" data-mobil="Glocke">
+                                <label class="notifset-switch" title="In der Glocke anzeigen" data-mobil="In der Glocke">
                                     <input type="checkbox" data-notif-pref="${s.key}" ${an ? 'checked' : ''}>
                                     <span></span>
                                 </label>
-                                <label class="notifset-switch" data-mobil="Fenster" title="${pushMoeglich ? 'Zusätzlich als Fenster melden' : 'Erst möglich, wenn Fenster oben erlaubt sind'}">
+                                <label class="notifset-switch" data-mobil="Windows-/Handy-Meldung" title="${pushMoeglich ? 'Zusätzlich als Windows-/Handy-Meldung' : 'Erst möglich, wenn Systemmeldungen oben erlaubt sind'}">
                                     <input type="checkbox" data-notif-pref="push_${s.key}"
                                         ${pushAn ? 'checked' : ''} ${an && pushMoeglich ? '' : 'disabled'}>
                                     <span></span>
@@ -138,12 +153,12 @@
                             </div>`;
                         }).join('')}
                     </div>
-                    <p class="notifset-note">Ist die Glocke für eine Sorte aus, wird sie gar nicht erst geladen — dann kann sie auch kein Fenster öffnen. <strong>Erneut</strong> steuert, wie hartnäckig etwas ist: <em>0</em> meldet jeden Eintrag genau einmal, <em>24</em> erinnert einmal am Tag, solange er offen bleibt.</p>
+                    <p class="notifset-note">Ist „In der Glocke“ für eine Sorte aus, wird sie gar nicht erst geladen — dann kommt dafür auch keine Windows-/Handy-Meldung. Die großen Karten oben rechts in der App (Wecker, „Jetzt erledigen / Später erinnern“) hängen nicht an diesen Schaltern. <strong>Erneut</strong> steuert, wie hartnäckig etwas ist: <em>0</em> meldet jeden Eintrag genau einmal, <em>24</em> erinnert einmal am Tag, solange er offen bleibt.</p>
                 </section>
 
                 <!-- 3) Ab welcher Dringlichkeit ein Fenster aufgeht -->
                 <section class="notifset-block">
-                    <h3>Wann darf ein Fenster aufgehen?</h3>
+                    <h3>Ab wann kommt eine Windows-/Handy-Meldung?</h3>
                     <label class="notifset-select">
                         <select data-notif-pref-sel="pushLevel" ${pushMoeglich ? '' : 'disabled'}>
                             <option value="overdue" ${P.pushLevel === 'overdue' ? 'selected' : ''}>Nur bei Überfälligem</option>
@@ -250,8 +265,16 @@
             } catch (e) { /* faellt unten auf den Hinweis zurueck */ }
         }
         if (window.showToast) {
-            window.showToast('Fenster sind aus — so würde die Meldung nur unter der Glocke stehen.');
+            window.showToast('Systemmeldungen sind aus — die Meldung stünde nur in der Glocke.');
         }
+    };
+
+    window.notifSettingsStumm = function (an) {
+        if (window.meldungsTakt) window.meldungsTakt.geraetStummSetzen(an);
+        if (window.showToast) {
+            window.showToast(an ? 'Auf diesem Gerät kommen keine Benachrichtigungen mehr.' : 'Benachrichtigungen auf diesem Gerät wieder an.');
+        }
+        zeichnen();
     };
 
     window.notifSettingsReset = function (event) {

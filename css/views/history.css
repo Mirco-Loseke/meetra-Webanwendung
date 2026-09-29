@@ -337,3 +337,19 @@
 .history-date-line.is-editable:hover {
     background: rgba(255, 255, 255, 0.08);
 }
+
+/* ==========================================================
+   Historie-Fenster einer Maschine auf dem PC größer (2026-09-29)
+   ==========================================================
+   Das Markup (index.html, #machine-history-modal) setzt per Inline-Style
+   max-width 600px — darin passten nur ein, zwei Einträge. Ab 900px
+   Bildschirmbreite nutzt das Fenster fast die ganze Fläche; die Liste
+   darin rollt wie bisher. Handy bleibt unverändert (responsive.css). */
+@media (min-width: 900px) {
+    #machine-history-modal > .modal-content {
+        max-width: min(1200px, 94vw) !important;
+        width: 94vw !important;
+        height: 92vh;
+        max-height: 92vh !important;
+    }
+}

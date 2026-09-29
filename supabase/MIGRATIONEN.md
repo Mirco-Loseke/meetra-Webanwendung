@@ -74,6 +74,7 @@ lassen als eine Migration auszulassen.
 |---|---|
 | `supabase_add_process_customer.sql` | Adressbezug und Erinnerung je Vorgang |
 | `supabase_add_process_steps.sql` | Schritte/Checkliste je Vorgang (`steps` JSONB) |
+| `supabase_add_process_mails.sql` | Angehängte Mails je Vorgang (`mails` JSONB) statt unter „Stand"; verschiebt vorhandene Mail-Stände dorthin. **MUSS laufen** (2026-09-29) |
 | `supabase_add_process_attachments.sql` | Dokumente an Vorgängen und einzelnen Schritten |
 | `supabase_add_process_service_link.sql` | Verknüpfung Vorgang ↔ Servicebericht |
 | `supabase_add_process_status_updates.sql` | Aktueller Stand je Vorgang |
@@ -123,7 +124,7 @@ Liegen unter `supabase/functions/`, werden über die Supabase CLI ausgerollt:
 |---|---|---|
 | `r2-sign` | Signierte Upload-URLs für Cloudflare R2 — keine Credentials mehr im Browser | `SETUP.txt` |
 | `sage-sync` | Sage-Abgleich (tools/sage-sync.ps1): nur Adressen/Angebote lesen/anlegen/ändern, Token statt Service-Key, ohne Verify JWT | `SETUP_SAGE_SYNC.txt` |
-| `groq-proxy` | KI-Anfragen; hängt den Groq-Schlüssel serverseitig an | `SETUP_GROQ.txt` |
+| `ki-proxy` | KI-Anfragen (Gemini/Groq); hängt den Schlüssel serverseitig an, Streaming | `SETUP_KI.txt` |
 
 ## Rechte in der Datenbank
 

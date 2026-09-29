@@ -950,11 +950,13 @@
             } else if (type === 'photo') {
                 html = `
                         <input type="text" id="manual-title" placeholder="Beschreibung der Fotos" class="glass-input" style="margin-bottom: 0.75rem;">
-                        <div style="background: rgba(255,255,255,0.05); border: 2px dashed rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; text-align: center;">
+                        <div id="manual-photos-drop" style="background: rgba(255,255,255,0.05); border: 2px dashed rgba(255,255,255,0.1); border-radius: 12px; padding: 1.5rem; text-align: center; transition: border-color 0.15s, background 0.15s;"
+                            ondragenter="window.historyPhotoDrag(event, true)" ondragover="window.historyPhotoDrag(event, true)"
+                            ondragleave="window.historyPhotoDrag(event, false)" ondrop="window.historyPhotoDrop(event)">
                             <input type="file" id="manual-photos" multiple accept="image/*" style="display: none;" onchange="updatePhotoCount(this)">
                             <label for="manual-photos" style="cursor: pointer;">
                                 <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">📸</div>
-                                <div id="photo-upload-label" style="font-size: 0.85rem; color: rgba(255,255,255,0.6);">Bilder zum Hochladen auswählen</div>
+                                <div id="photo-upload-label" style="font-size: 0.85rem; color: rgba(255,255,255,0.6);">Bilder hierher ziehen oder klicken zum Auswählen</div>
                             </label>
                         </div>
                     `;
@@ -1105,6 +1107,32 @@
             reader.readAsArrayBuffer(file);
         };
 
+        // Drag & Drop ins Foto-Feld: gezogene Bilder an die bereits gewählten
+        // anhängen (über DataTransfer ins <input>), dann wie bei der Auswahl weiter.
+        window.historyPhotoDrag = function (e, aktiv) {
+            e.preventDefault();
+            e.stopPropagation();
+            const zone = document.getElementById('manual-photos-drop');
+            if (!zone) return;
+            if (!aktiv && zone.contains(e.relatedTarget)) return;
+            zone.style.borderColor = aktiv ? 'rgba(52,211,153,0.8)' : 'rgba(255,255,255,0.1)';
+            zone.style.background = aktiv ? 'rgba(52,211,153,0.08)' : 'rgba(255,255,255,0.05)';
+        };
+
+        window.historyPhotoDrop = function (e) {
+            window.historyPhotoDrag(e, false);
+            const input = document.getElementById('manual-photos');
+            const neu = Array.from((e.dataTransfer && e.dataTransfer.files) || [])
+                .filter(f => (f.type || '').startsWith('image/') || /\.(jpe?g|png|gif|webp|heic|heif)$/i.test(f.name));
+            if (!input) return;
+            if (!neu.length) { window.showToast && window.showToast('Nur Bilder können hier abgelegt werden.'); return; }
+            const dt = new DataTransfer();
+            Array.from(input.files || []).forEach(f => dt.items.add(f));
+            neu.forEach(f => dt.items.add(f));
+            input.files = dt.files;
+            window.updatePhotoCount(input);
+        };
+
         window.updatePhotoCount = function (input) {
             const label = document.getElementById('photo-upload-label');
             let previewContainer = document.getElementById('new-photos-preview-list');
@@ -1141,7 +1169,7 @@
                     reader.readAsDataURL(file);
                 });
             } else {
-                label.textContent = 'Bilder zum Hochladen auswählen';
+                label.textContent = 'Bilder hierher ziehen oder klicken zum Auswählen';
                 label.style.color = 'rgba(255,255,255,0.6)';
             }
         };
