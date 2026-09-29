@@ -745,6 +745,7 @@
             ${name}
         </div>
         <button class="remove-btn" onclick="removeExistingServiceFile(${index})">&times;</button>`;
+                    item.querySelector('img').addEventListener('error', () => verwaistePruefen(file), { once: true });
                 } else {
                     // PDF/Doc
                     let typeLabel = 'DOK';
@@ -798,6 +799,24 @@
             serviceFiles.splice(index, 1);
             renderServiceFilePreviews();
         };
+
+        // Bild laedt nicht: nur wenn der Speicher 404 meldet (Datei wurde
+        // anderswo geloescht), fliegt der Verweis raus. Offline/Netzfehler
+        // aendern nichts — sonst verschwaenden Bilder ohne Grund.
+        async function verwaistePruefen(file) {
+            const url = typeof file === 'string' ? file : file && file.url;
+            if (!url || !/^https?:/i.test(url)) return;
+            let status = 0;
+            try { status = (await fetch(url, { method: 'HEAD', cache: 'no-store' })).status; } catch (e) { return; }
+            if (status !== 404) return;
+            const idx = existingServiceFiles.indexOf(file);
+            if (idx < 0) return;
+            existingServiceFiles.splice(idx, 1);
+            renderServiceFilePreviews();
+            if (typeof window.showToast === 'function') {
+                window.showToast('Ein gelöschtes Bild wurde aus dem Bericht entfernt – bitte speichern.');
+            }
+        }
 
         window.removeExistingServiceFile = function (index) {
             const file = existingServiceFiles[index];

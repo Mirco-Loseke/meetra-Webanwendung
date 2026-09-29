@@ -2854,18 +2854,56 @@
             </div>`).join('');
     }
 
-    window.mietKameraAusloesen = function () {
-        const video = document.getElementById('miet-cam-video');
-        if (!video || !video.videoWidth) return;
+    // Das Handy drosselt den Videostrom zeitweise (kurz nach dem Start,
+    // unter Last) auf winzige Aufloesungen — ein Standbild daraus war dann
+    // z. B. 176 px breit. Deshalb: wo moeglich ein echtes Foto per
+    // ImageCapture, sonst auf einen ausreichend grossen Videoframe warten.
+    const FOTO_MIN_KANTE = 1000;
+    let camAusloesenLaeuft = false;
 
+    function videoKante(video) {
+        return Math.max(video.videoWidth || 0, video.videoHeight || 0);
+    }
+
+    async function kameraFoto(video) {
+        const spur = camStrom && camStrom.getVideoTracks()[0];
+        if (spur && typeof window.ImageCapture === 'function') {
+            try {
+                const blob = await new window.ImageCapture(spur).takePhoto();
+                if (blob && blob.size) return await bildVerkleinern(blob);
+            } catch (e) { console.warn('takePhoto fehlgeschlagen, nehme Videobild:', e); }
+        }
+        for (let i = 0; i < 15 && videoKante(video) < FOTO_MIN_KANTE; i++) {
+            await new Promise(r => setTimeout(r, 100));
+        }
         // Gleiche Obergrenze wie beim Einsetzen aus einer Datei — sonst
         // liegen wieder Riesenbilder im Speicher (siehe FOTO_KANTE).
-        const faktor = Math.min(1, FOTO_KANTE / Math.max(video.videoWidth, video.videoHeight));
+        const faktor = Math.min(1, FOTO_KANTE / videoKante(video));
         const c = document.createElement('canvas');
         c.width = Math.round(video.videoWidth * faktor);
         c.height = Math.round(video.videoHeight * faktor);
         c.getContext('2d').drawImage(video, 0, 0, c.width, c.height);
-        daten.fotos[camWelche][camListe[camIdx]] = c.toDataURL('image/jpeg', FOTO_QUALITAET);
+        if (videoKante(video) < FOTO_MIN_KANTE) {
+            window.showToast(`Kamera liefert nur ${video.videoWidth}×${video.videoHeight} px – Bild ggf. neu aufnehmen.`);
+        }
+        return c.toDataURL('image/jpeg', FOTO_QUALITAET);
+    }
+
+    window.mietKameraAusloesen = async function () {
+        const video = document.getElementById('miet-cam-video');
+        if (!video || !video.videoWidth || camAusloesenLaeuft) return;
+
+        camAusloesenLaeuft = true;
+        const welche = camWelche, position = camListe[camIdx];
+        try {
+            daten.fotos[welche][position] = await kameraFoto(video);
+        } catch (e) {
+            console.error(e);
+            window.showToast('Foto konnte nicht aufgenommen werden.');
+            return;
+        } finally {
+            camAusloesenLaeuft = false;
+        }
 
         // kurzes Aufblitzen als Rueckmeldung
         const blitz = document.getElementById('miet-cam-flash');
