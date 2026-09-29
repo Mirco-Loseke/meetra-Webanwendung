@@ -665,6 +665,23 @@
             window.openServiceberichtModal = function (daten) {
                 const res = origOpenServicebericht.apply(this, arguments);
                 serviceberichtIsDirty = false;
+                // Neuer Bericht: ALLES vom vorher geöffneten Bericht leeren. Die
+                // Fehlerbeschreibung, Bemerkungen, Datumsfelder, Techniker und die
+                // Technikerunterschrift wurden bisher nie zurückgesetzt und standen
+                // im neuen Bericht einfach weiter drin.
+                if (!daten) {
+                    ['service-description', 'service-remarks', 'service-date-start', 'service-date-end',
+                     'service-tech-sig-date', 'service-customer-sig-date', 'service-tech-signature']
+                        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+                    const titel = document.getElementById('service-report-title');
+                    if (titel) titel.value = titel.defaultValue || 'Servicebericht';
+                    window._techSigIsAutofilled = false;
+                    window._serviceDateStartAutoVal = null;
+                    selectedTechs.length = 0;
+                    const techIds = document.getElementById('selected-technician-ids');
+                    if (techIds) techIds.value = '[]';
+                    renderTechDropdown();
+                }
                 // Neuer Bericht: die Unterschriften-Vorschau des vorher geöffneten
                 // Berichts stehen lassen wäre irreführend — das versteckte Feld ist
                 // leer, das Bild aber noch zu sehen. populateServiceberichtForm()

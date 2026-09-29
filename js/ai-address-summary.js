@@ -201,7 +201,7 @@ NUR wenn die Daten einen Abschnitt UMSATZ enthalten (sonst diesen Abschnitt ganz
 Chronologisch, kurz (max. 6 Punkte): Kauf, Vermietungen, Wartungen, Reparaturen, Reklamationen, Angebote. Nur was in den Daten steht.
 
 ## Auffälligkeiten
-Wiederkehrende Probleme, überfällige Wartungen, alte offene Angebote ohne Antwort, fehlende Ansprechpartner, Termine demnächst. Gibt es nichts, schreib „Nichts Auffälliges".
+Wiederkehrende Probleme (je Vorkommen mit Datum und, falls in den Daten angegeben, der Fotozahl in Klammern, z. B. „03.02.2026 (2 Fotos)"), überfällige Wartungen, alte offene Angebote ohne Antwort, fehlende Ansprechpartner, Termine demnächst. Gibt es nichts, schreib „Nichts Auffälliges".
 
 Regeln: Nichts erfinden — nur was in den Daten steht. Zahlen, Daten und Namen exakt übernehmen. Kurz und konkret, keine Floskeln, keine Einleitung und kein Schlusssatz. Wenn Daten fehlen, benenne das knapp.
 Fotos: Steht in den Daten bei einem Eintrag „(N Fotos)" bzw. „(1 Foto)", schreibe das bei JEDER Erwähnung dieses Serviceberichts, Historien-Eintrags, Vorgangs oder dieser Notiz genau so in Klammern dahinter, z. B. „12.03.2026 Reparatur Hydraulik (3 Fotos)". Ohne diese Angabe keine Klammer.`;

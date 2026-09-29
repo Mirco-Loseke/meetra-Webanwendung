@@ -149,7 +149,7 @@ Antworte auf Deutsch, in Markdown, mit genau diesen Abschnitten:
 Letzte Wartung, nächste Wartung (überfällig? ⚠️), Stundenverlauf, welche Prüfpläne zuletzt gemacht wurden. Fehlt etwas, sag es.
 
 ## Wiederkehrende Probleme
-Störungen, Reparaturen, Ersatzteile, die mehrfach vorkommen — mit Datum. Nichts erkennbar → „Keine wiederkehrenden Probleme erkennbar".
+Störungen, Reparaturen, Ersatzteile, die mehrfach vorkommen — je Vorkommen mit Datum und, falls in den Daten angegeben, der Fotozahl in Klammern, z. B. „03.02.2026 (2 Fotos), 14.05.2026 (5 Fotos)". Nichts erkennbar → „Keine wiederkehrenden Probleme erkennbar".
 
 ## Was ansteht
 Offene Vorgänge, geplante Termine, laufende Miete, offene Schritte — je eine Zeile, konkret.
