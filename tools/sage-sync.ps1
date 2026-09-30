@@ -483,14 +483,24 @@ if ($Nur -eq 'alles' -or $Nur -eq 'rechnungen') {
     }
 
     $arten = "('Rechnung','Direktrechnung','Stornorechnung','Gutschrift')"
+    # Zahlungskondition je Beleg: KHKVKBelegeZKD hat teils mehrere Zeilen, die mit
+    # IstStandard = -1 gilt. Nettobedingung "1;10" = 10 Tage netto. Die Spalte
+    # Faelligkeit dort ist NICHT das Zahlungsziel (steht fast immer auf Belegdatum).
+    $sqlZkd = "SELECT TOP 1 z.Nettobedingung, k.Bezeichnung FROM dbo.KHKVKBelegeZKD z LEFT JOIN dbo.KHKZahlungskonditionen k ON k.Zahlungskond = z.Zahlungskond WHERE z.BelID = {0} ORDER BY z.IstStandard, z.ID"
     $sqlRe = @"
 SELECT 1 AS Quelle, b.BelID, b.Belegart, CAST(b.Belegnummer AS varchar(20)) AS Nr, b.Belegjahr, b.Belegdatum,
-       b.A0AdressNr, b.A0Matchcode, b.Nettobetrag, b.Steuerbetrag, b.Bruttobetrag
-FROM dbo.KHKVKBelege b WHERE b.Belegart IN $arten AND b.Belegdatum >= '$RechnungenAb'
+       b.A0AdressNr, b.A0Matchcode, b.Nettobetrag, b.Steuerbetrag, b.Bruttobetrag,
+       zk.Nettobedingung, zk.Bezeichnung AS ZkBezeichnung
+FROM dbo.KHKVKBelege b
+OUTER APPLY ($($sqlZkd -f 'b.BelID')) zk
+WHERE b.Belegart IN $arten AND b.Belegdatum >= '$RechnungenAb'
 UNION ALL
 SELECT 2, x.BelID, x.Belegart, CAST(x.Belegnummer AS varchar(20)), x.Belegjahr, x.Belegdatum,
-       x.A0AdressNr, x.A0Matchcode, x.Nettobetrag, x.Steuerbetrag, x.Bruttobetrag
-FROM dbo.KHKArchivVKBelege x WHERE x.Belegart IN $arten AND x.Belegdatum >= '$RechnungenAb'
+       x.A0AdressNr, x.A0Matchcode, x.Nettobetrag, x.Steuerbetrag, x.Bruttobetrag,
+       zk.Nettobedingung, zk.Bezeichnung
+FROM dbo.KHKArchivVKBelege x
+OUTER APPLY ($($sqlZkd -f 'x.BelID')) zk
+WHERE x.Belegart IN $arten AND x.Belegdatum >= '$RechnungenAb'
 ORDER BY 1
 "@
     # Aktuelle Belege (Quelle 1) vor Archiv - bei doppelter BelID gewinnt der aktuelle.
@@ -522,6 +532,12 @@ ORDER BY 1
         if ($adr -and $adrIndex.ContainsKey($adr)) { $kid = $adrIndex[$adr] } else { $ohneKunde++ }
         $datum = $null
         if ($r.Belegdatum -is [DateTime]) { $datum = $r.Belegdatum.ToString('yyyy-MM-dd') }
+        # "1;10" -> 10 Tage; ohne Kondition gilt "sofort" (0 Tage).
+        $tage = 0
+        $nb = Text $r.Nettobedingung
+        if ($nb -and $nb -match ';\s*(\d+)') { $tage = [int]$Matches[1] }
+        $faellig = $null
+        if ($r.Belegdatum -is [DateTime]) { $faellig = $r.Belegdatum.AddDays($tage).ToString('yyyy-MM-dd') }
 
         $zeile = [ordered]@{
             sage_bel_id     = [int]$r.BelID
@@ -535,6 +551,9 @@ ORDER BY 1
             netto           = Betrag $r.Nettobetrag $minus
             mwst            = Betrag $r.Steuerbetrag $minus
             brutto          = Betrag $r.Bruttobetrag $minus
+            zahlungsbedingung = Text $r.ZkBezeichnung
+            zahlungsziel_tage = $tage
+            faellig_am        = $faellig
         }
 
         $alt = $nachId[[string]$r.BelID]

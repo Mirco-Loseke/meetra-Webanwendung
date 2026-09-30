@@ -1,0 +1,119 @@
+/* Buchhaltung → Ausgangsrechnungen (js/ausgangsrechnungen.js) */
+
+/* Auswertungen der alten Erfassung gelten hier nicht */
+#accounting.acc-modus-ausgang #accounting-charts-row,
+#accounting.acc-modus-ausgang #accounting-quarters,
+#accounting.acc-modus-ausgang #accounting-yoy { display: none; }
+
+.ar-kpis {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-3);
+    margin-bottom: var(--space-5);
+}
+.ar-kpi {
+    display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1);
+    padding: var(--space-4);
+    border-radius: var(--radius-lg);
+    border: 1.5px solid rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-1);
+    cursor: pointer; text-align: left;
+    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+.ar-kpi:hover { transform: translateY(-2px); background: rgba(255, 255, 255, 0.06); }
+.ar-kpi-wert { font-size: var(--fs-xl); font-weight: 800; }
+.ar-kpi-label { font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-2); }
+.ar-kpi-gruen .ar-kpi-wert { color: var(--success); }
+.ar-kpi-rot .ar-kpi-wert { color: var(--danger); }
+.ar-kpi-gelb .ar-kpi-wert { color: var(--warning); }
+.ar-kpi-blau .ar-kpi-wert { color: var(--info); }
+.ar-kpi-gruen.aktiv { border-color: var(--success); }
+.ar-kpi-rot.aktiv { border-color: var(--danger); }
+.ar-kpi-gelb.aktiv { border-color: var(--warning); }
+.ar-kpi-blau.aktiv { border-color: var(--info); }
+
+.ar-kopf {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
+}
+.ar-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.ar-chip {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-full, 999px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: transparent;
+    color: var(--text-2);
+    font-size: var(--fs-sm); font-weight: 700;
+    cursor: pointer;
+}
+.ar-chip:hover { color: var(--text-1); background: rgba(255, 255, 255, 0.05); }
+.ar-chip.aktiv { color: var(--text-1); background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.25); }
+.ar-suche { max-width: 280px; }
+
+.ar-liste { display: flex; flex-direction: column; gap: var(--space-2); }
+.ar-zeile {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 170px 130px auto;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-left: 4px solid var(--text-3);
+}
+.ar-zeile:hover { background: rgba(255, 255, 255, 0.05); }
+.ar-zeile.ar-bezahlt { border-left-color: var(--success); opacity: 0.75; }
+.ar-zeile.ar-bald { border-left-color: var(--warning); }
+.ar-zeile.ar-ueberfaellig { border-left-color: var(--danger); }
+.ar-zeile.ar-offen { border-left-color: var(--info); }
+
+.ar-kunde { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-weight: 700; color: var(--text-1); }
+.ar-kunde a { color: inherit; }
+.ar-kunde a:hover { text-decoration: underline; }
+.ar-meta { font-size: var(--fs-sm); color: var(--text-2); margin-top: 2px; }
+.ar-faellig-datum { font-size: var(--fs-sm); color: var(--text-2); }
+.ar-faellig-text { font-size: var(--fs-sm); font-weight: 700; color: var(--text-1); }
+.ar-ueberfaellig .ar-faellig-text { color: var(--danger); }
+.ar-bald .ar-faellig-text { color: var(--warning); }
+.ar-bezahlt .ar-faellig-text { color: var(--success); }
+.ar-betrag { font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; color: var(--text-1); }
+.ar-aktionen { display: flex; gap: var(--space-2); justify-content: flex-end; }
+
+.ar-btn {
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-1);
+    font-size: var(--fs-sm); font-weight: 700;
+    white-space: nowrap; cursor: pointer;
+}
+.ar-btn:hover { background: rgba(255, 255, 255, 0.09); }
+.ar-btn-mahn.dringend { border-color: var(--danger); color: var(--danger); }
+.ar-btn-bezahlt:hover { border-color: var(--success); color: var(--success); }
+.ar-btn-bezahlt.an { border-color: var(--success); color: var(--success); background: transparent; }
+
+.ar-badge {
+    font-size: var(--fs-xs); font-weight: 700;
+    padding: 2px var(--space-2);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-2);
+}
+.ar-badge-stufe1 { color: var(--warning); }
+.ar-badge-stufe2, .ar-badge-stufe3 { color: var(--danger); }
+
+.ar-leer { padding: var(--space-6) var(--space-4); text-align: center; color: var(--text-2); }
+.ar-fuss { margin-top: var(--space-4); font-size: var(--fs-xs); color: var(--text-3); }
+
+@media (max-width: 900px) {
+    .ar-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ar-zeile { grid-template-columns: minmax(0, 1fr) auto; }
+    .ar-faellig { grid-column: 1; }
+    .ar-betrag { grid-column: 2; grid-row: 1; }
+    .ar-aktionen { grid-column: 1 / -1; justify-content: flex-start; flex-wrap: wrap; }
+    .ar-suche { max-width: none; width: 100%; }
+}

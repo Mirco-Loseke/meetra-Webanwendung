@@ -61,6 +61,7 @@
     const state = {
         cursor: startOfMonth(new Date()),   // angezeigter Monat
         selectedDay: null,                  // 'YYYY-MM-DD' oder null = ganzer Monat
+        selectedEnd: null,                  // Umschalt+Klick: zweites Ende eines Zeitraums
         types: new Set(TYPE_KEYS),
         // Vorgabe: nur die eigenen Einträge. Wer das umschaltet, dem wird die
         // Wahl gemerkt (siehe saveFilters) — die Vorgabe greift nur, solange
@@ -536,9 +537,20 @@
         return entries.filter(e => e.day.startsWith(prefix) && passesFilters(e));
     }
 
+    // Gewählter Tag oder — per Umschalt+Klick — Zeitraum [von, bis].
+    function auswahlGrenzen() {
+        if (!state.selectedDay) return null;
+        const b = state.selectedEnd || state.selectedDay;
+        return state.selectedDay <= b ? [state.selectedDay, b] : [b, state.selectedDay];
+    }
+    function inAuswahl(key) {
+        const g = auswahlGrenzen();
+        return !!g && key >= g[0] && key <= g[1];
+    }
+
     function listEntries() {
         if (state.selectedDay) {
-            return entries.filter(e => e.day === state.selectedDay && passesFilters(e));
+            return entries.filter(e => inAuswahl(e.day) && passesFilters(e));
         }
         if (state.range === 'upcoming') {
             const today = todayKey();
@@ -573,7 +585,7 @@
             const cls = [
                 'calw-cell',
                 key === today ? 'is-today' : '',
-                key === state.selectedDay ? 'is-selected' : '',
+                inAuswahl(key) ? 'is-selected' : '',
                 types.length ? 'has-events' : ''
             ].filter(Boolean).join(' ');
             const dots = types.slice(0, 5)
@@ -846,8 +858,9 @@
         if (formOpen && !formPreset) captureForm();
 
         const monthLabel = `${MONTHS[state.cursor.getMonth()]} ${state.cursor.getFullYear()}`;
-        const listTitle = state.selectedDay
-            ? fmtDate(state.selectedDay)
+        const grenzen = auswahlGrenzen();
+        const listTitle = grenzen
+            ? (grenzen[0] === grenzen[1] ? fmtDate(grenzen[0]) : `${fmtDate(grenzen[0])} – ${fmtDate(grenzen[1])}`)
             : (state.range === 'upcoming' ? 'Ab heute' : monthLabel);
 
         panel.innerHTML = `
@@ -859,6 +872,9 @@
             <div class="calw-head-actions">
                 <button type="button" class="calw-icon-btn" data-calw-new="1" title="Neuen Eintrag anlegen">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                </button>
+                <button type="button" class="calw-icon-btn" data-calw-print="1" title="ToDo-Liste drucken (gewählter Tag bzw. Zeitraum — mehrere Tage: Umschalt+Klick auf den zweiten Tag)">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                 </button>
                 <button type="button" class="calw-icon-btn" data-calw-full="1" title="${state.full ? 'Vollansicht beenden' : 'Vollansicht'}">
                     ${state.full
@@ -888,7 +904,7 @@
                 <button type="button" class="calw-today-btn" data-calw-today="1">Heute</button>
             </div>
 
-            <div class="calw-grid">${renderGrid()}</div>
+            <div class="calw-grid" title="Umschalt+Klick auf einen zweiten Tag wählt einen Zeitraum">${renderGrid()}</div>
             </div>
 
             <div class="calw-col-side">
@@ -1271,6 +1287,17 @@
 
         if (hit('data-calw-full')) { state.full = !state.full; saveFilters(); render(); return; }
 
+        if (hit('data-calw-print')) {
+            const g = auswahlGrenzen();
+            const titel = g
+                ? (g[0] === g[1] ? fmtDate(g[0]) : `${fmtDate(g[0])} – ${fmtDate(g[1])}`)
+                : (state.range === 'upcoming' ? 'ab heute' : `${MONTHS[state.cursor.getMonth()]} ${state.cursor.getFullYear()}`);
+            if (typeof window.kalenderTodoDrucken === 'function') {
+                window.kalenderTodoDrucken(listEntries().map(x => Object.assign({ typLabel: TYPES[x.type].short, datumText: fmtDate(x.day) }, x)), titel);
+            }
+            return;
+        }
+
         // Kollegen-Menü: auf-/zuklappen und Namen an-/abwählen. Bewusst OHNE
         // render() — das baut das ganze Panel neu auf und würde das Menü bei
         // jedem Klick wieder schliessen. Deshalb nur die Liste neu zeichnen.
@@ -1324,6 +1351,7 @@
             const delta = Number(el.getAttribute('data-calw-month'));
             state.cursor = new Date(state.cursor.getFullYear(), state.cursor.getMonth() + delta, 1);
             state.selectedDay = null;
+            state.selectedEnd = null;
             render();
             return;
         }
@@ -1331,18 +1359,24 @@
         if (hit('data-calw-today')) {
             state.cursor = startOfMonth(new Date());
             state.selectedDay = todayKey();
+            state.selectedEnd = null;
             render();
             return;
         }
 
         if ((el = hit('data-calw-day'))) {
             const key = el.getAttribute('data-calw-day');
-            state.selectedDay = (state.selectedDay === key) ? null : key;
+            if (e.shiftKey && state.selectedDay && key !== state.selectedDay) {
+                state.selectedEnd = key;
+            } else {
+                state.selectedDay = (state.selectedDay === key && !state.selectedEnd) ? null : key;
+                state.selectedEnd = null;
+            }
             render();
             return;
         }
 
-        if (hit('data-calw-clear-day')) { state.selectedDay = null; render(); return; }
+        if (hit('data-calw-clear-day')) { state.selectedDay = null; state.selectedEnd = null; render(); return; }
 
         if ((el = hit('data-calw-type'))) {
             const t = el.getAttribute('data-calw-type');

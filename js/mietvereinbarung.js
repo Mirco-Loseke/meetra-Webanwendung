@@ -1433,6 +1433,17 @@
             // hier hoch — es kostet unmittelbar Wartezeit beim Speichern.
             const skala = 1.15;
 
+            // Nur den Bogen klonen: html2canvas kopiert sonst die GANZE App
+            // (alle Ansichten, Fenster, Listen) in ein unsichtbares Fenster und
+            // berechnet dort jedes Element neu — das blockierte den Browser so
+            // lange, dass Windows „App reagiert nicht" meldete. Alles, was weder
+            // den Bogen enthält noch in ihm liegt, wird beim Klonen übersprungen;
+            // <head> mit den Stilen bleibt.
+            const optionen = {
+                scale: skala, backgroundColor: '#ffffff', useCORS: true, logging: false,
+                ignoreElements: el => !(el.contains(pages) || pages.contains(el) || document.head.contains(el))
+            };
+
             // EIN Aufruf für den GANZEN Bogen statt einer je Seite.
             // Grund: html2canvas klont für jeden Aufruf das komplette
             // Dokument samt aller Stilangaben — das kostet auf diesem
@@ -1453,9 +1464,7 @@
             const amStueck = gesamtHoehe < 30000;
 
             const gesamt = amStueck
-                ? await window.html2canvas(pages, {
-                    scale: skala, backgroundColor: '#ffffff', useCORS: true, logging: false
-                })
+                ? await window.html2canvas(pages, optionen)
                 : null;
             const rahmen = pages.getBoundingClientRect();
             messPunkt('  … Aufnahme');
@@ -1465,9 +1474,7 @@
                 await new Promise(r => setTimeout(r, 0));
                 let canvas = gesamt
                     ? seitenAusschnitt(gesamt, seiten[i], rahmen, skala)
-                    : await window.html2canvas(seiten[i], {
-                        scale: skala, backgroundColor: '#ffffff', useCORS: true, logging: false
-                    });
+                    : await window.html2canvas(seiten[i], optionen);
 
                 // Sicherheitsnetz für den Ausschnitt: käme durch einen
                 // Rechenfehler ein leeres Blatt heraus, wäre das im PDF eine
@@ -1477,9 +1484,7 @@
                 if (gesamt && istLeeresBild(canvas) && seiten[i].innerText.trim().length > 20) {
                     console.warn('Seitenausschnitt war leer — Blatt', i + 1, 'wird einzeln aufgenommen.');
                     canvas.width = canvas.height = 0;
-                    canvas = await window.html2canvas(seiten[i], {
-                        scale: skala, backgroundColor: '#ffffff', useCORS: true, logging: false
-                    });
+                    canvas = await window.html2canvas(seiten[i], optionen);
                 }
                 let seitenBild;
                 try {

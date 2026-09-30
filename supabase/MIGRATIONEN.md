@@ -105,6 +105,7 @@ lassen als eine Migration auszulassen.
 | `supabase_add_ai_usage.sql` | KI-Verbrauch je Nutzer und Tag |
 | `supabase_add_customer_sage_stand.sql` | Sage-Abgleich: letzter Sage-Stand je Adresse (Handänderungen bleiben) |
 | `supabase_add_rechnungen.sql` | Sage-Abgleich: Rechnungsbelege je Adresse (Reiter „Belege", Recht `belege`) |
+| `supabase_rechnungen_zahlung.sql` | Ausgangsrechnungen: Fälligkeit aus Sage + bezahlt/Mahnstufe in der App (Buchhaltung → Ausgangsrechnungen). **MUSS laufen**, danach `sage-sync` neu ausrollen (2026-09-30) |
 
 ## Mail (Outlook / Microsoft Graph)
 

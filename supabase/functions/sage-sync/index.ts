@@ -37,8 +37,9 @@ const SPALTEN: Record<string, { lesen: string[]; schreiben: string[] }> = {
         schreiben: ['belegnummer', 'belegdatum', 'kundenmatchcode', 'nettobetrag', 'bruttobetrag', 'customer_id'],
     },
     rechnungen: {
-        lesen: ['id', 'sage_bel_id', 'belegart', 'belegnummer', 'belegjahr', 'belegdatum', 'address_number', 'customer_id', 'kundenmatchcode', 'netto', 'mwst', 'brutto'],
-        schreiben: ['sage_bel_id', 'belegart', 'belegnummer', 'belegjahr', 'belegdatum', 'address_number', 'customer_id', 'kundenmatchcode', 'netto', 'mwst', 'brutto', 'aktualisiert_am'],
+        // bezahlt_am / mahnstufe / mahn_verlauf pflegt nur die App — bewusst nicht hier.
+        lesen: ['id', 'sage_bel_id', 'belegart', 'belegnummer', 'belegjahr', 'belegdatum', 'address_number', 'customer_id', 'kundenmatchcode', 'netto', 'mwst', 'brutto', 'zahlungsbedingung', 'zahlungsziel_tage', 'faellig_am'],
+        schreiben: ['sage_bel_id', 'belegart', 'belegnummer', 'belegjahr', 'belegdatum', 'address_number', 'customer_id', 'kundenmatchcode', 'netto', 'mwst', 'brutto', 'zahlungsbedingung', 'zahlungsziel_tage', 'faellig_am', 'aktualisiert_am'],
     },
 };
 const MAX_ZEILEN = 500;

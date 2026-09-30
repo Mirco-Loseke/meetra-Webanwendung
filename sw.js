@@ -1,4 +1,4 @@
-const CACHE_NAME = 'meetra-app-v685';
+﻿const CACHE_NAME = 'meetra-app-v692';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
@@ -9,6 +9,7 @@ const PRECACHE = [
     'css/components/elements.css',
     'css/components/calendar-widget.css',
     'js/calendar-widget.js',
+    'js/kalender-todo-druck.js',
     'js/notifications.js',
     'js/notification-settings.js',
     'js/meldungs-takt.js',
@@ -59,6 +60,7 @@ const PRECACHE = [
     'css/views/user-edit.css',
     'css/views/einstellungen.css',
     'css/views/accounting.css',
+    'css/views/ausgangsrechnungen.css',
     'css/views/workshop.css',
     'css/views/dashboard.css',
     'css/views/listen.css',
@@ -105,6 +107,7 @@ const PRECACHE = [
     'js/protocol_templates.js',
     'js/file-upload-service-r2.js',
     'js/accounting.js',
+    'js/ausgangsrechnungen.js',
     'js/documents-r2.js',
     'js/checklists.js',
     'js/protokoll-liste.js',
@@ -384,6 +387,18 @@ self.addEventListener('fetch', event => {
 // ist dann 'jetzt', 'spaeter', 'weg' … und js/meldungs-takt.js führt dieselbe
 // Aktion aus wie der Knopf auf der Karte in der App. Nur „Öffnen"/„Jetzt"
 // holt das Fenster nach vorn — „Später" soll nicht aus der Arbeit reißen.
+// Windows-Meldung per X weggeklickt ⇒ Karte in der App ebenfalls zu.
+// Feuert nur beim Wegklicken durch den Nutzer, nicht bei n.close() aus der App.
+self.addEventListener('notificationclose', (event) => {
+    const key = event.notification && event.notification.tag;
+    if (!key) return;
+    event.waitUntil(
+        self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((liste) => {
+            liste.forEach(c => c.postMessage({ type: 'meldung-zu', key }));
+        })
+    );
+});
+
 self.addEventListener('notificationclick', (event) => {
     const n = event.notification;
     const ziel = (n && n.data) || {};

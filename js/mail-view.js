@@ -968,9 +968,10 @@
     function empfaenger(id) {
         return $(id).value.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean).map(a => ({ emailAddress: { address: a } }));
     }
-    window.mailSchreiben = function (an, betreff) {
+    // entwurfHtml optional (z. B. vorformulierte Mahnung aus js/ausgangsrechnungen.js).
+    window.mailSchreiben = function (an, betreff, entwurfHtml) {
         if (typeof window.switchView === 'function') window.switchView('mail');
-        schreibenVorbelegen(an, betreff);
+        schreibenVorbelegen(an, betreff, null, entwurfHtml);
     };
 
     // Editor-HTML für den Versand: Kurznamen der Schriften in echte Schriftstapel, Grundschrift Calibri 12.

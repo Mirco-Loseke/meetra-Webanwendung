@@ -285,6 +285,13 @@ window.renderAccounting = function () {
     const container = document.getElementById('accounting-table-container');
     if (!container) return;
 
+    // Ausgangsrechnungen kommen aus Sage (js/ausgangsrechnungen.js) — eigene Ansicht,
+    // Diagramme/Quartale/Vorjahr der alten Erfassung werden dort ausgeblendet.
+    const sektion = document.getElementById('accounting');
+    const ausgang = currentAccountingType === 'outgoing' && typeof window.renderAusgangsrechnungen === 'function';
+    if (sektion) sektion.classList.toggle('acc-modus-ausgang', ausgang);
+    if (ausgang) { window.renderAusgangsrechnungen(); return; }
+
     // Calculate KPIs
     const todayStr = new Date().toISOString().split('T')[0];
     const openOutgoing = allAccountingEntries.filter(e => e.type === 'outgoing' && !e.is_paid);

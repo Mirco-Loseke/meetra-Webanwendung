@@ -130,9 +130,39 @@
 
     // Windows-Meldung, möglichst mit Knöpfen. Knöpfe gehen nur über den
     // Service Worker; Chrome unter Windows zeigt höchstens Notification.maxActions (meist 2).
+    // Nur EINE Meldung zur selben Zeit: Ist die App im Vordergrund, reicht die Karte.
+    // Die Windows-Meldung wird gemerkt und erst gezeigt, wenn man die App verlässt
+    // und die Karte dann noch steht. Zurück in der App ⇒ Windows-Meldungen zu.
+    const zurueckgehalten = new Map();
+    function appImVordergrund() {
+        return !document.hidden && (typeof document.hasFocus !== 'function' || document.hasFocus());
+    }
+    function karteSteht(key) {
+        const box = document.getElementById('alarm-stack');
+        return !!(key && box && box.querySelector(`[data-alarm-key="${CSS.escape(key)}"]`));
+    }
+    function zurueckgehalteneZeigen() {
+        if (appImVordergrund()) return;
+        zurueckgehalten.forEach((args, key) => {
+            zurueckgehalten.delete(key);
+            if (karteSteht(key)) system(args[0], args[1], args[2]);
+        });
+    }
+    window.addEventListener('blur', () => setTimeout(zurueckgehalteneZeigen, 300));
+    window.addEventListener('focus', () => systemAlleZu());
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) zurueckgehalteneZeigen();
+        else systemAlleZu();
+    });
+
     async function system(titel, optionen, knoepfe) {
         if (geraetStumm()) return;
         if (typeof window.notificationsPushEnabled !== 'function' || !window.notificationsPushEnabled()) return;
+        if (appImVordergrund()) {
+            const key = optionen && optionen.tag;
+            if (key) zurueckgehalten.set(key, [titel, optionen, knoepfe]);
+            return;
+        }
         const opt = Object.assign({
             icon: ICON,
             badge: ICON,
@@ -168,7 +198,7 @@
         new MutationObserver(liste => {
             liste.forEach(m => m.removedNodes.forEach(n => {
                 const key = n.getAttribute && n.getAttribute('data-alarm-key');
-                if (key) systemZu(key);
+                if (key) { zurueckgehalten.delete(key); systemZu(key); }
             }));
             leisteAktualisieren(box);
         }).observe(box, { childList: true });
@@ -211,6 +241,12 @@
         navigator.serviceWorker.addEventListener('message', (e) => {
             const d = e && e.data;
             if (d && d.type === 'meldung-aktion') ausfuehren(d.key, d.aktion, d);
+            if (d && d.type === 'meldung-zu' && d.key) {
+                const i = schlange.findIndex(m => m.key === d.key);
+                if (i >= 0) schlange.splice(i, 1);
+                zurueckgehalten.delete(d.key);
+                karteZu(d.key);
+            }
         });
     }
 
