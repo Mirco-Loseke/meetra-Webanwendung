@@ -216,7 +216,7 @@ Regeln: Nichts erfinden — nur was in den Daten steht. Daten, Uhrzeiten, Namen 
 
     // ---------- Fenster ----------
     let letzterText = '', letzteAnfrage = '', lauf = 0;
-    let zeitraumKey = 'heute', nurMeins = false;
+    let zeitraumKey = 'heute', nurMeins = true;   // Vorgabe: nur eigene Einträge
     const cache = new Map();   // key+meins → { text, zeit, schutz, anfrage }
 
     function fenster() {
@@ -246,6 +246,7 @@ Regeln: Nichts erfinden — nur was in den Daten steht. Daten, Uhrzeiten, Namen 
                     <button type="button" class="ab-btn ab-btn-ghost" id="ki-briefing-raus" title="Zeigt den Text genau so, wie er an die KI gesendet wurde — nach der Pseudonymisierung">Was geht raus?</button>
                     <button type="button" class="ab-btn ab-btn-ghost" id="ki-briefing-copy">Kopieren</button>
                     <button type="button" class="ab-btn ab-btn-ghost" id="ki-briefing-again">Neu erzeugen</button>
+                    <button type="button" class="ab-btn ab-btn-ghost" id="ki-briefing-todo" title="Die KI wählt das wirklich Wichtige aus und druckt es als ToDo-Liste mit Adressen und Notizfeld">🖨 Wichtigstes als ToDo</button>
                     <button type="button" class="ab-btn ab-btn-primary" data-kb-close>Schließen</button>
                 </div>
             </div>`;
@@ -254,6 +255,7 @@ Regeln: Nichts erfinden — nur was in den Daten steht. Daten, Uhrzeiten, Namen 
         document.getElementById('ki-briefing-seg').addEventListener('click', e => { const b = e.target.closest('button[data-z]'); if (!b) return; zeitraumKey = b.dataset.z; segMarkieren(); erzeugen(false); });
         document.getElementById('ki-briefing-meins').addEventListener('change', e => { nurMeins = e.target.checked; erzeugen(false); });
         document.getElementById('ki-briefing-again').addEventListener('click', () => erzeugen(true));
+        document.getElementById('ki-briefing-todo').addEventListener('click', () => kiTodoDrucken());
         document.getElementById('ki-briefing-raus').addEventListener('click', () => {
             const body = document.getElementById('ki-briefing-body'), btn = document.getElementById('ki-briefing-raus');
             if (body.dataset.zeigtAnfrage === '1') { body.innerHTML = md(letzterText); body.dataset.zeigtAnfrage = ''; btn.textContent = 'Was geht raus?'; return; }
@@ -334,6 +336,103 @@ Regeln: Nichts erfinden — nur was in den Daten steht. Daten, Uhrzeiten, Namen 
             body.innerHTML = '<p style="color:#fca5a5;">Briefing fehlgeschlagen: ' + esc(e.message) + '</p>';
         }
     }
+
+    // ---------- „Wichtigstes als ToDo drucken" ----------
+    // Die KI wählt aus denselben Daten die wirklich wichtigen Punkte, ordnet sie
+    // drei Stufen zu und begründet kurz. Gedruckt wird über js/kalender-todo-druck.js
+    // (Adresse, letzter Stand, nächster Schritt, Notizfeld). Einträge laufen als
+    // R1, R2 … zur KI — IDs, Adressen und Namen verlassen den Browser nicht
+    // (Texte zusätzlich pseudonymisiert).
+    const PRIO = ['', 'Heute unbedingt', 'Wichtig', 'Wenn Zeit bleibt'];
+
+    function kandidaten(D, nurMeins) {
+        const Z = D.Z, out = [];
+        const add = (o) => out.push(Object.assign({ ref: 'R' + (out.length + 1) }, o));
+        const teiln = {};
+        D.teilnehmer.forEach(t => { (teiln[t.event_id] = teiln[t.event_id] || []).push(t); });
+        D.ereignisse.forEach(e => {
+            const wann = e.event_date || e.start_date;
+            if (nurMeins && !meins((teiln[e.id] || []).map(t => t.user_id).concat(e.created_by_user ? [e.created_by_user] : []))) return;
+            const wartung = !!(e.machine_id || e.manual_machine || e.maintenance_types);
+            add({ wann, typ: wartung ? 'Wartung' : 'Termin', titel: e.title || 'Termin',
+                subject: maschine(e.machine_id) || e.manual_machine || '', customerId: e.customer_id || null,
+                zeile: kurz(e.title || '', 90) + (kunde(e.customer_id) ? ' · ' + kunde(e.customer_id) : '') + (e.description ? ' — ' + kurz(e.description, 100) : '') });
+        });
+        if (!nurMeins) D.faellig.forEach(m => add({ wann: m.next_maintenance, typ: 'Wartung', titel: 'Wartung fällig', subject: maschine(m.id), targetType: 'machine', targetId: m.id, customerId: m.customer_id || null,
+            zeile: 'Wartung fällig ' + (maschine(m.id) || '') + (m.company ? ' · ' + m.company : '') }));
+        D.vorgaenge.forEach(p => {
+            if (nurMeins && !meins(p.assigned_users)) return;
+            const offen = (Array.isArray(p.steps) ? p.steps : []).filter(s => !s.done);
+            const stepHit = offen.find(s => s.remind_at && (im(s.remind_at, Z) || vorher(s.remind_at, Z)));
+            const hit = p.remind_at && (im(p.remind_at, Z) || vorher(p.remind_at, Z));
+            if (!hit && !stepHit) return;
+            add({ wann: hit ? p.remind_at : stepHit.remind_at, typ: 'Vorgang', titel: p.title || 'Vorgang', targetType: 'process', targetId: p.id, customerId: p.customer_id || null,
+                zeile: kurz(p.title || '', 90) + (kunde(p.customer_id) ? ' · ' + kunde(p.customer_id) : '') + (offen.length ? ' · offen: ' + offen.slice(0, 3).map(s => kurz(s.text, 50)).join('; ') : '') });
+        });
+        if (!nurMeins) D.einsaetze.forEach(s => add({ wann: s.datum_von || s.date, typ: 'Service', titel: s.title || 'Servicebericht', subject: maschine(s.machine_id), targetType: 'service', targetId: s.id,
+            zeile: kurz(s.title || 'Servicebericht', 80) + (maschine(s.machine_id) ? ' · ' + maschine(s.machine_id) : '') }));
+        if (!nurMeins) D.angebote.forEach(a => add({ wann: a.erinnerung, typ: 'Angebot', titel: 'Angebot ' + (a.belegnummer || ''), subject: angebotFirma(a), targetType: 'angebot', targetId: a.id,
+            zeile: 'Angebot nachfassen · ' + angebotFirma(a) + (a.status ? ' [' + a.status + ']' : '') }));
+        return out.map(x => Object.assign(x, { text: `${x.ref} | ${x.typ} | ${datum(x.wann)}${uhr(x.wann)}${vorher(x.wann, Z) ? ' ÜBERFÄLLIG' : ''} | ${x.zeile}` }));
+    }
+
+    async function kiTodoDrucken() {
+        // Fenster sofort (Popup-Sperre), gefüllt wird nach der KI-Antwort.
+        const w = window.kalenderTodoFenster && window.kalenderTodoFenster('Die KI wählt das Wichtigste aus …');
+        if (!w) return;
+        const Z = zeitraum(zeitraumKey);
+        const btn = document.getElementById('ki-briefing-todo');
+        if (btn) { btn.disabled = true; btn.textContent = 'KI wählt aus …'; }
+        try {
+            const D = await laden(Z);
+            const liste = kandidaten(D, nurMeins);
+            if (!liste.length) { await window.kalenderTodoDrucken([], Z.label, w); return; }
+            const p = window.kiPseudonym ? window.kiPseudonym.erzeugen(window.kiPseudonym.standardKontext({
+                kontakte: D.vorgaenge.map(x => x.contact_name).filter(Boolean),
+                firmen: D.angebote.map(angebotFirma).concat(D.faellig.map(m => m.company)).filter(Boolean)
+            })) : null;
+            const roh = liste.map(x => x.text).join('\n');
+            const heute = new Date().toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+            const system = `Du bist Disponent in einer Firma für Recycling-Maschinen (Service, Vermietung, Verkauf). Heute ist ${heute}, Zeitraum „${Z.label}".
+Du bekommst Einträge (Ref | Art | Datum | Inhalt). Wähle, was in diesem Zeitraum WIRKLICH erledigt werden muss, und gib eine ToDo-Liste zurück.
+Stufen: 1 = heute unbedingt (feste Termine, Überfälliges mit Folgen, Kunde wartet), 2 = wichtig, 3 = wenn Zeit bleibt. Unwichtiges weglassen, höchstens 25 Einträge.
+Antworte NUR mit JSON: {"liste":[{"ref":"R3","stufe":1,"warum":"max. 12 Wörter, konkret"}]} — sortiert nach Wichtigkeit. Nur Refs aus den Daten, nichts erfinden.`;
+            const resp = await window.groqFetch({
+                messages: [{ role: 'system', content: system + (p ? '\n\n' + window.kiPseudonym.PROMPT_HINWEIS : '') },
+                    { role: 'user', content: p ? p.maskieren(roh) : roh }],
+                temperature: 0.1, max_tokens: 1500, stream: false
+            });
+            const erg = await window.kiAntwortLesen(resp, () => {});
+            const text = p ? p.demaskieren(erg.text || '') : (erg.text || '');
+            const json = JSON.parse((text.match(/\{[\s\S]*\}/) || ['{}'])[0]);
+            const byRef = new Map(liste.map(x => [x.ref, x]));
+            const gewaehlt = (Array.isArray(json.liste) ? json.liste : [])
+                .filter(v => v && byRef.has(String(v.ref).trim()))
+                .map((v, i) => {
+                    const x = byRef.get(String(v.ref).trim());
+                    const stufe = Math.min(3, Math.max(1, parseInt(v.stufe, 10) || 2));
+                    const d = tag(x.wann);
+                    return { stufe, i, e: {
+                        day: d ? iso(d) : '', datumText: datum(x.wann) + uhr(x.wann), time: '',
+                        typLabel: x.typ, title: x.titel, subject: x.subject || '', note: '',
+                        ki: String(v.warum || '').trim(), gruppe: PRIO[stufe],
+                        targetType: x.targetType || null, targetId: x.targetId || null, customerId: x.customerId || null
+                    } };
+                })
+                .sort((a, b) => a.stufe - b.stufe || a.i - b.i)
+                .map(v => v.e);
+            if (!gewaehlt.length) throw new Error('Die KI hat keine verwertbare Liste geliefert.');
+            await window.kalenderTodoDrucken(gewaehlt, '✨ ' + Z.label + ' — das Wichtigste', w);
+        } catch (e) {
+            try { w.document.body.innerHTML = '<p style="font-family:sans-serif;padding:20px;color:#b91c1c">ToDo-Liste fehlgeschlagen: ' + esc(e.message) + '</p>'; } catch (x) { /* Fenster zu */ }
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = '🖨 Wichtigstes als ToDo'; }
+        }
+    }
+    window.kiTodoDrucken = function (key) {
+        if (key && ZEITRAEUME[key]) zeitraumKey = key;
+        return kiTodoDrucken();
+    };
 
     // key: 'heute' | 'tage3' | 'woche'
     window.openKiBriefing = function (key) {

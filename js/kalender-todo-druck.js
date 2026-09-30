@@ -117,6 +117,7 @@
         const stand = letzterStand(p);
         const schritt = naechsterSchritt(p);
         const info = [];
+        if (e.ki) info.push(`<div><span class="lbl">✨ Warum:</span> ${esc(e.ki)}</div>`);
         if (p && x.vorgangFremd) info.push(`<div><span class="lbl">Offener Vorgang:</span> ${esc(p.title || '')}</div>`);
         if (stand) info.push(`<div><span class="lbl">Letzter Stand${stand.am ? ' (' + esc(stand.am) + (stand.von ? ', ' + esc(stand.von) : '') + ')' : ''}:</span> ${esc(stand.text)}</div>`);
         if (schritt) info.push(`<div><span class="lbl">Nächster Schritt:</span> ${esc(schritt)}</div>`);
@@ -130,6 +131,7 @@
                 <div class="kopf">
                     <span class="box">${e.done ? '✓' : ''}</span>
                     <span class="art">${esc(e.typLabel || '')}</span>
+                    ${e.gruppe && e.datumText ? `<span class="zeit">${esc(e.datumText)}</span>` : ''}
                     ${e.time ? `<span class="zeit">${esc(e.time)}</span>` : ''}
                     <span class="titel">${esc(e.title)}${kopfSub}</span>
                 </div>
@@ -145,8 +147,10 @@
         const jetzt = new Date();
         const tage = [];
         daten.forEach(x => {
-            let t = tage.find(g => g.day === x.e.day);
-            if (!t) tage.push(t = { day: x.e.day, text: x.e.datumText, liste: [] });
+            // Gruppiert nach Tag — oder nach e.gruppe (KI-Priorität), wenn gesetzt.
+            const g = x.e.gruppe || x.e.day;
+            let t = tage.find(y => y.day === g);
+            if (!t) tage.push(t = { day: g, text: x.e.gruppe || x.e.datumText, liste: [] });
             t.liste.push(x);
         });
         const rumpf = tage.length
@@ -190,10 +194,18 @@ ${rumpf}
 </body></html>`;
     }
 
-    window.kalenderTodoDrucken = async function (eintraege, titel) {
+    // Fenster muss im Klick selbst aufgehen (Popup-Sperre) — wer vorher noch
+    // länger rechnet (KI), öffnet es damit zuerst und reicht es weiter.
+    window.kalenderTodoFenster = function (text) {
         const w = window.open('', '_blank');
-        if (!w) { window.showToast && window.showToast('Das Druckfenster wurde vom Browser blockiert — Popups für diese Seite erlauben.'); return; }
-        w.document.write('<!doctype html><meta charset="utf-8"><title>ToDo</title><p style="font-family:sans-serif;padding:20px">ToDo-Liste wird vorbereitet …</p>');
+        if (!w) { window.showToast && window.showToast('Das Druckfenster wurde vom Browser blockiert — Popups für diese Seite erlauben.'); return null; }
+        w.document.write('<!doctype html><meta charset="utf-8"><title>ToDo</title><p style="font-family:sans-serif;padding:20px">' + esc(text || 'ToDo-Liste wird vorbereitet …') + '</p>');
+        return w;
+    };
+
+    window.kalenderTodoDrucken = async function (eintraege, titel, fenster) {
+        const w = fenster || window.kalenderTodoFenster();
+        if (!w) return;
         let daten;
         // Erledigtes gehört nicht auf eine ToDo-Liste.
         const offen = (eintraege || []).filter(e => !e.done);

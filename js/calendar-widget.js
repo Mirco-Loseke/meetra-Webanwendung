@@ -876,6 +876,7 @@
                 <button type="button" class="calw-icon-btn" data-calw-print="1" title="ToDo-Liste drucken (gewählter Tag bzw. Zeitraum — mehrere Tage: Umschalt+Klick auf den zweiten Tag)">
                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
                 </button>
+                <button type="button" class="calw-icon-btn" data-calw-kiprint="1" title="✨ KI wählt das Wichtigste für heute und druckt es als ToDo-Liste">✨</button>
                 <button type="button" class="calw-icon-btn" data-calw-full="1" title="${state.full ? 'Vollansicht beenden' : 'Vollansicht'}">
                     ${state.full
                 ? '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>'
@@ -1286,6 +1287,8 @@
         if (hit('data-calw-close')) { closePanel(); return; }
 
         if (hit('data-calw-full')) { state.full = !state.full; saveFilters(); render(); return; }
+
+        if (hit('data-calw-kiprint')) { if (window.kiTodoDrucken) window.kiTodoDrucken('heute'); return; }
 
         if (hit('data-calw-print')) {
             const g = auswahlGrenzen();
