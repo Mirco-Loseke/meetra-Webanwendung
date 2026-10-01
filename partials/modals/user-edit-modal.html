@@ -94,6 +94,20 @@
                                 <label class="ue-toggle"><span class="ue-toggle-text">Rechnungsliste<small>ausklappbar unter Vorgänge</small></span><input type="checkbox" id="perm-rechnungsliste"><span class="ue-switch"></span></label>
                                 <label class="ue-toggle"><span class="ue-toggle-text">Belege an der Adresse<small>Rechnungen &amp; Umsätze aus Sage</small></span><input type="checkbox" id="perm-belege"><span class="ue-switch"></span></label>
                             </div>
+
+                            <!-- Handy-Leiste: Belegung in permissions.schnellzugriff (js/users.js, js/ki-chat.js) -->
+                            <div class="ue-abschnitt-kopf ue-abstand">
+                                <div>
+                                    <h3>Handy-Leiste unten</h3>
+                                    <p>Bis zu 5 Schnellzugriffe in eigener Reihenfolge — „KI" steht immer ganz rechts. Ausgeblendete Ansichten erscheinen auch hier nicht.</p>
+                                </div>
+                                <div class="ue-alle"><button type="button" id="ue-sz-standard">Standard</button></div>
+                            </div>
+                            <input type="hidden" id="ue-schnellzugriff" value="">
+                            <div class="ue-sz-vorschau" id="ue-sz-vorschau" aria-label="Vorschau der Leiste"></div>
+                            <div class="ue-sz-liste" id="ue-sz-liste"></div>
+                            <div class="ue-sz-hinzu-titel">Hinzufügen</div>
+                            <div class="ue-sz-hinzu" id="ue-sz-hinzu"></div>
                         </section>
 
                         <!-- EINSTELLUNGEN — Unterseiten -->

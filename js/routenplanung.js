@@ -2484,6 +2484,10 @@
                     ${kollegen.map(k => `<option value="${esc(k)}"${k === ladeAnsicht.kollege ? ' selected' : ''}>${esc(k)} (${andere.filter(r => (r.author || 'Ohne Namen') === k).length})</option>`).join('')}
                 </select>` : ''}
             </div>
+            ${ladeAnsicht.tab === 'meine' && savedRoutesTableOk && localRoutes().length ? `<div class="rp2-load-hochladen">
+                <span>${localRoutes().length} ${localRoutes().length === 1 ? 'Route liegt' : 'Routen liegen'} nur auf diesem Gerät.</span>
+                <button type="button" class="rp2-btn rp2-btn-sm rp2-btn-primary" data-rp2-action="upload-local-routes">Hochladen — für alle sichtbar</button>
+            </div>` : ''}
             ${ladeAnsicht.tab === 'andere' && liste.length ? '<div class="rp2-hint rp2-load-hinweis">Routen von Kollegen kannst du laden und drucken. Speichern legt eine eigene Kopie an — das Original bleibt unverändert.</div>' : ''}
             <div class="rp2-saved-list">${liste.length ? liste.map(zeile).join('') : '<div class="rp2-hint">' + esc(leer) + '</div>'}</div>`;
 
@@ -2492,6 +2496,25 @@
         if (hatteFokus) { feld.focus(); try { feld.setSelectionRange(pos, pos); } catch (e) { /* egal */ } }
         const wahl = document.getElementById('rp2-load-kollege');
         if (wahl) wahl.addEventListener('change', () => { ladeAnsicht.kollege = wahl.value; renderLoadList(); });
+    }
+
+    // Routen aus der Geräte-Ablage (localStorage) in saved_routes übertragen —
+    // für Touren, die gespeichert wurden, als die Tabelle noch fehlte. Lokal
+    // gelöscht wird nur, was fehlerfrei angekommen ist.
+    async function uploadLocalRoutes() {
+        const lokal = localRoutes();
+        if (!lokal.length || !savedRoutesTableOk || !window.supabaseClient) return;
+        const ich = currentAuthor();
+        const rows = lokal.map(r => ({
+            name: r.name, stops: r.stops || [], total_km: r.total_km ?? null, total_min: r.total_min ?? null,
+            author: r.author || ich, created_at: r.created_at || new Date().toISOString()
+        }));
+        const { error } = await sb().from('saved_routes').insert(rows);
+        if (error) { window.showToast('Hochladen fehlgeschlagen: ' + error.message); return; }
+        setLocalRoutes([]);
+        if (currentRouteLocal) { currentRouteId = null; currentRouteLocal = false; }
+        window.showToast(rows.length + (rows.length === 1 ? ' Route' : ' Routen') + ' hochgeladen — jetzt für alle Kollegen sichtbar.');
+        loadRouteDialog();
     }
 
     function applySavedRoute(id) {
@@ -2760,6 +2783,11 @@
             case 'load-route-dialog': loadRouteDialog(); break;
             case 'load-route': applySavedRoute(id); break;
             case 'load-tab': ladeAnsicht.tab = id; ladeAnsicht.kollege = ''; renderLoadList(); break;
+            case 'upload-local-routes': {
+                el.disabled = true; el.textContent = 'Lädt hoch …';
+                try { await uploadLocalRoutes(); } finally { el.disabled = false; }
+                break;
+            }
             case 'delete-route': deleteSavedRoute(id); break;
             case 'close-dialog': closeDialog(); break;
             case 'submit-dialog': {

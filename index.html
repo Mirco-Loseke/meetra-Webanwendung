@@ -178,7 +178,7 @@
     <link rel="stylesheet" href="css/views/timeline.css?v=46">
     <link rel="stylesheet" href="css/views/procurement.css?v=1">
     <link rel="stylesheet" href="css/views/settings.css?v=7">
-    <link rel="stylesheet" href="css/views/user-edit.css?v=1">
+    <link rel="stylesheet" href="css/views/user-edit.css?v=2">
     <link rel="stylesheet" href="css/views/accounting.css?v=1">
     <link rel="stylesheet" href="css/views/ausgangsrechnungen.css?v=1">
     <link rel="stylesheet" href="css/views/workshop.css?v=1">
@@ -189,7 +189,7 @@
     <link rel="stylesheet" href="css/views/dashboard.css?v=1">
     <link rel="stylesheet" href="css/views/listen.css?v=3">
     <link rel="stylesheet" href="css/views/addressbook.css?v=32">
-    <link rel="stylesheet" href="css/views/routenplanung.css?v=7">
+    <link rel="stylesheet" href="css/views/routenplanung.css?v=8">
     <!-- Quill-Editor (Mail schreiben, Signatur) — vor mail.css, damit dessen Umfärbung gewinnt -->
     <link rel="stylesheet" href="lib/quill.snow.css?v=1">
     <link rel="stylesheet" href="css/views/mail.css?v=22">
@@ -433,6 +433,20 @@
                                     <label class="ue-toggle"><span class="ue-toggle-text">Rechnungsliste<small>ausklappbar unter Vorgänge</small></span><input type="checkbox" id="perm-rechnungsliste"><span class="ue-switch"></span></label>
                                     <label class="ue-toggle"><span class="ue-toggle-text">Belege an der Adresse<small>Rechnungen &amp; Umsätze aus Sage</small></span><input type="checkbox" id="perm-belege"><span class="ue-switch"></span></label>
                                 </div>
+
+                                <!-- Handy-Leiste: Belegung in permissions.schnellzugriff (js/users.js, js/ki-chat.js) -->
+                                <div class="ue-abschnitt-kopf ue-abstand">
+                                    <div>
+                                        <h3>Handy-Leiste unten</h3>
+                                        <p>Bis zu 5 Schnellzugriffe in eigener Reihenfolge — „KI" steht immer ganz rechts. Ausgeblendete Ansichten erscheinen auch hier nicht.</p>
+                                    </div>
+                                    <div class="ue-alle"><button type="button" id="ue-sz-standard">Standard</button></div>
+                                </div>
+                                <input type="hidden" id="ue-schnellzugriff" value="">
+                                <div class="ue-sz-vorschau" id="ue-sz-vorschau" aria-label="Vorschau der Leiste"></div>
+                                <div class="ue-sz-liste" id="ue-sz-liste"></div>
+                                <div class="ue-sz-hinzu-titel">Hinzufügen</div>
+                                <div class="ue-sz-hinzu" id="ue-sz-hinzu"></div>
                             </section>
 
                             <!-- EINSTELLUNGEN — Unterseiten -->
@@ -6671,7 +6685,7 @@
     <script src="js/ki-einstellungen.js?v=3"></script>
     <script src="js/ai-quick-capture.js?v=32"></script>
     <script src="js/ai-task-extend.js?v=5"></script>
-    <script src="js/ki-chat.js?v=7"></script>
+    <script src="js/ki-chat.js?v=8"></script>
     <script>
         window.addEventListener('load', () => {
             if (typeof window.initTaskTemplates === 'function') {
@@ -7438,7 +7452,7 @@
          jeweiligen Folgemodulen). Ein zweites Einbinden ließ beide Module doppelt
          laufen — mit doppelt registrierten Event-Handlern. -->
     <script src="js/routeplanner.js?v=2"></script>
-    <script src="js/routenplanung.js?v=24"></script>
+    <script src="js/routenplanung.js?v=25"></script>
     <script src="js/listen.js?v=58"></script>
 
     <script src="js/labels.js?v=2"></script>
@@ -8370,7 +8384,7 @@
     <!-- /@partial:modals/picker-modals.html -->
 
 <script src="js/auth.js?v=1"></script>
-<script src="js/users.js?v=6"></script>
+<script src="js/users.js?v=7"></script>
 <script src="js/machines-grouped.js?v=53"></script>
 <script src="js/timeline-view.js?v=77"></script>
 <script src="js/voice-dictation.js?v=2"></script>

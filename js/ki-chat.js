@@ -44,10 +44,56 @@
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const toast = t => (typeof window.showToast === 'function' ? window.showToast(t) : alert(t));
 
-    const NAV = [
-        { t: 'home', l: 'Start' }, { t: 'tasks', l: 'Aufgaben' }, { t: 'processes', l: 'Vorgänge' },
-        { t: 'addressbook', l: 'Adressen' }, { t: 'mehr', l: 'Menü' }, { t: 'ki', l: 'KI' }
-    ];
+    // Belegung der Handy-Leiste: je Benutzer in permissions.schnellzugriff (Array
+    // von Ansichts-IDs, max. 5), einstellbar in der Benutzerverwaltung → Ansichten.
+    // „KI" steht immer ganz rechts und zählt nicht mit.
+    const NAV_STANDARD = ['home', 'tasks', 'processes', 'addressbook', 'mehr'];
+    const NAV_MAX = 5;
+    const KURZ = {
+        home: 'Start', tasks: 'Aufgaben', processes: 'Vorgänge', addressbook: 'Adressen', machines: 'Maschinen',
+        service: 'Berichte', calendar: 'Wartung', timeline: 'Timeline', mail: 'Mail', routenplanung: 'Route',
+        listen: 'Listen', accounting: 'Buchhalt.', documents: 'Dokumente', protocols: 'Protokolle',
+        settings: 'Einstell.', mehr: 'Menü'
+    };
+    function sidebarLink(t) { return document.querySelector(`.sidebar-nav li a[data-target="${t}"]`); }
+    function navSymbol(t, groesse) {
+        if (SVG[t]) return ico(t, groesse);
+        const svg = sidebarLink(t)?.querySelector('svg');
+        if (!svg) return ico('mehr', groesse);
+        const k = svg.cloneNode(true);
+        k.setAttribute('width', groesse); k.setAttribute('height', groesse); k.removeAttribute('style'); k.removeAttribute('class');
+        return k.outerHTML;
+    }
+    function navLabel(t) {
+        if (KURZ[t]) return KURZ[t];
+        const a = sidebarLink(t);
+        return a ? a.textContent.replace(/\s+/g, ' ').trim() : t;
+    }
+    // Alle wählbaren Ziele (für die Benutzerverwaltung): Sidebar-Ansichten + Menü
+    window.kicNavKatalog = function () {
+        const seen = new Set();
+        const liste = [...document.querySelectorAll('.sidebar-nav li a[data-target]')].map(a => a.getAttribute('data-target'))
+            .filter(t => t && !seen.has(t) && seen.add(t));
+        liste.push('mehr');
+        return liste.map(t => ({ t, l: navLabel(t), svg: navSymbol(t, 20) }));
+    };
+    window.kicNavStandard = NAV_STANDARD.slice();
+    window.kicNavMax = NAV_MAX;
+    function navBelegung() {
+        const p = window.activeUser && window.activeUser.permissions;
+        const cfg = p && Array.isArray(p.schnellzugriff) ? p.schnellzugriff.filter(t => typeof t === 'string') : null;
+        return (cfg && cfg.length ? cfg : NAV_STANDARD).slice(0, NAV_MAX);
+    }
+    let navSignatur = '';
+    function navZeichnen() {
+        const nav = document.getElementById('kic-nav');
+        if (!nav) return;
+        const ziele = navBelegung().concat('ki');
+        const sig = ziele.join(',');
+        if (sig === navSignatur && nav.childElementCount) return;
+        navSignatur = sig;
+        nav.innerHTML = ziele.map(t => `<button type="button" data-nav="${t}" class="${t === 'ki' ? 'kic-nav-ki' : ''}">${t === 'ki' ? ico('ki', 22) : navSymbol(t, 22)}<span>${esc(t === 'ki' ? 'KI' : navLabel(t))}</span></button>`).join('');
+    }
     // Briefing (js/ai-briefing.js) hat eigene Datenabfrage und Fenster — der Chat ruft es nur auf.
     const BRIEFINGS = [
         { i: '☀️', l: 'Was steht heute an?', key: 'heute' },
@@ -92,7 +138,6 @@
         const nav = document.createElement('nav');
         nav.id = 'kic-nav';
         nav.setAttribute('aria-label', 'Schnellzugriff');
-        nav.innerHTML = NAV.map(n => `<button type="button" data-nav="${n.t}" class="${n.t === 'ki' ? 'kic-nav-ki' : ''}">${ico(n.t, 22)}<span>${n.l}</span></button>`).join('');
         nav.addEventListener('click', e => {
             const b = e.target.closest('[data-nav]');
             if (!b) return;
@@ -177,6 +222,7 @@
         const an = !!window.activeUser;
         document.body.classList.toggle('kic-an', an);
         if (!an) schliessen();
+        navZeichnen();
         document.querySelectorAll('#kic-nav [data-nav]').forEach(b => {
             const link = document.querySelector(`.sidebar-nav li a[data-target="${b.dataset.nav}"]`);
             b.hidden = !!(link && link.parentElement.style.display === 'none');

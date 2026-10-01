@@ -215,7 +215,7 @@ Neue Regeln deshalb immer in den passenden Baustein, nicht in den Kopf.
 
 Ein Chat-Assistent unten rechts (`js/ki-assistent.js`, Strg+K) existierte bis
 2026-08-05 und wurde **auf Wunsch komplett entfernt**.
-**Neu seit 2026-10-01 (auf Wunsch):** `js/ki-chat.js` + `css/components/ki-chat.css` — KI-Chat (Knopf unten rechts am PC/iPad, auf dem Handy rechts in der Schnellzugriff-Leiste `#kic-nav` unten). Diktieren, Fotos, Antwort als JSON-Aktionen (vorgang, vorgang_stand, aufgabe, unteraufgaben, foto→`manual_history_entries`), jede per Klick bestätigt. Text über `fetchMaskiert`, Referenzen als Kürzel adrN/mID/tN/vN. `window.openKiChat(text?)`.
+**Neu seit 2026-10-01 (auf Wunsch):** `js/ki-chat.js` + `css/components/ki-chat.css` — KI-Chat (Knopf unten rechts am PC/iPad, auf dem Handy rechts in der Schnellzugriff-Leiste `#kic-nav` unten). Diktieren, Fotos, Antwort als JSON-Aktionen (vorgang, vorgang_stand, aufgabe, unteraufgaben, foto→`manual_history_entries`), jede per Klick bestätigt. Text über `fetchMaskiert`, Referenzen als Kürzel adrN/mID/tN/vN. `window.openKiChat(text?)`. **Handy-Leiste je Benutzer:** `permissions.schnellzugriff` (Array von Ansichts-IDs, max. 5, `mehr` = Menü; fehlt = Standard Start/Aufgaben/Vorgänge/Adressen/Menü), KI immer rechts. Einstellbar in Benutzerverwaltung → Ansichten → „Handy-Leiste unten" (`szZeichnen` in `js/users.js`); muss in `saveUserEdit` ausdrücklich mitgespeichert werden, weil dort sonst nur die Häkchen eingesammelt werden.
 
 ## Die Aufgaben-Ansicht läuft auf dem Fernseher
 Die Aufgaben werden als **Anzeigetafel auf einem Fernseher in der Werkstatt**
@@ -279,7 +279,7 @@ einem Inline-`style` suchen.
 `manifest.json` + `assets/icons/app-icon-{192,512}.png`, `-maskable-*` (Pfeile auf 60 % für Androids Zuschnitt), `apple-touch-icon.png` (180, iPhone-Home-Bildschirm), `favicon-32.png` — alle aus `meetra_arrows_icon.png` erzeugt (weißer Grund). `display_override: minimal-ui` = Zurück- und Aktualisieren-Knopf im installierten App-Fenster (Chrome/Edge); iPhone ignoriert das und bleibt Vollbild. Neues Logo ⇒ alle neu erzeugen und in `PRECACHE` lassen.
 
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v719 (Stand 2026-10-01) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v721 (Stand 2026-10-01) — bei jeder Änderung hochzählen.
 
 **Meldungs-Takt (2026-09-28).** `js/meldungs-takt.js`: Wecker, Vorgangs-Quittung und
 Glocke reihen ihre Meldungen per `meldungsTakt.einreihen(key, zeigen, aktion)` ein —

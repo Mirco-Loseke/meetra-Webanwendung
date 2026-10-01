@@ -320,6 +320,10 @@ window.editUser = function (id) {
         }).join('');
     }
 
+    // Handy-Leiste: gespeicherte Belegung (fehlt = Standard, Feld bleibt leer)
+    const szFeld = document.getElementById('ue-schnellzugriff');
+    if (szFeld) { szFeld.value = Array.isArray(perms.schnellzugriff) ? JSON.stringify(perms.schnellzugriff) : ''; szZeichnen(); }
+
     // Restliche (fest hinterlegte) Häkchen — z. B. Einstellungen-Unterseiten — setzen.
     window.PERM_VIEW_KEYS.forEach(key => {
         const cb = document.getElementById('perm-' + key);
@@ -376,6 +380,69 @@ window.editUser = function (id) {
 function ueEsc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+// ---- Handy-Leiste (Schnellzugriff) --------------------------------------
+// Belegung als Array von Ansichts-IDs in permissions.schnellzugriff; Katalog,
+// Symbole und Standard kommen aus js/ki-chat.js (kicNavKatalog/kicNavStandard).
+// Zustand im versteckten Feld #ue-schnellzugriff (JSON) — so erfasst auch die
+// „Ungespeichert"-Prüfung (ueZustand) jede Änderung.
+function szWert() {
+    try { const v = JSON.parse(document.getElementById('ue-schnellzugriff').value || 'null'); return Array.isArray(v) ? v : null; } catch (e) { return null; }
+}
+function szSetzen(liste) {
+    const feld = document.getElementById('ue-schnellzugriff');
+    if (!feld) return;
+    feld.value = liste ? JSON.stringify(liste) : '';
+    szZeichnen();
+    if (typeof ueGeaendert === 'function') ueGeaendert();
+}
+function szErlaubt(t) {
+    if (t === 'mehr') return true;
+    const cb = document.getElementById('perm-' + t);
+    return !cb || cb.checked;   // Ansicht für diesen Benutzer abgeschaltet → nicht anbieten
+}
+function szZeichnen() {
+    const liste = document.getElementById('ue-sz-liste');
+    if (!liste || typeof window.kicNavKatalog !== 'function') return;
+    const katalog = window.kicNavKatalog();
+    const nach = new Map(katalog.map(k => [k.t, k]));
+    const max = window.kicNavMax || 5;
+    const gewaehlt = (szWert() || window.kicNavStandard || []).filter(t => nach.has(t));
+    const sichtbar = gewaehlt.filter(szErlaubt);
+
+    document.getElementById('ue-sz-vorschau').innerHTML = sichtbar.map(t => `<span>${nach.get(t).svg}<b>${ueEsc(nach.get(t).l)}</b></span>`).join('')
+        + `<span class="ki"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg><b>KI</b></span>`;
+
+    liste.innerHTML = gewaehlt.length ? gewaehlt.map((t, i) => `
+        <div class="ue-sz-zeile${szErlaubt(t) ? '' : ' aus'}">
+            <span class="ue-sz-nr">${i + 1}</span>${nach.get(t).svg}
+            <span class="ue-sz-name">${ueEsc(nach.get(t).l)}${szErlaubt(t) ? '' : ' <small>— Ansicht abgeschaltet, wird nicht angezeigt</small>'}</span>
+            <button type="button" data-sz="hoch" data-i="${i}" title="Nach links" ${i === 0 ? 'disabled' : ''}>↑</button>
+            <button type="button" data-sz="runter" data-i="${i}" title="Nach rechts" ${i === gewaehlt.length - 1 ? 'disabled' : ''}>↓</button>
+            <button type="button" data-sz="weg" data-i="${i}" title="Entfernen" class="weg">✕</button>
+        </div>`).join('') : '<div class="ue-sz-leer">Keine Schnellzugriffe — dann zeigt die Leiste nur „KI". Unten hinzufügen.</div>';
+
+    const frei = katalog.filter(k => !gewaehlt.includes(k.t) && szErlaubt(k.t));
+    document.getElementById('ue-sz-hinzu').innerHTML = gewaehlt.length >= max
+        ? `<div class="ue-sz-leer">Alle ${max} Plätze belegt — erst einen entfernen.</div>`
+        : frei.map(k => `<button type="button" data-sz="dazu" data-t="${ueEsc(k.t)}">${k.svg}<span>${ueEsc(k.l)}</span></button>`).join('');
+}
+document.addEventListener('click', (e) => {
+    const b = e.target.closest && e.target.closest('#user-edit-modal [data-sz], #ue-sz-standard');
+    if (!b) return;
+    if (b.id === 'ue-sz-standard') { szSetzen(null); return; }
+    const liste = (szWert() || (window.kicNavStandard || [])).slice();
+    const i = +b.dataset.i;
+    if (b.dataset.sz === 'dazu' && liste.length < (window.kicNavMax || 5)) liste.push(b.dataset.t);
+    else if (b.dataset.sz === 'weg') liste.splice(i, 1);
+    else if (b.dataset.sz === 'hoch' && i > 0) [liste[i - 1], liste[i]] = [liste[i], liste[i - 1]];
+    else if (b.dataset.sz === 'runter' && i < liste.length - 1) [liste[i + 1], liste[i]] = [liste[i], liste[i + 1]];
+    szSetzen(liste);
+});
+// Ansicht ab-/angeschaltet → Leisten-Auswahl neu zeichnen (abgeschaltete grau)
+document.addEventListener('change', (e) => {
+    if (e.target.closest && e.target.closest('#perm-sidebar-pages')) szZeichnen();
+});
+
 function ueToggle(id, text, zusatz, checked) {
     return `<label class="ue-toggle"><span class="ue-toggle-text">${ueEsc(text)}${zusatz ? `<small>${ueEsc(zusatz)}</small>` : ''}</span>`
         + `<input type="checkbox" id="${id}" ${checked}><span class="ue-switch"></span></label>`;
@@ -433,6 +500,8 @@ document.addEventListener('change', (e) => {
         // gleiche Regeln wie beim Öffnen: fehlend = an, außer „belege" (fehlend = aus)
         cb.checked = key === 'belege' ? p[key] === true : p[key] !== false;
     });
+    const szFeld = document.getElementById('ue-schnellzugriff');
+    if (szFeld) { szFeld.value = Array.isArray(p.schnellzugriff) ? JSON.stringify(p.schnellzugriff) : ''; szZeichnen(); }
     syncDeletePermUi(); updatePermCounts(); ueGeaendert();
     window.showToast && window.showToast('Rechte von ' + quelle.name + ' übernommen — noch nicht gespeichert.');
 });
@@ -528,6 +597,9 @@ window.saveUserEdit = async function () {
             permsToSave[cb.id.slice(5)] = cb.checked;
         });
         permsToSave.can_delete = document.getElementById('perm-delete').checked;
+        // Handy-Leiste: nur speichern, wenn vom Standard abweichend eingestellt
+        const sz = szWert();
+        if (sz) permsToSave.schnellzugriff = sz;
     } else {
         permsToSave = userToUpdate.permissions;
     }
