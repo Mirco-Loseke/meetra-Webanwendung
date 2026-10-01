@@ -346,7 +346,7 @@ window.buildProcessRemindersPanel = function(base) {
     }).join('');
     return `
         <div style="margin-bottom:16px; border:1px solid rgba(255,255,255,0.1); border-radius:14px; background:rgba(255,255,255,0.02); overflow:hidden;">
-            <div onclick="window.toggleProcessRemindersPanel()" style="display:flex; align-items:center; gap:10px; padding:12px 16px; cursor:pointer; user-select:none;">
+            <div class="proc-remind-kopf" onclick="window.toggleProcessRemindersPanel()" style="display:flex; align-items:center; gap:10px; padding:12px 16px; cursor:pointer; user-select:none;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
                 <span style="color:#fff; font-weight:800; font-size:0.9rem; text-transform:uppercase; letter-spacing:0.5px;">Erinnerungen</span>
                 <span style="background:rgba(251,191,36,0.15); color:#fbbf24; font-weight:800; font-size:0.78rem; padding:2px 9px; border-radius:999px;">${shownCount}</span>

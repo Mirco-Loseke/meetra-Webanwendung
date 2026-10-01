@@ -214,8 +214,8 @@ fremde Sorte auch aus der Antwort — das halbiert den Prompt (rund 2.900 statt
 Neue Regeln deshalb immer in den passenden Baustein, nicht in den Kopf.
 
 Ein Chat-Assistent unten rechts (`js/ki-assistent.js`, Strg+K) existierte bis
-2026-08-05 und wurde **auf Wunsch komplett entfernt**; er brachte gegenüber der
-Schnellerfassung nichts. Nicht wieder einführen.
+2026-08-05 und wurde **auf Wunsch komplett entfernt**.
+**Neu seit 2026-10-01 (auf Wunsch):** `js/ki-chat.js` + `css/components/ki-chat.css` — KI-Chat (Knopf unten rechts am PC/iPad, auf dem Handy rechts in der Schnellzugriff-Leiste `#kic-nav` unten). Diktieren, Fotos, Antwort als JSON-Aktionen (vorgang, vorgang_stand, aufgabe, unteraufgaben, foto→`manual_history_entries`), jede per Klick bestätigt. Text über `fetchMaskiert`, Referenzen als Kürzel adrN/mID/tN/vN. `window.openKiChat(text?)`.
 
 ## Die Aufgaben-Ansicht läuft auf dem Fernseher
 Die Aufgaben werden als **Anzeigetafel auf einem Fernseher in der Werkstatt**
@@ -275,8 +275,11 @@ formfüllenden Feldern zusätzlich `.menu-block`. Ausgewählter Eintrag: `.selec
 „wirkten nicht". Wenn eine CSS-Änderung nicht greift: zuerst im Markup nach
 einem Inline-`style` suchen.
 
+## App-Symbol / Installieren
+`manifest.json` + `assets/icons/app-icon-{192,512}.png`, `-maskable-*` (Pfeile auf 60 % für Androids Zuschnitt), `apple-touch-icon.png` (180, iPhone-Home-Bildschirm), `favicon-32.png` — alle aus `meetra_arrows_icon.png` erzeugt (weißer Grund). Neues Logo ⇒ alle neu erzeugen und in `PRECACHE` lassen.
+
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v670 (Stand 2026-09-28) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v717 (Stand 2026-10-01) — bei jeder Änderung hochzählen.
 
 **Meldungs-Takt (2026-09-28).** `js/meldungs-takt.js`: Wecker, Vorgangs-Quittung und
 Glocke reihen ihre Meldungen per `meldungsTakt.einreihen(key, zeigen, aktion)` ein —

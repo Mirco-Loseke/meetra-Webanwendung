@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = 'meetra-app-v694';
+﻿const CACHE_NAME = 'meetra-app-v717';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
@@ -50,6 +50,7 @@ const PRECACHE = [
     'css/views/tasks.css',
     'css/views/workshop-tasks.css',
     'css/views/rechnungsliste.css',
+    'css/components/ki-chat.css',
     'css/views/datenschutz.css',
     'css/views/tasks-print.css',
     'css/views/service-reports.css',
@@ -122,6 +123,13 @@ const PRECACHE = [
     'lib/notosans-font.js',
     'assets/images/meetra-logo-bw-source.png',
     'assets/icons/meetra_arrows_icon.png',
+    'assets/icons/favicon-32.png',
+    'assets/icons/app-icon-192.png',
+    'assets/icons/app-icon-512.png',
+    'assets/icons/app-icon-maskable-192.png',
+    'assets/icons/app-icon-maskable-512.png',
+    'assets/icons/apple-touch-icon.png',
+    'manifest.json',
     // --- Aus dem index.html ausgelagerte Module (siehe CLAUDE.md) ---
     'js/ui-feedback.js',
     'js/permissions.js',
@@ -159,6 +167,7 @@ const PRECACHE = [
     'js/groq-proxy.js',
     'js/ki-einstellungen.js',
     'js/ai-quick-capture.js',
+    'js/ki-chat.js',
     'js/ai-task-extend.js',
     'js/photo-lightbox.js',
     'js/documents-modal.js',

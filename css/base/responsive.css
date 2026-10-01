@@ -2605,3 +2605,173 @@ details.category-group-details[open] .group-chevron {
     #settings-etiketten .label-article-row { flex-wrap: wrap !important; }
     #settings-etiketten .label-article-row > * { min-width: 0; }
 }
+
+/* ==========================================================
+   GROSSE SCHRIFT / SEITENZOOM AUF DEM HANDY (2026-10-01)
+   Wer am iPhone den Seitenzoom (Safari „aA") oder die Anzeige
+   vergrößert, bekommt in CSS-Pixeln einen schmaleren Bildschirm:
+   375px bei 125 % → 300px, bei 150 % → 250px. Damit die App dann
+   nutzbar bleibt, schrumpft hier stufenweise die rem-Basis (alle
+   --fs-* Tokens hängen daran), Überschriften und die Kopfzeile.
+   Eingabefelder bleiben bei 16px (iOS-Zoom-Schwelle, s. oben).
+   ========================================================== */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+@media (max-width: 768px) {
+    .view h1 { font-size: var(--fs-2xl) !important; }
+}
+/* Name oben rechts: nur das Kürzel, sobald es eng wird */
+@media (max-width: 400px) {
+    #topbar .sidebar-user-profile .user-info { display: none !important; }
+}
+/* Normale iPhones haben 375–440px — verkleinert wird erst darunter,
+   also nur bei vergrößertem Zoom/Schrift. */
+@media (max-width: 370px) {
+    html { font-size: 15px; }
+    .view h1 { font-size: 1.5rem !important; gap: 8px !important; }
+    .view h1 > svg { width: 22px; height: 22px; flex-shrink: 0; }
+    #kic-nav button { font-size: 0.625rem; letter-spacing: -0.1px; }
+}
+@media (max-width: 330px) {
+    html { font-size: 14px; }
+    .view h1 { font-size: 1.3rem !important; }
+    #kic-nav button { font-size: 0.5625rem; gap: 2px; }
+    #kic-nav button svg { width: 20px; height: 20px; }
+    #kic-nav .kic-nav-ki svg { width: 18px; height: 18px; padding: 5px; }
+    .dash-order-pill { white-space: normal !important; max-width: 100%; }
+    .kic-chips { grid-template-columns: 1fr; }
+}
+@media (max-width: 280px) {
+    html { font-size: 13px; }
+    #kic-nav button span { display: none; }
+}
+
+/* Tippflächen auf dem Handy: mindestens ~36px (vorher 23–25px) */
+@media (max-width: 768px) {
+    .ab-zuordnung-zu { min-height: 34px; }
+    #processes button[aria-label="Suche leeren"], #processes button[title="Suche leeren"] { min-width: 36px; min-height: 36px; }
+    .tlv-range button, .tlv-topbar button { min-height: 34px; min-width: 34px; }
+}
+
+/* Vorgangs-Fenster auf dem Handy (2026-10-01):
+   - Adress-Banner: Name und Knopf „Adresse öffnen" nebeneinander ließen dem
+     Namen ~100px — er brach Wort für Wort über fünf Zeilen. Knopf jetzt darunter.
+   - .msg-Ablagefelder (Outlook-Datei hineinziehen) sind am Handy nicht nutzbar. */
+@media (max-width: 768px) {
+    #edit-process-address-banner > div:nth-child(2),
+    #process-add-address-banner > div:nth-child(2) { flex-wrap: wrap; font-size: var(--fs-base) !important; }
+    #edit-process-address-name,
+    #process-add-address-name { flex: 1 1 0; min-width: 0; }
+    #edit-process-address-banner button,
+    #process-add-address-banner button { flex: 1 1 100%; justify-content: center; min-height: 38px; }
+    .form-group:has(> #edit-process-msg-dropzone),
+    .form-group:has(> #process-add-msg-dropzone),
+    .form-group:has(> #manual-email-msg-dropzone),
+    .form-group:has(> #email-msg-dropzone),
+    #process-header-msg-dropzone,
+    #ai-capture-msg-dropzone { display: none !important; }
+}
+@media (max-width: 768px) {
+    .ki-briefing-btn { min-height: 34px; }
+    .service-quickinfo-btn { min-width: 34px !important; min-height: 34px !important; }
+    .task-quick-complete { min-width: 34px; min-height: 34px; }
+}
+
+/* ==========================================================
+   KÄSTEN & TEXT AUF DEM HANDY (2026-10-01, per Messung gefunden)
+   ========================================================== */
+@media (max-width: 768px) {
+    /* Maschinen: Kategorie-Überschrift war fest 1.8rem + 15px Abstand ohne
+       Umbruch — „Schlauchtrommelwagen" lief 60px aus dem Kasten. */
+    .machine-category-header h2 {
+        font-size: var(--fs-xl) !important;
+        gap: 8px !important;
+        flex-wrap: wrap;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+    /* Trennlinie zwischen Kategorien war 4rem breiter als der Inhalt */
+    .category-separator { width: 100%; margin: 3rem 0; }
+
+    /* Kennzahl-Kacheln: 1fr allein lässt große Beträge die Spalte sprengen
+       (Angebote: 195/170/81px). minmax(0,1fr) = wirklich gleich breit. */
+    .maint-kpi-tile { min-width: 0; overflow-wrap: anywhere; }
+
+    /* Vorgänge → Erinnerungen: „Für mich" wurde über den Rand geschoben */
+    .proc-remind-kopf { flex-wrap: wrap; row-gap: 8px !important; }
+
+    /* Adressbuch: „Route zusammenstellen" lief aus dem Knopf */
+    #addressbook .ab-toolbar button { white-space: normal; line-height: 1.2; }
+}
+@media (max-width: 600px) {
+    .maint-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 768px) {
+    /* Listen: vier Filter mit fester Breite (115–190px) standen mit Suche und
+       Knopf in EINER Zeile (nowrap) — jeder Filter wurde auf 53px gequetscht. */
+    .listen-filters {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px !important;
+        width: 100%;
+        flex-shrink: 1 !important;
+    }
+    .listen-filters > * { width: auto !important; min-width: 0; }
+    .listen-filters > input,
+    .listen-filters > button { grid-column: 1 / -1; width: 100% !important; justify-content: center; }
+    .listen-toolbar { flex-wrap: wrap; }
+
+    /* Serviceberichte: Löschen-Knopf ragte 9px aus der Karte */
+    /* Abgeschlossene Berichte haben 4 Knöpfe (Status 150px + 3 runde) — passte
+       mit 32px Kartenrand nicht. Erster Knopf darf schrumpfen, Rand kleiner. */
+    .service-card-actions { margin-left: 0 !important; margin-right: 0 !important; gap: 6px !important; padding-left: 0 !important; padding-right: 0 !important; }
+    .service-card-actions > :first-child { flex: 1 1 0 !important; min-width: 0 !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #service .card-grid > .card { padding-left: 16px !important; padding-right: 16px !important; }
+}
+@media (max-width: 768px) {
+    /* Listen → Angebote: 12 Monatsbalken mit Beträgen passten nicht in die
+       Breite (Beschriftung hielt jeden Balken auf ≥40px). */
+    .ang-monatsbalken { gap: 2px !important; min-width: 0; }
+    .ang-monatsbalken > * { min-width: 0; }
+    .ang-monatsbalken > * > * { font-size: 0.5625rem !important; max-width: 100%; overflow-wrap: anywhere; text-align: center; }
+}
+@media (max-width: 768px) {
+    /* Vorgangskarte: Symbol-Leiste (Anhänge, Mails, Schritte …) rechts im Fuß
+       lief bei mehreren Symbolen bis zu 57px aus der Karte — jetzt Umbruch. */
+    .proc-card-footer { flex-wrap: wrap; row-gap: 8px; }
+    .proc-card-footer > * { min-width: 0; max-width: 100%; }
+    .proc-card-footer > div[style*="display: flex"] { flex-wrap: wrap; }
+    /* Wartungs-Diagramm Startseite: Monatsnamen 3px zu breit für die Spalte */
+    .maint-chart-month { font-size: 0.5625rem; letter-spacing: -0.2px; overflow: hidden; }
+    .maint-chart-card { min-width: 0; }
+}
+@media (max-width: 400px) {
+    /* Inline-Raster „repeat(auto-fit, minmax(280px, 1fr))" u. ä.: auf dem Handy
+       ohnehin einspaltig — die feste Mindestbreite lief bei Zoom über den Rand. */
+    #main-content [style*="auto-fit, minmax("],
+    #main-content [style*="auto-fill, minmax("],
+    .modal-new [style*="auto-fit, minmax("],
+    .modal-backdrop [style*="auto-fit, minmax("] {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+    /* Zellen mit „span 2" erzeugten sonst eine schmale Zusatzspalte */
+    #main-content [style*="auto-fit, minmax("] > *,
+    .modal-new [style*="auto-fit, minmax("] > *,
+    .modal-backdrop [style*="auto-fit, minmax("] > * { grid-column: 1 / -1 !important; }
+}
+@media (max-width: 768px) {
+    /* Angebot im Vorgang: Status über die Breite, VK/EK/Realisierbar/Spanne zu zweit */
+    /* Doppelte Klasse + Kontext: muss die allgemeine auto-fit-Regel oben schlagen */
+    #main-content .ang-felder.ang-felder, .modal-new .ang-felder.ang-felder, .modal-backdrop .ang-felder.ang-felder { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    #main-content .ang-felder.ang-felder > *, .modal-new .ang-felder.ang-felder > *, .modal-backdrop .ang-felder.ang-felder > * { grid-column: auto !important; min-width: 0; }
+    #main-content .ang-felder.ang-felder > :first-child, .modal-new .ang-felder.ang-felder > :first-child, .modal-backdrop .ang-felder.ang-felder > :first-child { grid-column: 1 / -1 !important; }
+}
+@media (max-width: 360px) {
+    /* Listen → Angebote: sechsstellige Beträge (304.000,00) fehlten 3–7px */
+    #listen input.glass-form-input { padding-left: 8px !important; padding-right: 8px !important; }
+}
+@media (max-width: 768px) {
+    /* Aufgabe → Unteraufgaben: Titel teilte sich die Zeile mit dem Abzeichen
+       und wurde abgeschnitten — Titel volle Breite, Abzeichen darunter. */
+    #task-modal .subtask-content-row > input.glass-input-minimal { flex: 1 1 100% !important; }
+}

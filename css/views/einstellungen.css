@@ -430,3 +430,30 @@
 .ki-st.gruen { background: rgba(16, 185, 129, 0.15); color: #6ee7b7; }
 .ki-st.rot { background: rgba(239, 68, 68, 0.15); color: #fca5a5; cursor: help; }
 @media (max-width: 768px) { .ki-status-tabelle th:nth-child(4), .ki-status-tabelle td:nth-child(4), .ki-status-tabelle th:nth-child(5), .ki-status-tabelle td:nth-child(5) { display: none; } }
+
+/* ---------- Handy: Einstellungs-Unterseiten (2026-10-01, per Messung) ---------- */
+@media (max-width: 768px) {
+    /* Benutzer/Kategorien: width:100% + margin-left:6px (Farbstreifen) = 6px zu breit */
+    .user-item-content { width: calc(100% - 6px) !important; box-sizing: border-box; min-width: 0; }
+    .user-info-group { min-width: 0; flex: 1 1 auto; }
+    .user-info-group * { min-width: 0; overflow-wrap: anywhere; }
+
+    /* Textbausteine: drei Reiter nowrap — „Schnellvorlagen" ragte 7px hinaus */
+    .settings-tab { min-width: 0 !important; white-space: normal !important; line-height: 1.2; }
+
+    /* Kategorien: Gruppentitel schob den Pfeil aus dem Kasten */
+    summary.category-group-title { min-width: 0; }
+    .group-title-content { flex: 1 1 auto; min-width: 0; flex-wrap: wrap; }
+    .group-title-content > span { min-width: 0; overflow-wrap: anywhere; }
+
+    /* Etiketten → Artikel: Text bekam 17px, weil Haken, Menge, Einheit, „Mehrere"
+       und Knöpfe in derselben Zeile standen. Text jetzt eigene Zeile, Felder darunter. */
+    #settings-etiketten .label-article-row { flex-wrap: wrap !important; row-gap: 10px !important; }
+    #settings-etiketten .label-article-row > div:nth-child(2) { flex: 1 1 calc(100% - 40px) !important; }
+    #settings-etiketten .label-article-row > div:nth-child(n+3) { flex: 1 1 auto !important; }
+}
+@media (max-width: 768px) {
+    /* Kategorien: lange Namen liefen bei Zoom 4–9px aus der Zeile */
+    #categories .user-details { min-width: 0; max-width: 100%; }
+    #categories .user-name-link { min-width: 0; max-width: 100%; overflow-wrap: anywhere; white-space: normal !important; }
+}

@@ -119,7 +119,7 @@
         let resp;
         try {
             // Google meldet bei Überlast 503 („high demand") — meist nur kurz.
-            // Zwei weitere Versuche nach 2 s bzw. 4 s, bevor aufgegeben wird.
+            // Ein weiterer Versuch nach 1 s, bevor aufgegeben wird.
             // (Die ki-proxy weicht zusätzlich selbst auf freie Modelle aus.)
             for (let versuch = 0; ; versuch++) {
                 resp = await fetch(url, {
@@ -130,9 +130,10 @@
                     },
                     body: JSON.stringify(payload)
                 });
-                if (resp.status !== 503 || versuch >= 2) break;
-                console.warn('KI überlastet (503) — neuer Versuch in ' + (2 * (versuch + 1)) + ' s');
-                await new Promise(r => setTimeout(r, 2000 * (versuch + 1)));
+                // Die Function probiert selbst schon alle Modelle parallel durch — hier nur noch ein kurzer Nachversuch.
+                if (resp.status !== 503 || versuch >= 1) break;
+                console.warn('KI überlastet (503) — neuer Versuch in 1 s');
+                await new Promise(r => setTimeout(r, 1000));
             }
         } catch (e) {
             // „Failed to fetch" heißt hier fast immer: die Function ist unter

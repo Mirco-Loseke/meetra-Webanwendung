@@ -2082,3 +2082,59 @@
 }
 .ab-copy-inline:hover { opacity: 1; color: var(--info, #60a5fa); background: rgba(255,255,255,0.06); }
 .ab-copy-inline.ok { opacity: 1; color: var(--success, #10b981); }
+
+/* ---------- Handy-Feinschliff (2026-10-01) ----------
+   - Die vier Filter hatten min-width 220px und standen einzeln untereinander —
+     die Liste begann erst am Bildschirmende. Jetzt 2×2.
+   - Detail: Reiter bleiben beim Scrollen oben stehen, der Schließen-Knopf
+     bleibt erreichbar (vorher scrollte beides mit weg). */
+@media (max-width: 768px) {
+    #addressbook .ab-toolbar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    #addressbook .ab-toolbar > * {
+        min-width: 0 !important;
+        width: auto !important;
+    }
+    #addressbook .ab-toolbar > .btn-add-bg { grid-column: 1 / -1; }
+    #addressbook .ab-toolbar .custom-filter-dropdown .filter-label,
+    #addressbook .ab-toolbar .custom-filter-dropdown * {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .ab-tabs {
+        position: sticky;
+        top: 0;
+        z-index: 6;
+        background: rgba(15, 23, 42, 0.97);
+    }
+    /* sticky statt fixed: .modal-backdrop hat backdrop-filter und wäre sonst
+       der Bezugsrahmen — der Knopf scrollte trotz fixed mit weg. */
+    .ab-modal-close {
+        position: sticky;
+        top: 8px;
+        display: flex;
+        margin: 8px 8px -48px auto;
+        z-index: 20;
+        width: 40px;
+        height: 40px;
+        background: rgba(15, 23, 42, 0.92);
+    }
+    .ab-tabs { padding-right: 56px; }
+    /* Inhalt war höher als das auf Bildschirmhöhe begrenzte Fenster — beim
+       Scrollen schien darunter die Adressliste durch. */
+    #addressbook-detail-modal .ab-detail-content { height: auto !important; max-height: none !important; min-height: 100dvh !important; align-self: flex-start; flex-shrink: 0; }
+    .ab-detail-head { padding-right: 3.5rem; }
+    .ab-detail-actions .ab-btn { min-height: 40px; }
+    .ab-copy-inline { min-width: 32px; min-height: 32px; }
+}
+/* Mit Zoom (unter ~360px) sind zwei Filter nebeneinander nicht mehr lesbar */
+@media (max-width: 360px) {
+    #addressbook .ab-toolbar { grid-template-columns: 1fr; gap: 6px; }
+    #addressbook .ab-toolbar > * { min-height: 38px; }
+    #addressbook .ab-toolbar button { white-space: normal; }
+}

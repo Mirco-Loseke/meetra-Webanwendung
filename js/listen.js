@@ -2046,7 +2046,7 @@
                 </div>
                 <div class="maint-chart-card" style="margin-bottom: 0; display:flex; flex-direction:column;">
                     <p class="maint-chart-title" style="margin-bottom:0;">Angebotsvolumen pro Monat</p>
-                    <div style="display:flex; align-items:flex-end; gap:6px; flex:1; padding-top:8px; min-height:160px;">
+                    <div class="ang-monatsbalken" style="display:flex; align-items:flex-end; gap:6px; flex:1; padding-top:8px; min-height:160px;">
                         ${monthBarsHtml}
                     </div>
                 </div>

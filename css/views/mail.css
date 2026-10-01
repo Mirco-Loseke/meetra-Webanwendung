@@ -95,7 +95,7 @@
 .mv-panel.mv-split.active { display: grid; overflow: hidden; }
 
 /* ---------- Liste | Detail ---------- */
-.mv-split { grid-template-columns: minmax(320px, 420px) 1fr; }
+.mv-split { grid-template-columns: minmax(320px, 420px) minmax(0, 1fr); }
 .mv-liste { background: var(--mv-bg-2); border-right: 1px solid var(--mv-line); overflow-y: auto; min-height: 0; }
 .mv-liste-kopf {
     display: flex; gap: var(--space-2); align-items: center;
@@ -115,7 +115,7 @@
 
 /* ---------- Mail-Zeile ---------- */
 .mv-mail {
-    display: grid; grid-template-columns: 34px 1fr auto; gap: var(--space-3);
+    display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: var(--space-3);
     padding: 10px var(--space-3); border-bottom: 1px solid var(--mv-line);
     cursor: pointer; align-items: start; border-left: 3px solid transparent;
 }
@@ -146,7 +146,7 @@
 .mv-zurueck { display: none; margin-bottom: var(--space-3); }
 .mv-mail-titel { font-size: var(--fs-xl); margin: 0 0 var(--space-4); color: var(--text-1); font-family: var(--font-heading); }
 .mv-mail-meta {
-    display: grid; grid-template-columns: 44px 1fr auto; gap: var(--space-3); align-items: center;
+    display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: var(--space-3); align-items: center;
     padding-bottom: var(--space-4); border-bottom: 1px solid var(--mv-line); margin-bottom: var(--space-4);
 }
 .mv-mail-meta .mv-avatar { width: 44px; height: 44px; }
@@ -182,7 +182,7 @@
     border-bottom: 1px solid var(--mv-line);
 }
 .mv-kontakt {
-    display: grid; grid-template-columns: 34px 1fr auto; gap: var(--space-3); align-items: center;
+    display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: var(--space-3); align-items: center;
     padding: 9px var(--space-3); border-bottom: 1px solid var(--mv-line); cursor: pointer; border-left: 3px solid transparent;
 }
 .mv-kontakt:hover { background: var(--mv-bg-3); }
@@ -192,7 +192,7 @@
 .mv-kontakt .mv-status { font-size: var(--fs-2xs); padding: 2px 7px; border-radius: var(--mv-r); white-space: nowrap; }
 .mv-status.da { background: #0b3b2c; color: var(--success-soft); }
 .mv-status.neu { background: var(--mv-bg); color: var(--text-3); border: 1px solid var(--mv-line); }
-.mv-k-kopf { display: grid; grid-template-columns: 64px 1fr; gap: var(--space-4); align-items: center; margin-bottom: var(--space-4); }
+.mv-k-kopf { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: var(--space-4); align-items: center; margin-bottom: var(--space-4); }
 .mv-k-kopf .mv-avatar { width: 64px; height: 64px; font-size: var(--fs-lg); }
 .mv-k-kopf h2 { margin: 0; font-size: var(--fs-xl); color: var(--text-1); font-family: var(--font-heading); }
 .mv-k-kopf .mv-firma { color: var(--text-3); font-size: var(--fs-md); }
@@ -205,7 +205,7 @@
 .mv-feld .mv-w { font-size: var(--fs-md); color: var(--text-1); }
 .mv-feld .mv-w a { color: #93c5fd; text-decoration: none; }
 .mv-k-mails h3 { font-size: var(--fs-md); color: var(--text-2); margin: 0 0 var(--space-2); }
-.mv-k-mails .mv-mail { grid-template-columns: 1fr auto; padding: 10px 0; border-left: 0; }
+.mv-k-mails .mv-mail { grid-template-columns: minmax(0, 1fr) auto; padding: 10px 0; border-left: 0; }
 
 /* ---------- Schreiben (Outlook-Aufbau) ----------
    Leiste oben, Kopfzeilen mit fester Beschriftungsspalte, Textfeld füllt den Rest. */
@@ -270,13 +270,13 @@ body.mv-vollbild #mv-vollbild { background: #1e3a8a; border-color: var(--mv-akze
     .mv-tab span { display: none; }
     .mv-tab { padding: 0 var(--space-3); }
     .mv-konto > div { display: none; }
-    .mv-split { grid-template-columns: 1fr; }
+    .mv-split { grid-template-columns: minmax(0, 1fr); }
     .mv-liste { border-right: 0; }
     .mv-detail { display: none; padding: var(--space-4); }
     .mv-split.zeigt-detail .mv-liste { display: none; }
     .mv-split.zeigt-detail .mv-detail { display: block; }
     .mv-zurueck { display: inline-flex; }
-    .mv-mail-meta { grid-template-columns: 44px 1fr; }
+    .mv-mail-meta { grid-template-columns: 44px minmax(0, 1fr); }
     .mv-mail-meta .mv-datum { grid-column: 2; }
     .mv-s-zeile label { width: 52px; }
     .mv-s-text { padding: var(--space-4); }
@@ -329,7 +329,7 @@ body.mv-vollbild #mv-vollbild { background: #1e3a8a; border-color: var(--mv-akze
 
 /* ---------- Reiter „Mails" im Adressbuch (dunkler Detail-Dialog) ---------- */
 .ab-mails-kopf { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-3); flex-wrap: wrap; }
-.ab-mails-liste .mv-mail { grid-template-columns: 1fr auto; padding: 10px 4px; border-left: 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.ab-mails-liste .mv-mail { grid-template-columns: minmax(0, 1fr) auto; padding: 10px 4px; border-left: 0; border-bottom: 1px solid rgba(255,255,255,0.08); }
 .ab-mails-liste .mv-mail:hover { background: rgba(255,255,255,0.05); }
 
 /* ---------- Ordnerwahl über der Liste ---------- */
@@ -589,3 +589,34 @@ body.mv-vollbild #mv-vollbild { background: #1e3a8a; border-color: var(--mv-akze
 .maa-firma-liste li { padding: var(--space-2) var(--space-3); cursor: pointer; color: var(--text-1); }
 .maa-firma-liste li small { color: var(--text-3); margin-left: 6px; }
 .maa-firma-liste li:hover { background: rgba(96, 165, 250, 0.18); }
+
+/* ---------- Handy mit Schnellzugriff-Leiste (2026-10-01) ----------
+   Die Höhe rechnete nur die obere Leiste ab (100vh - 86px). Mit der Leiste
+   unten (#kic-nav, js/ki-chat.js) wurde die Seite höher als der Bildschirm,
+   scrollte 74px hoch und der Mail-Kopf verschwand unter der Topbar.
+   dvh statt vh: auf dem iPhone ohne die ein-/ausfahrende Safari-Leiste. */
+@media (max-width: 768px) {
+    body.kic-an #mail {
+        height: calc(100dvh - 82px - var(--kic-nav-h, 62px) - env(safe-area-inset-bottom, 0px) - 14px);
+        min-height: 360px;
+    }
+    body.kic-an.mv-vollbild #kic-nav { display: none !important; }
+    .mv-mail > div { min-width: 0; }
+    .mv-s-zeile { min-width: 0; }
+    .mv-s-zeile input { min-width: 0; }
+    .mv-mail-aktionen { flex-wrap: wrap; }
+}
+@media (max-width: 768px) {
+    /* Schreiben: Quill-Leiste brach auf 4 Reihen um (171px), dem Text blieben
+       ~218px. Selten Gebrauchtes ausblenden statt wischbarer Reihe — deren
+       Farb-/Größen-Auswahl klappt nach unten auf und würde abgeschnitten.
+       Bleibt: Größe, B/I/U, Farben, Listen, Link, Anhänge/Signatur. */
+    #mv-s-toolbar .ql-font,
+    #mv-s-toolbar .ql-strike,
+    #mv-s-toolbar .ql-indent,
+    #mv-s-toolbar .ql-image,
+    #mv-s-toolbar .ql-blockquote,
+    #mv-s-toolbar .ql-formats:has(> .ql-align),
+    #mv-s-toolbar .ql-formats:has(> .ql-clean) { display: none !important; }
+    #mv-s-toolbar .ql-formats { margin-right: 8px !important; }
+}

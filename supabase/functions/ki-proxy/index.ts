@@ -68,7 +68,7 @@ async function geminiFallbacks(): Promise<string[]> {
 // zuerst, unbekannte hinten), gesperrte ganz hinten als letzte Rettung.
 // Gespeichert in app_settings.ki_modell_status — gilt für alle Nutzer und
 // überlebt Neustarts der Function; in der App unter Einstellungen → KI sichtbar.
-type ModellZustand = { ms?: number; ok?: number; fehler?: number; gesperrtBis?: number; letzterFehler?: string; zuletzt?: string };
+type ModellZustand = { stufe?: string | null; ms?: number; ok?: number; fehler?: number; gesperrtBis?: number; letzterFehler?: string; zuletzt?: string };
 let zustand: Record<string, ModellZustand> | null = null;
 let adminClient: ReturnType<typeof createClient> | null = null;
 function admin() {
@@ -117,6 +117,10 @@ function reihenfolge(modelle: string[]): string[] {
 
 // Wartezeit bis zur ersten Antwort je Modell, danach das nächste versuchen.
 const WARTEN_MS = parseInt(Deno.env.get('AI_TIMEOUT_MS') ?? '15000', 10) || 15000;
+// Gestaffelter Start (2026-10-01): antwortet ein Modell nicht binnen STAFFEL_MS,
+// startet das nächste PARALLEL — das erste mit Antwort gewinnt, der Rest wird
+// abgebrochen. Vorher wurde je Modell bis zu WARTEN_MS (15 s) nacheinander gewartet.
+const STAFFEL_MS = parseInt(Deno.env.get('AI_HEDGE_MS') ?? '4000', 10) || 4000;
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_API_KEY = Deno.env.get('GROQ_API_KEY') ?? '';
 const GROQ_MODEL = Deno.env.get('GROQ_MODEL_DEFAULT') ?? 'llama-3.3-70b-versatile';
@@ -192,21 +196,29 @@ Deno.serve(async (req) => {
     // Ein Modell anfragen; bei 400 wegen der Reasoning-Stufe die nächste Stufe.
     // Wartet höchstens WARTEN_MS auf die erste Antwort (Kopfzeilen) — danach
     // gilt das Modell als überlastet.
-    async function frage(model: string): Promise<Response | 'zeit'> {
+    // Die zuletzt funktionierende Reasoning-Stufe je Modell zuerst — spart die Fehlversuche.
+    async function frage(model: string, aussen: AbortSignal): Promise<Response | 'zeit'> {
         let r: Response | null = null;
-        for (const stufe of stufen) {
+        const gemerkt = zustand?.[model]?.stufe;
+        const folge = gemerkt !== undefined && stufen.includes(gemerkt as string | null)
+            ? stufen.slice(stufen.indexOf(gemerkt as string | null)) : stufen;
+        for (const stufe of folge) {
             const payload: Record<string, unknown> = { ...basis, model };
             if (stufe) payload.reasoning_effort = stufe;
             if (stufe === 'none') payload.extra_body = { google: { thinking_config: { thinking_budget: 0 } } };
             const abbruch = new AbortController();
             const uhr = setTimeout(() => abbruch.abort(), WARTEN_MS);
+            const weiter = () => abbruch.abort();
+            aussen.addEventListener('abort', weiter);
             try {
                 r = await fetch(url, { method: 'POST', signal: abbruch.signal, headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }, body: JSON.stringify(payload) });
             } catch (e) {
                 clearTimeout(uhr);
+                aussen.removeEventListener('abort', weiter);
                 if (abbruch.signal.aborted) return 'zeit';
                 throw e;
             }
+            if (r.ok && zustand) { const z = zustand[model] = zustand[model] || {}; z.stufe = stufe; }
             // Beim Streamen läuft die Antwort nach den Kopfzeilen weiter — dann
             // darf die Uhr nicht mehr abbrechen. Ohne Streamen wird der Text
             // unten ohnehin sofort gelesen.
@@ -221,26 +233,57 @@ Deno.serve(async (req) => {
     // Überlastet (503), Limit (429), Modell unbekannt (404), Serverfehler oder zu langsam
     // → nächstes Modell. Alles andere (z. B. 400/401) geht unverändert zurück.
     if (PROVIDER === 'gemini') { await zustandLaden(); modelle = reihenfolge(modelle); }
-    let antwort: Response | null = null;
-    let model = modelle[0];
     let geaendert = false;
-    for (const m of modelle) {
-        model = m;
-        let r: Response | 'zeit';
-        const start = Date.now();
-        try { r = await frage(m); }
-        catch (e) { return fehler(`${PROVIDER === 'gemini' ? 'Gemini' : 'Groq'} ist nicht erreichbar: ` + (e instanceof Error ? e.message : String(e)), 502); }
-        if (r === 'zeit') {
-            console.warn(`KI: ${m} antwortet nicht in ${WARTEN_MS} ms — nächstes Modell`);
-            if (zustand) { merkeFehler(m, 'zu langsam', 10); geaendert = true; }
-            continue;
-        }
-        antwort = r;
-        if (r.ok) { if (zustand) { merkeErfolg(m, Date.now() - start); geaendert = true; } break; }
-        if (![404, 429, 500, 502, 503, 504].includes(r.status)) break;
-        console.warn(`KI: ${m} meldet ${r.status} — nächstes Modell`);
-        if (zustand) { merkeFehler(m, 'HTTP ' + r.status, r.status === 404 ? 24 * 60 : 10); geaendert = true; }
-    }
+    // Bilder brauchen länger — sonst würde fast jede Bildanfrage doppelt gestellt.
+    const mitBild = JSON.stringify(messages).includes('"image_url"');
+    const sieger = await new Promise<{ r: Response; m: string } | null>(resolve => {
+        let i = 0, laufend = 0, fertig = false, timer: number | undefined;
+        let letzte: { r: Response; m: string } | null = null;
+        const laeufe: { c: AbortController; m: string }[] = [];
+        const ende = (x: { r: Response; m: string } | null) => {
+            if (fertig) return;
+            fertig = true;
+            clearTimeout(timer);
+            laeufe.forEach(l => { if (!x || l.m !== x.m) l.c.abort(); });
+            resolve(x);
+        };
+        const pruefeEnde = () => { if (!fertig && laufend === 0 && i >= modelle.length) ende(letzte); };
+        const naechster = () => {
+            if (fertig || i >= modelle.length) { pruefeEnde(); return; }
+            const m = modelle[i++];
+            const c = new AbortController();
+            laeufe.push({ c, m });
+            laufend++;
+            const start = Date.now();
+            clearTimeout(timer);
+            if (i < modelle.length) timer = setTimeout(naechster, mitBild ? STAFFEL_MS * 2 : STAFFEL_MS);
+            frage(m, c.signal).then(r => {
+                laufend--;
+                if (fertig) return;
+                if (r === 'zeit') {
+                    console.warn(`KI: ${m} antwortet nicht in ${WARTEN_MS} ms`);
+                    if (zustand) { merkeFehler(m, 'zu langsam', 10); geaendert = true; }
+                } else if (r.ok) {
+                    if (zustand) { merkeErfolg(m, Date.now() - start); geaendert = true; }
+                    return ende({ r, m });
+                } else {
+                    letzte = { r, m };
+                    if (![404, 429, 500, 502, 503, 504].includes(r.status)) return ende(letzte);
+                    console.warn(`KI: ${m} meldet ${r.status} — nächstes Modell`);
+                    if (zustand) { merkeFehler(m, 'HTTP ' + r.status, r.status === 404 ? 24 * 60 : 10); geaendert = true; }
+                }
+                naechster();
+            }).catch(e => {
+                laufend--;
+                if (fertig) return;
+                console.warn(`KI: ${m} nicht erreichbar`, e);
+                naechster();
+            });
+        };
+        naechster();
+    });
+    const antwort = sieger ? sieger.r : null;
+    const model = sieger ? sieger.m : modelle[0];
     if (geaendert) zustandSpeichern();
     if (!antwort) return fehler('Die KI ist gerade überlastet (alle Modelle zu langsam). Bitte gleich noch einmal versuchen.', 503);
 

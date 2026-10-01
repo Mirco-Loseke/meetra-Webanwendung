@@ -1363,3 +1363,13 @@ body.tlv-vollbild #tlv-vollbild { background: rgba(56, 189, 248, .18); border-co
     pointer-events: none; opacity: 0; transition: opacity .15s, transform .15s; z-index: 40;
 }
 #timeline .tlv-zoom-hinweis.an { opacity: 1; transform: translate(-50%, 0); }
+
+/* Handy (2026-10-01): Maschinenname links war 1.25rem (Fernseher-Größe) und
+   brach in einer 150px-Spalte über vier Zeilen — die Zeitachse blieb winzig. */
+@media (max-width: 768px) {
+    .tlv-label .n .maschine { font-size: var(--fs-sm); line-height: 1.25; }
+}
+@media (max-width: 400px) {
+    #timeline { --tlv-label-w: 118px; }
+    .tlv-label .n .maschine { font-size: var(--fs-xs); }
+}

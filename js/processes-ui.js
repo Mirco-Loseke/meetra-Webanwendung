@@ -1201,7 +1201,7 @@
                         ${datum ? `<span style="font-size:0.72rem; color:rgba(255,255,255,0.45);">vom ${datum}</span>` : ''}
                         ${modus === 'card' ? `<span onclick="window.switchView('listen'); window.switchListenTab && window.switchListenTab('angebote');" title="Zur Angebotsliste" style="margin-left:auto; font-size:0.72rem; color:#facc15; cursor:pointer; text-decoration:underline;">Liste</span>` : ''}
                     </div>
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:8px;">
+                    <div class="ang-felder" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:8px;">
                         ${feld('Status', `
                             <select class="glass-input" style="height:32px; padding:0 6px; font-size:0.85rem; ${statusCat && statusCat.color ? `border-color:${statusCat.color};` : ''}"
                                     onclick="event.stopPropagation()" onchange="window.procAngebotFeld('${a.id}', 'status', this.value)">
