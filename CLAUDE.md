@@ -276,10 +276,10 @@ formfüllenden Feldern zusätzlich `.menu-block`. Ausgewählter Eintrag: `.selec
 einem Inline-`style` suchen.
 
 ## App-Symbol / Installieren
-`manifest.json` + `assets/icons/app-icon-{192,512}.png`, `-maskable-*` (Pfeile auf 60 % für Androids Zuschnitt), `apple-touch-icon.png` (180, iPhone-Home-Bildschirm), `favicon-32.png` — alle aus `meetra_arrows_icon.png` erzeugt (weißer Grund). Neues Logo ⇒ alle neu erzeugen und in `PRECACHE` lassen.
+`manifest.json` + `assets/icons/app-icon-{192,512}.png`, `-maskable-*` (Pfeile auf 60 % für Androids Zuschnitt), `apple-touch-icon.png` (180, iPhone-Home-Bildschirm), `favicon-32.png` — alle aus `meetra_arrows_icon.png` erzeugt (weißer Grund). `display_override: minimal-ui` = Zurück- und Aktualisieren-Knopf im installierten App-Fenster (Chrome/Edge); iPhone ignoriert das und bleibt Vollbild. Neues Logo ⇒ alle neu erzeugen und in `PRECACHE` lassen.
 
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v717 (Stand 2026-10-01) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v719 (Stand 2026-10-01) — bei jeder Änderung hochzählen.
 
 **Meldungs-Takt (2026-09-28).** `js/meldungs-takt.js`: Wecker, Vorgangs-Quittung und
 Glocke reihen ihre Meldungen per `meldungsTakt.einreihen(key, zeigen, aktion)` ein —

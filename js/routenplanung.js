@@ -2406,36 +2406,92 @@
         });
     }
 
+    // „Route laden": Reiter „Meine Routen" (Standard) und „Von Kollegen".
+    // saved_routes ist ohnehin für alle lesbar — zugeordnet wird über `author`
+    // (Name des Speichernden, currentAuthor()). Fremde Routen: laden und drucken
+    // ja, löschen/überschreiben nein — Speichern legt dann eine eigene Kopie an.
+    const ladeAnsicht = { tab: 'meine', kollege: '', suche: '' };
+    const normName = s => String(s || '').trim().toLowerCase();
+    function istMeine(r) {
+        if (r.local) return true;
+        const ich = normName(currentAuthor());
+        return !!ich && normName(r.author) === ich;
+    }
+
     async function loadRouteDialog() {
         openDialog('Gespeicherte Routen', '<div class="rp2-hint">Wird geladen…</div>', null, null);
 
         let cloud = [];
         if (savedRoutesTableOk && window.supabaseClient) {
-            const { data, error } = await sb().from('saved_routes').select('*').order('created_at', { ascending: false }).limit(50);
+            const { data, error } = await sb().from('saved_routes').select('*').order('created_at', { ascending: false }).limit(300);
             if (error) { savedRoutesTableOk = false; console.warn('saved_routes nicht verfügbar:', error.message); }
             else cloud = data || [];
         }
-        const all = cloud.concat(localRoutes());
-        window.rp2SavedRoutes = all;
+        window.rp2SavedRoutes = cloud.concat(localRoutes());
+        // Keine eigenen, aber Routen von Kollegen vorhanden → gleich dort öffnen
+        if (ladeAnsicht.tab === 'meine' && !window.rp2SavedRoutes.some(istMeine) && window.rp2SavedRoutes.length) ladeAnsicht.tab = 'andere';
+        renderLoadList();
+    }
 
+    function renderLoadList() {
         const body = document.getElementById('rp2-dialog-body');
         if (!body) return;
+        const all = window.rp2SavedRoutes || [];
+        if (!all.length) { body.innerHTML = '<div class="rp2-hint">Noch keine Route gespeichert.</div>'; return; }
 
-        if (!all.length) {
-            body.innerHTML = '<div class="rp2-hint">Noch keine Route gespeichert.</div>';
-            return;
-        }
+        const meine = all.filter(istMeine);
+        const andere = all.filter(r => !istMeine(r));
+        const kollegen = [...new Set(andere.map(r => r.author || 'Ohne Namen'))].sort((a, b) => a.localeCompare(b, 'de'));
+        if (ladeAnsicht.kollege && !kollegen.includes(ladeAnsicht.kollege)) ladeAnsicht.kollege = '';
 
-        body.innerHTML = `<div class="rp2-saved-list">${all.map(r => `
+        const q = normName(ladeAnsicht.suche);
+        let liste = ladeAnsicht.tab === 'meine' ? meine : andere;
+        if (ladeAnsicht.tab === 'andere' && ladeAnsicht.kollege) liste = liste.filter(r => (r.author || 'Ohne Namen') === ladeAnsicht.kollege);
+        if (q) liste = liste.filter(r => normName([r.name, r.author, ...(r.stops || []).map(s => s.label + ' ' + (s.address || ''))].join(' ')).includes(q));
+
+        const zeile = r => {
+            const eigen = istMeine(r);
+            return `
             <div class="rp2-saved-row">
                 <div class="rp2-saved-body">
                     <div class="rp2-saved-name">${esc(r.name)}</div>
-                    <div class="rp2-saved-sub">${(r.stops || []).length} Stopps${r.total_km ? ' · ' + fmtKm(Number(r.total_km)) : ''}${r.created_at ? ' · ' + new Date(r.created_at).toLocaleDateString('de-DE') : ''}${r.author ? ' · ' + esc(r.author) : ''}</div>
+                    <div class="rp2-saved-sub">${(r.stops || []).length} Stopps${r.total_km ? ' · ' + fmtKm(Number(r.total_km)) : ''}${r.created_at ? ' · ' + new Date(r.created_at).toLocaleDateString('de-DE') : ''}${!eigen ? ' · <b class="rp2-saved-autor">' + esc(r.author || 'Ohne Namen') + '</b>' : ''}${r.local ? ' · nur auf diesem Gerät' : ''}</div>
                 </div>
                 <button class="rp2-btn rp2-btn-sm rp2-btn-primary" data-rp2-action="load-route" data-rp2-id="${esc(String(r.id))}">Laden</button>
                 <button class="rp2-icon-btn" data-rp2-action="print-saved-route" data-rp2-id="${esc(String(r.id))}" title="Laden und Tourenzettel drucken"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg></button>
-                <button class="rp2-icon-btn danger" data-rp2-action="delete-route" data-rp2-id="${esc(String(r.id))}" title="Löschen">${ic('trash', 15)}</button>
-            </div>`).join('')}</div>`;
+                ${eigen ? `<button class="rp2-icon-btn danger" data-rp2-action="delete-route" data-rp2-id="${esc(String(r.id))}" title="Löschen">${ic('trash', 15)}</button>` : ''}
+            </div>`;
+        };
+
+        const leer = ladeAnsicht.tab === 'meine'
+            ? (q ? 'Keine eigene Route passt zur Suche.' : 'Du hast noch keine Route gespeichert.' + (andere.length ? ' Unter „Von Kollegen" stehen ' + andere.length + '.' : ''))
+            : (q || ladeAnsicht.kollege ? 'Keine Route passt zur Auswahl.' : 'Von Kollegen gibt es noch keine gespeicherten Routen.');
+
+        // Suchfeld beim Neuzeichnen nicht verlieren (Fokus/Cursor)
+        const altesFeld = document.getElementById('rp2-load-suche');
+        const hatteFokus = altesFeld && document.activeElement === altesFeld;
+        const pos = hatteFokus ? altesFeld.selectionStart : null;
+
+        body.innerHTML = `
+            <div class="rp2-load-tabs" role="tablist">
+                <button type="button" class="${ladeAnsicht.tab === 'meine' ? 'aktiv' : ''}" data-rp2-action="load-tab" data-rp2-id="meine">Meine Routen <span>${meine.length}</span></button>
+                <button type="button" class="${ladeAnsicht.tab === 'andere' ? 'aktiv' : ''}" data-rp2-action="load-tab" data-rp2-id="andere">Von Kollegen <span>${andere.length}</span></button>
+            </div>
+            <div class="rp2-load-filter">
+                <input type="search" id="rp2-load-suche" class="rp2-input" placeholder="Name, Kunde oder Ort suchen …" value="${esc(ladeAnsicht.suche)}">
+                ${ladeAnsicht.tab === 'andere' && kollegen.length > 1 ? `<select id="rp2-load-kollege" class="rp2-input" data-no-enhance>
+                    <option value="">Alle Kollegen</option>
+                    ${kollegen.map(k => `<option value="${esc(k)}"${k === ladeAnsicht.kollege ? ' selected' : ''}>${esc(k)} (${andere.filter(r => (r.author || 'Ohne Namen') === k).length})</option>`).join('')}
+                </select>` : ''}
+            </div>
+            ${ladeAnsicht.tab === 'andere' && liste.length ? '<div class="rp2-hint rp2-load-hinweis">Routen von Kollegen kannst du laden und drucken. Speichern legt eine eigene Kopie an — das Original bleibt unverändert.</div>' : ''}
+            <div class="rp2-saved-list">${liste.length ? liste.map(zeile).join('') : '<div class="rp2-hint">' + esc(leer) + '</div>'}</div>`;
+
+        const feld = document.getElementById('rp2-load-suche');
+        feld.addEventListener('input', () => { ladeAnsicht.suche = feld.value; renderLoadList(); });
+        if (hatteFokus) { feld.focus(); try { feld.setSelectionRange(pos, pos); } catch (e) { /* egal */ } }
+        const wahl = document.getElementById('rp2-load-kollege');
+        if (wahl) wahl.addEventListener('change', () => { ladeAnsicht.kollege = wahl.value; renderLoadList(); });
     }
 
     function applySavedRoute(id) {
@@ -2451,9 +2507,12 @@
             lng: s.lng,
             isCustomer: !!s.isCustomer
         }));
-        currentRouteId = r.id;
+        // Route eines Kollegen: nicht als „geladene eigene" merken — sonst würde
+        // „Speichern → aktualisieren" sein Original überschreiben.
+        const eigen = istMeine(r);
+        currentRouteId = eigen ? r.id : null;
         currentRouteName = r.name || '';
-        currentRouteLocal = !!r.local;
+        currentRouteLocal = eigen && !!r.local;
         suppressDirty = true;
         routeDirty = false;
         closeDialog();
@@ -2461,7 +2520,7 @@
         scheduleMarkerRender();
         scheduleRouteLine();
         const extras = loadStopExtras();
-        setStatus(`Route „${r.name}“ geladen.`);
+        setStatus(eigen ? `Route „${r.name}“ geladen.` : `Route „${r.name}“ von ${r.author || 'einem Kollegen'} geladen — Speichern legt eine eigene Kopie an.`);
         setTimeout(() => setStatus(''), 4000);
         return extras;
     }
@@ -2477,6 +2536,7 @@
     async function deleteSavedRoute(id) {
         const r = (window.rp2SavedRoutes || []).find(x => String(x.id) === String(id));
         if (!r) return;
+        if (!istMeine(r)) { window.showToast('Routen von Kollegen können nur von ihnen selbst gelöscht werden.'); return; }
         if (!confirm(`Gespeicherte Route "${r.name}" löschen?`)) return;
 
         if (r.local) {
@@ -2699,6 +2759,7 @@
             case 'print-saved-route': savedRouteDrucken(id); break;
             case 'load-route-dialog': loadRouteDialog(); break;
             case 'load-route': applySavedRoute(id); break;
+            case 'load-tab': ladeAnsicht.tab = id; ladeAnsicht.kollege = ''; renderLoadList(); break;
             case 'delete-route': deleteSavedRoute(id); break;
             case 'close-dialog': closeDialog(); break;
             case 'submit-dialog': {

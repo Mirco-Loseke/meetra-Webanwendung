@@ -1067,3 +1067,42 @@ select.rp2-input option {
 }
 .rp2-druck-karte .rp2-druck-check { justify-content: flex-start; color: var(--text-2); font-size: var(--fs-sm); }
 .rp2-druck-knoepfe { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
+
+/* ---------- Route laden: Meine / Von Kollegen (2026-10-01) ---------- */
+.rp2-load-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 4px;
+    margin-bottom: 10px;
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.05);
+}
+.rp2-load-tabs button {
+    min-height: 38px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-2);
+    font: inherit;
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-bold);
+    cursor: pointer;
+}
+.rp2-load-tabs button span {
+    display: inline-block;
+    min-width: 20px;
+    margin-left: 4px;
+    padding: 1px 6px;
+    border-radius: var(--radius-pill);
+    background: rgba(255, 255, 255, 0.1);
+    font-size: var(--fs-2xs);
+}
+.rp2-load-tabs button.aktiv { background: rgba(34, 197, 94, 0.18); color: var(--text-1); box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.5); }
+.rp2-load-filter { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.rp2-load-filter .rp2-input { flex: 1 1 180px; min-width: 0; }
+.rp2-load-hinweis { margin-bottom: 8px; font-size: var(--fs-xs); }
+.rp2-saved-autor { color: #86efac; font-weight: var(--fw-semibold); }
+@media (max-width: 768px) {
+    .rp2-load-filter .rp2-input { font-size: 16px; }
+}
