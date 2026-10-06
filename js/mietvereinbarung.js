@@ -2113,7 +2113,7 @@
                 <tr>
                     <th style="width:${Math.max(22, 60 - sp.length * 12)}%;">${esc(f.baugruppe || 'Baugruppe')}</th>
                     <th class="miet-num">NR.</th>
-                    ${sp.map(c => `<th class="miet-checkcell">${esc(c.label)}</th>`).join('')}
+                    ${sp.map(c => `<th class="miet-checkcell${c.id === aktiv ? '' : ' miet-dim'}">${esc(c.label)}</th>`).join('')}
                 </tr>
                 </thead>
                 <tbody data-splitbox>
@@ -2133,14 +2133,18 @@
                 </tr>
                 <tr data-split>
                     <td>${esc(f.einweisung || 'Einweisung stattgefunden')}</td><td class="miet-num"></td>
-                    <td class="miet-checkcell">${jaNein('einweisung.erfolgt', daten.einweisung.erfolgt)}</td>
-                    <td${sp.length > 2 ? ` colspan="${sp.length - 1}"` : ''}>
-                        <div style="display:flex; align-items:center; gap:6px;">
+                    ${(() => {
+                        const durch = `<div style="display:flex; align-items:center; gap:6px;">
                             <span style="font-weight:700; white-space:nowrap;">durch:</span>
                             <div class="miet-pick${daten.einweisung.durch_name ? '' : ' leer'}" style="flex:1;"
                                  onclick="window.mietEinweiserMenu(this)">${esc(daten.einweisung.durch_name || '— bitte wählen —')}</div>
-                        </div>
-                    </td>
+                        </div>`;
+                        // Handy (Fließmodus): die zweite Phasenspalte ist dort ausgeblendet —
+                        // „durch" deshalb unter Ja/Nein in dieselbe Zelle. PDF (a4Modus) wie bisher.
+                        if (istHandy() && !a4Modus) return `<td class="miet-checkcell miet-einweis-zelle" colspan="${sp.length}">${jaNein('einweisung.erfolgt', daten.einweisung.erfolgt)}${durch}</td>`;
+                        return `<td class="miet-checkcell">${jaNein('einweisung.erfolgt', daten.einweisung.erfolgt)}</td>
+                    <td${sp.length > 2 ? ` colspan="${sp.length - 1}"` : ''}>${durch}</td>`;
+                    })()}
                 </tr>
                 </tbody>
             </table>

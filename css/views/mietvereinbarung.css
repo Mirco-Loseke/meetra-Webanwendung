@@ -2249,3 +2249,75 @@ textarea.miet-in {
     border: 1px solid #d1d5db; border-radius: 4px; padding: 2px 4px; min-width: 0;
 }
 .miet-zusatz-text { display: block; width: 100%; box-sizing: border-box; margin-top: 4px; }
+
+/* =========================================================
+   HANDY: SCHNELL ARBEITEN (2026-10-06)
+   Nur Bildschirm ≤768 px und nur außerhalb von .miet-a4 —
+   PDF/Druck bleiben unverändert A4.
+   - Formular-Tabellen (ohne Kopfzeile: Mieter, Mietgerät, Miete) werden zu
+     einer Spalte: Beschriftung über dem Feld, kein Querwischen mehr.
+   - Ankreuz-Tabellen (mit Kopfzeile) passen sich der Breite an.
+   - Kopf, Phasen-Umschalter und Fußleiste flacher → mehr Platz für den Bogen.
+   ========================================================= */
+@media screen and (max-width: 768px) {
+    .miet-pages:not(.miet-a4) .miet-block { overflow-x: visible; }
+
+    /* Formular-Tabellen: eine Spalte */
+    .miet-pages:not(.miet-a4) .miet-table:not(:has(thead)) { min-width: 0; width: 100%; border: 0; }
+    .miet-pages:not(.miet-a4) .miet-table:not(:has(thead)) tbody { display: block; }
+    .miet-pages:not(.miet-a4) .miet-table:not(:has(thead)) tr {
+        display: flex; flex-wrap: wrap; gap: 4px 6px;
+        padding: 6px 0 8px; border-bottom: 1px solid #e5e7eb;
+    }
+    .miet-pages:not(.miet-a4) .miet-table:not(:has(thead)) td {
+        display: block; flex: 1 1 100%; min-width: 0; width: auto !important;
+        border: 0 !important; padding: 0 !important; background: none !important;
+    }
+    .miet-pages:not(.miet-a4) .miet-table:not(:has(thead)) td.miet-label {
+        font-size: 11px; font-weight: 800; color: #6b7280; text-transform: uppercase;
+        letter-spacing: .03em; padding-top: 2px !important;
+    }
+    /* Die Felder selbst: klar als Eingabe erkennbar, volle Breite */
+    .miet-pages:not(.miet-a4) .miet-table:not(:has(thead)) .miet-in {
+        display: block; width: 100%; box-sizing: border-box; min-height: 40px;
+        padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; background: #fff;
+    }
+    .miet-pages:not(.miet-a4) .miet-table:not(:has(thead)) .miet-in[contenteditable]:empty::before { content: attr(data-ph); color: #9ca3af; }
+
+    /* Ankreuz-Tabellen: an die Breite anpassen, i.O./n.i.O. untereinander */
+    /* Feste Spaltenbreiten aus der Kopfzeile: Baugruppe nimmt den Rest */
+    .miet-pages:not(.miet-a4) .miet-table:has(thead) { min-width: 0 !important; width: 100% !important; table-layout: fixed !important; }
+    .miet-pages:not(.miet-a4) .miet-table:has(thead) th.miet-num { width: 24px !important; }
+    .miet-pages:not(.miet-a4) .miet-table:has(thead) th.miet-checkcell:not(.miet-dim) { width: 132px !important; }
+    .miet-pages:not(.miet-a4) .miet-table:has(thead) th:first-child { width: auto !important; }
+    .miet-pages:not(.miet-a4) .miet-table:has(thead) td:first-child { overflow-wrap: break-word; hyphens: auto; }
+    .miet-pages:not(.miet-a4) .miet-table:has(thead) th,
+    .miet-pages:not(.miet-a4) .miet-table:has(thead) td { padding: 6px 4px; overflow-wrap: anywhere; }
+    /* Nur die gerade bearbeitete Phase zeigen (Übergabe ODER Rücknahme) — die
+       graue Spalte der anderen Phase kostet auf dem Handy die halbe Breite.
+       Im PDF (.miet-a4) stehen beide wie gehabt. */
+    .miet-pages:not(.miet-a4) .miet-table:has(thead) th.miet-dim,
+    .miet-pages:not(.miet-a4) .miet-table:has(thead) td.miet-dim {
+        min-width: 0 !important;
+        /* nicht display:none — die Zwischenzeilen überspannen die Spalte per colspan,
+           sie bliebe sonst als leere Lücke stehen. Null breit statt weg. */
+        width: 0 !important; max-width: 0 !important; padding: 0 !important; border: 0 !important; overflow: hidden; font-size: 0;
+    }
+    .miet-pages:not(.miet-a4) .miet-table:has(thead) .miet-dim > * { display: none !important; }
+    .miet-pages:not(.miet-a4) .miet-table:has(thead) th.miet-dim { color: transparent; }
+    .miet-pages:not(.miet-a4) .miet-checkcell { white-space: nowrap; }
+    .miet-pages:not(.miet-a4) .miet-checkcell .miet-check { display: inline-flex; margin: 2px 4px 2px 0; gap: 3px; }
+    .miet-pages:not(.miet-a4) .miet-table:has(thead) td.miet-checkcell:not(.miet-dim) { padding: 4px 2px !important; overflow: visible; }
+
+    /* Rahmen des Fensters flacher */
+    .miet-head { padding: 8px 12px; padding-top: calc(8px + env(safe-area-inset-top)); }
+    .miet-head h2 { font-size: .98rem; }
+    .miet-phase-switch { padding: 6px 10px; }
+    .miet-phase-btn { padding: 7px 10px; font-size: .82rem; }
+    .miet-body { padding: 6px; }
+    .miet-page { padding: 10px 10px !important; }
+    .miet-foot { padding: 6px 10px; padding-bottom: calc(6px + env(safe-area-inset-bottom)); gap: 6px; }
+    .miet-foot button { min-height: 36px; font-size: .8rem; padding: 6px 8px; min-width: 0; }
+    .miet-foot .miet-note, .miet-foot #miet-seitenzahl { font-size: .7rem; }
+}
+@media screen and (max-width: 768px) { .miet-pages:not(.miet-a4) .miet-einweis-zelle { white-space: normal !important; } .miet-pages:not(.miet-a4) .miet-einweis-zelle > div { margin-top: 4px; } }

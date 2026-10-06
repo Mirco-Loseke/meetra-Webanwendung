@@ -95,6 +95,7 @@ Reihenfolge der ausgelagerten Module:
   Direkt in `index.html` editierte Partial-Bereiche werden beim nächsten Build überschrieben.
 - **CSS:** in die passende Datei unter `css/views/` bzw. `css/components/` —
   nichts an `style.css` anhängen.
+- **Handy kompakt:** `css/base/handy-kompakt.css` (nur ≤768 px, vor utilities geladen) verkleinert Tokens, Knöpfe, Karten, Überschriften und fängt Inline-`font-size: 1.x rem` per Attribut-Selektor ab. Neue Bausteine fürs Handy dort nachziehen, nicht in jeder View einzeln.
 - Für wiederkehrende Muster gibt es `css/base/utilities.css`
   (`.form-label-caps`, `.row-clickable`, `.clickable`, `.text-muted-sm`) —
   diese Klassen nutzen statt die Stile erneut inline zu schreiben. Die Datei
@@ -281,7 +282,7 @@ einem Inline-`style` suchen.
 `manifest.json` + `assets/icons/app-icon-{192,512}.png`, `-maskable-*` (Pfeile auf 60 % für Androids Zuschnitt), `apple-touch-icon.png` (180, iPhone-Home-Bildschirm), `favicon-32.png` — alle aus `meetra_arrows_icon.png` erzeugt (weißer Grund). `display_override: minimal-ui` = Zurück- und Aktualisieren-Knopf im installierten App-Fenster (Chrome/Edge); iPhone ignoriert das und bleibt Vollbild. Neues Logo ⇒ alle neu erzeugen und in `PRECACHE` lassen.
 
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v765 (Stand 2026-10-02) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v792 (Stand 2026-10-02) — bei jeder Änderung hochzählen.
 
 **To-do-Liste (2026-10-02).** Vollbild per Knopf/Doppelklick auf den Kopf (`body.todo-vollbild`, je Browser gemerkt), Diktieren an Stand, Notiz, eigenem Punkt (`micButtonHtml`). `js/todo-liste.js` + `css/components/todo-liste.css`: Knopf links neben dem KI-Knopf (Handy: über der Leiste), Panel mit Einträgen je Stufe, aufklappbar — Vorgang (Schritte abhaken, Stand eintragen), Termin, Adresse (Tel/Mail/Route), Notiz. Gefüllt aus dem Briefing über „✅ Als To-do übernehmen" (`kiAuswahl` in `ai-briefing.js`, gleiche KI-Auswahl wie der Druck) → `window.todoUebernehmen(liste)`. Ablage `todo_listen` (eine Zeile je Benutzer, Migration `supabase_add_todo_listen.sql`), ohne Tabelle Rückfall localStorage.
 **Angebote im Briefing + Mail aus der To-do-Liste (2026-10-02).** Briefing lädt zusätzlich offene Angebote der letzten 6 Monate (`angebotOffen` = Regex wie `classifyAngebotStatus`, „Nur meine" über `assigned_users` des Angebots-Vorgangs), eigener KI-Abschnitt „Angebote" und darunter eine echte Liste mit 📄 PDF / ✉ Mail / ＋ To-do (`window.todoAktion.pdf/mail`). To-do-Eintrag Angebot/Vorgang zeigt Status, Alter, Betrag, PDFs (`attachments` des Vorgangs ohne `step_id`), Ansprechpartner (`customer_contacts`). „✉ Mail" → Auswahl Empfänger (Adresse + Ansprechpartner, Vorschlag über `contact_name`) + Anhänge → `window.mailSchreiben(an, betreff, html, dateien)` — 4. Parameter neu, lädt `[{name,url,type}]` als Anhang. Gesendet wird nie automatisch.

@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = 'meetra-app-v765';
+﻿const CACHE_NAME = 'meetra-app-v792';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
@@ -29,6 +29,7 @@ const PRECACHE = [
     'assets/fonts/inter-latin-ext.woff2',
     'assets/fonts/outfit-latin.woff2',
     'assets/fonts/outfit-latin-ext.woff2',
+    'css/base/handy-kompakt.css',
     'css/base/utilities.css',
     'css/base/responsive.css',
     'css/components/navigation.css',
