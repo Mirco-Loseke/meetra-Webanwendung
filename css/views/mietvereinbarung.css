@@ -2237,3 +2237,15 @@ textarea.miet-in {
         opacity: 0 !important;
     }
 }
+
+/* Weitere Bilder (Schäden/Details) je Phase — js/mietvereinbarung.js, zusatzBlock */
+.miet-zusatzbilder { margin-top: 10px; }
+.miet-zusatzbilder .miet-photo-progress { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.miet-zusatz-slot { cursor: default; }
+.miet-zusatz-slot .miet-photo-name { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; padding-right: 26px; }
+.miet-zusatz-datum { flex: 1 1 110px; }
+.miet-zusatz-datum, .miet-zusatz-text {
+    font: inherit; font-size: 11px; color: #111827; background: #fff;
+    border: 1px solid #d1d5db; border-radius: 4px; padding: 2px 4px; min-width: 0;
+}
+.miet-zusatz-text { display: block; width: 100%; box-sizing: border-box; margin-top: 4px; }

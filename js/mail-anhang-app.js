@@ -45,7 +45,7 @@
             const firma = (a.customers && a.customers.name) || a.kundenmatchcode || '';
             (anhaengeJe[a.process_id] || []).filter(f => f && (f.path || f.url) && !f.step_id).forEach(f => {
                 angebote.push({
-                    key: 'a:' + (f.id || f.path || f.url), name: f.name || 'Datei', size: f.size, type: f.type,
+                    key: 'a:' + (f.id || f.path || f.url), name: angebotName(a, f), size: f.size, type: f.type,
                     path: f.path, url: f.url, kundeId: a.customer_id, matchcode: a.kundenmatchcode,
                     titel: 'Angebot ' + (a.belegnummer || ''), unter: [firma, datum(a.belegdatum)].filter(Boolean).join(' · '),
                     suche: norm([f.name, a.belegnummer, firma].join(' '))
@@ -111,7 +111,7 @@
                 if (schon.has(key)) return;
                 schon.add(key);
                 daten.angebote.push({
-                    key, name: f.name || 'Datei', size: f.size, type: f.type,
+                    key, name: angebotName(a, f), size: f.size, type: f.type,
                     path: f.path, url: f.url, kundeId: a.customer_id, matchcode: a.kundenmatchcode,
                     titel: 'Angebot ' + (a.belegnummer || ''), unter: [firma, datum(a.belegdatum)].filter(Boolean).join(' · '),
                     suche: norm([f.name, a.belegnummer, firma].join(' '))
@@ -133,11 +133,48 @@
                <ul class="maa-firma-liste" id="maa-firma-liste"></ul></div>`;
     }
 
+    // Anhang-Name wie beim Herunterladen: „Angebot 2026-30138.pdf"
+    function angebotName(a, f) {
+        if (typeof window.angebotDateiName === 'function') { try { return window.angebotDateiName(a, f); } catch (e) { /* unten */ } }
+        const roh = String(a.belegnummer || '').trim();
+        if (!roh) return f.name || 'Datei';
+        const jahr = /^\d{4}/.test(String(a.belegdatum || '')) ? String(a.belegdatum).slice(0, 4) : String(new Date().getFullYear());
+        const ext = (String(f.name || '').match(/\.[a-z0-9]{1,5}$/i) || ['.pdf'])[0];
+        return 'Angebot ' + (/^\d{4}-/.test(roh) ? roh : jahr + '-' + roh) + ext;
+    }
+
+    // Dateityp-Filter: beim Öffnen immer nur PDF (häufigster Fall: Angebot/Bericht versenden)
+    const TYPEN = [['pdf', 'PDF'], ['bild', 'Bilder'], ['word', 'Word'], ['excel', 'Excel'], ['sonst', 'Sonstiges']];
+    let typen = new Set(['pdf']);
+    function dateityp(r) {
+        const t = String(r.type || '').toLowerCase();
+        const e = (String(r.name || '').toLowerCase().match(/\.([a-z0-9]{2,5})(?:\?|$)/) || [])[1] || '';
+        if (/pdf/.test(t) || e === 'pdf') return 'pdf';
+        if (/^image\//.test(t) || /^(png|jpe?g|gif|webp|heic|heif|bmp|tiff?)$/.test(e)) return 'bild';
+        if (/word|opendocument\.text|msword/.test(t) || /^(docx?|odt|rtf)$/.test(e)) return 'word';
+        if (/excel|spreadsheet|csv/.test(t) || /^(xlsx?|xlsm|ods|csv)$/.test(e)) return 'excel';
+        return 'sonst';
+    }
+    const ICO = { pdf: 'PDF', bild: 'BILD', word: 'WORD', excel: 'XLS', sonst: 'DATEI' };
+    function typKnopfText() {
+        const an = TYPEN.filter(([k]) => typen.has(k)).map(([, l]) => l);
+        return an.length === TYPEN.length ? 'Alle Dateitypen' : (an.length ? an.join(', ') : 'Kein Dateityp');
+    }
+    function typMenuZeichnen() {
+        const b = document.getElementById('maa-typ-knopf');
+        if (b) b.querySelector('span').textContent = typKnopfText();
+        const p = document.getElementById('maa-typ-panel');
+        if (p) p.innerHTML = TYPEN.map(([k, l]) => {
+            const n = daten ? daten[reiter].filter(r => dateityp(r) === k).length : '';
+            return `<label class="maa-typ-zeile"><input type="checkbox" data-typ="${k}" ${typen.has(k) ? 'checked' : ''}><span class="maa-ico maa-ico-${k}">${ICO[k]}</span>${l}<em>${n}</em></label>`;
+        }).join('') + '<div class="maa-typ-fuss"><button type="button" data-typ-alle="1">Alle</button><button type="button" data-typ-alle="pdf">Nur PDF</button></div>';
+    }
+
     function liste() {
         const box = document.getElementById('maa-liste');
         if (!box || !daten) return;
         const q = norm(document.getElementById('maa-suche').value).trim();
-        let rows = daten[reiter];
+        let rows = daten[reiter].filter(r => typen.has(dateityp(r)));
         if (nurKunde && kunde) rows = rows.filter(gehoertZuKunde);
         if (q) rows = rows.filter(r => q.split(/\s+/).every(w => r.suche.includes(w)));
         // Dateien der Firma zuerst (stabil: innerhalb bleibt „neueste zuerst")
@@ -146,12 +183,13 @@
         box.innerHTML = gezeigt.length ? gezeigt.map(r => `
             <label class="maa-zeile${gewaehlt.has(r.key) ? ' an' : ''}">
                 <input type="checkbox" data-key="${esc(r.key)}" ${gewaehlt.has(r.key) ? 'checked' : ''}>
-                <span class="maa-ico">${/pdf/i.test(r.type || r.name) ? 'PDF' : /image/i.test(r.type || '') ? 'BILD' : 'DATEI'}</span>
+                <span class="maa-ico maa-ico-${dateityp(r)}">${ICO[dateityp(r)]}</span>
                 <span class="maa-text"><b>${esc(r.titel)}</b>${gehoertZuKunde(r) ? ' <em class="maa-chip">' + esc(kunde.name) + '</em>' : ''}
                     <small>${esc(r.name !== r.titel ? r.name + ' · ' : '')}${esc(r.unter)}</small></span>
                 <span class="maa-gr">${groesse(r.size)}</span>
             </label>`).join('') + (rows.length > 150 ? `<div class="maa-mehr">… ${rows.length - 150} weitere — Suche eingrenzen</div>` : '')
-            : '<div class="maa-mehr">Nichts gefunden.</div>';
+            : `<div class="maa-mehr">Nichts gefunden${typen.size < TYPEN.length ? ' — Dateityp: ' + esc(typKnopfText()) + '. Oben unter „Dateityp" weitere Typen anhaken.' : '.'}</div>`;
+        typMenuZeichnen();
         zaehlen();
     }
     function zaehlen() {
@@ -161,7 +199,7 @@
         document.getElementById('maa-ok').disabled = !n;
         document.querySelectorAll('#maa-dialog .maa-tab').forEach(t => {
             const k = t.dataset.r;
-            const z = daten ? daten[k].length : '';
+            const z = daten ? daten[k].filter(r => typen.has(dateityp(r))).length : '';
             t.querySelector('em').textContent = z;
         });
     }
@@ -221,6 +259,10 @@
                         <button type="button" class="maa-tab aktiv" data-r="angebote">Angebote <em></em></button>
                         <button type="button" class="maa-tab" data-r="dokumente">Dokumente <em></em></button>
                     </div>
+                    <div class="maa-typ" id="maa-typ">
+                        <button type="button" class="maa-typ-knopf" id="maa-typ-knopf" aria-haspopup="true" title="Welche Dateitypen anzeigen">Dateityp: <span>PDF</span> ▾</button>
+                        <div class="maa-typ-panel" id="maa-typ-panel" hidden></div>
+                    </div>
                     <input type="search" id="maa-suche" placeholder="Suchen: Belegnummer, Kunde, Maschine, Dateiname …" autocomplete="off">
                 </div>
                 <div class="maa-firma" id="maa-firma"></div>
@@ -233,6 +275,11 @@
             </div>`;
         document.body.appendChild(el);
         el.addEventListener('click', e => {
+            const tp = document.getElementById('maa-typ-panel');
+            if (e.target.closest('#maa-typ-knopf')) { tp.hidden = !tp.hidden; return; }
+            const alle = e.target.closest('[data-typ-alle]');
+            if (alle) { typen = alle.dataset.typAlle === 'pdf' ? new Set(['pdf']) : new Set(TYPEN.map(([k]) => k)); liste(); return; }
+            if (tp && !tp.hidden && !e.target.closest('#maa-typ')) tp.hidden = true;
             if (e.target === el || e.target.closest('[data-maa-zu]')) return schliessen();
             if (e.target.closest('[data-maa-firma-weg]')) { kunde = null; nurKunde = false; firmaWahlZeichnen(); liste(); const i = document.getElementById('maa-firma-input'); if (i) i.focus(); return; }
             const wahl = e.target.closest('[data-maa-kunde]');
@@ -254,6 +301,11 @@
         });
         el.addEventListener('change', e => {
             if (e.target.id === 'maa-nur') { nurKunde = e.target.checked; liste(); return; }
+            if (e.target.dataset && e.target.dataset.typ) {
+                if (e.target.checked) typen.add(e.target.dataset.typ); else typen.delete(e.target.dataset.typ);
+                liste();
+                return;
+            }
             const key = e.target.dataset && e.target.dataset.key;
             if (!key) return;
             const r = daten[reiter].find(x => x.key === key);
@@ -274,6 +326,7 @@
         document.getElementById('maa-ok').addEventListener('click', anhaengen);
         el.addEventListener('keydown', e => { if (e.key === 'Escape') schliessen(); });
         reiter = 'angebote';
+        typen = new Set(['pdf']);
         setTimeout(() => document.getElementById('maa-suche').focus(), 50);
         try { await laden(); liste(); if (kunde) { await kundenAngeboteNachladen(); liste(); } }
         catch (e) { document.getElementById('maa-liste').innerHTML = '<div class="maa-mehr">Laden fehlgeschlagen: ' + esc(e.message || e) + '</div>'; }

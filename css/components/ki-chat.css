@@ -331,3 +331,28 @@ body.kic-offen #kic-fab { transform: scale(0.9); opacity: 0; pointer-events: non
     .kic-briefing { grid-template-columns: 1fr; }
     .kic-briefing button { flex-direction: row; min-height: 44px; }
 }
+.kic-adr-vorschlaege { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--text-3); }
+.kic-adr-vorschlaege button {
+    padding: 5px 10px; min-height: 30px;
+    border: 1px dashed rgba(14, 165, 233, 0.6); border-radius: var(--radius-pill);
+    background: rgba(14, 165, 233, 0.1); color: var(--text-1);
+    font: inherit; font-size: var(--fs-xs); cursor: pointer;
+}
+
+/* Antworten mit Auswertungen (js/ki-auswertung.js): Listen, Tabellen, Quelle */
+.kic-blase p { margin: 0 0 6px; }
+.kic-blase p:last-child { margin-bottom: 0; }
+.kic-blase ul { margin: 4px 0 8px; padding-left: 18px; }
+.kic-blase li { margin: 2px 0; }
+.kic-h { margin: 10px 0 4px; font-weight: 800; color: var(--text-1, #fff); }
+.kic-tab { max-width: 100%; overflow-x: auto; margin: 6px 0 8px; }
+.kic-tab table { border-collapse: collapse; font-size: var(--fs-sm, .8125rem); min-width: 100%; }
+.kic-tab th, .kic-tab td { padding: 5px 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); text-align: left; white-space: nowrap; }
+.kic-tab th { color: var(--text-2, #cbd5e1); font-weight: 700; }
+.kic-tab td:not(:first-child) { font-variant-numeric: tabular-nums; }
+.kic-quelle { margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 0.72rem; color: var(--text-3, #94a3b8); }
+.kic-status { display: block; margin-top: 6px; font-size: 0.75rem; font-style: normal; color: var(--text-3, #94a3b8); }
+
+/* Abschrift handschriftlicher Zettel (Aktion „handschrift") */
+.kic-f-abschrift { min-height: 140px; font-family: var(--font-mono, ui-monospace, Consolas, monospace); font-size: 0.85rem; line-height: 1.45; resize: vertical; }
+.kic-unsicher { margin: 4px 0 6px; padding: 6px 10px; border-radius: 8px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.35); color: #fbbf24; font-size: 0.78rem; }

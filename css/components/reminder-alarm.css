@@ -327,3 +327,16 @@
     font-size: 0.8rem;
     white-space: nowrap;
 }
+
+/* „Jetzt nicht" + Dauer (js/meldungs-takt.js, leisteAktualisieren) */
+.alarm-spaeter-wahl { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.alarm-spaeter-wahl select {
+    background: rgba(255, 255, 255, 0.08); color: var(--text-1, #f1f5f9);
+    border: 1px solid rgba(255, 255, 255, 0.2); border-radius: var(--radius-md, 10px);
+    padding: 6px 8px; font: inherit; font-size: var(--fs-sm, .8125rem); cursor: pointer;
+}
+.alarm-spaeter-wahl select option { color: #111827; }
+/* Schmal: Text und Knöpfe brechen um, statt über den Rand zu ragen */
+.alarm-spaeter-leiste { flex-wrap: wrap; }
+.alarm-spaeter-leiste > span { flex: 1 1 110px; min-width: 0; }
+.alarm-spaeter-wahl { margin-left: auto; }

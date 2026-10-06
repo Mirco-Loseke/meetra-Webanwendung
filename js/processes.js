@@ -555,6 +555,16 @@ window.renderProcesses = function(targetId, opts) {
             </div>
         `;
 
+        const addrIdCell = p.customer_id || (p.machines && p.machines.customer_id) || null;
+        let addrNameCell = (p.customers && p.customers.name) || '';
+        if (!addrNameCell && addrIdCell && window.customerCacheSync) {
+            const k = window.customerCacheSync().find(c => String(c.id) === String(addrIdCell));
+            if (k) addrNameCell = k.name || '';
+        }
+        const addrBadge = addrIdCell ? `<div style="display: inline-flex; align-items: center; gap: 7px; color: #a78bfa; font-weight: 800; font-size: 1.02rem; line-height: 1.25; word-break: break-word; background: rgba(167,139,250,0.14); border: 1px solid rgba(167,139,250,0.45); border-radius: 10px; padding: 6px 12px; max-width: 100%;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    ${addrNameCell || 'Adresse'}
+                </div>` : '';
         let machineCell = '<span style="color: rgba(255,255,255,0.3); font-style: italic;">Nicht verknüpft</span>';
         if (p.machines) {
             const m = p.machines;
@@ -564,13 +574,12 @@ window.renderProcesses = function(targetId, opts) {
         } else if (p.workshop_order_number) {
             machineCell = `<div style="color: #60a5fa; font-weight: 800; font-size: 1.06rem; white-space: normal; word-break: break-word; line-height: 1.2;">Werkstattauftrag</div>
                 <div style="color: #60a5fa; opacity: 0.8; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; margin-top: 2px;">${p.workshop_order_number}</div>`;
-        } else if (p.customers || p.customer_id) {
-            const addrName = (p.customers && p.customers.name) || 'Adresse';
-            machineCell = `<div style="display: inline-flex; align-items: center; gap: 7px; color: #a78bfa; font-weight: 800; font-size: 1.02rem; line-height: 1.25; word-break: break-word; background: rgba(167,139,250,0.14); border: 1px solid rgba(167,139,250,0.45); border-radius: 10px; padding: 6px 12px; max-width: 100%;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                    ${addrName}
-                </div>
+        } else if (addrBadge) {
+            machineCell = `${addrBadge}
                 ${p.contact_name ? `<div style="color: rgba(255,255,255,0.7); font-weight: 700; font-size: 0.9rem; margin-top: 4px;">${p.contact_name}</div>` : ''}`;
+        }
+        if (addrBadge && (p.machines || p.workshop_order_number)) {
+            machineCell = `<div style="margin-bottom: 6px;">${addrBadge}</div>` + machineCell;
         }
         
         let dateStr = '-';

@@ -1328,6 +1328,8 @@
     window.abInternals = {
         state,
         sb,
+        dubletten: (a, ausserId) => findDuplicateAddresses(a, ausserId),
+        openDetail: (id, tab) => openDetail(String(id), tab),
         buildAddressPayload,
         renderList: () => renderAddressList(),
         renderDetail: () => renderDetail(),
@@ -1750,9 +1752,16 @@
                     <button class="ab-btn ab-btn-ghost ab-btn-ki" data-ab-action="ai-summary" data-ab-id="${esc(state.currentId)}" title="Vergangenheit, offene Vorgänge und nächste Schritte — von der KI zusammengefasst">✨ Zusammenfassung</button>
                     <button class="ab-btn ab-btn-ghost" data-ab-action="plan-route" data-ab-id="${esc(state.currentId)}">${ic('route', 16)} Route planen</button>
                     <button class="ab-btn ab-btn-ghost" data-ab-action="edit" data-ab-id="${esc(state.currentId)}">${ic('edit', 16)} Bearbeiten</button>
+                    <button class="ab-btn ab-btn-ghost delete-permission-required" data-del-area="adressen" onclick="window.adresseZusammenfuehren && window.adresseZusammenfuehren('${esc(state.currentId)}')" title="Doppelt angelegte Adresse mit einer anderen zusammenführen">${ic('link', 16)} Zusammenführen</button>
                     <button class="ab-btn ab-btn-danger delete-permission-required" data-del-area="adressen" data-ab-action="delete" data-ab-id="${esc(state.currentId)}">${ic('trash', 16)} Löschen</button>
                 </div>
             </header>
+            ${(() => {
+                // Starker Dubletten-Verdacht (gleiche Anschrift/Mail/Telefon + ähnlicher Name) → Hinweis
+                const d = findDuplicateAddresses(a, a.id).filter(x => x.score >= 0.9);
+                if (!d.length) return '';
+                return `<div class="ab-dubletten-hinweis">⚠️ Möglicherweise doppelt: ${d.slice(0, 3).map(x => `<button type="button" class="ab-dublette-btn" onclick="window.adresseZusammenfuehren && window.adresseZusammenfuehren('${esc(a.id)}', '${esc(x.addr.id)}')" title="${esc(x.reasons.join(', '))}">${esc(x.addr.name)}${x.addr.address_number ? ' · Adr. ' + esc(x.addr.address_number) : ''}${x.addr.city ? ' · ' + esc(x.addr.city) : ''} → zusammenführen</button>`).join('')}</div>`;
+            })()}
 
             <nav class="ab-tabs">
                 ${tabs.map(t => `
@@ -5861,6 +5870,23 @@
             angeboteByProcess: state.detail.angeboteByProcess || {},
             termine: state.detail.appointments || []
         };
+    };
+
+    // Lädt die Detail-Daten einer Adresse ohne das Detail-Fenster zu öffnen —
+    // für die Zusammenfassung aus der To-do-Historie. Ist das Detail einer
+    // anderen Adresse gerade offen, bleibt es unangetastet (Rückgabe null).
+    window.abDetailLaden = async function (id) {
+        id = String(id);
+        if (!state.byId.has(id) && typeof window.loadAddressbook === 'function') await window.loadAddressbook();
+        if (!state.byId.has(id)) return null;
+        const el = document.getElementById('addressbook-detail-modal');
+        const offen = el && el.classList.contains('show');
+        if (state.currentId === id && (offen || (state.detail && state.detail.processes))) return window.abDetailDaten();
+        if (offen) return null;
+        state.currentId = id;
+        state.detail = { contacts: [], links: [], notes: [], machines: [], appointments: [], linkedMachines: new Map(), linkedContacts: new Map(), clusterMeta: new Map() };
+        await loadDetailData(id);
+        return window.abDetailDaten();
     };
 
     // Öffnet das Adress-Detail erneut, z. B. nachdem im Vorgangs-Modal

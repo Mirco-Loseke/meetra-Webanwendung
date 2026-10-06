@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = 'meetra-app-v721';
+﻿const CACHE_NAME = 'meetra-app-v761';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
@@ -51,6 +51,7 @@ const PRECACHE = [
     'css/views/workshop-tasks.css',
     'css/views/rechnungsliste.css',
     'css/components/ki-chat.css',
+    'css/components/todo-liste.css',
     'css/views/datenschutz.css',
     'css/views/tasks-print.css',
     'css/views/service-reports.css',
@@ -71,6 +72,7 @@ const PRECACHE = [
     // ausgeloest. Neue Eintraege deshalb immer gegen die Platte pruefen.
     'css/views/addressbook.css',
     'js/addressbook.js',
+    'js/adressen-zusammenfuehren.js',
     'js/address-history.js',
     'js/addressbook-live.js',
     'js/autosave.js',
@@ -167,7 +169,10 @@ const PRECACHE = [
     'js/groq-proxy.js',
     'js/ki-einstellungen.js',
     'js/ai-quick-capture.js',
+    'js/ki-erkennung.js',
+    'js/ki-auswertung.js',
     'js/ki-chat.js',
+    'js/todo-liste.js',
     'js/ai-task-extend.js',
     'js/photo-lightbox.js',
     'js/documents-modal.js',

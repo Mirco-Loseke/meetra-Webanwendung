@@ -261,7 +261,7 @@
             const m = await window.graphFetch('/me/messages/' + encodeURIComponent(id) + '?$select=id,subject,from,toRecipients,ccRecipients,receivedDateTime,body,hasAttachments,webLink');
             let anhaenge = [];
             if (m.hasAttachments) {
-                try { anhaenge = (await window.graphFetch('/me/messages/' + encodeURIComponent(id) + '/attachments?$select=name,size,contentType')).value || []; } catch (e) { /* egal */ }
+                try { anhaenge = (await window.graphFetch('/me/messages/' + encodeURIComponent(id) + '/attachments?$select=id,name,size,contentType')).value || []; } catch (e) { /* egal */ }
             }
             const von = (m.from && m.from.emailAddress) || {};
             const an = (m.toRecipients || []).map(r => r.emailAddress.name || r.emailAddress.address).join(', ');
@@ -279,9 +279,10 @@
                 + '<button class="btn-secondary mv-ki-btn" id="mv-ki-vorgang" title="Aus dieser Mail einen Vorgang machen — die KI füllt Titel, Art, Maschine, Zusammenfassung und Schritte vor">✨ Vorgang aus Mail</button>'
                 + '<a class="btn-secondary" href="' + esc(m.webLink || '#') + '" target="_blank" rel="noopener">In Outlook öffnen</a>'
                 + '</div>'
-                + (anhaenge.length ? '<div>' + anhaenge.map(a => '<span class="mv-anhang">📎 ' + esc(a.name) + ' <span class="text-muted-sm">' + Math.round((a.size || 0) / 1024) + ' KB</span></span>').join('') + '</div>' : '')
+                + (anhaenge.length ? '<div class="mv-anhaenge-empfangen">' + anhaenge.map(a => '<button type="button" class="mv-anhang mv-anhang-klick" data-att="' + esc(a.id) + '" data-name="' + esc(a.name) + '" data-typ="' + esc(a.contentType || '') + '" title="Öffnen">📎 ' + esc(a.name) + ' <span class="text-muted-sm">' + Math.round((a.size || 0) / 1024) + ' KB</span></button>').join('') + '</div>' : '')
                 + '<div class="mv-body" id="mv-body"></div>';
             ziel.querySelector('.mv-zurueck').onclick = () => kasten.classList.remove('zeigt-detail');
+            ziel.querySelectorAll('.mv-anhang-klick').forEach(b => { b.onclick = () => empfangenOeffnen(id, b); });
             $('mv-antworten').onclick = () => schreibenVorbelegen(von.address || '', antwortBetreff(m), zitatVon(m, von));
             $('mv-ki-vorgang').onclick = () => mailZuVorgang(m, von, an);
             $('mv-ki-antwort').onclick = () => antwortEntwerfen(m, von, an);
@@ -904,7 +905,91 @@
             modules: { toolbar: '#mv-s-toolbar', clipboard: { matchVisual: false } }
         });
         editor.root.setAttribute('spellcheck', 'true');
+        editor.on('text-change', (d, alt, quelle) => { if (quelle === 'user') entwurfVormerken(); });
     }
+
+    // ---- Entwurf automatisch in Outlook („Entwürfe") ----
+    // Nach 3 s ohne Tippen wird die Mail als Entwurf im Postfach gespeichert (erst
+    // POST, danach PATCH auf dieselbe Nachricht). Nach dem Neuladen bietet die Ansicht
+    // „Entwurf fortsetzen" an (ID in localStorage). Senden verschickt genau diesen
+    // Entwurf — es entsteht kein zweiter. Anhänge gehen erst beim Senden mit.
+    const ENTWURF_LS = 'mv_entwurf';
+    let entwurf = null;          // { id, von }
+    let entwurfUhr = null, entwurfLaeuft = null;
+    function entwurfMerken(e) {
+        entwurf = e;
+        try { if (e) localStorage.setItem(ENTWURF_LS, JSON.stringify(Object.assign({ zeit: new Date().toISOString(), betreff: ($('mv-s-betreff') || {}).value || '' }, e))); else localStorage.removeItem(ENTWURF_LS); } catch (x) { /* gesperrt */ }
+    }
+    function entwurfHinweis(t) { const el = $('mv-s-entwurf'); if (el) el.textContent = t || ''; }
+    function hatInhalt() {
+        const n = nachrichtObjekt();
+        return !!(n.subject || (n.body.content && editor && editor.getText().trim()) || n.toRecipients.length || n.ccRecipients.length);
+    }
+    function entwurfVormerken() {
+        if (!(window.outlookKonto && window.outlookKonto())) return;
+        clearTimeout(entwurfUhr);
+        entwurfHinweis('Ungespeichert …');
+        entwurfUhr = setTimeout(entwurfSpeichern, 3000);
+    }
+    async function entwurfSpeichern() {
+        clearTimeout(entwurfUhr);
+        if (entwurfLaeuft) { await entwurfLaeuft.catch(() => {}); }
+        if (!hatInhalt()) { entwurfHinweis(''); return; }
+        const n = nachrichtObjekt(), von = vonKonto();
+        entwurfLaeuft = (async () => {
+            try {
+                if (entwurf && entwurf.von === von) {
+                    try { await window.graphFetch('/me/messages/' + encodeURIComponent(entwurf.id), 'PATCH', n, von); }
+                    catch (e) { if (e.status === 404 || e.status === 400) entwurf = null; else throw e; }
+                }
+                if (!entwurf || entwurf.von !== von) {
+                    const m = await window.graphFetch('/me/messages', 'POST', n, von);
+                    entwurfMerken({ id: m.id, von });
+                } else entwurfMerken(entwurf);
+                entwurfHinweis('✓ Entwurf in Outlook gespeichert ' + new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
+            } catch (e) {
+                entwurfHinweis('Entwurf nicht gespeichert: ' + (e.message || e));
+            }
+        })();
+        return entwurfLaeuft;
+    }
+    // Nach dem Neuladen: ungesendeten Entwurf anbieten
+    function entwurfAnbieten() {
+        let g = null;
+        try { g = JSON.parse(localStorage.getItem(ENTWURF_LS) || 'null'); } catch (e) { g = null; }
+        const box = $('mv-s-entwurf-angebot');
+        if (!box) return;
+        if (!g || !g.id || entwurf || hatInhaltSicher()) { box.hidden = true; return; }
+        box.hidden = false;
+        box.innerHTML = '📝 Ungesendeter Entwurf' + (g.betreff ? ' „' + esc(g.betreff) + '"' : '') + ' vom ' + esc(new Date(g.zeit).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }))
+            + ' <button type="button" class="btn-secondary" data-entwurf="weiter">Fortsetzen</button> <button type="button" class="btn-secondary" data-entwurf="weg" title="Bleibt in Outlook unter „Entwürfe"">Ausblenden</button>';
+        box.onclick = async ev => {
+            const b = ev.target.closest('[data-entwurf]'); if (!b) return;
+            if (b.dataset.entwurf === 'weg') { entwurfMerken(null); box.hidden = true; return; }
+            b.disabled = true;
+            try {
+                const m = await window.graphFetch('/me/messages/' + encodeURIComponent(g.id) + '?$select=subject,body,toRecipients,ccRecipients,bccRecipients,isDraft', 'GET', null, g.von);
+                if (!m || m.isDraft === false) throw Object.assign(new Error('Der Entwurf wurde inzwischen gesendet.'), { status: 404 });
+                editorBauen();
+                const adr = l => (l || []).map(r => r.emailAddress && r.emailAddress.address).filter(Boolean).join(', ');
+                $('mv-s-an').value = adr(m.toRecipients);
+                $('mv-s-cc').value = adr(m.ccRecipients); if (m.ccRecipients && m.ccRecipients.length) ccBccZeigen('cc', true);
+                $('mv-s-bcc').value = adr(m.bccRecipients); if (m.bccRecipients && m.bccRecipients.length) ccBccZeigen('bcc', true);
+                $('mv-s-betreff').value = m.subject || '';
+                const w = $('mv-s-von-wahl'); if (w && g.von) { w.value = g.von; w.onchange && w.onchange(); }
+                if (editor) { editor.setContents([]); editor.clipboard.dangerouslyPasteHTML(m.body && m.body.content || ''); }
+                entwurf = { id: g.id, von: g.von };
+                box.hidden = true;
+                tabWechseln('schreiben');
+                entwurfHinweis('Entwurf geladen — wird beim Weiterschreiben aktualisiert.');
+            } catch (e) {
+                toast(e.status === 404 ? 'Der Entwurf existiert nicht mehr (gesendet oder gelöscht).' : 'Entwurf konnte nicht geladen werden: ' + (e.message || e), 'error');
+                if (e.status === 404) { entwurfMerken(null); box.hidden = true; }
+                b.disabled = false;
+            }
+        };
+    }
+    function hatInhaltSicher() { try { return hatInhalt(); } catch (e) { return false; } }
 
     // „Von": Auswahl unter allen angemeldeten Konten wie in Outlook; Vorgabe = aktives Postfach.
     // Gesendet wird mit dem Ticket des gewählten Kontos (graphFetch(…, vonKonto())).
@@ -945,6 +1030,9 @@
         anhaenge = []; anhaengeZeichnen();
         ccBccZeigen('cc', false); ccBccZeigen('bcc', false);
         $('mv-s-status').textContent = '';
+        clearTimeout(entwurfUhr);
+        entwurfMerken(null);    // der alte bleibt in Outlook unter „Entwürfe"
+        entwurfHinweis('');
     }
     // zitat: { kopf, html } der Ursprungsmail (Antworten) — kommt unter die Signatur
     // entwurfHtml: vorformulierter Text (KI-Entwurf) statt der leeren Zeile oben
@@ -969,9 +1057,32 @@
         return $(id).value.split(/[,;\s]+/).map(s => s.trim()).filter(Boolean).map(a => ({ emailAddress: { address: a } }));
     }
     // entwurfHtml optional (z. B. vorformulierte Mahnung aus js/ausgangsrechnungen.js).
-    window.mailSchreiben = function (an, betreff, entwurfHtml) {
+    // dateien optional: [{ name, url, type }] — werden geladen und als Anhang vorbelegt
+    // (z. B. das Angebots-PDF aus der To-do-Liste, js/todo-liste.js).
+    window.mailSchreiben = async function (an, betreff, entwurfHtml, dateien) {
         if (typeof window.switchView === 'function') window.switchView('mail');
         schreibenVorbelegen(an, betreff, null, entwurfHtml);
+        const liste = (dateien || []).filter(d => d && d.url);
+        if (!liste.length) return;
+        const st = $('mv-s-status');
+        if (st) st.textContent = 'Anhänge werden geladen …';
+        let fehler = 0;
+        for (const d of liste) {
+            try {
+                const r = await fetch(d.url);
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                const blob = await r.blob();
+                const base64 = await new Promise((ok, nein) => {
+                    const fr = new FileReader();
+                    fr.onload = () => ok(String(fr.result).split(',')[1] || '');
+                    fr.onerror = () => nein(fr.error);
+                    fr.readAsDataURL(blob);
+                });
+                anhaenge.push({ name: d.name || 'Dokument', size: blob.size, type: d.type || blob.type || 'application/octet-stream', base64 });
+            } catch (e) { fehler++; console.warn('Anhang nicht geladen:', d.name, e); }
+        }
+        anhaengeZeichnen();
+        if (st) st.textContent = fehler ? fehler + ' Anhang/Anhänge konnten nicht geladen werden — bitte von Hand anhängen.' : '';
     };
 
     // Editor-HTML für den Versand: Kurznamen der Schriften in echte Schriftstapel, Grundschrift Calibri 12.
@@ -993,12 +1104,138 @@
         };
     }
 
+    // ---- Anhänge öffnen (empfangen + beim Schreiben) ----
+    // PDF, Bilder, Text → neuer Tab; alles andere (Word, Excel …) → herunterladen.
+    function anzeigbar(typ, name) { return /^(application\/pdf|image\/|text\/)/i.test(typ || '') || /\.(pdf|png|jpe?g|gif|webp|txt)$/i.test(name || ''); }
+    function typAus(typ, name) {
+        if (typ && typ !== 'application/octet-stream') return typ;
+        const e = (String(name || '').split('.').pop() || '').toLowerCase();
+        return { pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', txt: 'text/plain' }[e] || 'application/octet-stream';
+    }
+    function blobAus(base64, typ) {
+        const bin = atob(base64), bytes = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+        return new Blob([bytes], { type: typ });
+    }
+    function blobZeigen(blob, name, fenster) {
+        const url = URL.createObjectURL(blob);
+        if (anzeigbar(blob.type, name)) {
+            if (fenster) fenster.location.href = url; else window.open(url, '_blank', 'noopener');
+        } else {
+            if (fenster) fenster.close();
+            const a = document.createElement('a'); a.href = url; a.download = name || 'Anhang';
+            document.body.appendChild(a); a.click(); a.remove();
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 5 * 60 * 1000);
+    }
+    async function empfangenOeffnen(mailId, b) {
+        const name = b.dataset.name, typ = typAus(b.dataset.typ, name);
+        // Fenster sofort öffnen (sonst blockt der Browser das Popup nach dem Laden)
+        const fenster = anzeigbar(typ, name) ? window.open('', '_blank') : null;
+        if (fenster) fenster.document.write('<p style="font-family:sans-serif;padding:20px;color:#555">' + esc(name) + ' wird geladen …</p>');
+        b.disabled = true;
+        try {
+            const a = await window.graphFetch('/me/messages/' + encodeURIComponent(mailId) + '/attachments/' + encodeURIComponent(b.dataset.att));
+            if (!a || !a.contentBytes) throw new Error('Dieser Anhang ist keine Datei (z. B. eine angehängte Mail) — bitte in Outlook öffnen.');
+            blobZeigen(blobAus(a.contentBytes, typ), name, fenster);
+        } catch (e) {
+            if (fenster) fenster.close();
+            toast('Anhang konnte nicht geöffnet werden: ' + (e.message || e), 'error');
+        } finally { b.disabled = false; }
+    }
+
+    // ---- Empfänger-Vorschläge (An/Cc/Bcc) ----
+    // Quellen: Adressbuch der App (Firmen-Mail + Ansprechpartner, über den Kunden-Index)
+    // und Outlook-Kontakte (einmal je Sitzung über Graph). Gesucht wird nur im Browser.
+    let vorschlagListe = null;
+    async function vorschlagQuellen() {
+        if (vorschlagListe) return vorschlagListe;
+        const out = new Map();
+        const dazu = (mail, name, firma, quelle) => {
+            const m = String(mail || '').trim().toLowerCase();
+            if (!m || !/@/.test(m) || out.has(m)) return;
+            out.set(m, { mail: String(mail).trim(), name: name || '', firma: firma || '', quelle });
+        };
+        try {
+            await indexBauen();
+            S.adrZuKunde.forEach((t, adr) => dazu(adr, t.kontakt ? t.kontakt.name : (t.kunde && t.kunde.name), t.kunde && t.kunde.name, 'Adressbuch'));
+        } catch (e) { /* ohne Adressbuch weiter */ }
+        try {
+            if (!S.kontakteGeladen && window.graphAlle && window.outlookKonto && window.outlookKonto()) {
+                S.kontakte = await window.graphAlle('/me/contacts?$top=500&$select=id,displayName,givenName,surname,companyName,emailAddresses', 10000);
+                S.kontakteGeladen = true;
+            }
+            (S.kontakte || []).forEach(k => kAdressen(k).forEach(a => dazu(a, kName(k), k.companyName || '', 'Outlook')));
+        } catch (e) { /* ohne Outlook weiter */ }
+        vorschlagListe = [...out.values()];
+        return vorschlagListe;
+    }
+    document.addEventListener('addressbook:changed', () => { vorschlagListe = null; });
+
+    function empfaengerVorschlag(feld) {
+        let box = null, treffer = [], aktiv = 0, uhr = null;
+        const token = () => { const v = feld.value; const i = Math.max(v.lastIndexOf(','), v.lastIndexOf(';')); return v.slice(i + 1).trim(); };
+        const zu = () => { if (box) box.remove(); box = null; treffer = []; };
+        function zeichnen() {
+            if (!treffer.length) return zu();
+            if (!box) {
+                box = document.createElement('div');
+                box.className = 'mv-vorschlag';
+                document.body.appendChild(box);
+                box.addEventListener('mousedown', ev => { const z = ev.target.closest('[data-i]'); if (!z) return; ev.preventDefault(); waehlen(Number(z.dataset.i)); });
+            }
+            const r = feld.getBoundingClientRect();
+            box.style.left = r.left + 'px';
+            box.style.top = (r.bottom + 4) + 'px';
+            box.style.width = Math.max(280, r.width) + 'px';
+            box.innerHTML = treffer.map((t, i) => '<div class="mv-vorschlag-z' + (i === aktiv ? ' aktiv' : '') + '" data-i="' + i + '">'
+                + '<div><b>' + esc(t.name || t.mail) + '</b>' + (t.firma && t.firma !== t.name ? ' <span class="text-muted-sm">· ' + esc(t.firma) + '</span>' : '') + '</div>'
+                + '<div class="text-muted-sm">' + esc(t.mail) + ' <span class="mv-vorschlag-q">' + esc(t.quelle) + '</span></div></div>').join('');
+        }
+        function waehlen(i) {
+            const t = treffer[i]; if (!t) return;
+            const v = feld.value; const k = Math.max(v.lastIndexOf(','), v.lastIndexOf(';'));
+            feld.value = (k >= 0 ? v.slice(0, k + 1) + ' ' : '') + t.mail + ', ';
+            zu();
+            feld.focus();
+            feld.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        feld.addEventListener('input', ev => {
+            if (ev.isTrusted === false && !box) return;
+            clearTimeout(uhr);
+            const q = token().toLowerCase();
+            if (q.length < 2) return zu();
+            uhr = setTimeout(async () => {
+                const liste = await vorschlagQuellen();
+                if (token().toLowerCase() !== q) return;
+                const schon = feld.value.toLowerCase();
+                const rang = t => { const n = (t.name || '').toLowerCase(), m = t.mail.toLowerCase(), fa = (t.firma || '').toLowerCase();
+                    if (n.startsWith(q) || m.startsWith(q)) return 0;
+                    if (n.split(/\s+/).some(w => w.startsWith(q)) || fa.startsWith(q)) return 1;
+                    return (n + ' ' + m + ' ' + fa).includes(q) ? 2 : 9; };
+                treffer = liste.map(t => ({ t, r: rang(t) })).filter(x => x.r < 9 && !schon.includes(x.t.mail.toLowerCase() + ','))
+                    .sort((a, b) => a.r - b.r || (a.t.quelle === 'Adressbuch' ? -1 : 1)).slice(0, 8).map(x => x.t);
+                aktiv = 0;
+                zeichnen();
+            }, 120);
+        });
+        feld.addEventListener('keydown', ev => {
+            if (!box || !treffer.length) return;
+            if (ev.key === 'ArrowDown') { ev.preventDefault(); aktiv = (aktiv + 1) % treffer.length; zeichnen(); }
+            else if (ev.key === 'ArrowUp') { ev.preventDefault(); aktiv = (aktiv - 1 + treffer.length) % treffer.length; zeichnen(); }
+            else if (ev.key === 'Enter' || ev.key === 'Tab') { ev.preventDefault(); waehlen(aktiv); }
+            else if (ev.key === 'Escape') { ev.preventDefault(); zu(); }
+        });
+        feld.addEventListener('blur', () => setTimeout(zu, 150));
+        window.addEventListener('resize', zu);
+    }
+
     // ---- Anhänge ----
     function groesse(b) { return b < 1024 * 1024 ? Math.max(1, Math.round(b / 1024)) + ' KB' : (b / 1024 / 1024).toFixed(1) + ' MB'; }
     function anhaengeZeichnen() {
         const box = $('mv-s-anhaenge'); if (!box) return;
         box.hidden = !anhaenge.length;
-        box.innerHTML = anhaenge.map((a, i) => '<span class="mv-anhang">📎 ' + esc(a.name) + ' <span class="text-muted-sm">' + groesse(a.size) + '</span>'
+        box.innerHTML = anhaenge.map((a, i) => '<span class="mv-anhang"><span class="mv-anhang-name" data-oeffnen="' + i + '" title="Öffnen">📎 ' + esc(a.name) + '</span> <span class="text-muted-sm">' + groesse(a.size) + '</span>'
             + '<button type="button" data-i="' + i + '" title="Entfernen">×</button></span>').join('');
     }
     function dateienHinzufuegen(files) {
@@ -1047,9 +1284,16 @@
         if (!n.subject && !n.body.content && !n.toRecipients.length) { st.textContent = 'Nichts zum Öffnen — erst etwas schreiben.'; return; }
         btn.disabled = true; st.textContent = 'Entwurf wird in Outlook angelegt …';
         try {
-            const entwurf = await window.graphFetch('/me/messages', 'POST', n, von);
-            if (anhaenge.length) { st.textContent = 'Anhänge werden übertragen …'; await anhaengeAnEntwurf(entwurf.id, von); }
-            const fenster = window.open(entwurf.webLink, '_blank', 'noopener');
+            // Gibt es schon den automatisch gespeicherten Entwurf? Dann den aktualisieren und öffnen statt einen zweiten anzulegen.
+            clearTimeout(entwurfUhr);
+            if (entwurfLaeuft) await entwurfLaeuft.catch(() => {});
+            let ziel = null;
+            if (entwurf && entwurf.von === von) {
+                try { ziel = await window.graphFetch('/me/messages/' + encodeURIComponent(entwurf.id), 'PATCH', n, von); } catch (e) { if (e.status !== 404) throw e; }
+            }
+            if (!ziel) ziel = await window.graphFetch('/me/messages', 'POST', n, von);
+            if (anhaenge.length) { st.textContent = 'Anhänge werden übertragen …'; await anhaengeAnEntwurf(ziel.id, von); }
+            const fenster = window.open(ziel.webLink, '_blank', 'noopener');
             schreibenLeeren();
             st.textContent = fenster
                 ? 'In Outlook geöffnet — der Entwurf liegt auch im Ordner „Entwürfe" deines Postfachs.'
@@ -1067,8 +1311,21 @@
         if (!n.toRecipients.length && !n.ccRecipients.length && !n.bccRecipients.length) { st.textContent = 'Bitte mindestens einen Empfänger eintragen.'; return; }
         const alle = n.toRecipients.concat(n.ccRecipients, n.bccRecipients).map(r => r.emailAddress.address);
         btn.disabled = true; st.textContent = 'Wird gesendet …';
+        clearTimeout(entwurfUhr);
+        if (entwurfLaeuft) await entwurfLaeuft.catch(() => {});
         try {
-            if (!anhaenge.length) {
+            let ueberEntwurf = false;
+            if (entwurf && entwurf.von === von) {
+                try {
+                    await window.graphFetch('/me/messages/' + encodeURIComponent(entwurf.id), 'PATCH', n, von);
+                    if (anhaenge.length) { st.textContent = 'Anhänge werden übertragen …'; await anhaengeAnEntwurf(entwurf.id, von); }
+                    st.textContent = 'Wird gesendet …';
+                    await window.graphFetch('/me/messages/' + encodeURIComponent(entwurf.id) + '/send', 'POST', null, von);
+                    ueberEntwurf = true;
+                } catch (e) { if (e.status !== 404) throw e; }   // Entwurf weg → normal senden
+            }
+            if (ueberEntwurf) { /* fertig */ }
+            else if (!anhaenge.length) {
                 await window.graphFetch('/me/sendMail', 'POST', { message: n, saveToSentItems: true }, von);
             } else {
                 // Mit Anhängen: Entwurf → Anhänge → Senden (so gehen auch große Dateien)
@@ -1157,9 +1414,17 @@
             window.mailAnhangAusApp({ kunde: t && t.kunde ? { id: t.kunde.id, name: t.kunde.name, matchcode: t.kunde.matchcode || '' } : null });
         });
         $('mv-s-anhaenge').addEventListener('click', e => {
+            const o = e.target.closest('[data-oeffnen]');
+            if (o) { const a = anhaenge[Number(o.dataset.oeffnen)]; if (a) blobZeigen(blobAus(a.base64, typAus(a.type, a.name)), a.name); return; }
             const b = e.target.closest('button[data-i]'); if (!b) return;
             anhaenge.splice(Number(b.dataset.i), 1); anhaengeZeichnen();
         });
+        ['mv-s-an', 'mv-s-cc', 'mv-s-bcc'].forEach(id => { if ($(id)) empfaengerVorschlag($(id)); });
+        ['mv-s-an', 'mv-s-cc', 'mv-s-bcc', 'mv-s-betreff'].forEach(id => { if ($(id)) $(id).addEventListener('input', ev => { if (ev.isTrusted) entwurfVormerken(); }); });
+        // Seite verlassen: offenes Speichern sofort anstoßen (best effort)
+        window.addEventListener('pagehide', () => { if (entwurfUhr) entwurfSpeichern(); });
+        sec.querySelector('.mv-tab[data-tab="schreiben"]').addEventListener('click', () => setTimeout(entwurfAnbieten, 50));
+        setTimeout(entwurfAnbieten, 1500);
         const wrap = $('mv-s-editor-wrap');
         ['dragenter', 'dragover'].forEach(ev => wrap.addEventListener(ev, e => { if (e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files')) { e.preventDefault(); wrap.classList.add('drop'); } }));
         ['dragleave', 'drop'].forEach(ev => wrap.addEventListener(ev, () => wrap.classList.remove('drop')));

@@ -51,6 +51,26 @@
         const m = id && typeof window.machineById === 'function' ? window.machineById(id) : null;
         return m ? (typeof window.machineLabel === 'function' ? window.machineLabel(m) : m.name) : '';
     }
+    // Wie classifyAngebotStatus in js/listen.js: verloren/gewonnen = erledigt, alles andere offen.
+    function angebotOffen(a) {
+        const s = String(a.status || '').toLowerCase();
+        return !/verloren|abgelehnt|absage|abgesagt|storniert|kein interesse|gewonnen|auftrag|bestellt|verkauft|angenommen|zusage/.test(s);
+    }
+    function angebotMeins(a, D) {
+        const p = a.process_id && D.vorgaenge.find(v => String(v.id) === String(a.process_id));
+        return !!(p && meins(p.assigned_users));
+    }
+    const tageAlt = v => { const d = tag(v); return d ? Math.round((tag(new Date()) - d) / 86400000) : null; };
+    const betrag = v => { const n = typeof v === 'number' ? v : parseFloat(String(v == null ? '' : v).replace(/\.(?=\d{3})/g, '').replace(',', '.')); return isNaN(n) ? '' : n.toLocaleString('de-DE', { maximumFractionDigits: 0 }) + ' €'; };
+    // Wartet am längsten / steht auf „warten …" → zuerst
+    function angeboteSortiert(D, nurMeins) {
+        return D.angeboteOffen
+            .filter(a => !nurMeins || angebotMeins(a, D))
+            .map(a => ({ a, alter: tageAlt(a.belegdatum), warten: /warte|reaktion|rückmeld|nachfass|offen|versendet|verschickt/i.test(a.status || '') }))
+            .filter(x => x.alter == null || x.alter >= 3)
+            .sort((x, y) => (y.warten - x.warten) || ((y.alter || 0) - (x.alter || 0)));
+    }
+
     function angebotFirma(a) { return ((a.customers && a.customers.name) || a.kundenmatchcode || '').split(',')[0].trim(); }
     function kunde(id) {
         const k = id && typeof window.customerCacheSync === 'function' ? (window.customerCacheSync() || []).find(c => String(c.id) === String(id)) : null;
@@ -64,7 +84,8 @@
         const ueber = new Date(Z.von); ueber.setDate(ueber.getDate() - 30);   // Überfälliges bis 30 Tage zurück
         const vonUeber = iso(ueber);
         const q = p => p.then(r => r.data || []).catch(e => { console.warn('Briefing:', e); return []; });
-        const [ereignisse, teilnehmer, faellig, vorgaenge, aufgaben, unteraufgaben, einsaetze, mieten, angebote, werkstatt] = await Promise.all([
+        const halbesJahr = new Date(Z.von); halbesJahr.setDate(halbesJahr.getDate() - 180);
+        const [ereignisse, teilnehmer, faellig, vorgaenge, aufgaben, unteraufgaben, einsaetze, mieten, angebote, werkstatt, angeboteAlle] = await Promise.all([
             // Termine + Wartungen (eine Tabelle, siehe CLAUDE.md)
             q(sb.from('maintenance_events').select('id, title, event_date, start_date, machine_id, manual_machine, maintenance_types, description, customer_id, created_by_user').or(`and(event_date.gte.${von},event_date.lte.${bis}),and(start_date.gte.${von},start_date.lte.${bis})`).limit(200)),
             q(sb.from('event_participants').select('event_id, user_id, status').limit(500)),
@@ -74,10 +95,14 @@
             q(sb.from('subtasks').select('id, task_id, title, status, assigned_to, start_date, end_date').gte('start_date', vonUeber).lte('start_date', bis).limit(300)),
             q(sb.from('service_entries').select('id, title, date, datum_von, datum_bis, machine_id, description').or(`and(date.gte.${von},date.lte.${bis}),and(datum_von.gte.${von},datum_von.lte.${bis})`).limit(100)),
             q(sb.from('rental_agreements').select('id, title, machine_id, data, created_at').order('created_at', { ascending: false }).limit(150)),
-            q(sb.from('angebote').select('id, belegnummer, erinnerung, kundenmatchcode, status, customers(name)').gte('erinnerung', vonUeber).lte('erinnerung', bis).limit(100)),
-            q(sb.from('workshop_tasks').select('id, text, done').eq('done', false).limit(50))
+            q(sb.from('angebote').select('*, customers(name)').gte('erinnerung', vonUeber).lte('erinnerung', bis).limit(100)),
+            q(sb.from('workshop_tasks').select('id, text, done').eq('done', false).limit(50)),
+            // Offene Angebote der letzten 6 Monate (Status-Text entscheidet, siehe angebotOffen)
+            q(sb.from('angebote').select('*, customers(name)').gte('belegdatum', iso(halbesJahr)).order('belegdatum', { ascending: false }).limit(300))
         ]);
-        return { Z, ereignisse, teilnehmer, faellig, vorgaenge, aufgaben, unteraufgaben, einsaetze, mieten, angebote, werkstatt };
+        const mitErinnerung = new Set(angebote.map(a => String(a.id)));
+        const angeboteOffen = angeboteAlle.filter(a => angebotOffen(a) && !mitErinnerung.has(String(a.id)));
+        return { Z, ereignisse, teilnehmer, faellig, vorgaenge, aufgaben, unteraufgaben, einsaetze, mieten, angebote, werkstatt, angeboteOffen };
     }
 
     // ---------- Daten → Text ----------
@@ -171,6 +196,12 @@
             D.angebote.sort((a, b) => new Date(a.erinnerung) - new Date(b.erinnerung)).forEach(a => zeilen.push('- ' + datum(a.erinnerung) + (vorher(a.erinnerung, Z) ? ' ÜBERFÄLLIG' : '') + ': Angebot ' + (a.belegnummer || '') + (angebotFirma(a) ? ' · ' + angebotFirma(a) : '') + (a.status ? ' [' + a.status + ']' : '')));
         }
 
+        const wo = angeboteSortiert(D, nurMeins).slice(0, 30);
+        if (wo.length) {
+            zeilen.push('\n## ANGEBOTE offen — warten auf Reaktion (' + wo.length + ')');
+            wo.forEach(x => zeilen.push('- Angebot ' + (x.a.belegnummer || '') + (angebotFirma(x.a) ? ' · ' + angebotFirma(x.a) : '') + ' [' + (x.a.status || 'offen') + ']' + (x.alter != null ? ' · seit ' + x.alter + ' Tagen' : '') + (betrag(x.a.nettobetrag) ? ' · ' + betrag(x.a.nettobetrag) : '')));
+        }
+
         if (D.werkstatt.length && !nurMeins) zeilen.push('\n## WERKSTATT-LISTE offen (' + D.werkstatt.length + ')', ...D.werkstatt.slice(0, 15).map(w => '- ' + kurz(w.text || '', 80)));
 
         return zeilen.join('\n');
@@ -190,7 +221,10 @@ Antworte auf Deutsch, in Markdown, mit genau diesen Abschnitten:
 ${mehrereTage ? '## Tag für Tag\nJe Tag eine Überschrift (**Wochentag, Datum**) und darunter chronologisch die Termine, Wartungen, Einsätze, Wiedervorlagen — mit Uhrzeit, Kunde/Maschine, wer. Tage ohne Einträge weglassen.' : '## Heute chronologisch\nAlle Termine, Wartungen, Einsätze und Wiedervorlagen in Zeitreihenfolge — mit Uhrzeit, Kunde/Maschine, wer.'}
 
 ## Vorgänge & Aufgaben
-Was ist zu erledigen: offene Schritte mit Frist, geplante Aufgaben, Angebote nachfassen. Je Punkt eine Zeile, wer ist dran.
+Was ist zu erledigen: offene Schritte mit Frist, geplante Aufgaben. Je Punkt eine Zeile, wer ist dran.
+
+## Angebote
+Angebote mit Erinnerung und offene Angebote, die auf eine Reaktion des Kunden warten: Belegnummer, Kunde, Status, seit wie vielen Tagen. Älteste und „warten auf Reaktion" zuerst, mit kurzer Empfehlung (anrufen / nachfassen per Mail). Gibt es keine, Abschnitt weglassen.
 
 ## ⚠️ Achtung
 Überfälliges, fällige Wartungen ohne Termin, Termine ohne zugesagte Teilnehmer, Mietrücknahmen. Gibt es nichts, schreib „Nichts Auffälliges".
@@ -214,8 +248,26 @@ Regeln: Nichts erfinden — nur was in den Daten steht. Daten, Uhrzeiten, Namen 
         return out.join('');
     }
 
+    // Offene Angebote als Liste mit Knöpfen (nicht von der KI — echte Daten, damit PDF und Mail stimmen).
+    function angeboteHtml(D, nurMeins) {
+        const liste = D.angebote.filter(angebotOffen).map(a => ({ a, alter: tageAlt(a.belegdatum), erinnerung: true }))
+            .concat(angeboteSortiert(D, nurMeins).slice(0, 15));
+        if (!liste.length) return '';
+        return '<div class="kb-angebote"><h4>📄 Angebote — warten auf Reaktion</h4>' + liste.map(x => `
+            <div class="kb-angebot">
+                <div class="kb-angebot-text"><b>${esc(x.a.belegnummer || '')}</b> · ${esc(angebotFirma(x.a))}
+                    <div class="text-muted-sm">${esc(x.a.status || 'offen')}${x.alter != null ? ' · seit ' + x.alter + ' Tagen' : ''}${betrag(x.a.nettobetrag) ? ' · ' + betrag(x.a.nettobetrag) : ''}${x.erinnerung && x.a.erinnerung ? ' · Erinnerung ' + datum(x.a.erinnerung) : ''}</div>
+                </div>
+                <div class="kb-angebot-knoepfe">
+                    <button type="button" class="todo-kk" data-kb-angebot="pdf" data-id="${esc(x.a.id)}">📄 PDF</button>
+                    <button type="button" class="todo-kk todo-kk-primaer" data-kb-angebot="mail" data-id="${esc(x.a.id)}">✉ Mail</button>
+                    <button type="button" class="todo-kk" data-kb-angebot="todo" data-id="${esc(x.a.id)}" data-nr="${esc(x.a.belegnummer || '')}" data-firma="${esc(angebotFirma(x.a))}" data-status="${esc(x.a.status || '')}" data-kunde="${esc(x.a.customer_id || '')}" title="In die To-do-Liste">＋ To-do</button>
+                </div>
+            </div>`).join('') + '</div>';
+    }
+
     // ---------- Fenster ----------
-    let letzterText = '', letzteAnfrage = '', lauf = 0;
+    let letzterText = '', letzteAnfrage = '', letzteAngebote = '', lauf = 0;
     let zeitraumKey = 'heute', nurMeins = true;   // Vorgabe: nur eigene Einträge
     const cache = new Map();   // key+meins → { text, zeit, schutz, anfrage }
 
@@ -247,18 +299,31 @@ Regeln: Nichts erfinden — nur was in den Daten steht. Daten, Uhrzeiten, Namen 
                     <button type="button" class="ab-btn ab-btn-ghost" id="ki-briefing-copy">Kopieren</button>
                     <button type="button" class="ab-btn ab-btn-ghost" id="ki-briefing-again">Neu erzeugen</button>
                     <button type="button" class="ab-btn ab-btn-ghost" id="ki-briefing-todo" title="Die KI wählt das wirklich Wichtige aus und druckt es als ToDo-Liste mit Adressen und Notizfeld">🖨 Wichtigstes als ToDo</button>
-                    <button type="button" class="ab-btn ab-btn-primary" data-kb-close>Schließen</button>
+                    <button type="button" class="ab-btn ab-btn-primary" id="ki-briefing-alstodo" title="Die KI wählt das Wichtige aus und legt es in deine To-do-Liste (Knopf unten rechts) — dort arbeitest du es Punkt für Punkt ab">✅ Als To-do übernehmen</button>
                 </div>
             </div>`;
         document.body.appendChild(el);
         el.addEventListener('click', e => { if (e.target === el || e.target.closest('[data-kb-close]')) schliessen(); });
+        el.addEventListener('click', e => {
+            const b = e.target.closest('[data-kb-angebot]');
+            if (!b || !window.todoAktion) return;
+            const id = b.dataset.id;
+            if (b.dataset.kbAngebot === 'pdf') return window.todoAktion.pdf(id);
+            if (b.dataset.kbAngebot === 'mail') { schliessen(); return window.todoAktion.mail(id); }
+            if (b.dataset.kbAngebot === 'todo' && window.todoUebernehmen) {
+                schliessen();
+                window.todoUebernehmen([{ typLabel: 'Angebot', title: 'Angebot ' + b.dataset.nr + ' nachfassen', subject: b.dataset.firma + (b.dataset.status ? ' · ' + b.dataset.status : ''),
+                    gruppe: 'Wichtig', ki: 'Wartet auf Reaktion', targetType: 'angebot', targetId: id, customerId: b.dataset.kunde || null }]);
+            }
+        });
         document.getElementById('ki-briefing-seg').addEventListener('click', e => { const b = e.target.closest('button[data-z]'); if (!b) return; zeitraumKey = b.dataset.z; segMarkieren(); erzeugen(false); });
         document.getElementById('ki-briefing-meins').addEventListener('change', e => { nurMeins = e.target.checked; erzeugen(false); });
         document.getElementById('ki-briefing-again').addEventListener('click', () => erzeugen(true));
         document.getElementById('ki-briefing-todo').addEventListener('click', () => kiTodoDrucken());
+        document.getElementById('ki-briefing-alstodo').addEventListener('click', () => alsTodo());
         document.getElementById('ki-briefing-raus').addEventListener('click', () => {
             const body = document.getElementById('ki-briefing-body'), btn = document.getElementById('ki-briefing-raus');
-            if (body.dataset.zeigtAnfrage === '1') { body.innerHTML = md(letzterText); body.dataset.zeigtAnfrage = ''; btn.textContent = 'Was geht raus?'; return; }
+            if (body.dataset.zeigtAnfrage === '1') { body.innerHTML = md(letzterText) + letzteAngebote; body.dataset.zeigtAnfrage = ''; btn.textContent = 'Was geht raus?'; return; }
             body.innerHTML = '<p class="text-muted-sm">So kam der Text beim KI-Anbieter an — Namen, Orte und Nummern sind ersetzt, die Zuordnung liegt nur in diesem Browser:</p>' + (window.kiPseudonym && window.kiPseudonym.pruefHtml ? window.kiPseudonym.pruefHtml(letzteAnfrage || '(noch nichts gesendet)') : '<pre class="ab-ai-summary-roh">' + esc(letzteAnfrage) + '</pre>');
             body.dataset.zeigtAnfrage = '1'; btn.textContent = 'Briefing zeigen';
         });
@@ -287,7 +352,7 @@ Regeln: Nichts erfinden — nur was in den Daten steht. Daten, Uhrzeiten, Namen 
         const mein = ++lauf;
 
         const c = cache.get(key);
-        if (c && !neu) { letzterText = c.text; letzteAnfrage = c.anfrage; body.innerHTML = md(c.text); body.dataset.zeigtAnfrage = ''; raus.textContent = 'Was geht raus?'; meta.textContent = 'Stand ' + c.zeit + (c.schutz ? ' · ' + c.schutz : ''); return; }
+        if (c && !neu) { letzterText = c.text; letzteAnfrage = c.anfrage; letzteAngebote = c.angebHtml || ''; body.innerHTML = md(c.text) + letzteAngebote; body.dataset.zeigtAnfrage = ''; raus.textContent = 'Was geht raus?'; meta.textContent = 'Stand ' + c.zeit + (c.schutz ? ' · ' + c.schutz : ''); return; }
 
         body.innerHTML = '<div class="ab-ai-summary-laden"><span class="ab-ai-spinner"></span> Lade Termine, Wartungen, Vorgänge, Aufgaben …</div>';
         body.dataset.zeigtAnfrage = ''; raus.textContent = 'Was geht raus?';
@@ -327,8 +392,9 @@ Regeln: Nichts erfinden — nur was in den Daten steht. Daten, Uhrzeiten, Namen 
                 meta.textContent = 'Stand ' + zeit + ' · unvollständig';
                 return;
             }
-            cache.set(key, { text, zeit, schutz, anfrage });
-            body.innerHTML = md(text);
+            const angebHtml = angeboteHtml(D, nurMeins);
+            cache.set(key, { text, zeit, schutz, anfrage, angebHtml });
+            letzteAngebote = angebHtml; body.innerHTML = md(text) + angebHtml;
             const tok = erg.usage && erg.usage.total_tokens;
             meta.textContent = 'Stand ' + zeit + ' · ' + ((performance.now() - t0) / 1000).toFixed(1) + ' s' + (tok ? ' · ' + tok.toLocaleString('de-DE') + ' Token' : '') + (resp.headers.get('x-ki-modell') ? ' · ' + resp.headers.get('x-ki-modell') : '') + (schutz ? ' · ' + schutz : '');
         } catch (e) {
@@ -354,7 +420,7 @@ Regeln: Nichts erfinden — nur was in den Daten steht. Daten, Uhrzeiten, Namen 
             const wann = e.event_date || e.start_date;
             if (nurMeins && !meins((teiln[e.id] || []).map(t => t.user_id).concat(e.created_by_user ? [e.created_by_user] : []))) return;
             const wartung = !!(e.machine_id || e.manual_machine || e.maintenance_types);
-            add({ wann, typ: wartung ? 'Wartung' : 'Termin', titel: e.title || 'Termin',
+            add({ wann, typ: wartung ? 'Wartung' : 'Termin', titel: e.title || 'Termin', targetType: 'event', targetId: e.id,
                 subject: maschine(e.machine_id) || e.manual_machine || '', customerId: e.customer_id || null,
                 zeile: kurz(e.title || '', 90) + (kunde(e.customer_id) ? ' · ' + kunde(e.customer_id) : '') + (e.description ? ' — ' + kurz(e.description, 100) : '') });
         });
@@ -371,22 +437,23 @@ Regeln: Nichts erfinden — nur was in den Daten steht. Daten, Uhrzeiten, Namen 
         });
         if (!nurMeins) D.einsaetze.forEach(s => add({ wann: s.datum_von || s.date, typ: 'Service', titel: s.title || 'Servicebericht', subject: maschine(s.machine_id), targetType: 'service', targetId: s.id,
             zeile: kurz(s.title || 'Servicebericht', 80) + (maschine(s.machine_id) ? ' · ' + maschine(s.machine_id) : '') }));
-        if (!nurMeins) D.angebote.forEach(a => add({ wann: a.erinnerung, typ: 'Angebot', titel: 'Angebot ' + (a.belegnummer || ''), subject: angebotFirma(a), targetType: 'angebot', targetId: a.id,
+        if (!nurMeins) D.angebote.forEach(a => add({ wann: a.erinnerung, typ: 'Angebot', titel: 'Angebot ' + (a.belegnummer || ''), subject: angebotFirma(a), targetType: 'angebot', targetId: a.id, customerId: a.customer_id || null,
             zeile: 'Angebot nachfassen · ' + angebotFirma(a) + (a.status ? ' [' + a.status + ']' : '') }));
+        angeboteSortiert(D, nurMeins).slice(0, 20).forEach(x => add({ wann: x.a.belegdatum, typ: 'Angebot', titel: 'Angebot ' + (x.a.belegnummer || '') + ' nachfassen', subject: angebotFirma(x.a) + (x.a.status ? ' · ' + x.a.status : ''), targetType: 'angebot', targetId: x.a.id, customerId: x.a.customer_id || null,
+            zeile: 'Angebot wartet auf Reaktion · ' + angebotFirma(x.a) + ' [' + (x.a.status || 'offen') + ']' + (x.alter != null ? ' seit ' + x.alter + ' Tagen' : '') }));
         return out.map(x => Object.assign(x, { text: `${x.ref} | ${x.typ} | ${datum(x.wann)}${uhr(x.wann)}${vorher(x.wann, Z) ? ' ÜBERFÄLLIG' : ''} | ${x.zeile}` }));
     }
 
-    async function kiTodoDrucken() {
-        // Fenster sofort (Popup-Sperre), gefüllt wird nach der KI-Antwort.
-        const w = window.kalenderTodoFenster && window.kalenderTodoFenster('Die KI wählt das Wichtigste aus …');
-        if (!w) return;
-        const Z = zeitraum(zeitraumKey);
-        const btn = document.getElementById('ki-briefing-todo');
-        if (btn) { btn.disabled = true; btn.textContent = 'KI wählt aus …'; }
-        try {
+    // KI wählt aus den Kandidaten das Wichtige (ein Aufruf je Zeitraum, kurz zwischengespeichert —
+    // Drucken und „Als To-do übernehmen" nutzen dieselbe Auswahl).
+    const auswahlCache = new Map();
+    async function kiAuswahl(Z) {
+        const ckey = Z.key + (nurMeins ? ':meins' : '');
+        const c = auswahlCache.get(ckey);
+        if (c && Date.now() - c.zeit < 10 * 60 * 1000) return c.liste;
             const D = await laden(Z);
             const liste = kandidaten(D, nurMeins);
-            if (!liste.length) { await window.kalenderTodoDrucken([], Z.label, w); return; }
+            if (!liste.length) return [];
             const p = window.kiPseudonym ? window.kiPseudonym.erzeugen(window.kiPseudonym.standardKontext({
                 kontakte: D.vorgaenge.map(x => x.contact_name).filter(Boolean),
                 firmen: D.angebote.map(angebotFirma).concat(D.faellig.map(m => m.company)).filter(Boolean)
@@ -422,13 +489,43 @@ Antworte NUR mit JSON: {"liste":[{"ref":"R3","stufe":1,"warum":"max. 12 Wörter,
                 .sort((a, b) => a.stufe - b.stufe || a.i - b.i)
                 .map(v => v.e);
             if (!gewaehlt.length) throw new Error('Die KI hat keine verwertbare Liste geliefert.');
-            await window.kalenderTodoDrucken(gewaehlt, '✨ ' + Z.label + ' — das Wichtigste', w);
+            auswahlCache.set(ckey, { zeit: Date.now(), liste: gewaehlt });
+            return gewaehlt;
+    }
+
+    async function kiTodoDrucken() {
+        // Fenster sofort (Popup-Sperre), gefüllt wird nach der KI-Antwort.
+        const w = window.kalenderTodoFenster && window.kalenderTodoFenster('Die KI wählt das Wichtigste aus …');
+        if (!w) return;
+        const Z = zeitraum(zeitraumKey);
+        const btn = document.getElementById('ki-briefing-todo');
+        if (btn) { btn.disabled = true; btn.textContent = 'KI wählt aus …'; }
+        try {
+            const gewaehlt = await kiAuswahl(Z);
+            await window.kalenderTodoDrucken(gewaehlt, gewaehlt.length ? '✨ ' + Z.label + ' — das Wichtigste' : Z.label, w);
         } catch (e) {
             try { w.document.body.innerHTML = '<p style="font-family:sans-serif;padding:20px;color:#b91c1c">ToDo-Liste fehlgeschlagen: ' + esc(e.message) + '</p>'; } catch (x) { /* Fenster zu */ }
         } finally {
             if (btn) { btn.disabled = false; btn.textContent = '🖨 Wichtigstes als ToDo'; }
         }
     }
+    async function alsTodo() {
+        if (typeof window.todoUebernehmen !== 'function') { toast('To-do-Liste nicht geladen.', 'error'); return; }
+        const Z = zeitraum(zeitraumKey);
+        const btn = document.getElementById('ki-briefing-alstodo');
+        if (btn) { btn.disabled = true; btn.textContent = 'KI wählt aus …'; }
+        try {
+            const gewaehlt = await kiAuswahl(Z);
+            if (!gewaehlt.length) { toast('Für ' + Z.label + ' gibt es nichts zu übernehmen.'); return; }
+            schliessen();
+            await window.todoUebernehmen(gewaehlt);
+        } catch (e) {
+            toast('Übernehmen fehlgeschlagen: ' + e.message, 'error');
+        } finally {
+            if (btn) { btn.disabled = false; btn.textContent = '✅ Als To-do übernehmen'; }
+        }
+    }
+
     window.kiTodoDrucken = function (key) {
         if (key && ZEITRAEUME[key]) zeitraumKey = key;
         return kiTodoDrucken();

@@ -52,35 +52,46 @@
 .ar-chip.aktiv { color: var(--text-1); background: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.25); }
 .ar-suche { max-width: 280px; }
 
-.ar-liste { display: flex; flex-direction: column; gap: var(--space-2); }
-.ar-zeile {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 170px 130px auto;
-    align-items: center;
-    gap: var(--space-4);
-    padding: var(--space-3) var(--space-4);
-    border-radius: var(--radius-md);
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-left: 4px solid var(--text-3);
+/* Tabelle im Stil der Angebotsliste — feste Breite, kein Querscrollen */
+.ar-tabelle { width: 100%; table-layout: fixed; border-collapse: collapse; }
+.ar-w-datum { width: 105px; }
+.ar-w-nr { width: 120px; }
+.ar-w-betrag { width: 120px; }
+.ar-w-faellig { width: 170px; }
+.ar-w-mahn { width: 170px; }
+.ar-w-aktion { width: 270px; }
+.ar-tabelle thead tr { border-bottom: 2px solid rgba(255, 255, 255, 0.15); }
+.ar-tabelle th {
+    padding: 10px; text-align: left;
+    font-size: var(--fs-sm); font-weight: 700; color: var(--text-1);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.ar-zeile:hover { background: rgba(255, 255, 255, 0.05); }
-.ar-zeile.ar-bezahlt { border-left-color: var(--success); opacity: 0.75; }
-.ar-zeile.ar-bald { border-left-color: var(--warning); }
-.ar-zeile.ar-ueberfaellig { border-left-color: var(--danger); }
-.ar-zeile.ar-offen { border-left-color: var(--info); }
+.ar-tabelle td {
+    padding: 12px 10px; vertical-align: middle;
+    font-size: var(--fs-md, 0.95rem); color: var(--text-1);
+    overflow-wrap: anywhere;
+}
+.ar-tabelle .ar-rechts, .ar-c-betrag { text-align: right; }
+.ar-zeile { border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+.ar-zeile:hover { background: rgba(255, 255, 255, 0.03); }
+.ar-zeile td:first-child { box-shadow: inset 4px 0 0 0 var(--text-3); }
+.ar-zeile.ar-bezahlt { opacity: 0.75; }
+.ar-zeile.ar-bezahlt td:first-child { box-shadow: inset 4px 0 0 0 var(--success); }
+.ar-zeile.ar-bald td:first-child { box-shadow: inset 4px 0 0 0 var(--warning); }
+.ar-zeile.ar-ueberfaellig td:first-child { box-shadow: inset 4px 0 0 0 var(--danger); }
+.ar-zeile.ar-offen td:first-child { box-shadow: inset 4px 0 0 0 var(--info); }
+.ar-c-datum { white-space: nowrap; }
+.ar-c-nr { font-weight: 700; }
+.ar-c-kunde a { color: inherit; font-weight: 600; }
+.ar-c-kunde a:hover { text-decoration: underline; }
+.ar-c-betrag { font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ar-aktionen { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: flex-end; }
 
-.ar-kunde { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font-weight: 700; color: var(--text-1); }
-.ar-kunde a { color: inherit; }
-.ar-kunde a:hover { text-decoration: underline; }
-.ar-meta { font-size: var(--fs-sm); color: var(--text-2); margin-top: 2px; }
-.ar-faellig-datum { font-size: var(--fs-sm); color: var(--text-2); }
+.ar-meta { font-size: var(--fs-xs); color: var(--text-2); margin-top: 2px; font-weight: 400; }
 .ar-faellig-text { font-size: var(--fs-sm); font-weight: 700; color: var(--text-1); }
 .ar-ueberfaellig .ar-faellig-text { color: var(--danger); }
 .ar-bald .ar-faellig-text { color: var(--warning); }
 .ar-bezahlt .ar-faellig-text { color: var(--success); }
-.ar-betrag { font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; color: var(--text-1); }
-.ar-aktionen { display: flex; gap: var(--space-2); justify-content: flex-end; }
 
 .ar-btn {
     padding: var(--space-2) var(--space-3);
@@ -109,11 +120,32 @@
 .ar-leer { padding: var(--space-6) var(--space-4); text-align: center; color: var(--text-2); }
 .ar-fuss { margin-top: var(--space-4); font-size: var(--fs-xs); color: var(--text-3); }
 
+@media (max-width: 1200px) {
+    .ar-tabelle col.ar-w-mahn, .ar-tabelle th:nth-child(6), .ar-tabelle td.ar-c-mahn { display: none; }
+    .ar-w-aktion { width: 150px; }
+    .ar-aktionen { flex-direction: column; align-items: stretch; }
+}
 @media (max-width: 900px) {
     .ar-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .ar-zeile { grid-template-columns: minmax(0, 1fr) auto; }
-    .ar-faellig { grid-column: 1; }
-    .ar-betrag { grid-column: 2; grid-row: 1; }
-    .ar-aktionen { grid-column: 1 / -1; justify-content: flex-start; flex-wrap: wrap; }
     .ar-suche { max-width: none; width: 100%; }
+    /* Handy: jede Rechnung als Karte */
+    .ar-tabelle, .ar-tabelle tbody, .ar-tabelle tr, .ar-tabelle td { display: block; width: 100%; }
+    .ar-tabelle thead, .ar-tabelle colgroup { display: none; }
+    .ar-zeile {
+        margin-bottom: var(--space-2); padding: var(--space-2) var(--space-3);
+        border: 1px solid rgba(255, 255, 255, 0.06); border-radius: var(--radius-md);
+        background: rgba(255, 255, 255, 0.03); border-left: 4px solid var(--text-3);
+    }
+    .ar-zeile td:first-child { box-shadow: none !important; }
+    .ar-zeile.ar-bezahlt { border-left-color: var(--success); }
+    .ar-zeile.ar-bald { border-left-color: var(--warning); }
+    .ar-zeile.ar-ueberfaellig { border-left-color: var(--danger); }
+    .ar-zeile.ar-offen { border-left-color: var(--info); }
+    .ar-tabelle td { padding: 4px 0; text-align: left; }
+    .ar-tabelle td.ar-c-mahn { display: block; }
+    .ar-tabelle td[data-label]::before {
+        content: attr(data-label); display: block;
+        font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase; color: var(--text-3);
+    }
+    .ar-aktionen { flex-direction: row; justify-content: flex-start; margin-top: var(--space-2); }
 }

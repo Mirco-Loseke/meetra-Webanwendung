@@ -6,6 +6,58 @@
 // die Reihenfolge der Skripte entspricht der fruaeheren Reihenfolge im
 // Inline-Block und darf nicht vertauscht werden.
 // ==========================================================
+
+        // Unterschrift platzsparend als PNG: auf die Striche zuschneiden und in ein
+        // kleines Bild im Seitenverhältnis des PDF-Felds (70 × 22 mm) setzen.
+        // Vorher ging die volle Zeichenfläche (≈ 560 × 300, 50–150 KB Base64) in die
+        // Datenbank — jetzt ≈ 5–15 KB, und im PDF wird nichts mehr verzerrt.
+        window.signaturKlein = function (canvas, opts) {
+            const o = opts || {};
+            const zielB = o.breite || 400;
+            const verh = o.verhaeltnis || (70 / 22);
+            try {
+                const w = canvas.width, h = canvas.height;
+                const px = canvas.getContext('2d').getImageData(0, 0, w, h).data;
+                let x0 = w, y0 = h, x1 = -1, y1 = -1;
+                for (let y = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++) {
+                        const i = (y * w + x) * 4;
+                        // Strich = sichtbar (alpha) und nicht fast weiß
+                        if (px[i + 3] > 40 && (px[i] + px[i + 1] + px[i + 2]) < 600) {
+                            if (x < x0) x0 = x; if (x > x1) x1 = x;
+                            if (y < y0) y0 = y; if (y > y1) y1 = y;
+                        }
+                    }
+                }
+                if (x1 < 0) return canvas.toDataURL('image/png');   // leer
+                const rand = 6;
+                x0 = Math.max(0, x0 - rand); y0 = Math.max(0, y0 - rand);
+                x1 = Math.min(w - 1, x1 + rand); y1 = Math.min(h - 1, y1 + rand);
+                const sw = x1 - x0 + 1, sh = y1 - y0 + 1;
+                const zielH = Math.round(zielB / verh);
+                const f = Math.min(zielB / sw, zielH / sh, 1);
+                const dw = Math.round(sw * f), dh = Math.round(sh * f);
+                const out = document.createElement('canvas');
+                out.width = zielB; out.height = zielH;
+                const ctx = out.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, zielB, zielH);
+                ctx.imageSmoothingQuality = 'high';
+                ctx.drawImage(canvas, x0, y0, sw, sh, Math.round((zielB - dw) / 2), Math.round((zielH - dh) / 2), dw, dh);
+                // Reines Schwarz/Weiß statt Graustufen-Kanten: PNG komprimiert das um ein Vielfaches besser.
+                const bild = ctx.getImageData(0, 0, zielB, zielH);
+                const d = bild.data;
+                for (let i = 0; i < d.length; i += 4) {
+                    const v = (d[i] + d[i + 1] + d[i + 2]) < 540 ? 0 : 255;
+                    d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255;
+                }
+                ctx.putImageData(bild, 0, 0);
+                return out.toDataURL('image/png');
+            } catch (e) {
+                return canvas.toDataURL('image/png');
+            }
+        };
+
         let signatureCanvas = null;
         let signatureCtx = null;
         let isDrawing = false;
@@ -127,7 +179,7 @@
         
         window.saveSignatureCanvas = function() {
             if (signatureCanvas) {
-                const dataUrl = signatureCanvas.toDataURL('image/png');
+                const dataUrl = window.signaturKlein(signatureCanvas);
                 document.getElementById('service-customer-signature').value = dataUrl;
                 
                 const sigPreviewImg = document.getElementById('signature-preview-img');
@@ -221,7 +273,7 @@
 
         window.saveTechSignatureCanvas = function() {
             if (techSignatureCanvas) {
-                const dataUrl = techSignatureCanvas.toDataURL('image/png');
+                const dataUrl = window.signaturKlein(techSignatureCanvas);
                 document.getElementById('service-tech-signature').value = dataUrl;
                 const img = document.getElementById('tech-signature-preview-img');
                 if (img) { img.src = dataUrl; img.classList.remove('hidden'); img.style.display = 'block'; }
@@ -314,7 +366,7 @@
 
         window.saveDriverSignatureCanvas = function() {
             if (!driverSignatureCanvas || !driverSigTarget) return;
-            const dataUrl = driverSignatureCanvas.toDataURL('image/png');
+            const dataUrl = window.signaturKlein(driverSignatureCanvas);
             if (typeof window.setDriverSignatureImage === 'function') {
                 window.setDriverSignatureImage(driverSigTarget.templateId, driverSigTarget.index, dataUrl);
             }
@@ -385,7 +437,7 @@
 
         window.saveUserSignatureCanvas = function() {
             if (userSignatureCanvas) {
-                const dataUrl = userSignatureCanvas.toDataURL('image/png');
+                const dataUrl = window.signaturKlein(userSignatureCanvas);
                 document.getElementById('edit-user-signature').value = dataUrl;
                 const img = document.getElementById('user-signature-preview-img');
                 if (img) { img.src = dataUrl; img.classList.remove('hidden'); img.style.display = 'block'; }

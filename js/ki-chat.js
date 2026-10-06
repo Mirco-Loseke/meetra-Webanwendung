@@ -121,7 +121,11 @@
         { i: '➕', l: 'Unteraufgaben ergänzen', text: 'Zur Aufgabe … folgende Unteraufgaben hinzufügen: ' },
         { i: '📷', l: 'Foto einer Maschine zuordnen', text: 'Foto zur Maschine ', foto: true },
         { i: '⚠️', l: 'Schadensbericht aufnehmen', text: 'Schadensbericht: Maschine … — Schaden: ' },
-        { i: '🔍', l: 'Bild analysieren', text: 'Was ist auf dem Bild zu sehen?', foto: true }
+        { i: '🔍', l: 'Bild analysieren', text: 'Was ist auf dem Bild zu sehen?', foto: true },
+        { i: '✍️', l: 'Handschrift abschreiben', text: 'Bitte den handschriftlichen Zettel abschreiben und als Eintrag ablegen bei ', foto: true },
+        { i: '📊', l: 'Service-Statistik', text: 'Wie sieht unsere Service-Statistik der letzten 12 Monate aus? Welche Maschinen waren am häufigsten dran?' },
+        { i: '💶', l: 'Angebots-Quote', text: 'Wie viele Angebote haben wir dieses Jahr gewonnen und verloren, wie ist die Abschlussquote?' },
+        { i: '🔧', l: 'Häufige Probleme', text: 'Welche Probleme und Bauteile tauchen im Service am häufigsten auf?' }
     ];
 
     let verlauf = [];       // { rolle:'user'|'ki', text, bilder:[nr], aktionen:[], laedt, fehler }
@@ -269,6 +273,11 @@
         else if (a === 'neu') { if (laeuft) return; verlauf = []; wartend = []; render(); }
         else if (a === 'foto') document.getElementById('kic-datei').click();
         else if (a === 'briefing') briefingOeffnen(b.dataset.key);
+        else if (a === 'adr-wahl') {
+            const k = b.closest('.kic-karte');
+            const f = k && k.querySelector('.kic-f-adr');
+            if (f) { f.value = b.dataset.v; b.parentElement.remove(); }
+        }
         else if (a === 'vorschlag') {
             const v = VORSCHLAEGE[+b.dataset.i];
             oeffnen(v.text);
@@ -335,13 +344,16 @@
         if (Date.now() - cache.zeit < 120000) return;
         const sb = window.supabaseClient;
         if (!sb) return;
-        const [t, v] = await Promise.all([
+        const [t, v, s] = await Promise.all([
             sb.from('tasks').select('id, title, machine_id, status').neq('status', 'completed').order('id', { ascending: false }).limit(300),
-            sb.from('internal_processes').select('*').order('id', { ascending: false }).limit(300)
+            sb.from('internal_processes').select('*').order('id', { ascending: false }).limit(300),
+            // Serviceberichte schmal (ohne Unterschriften) — für „beim Servicebericht ergänzen"
+            sb.from('service_entries').select('id, machine_id, title, date, created_at, is_finalized').order('id', { ascending: false }).limit(400)
         ]);
         cache = {
             zeit: Date.now(),
             tasks: t.data || [],
+            berichte: s.data || [],
             procs: (v.data || []).filter(x => !ERLEDIGT.test(String(x.status || ''))).map(x => ({ id: x.id, title: x.title, customer_id: x.customer_id, machine_id: x.machine_id, status: x.status }))
         };
     }
@@ -433,16 +445,21 @@
     function kontextBauen(text) {
         const hay = String(text || '').toLowerCase();
         const hayZ = hay.replace(/[^a-z0-9]/g, '');
-        refs = { adr: {}, m: {}, t: {}, v: {} };
+        refs = { adr: {}, m: {}, t: {}, v: {}, s: {} };
         const kunden = (window.customerCacheSync && window.customerCacheSync()) || [];
         const kundeById = new Map(kunden.map(k => [String(k.id), k]));
 
-        // Adressen: jedes Wort ≥4 Zeichen im Kunden-Cache suchen
-        const adr = new Map();
-        worte(text).forEach(w => {
+        // Adressen + Maschinen: Punkte-Erkennung (js/ki-erkennung.js) — Tippfehler,
+        // Umlaute, Ort/PLZ/Nr., seltene Namensteile zählen mehr. Rückfall: Wortsuche.
+        const E = window.kiErkennung;
+        const adrTreffer = E ? E.adressen(text) : [];
+        const adr = new Map(adrTreffer.slice(0, 10).map(a => [String(a.k.id), a.k]));
+        if (!E) worte(text).forEach(w => {
             if (adr.size >= 10 || !window.customerCacheSearchSync) return;
             window.customerCacheSearchSync(w, 4).forEach(k => { if (adr.size < 10) adr.set(String(k.id), k); });
         });
+        const maschTreffer = E ? E.maschinen(text, adrTreffer) : [];
+        const maschPunkte = new Map(maschTreffer.map(x => [x.m.id, x.score]));
 
         // Maschinen: Wort-/Seriennummer-Treffer, dann Maschinen der gefundenen Adressen
         const ms = (window.machineList || []).map(m => {
@@ -451,6 +468,7 @@
             if (sn.length >= 3 && (hayZ.includes(sn) || ocr(hay).includes(ocr(sn)))) s += 5;
             if (m.customer_id && adr.has(String(m.customer_id))) s += 2;
             if (typSchluessel(m).some(k => typRe(k).test(hay))) s += 6;
+            s += (maschPunkte.get(m.id) || 0) * 1.5;
             return { m, s };
         }).filter(x => x.s >= 1).sort((a, b) => b.s - a.s).slice(0, 25).map(x => x.m);
 
@@ -470,6 +488,20 @@
         z.push('OFFENE AUFGABEN:'); tasks.forEach(t => { const r = 't' + (++i); refs.t[r] = t; z.push(`${r} = ${t.title || 'Aufgabe'}${t.machine_id ? ' (Maschine m' + t.machine_id + ')' : ''}`); });
         i = 0;
         z.push('OFFENE VORGÄNGE:'); procs.forEach(v => { const r = 'v' + (++i); refs.v[r] = v; const k = kundeById.get(String(v.customer_id)); z.push(`${r} = ${v.title || 'Vorgang'}${k ? ' — ' + k.name : ''}`); });
+        // Serviceberichte der erkannten Maschinen (neueste zuerst, je Maschine 4, gesamt 15)
+        i = 0;
+        const mIds = new Set(ms.slice(0, 6).map(m => String(m.id)));
+        const jeM = {};
+        let berichte = (cache.berichte || []).filter(b => mIds.has(String(b.machine_id)) && (jeM[b.machine_id] = (jeM[b.machine_id] || 0) + 1) <= 4).slice(0, 15);
+        // Keine Maschine erkannt, aber vom Bericht die Rede → die neuesten zur Auswahl
+        if (!berichte.length && /bericht|servicebericht|einsatz/i.test(hay)) berichte = (cache.berichte || []).slice(0, 8);
+        z.push('SERVICEBERICHTE:');
+        berichte.forEach(b => {
+            const r = 's' + (++i); refs.s[r] = b;
+            const d = b.date || b.created_at;
+            z.push(`${r} = ${b.title || 'Servicebericht'}${d ? ' vom ' + new Date(d).toLocaleDateString('de-DE') : ''} (Maschine m${b.machine_id})${b.is_finalized ? ' [abgeschlossen]' : ''}`);
+        });
+        if (!berichte.length) z.push('(keiner zu den genannten Maschinen)');
         z.push('MITARBEITER: ' + (window.userList || []).map(u => u.name).filter(Boolean).join(', '));
         return z.join('\n');
     }
@@ -485,6 +517,8 @@ Mögliche Aktionen:
 {"art":"aufgabe","titel":"kurz","beschreibung":"","maschine":"mID|null","unteraufgaben":["…"],"zustaendig":["Mitarbeitername"]}
 {"art":"unteraufgaben","aufgabe":"tN","unteraufgaben":["…"]}
 {"art":"foto","maschine":"mID|null","bilder":[Bildnummern],"titel":"kurz","notiz":"was zu sehen ist"}
+{"art":"handschrift","adresse":"adrN|null","maschine":"mID|null","titel":"kurz, worum es geht","text":"vollständige wörtliche Abschrift","bilder":[Bildnummern],"unsicher":["schwer lesbare Wörter/Zahlen"]}
+{"art":"servicebericht","bericht":"sN|null","maschine":"mID|null","bilder":[Bildnummern],"text":"Ergänzung/Bemerkung oder leer"}
 {"art":"schaden","maschine":"mID|null","titel":"kurz, z. B. Hydraulikschlauch geplatzt","schaden":"was ist beschädigt/defekt, wie sieht es aus","bauteil":"betroffenes Bauteil","ursache":"vermutete Ursache oder leer","schwere":"gering|mittel|hoch","betriebsbereit":"ja|eingeschränkt|nein","massnahme":"empfohlene Reparatur/Sofortmaßnahme","bilder":[Bildnummern]}
 Jede Aktion mit Maschinenbezug bekommt zusätzlich "erkannt":{"seriennummer":"","hersteller":"","typ":"","baujahr":"","kunde":""} — genau so, wie es im Text oder auf dem Bild (Typenschild!) steht, Ziffern exakt abschreiben, Unbekanntes leer. Damit ordnet die App die Maschine auch zu, wenn sie nicht in der Liste steht.
 Regeln:
@@ -493,9 +527,16 @@ Regeln:
 - Ist keine passende Maschine in der Liste, "maschine": null lassen — aber "erkannt" immer ausfüllen.
 - Bilder: kurz beschreiben, was zu sehen ist. Typenschild → Seriennummer/Hersteller lesen und die Maschine aus der Liste zuordnen. Will der Nutzer das Foto ablegen oder zuordnen → Aktion "foto".
 - "Schaden", "Schadensbericht", "kaputt", "beschädigt" oder ein Schaden auf dem Foto → Aktion "schaden" (die App legt auf Wunsch selbst den Reparatur-Vorgang dazu an, also NICHT zusätzlich "vorgang"). Fehlt Wichtiges, trotzdem die Aktion liefern und in "antwort" kurz nachfragen.
+- Handschriftlicher Zettel, Notiz, Aufmaß, Formular oder Liste auf dem Foto → Aktion "handschrift": den Text VOLLSTÄNDIG und WÖRTLICH abschreiben (Zeilenumbrüche als \n, Zahlen, Maße, Seriennummern und Telefonnummern exakt, Abkürzungen nicht auflösen), unleserliche Stellen als [?] markieren und in "unsicher" nennen. Adresse/Maschine aus Text oder Zettel zuordnen. Nicht zusammenfassen — die Zusammenfassung gehört höchstens in "titel".
+- "Servicebericht", "Bericht", "Einsatz", "beim Bericht", "zum Bericht hinzufügen/ergänzen/nachtragen/anhängen" → Aktion "servicebericht": der Nutzer will etwas an einem VORHANDENEN Servicebericht ablegen (Bilder anhängen und/oder Text ergänzen). Bericht aus SERVICEBERICHTE wählen (passende Maschine, sonst der neueste); "letzter"/"heutiger" = neuester. Ist keiner eindeutig: "bericht": null, aber "maschine" setzen. Bilder dann NICHT zusätzlich als "foto" vorschlagen.
 - Sonstige Defekte → gerne Vorgang (typ repair) oder Aufgabe vorschlagen.
 - typ nach Inhalt: Störung/Defekt repair, Wartung maintenance, Preisanfrage offer, Bestellung order, Beschwerde complaint, Besuch/Termin appointment, Anruf call, reine Info note.
 - Reine Fragen oder Smalltalk → "aktionen": [].
+${window.kiAuswertung ? `
+FRAGEN NACH ZAHLEN, STATISTIKEN, HÄUFIGKEITEN, VERLÄUFEN (z. B. „welche Maschinen oft im Service", „wie viele Angebote gewonnen", „was war bei Maschine X"):
+Antworte ZUERST NUR mit {"abfragen":[{"name":"…", …Parameter}]} — ohne "antwort". Die App rechnet und schickt dir die ERGEBNISSE; dann antwortest du normal mit {"antwort":"…","aktionen":[]}.
+In der Antwort mit Zahlen: konkrete Zahlen und Namen aus den ERGEBNISSEN nennen, nichts erfinden, nichts schätzen. Markdown erlaubt: **fett**, Listen mit "- ", kleine Tabellen mit | Spalte | Spalte |. Am Ende 1–2 Sätze Einordnung oder Empfehlung.
+${window.kiAuswertung.KATALOG}` : ''}
 LISTEN:
 ${kontext}`;
     }
@@ -523,15 +564,18 @@ ${kontext}`;
         verlauf.push(ki);
         laeuft = true;
         render();
+        nutzer._status = t => { ki.status = t; render(); };
         try {
             const r = await frageKi(nutzer);
             ki.text = r.antwort || (r.aktionen.length ? 'Hier mein Vorschlag:' : 'Keine Antwort erhalten.');
             ki.aktionen = r.aktionen;
+            ki.abfragen = r.abfragen || null;
         } catch (e) {
             ki.fehler = true;
             ki.text = e && e.abgebrochen ? 'Nicht an die KI gesendet.' : ('⚠️ ' + (e && e.message || e));
         }
         ki.laedt = false;
+        delete nutzer._status;
         laeuft = false;
         render();
     }
@@ -559,15 +603,48 @@ ${kontext}`;
             delete payload.response_format;
             resp = await holen(payload);
         }
+        let roh = await inhaltVon(resp);
+        // Auswertungs-Runde: KI wünscht Abfragen → App rechnet → zweiter Aufruf mit den Ergebnissen
+        const w = jsonAus(roh);
+        if (w && Array.isArray(w.abfragen) && w.abfragen.length && window.kiAuswertung) {
+            nutzer._status && nutzer._status('Rechne Auswertung …');
+            const erg = await window.kiAuswertung.ausfuehren(w.abfragen, refs);
+            messages.push({ role: 'assistant', content: roh });
+            messages.push({ role: 'user', content: 'ERGEBNISSE DER ABFRAGEN:\n' + erg.text + '\n\nBeantworte jetzt die ursprüngliche Frage mit diesen Zahlen. Antworte als JSON {"antwort":"…","aktionen":[]} — keine weiteren "abfragen".' });
+            payload.max_tokens = 3000;
+            nutzer._status && nutzer._status('Schreibe Antwort …');
+            resp = await holen(payload);
+            roh = await inhaltVon(resp);
+            const r = auswerten(roh, nutzer.text);
+            r.abfragen = erg.liste;
+            return r;
+        }
+        return auswerten(roh, nutzer.text);
+    }
+    async function inhaltVon(resp) {
         let j = null;
         try { j = await resp.json(); } catch (e) { /* unten */ }
         if (!resp.ok) throw new Error((j && j.error && (j.error.message || j.error)) || ('KI-Fehler ' + resp.status));
-        const roh = j && j.choices && j.choices[0] && j.choices[0].message ? j.choices[0].message.content : '';
-        return auswerten(roh, nutzer.text);
+        return j && j.choices && j.choices[0] && j.choices[0].message ? j.choices[0].message.content : '';
+    }
+    function jsonAus(roh) {
+        const t = String(roh || '').replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
+        try { return JSON.parse(t); } catch (e) {
+            const a = t.indexOf('{'), b = t.lastIndexOf('}');
+            if (a >= 0 && b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch (e2) { return null; } }
+            return null;
+        }
     }
 
     function auswerten(roh, nutzerText) {
-        const ausText = maschineAusText(nutzerText);
+        // Eindeutige Treffer aus dem Nutzertext — die setzt die App selbst,
+        // auch wenn die KI null liefert oder danebenliegt.
+        const E = window.kiErkennung;
+        const adrListe = E ? E.adressen(nutzerText) : [];
+        const adrSicher = E ? E.eindeutig(adrListe, 4) : null;
+        const maschSicher = E ? E.eindeutig(E.maschinen(nutzerText, adrListe), 5) : null;
+        const ausText = maschineAusText(nutzerText) || (maschSicher ? { m: maschSicher.m, sicher: maschSicher.score >= 6, grund: maschSicher.grund } : null);
+        const kundeVon = id => ((window.customerCacheSync && window.customerCacheSync()) || []).find(k => String(k.id) === String(id)) || null;
         let o = null;
         const s = String(roh || '').replace(/^```(?:json)?\s*|\s*```$/g, '').trim();
         try { o = JSON.parse(s); } catch (e) {
@@ -585,11 +662,34 @@ ${kontext}`;
             if (f && (!x.maschine || (f.sicher && f.m.id !== x.maschine.id))) x.maschine = f.m;
             x.treffer = f ? (f.m === x.maschine ? f.grund : '') : '';
             x.adresse = a.adresse && r.adr[a.adresse] ? r.adr[a.adresse] : null;
+            // Adresse: eindeutig im Text erkannt → setzen (bzw. KI-Wahl korrigieren,
+            // wenn die KI eine andere als die klar genannte nimmt)
+            if (adrSicher && (!x.adresse || String(x.adresse.id) !== String(adrSicher.k.id))) {
+                x.adresse = adrSicher.k; x.adrTreffer = 'erkannt über ' + adrSicher.grund;
+            }
+            // Keine Adresse, aber Maschine mit Kundenverknüpfung → deren Kunde
+            if (!x.adresse && x.maschine && x.maschine.customer_id) {
+                const k = kundeVon(x.maschine.customer_id);
+                if (k) { x.adresse = k; x.adrTreffer = 'von der Maschine übernommen'; }
+            }
+            // KI hat keine Adresse gesetzt, die Erkennung aber Vorschläge → auf der Karte nennen
+            // Mehrdeutig (z. B. zwei „Ostendorf"): ohne Adresse → Vorschläge; hat die
+            // KI eine gewählt, aber ähnlich gute Alternativen gibt es → „Oder:" zeigen.
+            const nahe = adrListe.length ? adrListe.filter(t => t.score >= adrListe[0].score * 0.75) : [];
+            x.adrVorschlaege = !x.adresse ? nahe.slice(0, 3).map(t => t.k)
+                : (!x.adrTreffer && nahe.length > 1 ? nahe.filter(t => String(t.k.id) !== String(x.adresse.id)).slice(0, 2).map(t => t.k) : []);
+            x.adrOder = !!x.adresse && x.adrVorschlaege.length > 0;
             x.aufgabe = a.aufgabe && r.t[a.aufgabe] ? r.t[a.aufgabe] : null;
             x.vorgang = a.vorgang && r.v[a.vorgang] ? r.v[a.vorgang] : null;
-            x.kand = { t: Object.values(r.t), v: Object.values(r.v) };
+            x.bericht = a.bericht && r.s && r.s[a.bericht] ? r.s[a.bericht] : null;
+            // Bericht gewählt, aber Maschine fehlt/abweichend → Maschine des Berichts
+            if (x.bericht && x.bericht.machine_id) {
+                const bm = (window.machineList || []).find(m => String(m.id) === String(x.bericht.machine_id));
+                if (bm) x.maschine = bm;
+            }
+            x.kand = { t: Object.values(r.t), v: Object.values(r.v), s: Object.values(r.s || {}) };
             return x;
-        }).filter(a => ['vorgang', 'vorgang_stand', 'aufgabe', 'unteraufgaben', 'foto', 'schaden'].includes(a.art));
+        }).filter(a => ['vorgang', 'vorgang_stand', 'aufgabe', 'unteraufgaben', 'foto', 'schaden', 'handschrift', 'servicebericht'].includes(a.art));
         return { antwort: String(o.antwort || ''), aktionen: liste };
     }
 
@@ -612,11 +712,37 @@ ${kontext}`;
             if (m.rolle === 'user') {
                 return `<div class="kic-msg kic-user">${m.bilder.length ? `<div class="kic-msg-bilder">${m.bilder.map(nr => `<img src="${alleBilder[nr].url}" alt="Bild ${nr}" data-kic="bild" data-nr="${nr}">`).join('')}</div>` : ''}${m.text ? `<div class="kic-blase">${esc(m.text)}</div>` : ''}</div>`;
             }
-            if (m.laedt) return `<div class="kic-msg kic-ki"><div class="kic-blase kic-tippt"><span></span><span></span><span></span></div></div>`;
-            return `<div class="kic-msg kic-ki"><div class="kic-blase${m.fehler ? ' kic-fehler' : ''}">${esc(m.text).replace(/\n/g, '<br>')}</div>${(m.aktionen || []).map((a, ai) => karte(a, mi, ai)).join('')}</div>`;
+            if (m.laedt) return `<div class="kic-msg kic-ki"><div class="kic-blase kic-tippt"><span></span><span></span><span></span>${m.status ? `<em class="kic-status">${esc(m.status)}</em>` : ''}</div></div>`;
+            return `<div class="kic-msg kic-ki"><div class="kic-blase${m.fehler ? ' kic-fehler' : ''}">${mdKlein(m.text)}${m.abfragen && m.abfragen.length ? `<div class="kic-quelle">📊 Ausgewertet: ${m.abfragen.map(a => esc(a.name.replace(/_/g, ' ')) + (a.monate ? ' (' + esc(a.monate) + ' Mon.)' : '')).join(', ')} — Zahlen aus der Datenbank, nur die Ergebnisse gingen an die KI</div>` : ''}</div>${(m.aktionen || []).map((a, ai) => karte(a, mi, ai)).join('')}</div>`;
         }).join('');
         datalistsFuellen();
         el.scrollTop = el.scrollHeight;
+    }
+
+    // Kleines Markdown für Antworten: **fett**, Listen, Überschriften, Tabellen
+    function mdKlein(text) {
+        const inl = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        const out = []; let liste = null, tab = null;
+        const flush = () => {
+            if (liste) { out.push('<ul>' + liste.join('') + '</ul>'); liste = null; }
+            if (tab) {
+                const rows = tab.filter(r => !/^\s*\|?\s*:?-{2,}/.test(r));
+                out.push('<div class="kic-tab"><table>' + rows.map((r, i) => '<tr>' + r.replace(/^\s*\||\|\s*$/g, '').split('|').map(c => (i ? '<td>' : '<th>') + inl(c.trim()) + (i ? '</td>' : '</th>')).join('') + '</tr>').join('') + '</table></div>');
+                tab = null;
+            }
+        };
+        String(text || '').split(/\r?\n/).forEach(z => {
+            if (/^\s*\|.*\|\s*$/.test(z)) { if (liste) flush(); (tab = tab || []).push(z); return; }
+            if (tab) flush();
+            const li = /^\s*(?:[-*•]|\d+[.)])\s+(.*)$/.exec(z);
+            if (li) { (liste = liste || []).push('<li>' + inl(li[1]) + '</li>'); return; }
+            flush();
+            const h = /^#{1,4}\s+(.*)$/.exec(z);
+            if (h) out.push('<div class="kic-h">' + inl(h[1]) + '</div>');
+            else if (z.trim()) out.push('<p>' + inl(z) + '</p>');
+        });
+        flush();
+        return out.join('');
     }
 
     function datalistsFuellen() {
@@ -649,7 +775,7 @@ ${kontext}`;
         const id = `data-m="${mi}" data-a="${ai}"`;
         if (a.status === 'verworfen') return `<div class="kic-karte kic-verworfen" ${id}>Verworfen: ${esc(a.titel || a.art)}</div>`;
         if (a.status === 'fertig') {
-            const link = (a.art === 'schaden' && a.zielId) || a.art === 'vorgang' || a.art === 'vorgang_stand' || a.art === 'aufgabe' || a.art === 'unteraufgaben';
+            const link = (a.art === 'schaden' && a.zielId) || (a.art === 'servicebericht' && a.zielId) || a.art === 'vorgang' || a.art === 'vorgang_stand' || a.art === 'aufgabe' || a.art === 'unteraufgaben';
             return `<div class="kic-karte kic-fertig" ${id}><span>✓ ${esc(a.fertigText || 'Erledigt')}</span>${link ? '<button type="button" class="kic-link" data-kic="oeffnen">Öffnen →</button>' : ''}</div>`;
         }
         let kopf = '', body = '', knopf = '';
@@ -658,6 +784,8 @@ ${kontext}`;
             body = feld('', 'Titel', `<input class="kic-f-titel" value="${esc(a.titel)}">`)
                 + `<div class="kic-zwei">${feld('', 'Art', `<select class="kic-f-typ">${Object.entries(TYP).map(([k, l]) => `<option value="${k}"${k === (TYP[a.typ] ? a.typ : 'other') ? ' selected' : ''}>${l}</option>`).join('')}</select>`)}
                    ${feld('', 'Adresse', `<input class="kic-f-adr" list="kic-dl-adr" value="${a.adresse ? esc(aLabel(a.adresse)) : ''}" placeholder="— keine —">`)}</div>`
+                + (a.adrTreffer ? `<div class="kic-zust">🏢 Adresse ${esc(a.adrTreffer)}</div>` : '')
+                + (a.adrVorschlaege && a.adrVorschlaege.length ? `<div class="kic-adr-vorschlaege"><span>${a.adrOder ? 'Mehrere passen — oder doch:' : 'Meintest du:'}</span>${a.adrVorschlaege.map(k => `<button type="button" data-kic="adr-wahl" data-v="${esc(aLabel(k))}">${esc(k.name)}${k.city ? ' · ' + esc(k.city) : ''}</button>`).join('')}</div>` : '')
                 + inputMaschine(a.maschine, a)
                 + feld('', 'Beschreibung', `<textarea class="kic-f-text" rows="2">${esc(a.beschreibung)}</textarea>`)
                 + feld('', 'Schritte (je Zeile einer)', `<textarea class="kic-f-liste" rows="2">${zeilen(a.schritte)}</textarea>`)
@@ -705,6 +833,41 @@ ${kontext}`;
                 + feld('', 'Titel', `<input class="kic-f-titel" value="${esc(a.titel || 'Foto')}">`)
                 + feld('', 'Notiz', `<textarea class="kic-f-text" rows="2">${esc(a.notiz)}</textarea>`);
             knopf = 'Foto speichern';
+        } else if (a.art === 'servicebericht') {
+            const nrs = (Array.isArray(a.bilder) ? a.bilder : []).map(Number).filter(n => alleBilder[n]);
+            a.bilder = nrs;
+            // Auswahl: gewählter Bericht, dann Berichte derselben Maschine, dann die übrigen Kandidaten
+            const kand = (a.kand.s || []).filter(b => b !== a.bericht);
+            const gleicheM = a.maschine ? kand.filter(b => String(b.machine_id) === String(a.maschine.id)) : [];
+            const optionen = (a.bericht ? [a.bericht] : []).concat(gleicheM, kand.filter(b => !gleicheM.includes(b)));
+            const bLabel = b => {
+                const d = b.date || b.created_at;
+                const m = (window.machineList || []).find(x => String(x.id) === String(b.machine_id));
+                return [(b.title || 'Servicebericht'), d ? new Date(d).toLocaleDateString('de-DE') : '', m ? machineLabel(m) : ''].filter(Boolean).join(' · ') + (b.is_finalized ? ' 🔒' : '');
+            };
+            kopf = '📋 Beim Servicebericht ergänzen';
+            body = (nrs.length ? `<div class="kic-msg-bilder">${nrs.map(nr => `<img src="${alleBilder[nr].url}" alt="Bild ${nr}" data-kic="bild" data-nr="${nr}">`).join('')}</div>` : '')
+                + feld('', 'Servicebericht', `<select class="kic-f-ziel">${optionen.map(b => `<option value="${b.id}">${esc(bLabel(b))}</option>`).join('') || '<option value="">— kein Bericht zu dieser Maschine gefunden —</option>'}</select>`)
+                + feld('', 'Ergänzung / Bemerkung (optional)', `<textarea class="kic-f-text" rows="2" placeholder="wird an die Bemerkungen angehängt">${esc(a.text)}</textarea>`)
+                + '<div class="kic-zust">Bilder kommen zu den Anhängen des Berichts. Text wird an die Bemerkungen angehängt — bei abgeschlossenen Berichten (🔒) nur Bilder, das unterschriebene PDF bleibt unverändert.</div>';
+            knopf = nrs.length ? 'Zum Bericht hinzufügen' : 'Ergänzung speichern';
+        } else if (a.art === 'handschrift') {
+            const nrs = (Array.isArray(a.bilder) ? a.bilder : []).map(Number).filter(n => alleBilder[n]);
+            if (!nrs.length) Object.keys(alleBilder).slice(-1).forEach(n => nrs.push(+n));
+            a.bilder = nrs;
+            const unsicher = (Array.isArray(a.unsicher) ? a.unsicher : []).filter(Boolean);
+            kopf = '✍️ Abschrift als Eintrag';
+            body = (nrs.length ? `<div class="kic-msg-bilder">${nrs.map(nr => `<img src="${alleBilder[nr].url}" alt="Bild ${nr}" data-kic="bild" data-nr="${nr}">`).join('')}</div>` : '')
+                + `<div class="kic-zwei">${feld('', 'Adresse', `<input class="kic-f-adr" list="kic-dl-adr" value="${a.adresse ? esc(aLabel(a.adresse)) : ''}" placeholder="— keine —">`)}</div>`
+                + (a.adrTreffer ? `<div class="kic-zust">🏢 Adresse ${esc(a.adrTreffer)}</div>` : '')
+                + (a.adrVorschlaege && a.adrVorschlaege.length ? `<div class="kic-adr-vorschlaege"><span>${a.adrOder ? 'Mehrere passen — oder doch:' : 'Meintest du:'}</span>${a.adrVorschlaege.map(k => `<button type="button" data-kic="adr-wahl" data-v="${esc(aLabel(k))}">${esc(k.name)}${k.city ? ' · ' + esc(k.city) : ''}</button>`).join('')}</div>` : '')
+                + inputMaschine(a.maschine, a)
+                + feld('', 'Titel', `<input class="kic-f-titel" value="${esc(a.titel || 'Handschriftliche Notiz')}">`)
+                + feld('', 'Abschrift — bitte prüfen und korrigieren', `<textarea class="kic-f-text kic-f-abschrift" rows="8">${esc(a.text)}</textarea>`)
+                + (unsicher.length ? `<div class="kic-unsicher">⚠️ Schwer lesbar: ${unsicher.map(esc).join(', ')} — im Text mit [?] markiert</div>` : '')
+                + (nrs.length ? '<label class="kic-check"><input type="checkbox" class="kic-f-foto" checked> Foto mit ablegen</label>' : '')
+                + '<div class="kic-zust">Landet in der Historie der Adresse und/oder Maschine. Mindestens eins von beiden wählen.</div>';
+            knopf = 'Eintrag speichern';
         }
         return `<div class="kic-karte" ${id}><div class="kic-karte-kopf">${kopf}</div>${body}
             <div class="kic-karte-fuss"><button type="button" class="kic-btn-ghost" data-kic="verwerfen">Verwerfen</button><button type="button" class="kic-btn" data-kic="ausfuehren">${knopf}</button></div></div>`;
@@ -846,6 +1009,61 @@ ${kontext}`;
                 if (error) throw error;
                 if (window.updateHistoryViewExternally) window.updateHistoryViewExternally(m.id);
                 a.fertigText = urls.length + ' Foto' + (urls.length > 1 ? 's' : '') + ' bei ' + machineLabel(m) + ' gespeichert';
+            } else if (a.art === 'servicebericht') {
+                const id = wert('.kic-f-ziel');
+                if (!id) throw new Error('Bitte einen Servicebericht wählen.');
+                const text = wert('.kic-f-text');
+                const files = a.bilder.map(nr => alleBilder[nr] && alleBilder[nr].file).filter(Boolean);
+                if (!files.length && !text) throw new Error('Keine Bilder und kein Text zum Ergänzen.');
+                const { data: cur, error: e1 } = await sb.from('service_entries').select('id, machine_id, files, remarks, is_finalized').eq('id', id).single();
+                if (e1) throw e1;
+                if (text && cur.is_finalized && !files.length) throw new Error('Der Bericht ist abgeschlossen — Text kann nicht mehr ergänzt werden, nur Bilder.');
+                let neu = [];
+                if (files.length) {
+                    const m = (window.machineList || []).find(x => String(x.id) === String(cur.machine_id));
+                    const ordner = m && window.getMachineFolderName ? window.getMachineFolderName(m.id, m.manufacturer, m.name, m.serial || m.serial_number, m.year) : 'Maschinen/' + (cur.machine_id || 'ohne');
+                    const erg = await window.FileUploadService.uploadFiles(files, (f, i) => `${ordner}/Serviceberichte/${Date.now()}-${i}-${(f.name || 'bild.jpg').replace(/[^a-zA-Z0-9.\-_]/g, '_')}`, { bucket: 'dateien', compress: true, concurrency: 4, provider: 'cloudflare-r2' });
+                    neu = (erg || []).map((r, i) => r && r.url ? { name: files[i].name || 'Bild', type: files[i].type || 'image/jpeg', url: r.url } : null).filter(Boolean);
+                    if (!neu.length) throw new Error('Hochladen fehlgeschlagen.');
+                }
+                const upd = {};
+                if (neu.length) upd.files = (Array.isArray(cur.files) ? cur.files : []).concat(neu);
+                const textMit = text && !cur.is_finalized;
+                if (textMit) {
+                    const stempel = new Date().toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) + ' · ' + (window.activeUser?.name || '');
+                    upd.remarks = [cur.remarks, 'Ergänzung ' + stempel + ': ' + text].filter(Boolean).join('\n');
+                }
+                const { error } = await sb.from('service_entries').update(upd).eq('id', id);
+                if (error) throw error;
+                cache.zeit = 0;
+                if (typeof window.fetchServiceEntries === 'function') { try { window.fetchServiceEntries(); } catch (e) { /* Liste lädt beim nächsten Öffnen */ } }
+                a.zielId = id;
+                a.fertigText = [neu.length ? neu.length + ' Bild' + (neu.length > 1 ? 'er' : '') + ' angehängt' : '', textMit ? 'Bemerkung ergänzt' : '', text && !textMit ? '(Text nicht übernommen — Bericht abgeschlossen)' : ''].filter(Boolean).join(', ');
+            } else if (a.art === 'handschrift') {
+                const m = wert('.kic-f-m') ? maschineAusFeld(wert('.kic-f-m')) : null;
+                const kd = wert('.kic-f-adr') ? adresseAusFeld(wert('.kic-f-adr')) : null;
+                if (wert('.kic-f-m') && !m) throw new Error('Maschine nicht gefunden — bitte aus der Liste wählen oder leeren.');
+                if (wert('.kic-f-adr') && !kd) throw new Error('Adresse nicht gefunden — bitte aus der Liste wählen oder leeren.');
+                if (!m && !kd) throw new Error('Bitte eine Adresse oder Maschine wählen.');
+                const text = wert('.kic-f-abschrift');
+                if (!text) throw new Error('Die Abschrift ist leer.');
+                let urls = [];
+                const fotoMit = k.querySelector('.kic-f-foto');
+                const files = fotoMit && fotoMit.checked ? a.bilder.map(nr => alleBilder[nr] && alleBilder[nr].file).filter(Boolean) : [];
+                if (files.length) {
+                    const ordner = m && window.getMachineFolderName ? window.getMachineFolderName(m.id, m.manufacturer, m.name, m.serial || m.serial_number, m.year) + '/Notizen'
+                        : 'Adressen/' + (kd ? kd.id : 'ohne') + '/Notizen';
+                    const erg = await window.FileUploadService.uploadFiles(files, (f, i) => `${ordner}/${Date.now()}-${i}.${(f.name.split('.').pop() || 'jpg').toLowerCase()}`, { bucket: 'dateien', compress: true, concurrency: 4, provider: 'cloudflare-r2' });
+                    urls = (erg || []).map(r => r.url).filter(Boolean);
+                }
+                const zeile = { type: 'note', title: wert('.kic-f-titel') || 'Handschriftliche Notiz', content: text, files: urls, created_by: window.activeUser?.id || null };
+                if (m) zeile.machine_id = m.id;
+                if (kd) zeile.customer_id = kd.id;
+                const { error } = await sb.from('manual_history_entries').insert([zeile]);
+                if (error) throw error;
+                if (m && window.updateHistoryViewExternally) window.updateHistoryViewExternally(m.id);
+                document.dispatchEvent(new CustomEvent('addressbook:changed'));
+                a.fertigText = 'Abschrift gespeichert bei ' + [kd ? kd.name : '', m ? machineLabel(m) : ''].filter(Boolean).join(' und ') + (urls.length ? ' (mit Foto)' : '');
             }
             a.status = 'fertig';
             render();
@@ -861,6 +1079,7 @@ ${kontext}`;
         if (!a || !a.zielId) return;
         if (window.innerWidth <= 768) schliessen();
         if (a.art === 'aufgabe' || a.art === 'unteraufgaben') { if (window.navigateToTask) window.navigateToTask(a.zielId); }
+        else if (a.art === 'servicebericht') { if (window.openEditServicebericht) window.openEditServicebericht(a.zielId); }
         else if (window.navigateToProcess) window.navigateToProcess(a.zielId);
     }
 

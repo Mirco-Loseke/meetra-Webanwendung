@@ -513,8 +513,11 @@
     // Mehrere Dokumente am Angebot: ab dem zweiten mit „(2)", „(3)" …
     function angebotDateiName(a, f) {
         const orig = String(f.name || 'Dokument');
-        const ext = (orig.match(/\.[a-z0-9]{1,5}$/i) || [''])[0];
-        const nr = String(a.belegnummer || '').trim();
+        const ext = (orig.match(/\.[a-z0-9]{1,5}$/i) || [/pdf/i.test(f.type || '') || !/\./.test(orig) ? '.pdf' : ''])[0];
+        // „Angebot 2026-30138": Jahr des Belegdatums vor die Sage-Nummer (wie im Mail-Betreff)
+        const roh = String(a.belegnummer || '').trim();
+        const jahr = /^\d{4}/.test(String(a.belegdatum || '')) ? String(a.belegdatum).slice(0, 4) : String(new Date().getFullYear());
+        const nr = roh && !/^\d{4}-/.test(roh) ? jahr + '-' + roh : roh;
         if (!nr) return orig.replace(/^[0-9a-f-]{8,}[_\s-]+/i, '').replace(/_/g, ' ');
         let alle = [];
         try { alle = angebotDokumente(a); } catch (e) { alle = []; }

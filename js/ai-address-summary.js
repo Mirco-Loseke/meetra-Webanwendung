@@ -355,10 +355,26 @@ Fotos: Steht in den Daten bei einem Eintrag „(N Fotos)" bzw. „(1 Foto)", sch
         }
     }
 
-    window.openAddressSummary = function (customerId) {
-        const D = window.abDetailDaten ? window.abDetailDaten() : null;
+    // opts.ueber: Element, über das sich das Fenster deckungsgleich legt
+    // (To-do-Historie). Fehlen die Adressdaten, lädt window.abDetailLaden sie nach.
+    window.openAddressSummary = async function (customerId, opts) {
+        let D = window.abDetailDaten ? window.abDetailDaten() : null;
+        if (customerId && (!D || String(D.id) !== String(customerId)) && window.abDetailLaden) {
+            D = await window.abDetailLaden(customerId);
+            if (!D) { toast('Bitte zuerst das offene Adress-Detail schließen.', 'error'); return; }
+        }
         aktuelleId = customerId || (D && D.id);
         const el = fenster();
+        const box = el.querySelector('.ab-ai-summary');
+        const ueber = opts && opts.ueber;
+        el.classList.toggle('abs-ueber', !!ueber);
+        if (ueber) {
+            const r = ueber.getBoundingClientRect();
+            Object.assign(box.style, { position: 'fixed', left: r.left + 'px', top: r.top + 'px', width: r.width + 'px', height: r.height + 'px', maxWidth: 'none', maxHeight: 'none', margin: '0' });
+        } else {
+            box.removeAttribute('style');
+            box.style.maxWidth = '760px';
+        }
         document.getElementById('ab-ai-summary-sub').textContent = D && D.adresse ? D.adresse.name + (D.adresse.city ? ' · ' + D.adresse.city : '') : '';
         el.classList.add('show', 'active');
         document.body.style.overflow = 'hidden';

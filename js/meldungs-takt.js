@@ -21,11 +21,15 @@
     const ICON = 'assets/icons/meetra_arrows_icon.png';
 
     const STUMM_KEY = 'meetra_geraet_stumm';   // je Gerät: gar keine Meldungen
-    const LEISTE_AB = 3;                       // ab so vielen Karten: „Später"-Leiste
-    const SPAETER_MIN = 30;                    // so lange ruhen Karten nach „Später"
+    const LEISTE_AB = 1;                       // ab so vielen Karten: Leiste „Jetzt nicht"
+    const SPAETER_MIN = 30;                    // Standard-Ruhezeit nach „Jetzt nicht"
+    const PAUSE_KEY = 'meetra_meldung_pause';  // Ende der Ruhe (ms) — überlebt Neuladen
+    const DAUER_KEY = 'meetra_meldung_pause_min';   // zuletzt gewählte Ruhezeit
 
     const schlange = [];          // [{ key, zeigen }]
     let pauseBis = 0;             // Zeitstempel: bis dahin keine Karten zeigen
+    try { pauseBis = +localStorage.getItem(PAUSE_KEY) || 0; } catch (e) { /* ohne Speicher */ }
+    function pausiert() { return pauseBis > Date.now(); }
     const handler = new Map();    // key -> fn(aktion)
     const offenAusStart = new Map();   // key -> { aktion, zielTyp, zielId } (App war zu)
     let letzte = 0;
@@ -158,7 +162,7 @@
     async function system(titel, optionen, knoepfe) {
         if (geraetStumm()) return;
         if (typeof window.notificationsPushEnabled !== 'function' || !window.notificationsPushEnabled()) return;
-        if (appImVordergrund()) {
+        if (appImVordergrund() || pausiert()) {
             const key = optionen && optionen.tag;
             if (key) zurueckgehalten.set(key, [titel, optionen, knoepfe]);
             return;
@@ -195,6 +199,7 @@
             box.id = 'alarm-stack';
             document.body.appendChild(box);
         }
+        pauseAnwenden();
         new MutationObserver(liste => {
             liste.forEach(m => m.removedNodes.forEach(n => {
                 const key = n.getAttribute && n.getAttribute('data-alarm-key');
@@ -204,9 +209,15 @@
         }).observe(box, { childList: true });
     }
 
-    // Viele Karten auf einmal: oben eine Leiste „Später", die alle Karten
-    // für SPAETER_MIN Minuten ausblendet — nichts wird erledigt oder gelöscht,
-    // die Karten kommen danach genau so wieder.
+    // Sobald eine Karte steht: oben die Leiste „Jetzt nicht". Sie blendet ALLE
+    // Karten für die gewählte Zeit aus (auch solche, die in der Zeit dazukommen) —
+    // nichts wird erledigt oder gelöscht, danach kommen sie genau so wieder.
+    // Das Ende steht in localStorage (überlebt Neuladen/Homebildschirm-Neustart)
+    // und wird per Intervall + Sichtbarkeit geprüft statt per langem setTimeout,
+    // den Handys im Hintergrund schlafen legen.
+    function dauerMin() {
+        try { const v = +localStorage.getItem(DAUER_KEY); return v > 0 ? v : SPAETER_MIN; } catch (e) { return SPAETER_MIN; }
+    }
     function leisteAktualisieren(box) {
         const anzahl = box.querySelectorAll('[data-alarm-key]').length;
         let leiste = box.querySelector('.alarm-spaeter-leiste');
@@ -214,27 +225,56 @@
         if (!leiste) {
             leiste = document.createElement('div');
             leiste.className = 'alarm-spaeter-leiste';
-            leiste.innerHTML = '<span></span><button type="button">Benachrichtigungen später</button>';
-            leiste.querySelector('button').addEventListener('click', spaeter);
-            box.appendChild(leiste);
+            leiste.innerHTML = '<span></span><div class="alarm-spaeter-wahl" data-no-enhance>'
+                + '<select aria-label="Wie lange ausblenden" data-no-enhance>'
+                + [[15, '15 Min'], [30, '30 Min'], [60, '1 Std'], [120, '2 Std'], [240, '4 Std']].map(([v, t]) => `<option value="${v}">${t}</option>`).join('')
+                + '</select><button type="button">Jetzt nicht</button></div>';
+            const sel = leiste.querySelector('select');
+            sel.value = String(dauerMin());
+            if (!sel.value) sel.value = String(SPAETER_MIN);
+            sel.addEventListener('change', () => { try { localStorage.setItem(DAUER_KEY, sel.value); } catch (e) { /* egal */ } });
+            leiste.querySelector('button').addEventListener('click', () => spaeter(+sel.value || SPAETER_MIN));
+            box.prepend(leiste);
         }
-        leiste.querySelector('span').textContent = `${anzahl} Benachrichtigungen`;
+        leiste.querySelector('span').textContent = anzahl === 1 ? '1 Benachrichtigung' : `${anzahl} Benachrichtigungen`;
     }
 
-    function spaeter() {
+    function pauseAnwenden() {
         const box = document.getElementById('alarm-stack');
-        if (!box) return;
-        pauseBis = Date.now() + SPAETER_MIN * 60000;
-        box.classList.add('alarm-pausiert');
+        if (box) box.classList.toggle('alarm-pausiert', pausiert());
+    }
+    function pauseEndePruefen() {
+        if (!pauseBis || pausiert()) return;
+        pauseBis = 0;
+        try { localStorage.removeItem(PAUSE_KEY); } catch (e) { /* egal */ }
+        pauseAnwenden();
+        // Ein während der Ruhe gestellter Wecker (auf das alte Ende) darf das
+        // Nachholen nicht blockieren — jetzt sofort weiter.
         if (timer) { clearTimeout(timer); timer = null; }
+        naechste();
+    }
+    setInterval(pauseEndePruefen, 20000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) pauseEndePruefen(); });
+    window.addEventListener('focus', pauseEndePruefen);
+    // Andere Tabs desselben Browsers ruhen mit
+    window.addEventListener('storage', e => {
+        if (e.key !== PAUSE_KEY) return;
+        pauseBis = +e.newValue || 0;
+        pauseAnwenden();
+        pauseEndePruefen();
+    });
+
+    function spaeter(minuten) {
+        const min = +minuten > 0 ? +minuten : dauerMin();
+        pauseBis = Date.now() + min * 60000;
+        try { localStorage.setItem(PAUSE_KEY, String(pauseBis)); } catch (e) { /* ohne Speicher: nur bis Neuladen */ }
+        pauseAnwenden();
+        if (timer) { clearTimeout(timer); timer = null; }
+        systemAlleZu();
         if (typeof window.showToast === 'function') {
-            window.showToast(`Benachrichtigungen ruhen ${SPAETER_MIN} Minuten.`);
+            const bis = new Date(pauseBis).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            window.showToast(`Benachrichtigungen ruhen bis ${bis} Uhr — danach kommen sie wieder.`);
         }
-        setTimeout(() => {
-            pauseBis = 0;
-            box.classList.remove('alarm-pausiert');
-            if (!timer) naechste();
-        }, SPAETER_MIN * 60000);
     }
 
     if (navigator.serviceWorker) {

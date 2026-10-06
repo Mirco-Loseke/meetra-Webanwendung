@@ -2138,3 +2138,43 @@
     #addressbook .ab-toolbar > * { min-height: 38px; }
     #addressbook .ab-toolbar button { white-space: normal; }
 }
+
+/* ---------- Dubletten: Hinweis im Detail + Zusammenführen (js/adressen-zusammenfuehren.js) ---------- */
+.ab-dubletten-hinweis { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: var(--space-2) 0 var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.4); color: #fcd34d; font-size: var(--fs-sm); }
+.ab-dublette-btn { background: rgba(245, 158, 11, 0.18); border: 1px solid rgba(245, 158, 11, 0.5); color: #fde68a; border-radius: var(--radius-sm); padding: 4px 10px; font: inherit; font-size: var(--fs-xs); font-weight: 700; cursor: pointer; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ab-dublette-btn:hover { background: rgba(245, 158, 11, 0.3); }
+.az-backdrop { position: fixed; inset: 0; z-index: 10050; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom)); }
+.az-box { width: min(640px, 100%); max-height: 100%; overflow-y: auto; background: rgba(15, 23, 42, 0.98); border: 1px solid var(--glass-border); border-radius: var(--radius-lg); padding: var(--space-5); color: var(--text-1); box-shadow: var(--shadow-3); }
+.az-box h3 { margin: 0 0 var(--space-3); }
+.az-paar { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: var(--space-2); }
+.az-karte { padding: var(--space-3); border-radius: var(--radius-md); border: 1px solid rgba(255, 255, 255, 0.12); background: rgba(255, 255, 255, 0.04); min-width: 0; }
+.az-karte.bleibt { border-color: rgba(16, 185, 129, 0.6); background: rgba(16, 185, 129, 0.08); }
+.az-karte.geht { opacity: 0.85; }
+.az-rolle { font-size: var(--fs-xs); font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); margin-bottom: 4px; }
+.az-karte.bleibt .az-rolle { color: #34d399; }
+.az-name { font-weight: 800; overflow-wrap: anywhere; }
+.az-sub { font-size: var(--fs-xs); color: var(--text-2); overflow-wrap: anywhere; }
+.az-liste { margin: var(--space-3) 0; padding-left: 1.2rem; font-size: var(--fs-sm); color: var(--text-2); }
+.az-liste li { margin: 4px 0; }
+.az-warn { color: #fca5a5; font-size: var(--fs-sm); margin: 0; }
+.az-knoepfe { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-4); }
+.az-suche { width: 100%; margin-bottom: var(--space-2); }
+.az-treffer { display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow-y: auto; }
+.az-wahl { text-align: left; padding: 8px 10px; border-radius: var(--radius-sm); border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.04); color: var(--text-1); font: inherit; cursor: pointer; display: flex; flex-direction: column; gap: 2px; }
+.az-wahl:hover { border-color: rgba(16, 185, 129, 0.6); }
+.az-wahl span { font-size: var(--fs-xs); color: var(--text-3); }
+
+/* Handy kompakt (2026-10-06): Knöpfe im Adress-Kopf nur so breit wie ihr Text,
+   kleinere Schrift, alle in eine Zeile/umbrechend statt je Knopf eine volle Zeile. */
+@media (max-width: 768px) {
+    .ab-detail-head { padding: 1rem 3.25rem .75rem 1rem; gap: 10px; }
+    .ab-detail-head .ab-avatar-lg { width: 44px; height: 44px; font-size: 1rem; border-radius: 12px; }
+    .ab-detail-title h2 { font-size: 1.05rem !important; line-height: 1.25; }
+    .ab-detail-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+    .ab-detail-actions .ab-btn {
+        flex: 0 1 auto; min-height: 34px; padding: 5px 10px;
+        font-size: .76rem; gap: 5px; white-space: nowrap; border-radius: 9px;
+    }
+    .ab-detail-actions .ab-btn svg { width: 13px; height: 13px; }
+    .ab-btn { font-size: .8rem; }
+}

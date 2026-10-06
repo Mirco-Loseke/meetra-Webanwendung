@@ -2510,11 +2510,24 @@ details.category-group-details[open] .group-chevron {
         grid-template-columns: 1fr !important;
     }
 
+    /* --- Knöpfe oben in der Fensterecke (absolut positioniert) ---
+       Sie ignorieren den Innenabstand und lagen in der Homebildschirm-App unter
+       der Notch/Statusleiste. Inline-top ohne !important wird hier überstimmt. */
+    .modal-content .btn-close-modal,
+    .procurement-close-btn,
+    #machine-details-edit-btn,
+    #lbx-close,
+    #ab-ai-summary-modal [data-abs-close].ab-icon-btn {
+        top: calc(14px + env(safe-area-inset-top, 0px)) !important;
+    }
+
     /* --- Innenabstaende der Fenster --- */
     /* 2rem ringsum sind auf 375px 64px, also ein Sechstel der Breite. */
+    /* Oben/unten mit Notch und Home-Balken (Homebildschirm-App, black-translucent) —
+       ohne max(…env…) hob diese Regel den Abstand aus „HANDY-FEINSCHLIFF“ wieder auf. */
     .modal-content,
     .modal-new .modal-content {
-        padding: 1rem 0.9rem !important;
+        padding: max(1rem, env(safe-area-inset-top)) 0.9rem max(1rem, env(safe-area-inset-bottom)) !important;
         border-radius: 16px !important;
     }
 

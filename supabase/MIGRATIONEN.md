@@ -61,6 +61,7 @@ lassen als eine Migration auszulassen.
 | `supabase_add_tasks_realtime.sql` | Live-Aktualisierung von `tasks`/`subtasks` (Anzeigetafel in der Werkstatt) |
 | `supabase_add_workshop_tasks.sql` | Werkstatt-Liste (schnelle kleine Aufgaben) |
 | `supabase_add_invoice_todos.sql` | Rechnungsliste („wem muss noch eine Rechnung geschrieben werden") — ausklappbar rechts unter Vorgänge, Sichtbarkeit je Benutzer |
+| `supabase_add_todo_listen.sql` | Persönliche To-do-Liste (Knopf neben dem KI-Chat, gefüllt aus dem Briefing) — eine Zeile je Benutzer. Ohne Migration nur je Browser (2026-10-02) |
 | `supabase_add_notification_prefs.sql` | Benachrichtigungs-Einstellungen je Benutzer, geräteübergreifend |
 | `supabase_add_erinnerung_owner.sql` | Angebots-Erinnerung gehört dem, der sie gesetzt hat (`erinnerung_by`) |
 | `supabase_add_angebot_vorgang.sql` | Jedes Angebot ist ein Vorgang (`angebote.process_id`); Zuständiger, Stand, Adresse, Maschine leben im Vorgang |

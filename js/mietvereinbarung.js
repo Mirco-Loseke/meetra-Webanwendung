@@ -71,6 +71,9 @@
             einweisung: { erfolgt: null, durch_id: '', durch_name: '' },
             schaeden: [{ nr: '', position: '', beschreibung: '' }],
             fotos: { uebergabe: {}, ruecknahme: {} },
+            // Weitere Bilder (Schäden, Details) über die Standardpositionen hinaus:
+            // je Phase [{ pos, datum, text }] — das Bild selbst liegt in fotos[phase][pos].
+            zusatz: { uebergabe: [], ruecknahme: [] },
             unterschriften: {
                 u_vermieter: null, u_mieter: null, u_datum: heute(),   // Übergabe
                 r_vermieter: null, r_mieter: null, r_datum: ''       // Rücknahme
@@ -267,6 +270,7 @@
             if (d.auswahl && typeof d.auswahl === 'object') daten.auswahl = d.auswahl;
             if (Array.isArray(d.schaeden) && d.schaeden.length) daten.schaeden = d.schaeden;
             if (d.trommeltyp != null) daten.trommeltyp = d.trommeltyp;
+            if (d.zusatz && typeof d.zusatz === 'object') daten.zusatz = { uebergabe: d.zusatz.uebergabe || [], ruecknahme: d.zusatz.ruecknahme || [] };
 
             (Array.isArray(data.photos) ? data.photos : []).forEach(f => {
                 if (!f || !f.url || !f.phase || !f.position) return;
@@ -1650,7 +1654,8 @@
                 data: { mieter: daten.mieter, geraet: daten.geraet, miete: daten.miete,
                         pruefpunkte: daten.pruefpunkte, auswahl: daten.auswahl, trommeltyp: daten.trommeltyp,
                         sauberkeit: daten.sauberkeit, einweisung: daten.einweisung,
-                        schaeden: daten.schaeden, unterschriften: daten.unterschriften },
+                        schaeden: daten.schaeden, unterschriften: daten.unterschriften,
+                        zusatz: { uebergabe: zusatzListe('uebergabe'), ruecknahme: zusatzListe('ruecknahme') } },
                 photos: fotos,
                 folder_path: basis,
                 user_id: window.activeUser ? String(window.activeUser.id || '') : null
@@ -2209,9 +2214,79 @@
                 ? ` <button type="button" class="miet-photo-start" onclick="window.mietFotoserie('${esc(welche)}')">Rundgang starten</button>`
                 : ''}</div>
             <div class="miet-photo-grid" data-splitbox data-drop-welche="${esc(welche)}">${kacheln}</div>
+            ${zusatzBlock(welche)}
             ${fotoUnterschriften(welche)}
         </div>`;
     }
+
+    // ---------- Weitere Bilder (Schäden/Details) je Phase ----------
+    function zusatzListe(welche) {
+        if (!daten.zusatz) daten.zusatz = { uebergabe: [], ruecknahme: [] };
+        if (!Array.isArray(daten.zusatz[welche])) daten.zusatz[welche] = [];
+        // Einträge ohne Bild (gelöscht) fallen raus
+        const satz = daten.fotos[welche] || {};
+        daten.zusatz[welche] = daten.zusatz[welche].filter(z => z && satz[z.pos]);
+        return daten.zusatz[welche];
+    }
+    function zusatzBlock(welche) {
+        const liste = zusatzListe(welche);
+        const satz = daten.fotos[welche] || {};
+        const wort = welche === 'uebergabe' ? 'Übergabe' : 'Rücknahme';
+        const kacheln = liste.map((z, i) => `
+            <div class="miet-photo-slot filled miet-zusatz-slot" data-split>
+                <button type="button" class="miet-photo-del" onclick="event.stopPropagation(); window.mietZusatzLoeschen('${esc(welche)}', '${esc(z.pos)}')" title="Bild entfernen">&times;</button>
+                <div class="miet-photo-name"><span style="color:#047857; font-weight:800;">Zusatz ${i + 1}</span>
+                    <input type="date" class="miet-zusatz-datum" value="${esc(z.datum || '')}" onchange="window.mietZusatzFeld('${esc(welche)}', '${esc(z.pos)}', 'datum', this.value)" title="Datum der Aufnahme"></div>
+                <div class="miet-photo-box"><img src="${satz[z.pos]}" alt=""></div>
+                <input type="text" class="miet-zusatz-text" value="${esc(z.text || '')}" placeholder="Beschreibung, z. B. Kratzer Haube links" onchange="window.mietZusatzFeld('${esc(welche)}', '${esc(z.pos)}', 'text', this.value)">
+            </div>`).join('');
+        return `
+            <div class="miet-zusatzbilder">
+                <div class="miet-photo-progress" data-nurerste>Weitere Bilder bei ${esc(wort)} (Schäden, Details)${liste.length ? ' · ' + liste.length : ''}
+                    <button type="button" class="miet-photo-start" onclick="window.mietZusatzHinzu('${esc(welche)}')">+ Bilder hinzufügen</button></div>
+                ${liste.length ? `<div class="miet-photo-grid" data-splitbox>${kacheln}</div>` : ''}
+            </div>`;
+    }
+    window.mietZusatzHinzu = function (welche) {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.multiple = true;
+        input.style.cssText = 'position:fixed;left:-9999px;opacity:0';
+        document.body.appendChild(input);
+        input.onchange = async () => {
+            const dateien = [...(input.files || [])];
+            input.remove();
+            if (!dateien.length) return;
+            const datum = (welche === 'uebergabe' ? daten.unterschriften.u_datum : daten.unterschriften.r_datum) || heute();
+            const liste = zusatzListe(welche);
+            for (const datei of dateien) {
+                try {
+                    const pos = 'Zusatz ' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+                    daten.fotos[welche][pos] = await bildVerkleinern(datei);
+                    liste.push({ pos, datum, text: '' });
+                } catch (e) {
+                    console.error('Bild konnte nicht übernommen werden:', e);
+                    window.showToast('Ein Bild konnte nicht gelesen werden.');
+                }
+            }
+            entwurfMerken();
+            zeichneInhalt();
+        };
+        input.click();
+    };
+    window.mietZusatzFeld = function (welche, pos, feld, wert) {
+        const z = zusatzListe(welche).find(x => x.pos === pos);
+        if (!z) return;
+        z[feld] = wert;
+        entwurfMerken();
+    };
+    window.mietZusatzLoeschen = function (welche, pos) {
+        delete daten.fotos[welche][pos];
+        zusatzListe(welche);
+        entwurfMerken();
+        zeichneInhalt();
+    };
 
     // Direkt unter den Fotos wird der Zustand bestätigt: zwei Unterschriften
     // plus Datum — bei Übergabe und bei Rücknahme getrennt. Die Felder der
@@ -3130,7 +3205,7 @@
 
     window.mietPadSave = function () {
         const cv = document.getElementById('miet-pad-canvas');
-        if (cv && padZiel && !padLeer) daten.unterschriften[padZiel] = cv.toDataURL('image/png');
+        if (cv && padZiel && !padLeer) daten.unterschriften[padZiel] = window.signaturKlein ? window.signaturKlein(cv, { verhaeltnis: cv.width / cv.height }) : cv.toDataURL('image/png');
         window.mietPadCancel();
         zeichneInhalt();
     };

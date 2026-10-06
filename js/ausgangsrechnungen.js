@@ -134,28 +134,27 @@
             ? `<span class="ar-badge ar-badge-stufe${stufe} clickable" onclick="window.arStufeZurueck(${r.id})" title="Klicken, um diese Stufe zurückzunehmen">${esc(STUFEN[stufe].name)} · ${datum(r.mahnung_am)}</span>`
             : '';
         return `
-        <div class="ar-zeile ar-${z.art}">
-            <div class="ar-haupt">
-                <div class="ar-kunde">
-                    <a class="clickable" onclick="window.arKundeOeffnen(${r.id})">${esc(kundenName(r))}</a>
-                    ${stufeBadge}
-                </div>
-                <div class="ar-meta">
-                    ${esc(r.belegart)} ${esc(r.belegnummer)} · ${datum(r.belegdatum)}
-                    ${r.zahlungsbedingung ? ' · ' + esc(r.zahlungsbedingung) : ''}
-                </div>
-            </div>
-            <div class="ar-faellig">
-                <div class="ar-faellig-datum">${r.bezahlt_am ? '' : 'bis ' + datum(r.faellig_am)}</div>
+        <tr class="ar-zeile ar-${z.art}">
+            <td class="ar-c-datum" data-label="Belegdatum">${datum(r.belegdatum)}</td>
+            <td class="ar-c-nr" data-label="Rechnung">${esc(r.belegnummer)}<div class="ar-meta">${esc(r.belegart)}</div></td>
+            <td class="ar-c-kunde" data-label="Firma">
+                <a class="clickable" onclick="window.arKundeOeffnen(${r.id})">${esc(kundenName(r))}</a>
+                ${r.zahlungsbedingung ? `<div class="ar-meta">${esc(r.zahlungsbedingung)}</div>` : ''}
+            </td>
+            <td class="ar-c-betrag" data-label="Brutto">${eur(r.brutto)}</td>
+            <td class="ar-c-faellig" data-label="Fällig">
                 <div class="ar-faellig-text">${esc(z.text)}</div>
-            </div>
-            <div class="ar-betrag">${eur(r.brutto)}</div>
-            <div class="ar-aktionen">
-                ${mahnKnopf}
-                <button type="button" class="ar-btn ar-btn-bezahlt${r.bezahlt_am ? ' an' : ''}" onclick="window.arBezahlt(${r.id})"
-                    title="${r.bezahlt_am ? 'Wieder als offen markieren' : 'Als bezahlt markieren'}">${r.bezahlt_am ? '✓ Bezahlt' : 'Bezahlt ✓'}</button>
-            </div>
-        </div>`;
+                ${r.bezahlt_am ? '' : `<div class="ar-meta">bis ${datum(r.faellig_am)}</div>`}
+            </td>
+            <td class="ar-c-mahn" data-label="Mahnung">${stufeBadge || '<span class="ar-meta">–</span>'}</td>
+            <td class="ar-c-aktion">
+                <div class="ar-aktionen">
+                    ${mahnKnopf}
+                    <button type="button" class="ar-btn ar-btn-bezahlt${r.bezahlt_am ? ' an' : ''}" onclick="window.arBezahlt(${r.id})"
+                        title="${r.bezahlt_am ? 'Wieder als offen markieren' : 'Als bezahlt markieren'}">${r.bezahlt_am ? '✓ Bezahlt' : 'Bezahlt ✓'}</button>
+                </div>
+            </td>
+        </tr>`;
     }
 
     function zeichnen() {
@@ -181,7 +180,11 @@
                 <input type="search" class="glass-form-input ar-suche" placeholder="Kunde, Rechnungsnr., Betrag …"
                     value="${esc(suche)}" oninput="window.arSuche(this.value)">
             </div>
-            <div class="ar-liste">${a.length ? a.map(zeile).join('') : '<div class="ar-leer">Keine Rechnungen in dieser Auswahl.</div>'}</div>
+            ${a.length ? `<table class="ar-tabelle">
+                <colgroup><col class="ar-w-datum"><col class="ar-w-nr"><col><col class="ar-w-betrag"><col class="ar-w-faellig"><col class="ar-w-mahn"><col class="ar-w-aktion"></colgroup>
+                <thead><tr><th>Belegdatum</th><th>Rechnung</th><th>Firma</th><th class="ar-rechts">Brutto</th><th>Fällig</th><th>Mahnung</th><th></th></tr></thead>
+                <tbody>${a.map(zeile).join('')}</tbody>
+            </table>` : '<div class="ar-leer">Keine Rechnungen in dieser Auswahl.</div>'}
             <div class="ar-fuss">Quelle: Sage (Abgleich alle 30 min) · „Bezahlt" und Mahnungen werden nur hier gepflegt.</div>`;
     }
 
