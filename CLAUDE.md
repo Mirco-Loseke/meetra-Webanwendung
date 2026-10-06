@@ -73,6 +73,7 @@ Reihenfolge der ausgelagerten Module:
 | Einstellungen → Datenschutz (Verarbeitungsverzeichnis, Dienstleister) | `partials/settings/datenschutz.html`, `css/views/datenschutz.css` |
 | Einstellungen: Übersicht (Gruppen, Suche) + einheitlicher Kopf aller Unterseiten + Mietvorlagen-Liste/-Editor | `partials/settings/settings.html`, `css/views/einstellungen.css`, `js/einstellungen.js` |
 | Adressen zusammenführen (Dubletten; Sage-Adresse mit address_number bleibt, Verweise umhängen, dann Quelle löschen; Liste VERWEISE pflegen bei neuer customer_id-Spalte) | `js/adressen-zusammenfuehren.js`, Hinweis im Detail-Kopf (`addressbook.js`) |
+| Suche über alles (Lupe in der Kopfleiste, Strg+K; Adressen/Maschinen/Vorgänge/Berichte/Angebote/Aufgaben, im Browser, „Zuletzt geöffnet" in localStorage). **Eigenständig — entfernen = 2 Zeilen in index.html + 2 in sw.js** | `js/globale-suche.js`, `css/components/globale-suche.css` |
 | Benutzer bearbeiten (Reiter, Schalter, „Rechte übernehmen von") | `partials/modals/user-edit-modal.html`, `css/views/user-edit.css`, `js/users.js` |
 
 ## Zuerst hier nachschlagen (spart das Durchsuchen)
@@ -85,9 +86,14 @@ Reihenfolge der ausgelagerten Module:
 
 ## Arbeitsweise in diesem Projekt
 - **Suchen statt lesen.** Erst `FUNKTIONEN.txt`, dann gezielt `Read offset/limit`.
-- **JS-Änderung:** Datei in `js/` → `node --check <datei>.js` → Cache-Bust:
-  `?v=N` beim `<script src>` in `index.html` hochzählen **und** `CACHE_NAME` in `sw.js`.
-  Ohne beides sieht der Nutzer die Änderung nicht.
+- **JS/CSS-Änderung:** `node --check <datei>.js`, danach **`node tools/version.js`** —
+  zählt `?v=N` jeder geänderten Datei in `index.html`, `CACHE_NAME` in `sw.js` und die
+  Angabe hier hoch (Fingerabdrücke in `tools/.versionen.json`; `--probe` = nur anzeigen).
+  Warnt auch, wenn eine eingebundene js/css-Datei in `PRECACHE` fehlt. Nicht mehr von Hand zählen.
+- **Handy-Check:** in der angemeldeten App bei ≤768 px `handyCheck()` in der Konsole
+  oder `index.html?handycheck` — öffnet alle Ansichten + Fenster (`js/handy-check.js`,
+  Liste `fensterListe`), misst Überstand/Überlappung/Schriftgröße/Tippflächen, zeigt Bericht.
+  Dauert ~2 min. Nach jeder sichtbaren Änderung laufen lassen; neues Fenster ⇒ dort eintragen.
 - **Neue js/css-Datei angelegt?** Zusätzlich in die `PRECACHE`-Liste in `sw.js` eintragen,
   sonst fehlt sie offline.
 - **HTML-Änderung:** immer im passenden `partials/`-Baustein → `node build.js`.
@@ -282,7 +288,7 @@ einem Inline-`style` suchen.
 `manifest.json` + `assets/icons/app-icon-{192,512}.png`, `-maskable-*` (Pfeile auf 60 % für Androids Zuschnitt), `apple-touch-icon.png` (180, iPhone-Home-Bildschirm), `favicon-32.png` — alle aus `meetra_arrows_icon.png` erzeugt (weißer Grund). `display_override: minimal-ui` = Zurück- und Aktualisieren-Knopf im installierten App-Fenster (Chrome/Edge); iPhone ignoriert das und bleibt Vollbild. Neues Logo ⇒ alle neu erzeugen und in `PRECACHE` lassen.
 
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v792 (Stand 2026-10-02) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v814 (Stand 2026-10-02) — bei jeder Änderung hochzählen.
 
 **To-do-Liste (2026-10-02).** Vollbild per Knopf/Doppelklick auf den Kopf (`body.todo-vollbild`, je Browser gemerkt), Diktieren an Stand, Notiz, eigenem Punkt (`micButtonHtml`). `js/todo-liste.js` + `css/components/todo-liste.css`: Knopf links neben dem KI-Knopf (Handy: über der Leiste), Panel mit Einträgen je Stufe, aufklappbar — Vorgang (Schritte abhaken, Stand eintragen), Termin, Adresse (Tel/Mail/Route), Notiz. Gefüllt aus dem Briefing über „✅ Als To-do übernehmen" (`kiAuswahl` in `ai-briefing.js`, gleiche KI-Auswahl wie der Druck) → `window.todoUebernehmen(liste)`. Ablage `todo_listen` (eine Zeile je Benutzer, Migration `supabase_add_todo_listen.sql`), ohne Tabelle Rückfall localStorage.
 **Angebote im Briefing + Mail aus der To-do-Liste (2026-10-02).** Briefing lädt zusätzlich offene Angebote der letzten 6 Monate (`angebotOffen` = Regex wie `classifyAngebotStatus`, „Nur meine" über `assigned_users` des Angebots-Vorgangs), eigener KI-Abschnitt „Angebote" und darunter eine echte Liste mit 📄 PDF / ✉ Mail / ＋ To-do (`window.todoAktion.pdf/mail`). To-do-Eintrag Angebot/Vorgang zeigt Status, Alter, Betrag, PDFs (`attachments` des Vorgangs ohne `step_id`), Ansprechpartner (`customer_contacts`). „✉ Mail" → Auswahl Empfänger (Adresse + Ansprechpartner, Vorschlag über `contact_name`) + Anhänge → `window.mailSchreiben(an, betreff, html, dateien)` — 4. Parameter neu, lädt `[{name,url,type}]` als Anhang. Gesendet wird nie automatisch.

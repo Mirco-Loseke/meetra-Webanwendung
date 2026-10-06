@@ -258,4 +258,16 @@
     #addressbook details:has(.ab-zuordnung-zu) > summary strong { flex: 1 1 0; min-width: 0; font-size: .8rem !important; line-height: 1.3; }
     #addressbook details:has(.ab-zuordnung-zu) > summary .ab-zuordnung-zu { flex: 0 0 auto; white-space: nowrap; }
     #addressbook details:has(.ab-zuordnung-zu) > summary .ab-zuordnung-zu { margin-left: auto; padding: 4px 10px !important; min-height: 28px; font-size: .74rem !important; }
+
+    /* --- Zu kleine Tippflächen (vom Handy-Check gefunden, js/handy-check.js) --- */
+    button[onclick*="removeQTSubtask"], button[onclick*="removeSubtask"], button[onclick*="removeModalSubtask"], button[onclick*="clearProcessR"],
+    .proc-att-close, #rp2-radius-clear-btn {
+        min-width: 28px !important; min-height: 28px !important; display: inline-flex !important; align-items: center; justify-content: center;
+    }
+    button[onclick*="openProcessAddressCreate"] { min-height: 28px !important; padding-top: 4px !important; padding-bottom: 4px !important; }
+    #acc-global-type-machine, #acc-global-type-other, [id^="acc-global-filter-"] { min-height: 28px !important; }
+    #main-content .delete-permission-required.btn-icon-soft, #main-content .service-link-badge,
+    .modal-content button.btn-icon-soft { min-width: 28px !important; min-height: 28px !important; }
+    #machine-details-radius-route-btn { min-height: 28px !important; }
+    #task-print-modal .tp-bulk button { min-height: 30px !important; padding: 4px 12px !important; }
 }

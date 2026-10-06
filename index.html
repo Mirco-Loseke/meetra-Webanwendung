@@ -186,6 +186,7 @@
     <link rel="stylesheet" href="css/views/rechnungsliste.css?v=3">
     <link rel="stylesheet" href="css/components/ki-chat.css?v=6">
     <link rel="stylesheet" href="css/components/todo-liste.css?v=20">
+    <link rel="stylesheet" href="css/components/globale-suche.css?v=3"><!-- Suche über alles: entfernen = diese Zeile + globale-suche.js -->
     <link rel="stylesheet" href="css/views/tasks-print.css?v=5">
     <link rel="stylesheet" href="css/views/dashboard.css?v=1">
     <link rel="stylesheet" href="css/views/listen.css?v=3">
@@ -300,13 +301,13 @@
     <!-- Diese Dateien kommen NACH den Bausteinen oben — Reihenfolge bindend. -->
     <!-- ========================================================= -->
     <link rel="stylesheet" href="css/views/login.css?v=2">
-    <link rel="stylesheet" href="css/views/history.css?v=4">
+    <link rel="stylesheet" href="css/views/history.css?v=5">
     <link rel="stylesheet" href="css/base/landscape.css?v=2">
     <link rel="stylesheet" href="css/components/voice-dictation.css?v=3">
     <link rel="stylesheet" href="css/views/machine-modal.css?v=4">
     <link rel="stylesheet" href="css/views/uvv-protokoll.css?v=5">
     <!-- Zuletzt: ersetzt frueher inline gesetzte Stile, muss deshalb zuletzt greifen -->
-    <link rel="stylesheet" href="css/base/handy-kompakt.css?v=16">
+    <link rel="stylesheet" href="css/base/handy-kompakt.css?v=18">
     <link rel="stylesheet" href="css/base/utilities.css?v=5">
     <!-- Einheitlicher Dropdown-Look (Vorbild: Hersteller-Feld in "Maschine
          bearbeiten"). Bewusst zuletzt geladen, damit er ohne !important
@@ -4814,7 +4815,7 @@
     <script src="js/machine-modal.js?v=6"></script>
     <script src="js/service-report-form.js?v=20"></script>
     <script src="js/service-list.js?v=4"></script>
-    <script src="js/history-modal.js?v=208"></script>
+    <script src="js/history-modal.js?v=210"></script>
     <script src="js/calendar-events.js?v=6"></script>
     <script src="js/processes-ui.js?v=49"></script>
     <!-- Dokumente an Vorgaengen/Schritten. Nutzt window.FileUploadService
@@ -6734,7 +6735,7 @@
         <img id="lightbox-img" src="" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 92vw; max-height: 92vh; object-fit: contain; border-radius: 8px; will-change: transform; cursor: grab;">
     </div>
 
-    <script src="js/photo-lightbox.js?v=2"></script>
+    <script src="js/photo-lightbox.js?v=3"></script>
 
     <!-- Modal: History Timeline -->
     <div id="machine-history-modal" class="modal-backdrop hidden"
@@ -7419,7 +7420,7 @@
     <script src="js/file-upload-service-r2.js?v=8"></script>
     <script src="js/accounting.js?v=47"></script>
     <script src="js/ausgangsrechnungen.js?v=2"></script>
-    <script src="js/documents-r2.js?v=10"></script>
+    <script src="js/documents-r2.js?v=13"></script>
     <script src="js/checklists.js?v=7"></script>
     <script src="js/protokoll-liste.js?v=3"></script>
     <script src="js/customers.js?v=8"></script>
@@ -7442,7 +7443,7 @@
     <script src="js/ai-address-summary.js?v=14"></script>
     <script src="js/ai-machine-summary.js?v=7"></script>
     <script src="js/ai-briefing.js?v=7"></script>
-    <script src="js/todo-liste.js?v=14"></script>
+    <script src="js/todo-liste.js?v=15"></script>
     <!-- Termine mit Teilnehmern: liefert die Bausteine, die Benachrichtigungen,
          Kalender und Routenplanung darunter benutzen. -->
     <script src="js/appointment-invite.js?v=2"></script>
@@ -8397,6 +8398,8 @@
 <script src="js/machines-grouped.js?v=53"></script>
 <script src="js/timeline-view.js?v=77"></script>
 <script src="js/voice-dictation.js?v=2"></script>
+<script src="js/handy-check.js?v=7"></script>
+<script src="js/globale-suche.js?v=7"></script>
 </body>
 
 </html>

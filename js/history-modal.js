@@ -469,6 +469,26 @@
                                 files: m.files // Added files here
                             });
                         });
+
+                        // Mietvereinbarungen: Fotos je Phase dazuladen (Übergabe / Rückgabe)
+                        const mietIds = [...new Set(manualEntries.filter(m => m.type === 'miete' && m.rental_agreement_id).map(m => String(m.rental_agreement_id)))];
+                        if (mietIds.length) {
+                            const { data: mieten } = await window.supabaseClient.from('rental_agreements').select('*').in('id', mietIds);
+                            const byId = new Map((mieten || []).map(r => [String(r.id), r]));
+                            const tag = d => d ? new Date(String(d).slice(0, 10) + 'T00:00:00').toLocaleDateString('de-DE') : '';
+                            historyItems.forEach(it => {
+                                if (it.rawType !== 'miete' || !it.rentalAgreementId) return;
+                                const r = byId.get(String(it.rentalAgreementId));
+                                if (!r) return;
+                                const zus = (r.data && r.data.zusatz) || {};
+                                const u = (r.data && r.data.unterschriften) || {};
+                                const je = ph => (Array.isArray(r.photos) ? r.photos : []).filter(f => f && f.url && f.phase === ph).map(f => {
+                                    const z = (zus[ph] || []).find(x => x && x.pos === f.position);
+                                    return { url: f.url, name: z ? [tag(z.datum), z.text || 'Zusatzbild'].filter(Boolean).join(' · ') : f.position };
+                                });
+                                it.mietFotos = { uebergabe: je('uebergabe'), ruecknahme: je('ruecknahme'), uDatum: tag(u.u_datum), rDatum: tag(u.r_datum) };
+                            });
+                        }
                     }
                 }
 
@@ -548,8 +568,9 @@
 
                         const hasAttachments = item.files && item.files.length > 0;
                         const attachmentIcon = hasAttachments ? `
-                                <button onclick="window.openServiceAttachments(${JSON.stringify(item.files).replace(/"/g, '&quot;')})" class="btn-icon-circular" style="background: rgba(139,92,246,0.15); border-color: rgba(139,92,246,0.4); color: #a78bfa;" title="Anhänge öffnen (${item.files.length})">
+                                <button onclick="window.openServiceAttachments(${JSON.stringify(item.files).replace(/"/g, '&quot;')})" class="btn-icon-circular hist-anhang-btn" style="position: relative; background: rgba(139,92,246,0.15); border-color: rgba(139,92,246,0.4); color: #a78bfa;" title="${(() => { const bilder = item.files.filter(f => { const u = typeof f === 'string' ? f : (f && f.url) || ''; const t = typeof f === 'string' ? '' : (f && f.type) || ''; return t.startsWith('image/') || /\.(jpe?g|png|gif|webp|heic)(\?|$)/i.test(u); }).length; const rest = item.files.length - bilder; return [bilder ? bilder + (bilder === 1 ? ' Bild' : ' Bilder') : '', rest ? rest + (rest === 1 ? ' Datei' : ' Dateien') : ''].filter(Boolean).join(', ') + ' — öffnen'; })()}">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                                    <span class="hist-anhang-zahl">${item.files.length}</span>
                                 </button>
                             ` : '';
 
@@ -666,7 +687,20 @@
                     }
 
                     let photoGallery = '';
-                    if (item.source === 'manuell' && item.files && Array.isArray(item.files) && item.files.length > 0) {
+                    if (item.mietFotos && (item.mietFotos.uebergabe.length || item.mietFotos.ruecknahme.length)) {
+                        // Mietvereinbarung: Fotos getrennt nach Übergabe und Rückgabe, je eigene Galerie
+                        const gruppe = (fs, titel, datum, farbe) => {
+                            if (!fs.length) return '';
+                            const urls = JSON.stringify(fs.map(f => f.url)).replace(/"/g, '&quot;');
+                            const beschr = JSON.stringify({ titel: titel + (datum ? ' ' + datum : ''), namen: fs.map(f => f.name || '') }).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                            return `<div class="hist-miet-gruppe" style="--hm-farbe:${farbe}">
+                                <div class="hist-miet-titel">📷 ${titel}${datum ? ' · ' + datum : ''} <span>${fs.length} ${fs.length === 1 ? 'Bild' : 'Bilder'}</span></div>
+                                <div class="hist-miet-grid">${fs.map((f, i) => `<button type="button" class="hist-miet-bild" onclick="openPhotosLightbox(${urls}, ${i}, ${beschr})" title="${titel}: ${String(f.name || '').replace(/"/g, '&quot;')}"><img src="${f.url}" loading="lazy" alt=""><span>${i + 1}</span></button>`).join('')}</div>
+                            </div>`;
+                        };
+                        photoGallery = gruppe(item.mietFotos.uebergabe, 'Übergabe', item.mietFotos.uDatum, '#10b981')
+                            + gruppe(item.mietFotos.ruecknahme, 'Rückgabe', item.mietFotos.rDatum, '#f59e0b');
+                    } else if (item.source === 'manuell' && item.files && Array.isArray(item.files) && item.files.length > 0) {
                         photoGallery = `
                                 <div style="display: flex; gap: 8px; margin-top: 1rem; overflow-x: auto; padding-bottom: 4px;">
                                     ${item.files.map((fileUrl, index) => `

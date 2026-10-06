@@ -106,9 +106,13 @@
             lbxApplyTransform(true);
         }
 
-        window.openPhotosLightbox = function (images, startIndex) {
+        // beschriftung (optional): { titel: 'Übergabe', namen: ['Seite links', …] } —
+        // erscheint im Zähler, z. B. „Übergabe · 2 / 9 · Seite links“.
+        let galleryBeschriftung = null;
+        window.openPhotosLightbox = function (images, startIndex, beschriftung) {
             if (!images || images.length === 0 || !images[0]) return;
             galleryImages = images;
+            galleryBeschriftung = beschriftung || null;
             currentGalleryIndex = startIndex || 0;
             const lightbox = document.getElementById('photos-lightbox');
             if (!lightbox) return;
@@ -138,7 +142,12 @@
             const prevBtn = document.getElementById('lightbox-prev');
             const nextBtn = document.getElementById('lightbox-next');
             if (img) img.src = galleryImages[currentGalleryIndex];
-            if (counter) counter.innerText = `${currentGalleryIndex + 1} / ${galleryImages.length}`;
+            if (counter) {
+                const b = galleryBeschriftung;
+                const nr = `${currentGalleryIndex + 1} / ${galleryImages.length}`;
+                const name = b && Array.isArray(b.namen) ? b.namen[currentGalleryIndex] : '';
+                counter.innerText = b ? [b.titel, nr, name].filter(Boolean).join(' · ') : nr;
+            }
             const single = galleryImages.length <= 1;
             if (prevBtn) prevBtn.style.display = single ? 'none' : 'flex';
             if (nextBtn) nextBtn.style.display = single ? 'none' : 'flex';

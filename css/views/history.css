@@ -353,3 +353,20 @@
         max-height: 92vh !important;
     }
 }
+
+/* Anzahl an der lila Büroklammer (Anhänge eines Serviceberichts) */
+.hist-anhang-zahl {
+    position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px;
+    border-radius: 9px; background: #8b5cf6; color: #fff; font-size: .66rem; font-weight: 800;
+    line-height: 18px; text-align: center; border: 2px solid #1e293b; box-sizing: content-box;
+}
+
+/* Mietvereinbarung: Fotos getrennt nach Übergabe / Rückgabe (js/history-modal.js) */
+.hist-miet-gruppe { margin-top: .75rem; padding: 8px 10px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--hm-farbe) 45%, transparent); background: color-mix(in srgb, var(--hm-farbe) 8%, transparent); }
+.hist-miet-titel { font-size: .78rem; font-weight: 800; color: var(--hm-farbe); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+.hist-miet-titel span { margin-left: 6px; color: var(--text-2, #cbd5e1); font-weight: 600; text-transform: none; letter-spacing: 0; }
+.hist-miet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; }
+.hist-miet-bild { position: relative; padding: 0; aspect-ratio: 4 / 3; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255, 255, 255, .12); background: rgba(0, 0, 0, .3); cursor: zoom-in; }
+.hist-miet-bild img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hist-miet-bild span { position: absolute; left: 3px; bottom: 3px; padding: 0 5px; border-radius: 6px; background: rgba(0, 0, 0, .6); color: #fff; font-size: .62rem; font-weight: 700; }
+.hist-miet-bild:hover { border-color: var(--hm-farbe); }

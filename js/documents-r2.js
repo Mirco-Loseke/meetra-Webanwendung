@@ -1235,6 +1235,8 @@ let _previewType = null; // 'pdf' | 'image' | 'other'
 let _pdfDocRef = null;
 let _pdfCacheBustedUrl = null;
 let _pinchRenderTimer = null;
+// Weißer Rand um jede PDF-Seite: Handy schmaler, damit die Seite möglichst breit wird
+const PDF_HUELLE_RAND = () => (window.innerWidth <= 768 ? 6 : 15);
 let _pdfRenderGen = 0; // guards against overlapping renders (e.g. rapid zoom) drawing over each other
 let _pdfPageEls = []; // { wrapper, canvas } per page, kept across zoom steps (only rebuilt on open/rotate)
 
@@ -1268,7 +1270,10 @@ async function _renderPdfPages() {
     // Fitting width alone stretches a narrow A4-portrait page across a much wider desktop
     // window, making "100%" look huge and forcing the user to zoom out to see it fully.
     const naturalVp = firstPage.getViewport({ scale: 1, rotation: _previewRotation });
-    const containerWidth = Math.max(300, (container ? container.clientWidth : 0) || (window.innerWidth - 40));
+    // Innenabstand abziehen — sonst ragte die Seite bei 100 % ein paar Pixel heraus
+    const cPad = container ? (parseFloat(getComputedStyle(container).paddingLeft) || 0) + (parseFloat(getComputedStyle(container).paddingRight) || 0) : 0;
+    // …und den weißen Rand der Seitenhülle (2 × PDF_HUELLE_RAND), sonst ist die Hülle zu breit
+    const containerWidth = Math.max(window.innerWidth <= 768 ? 200 : 300, ((container ? container.clientWidth - cPad : 0) || (window.innerWidth - 40)) - 2 * PDF_HUELLE_RAND());
     const containerHeight = Math.max(300, (container ? container.clientHeight : 0) || (window.innerHeight - 160));
     const fitScale = Math.min(containerWidth / naturalVp.width, containerHeight / naturalVp.height);
     const dpr = window.devicePixelRatio || 1;
@@ -1290,7 +1295,7 @@ async function _renderPdfPages() {
         // wrapper's own outer edge and pokes out past its rounded corners, looking like a
         // second overlapping frame/sheet behind the card. Width itself is set by
         // _applyPdfZoomCss() below, alongside every other zoom change.
-        pageWrapper.style.cssText = `margin: 20px auto; padding: 15px; background: white; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 8px; box-sizing: border-box; overflow: hidden;`;
+        pageWrapper.style.cssText = `margin: ${window.innerWidth <= 768 ? 10 : 20}px auto; padding: ${PDF_HUELLE_RAND()}px; background: white; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border-radius: 8px; box-sizing: border-box; overflow: hidden;`;
         const canvas = document.createElement('canvas');
         canvas.style.display = 'block';
         canvas.width = Math.round(bufferVp.width);
@@ -1319,7 +1324,7 @@ function _applyPdfZoomCss() {
         const h = Math.round(baseHeight * _previewZoom);
         canvas.style.width = w + 'px';
         canvas.style.height = h + 'px';
-        wrapper.style.width = (w + 30) + 'px';
+        wrapper.style.width = (w + 2 * PDF_HUELLE_RAND()) + 'px';
     });
 }
 
@@ -1506,7 +1511,8 @@ window.previewDocument = async function(url, title, mimeType) {
 
     // Etwas näher als exaktes "ganze Seite passt rein" starten, damit die Vorschau nicht
     // zu klein/kariert wirkt (eine Zoomstufe naeher als 100%-Fit).
-    _previewZoom = 1.15;
+    // Handy: 100 % = ganze Seitenbreite; 115 % ragte rechts heraus (Querwischen)
+    _previewZoom = window.innerWidth <= 768 ? 1.0 : 1.15;
     _previewRotation = 0;
     _pdfDocRef = null;
     _previewType = null;

@@ -564,7 +564,7 @@
                     const [k, ph, i] = bi.dataset.histBilder.split('|');
                     const x = (h._eintraege || [])[+k];
                     const fs = x && x.mietFotos ? x.mietFotos[ph] : [];
-                    if (fs.length && window.openPhotosLightbox) window.openPhotosLightbox(fs.map(f => f.url), +i);
+                    if (fs.length && window.openPhotosLightbox) window.openPhotosLightbox(fs.map(f => f.url), +i, { titel: ph === 'uebergabe' ? 'Übergabe' : 'Rückgabe', namen: fs.map(f => f.name || '') });
                     else if (fs[+i]) window.open(fs[+i].url, '_blank', 'noopener');
                     return;
                 }

@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = 'meetra-app-v792';
+﻿const CACHE_NAME = 'meetra-app-v814';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
@@ -74,6 +74,9 @@ const PRECACHE = [
     'css/views/addressbook.css',
     'js/addressbook.js',
     'js/adressen-zusammenfuehren.js',
+    'js/handy-check.js',
+    'js/globale-suche.js',
+    'css/components/globale-suche.css',
     'js/address-history.js',
     'js/addressbook-live.js',
     'js/autosave.js',
