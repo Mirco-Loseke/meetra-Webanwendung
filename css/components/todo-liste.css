@@ -437,3 +437,32 @@ body.todo-vollbild.todo-historie-offen #todo-panel { right: min(560px, 42vw); }
     #todo-fab svg { width: 19px; height: 19px; }
     #todo-fab .todo-fab-zahl { min-width: 17px; height: 17px; line-height: 17px; padding: 0 4px; font-size: .62rem; top: -4px; right: -4px; }
 }
+
+/* Vollbild (und auf dem Handy immer, dort deckt die Liste alles ab): Seite dahinter
+   scrollt nicht mit — weder am Listenende noch beim Wischen über Kopf/Eingabe. */
+#todo-panel, #todo-historie { overscroll-behavior: contain; }
+#todo-panel .todo-liste, #todo-historie .todo-liste { overscroll-behavior: contain; }
+body.todo-offen.todo-vollbild,
+body.todo-offen.todo-vollbild #main-content { overflow: hidden !important; }
+@media (max-width: 768px) {
+    body.todo-offen, body.todo-offen #main-content { overflow: hidden !important; }
+}
+html:has(body.todo-offen.todo-vollbild) { overflow: hidden; overscroll-behavior: none; }
+@media (max-width: 768px) { html:has(body.todo-offen) { overflow: hidden; overscroll-behavior: none; } }
+
+/* Adresse groß in der Übersicht (wie in der Vorgänge-Liste: lila) */
+.todo-adresse {
+    display: inline-flex; align-items: center; gap: 5px; max-width: 100%;
+    margin: 3px 0 2px; padding: 3px 9px; border-radius: 8px;
+    background: rgba(167, 139, 250, 0.14); border: 1px solid rgba(167, 139, 250, 0.45);
+    color: #a78bfa; font-weight: 800; font-size: .9rem; line-height: 1.25;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-sizing: border-box;
+}
+@media (max-width: 768px) {
+    .todo-adresse { font-size: .84rem; padding: 2px 8px; }
+    .todo-zeile { gap: 8px; padding: 8px 8px 8px 10px; }
+    .todo-text { overflow: hidden; }
+    .todo-name { overflow-wrap: anywhere; }
+}
+/* Adresse vollständig lesbar: umbrechen statt „…" */
+.todo-adresse { white-space: normal; overflow-wrap: anywhere; align-items: flex-start; }

@@ -248,6 +248,21 @@
         return '<div class="todo-hinweis">Die Liste ist nur in diesem Browser gespeichert. Für alle Geräte: Migration <code>supabase_add_todo_listen.sql</code> ausführen.</div>';
     }
 
+    // Name der hinterlegten Adresse: geladenes Detail, sonst Kunden-Cache
+    function adresseName(e) {
+        const d = details[e.id];
+        if (d && d.kunde && d.kunde.name) return d.kunde.name;
+        if (!e.customerId || !window.customerCacheSync) return '';
+        const alle = window.customerCacheSync();
+        // Cache noch nicht geladen → einmal laden und neu zeichnen
+        if (!alle.length && window.customerCacheGet && !adresseName.laedt) {
+            adresseName.laedt = true;
+            Promise.resolve(window.customerCacheGet()).then(() => zeichnen()).catch(() => {});
+        }
+        const k = alle.find(x => String(x.id) === String(e.customerId));
+        return k ? k.name || '' : '';
+    }
+
     function eintragHtml(e) {
         const auf = offen.has(e.id);
         const farbe = TYP_FARBE[e.typ] || '#94a3b8';
@@ -257,8 +272,9 @@
                 <label class="todo-haken" title="${e.erledigt ? 'Wieder offen' : 'Erledigt'}"><input type="checkbox" data-todo-erledigt ${e.erledigt ? 'checked' : ''}><span></span></label>
                 <div class="todo-text">
                     <div class="todo-oben"><span class="todo-typ">${esc(e.typ)}</span>${e.datumText ? `<span class="todo-wann">${esc(e.datumText)}</span>` : ''}${e.neu && !e.erledigt ? '<span class="todo-neu-badge">neu</span>' : (e.auto ? '<span class="todo-auto-badge" title="Automatisch übernommen">⚡</span>' : '')}</div>
+                    ${(() => { const n = adresseName(e); return n ? `<div class="todo-adresse" title="Adresse">📍 ${esc(n)}</div>` : ''; })()}
                     <div class="todo-name">${esc(e.titel || '(ohne Titel)')}</div>
-                    ${e.subject ? `<div class="todo-sub">${esc(e.subject)}</div>` : ''}
+                    ${e.subject && e.subject !== adresseName(e) ? `<div class="todo-sub">${esc(e.subject)}</div>` : ''}
                     ${e.ki ? `<div class="todo-ki">✨ ${esc(e.ki)}</div>` : ''}
                 </div>
                 ${Array.isArray(e.zustaendig) && e.zustaendig.length ? `<div class="todo-karte-av">${avatareHtml(e.zustaendig, 3)}</div>` : ''}
