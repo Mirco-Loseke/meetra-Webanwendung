@@ -571,6 +571,7 @@
         if (Notification.permission !== 'default') return;      // schon entschieden
         if (frageUnterdrueckt()) return;
         if (document.getElementById('alarm-ask')) return;
+        if (window.meldungsTakt && window.meldungsTakt.geraetStumm()) return;   // Gerät stumm
 
         const karte = document.createElement('div');
         karte.className = 'alarm-card alarm-ask';

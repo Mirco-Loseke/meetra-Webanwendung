@@ -340,3 +340,16 @@
 .alarm-spaeter-leiste { flex-wrap: wrap; }
 .alarm-spaeter-leiste > span { flex: 1 1 110px; min-width: 0; }
 .alarm-spaeter-wahl { margin-left: auto; }
+
+/* Gerät stumm (Einstellungen → Benachrichtigungen): auf diesem Gerät taucht
+   nichts auf — keine Karten, kein Zähler an der Glocke, kein Pulsieren. */
+body.geraet-stumm #alarm-stack,
+body.geraet-stumm #notif-badge { display: none !important; }
+body.geraet-stumm #notif-bell-btn,
+body.geraet-stumm .todo-puls { animation: none !important; }
+body.geraet-stumm #notif-bell-btn.has-unread,
+body.geraet-stumm #notif-bell-btn.has-overdue {
+    color: inherit;
+    border-color: transparent;
+    background: transparent;
+}

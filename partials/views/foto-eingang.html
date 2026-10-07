@@ -1,0 +1,24 @@
+<!-- ===================== FOTO-EINGANG ======================= -->
+<!-- Fotos von Handys ohne Anmeldung (fotos/, Edge Function     -->
+<!-- foto-eingang) → hier zuordnen. Logik: js/foto-eingang.js,  -->
+<!-- Stil: css/views/foto-eingang.css                           -->
+<!-- ========================================================= -->
+<section id="foto-eingang" class="view hidden">
+    <div class="fe-kopf">
+        <h1 class="fe-titel">📥 Foto-Eingang <span class="fe-zahl" id="fe-zahl"></span></h1>
+        <div class="fe-filter" role="tablist">
+            <button type="button" class="fe-reiter active" data-fe-filter="offen">Offen</button>
+            <button type="button" class="fe-reiter" data-fe-filter="zugeordnet">Zugeordnet</button>
+        </div>
+        <button type="button" class="btn-secondary fe-handys-knopf" onclick="window.fotoEingang.handys()">📱 Handys</button>
+    </div>
+
+    <div class="fe-leiste" id="fe-leiste" hidden>
+        <span id="fe-auswahl-text"></span>
+        <button type="button" class="btn-primary" onclick="window.fotoEingang.zuordnen()">Zuordnen …</button>
+        <button type="button" class="btn-secondary" onclick="window.fotoEingang.auswahlLeeren()">Abwählen</button>
+        <button type="button" class="btn-secondary fe-loeschen" onclick="window.fotoEingang.loeschen()">Löschen</button>
+    </div>
+
+    <div id="fe-liste" class="fe-liste"></div>
+</section>

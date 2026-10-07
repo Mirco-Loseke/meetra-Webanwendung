@@ -466,3 +466,7 @@ html:has(body.todo-offen.todo-vollbild) { overflow: hidden; overscroll-behavior:
 }
 /* Adresse vollständig lesbar: umbrechen statt „…" */
 .todo-adresse { white-space: normal; overflow-wrap: anywhere; align-items: flex-start; }
+
+/* Suchfeld über der Liste */
+.todo-suche { padding: var(--space-2, 8px) var(--space-3, 12px) 0; }
+.todo-suche input { width: 100%; }

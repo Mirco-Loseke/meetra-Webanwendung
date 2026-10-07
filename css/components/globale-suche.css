@@ -66,3 +66,6 @@ body.gs-offen { overflow: hidden; }
 /* Tippflächen der Filter (Handy-Check: waren 19px hoch) */
 .gs-chip { min-height: 32px; display: inline-flex; align-items: center; gap: 3px; box-sizing: border-box; }
 .gs-mehr { min-height: 30px; padding: 4px 6px; }
+/* Filter immer alle sichtbar: umbrechen statt seitlich scrollen (wurde rechts abgeschnitten) */
+.gs-chips { flex-wrap: wrap; overflow-x: visible; padding-bottom: 2px; }
+.gs-chip { padding: 4px 9px; font-size: .74rem; min-height: 30px; }

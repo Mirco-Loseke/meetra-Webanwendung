@@ -56,6 +56,7 @@
 
     function geraetStummSetzen(an) {
         try { if (an) localStorage.setItem(STUMM_KEY, '1'); else localStorage.removeItem(STUMM_KEY); } catch (e) { /* ohne Speicher */ }
+        stummKlasse();
         if (an) {
             // Alles, was schon ansteht oder offen ist, sofort weg.
             schlange.length = 0;
@@ -314,6 +315,19 @@
             }, 1000);
         } catch (e) { /* ohne Parameter */ }
     }
+
+    // body.geraet-stumm blendet alles aus, was sich meldet (Karten, Glocken-Zähler,
+    // Pulsieren) — Regeln in css/components/reminder-alarm.css.
+    function stummKlasse() {
+        const an = geraetStumm();
+        if (document.body) document.body.classList.toggle('geraet-stumm', an);
+        if (an) {
+            const box = document.getElementById('alarm-stack');
+            if (box) box.querySelectorAll('[data-alarm-key]').forEach(el => el.remove());
+        }
+    }
+    window.addEventListener('storage', e => { if (e.key === STUMM_KEY) { stummKlasse(); if (geraetStumm()) { schlange.length = 0; systemAlleZu(); } } });
+    if (document.body) stummKlasse(); else document.addEventListener('DOMContentLoaded', stummKlasse);
 
     startParameter();
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', beobachten);

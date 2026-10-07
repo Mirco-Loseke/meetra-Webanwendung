@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>meetra Fotos</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="../assets/icons/fotos-apple-touch-icon.png">
+<link rel="icon" href="../assets/icons/fotos-icon-192.png">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="meetra Fotos">
+<!--
+  meetra Fotos — eigenständige Startbildschirm-App für die Werkstatt.
+  Keine Anmeldung: Zugang über einen Geräte-Schlüssel, den die App unter
+  Foto-Eingang → „Handys" erzeugt (Link/QR: fotos/?k=<Schlüssel>).
+  Der Schlüssel darf nur in den Eingang hochladen (Edge Function foto-eingang).
+  Android: erscheint im Teilen-Menü (share_target, sw.js parkt die Dateien
+  im Cache „meetra-geteilt" und leitet auf ?geteilt=1 weiter).
+-->
+<style>
+    :root {
+        --bg: #000; --fl: #15171c; --rand: #2a2e36; --text: #f4f5f7; --leise: #9aa1ad;
+        --gruen: #10a068; --rot: #e5484d;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+        background: var(--bg); color: var(--text);
+        font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+        display: flex; flex-direction: column; gap: 16px;
+        -webkit-tap-highlight-color: transparent;
+    }
+    header { display: flex; align-items: center; gap: 10px; }
+    header img { width: 36px; height: 36px; border-radius: 8px; }
+    header h1 { font-size: 20px; margin: 0; font-weight: 700; }
+    header .wer { margin-left: auto; color: var(--leise); font-size: 13px; }
+    .gross {
+        flex: 1; min-height: 220px; border: 2px dashed var(--rand); border-radius: 20px;
+        background: var(--fl); color: var(--text); font-size: 24px; font-weight: 700;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+        cursor: pointer;
+    }
+    .gross:active { background: #1d2027; }
+    .gross span { font-size: 64px; line-height: 1; }
+    .gross small { font-size: 14px; font-weight: 400; color: var(--leise); }
+    .reihe { display: flex; gap: 10px; }
+    .reihe button { flex: 1; }
+    button.knopf {
+        min-height: 52px; border-radius: 14px; border: 1px solid var(--rand);
+        background: var(--fl); color: var(--text); font-size: 17px; font-weight: 600; cursor: pointer;
+    }
+    button.knopf.haupt { background: var(--gruen); border-color: var(--gruen); color: #fff; }
+    button.knopf:disabled { opacity: .5; }
+    label { font-size: 14px; color: var(--leise); display: block; margin-bottom: 6px; }
+    textarea {
+        width: 100%; min-height: 64px; resize: vertical; border-radius: 12px; border: 1px solid var(--rand);
+        background: var(--fl); color: var(--text); font: inherit; font-size: 16px; padding: 10px 12px;
+    }
+    .vorschau { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
+    .vorschau div { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: var(--fl); }
+    .vorschau img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .vorschau .datei { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 12px; color: var(--leise); padding: 4px; text-align: center; word-break: break-all; }
+    .vorschau button {
+        position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border-radius: 50%;
+        border: none; background: rgba(0,0,0,.7); color: #fff; font-size: 15px; line-height: 1; cursor: pointer;
+    }
+    .meldung { border-radius: 14px; padding: 14px 16px; font-size: 17px; font-weight: 600; text-align: center; }
+    .meldung.ok { background: rgba(16,160,104,.18); color: #5ee0a8; }
+    .meldung.fehler { background: rgba(229,72,77,.18); color: #ff9a9d; }
+    .meldung.info { background: var(--fl); color: var(--leise); font-weight: 400; }
+    .balken { height: 8px; border-radius: 4px; background: var(--fl); overflow: hidden; }
+    .balken i { display: block; height: 100%; width: 0; background: var(--gruen); transition: width .2s; }
+    .hidden { display: none !important; }
+    .einrichten { color: var(--leise); font-size: 15px; text-align: center; margin-top: 20vh; }
+</style>
+</head>
+<body>
+<header>
+    <img src="../assets/icons/fotos-icon-192.png" alt="">
+    <h1>meetra Fotos</h1>
+    <span class="wer" id="wer"></span>
+</header>
+
+<div id="ohne" class="einrichten hidden">
+    Dieses Handy ist noch nicht eingerichtet.<br><br>
+    Bitte in der meetra-App unter <b>Foto-Eingang → Handys</b> einen Einrichtungs-Link
+    erzeugen und hier öffnen (QR-Code scannen).
+</div>
+
+<main id="mit" class="hidden" style="display:flex;flex-direction:column;gap:16px;flex:1">
+    <input type="file" id="wahl" accept="image/*,video/*,application/pdf" multiple hidden>
+    <input type="file" id="kamera" accept="image/*" capture="environment" hidden>
+
+    <button class="gross" id="gross" type="button">
+        <span>📷</span>Fotos auswählen
+        <small>Galerie, mehrere auf einmal</small>
+    </button>
+    <div class="reihe"><button class="knopf" id="knopf-kamera" type="button">Kamera</button></div>
+
+    <div class="vorschau" id="vorschau"></div>
+
+    <div id="senden-block" class="hidden" style="display:flex;flex-direction:column;gap:12px">
+        <div>
+            <label for="notiz">Wozu? (freiwillig — Maschine, Kunde, Seriennummer …)</label>
+            <textarea id="notiz" placeholder="z. B. Schaden an der Walze, Kunde Müller"></textarea>
+        </div>
+        <button class="knopf haupt" id="senden" type="button">Abschicken</button>
+    </div>
+    <div class="balken hidden" id="balken"><i></i></div>
+    <div id="meldung" class="meldung hidden"></div>
+</main>
+
+<script>
+(function () {
+    'use strict';
+    var FUNKTION = 'https://rtnpyziwyaqrlfazxkyr.supabase.co/functions/v1/foto-eingang';
+    var KEY = 'meetra_fotos_schluessel';
+    var NAME = 'meetra_fotos_name';
+    var JE_ANFRAGE = 4;
+    var MAX_KANTE = 2200;
+
+    var $ = function (id) { return document.getElementById(id); };
+    var dateien = [];
+
+    function speicher(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+
+    function meldung(text, art) {
+        var m = $('meldung');
+        m.textContent = text; m.className = 'meldung ' + (art || 'info');
+    }
+
+    // Einrichtung über ?k=<Schlüssel>; danach aus der Adresszeile entfernen.
+    async function einrichten() {
+        var p = new URLSearchParams(location.search);
+        var k = p.get('k');
+        if (k) {
+            p.delete('k');
+            history.replaceState(null, '', location.pathname + (p.toString() ? '?' + p : ''));
+            try {
+                var r = await fetch(FUNKTION + '?schluessel=' + encodeURIComponent(k));
+                var j = await r.json();
+                if (!j.ok) throw new Error(j.error || 'ungültig');
+                speicher(KEY, k); speicher(NAME, j.name || '');
+                anzeigen();
+                meldung('✓ Eingerichtet für „' + (j.name || '') + '". Jetzt zum Startbildschirm hinzufügen.', 'ok');
+                return;
+            } catch (e) {
+                anzeigen();
+                meldung('Einrichtung fehlgeschlagen: ' + e.message, 'fehler');
+                return;
+            }
+        }
+        anzeigen();
+    }
+
+    function anzeigen() {
+        var da = !!speicher(KEY);
+        $('ohne').classList.toggle('hidden', da);
+        $('mit').classList.toggle('hidden', !da);
+        $('wer').textContent = da ? (speicher(NAME) || '') : '';
+    }
+
+    function zeichnen() {
+        var v = $('vorschau');
+        v.innerHTML = '';
+        dateien.forEach(function (f, i) {
+            var d = document.createElement('div');
+            if (f.type.indexOf('image/') === 0) {
+                var img = document.createElement('img');
+                img.src = URL.createObjectURL(f);
+                img.onload = function () { URL.revokeObjectURL(img.src); };
+                d.appendChild(img);
+            } else {
+                var s = document.createElement('div'); s.className = 'datei'; s.textContent = f.name; d.appendChild(s);
+            }
+            var x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', 'Entfernen');
+            x.onclick = function () { dateien.splice(i, 1); zeichnen(); };
+            d.appendChild(x);
+            v.appendChild(d);
+        });
+        $('senden-block').classList.toggle('hidden', !dateien.length);
+        $('senden').textContent = dateien.length ? dateien.length + (dateien.length === 1 ? ' Datei' : ' Dateien') + ' abschicken' : 'Abschicken';
+        $('gross').querySelector('small').textContent = dateien.length ? 'Weitere hinzufügen' : 'Galerie, mehrere auf einmal';
+    }
+
+    function hinzu(liste) {
+        for (var i = 0; i < liste.length; i++) dateien.push(liste[i]);
+        $('meldung').classList.add('hidden');
+        zeichnen();
+    }
+
+    // Große Fotos verkleinern (Handyfotos haben oft 5–10 MB). Was der Browser
+    // nicht lesen kann (z. B. HEIC in Chrome), geht unverändert raus.
+    async function verkleinern(f) {
+        if (!/^image\/(jpeg|png|webp)$/.test(f.type) || f.size < 900 * 1024 || !window.createImageBitmap) return f;
+        try {
+            var bmp = await createImageBitmap(f, { imageOrientation: 'from-image' });
+            var s = Math.min(1, MAX_KANTE / Math.max(bmp.width, bmp.height));
+            var c = document.createElement('canvas');
+            c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+            c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+            var blob = await new Promise(function (res) { c.toBlob(res, 'image/jpeg', 0.85); });
+            if (!blob || blob.size >= f.size) return f;
+            return new File([blob], f.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' });
+        } catch (e) { return f; }
+    }
+
+    async function senden() {
+        var k = speicher(KEY);
+        if (!k || !dateien.length) return;
+        var knopf = $('senden'); knopf.disabled = true;
+        var balken = $('balken'); balken.classList.remove('hidden');
+        var notiz = $('notiz').value.trim();
+        var gesamt = dateien.length, fertig = 0, fehler = [];
+        meldung('Wird geschickt …', 'info');
+        var rest = dateien.slice();
+        while (rest.length) {
+            var teil = rest.splice(0, JE_ANFRAGE);
+            var fd = new FormData();
+            fd.append('notiz', notiz);
+            for (var i = 0; i < teil.length; i++) fd.append('fotos', await verkleinern(teil[i]), teil[i].name);
+            try {
+                var r = await fetch(FUNKTION, { method: 'POST', headers: { 'x-foto-schluessel': k }, body: fd });
+                var j = await r.json().catch(function () { return {}; });
+                if (r.status === 403) throw new Error('Dieses Handy ist gesperrt oder der Schlüssel ist ungültig.');
+                fertig += j.angekommen || 0;
+                (j.fehler || []).forEach(function (t) { fehler.push(t); });
+                if (!r.ok && !j.angekommen) fehler.push(j.error || ('Fehler ' + r.status));
+            } catch (e) {
+                fehler.push(e.message === 'Failed to fetch' ? 'Keine Verbindung' : e.message);
+                if (/gesperrt/.test(e.message)) break;
+            }
+            balken.firstElementChild.style.width = Math.round((gesamt - rest.length) / gesamt * 100) + '%';
+        }
+        knopf.disabled = false;
+        setTimeout(function () { balken.classList.add('hidden'); balken.firstElementChild.style.width = '0'; }, 600);
+        if (fertig === gesamt) {
+            dateien = []; $('notiz').value = ''; zeichnen();
+            meldung('✓ ' + fertig + (fertig === 1 ? ' Datei' : ' Dateien') + ' angekommen', 'ok');
+            if (navigator.vibrate) navigator.vibrate(80);
+        } else {
+            // Nur die Angekommenen fallen weg wäre ungenau — alles bleibt stehen, damit man erneut senden kann.
+            meldung((fertig ? fertig + ' von ' + gesamt + ' angekommen. ' : 'Nicht angekommen. ') + fehler.slice(0, 2).join(' · '), 'fehler');
+        }
+    }
+
+    // Android: über „Teilen" geschickte Dateien, vom Service Worker geparkt.
+    async function geteilteHolen() {
+        var p = new URLSearchParams(location.search);
+        if (!p.has('geteilt') || !window.caches) return;
+        history.replaceState(null, '', location.pathname);
+        try {
+            var cache = await caches.open('meetra-geteilt');
+            var keys = await cache.keys();
+            var liste = [], text = '';
+            for (var i = 0; i < keys.length; i++) {
+                var r = await cache.match(keys[i]);
+                if (/\/text$/.test(keys[i].url)) text = await r.text();
+                else {
+                    var blob = await r.blob();
+                    var name = decodeURIComponent(r.headers.get('x-name') || 'foto.jpg');
+                    liste.push(new File([blob], name, { type: blob.type || 'image/jpeg' }));
+                }
+                await cache.delete(keys[i]);
+            }
+            if (liste.length) hinzu(liste);
+            if (text) $('notiz').value = text;
+        } catch (e) { meldung('Geteilte Fotos konnten nicht übernommen werden.', 'fehler'); }
+    }
+
+    $('gross').onclick = function () { $('wahl').click(); };
+    $('knopf-kamera').onclick = function () { $('kamera').click(); };
+    $('wahl').onchange = function () { hinzu(this.files); this.value = ''; };
+    $('kamera').onchange = function () { hinzu(this.files); this.value = ''; };
+    $('senden').onclick = senden;
+
+    if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+        navigator.serviceWorker.register('../sw.js', { scope: '../' }).catch(function () { /* geht auch ohne */ });
+    }
+    einrichten().then(geteilteHolen);
+})();
+</script>
+</body>
+</html>

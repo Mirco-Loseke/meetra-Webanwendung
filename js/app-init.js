@@ -392,7 +392,7 @@
             // Alle steuerbaren Ansichten: Schlüssel = data-target der Sidebar-Links bzw. der
             // Einstellungs-Karten. Fehlende Schlüssel in user.permissions gelten als erlaubt.
             window.PERM_VIEW_KEYS = [
-                'home', 'tasks', 'machines', 'workshop', 'service', 'protocols',
+                'home', 'tasks', 'machines', 'foto-eingang', 'workshop', 'service', 'protocols',
                 'settings-etiketten', 'documents', 'listen', 'history', 'accounting', 'calendar', 'timeline', 'settings',
                 'users', 'categories', 'protocol-templates', 'settings-textbausteine',
                 'settings-firmeneinstellungen', 'settings-import', 'settings-uvv-wartungsplaene', 'settings-ai', 'settings-outlook', 'settings-datenschutz',

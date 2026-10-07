@@ -161,7 +161,7 @@
     <link rel="stylesheet" href="css/components/buttons.css?v=3">
     <link rel="stylesheet" href="css/components/forms.css?v=6">
     <link rel="stylesheet" href="css/components/notifications.css?v=8">
-    <link rel="stylesheet" href="css/components/reminder-alarm.css?v=9">
+    <link rel="stylesheet" href="css/components/reminder-alarm.css?v=10">
     <link rel="stylesheet" href="css/components/calendar.css?v=1">
     <link rel="stylesheet" href="css/components/calendar-widget.css?v=7">
     <link rel="stylesheet" href="css/components/dropdowns.css?v=4">
@@ -185,8 +185,8 @@
     <link rel="stylesheet" href="css/views/workshop-tasks.css?v=4">
     <link rel="stylesheet" href="css/views/rechnungsliste.css?v=3">
     <link rel="stylesheet" href="css/components/ki-chat.css?v=6">
-    <link rel="stylesheet" href="css/components/todo-liste.css?v=20">
-    <link rel="stylesheet" href="css/components/globale-suche.css?v=3"><!-- Suche über alles: entfernen = diese Zeile + globale-suche.js -->
+    <link rel="stylesheet" href="css/components/todo-liste.css?v=21">
+    <link rel="stylesheet" href="css/components/globale-suche.css?v=4"><!-- Suche über alles: entfernen = diese Zeile + globale-suche.js -->
     <link rel="stylesheet" href="css/views/tasks-print.css?v=5">
     <link rel="stylesheet" href="css/views/dashboard.css?v=1">
     <link rel="stylesheet" href="css/views/listen.css?v=3">
@@ -195,6 +195,7 @@
     <!-- Quill-Editor (Mail schreiben, Signatur) — vor mail.css, damit dessen Umfärbung gewinnt -->
     <link rel="stylesheet" href="lib/quill.snow.css?v=1">
     <link rel="stylesheet" href="css/views/mail.css?v=26">
+    <link rel="stylesheet" href="css/views/foto-eingang.css?v=1">
     <link rel="stylesheet" href="css/views/datenschutz.css?v=1">
     <link rel="stylesheet" href="css/base/responsive.css?v=35">
 
@@ -712,6 +713,18 @@
                                         <path d="M9.5 16.5a3.5 3.5 0 0 1 7 0" />
                                     </svg>
                                     <span>Adressbuch</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#foto-eingang" class="nav-link" data-target="foto-eingang">
+                                    <!-- Inbox/Camera Icon (js/foto-eingang.js) -->
+                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                                        <circle cx="12" cy="13" r="3.5" />
+                                    </svg>
+                                    <span>Foto-Eingang</span>
+                                    <span class="fe-nav-zahl" id="fe-nav-zahl"></span>
                                 </a>
                             </li>
                             <li>
@@ -1979,6 +1992,33 @@
                     <div class="tlv-ungeplant" id="tlv-ungeplant"></div>
                 </section>
                 <!-- /@partial:views/timeline.html -->
+
+                <!-- @partial:views/foto-eingang.html -->
+                <!-- ===================== FOTO-EINGANG ======================= -->
+                <!-- Fotos von Handys ohne Anmeldung (fotos/, Edge Function     -->
+                <!-- foto-eingang) → hier zuordnen. Logik: js/foto-eingang.js,  -->
+                <!-- Stil: css/views/foto-eingang.css                           -->
+                <!-- ========================================================= -->
+                <section id="foto-eingang" class="view hidden">
+                    <div class="fe-kopf">
+                        <h1 class="fe-titel">📥 Foto-Eingang <span class="fe-zahl" id="fe-zahl"></span></h1>
+                        <div class="fe-filter" role="tablist">
+                            <button type="button" class="fe-reiter active" data-fe-filter="offen">Offen</button>
+                            <button type="button" class="fe-reiter" data-fe-filter="zugeordnet">Zugeordnet</button>
+                        </div>
+                        <button type="button" class="btn-secondary fe-handys-knopf" onclick="window.fotoEingang.handys()">📱 Handys</button>
+                    </div>
+
+                    <div class="fe-leiste" id="fe-leiste" hidden>
+                        <span id="fe-auswahl-text"></span>
+                        <button type="button" class="btn-primary" onclick="window.fotoEingang.zuordnen()">Zuordnen …</button>
+                        <button type="button" class="btn-secondary" onclick="window.fotoEingang.auswahlLeeren()">Abwählen</button>
+                        <button type="button" class="btn-secondary fe-loeschen" onclick="window.fotoEingang.loeschen()">Löschen</button>
+                    </div>
+
+                    <div id="fe-liste" class="fe-liste"></div>
+                </section>
+                <!-- /@partial:views/foto-eingang.html -->
 
                 <!-- @partial:views/mail.html -->
                 <!-- ========================================================= -->
@@ -4809,7 +4849,7 @@
     <script src="js/app-core.js?v=10"></script>
     <script src="js/lookup-cache.js?v=1"></script>
     <script src="js/photo-dedupe.js?v=3"></script>
-    <script src="js/app-init.js?v=28"></script>
+    <script src="js/app-init.js?v=29"></script>
     <script src="js/settings-uvv-plans.js?v=1"></script>
     <script src="js/machine-details-modal.js?v=3"></script>
     <script src="js/machine-modal.js?v=6"></script>
@@ -7443,7 +7483,7 @@
     <script src="js/ai-address-summary.js?v=14"></script>
     <script src="js/ai-machine-summary.js?v=7"></script>
     <script src="js/ai-briefing.js?v=7"></script>
-    <script src="js/todo-liste.js?v=15"></script>
+    <script src="js/todo-liste.js?v=16"></script>
     <!-- Termine mit Teilnehmern: liefert die Bausteine, die Benachrichtigungen,
          Kalender und Routenplanung darunter benutzen. -->
     <script src="js/appointment-invite.js?v=2"></script>
@@ -7453,8 +7493,8 @@
     <script src="js/notification-settings.js?v=4"></script>
     <!-- Minutengenauer Wecker fuer Erinnerungen mit Uhrzeit. Muss NACH
          notifications.js stehen: nutzt window.notificationsPushEnabled. -->
-    <script src="js/meldungs-takt.js?v=6"></script>
-    <script src="js/reminder-alarm.js?v=10"></script>
+    <script src="js/meldungs-takt.js?v=7"></script>
+    <script src="js/reminder-alarm.js?v=11"></script>
     <script src="js/assignment-handoff.js?v=6"></script>
     <script src="js/calendar-widget.js?v=23"></script>
     <script src="js/kalender-todo-druck.js?v=4"></script>
@@ -8399,7 +8439,8 @@
 <script src="js/timeline-view.js?v=77"></script>
 <script src="js/voice-dictation.js?v=2"></script>
 <script src="js/handy-check.js?v=7"></script>
-<script src="js/globale-suche.js?v=7"></script>
+<script src="js/globale-suche.js?v=8"></script>
+<script src="js/foto-eingang.js?v=4"></script>
 </body>
 
 </html>

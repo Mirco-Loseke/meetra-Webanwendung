@@ -49,9 +49,9 @@
             if (window.customerCacheGet) { try { await window.customerCacheGet(); } catch (e) { /* ohne */ } }
             const q = p => p.then(r => r.data || []).catch(() => []);
             const [vorgaenge, berichte, angebote, aufgaben, kontakte, telefone, dokumente, ordner] = sb ? await Promise.all([
-                q(sb.from('internal_processes').select('id, title, status, customer_id, machine_id, created_at, workshop_order_number').order('created_at', { ascending: false }).limit(1500)),
+                q(sb.from('internal_processes').select('id, title, status, customer_id, machine_id, created_at, workshop_order_number, contact_name, sender, recipient').order('created_at', { ascending: false }).limit(1500)),
                 q(sb.from('service_entries').select('id, machine_id, title, date, created_at, is_finalized').order('id', { ascending: false }).limit(1500)),
-                q(sb.from('angebote').select('id, belegnummer, belegdatum, kundenmatchcode, nettobetrag, status, customer_id').order('belegdatum', { ascending: false }).limit(1500)),
+                q(sb.from('angebote').select('id, belegnummer, belegdatum, kundenmatchcode, nettobetrag, status, customer_id, process_id').order('belegdatum', { ascending: false }).limit(1500)),
                 q(sb.from('tasks').select('id, title, machine_id, status').order('id', { ascending: false }).limit(800)),
                 q(sb.from('customer_contacts').select('id, customer_id, salutation, name, position, department, phone, mobile, email').limit(5000)),
                 // Der Kunden-Speicher (lookup-cache) hat keine Telefonnummer — hier schmal dazuladen
@@ -98,12 +98,20 @@
             sub: [m.year ? 'Bj. ' + m.year : '', kName(m.customer_id) || m.company || '', m.location || m.operator_city || ''].filter(Boolean).join(' · '),
             text: [mLabel(m), m.serial, m.serial_number, m.manufacturer, m.name, m.matchcode, m.year, m.company, kName(m.customer_id), m.location, m.operator_city].join(' ')
         }));
+        // Angebotsnummern je Vorgang (angebote.process_id) — ein Vorgang kann mehrere haben
+        const belegeJe = new Map();
+        (d.angebote || []).forEach(a => { if (!a.process_id) return; const l = belegeJe.get(String(a.process_id)) || []; l.push(a.belegnummer); belegeJe.set(String(a.process_id), l); });
         (d.vorgaenge || []).forEach(v => {
             const m = mById.get(String(v.machine_id));
+            const k = kd.get(String(v.customer_id)) || {};
+            const belege = (belegeJe.get(String(v.id)) || []).filter(Boolean);
             out.push({
                 art: 'vorgang', id: v.id, titel: v.title || 'Vorgang',
-                sub: [kName(v.customer_id), m ? mLabel(m) : '', v.status || '', datum(v.created_at)].filter(Boolean).join(' · '),
-                text: [v.title, kName(v.customer_id), m ? mLabel(m) : '', v.workshop_order_number, v.status].join(' '),
+                sub: [kName(v.customer_id), v.contact_name, m ? mLabel(m) : '', belege.length && !belege.some(b => String(v.title || '').includes(b)) ? 'Angebot ' + belege.join(', ') : '', v.status || '', datum(v.created_at)].filter(Boolean).join(' · '),
+                // Titel, Adresse (Name, Ort, PLZ, Straße, Kd.-/Adr.-Nr., Matchcode), Ansprechpartner,
+                // Absender/Empfänger, Maschine, Angebotsnummern, Werkstattauftrag, Status
+                text: [v.title, kName(v.customer_id), k.city, k.zip_code, k.street, k.customer_number, k.address_number, k.matchcode,
+                    v.contact_name, v.sender, v.recipient, m ? mLabel(m) : '', m ? m.serial : '', belege.join(' '), v.workshop_order_number, v.status].join(' '),
                 erledigt: /erledigt|abgeschlossen|done/i.test(v.status || '')
             });
         });

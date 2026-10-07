@@ -117,6 +117,7 @@
                 <div class="todo-kopf-knoepfe">
                     <button type="button" class="todo-kk" data-todo="briefing" title="KI-Briefing für heute öffnen — von dort „Als To-do übernehmen“">✨ Briefing</button>
                     <button type="button" class="todo-kk" data-todo="auto" id="todo-auto-knopf" title="Neue fällige Wiedervorlagen, Schritte, Termine und Angebots-Erinnerungen automatisch übernehmen">⚡ Auto</button>
+                    <button type="button" class="todo-kk" data-todo="drucken" title="Liste drucken — mit Adresse, Telefon, letztem Stand, nächstem Schritt und Platz für Notizen (Suche wirkt mit)">🖨 Drucken</button>
                     <button type="button" class="todo-kk" data-todo="aufraeumen" title="Erledigte Punkte aus der Liste nehmen">Erledigte weg</button>
                     <button type="button" class="todo-x" data-todo="vollbild" id="todo-vollbild-knopf" title="Vollbild" aria-label="Vollbild umschalten">
                         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
@@ -127,6 +128,7 @@
                 </div>
             </div>
             <div class="todo-fortschritt"><div id="todo-balken"></div></div>
+            <div class="todo-suche"><input type="search" class="glass-form-input" id="todo-such" placeholder="Suchen: Kunde, Maschine, Vorgang, Notiz …" autocomplete="off"></div>
             <div class="todo-liste" id="todo-liste"></div>
             <form class="todo-neu" id="todo-neu">
                 <input type="text" class="glass-form-input" id="todo-neu-text" placeholder="Eigenen Punkt hinzufügen oder diktieren …" autocomplete="off">
@@ -137,6 +139,7 @@
         document.body.appendChild(p);
 
         p.addEventListener('click', klick);
+        p.querySelector('#todo-such').addEventListener('input', ev => { suche = ev.target.value; zeichnen(); });
         p.querySelector('.todo-kopf').addEventListener('dblclick', e => { if (!e.target.closest('button')) vollbild(!document.body.classList.contains('todo-vollbild')); });
         p.addEventListener('change', aenderung);
         p.addEventListener('input', eingabe);
@@ -209,6 +212,17 @@
         eintraege = eintraege.filter(e => !e.archiviert || new Date(e.archiviertAm || 0).getTime() > grenze);
     }
     const sichtbar = () => eintraege.filter(e => !e.archiviert);
+    // Suchfeld oben in der Liste: alle Wörter müssen irgendwo im Eintrag vorkommen.
+    let suche = '';
+    function passtSuche(e) {
+        const w = suche.toLowerCase().trim().split(/s+/).filter(Boolean);
+        if (!w.length) return true;
+        const d = details[e.id] || {};
+        const text = [e.typ, e.titel, e.subject, e.ki, e.notiz, e.datumText, e.gruppe, adresseName(e),
+            d.proc && d.proc.description, d.proc && d.proc.contact_name].filter(Boolean).join(' ').toLowerCase();
+        return w.every(x => text.includes(x));
+    }
+    const gefiltert = () => sichtbar().filter(passtSuche);
     function archivieren(liste) {
         const jetzt = new Date().toISOString();
         liste.forEach(e => { e.archiviert = true; e.archiviertAm = jetzt; offen.delete(e.id); });
@@ -220,10 +234,14 @@
         const box = document.getElementById('todo-liste');
         if (!box) return;
         zaehlerSetzen();
-        const alle = sichtbar();
+        const alle = gefiltert();
         const fertig = alle.filter(e => e.erledigt).length;
         document.getElementById('todo-stand').textContent = alle.length ? `${fertig} von ${alle.length} erledigt` : '';
         document.getElementById('todo-balken').style.width = alle.length ? (fertig / alle.length * 100) + '%' : '0';
+        if (!alle.length && suche.trim() && sichtbar().length) {
+            box.innerHTML = '<div class="todo-leer"><p>Nichts gefunden für „' + esc(suche.trim()) + '“.</p></div>';
+            return;
+        }
         if (!alle.length) {
             box.innerHTML = `<div class="todo-leer">
                 <div style="font-size:2rem;">🗒️</div>
@@ -810,6 +828,19 @@
             autoAn(!autoIstAn());
             toast(autoIstAn() ? 'Automatik an — neue fällige Punkte kommen von selbst in die Liste.' : 'Automatik aus — nur noch über das Briefing.');
             if (autoIstAn()) autoPruefen(true);
+            return;
+        }
+        if (was === 'drucken') {
+            // Offene Punkte (mit Suche), nach Stufe sortiert; Notiz des Eintrags kommt mit aufs Blatt.
+            const reihe = g => { const i = GRUPPEN.indexOf(g || 'Wichtig'); return i < 0 ? 99 : i; };
+            const liste = gefiltert().filter(x => !x.erledigt).sort((a, b) => reihe(a.gruppe) - reihe(b.gruppe)).map(x => ({
+                title: x.titel || '(ohne Titel)', typLabel: x.typ, datumText: x.datumText, gruppe: x.gruppe || 'Wichtig',
+                subject: x.subject, ki: x.ki, note: x.notiz, targetType: x.targetType, targetId: x.targetId,
+                customerId: x.customerId, day: x.day, done: false
+            }));
+            if (!liste.length) { toast('Keine offenen Punkte zum Drucken.'); return; }
+            if (!window.kalenderTodoDrucken) { toast('Druck-Modul nicht geladen.'); return; }
+            window.kalenderTodoDrucken(liste, 'Meine To-dos' + (suche.trim() ? ' — Suche „' + suche.trim() + '“' : ''));
             return;
         }
         if (was === 'aufraeumen') {

@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = 'meetra-app-v814';
+﻿const CACHE_NAME = 'meetra-app-v820';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [
@@ -91,6 +91,8 @@ const PRECACHE = [
     'css/views/mail.css',
     'js/outlook-graph.js',
     'js/mail-view.js',
+    'js/foto-eingang.js',
+    'css/views/foto-eingang.css',
     'js/mail-anhang-app.js',
     'js/outlook-settings.js',
     'js/onedrive-angebote.js',
@@ -280,7 +282,7 @@ self.addEventListener('activate', event => {
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(cache => {
-                    if (cache !== CACHE_NAME) {
+                    if (cache !== CACHE_NAME && cache !== GETEILT_CACHE) {
                         console.log('[Service Worker] Lösche alten Cache:', cache);
                         return caches.delete(cache);
                     }
@@ -288,6 +290,29 @@ self.addEventListener('activate', event => {
             );
         }).then(() => self.clients.claim())
     );
+});
+
+// meetra Fotos (fotos/manifest.json, share_target): Android schickt geteilte
+// Dateien als POST an fotos/?teilen=1. Hier parken und auf die Seite umleiten,
+// die sie aus dem Cache holt und hochlädt.
+const GETEILT_CACHE = 'meetra-geteilt';
+self.addEventListener('fetch', event => {
+    const u = new URL(event.request.url);
+    if (event.request.method !== 'POST' || u.origin !== self.location.origin
+        || !/\/fotos\/(index\.html)?$/.test(u.pathname) || !u.searchParams.has('teilen')) return;
+    event.respondWith((async () => {
+        try {
+            const fd = await event.request.formData();
+            const cache = await caches.open(GETEILT_CACHE);
+            const basis = new URL('fotos/geteilt/', self.registration.scope).href;
+            const dateien = fd.getAll('fotos').filter(f => f && typeof f !== 'string');
+            await Promise.all(dateien.map((f, i) => cache.put(basis + Date.now() + '-' + i,
+                new Response(f, { headers: { 'Content-Type': f.type || 'image/jpeg', 'x-name': encodeURIComponent(f.name || 'foto.jpg') } }))));
+            const text = [fd.get('titel'), fd.get('text')].filter(Boolean).join(' ').trim();
+            if (text) await cache.put(basis + 'text', new Response(text));
+        } catch (e) { /* Seite zeigt dann einfach nichts an */ }
+        return Response.redirect(new URL('fotos/index.html?geteilt=1', self.registration.scope).href, 303);
+    })());
 });
 
 // Fetch Event: Stale-While-Revalidate für App-Shell, Network-First für API
