@@ -291,8 +291,8 @@
     // Dokumente ERSETZEN: neue Dateien hochladen, danach die bisherigen
     // Vorgangs-Dokumente (ohne Schritt-Bezug) aus Liste und Speicher entfernen.
     // Genutzt von der Angebotsliste (Datei auf die Zelle ziehen → „Ersetzen").
-    // Bewusst OHNE Löschrecht-Prüfung: Austauschen darf jeder — es ist derselbe
-    // Vorgang wie „neues Dokument statt altem", nur in einem Schritt.
+    // Austauschen löscht das alte Dokument: ohne Löschrecht „Dokumente" wird das
+    // neue nur dazugelegt, das alte bleibt stehen (seit 2026-10-07, vorher ohne Prüfung).
     // Reihenfolge: erst hochladen, dann löschen — schlägt der Upload fehl,
     // bleibt das alte Dokument unangetastet.
     window.replaceProcessAttachments = async function (processId, dateien, onProgress) {
@@ -302,6 +302,10 @@
         const erg = await uploadDateien(processId, null, dateien, onProgress);
         const neuHochgeladen = liste(proc(processId)).filter(f => !f.step_id && !alteIds.has(String(f.id)));
         if (!neuHochgeladen.length) return Object.assign(erg, { ersetzt: 0 });
+        if (typeof window.canDeleteArea === 'function' && !window.canDeleteArea('dokumente')) {
+            if (window.showToast) window.showToast('Neues Dokument hinzugefügt. Das alte bleibt, weil du keine Berechtigung zum Löschen von Dokumenten hast.', 'warn');
+            return Object.assign(erg, { ersetzt: 0 });
+        }
 
         const rest = liste(proc(processId)).filter(f => !alteIds.has(String(f.id)));
         const { error } = await sb().from('internal_processes').update({ attachments: rest }).eq('id', processId);

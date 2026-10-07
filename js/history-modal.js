@@ -1290,7 +1290,7 @@
                             <div style="position: relative; width: 60px; height: 60px; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); cursor: pointer;"
                                  onclick="if(!event.target.closest('button')) window.openPhotosLightbox(${JSON.stringify(entry.files).replace(/"/g, '&quot;')}, ${index})">
                                 <img src="${url}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
-                                <button onclick="window.removeExistingPhoto('${url}', event)" style="position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3); z-index: 10;">&times;</button>
+                                <button class="delete-permission-required" data-del-area="fotos" onclick="window.removeExistingPhoto('${url}', event)" style="position: absolute; top: -5px; right: -5px; background: #ef4444; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.3); z-index: 10;">&times;</button>
                             </div>
                         `).join('');
                 }
@@ -1302,6 +1302,7 @@
 
         window.removeExistingPhoto = function (url, event) {
             if (event) event.stopPropagation();
+            if (typeof window.canDelete === 'function' && !window.canDelete('Fotos')) return;
             const list = document.getElementById('existing-photos-list');
             const photoDiv = Array.from(list.children).find(div => div.querySelector('img').src === url);
             if (photoDiv) photoDiv.remove();

@@ -725,7 +725,7 @@
                             <button class="set-main-btn" onclick="setMachineMainImage(${index}, true)" title="Als Titelbild festlegen">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="${item.classList.contains('is-main') ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
                             </button>
-                            <button class="remove-btn" onclick="removeMachineFile(${index}, true)">&times;</button>
+                            <button class="remove-btn delete-permission-required" data-del-area="fotos" onclick="removeMachineFile(${index}, true)">&times;</button>
                     `;
                 } else {
                     // PDF/Doc
@@ -737,7 +737,7 @@
                                 <span style="font-weight: 900; font-size: 0.8rem; opacity: 0.5;">${typeLabel}</span>
                                 <span style="font-size: 0.7rem; word-break: break-all; overflow: hidden; max-height: 3em;">${name}</span>
                             </div>
-                        <button class="remove-btn" onclick="removeMachineFile(${index}, true)">&times;</button>
+                        <button class="remove-btn delete-permission-required" data-del-area="fotos" onclick="removeMachineFile(${index}, true)">&times;</button>
                     `;
                 }
             } else {
@@ -789,6 +789,7 @@
         };
 
         window.removeMachineFile = function (index, isExisting) {
+            if (isExisting && typeof window.canDelete === 'function' && !window.canDelete('Fotos')) return;
             let removedUrl = null;
             if (isExisting) {
                 const removedFile = existingMachineFiles[index];

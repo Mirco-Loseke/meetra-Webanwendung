@@ -56,11 +56,32 @@
     position: absolute; bottom: var(--space-1); right: var(--space-1); width: 30px; height: 30px;
     border-radius: var(--radius-circle); border: none; background: rgba(0, 0, 0, 0.55); color: var(--color-white); cursor: pointer;
 }
+.fe-kopie {
+    position: absolute; top: var(--space-1); right: var(--space-1); width: 30px; height: 30px;
+    border-radius: var(--radius-circle); border: none; background: rgba(0, 0, 0, 0.55); color: var(--color-white); cursor: pointer;
+}
 .fe-ziel {
     position: absolute; left: 0; right: 0; bottom: 0; padding: var(--space-1) var(--space-2);
-    background: rgba(0, 0, 0, 0.65); color: var(--color-white); font-size: var(--fs-2xs);
+    border: none; text-align: left; cursor: pointer; font: inherit;
+    background: rgba(16, 160, 104, 0.92); color: var(--color-white); font-size: var(--fs-xs); font-weight: var(--fw-semibold);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.fe-ziel:hover { text-decoration: underline; }
+.fe-kachel .fe-ziel ~ .fe-lupe, .fe-kachel:has(.fe-ziel) .fe-lupe { bottom: 30px; }
+
+/* Rote Lösch-Rückfrage */
+.fe-warnung {
+    border: 2px solid var(--danger); background: var(--danger-soft); border-radius: var(--radius-md);
+    padding: var(--space-4); color: var(--text-1);
+}
+.fe-warnung-titel { font-size: var(--fs-xl); font-weight: var(--fw-bold); color: var(--danger); margin-bottom: var(--space-2); }
+.fe-warnung p { margin: var(--space-2) 0; }
+.fe-warnung ul { margin: var(--space-1) 0 var(--space-2); padding-left: 1.2em; }
+.fe-btn-rot {
+    background: var(--danger); color: var(--color-white); border: none; border-radius: var(--radius-sm);
+    padding: var(--space-2) var(--space-4); font-weight: var(--fw-bold); cursor: pointer;
+}
+.fe-btn-rot:hover { filter: brightness(1.1); }
 .fe-leer { color: var(--text-3); padding: var(--space-8) 0; text-align: center; }
 
 /* Fenster (Zuordnen, Handys) */

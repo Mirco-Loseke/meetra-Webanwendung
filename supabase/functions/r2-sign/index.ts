@@ -78,7 +78,23 @@ Deno.serve(async (req) => {
     }
 
     // ── delete: return a presigned DELETE URL (5 min) ─────────────
+    // Löschrecht wie in der App (js/permissions.js): users.permissions.can_delete === false
+    // → kein Löschen. Bewusst nur der Hauptschalter (Bereiche prüft die App) und im
+    // Zweifel ERLAUBEN (Nutzer nicht in users gefunden, Abfrage scheitert), damit
+    // nie ein laufender Arbeitsablauf an der Prüfung hängen bleibt. Upload ist nie betroffen.
     if (body.action === 'delete' && body.path) {
+        try {
+            const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+            const { data: zeile } = await admin.from('users').select('*').ilike('email', user.email ?? '').limit(1).maybeSingle();
+            let p = zeile ? zeile.permissions : null;
+            if (typeof p === 'string') { try { p = JSON.parse(p); } catch { p = null; } }
+            if (!p || typeof p !== 'object') p = {};
+            if (zeile && !zeile.is_admin && (p.can_delete === false || p.can_delete === 'false')) {
+                return json({ error: 'Keine Berechtigung zum Löschen', verweigert: true }, 403);
+            }
+        } catch (e) {
+            console.warn('Löschrecht nicht prüfbar, erlaube:', e);
+        }
         const target = new URL(`${R2_ENDPOINT}/${R2_BUCKET}/${body.path}`);
         target.searchParams.set('X-Amz-Expires', '300');
 

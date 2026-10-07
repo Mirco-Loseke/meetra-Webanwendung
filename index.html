@@ -195,7 +195,7 @@
     <!-- Quill-Editor (Mail schreiben, Signatur) — vor mail.css, damit dessen Umfärbung gewinnt -->
     <link rel="stylesheet" href="lib/quill.snow.css?v=1">
     <link rel="stylesheet" href="css/views/mail.css?v=26">
-    <link rel="stylesheet" href="css/views/foto-eingang.css?v=1">
+    <link rel="stylesheet" href="css/views/foto-eingang.css?v=3">
     <link rel="stylesheet" href="css/views/datenschutz.css?v=1">
     <link rel="stylesheet" href="css/base/responsive.css?v=35">
 
@@ -2013,7 +2013,7 @@
                         <span id="fe-auswahl-text"></span>
                         <button type="button" class="btn-primary" onclick="window.fotoEingang.zuordnen()">Zuordnen …</button>
                         <button type="button" class="btn-secondary" onclick="window.fotoEingang.auswahlLeeren()">Abwählen</button>
-                        <button type="button" class="btn-secondary fe-loeschen" onclick="window.fotoEingang.loeschen()">Löschen</button>
+                        <button type="button" class="btn-secondary fe-loeschen delete-permission-required" data-del-area="fotos" onclick="window.fotoEingang.loeschen()">Löschen</button>
                     </div>
 
                     <div id="fe-liste" class="fe-liste"></div>
@@ -4852,16 +4852,16 @@
     <script src="js/app-init.js?v=29"></script>
     <script src="js/settings-uvv-plans.js?v=1"></script>
     <script src="js/machine-details-modal.js?v=3"></script>
-    <script src="js/machine-modal.js?v=6"></script>
-    <script src="js/service-report-form.js?v=20"></script>
+    <script src="js/machine-modal.js?v=7"></script>
+    <script src="js/service-report-form.js?v=21"></script>
     <script src="js/service-list.js?v=4"></script>
-    <script src="js/history-modal.js?v=210"></script>
+    <script src="js/history-modal.js?v=211"></script>
     <script src="js/calendar-events.js?v=6"></script>
     <script src="js/processes-ui.js?v=49"></script>
     <!-- Dokumente an Vorgaengen/Schritten. Nutzt window.FileUploadService
          (js/file-upload-service-r2.js, weiter UNTEN geladen) — das ist in
          Ordnung, weil der Dienst erst beim Hochladen angefasst wird. -->
-    <script src="js/process-attachments.js?v=12"></script>
+    <script src="js/process-attachments.js?v=13"></script>
     <script src="js/process-messages.js?v=1"></script>
     <script src="js/process-machine-select.js?v=2"></script>
     <script src="js/customer-matching.js?v=2"></script>
@@ -6709,7 +6709,7 @@
     <!-- MIETVEREINBARUNG (2/3) — eigenstaendig, diese Zeile loeschen = weg -->
     <script src="js/mietvereinbarung-vorlagen.js?v=18"></script>
     <script src="js/einstellungen.js?v=1"></script>
-    <script src="js/mietvereinbarung.js?v=53"></script>
+    <script src="js/mietvereinbarung.js?v=54"></script>
     <script src="js/mietvereinbarung-liste.js?v=2"></script>
 
     </main>
@@ -7469,7 +7469,7 @@
     <script src="js/address-history.js?v=2"></script>
     <script src="js/addressbook.js?v=87"></script>
     <script src="js/outlook-graph.js?v=4"></script>
-    <script src="js/mail-view.js?v=22"></script>
+    <script src="js/mail-view.js?v=23"></script>
     <script src="js/mail-anhang-app.js?v=5"></script>
     <script src="js/outlook-settings.js?v=3"></script>
     <script src="js/onedrive-angebote.js?v=2"></script>
@@ -8440,7 +8440,7 @@
 <script src="js/voice-dictation.js?v=2"></script>
 <script src="js/handy-check.js?v=7"></script>
 <script src="js/globale-suche.js?v=8"></script>
-<script src="js/foto-eingang.js?v=4"></script>
+<script src="js/foto-eingang.js?v=8"></script>
 </body>
 
 </html>

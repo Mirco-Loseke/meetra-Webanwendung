@@ -81,15 +81,32 @@
         leisteSetzen();
     }
 
+    const ZIEL_ICON = { maschine: '⚙️', adresse: '📍', servicebericht: '🔧', vorgang: '📋' };
+    function zielTitel(z) {
+        return 'Zugeordnet: ' + z.zugeordnet_text + (z.zugeordnet_von ? ' — von ' + z.zugeordnet_von : '') +
+            (z.zugeordnet_am ? ' am ' + new Date(z.zugeordnet_am).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) : '') + ' · Klick öffnet';
+    }
+    function zielOeffnen(z) {
+        const id = z.zugeordnet_id;
+        try {
+            if (z.zugeordnet_typ === 'maschine' && window.openMachineDetails) return window.openMachineDetails(id);
+            if (z.zugeordnet_typ === 'adresse' && window.openAddressDetail) { if (window.switchView) window.switchView('addressbook'); return window.openAddressDetail(id); }
+            if (z.zugeordnet_typ === 'servicebericht' && window.openEditServicebericht) return window.openEditServicebericht(id);
+            if (z.zugeordnet_typ === 'vorgang' && window.oeffneErinnerungsZiel) return window.oeffneErinnerungsZiel('process', id);
+        } catch (e) { console.warn('Foto-Eingang: Ziel öffnen', e); }
+        toast('Das Ziel lässt sich gerade nicht öffnen.', 'warn');
+    }
+
     function kachel(z) {
         const an = S.gewaehlt.has(z.id);
         const inhalt = istBild(z)
-            ? '<img src="' + esc(z.url) + '" loading="lazy" alt="">'
+            ? '<img src="' + esc(z.url) + '" loading="lazy" alt="" draggable="false">'
             : '<div class="fe-datei">' + esc(z.dateiname || z.pfad.split('/').pop()) + '</div>';
-        return '<div class="fe-kachel' + (an ? ' gewaehlt' : '') + '" data-fe-id="' + esc(z.id) + '">' + inhalt +
+        return '<div class="fe-kachel' + (an ? ' gewaehlt' : '') + '" draggable="true" title="Ziehen: in einen Windows-Ordner, ins Mail-Fenster der App oder in eine Mail" data-fe-id="' + esc(z.id) + '">' + inhalt +
             '<span class="fe-haken">' + (an ? '✓' : '') + '</span>' +
+            (istBild(z) ? '<button type="button" class="fe-kopie" data-fe-kopie="' + esc(z.id) + '" title="Bild kopieren — in Mail mit Strg+V einfügen">📋</button>' : '') +
             '<button type="button" class="fe-lupe" data-fe-lupe="' + esc(z.id) + '" title="Groß ansehen">🔍</button>' +
-            (z.zugeordnet_text ? '<div class="fe-ziel" title="' + esc(z.zugeordnet_text) + '">→ ' + esc(z.zugeordnet_text) + '</div>' : '') +
+            (z.zugeordnet_text ? '<button type="button" class="fe-ziel" data-fe-oeffnen="' + esc(z.id) + '" title="' + esc(zielTitel(z)) + '">' + (ZIEL_ICON[z.zugeordnet_typ] || '→') + ' ' + esc(z.zugeordnet_text) + '</button>' : '') +
         '</div>';
     }
 
@@ -120,6 +137,20 @@
     // Klicks in der Liste
     // ------------------------------------------------------------
     function klick(e) {
+        const ziel = e.target.closest('[data-fe-oeffnen]');
+        if (ziel) {
+            e.stopPropagation();
+            const z = S.zeilen.find(x => x.id === ziel.dataset.feOeffnen);
+            if (z) zielOeffnen(z);
+            return;
+        }
+        const kopie = e.target.closest('[data-fe-kopie]');
+        if (kopie) {
+            e.stopPropagation();
+            const z = S.zeilen.find(x => x.id === kopie.dataset.feKopie);
+            if (z) bildKopieren(z);
+            return;
+        }
         const lupe = e.target.closest('[data-fe-lupe]');
         if (lupe) {
             e.stopPropagation();
@@ -147,6 +178,69 @@
         k.classList.toggle('gewaehlt', S.gewaehlt.has(id));
         k.querySelector('.fe-haken').textContent = S.gewaehlt.has(id) ? '✓' : '';
         leisteSetzen();
+    }
+
+    // Ziehen aus dem Eingang — das BILD selbst, kein Link:
+    //  - Beim Drüberfahren wird die Datei vorab geladen (dragstart ist synchron, dort darf
+    //    nicht mehr geladen werden) und dann als echte Datei mitgegeben → Outlook, Mail-Programme,
+    //    Windows-Ordner bekommen das Foto. Zusätzlich „DownloadURL" (Chrome/Edge → Ordner/Desktop).
+    //  - Kein text/uri-list / text/plain / text/html mehr: daraus machten Mail-Programme einen Link.
+    //  - Mail-Fenster der App: alle gewählten Dateien über application/x-meetra-dateien (js/mail-view.js).
+    const dateiPuffer = new Map();   // id → File
+    function dateiname(z) {
+        const n = z.dateiname || z.pfad.split('/').pop();
+        return n.replace(/[:\/*?"<>|]+/g, '_');
+    }
+    async function dateiHolen(z) {
+        if (dateiPuffer.has(z.id)) return dateiPuffer.get(z.id);
+        const r = await fetch(z.url);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const b = await r.blob();
+        const f = new File([b], dateiname(z), { type: z.typ || b.type || 'image/jpeg' });
+        dateiPuffer.set(z.id, f);
+        return f;
+    }
+    function vorladen(e) {
+        const k = e.target.closest && e.target.closest('[data-fe-id]');
+        if (!k) return;
+        const z = S.zeilen.find(x => x.id === k.dataset.feId);
+        const liste = z && S.gewaehlt.has(z.id) ? gewaehlteZeilen() : (z ? [z] : []);
+        liste.forEach(x => { if (!dateiPuffer.has(x.id)) dateiHolen(x).catch(() => {}); });
+    }
+    function ziehenStart(e) {
+        const k = e.target.closest && e.target.closest('[data-fe-id]');
+        if (!k || !e.dataTransfer) return;
+        const z = S.zeilen.find(x => x.id === k.dataset.feId);
+        if (!z) return;
+        const liste = S.gewaehlt.has(z.id) ? [z].concat(gewaehlteZeilen().filter(x => x.id !== z.id)) : [z];
+        const dt = e.dataTransfer;
+        try { dt.clearData(); } catch (x) { /* nicht überall erlaubt */ }
+        dt.effectAllowed = 'copy';
+        let mitDatei = 0;
+        liste.forEach(x => { const f = dateiPuffer.get(x.id); if (f && dt.items) { try { dt.items.add(f); mitDatei++; } catch (y) { /* Browser lässt es nicht zu */ } } });
+        dt.setData('DownloadURL', (z.typ || 'image/jpeg') + ':' + dateiname(z) + ':' + z.url);
+        dt.setData('application/x-meetra-dateien', JSON.stringify(liste.map(x => ({ name: dateiname(x), url: x.url, type: x.typ || 'image/jpeg' }))));
+        const img = k.querySelector('img');
+        if (img) dt.setDragImage(img, 40, 40);
+        if (!mitDatei) toast('Foto lädt noch — falls nichts ankommt, kurz warten und nochmal ziehen, oder „📋 Bild kopieren“ und mit Strg+V einfügen.');
+    }
+
+    // Bild in die Zwischenablage → in jeder Mail mit Strg+V als Bild einfügbar.
+    // Zwischenablage nimmt nur PNG sicher an, daher über ein Canvas umwandeln.
+    async function bildKopieren(z) {
+        try {
+            const f = await dateiHolen(z);
+            const bmp = await createImageBitmap(f);
+            const c = document.createElement('canvas');
+            c.width = bmp.width; c.height = bmp.height;
+            c.getContext('2d').drawImage(bmp, 0, 0);
+            const png = await new Promise(r => c.toBlob(r, 'image/png'));
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+            toast('Bild kopiert — in der Mail mit Strg+V einfügen.', 'success');
+        } catch (e) {
+            console.warn('Foto-Eingang: kopieren', e);
+            toast('Kopieren ging nicht: ' + (e.message || e), 'error');
+        }
     }
 
     function gewaehlteZeilen() { return S.zeilen.filter(z => S.gewaehlt.has(z.id)); }
@@ -342,24 +436,82 @@
     // ------------------------------------------------------------
     // Löschen (nur offene: zugeordnete Dateien werden woanders benutzt)
     // ------------------------------------------------------------
+    // Verweis auf das Foto aus dem Ziel entfernen (die Datei liegt nur einmal in R2).
+    async function ausZielEntfernen(z) {
+        const url = z.url, id = z.zugeordnet_id;
+        const urlVon = u => (u && u.url ? u.url : u);
+        if (z.zugeordnet_typ === 'maschine' || z.zugeordnet_typ === 'adresse') {
+            const { data, error } = await sb().from('manual_history_entries').select('id, files, content')
+                .eq(z.zugeordnet_typ === 'maschine' ? 'machine_id' : 'customer_id', id);
+            if (error) throw error;
+            for (const h of (data || []).filter(h => Array.isArray(h.files) && h.files.some(u => urlVon(u) === url))) {
+                const rest = h.files.filter(u => urlVon(u) !== url);
+                // Eintrag bestand nur aus Fotos und ist jetzt leer → ganz weg, sonst nur das Foto raus
+                const r = !rest.length && !(h.content || '').trim()
+                    ? await sb().from('manual_history_entries').delete().eq('id', h.id)
+                    : await sb().from('manual_history_entries').update({ files: rest }).eq('id', h.id);
+                if (r.error) throw r.error;
+            }
+            if (z.zugeordnet_typ === 'maschine' && window.updateHistoryViewExternally) window.updateHistoryViewExternally(id);
+            document.dispatchEvent(new CustomEvent('addressbook:changed'));
+        } else if (z.zugeordnet_typ === 'servicebericht') {
+            const { data, error } = await sb().from('service_entries').select('id, files').eq('id', id).maybeSingle();
+            if (error) throw error;
+            if (data && Array.isArray(data.files)) {
+                const r = await sb().from('service_entries').update({ files: data.files.filter(x => urlVon(x) !== url) }).eq('id', id);
+                if (r.error) throw r.error;
+            }
+            if (typeof window.fetchServiceEntries === 'function') { try { window.fetchServiceEntries(); } catch (e) { /* lädt beim nächsten Öffnen */ } }
+        } else if (z.zugeordnet_typ === 'vorgang') {
+            const { data, error } = await sb().from('internal_processes').select('id, attachments').eq('id', id).maybeSingle();
+            if (error) throw error;
+            if (data && Array.isArray(data.attachments)) {
+                const rest = data.attachments.filter(x => urlVon(x) !== url);
+                const r = await sb().from('internal_processes').update({ attachments: rest }).eq('id', id);
+                if (r.error) throw r.error;
+                const lokal = ((window.eventsState && window.eventsState.processes) || []).find(x => String(x.id) === String(id));
+                if (lokal) lokal.attachments = rest;
+            }
+        }
+    }
+
+    // Große rote Rückfrage; nennt jedes Ziel, aus dem das Foto mit verschwindet.
+    function loeschenFragen(zeilen) {
+        const zugeordnet = zeilen.filter(z => z.zugeordnet_am);
+        const ziele = [...new Set(zugeordnet.map(z => (ZIEL_ICON[z.zugeordnet_typ] || '') + ' ' + z.zugeordnet_text))];
+        return new Promise(fertig => {
+            const f = fenster('Endgültig löschen?',
+                '<div class="fe-warnung">' +
+                    '<div class="fe-warnung-titel">⚠️ ' + zeilen.length + (zeilen.length === 1 ? ' Foto wird' : ' Fotos werden') + ' endgültig gelöscht</div>' +
+                    (zugeordnet.length
+                        ? '<p><b>' + zugeordnet.length + ' davon ' + (zugeordnet.length === 1 ? 'ist' : 'sind') + ' schon zugeordnet und ' + (zugeordnet.length === 1 ? 'verschwindet' : 'verschwinden') + ' auch dort:</b></p><ul>' + ziele.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul>'
+                        : '<p>Die Fotos sind noch nirgends zugeordnet.</p>') +
+                    '<p>Das lässt sich <b>nicht rückgängig</b> machen — es gibt keinen Papierkorb.</p>' +
+                '</div>',
+                '<button type="button" class="btn-secondary" data-fe-zu>Abbrechen</button><button type="button" class="fe-btn-rot" id="fe-wirklich">Endgültig löschen</button>');
+            let ok = false;
+            f.el.querySelector('#fe-wirklich').addEventListener('click', () => { ok = true; f.zu(); });
+            new MutationObserver((m, o) => { if (!f.el.isConnected) { o.disconnect(); fertig(ok); } }).observe(document.body, { childList: true });
+        });
+    }
+
     async function loeschen() {
         const zeilen = gewaehlteZeilen();
         if (!zeilen.length) return;
-        if (zeilen.some(z => z.zugeordnet_am)) {
-            toast('Zugeordnete Fotos werden schon benutzt und lassen sich hier nicht löschen.', 'warn');
-            return;
-        }
-        if (!confirm(zeilen.length + (zeilen.length === 1 ? ' Datei' : ' Dateien') + ' endgültig löschen?')) return;
+        if (typeof window.canDelete === 'function' && !window.canDelete('Fotos')) return;
+        if (!(await loeschenFragen(zeilen))) return;
         let fehler = 0;
         for (const z of zeilen) {
             try {
+                // Erst aus dem Ziel, dann die Datei — nie umgekehrt, sonst bleibt ein toter Verweis stehen.
+                if (z.zugeordnet_am) await ausZielEntfernen(z);
                 if (window.FileUploadService) await window.FileUploadService.deleteFile(z.pfad, { bucket: 'dateien', provider: 'cloudflare-r2' });
                 const { error } = await sb().from('foto_eingang').delete().eq('id', z.id);
                 if (error) throw error;
                 S.gewaehlt.delete(z.id);
             } catch (e) { fehler++; console.error('Foto-Eingang: Löschen', e); }
         }
-        toast(fehler ? fehler + ' Datei(en) konnten nicht gelöscht werden.' : 'Gelöscht.', fehler ? 'error' : 'success');
+        toast(fehler ? fehler + ' Datei(en) konnten nicht gelöscht werden.' : 'Endgültig gelöscht.', fehler ? 'error' : 'success');
         laden();
     }
 
@@ -475,7 +627,7 @@
     // ------------------------------------------------------------
     function start() {
         const liste = document.getElementById('fe-liste');
-        if (liste) liste.addEventListener('click', klick);
+        if (liste) { liste.addEventListener('click', klick); liste.addEventListener('dragstart', ziehenStart); liste.addEventListener('pointerover', vorladen); liste.addEventListener('pointerdown', vorladen); }
         document.querySelectorAll('[data-fe-filter]').forEach(b => b.addEventListener('click', () => {
             S.filter = b.dataset.feFilter;
             S.gewaehlt.clear();

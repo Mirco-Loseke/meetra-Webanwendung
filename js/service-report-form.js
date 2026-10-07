@@ -797,7 +797,7 @@
             style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: white; font-size: 0.6rem; padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
             ${name}
         </div>
-        <button class="remove-btn" onclick="removeExistingServiceFile(${index})">&times;</button>`;
+        <button class="remove-btn delete-permission-required" data-del-area="fotos" onclick="removeExistingServiceFile(${index})">&times;</button>`;
                     item.querySelector('img').addEventListener('error', () => verwaistePruefen(file), { once: true });
                 } else {
                     // PDF/Doc
@@ -810,7 +810,7 @@
                             <span
                                 style="font-size: 0.7rem; word-break: break-all; overflow: hidden; max-height: 3em; line-height: 1.2;">${name}</span>
                         </div>
-                        <button class="remove-btn" onclick="removeExistingServiceFile(${index})">&times;</button>`;
+                        <button class="remove-btn delete-permission-required" data-del-area="fotos" onclick="removeExistingServiceFile(${index})">&times;</button>`;
                 }
                 previewGrid.appendChild(item);
             });
@@ -905,6 +905,8 @@
         }
 
         window.removeExistingServiceFile = function (index) {
+            // Schon gespeicherte Anhänge = Löschen → Löschrecht „Fotos" nötig
+            if (typeof window.canDelete === 'function' && !window.canDelete('Fotos')) return;
             const file = existingServiceFiles[index];
             if (file) {
                 removedServiceFiles.push(file);

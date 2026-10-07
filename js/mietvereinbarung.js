@@ -2285,7 +2285,14 @@
         z[feld] = wert;
         entwurfMerken();
     };
+    function mietFotoGespeichert(f) {
+        const u = f && (typeof f === 'string' ? f : (f.url || f.src || ''));
+        return /^https?:/i.test(u || '');
+    }
+
     window.mietZusatzLoeschen = function (welche, pos) {
+        // Nur schon gespeicherte Fotos (URL) brauchen das Löschrecht — frisch aufgenommene darf jeder neu machen
+        if (mietFotoGespeichert(daten.fotos[welche][arguments[1]]) && typeof window.canDelete === 'function' && !window.canDelete('Fotos')) return;
         delete daten.fotos[welche][pos];
         zusatzListe(welche);
         entwurfMerken();
@@ -2701,6 +2708,8 @@
     }
 
     window.mietFotoLoeschen = function (welche, position) {
+        // Nur schon gespeicherte Fotos (URL) brauchen das Löschrecht — frisch aufgenommene darf jeder neu machen
+        if (mietFotoGespeichert(daten.fotos[welche][arguments[1]]) && typeof window.canDelete === 'function' && !window.canDelete('Fotos')) return;
         delete daten.fotos[welche][position];
         if (lbOffen) window.mietBildZu();
         zeichneInhalt();

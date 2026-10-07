@@ -1426,7 +1426,26 @@
         sec.querySelector('.mv-tab[data-tab="schreiben"]').addEventListener('click', () => setTimeout(entwurfAnbieten, 50));
         setTimeout(entwurfAnbieten, 1500);
         const wrap = $('mv-s-editor-wrap');
-        ['dragenter', 'dragover'].forEach(ev => wrap.addEventListener(ev, e => { if (e.dataTransfer && Array.from(e.dataTransfer.types).includes('Files')) { e.preventDefault(); wrap.classList.add('drop'); } }));
+        // Aus dem Foto-Eingang (js/foto-eingang.js) gezogene Dateien kommen als URL-Liste.
+        const appDateien = e => e.dataTransfer && Array.from(e.dataTransfer.types).includes('application/x-meetra-dateien');
+        wrap.addEventListener('drop', async e => {
+            if (!appDateien(e)) return;
+            e.preventDefault(); e.stopImmediatePropagation();
+            wrap.classList.remove('drop');
+            let liste = [];
+            try { liste = JSON.parse(e.dataTransfer.getData('application/x-meetra-dateien')) || []; } catch (x) { return; }
+            const files = [];
+            for (const d of liste) {
+                try {
+                    const r = await fetch(d.url);
+                    if (!r.ok) throw new Error(r.status);
+                    const b = await r.blob();
+                    files.push(new File([b], d.name || 'foto.jpg', { type: d.type || b.type }));
+                } catch (x) { if (window.showToast) window.showToast('Konnte nicht anhängen: ' + (d.name || d.url), 'error'); }
+            }
+            if (files.length) dateienHinzufuegen(files);
+        });
+        ['dragenter', 'dragover'].forEach(ev => wrap.addEventListener(ev, e => { if (e.dataTransfer && (Array.from(e.dataTransfer.types).includes('Files') || appDateien(e))) { e.preventDefault(); wrap.classList.add('drop'); } }));
         ['dragleave', 'drop'].forEach(ev => wrap.addEventListener(ev, () => wrap.classList.remove('drop')));
         wrap.addEventListener('drop', e => { if (e.dataTransfer && e.dataTransfer.files.length) { e.preventDefault(); dateienHinzufuegen(e.dataTransfer.files); } });
         // Signatur an der Cursorposition einfügen
