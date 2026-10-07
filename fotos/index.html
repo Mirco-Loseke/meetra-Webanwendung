@@ -4,7 +4,15 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>meetra Fotos</title>
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest.json" id="manifest-link">
+<script>
+  // iPhone: das Home-Bildschirm-Symbol hat einen EIGENEN Speicher (nicht der von Safari).
+  // Ohne Manifest nimmt iOS beim „Zum Home-Bildschirm" die aktuelle Adresse — inklusive
+  // ?k=<Schlüssel>. So richtet sich das Symbol beim ersten Start selbst ein.
+  if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) {
+    var ml = document.getElementById("manifest-link"); if (ml) ml.remove();
+  }
+</script>
 <link rel="apple-touch-icon" href="../assets/icons/fotos-apple-touch-icon.png">
 <link rel="icon" href="../assets/icons/fotos-icon-192.png">
 <meta name="theme-color" content="#000000">
@@ -75,6 +83,20 @@
     .balken i { display: block; height: 100%; width: 0; background: var(--gruen); transition: width .2s; }
     .hidden { display: none !important; }
     .einrichten { color: var(--leise); font-size: 15px; text-align: center; margin-top: 20vh; }
+    /* Serien-Kamera: Vollbild, beliebig oft auslösen */
+    .serie { position: fixed; inset: 0; z-index: 50; background: #000; display: flex; flex-direction: column; }
+    .serie video { flex: 1; min-height: 0; width: 100%; object-fit: cover; background: #000; }
+    .serie-oben { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center;
+        padding: max(12px, env(safe-area-inset-top)) 16px 12px; background: linear-gradient(rgba(0,0,0,.6), transparent); }
+    .serie-zahl { font-size: 18px; font-weight: 700; }
+    .serie-blitz { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; transition: opacity .15s; }
+    .serie-streifen { display: flex; gap: 6px; overflow-x: auto; padding: 8px 12px; min-height: 72px; background: #000; }
+    .serie-streifen img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+    .serie-unten { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        padding: 12px 20px max(16px, env(safe-area-inset-bottom)); background: #000; }
+    .serie-unten .knopf { flex: 0 0 auto; min-width: 96px; padding: 0 14px; }
+    .ausloeser { width: 78px; height: 78px; border-radius: 50%; border: 5px solid #fff; background: #fff; box-shadow: inset 0 0 0 3px #000; cursor: pointer; flex-shrink: 0; }
+    .ausloeser:active { transform: scale(.92); }
 </style>
 </head>
 <body>
@@ -87,7 +109,10 @@
 <div id="ohne" class="einrichten hidden">
     Dieses Handy ist noch nicht eingerichtet.<br><br>
     Bitte in der meetra-App unter <b>Foto-Eingang → Handys</b> einen Einrichtungs-Link
-    erzeugen und hier öffnen (QR-Code scannen).
+    erzeugen und hier öffnen.<br><br>
+    Oder den Einrichtungs-Link hier einfügen:<br><br>
+    <textarea id="link-feld" placeholder="https://…/fotos/index.html?k=…" style="min-height:80px"></textarea><br><br>
+    <button class="knopf haupt" id="link-ok" type="button" style="width:100%">Einrichten</button>
 </div>
 
 <main id="mit" class="hidden" style="display:flex;flex-direction:column;gap:16px;flex:1">
@@ -98,7 +123,10 @@
         <span>📷</span>Fotos auswählen
         <small>Galerie, mehrere auf einmal</small>
     </button>
-    <div class="reihe"><button class="knopf" id="knopf-kamera" type="button">Kamera</button></div>
+    <div class="reihe">
+        <button class="knopf haupt" id="knopf-serie" type="button">📸 Fotoserie</button>
+        <button class="knopf" id="knopf-kamera" type="button">Einzelfoto</button>
+    </div>
 
     <div class="vorschau" id="vorschau"></div>
 
@@ -112,6 +140,21 @@
     <div class="balken hidden" id="balken"><i></i></div>
     <div id="meldung" class="meldung hidden"></div>
 </main>
+
+<div class="serie hidden" id="serie">
+    <video id="serie-video" playsinline autoplay muted></video>
+    <div class="serie-blitz" id="serie-blitz"></div>
+    <div class="serie-oben">
+        <span class="serie-zahl" id="serie-zahl">0 Fotos</span>
+        <button class="knopf" id="serie-drehen" type="button" style="min-height:40px;padding:0 12px">🔄</button>
+    </div>
+    <div class="serie-streifen" id="serie-streifen"></div>
+    <div class="serie-unten">
+        <button class="knopf" id="serie-abbruch" type="button">Abbrechen</button>
+        <button class="ausloeser" id="serie-ausloeser" type="button" aria-label="Foto aufnehmen"></button>
+        <button class="knopf haupt" id="serie-fertig" type="button">Fertig</button>
+    </div>
+</div>
 
 <script>
 (function () {
@@ -136,9 +179,11 @@
     async function einrichten() {
         var p = new URLSearchParams(location.search);
         var k = p.get('k');
+        // Schon mit genau diesem Schlüssel eingerichtet (Start vom Home-Bildschirm): nichts tun.
+        if (k && k === speicher(KEY)) { anzeigen(); return; }
         if (k) {
-            p.delete('k');
-            history.replaceState(null, '', location.pathname + (p.toString() ? '?' + p : ''));
+            // Den Schlüssel in der Adresse LASSEN: iPhone legt das Symbol mit genau dieser
+            // Adresse an (siehe oben) — nur so kennt das Symbol ihn.
             try {
                 var r = await fetch(FUNKTION + '?schluessel=' + encodeURIComponent(k));
                 var j = await r.json();
@@ -150,6 +195,7 @@
             } catch (e) {
                 anzeigen();
                 meldung('Einrichtung fehlgeschlagen: ' + e.message, 'fehler');
+                if (!speicher(KEY)) alert('Einrichtung fehlgeschlagen: ' + e.message + ' — bitte in der App einen neuen Link erzeugen.');
                 return;
             }
         }
@@ -271,7 +317,70 @@
         } catch (e) { meldung('Geteilte Fotos konnten nicht übernommen werden.', 'fehler'); }
     }
 
+    $('link-ok').onclick = function () {
+        var t = $('link-feld').value.trim();
+        var m = t.match(/[?&]k=([^&s#]+)/);
+        var k = m ? decodeURIComponent(m[1]) : t;
+        if (k.length < 20) { alert('Das sieht nicht nach einem Einrichtungs-Link aus.'); return; }
+        location.href = location.pathname + '?k=' + encodeURIComponent(k);
+    };
     $('gross').onclick = function () { $('wahl').click(); };
+    // ---------- Fotoserie: eigene Kamera, beliebig viele Fotos am Stück ----------
+    // Die Fotos bleiben bis „Fertig" nur im Speicher des Handys; danach stehen sie
+    // in der Vorschau und gehen mit „Abschicken" alle zusammen raus.
+    var serie = { strom: null, fotos: [], vorne: false };
+    async function serieStart() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { $('kamera').click(); return; }
+        try {
+            if (serie.strom) serie.strom.getTracks().forEach(function (t) { t.stop(); });
+            serie.strom = await navigator.mediaDevices.getUserMedia({ audio: false, video: {
+                facingMode: serie.vorne ? 'user' : { ideal: 'environment' },
+                width: { ideal: 2560 }, height: { ideal: 1920 } } });
+            $('serie-video').srcObject = serie.strom;
+            $('serie').classList.remove('hidden');
+            serieZahl();
+        } catch (e) {
+            alert('Kamera nicht verfügbar: ' + (e.name === 'NotAllowedError' ? 'Zugriff wurde nicht erlaubt. Bitte in den Einstellungen des Handys die Kamera für diese Seite erlauben.' : e.message));
+        }
+    }
+    function serieZahl() {
+        var n = serie.fotos.length;
+        $('serie-zahl').textContent = n + (n === 1 ? ' Foto' : ' Fotos');
+        $('serie-fertig').textContent = n ? 'Fertig (' + n + ')' : 'Fertig';
+    }
+    function serieAusloesen() {
+        var v = $('serie-video');
+        if (!v.videoWidth) return;
+        var c = document.createElement('canvas');
+        var s = Math.min(1, MAX_KANTE / Math.max(v.videoWidth, v.videoHeight));
+        c.width = Math.round(v.videoWidth * s); c.height = Math.round(v.videoHeight * s);
+        c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+        var b = $('serie-blitz'); b.style.opacity = '.7'; setTimeout(function () { b.style.opacity = '0'; }, 90);
+        if (navigator.vibrate) navigator.vibrate(30);
+        c.toBlob(function (blob) {
+            if (!blob) return;
+            var nr = serie.fotos.length + 1;
+            var f = new File([blob], 'serie-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '-' + nr + '.jpg', { type: 'image/jpeg' });
+            serie.fotos.push(f);
+            var img = document.createElement('img'); img.src = URL.createObjectURL(blob);
+            var st = $('serie-streifen'); st.appendChild(img); st.scrollLeft = st.scrollWidth;
+            serieZahl();
+        }, 'image/jpeg', 0.85);
+    }
+    function serieEnde(uebernehmen) {
+        if (!uebernehmen && serie.fotos.length && !confirm(serie.fotos.length + ' Fotos verwerfen?')) return;
+        if (serie.strom) serie.strom.getTracks().forEach(function (t) { t.stop(); });
+        serie.strom = null;
+        $('serie').classList.add('hidden');
+        if (uebernehmen && serie.fotos.length) hinzu(serie.fotos);
+        serie.fotos = [];
+        $('serie-streifen').querySelectorAll('img').forEach(function (i) { URL.revokeObjectURL(i.src); i.remove(); });
+    }
+    $('knopf-serie').onclick = serieStart;
+    $('serie-ausloeser').onclick = serieAusloesen;
+    $('serie-fertig').onclick = function () { serieEnde(true); };
+    $('serie-abbruch').onclick = function () { serieEnde(false); };
+    $('serie-drehen').onclick = function () { serie.vorne = !serie.vorne; serieStart(); };
     $('knopf-kamera').onclick = function () { $('kamera').click(); };
     $('wahl').onchange = function () { hinzu(this.files); this.value = ''; };
     $('kamera').onchange = function () { hinzu(this.files); this.value = ''; };

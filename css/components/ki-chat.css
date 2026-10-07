@@ -277,6 +277,8 @@ body.kic-offen #kic-fab { transform: scale(0.9); opacity: 0; pointer-events: non
 
     /* Platz für die Leiste: Inhalt und Meldungen enden darüber */
     body.kic-an #main-content { padding-bottom: calc(var(--kic-nav-h) + env(safe-area-inset-bottom, 0px) + 16px) !important; }
+    /* Seitenmenü (Einstellungen steht ganz unten) endet ebenfalls über der Leiste */
+    body.kic-an #sidebar { bottom: calc(var(--kic-nav-h) + env(safe-area-inset-bottom, 0px)) !important; height: auto !important; max-height: none !important; }
     body.kic-an #alarm-stack { bottom: calc(var(--kic-nav-h) + env(safe-area-inset-bottom, 0px) + 10px); }
 
     #kic-panel {
