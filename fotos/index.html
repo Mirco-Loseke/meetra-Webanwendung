@@ -230,7 +230,9 @@
                 img.onload = function () { URL.revokeObjectURL(img.src); };
                 d.appendChild(img);
             } else {
-                var s = document.createElement('div'); s.className = 'datei'; s.textContent = f.name; d.appendChild(s);
+                var s = document.createElement('div'); s.className = 'datei';
+                s.textContent = f.type.indexOf('audio/') === 0 ? '🎤 Sprachaufnahme' : f.name;
+                d.appendChild(s);
             }
             var x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', 'Entfernen');
             x.onclick = function () { dateien.splice(i, 1); zeichnen(); };
