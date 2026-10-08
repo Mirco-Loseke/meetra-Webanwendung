@@ -483,3 +483,18 @@
     font-size: var(--fs-sm);
     font-weight: 500;
 }
+
+/* Maschinen-Detailansicht: blauer „Historie“-Knopf links neben „Bearbeiten“ */
+#machine-details-history-btn {
+    position: absolute; top: 20px; right: 216px; z-index: 10;
+    display: flex; align-items: center; gap: 6px; padding: 0 16px; height: 36px; border-radius: 18px;
+    background: rgba(59, 130, 246, 0.14); border: 1px solid rgba(59, 130, 246, 0.45); color: #60a5fa;
+    font-weight: 700; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer;
+    transition: all 0.2s;
+}
+#machine-details-history-btn:hover { background: rgba(59, 130, 246, 0.24); border-color: rgba(59, 130, 246, 0.7); transform: scale(1.05); }
+@media (max-width: 768px) {
+    #machine-details-history-btn { padding: 0; width: 36px; justify-content: center; right: 106px; top: calc(14px + env(safe-area-inset-top, 0px)); }
+    #machine-details-history-btn .machine-details-edit-label { display: none; }
+    .machine-details-header { padding-right: 150px !important; }
+}

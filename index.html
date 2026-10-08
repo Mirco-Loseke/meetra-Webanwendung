@@ -195,7 +195,7 @@
     <!-- Quill-Editor (Mail schreiben, Signatur) — vor mail.css, damit dessen Umfärbung gewinnt -->
     <link rel="stylesheet" href="lib/quill.snow.css?v=1">
     <link rel="stylesheet" href="css/views/mail.css?v=26">
-    <link rel="stylesheet" href="css/views/foto-eingang.css?v=3">
+    <link rel="stylesheet" href="css/views/foto-eingang.css?v=4">
     <link rel="stylesheet" href="css/views/datenschutz.css?v=1">
     <link rel="stylesheet" href="css/base/responsive.css?v=35">
 
@@ -305,7 +305,7 @@
     <link rel="stylesheet" href="css/views/history.css?v=5">
     <link rel="stylesheet" href="css/base/landscape.css?v=2">
     <link rel="stylesheet" href="css/components/voice-dictation.css?v=3">
-    <link rel="stylesheet" href="css/views/machine-modal.css?v=4">
+    <link rel="stylesheet" href="css/views/machine-modal.css?v=6">
     <link rel="stylesheet" href="css/views/uvv-protokoll.css?v=5">
     <!-- Zuletzt: ersetzt frueher inline gesetzte Stile, muss deshalb zuletzt greifen -->
     <link rel="stylesheet" href="css/base/handy-kompakt.css?v=18">
@@ -3055,6 +3055,12 @@
                                     <td>Aufruf über die eigene Edge Function <code>ki-proxy</code>; der Schlüssel liegt serverseitig. Verarbeitung außerhalb der EU möglich</td>
                                 </tr>
                                 <tr>
+                                    <td><strong>Google Gemini</strong><br><span class="ds-klein">Sprachaufnahmen (Foto-Eingang)</span></td>
+                                    <td>Abschrift eingesprochener Notizen aus der Handy-App „meetra Fotos" in Text</td>
+                                    <td>die <strong>Tonaufnahme selbst — nicht pseudonymisiert</strong>; ausgesprochene Namen, Kunden, Orte und Nummern gehen mit. Aufnahme und Text liegen danach in R2 bzw. Supabase (<code>foto_eingang</code>)</td>
+                                    <td>Automatisch nach dem Hochladen über die Edge Function <code>foto-eingang</code>; der Schlüssel liegt serverseitig. Verarbeitung außerhalb der EU möglich. Hinweis an die Mitarbeiter: nur Sachliches zur Maschine einsprechen</td>
+                                </tr>
+                                <tr>
                                     <td><strong>OpenStreetMap / Nominatim</strong><br><span class="ds-klein">Karte und Adresssuche</span></td>
                                     <td>Adresse → Koordinaten, Kartenkacheln, Routen (OSRM), Ortssuche (Photon)</td>
                                     <td>die gesuchte Anschrift und die IP-Adresse des Geräts</td>
@@ -3113,6 +3119,9 @@
                         <li>Jede Vorschau hat den Knopf <strong>„Was geht raus?"</strong> — dort steht der Text
                             genau so, wie er beim Anbieter ankommt, mit farblicher Kontrolle, ob etwas übersehen
                             wurde.</li>
+                        <li><strong>Ausnahme Sprachaufnahmen:</strong> Was im Foto-Eingang eingesprochen wird, geht
+                            als Tonaufnahme an Gemini und lässt sich nicht pseudonymisieren. Bewusst so entschieden
+                            (2026-10-08), damit der Text ohne Zutun sofort da ist.</li>
                         <li>Die KI entscheidet nichts selbstständig: Sie schlägt vor, gespeichert oder gesendet
                             wird erst nach Klick. Eine automatisierte Entscheidung im Sinne von Art. 22 DSGVO
                             findet nicht statt.</li>
@@ -4851,13 +4860,13 @@
     <script src="js/photo-dedupe.js?v=3"></script>
     <script src="js/app-init.js?v=29"></script>
     <script src="js/settings-uvv-plans.js?v=1"></script>
-    <script src="js/machine-details-modal.js?v=3"></script>
+    <script src="js/machine-details-modal.js?v=4"></script>
     <script src="js/machine-modal.js?v=7"></script>
     <script src="js/service-report-form.js?v=21"></script>
     <script src="js/service-list.js?v=4"></script>
     <script src="js/history-modal.js?v=211"></script>
     <script src="js/calendar-events.js?v=6"></script>
-    <script src="js/processes-ui.js?v=49"></script>
+    <script src="js/processes-ui.js?v=50"></script>
     <!-- Dokumente an Vorgaengen/Schritten. Nutzt window.FileUploadService
          (js/file-upload-service-r2.js, weiter UNTEN geladen) — das ist in
          Ordnung, weil der Dienst erst beim Hochladen angefasst wird. -->
@@ -4866,7 +4875,7 @@
     <script src="js/process-machine-select.js?v=2"></script>
     <script src="js/customer-matching.js?v=2"></script>
     <script src="js/ui-modals.js?v=2"></script>
-    <script src="js/processes.js?v=142"></script>
+    <script src="js/processes.js?v=143"></script>
     <script src="js/service-reports.js?v=2"></script>
     <script src="js/service-entries.js?v=16"></script>
     <script src="js/service-picker.js?v=2"></script>
@@ -6399,6 +6408,16 @@
             <!-- Dynamic Category Border Accent -->
             <div id="machine-details-accent" style="position: absolute; top: 0; left: 0; right: 0; height: 6px; background: var(--color-primary-green); border-radius: 24px 24px 0 0;"></div>
 
+            <!-- Historie-Knopf (js/machine-details-modal.js setzt onclick, Stil css/views/machine-modal.css) -->
+            <button id="machine-details-history-btn" type="button" title="Historie der Maschine öffnen">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path>
+                    <polyline points="3 3 3 8 8 8"></polyline>
+                    <polyline points="12 7 12 12 15 14"></polyline>
+                </svg>
+                <span class="machine-details-edit-label">Historie</span>
+            </button>
+
             <!-- Edit Button -->
             <button id="machine-details-edit-btn" type="button" style="position: absolute; top: 20px; right: 66px; display: flex; align-items: center; gap: 6px; padding: 0 16px; height: 36px; border-radius: 18px; background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.4); color: var(--color-primary-green); font-weight: 700; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; cursor: pointer; transition: all 0.2s; z-index: 10;" onmouseover="this.style.background='rgba(52,211,153,0.22)'; this.style.borderColor='rgba(52,211,153,0.6)'; this.style.transform='scale(1.05)';" onmouseout="this.style.background='rgba(52,211,153,0.12)'; this.style.borderColor='rgba(52,211,153,0.4)'; this.style.transform='scale(1)';">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -6417,7 +6436,7 @@
             </button>
 
             <!-- Modal Header -->
-            <div class="machine-details-header" style="margin-bottom: 2rem; padding-right: 170px;">
+            <div class="machine-details-header" style="margin-bottom: 2rem; padding-right: 310px;">
                 <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 6px;">
                     <span id="machine-details-category-badge" style="font-size: 0.75rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; padding: 4px 12px; border-radius: 20px; background: rgba(59, 130, 246, 0.2); border: 1px solid rgba(59, 130, 246, 0.4); color: #60a5fa;">Kategorie</span>
                 </div>
@@ -7482,8 +7501,8 @@
     <script src="js/ai-address-task.js?v=15"></script>
     <script src="js/ai-address-summary.js?v=14"></script>
     <script src="js/ai-machine-summary.js?v=7"></script>
-    <script src="js/ai-briefing.js?v=7"></script>
-    <script src="js/todo-liste.js?v=16"></script>
+    <script src="js/ai-briefing.js?v=8"></script>
+    <script src="js/todo-liste.js?v=17"></script>
     <!-- Termine mit Teilnehmern: liefert die Bausteine, die Benachrichtigungen,
          Kalender und Routenplanung darunter benutzen. -->
     <script src="js/appointment-invite.js?v=2"></script>
@@ -8440,7 +8459,7 @@
 <script src="js/voice-dictation.js?v=2"></script>
 <script src="js/handy-check.js?v=7"></script>
 <script src="js/globale-suche.js?v=8"></script>
-<script src="js/foto-eingang.js?v=8"></script>
+<script src="js/foto-eingang.js?v=10"></script>
 </body>
 
 </html>

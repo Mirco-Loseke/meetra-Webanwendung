@@ -18,6 +18,8 @@
     const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const toast = (t, art) => { if (window.showToast) window.showToast(t, art); };
     const istBild = r => /^image\//.test(r.typ || '') || /\.(jpe?g|png|webp|gif|heic)$/i.test(r.pfad || '');
+    const istTon = r => /^audio\//.test(r.typ || '');
+    const FUNKTION = 'https://rtnpyziwyaqrlfazxkyr.supabase.co/functions/v1/foto-eingang';
     const machineLabel = m => (typeof window.machineLabel === 'function' ? window.machineLabel(m) : (m.name || ''));
 
     const S = { filter: 'offen', zeilen: [], gewaehlt: new Set(), tabelleFehlt: false };
@@ -75,7 +77,8 @@
                     '<b>' + esc(datum) + ' · ' + esc(g.absender) + '</b><span>' + zeit + ' Uhr · ' + g.zeilen.length + (g.zeilen.length === 1 ? ' Datei' : ' Dateien') + '</span>' +
                 '</div>' +
                 (g.notiz ? '<p class="fe-notiz">' + esc(g.notiz) + '</p>' : '') +
-                '<div class="fe-raster">' + g.zeilen.map(kachel).join('') + '</div>' +
+                g.zeilen.filter(istTon).map(sprache).join('') +
+                (g.zeilen.some(z => !istTon(z)) ? '<div class="fe-raster">' + g.zeilen.filter(z => !istTon(z)).map(kachel).join('') + '</div>' : '') +
             '</div>';
         }).join('');
         leisteSetzen();
@@ -110,6 +113,65 @@
         '</div>';
     }
 
+    // Sprachaufnahme: Abspielen + abgeschriebener Text (bearbeitbar, speichert beim Verlassen)
+    function sprache(z) {
+        const an = S.gewaehlt.has(z.id);
+        const st = z.text_status;
+        const textTeil = st === 'laeuft' && !z.text
+            ? '<p class="fe-sprache-info">⏳ Text wird erstellt …</p>'
+            : st === 'fehler' && !z.text
+                ? '<p class="fe-sprache-info fehler">Kein Text: ' + esc(z.text_fehler || 'unbekannter Fehler') + ' <button type="button" class="btn-secondary" data-fe-abschreiben="' + esc(z.id) + '">Text erzeugen</button></p>'
+                : '<textarea class="fe-feld fe-sprache-text" data-fe-text="' + esc(z.id) + '" rows="4" placeholder="Text …">' + esc(z.text || '') + '</textarea>';
+        return '<div class="fe-sprache' + (an ? ' gewaehlt' : '') + '" data-fe-id="' + esc(z.id) + '">' +
+            '<div class="fe-sprache-kopf"><span class="fe-haken">' + (an ? '✓' : '') + '</span><b>🎤 Sprachaufnahme</b>' +
+                '<span>' + new Date(z.created_at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr</span>' +
+                (z.zugeordnet_text ? '<button type="button" class="fe-ziel" data-fe-oeffnen="' + esc(z.id) + '" title="' + esc(zielTitel(z)) + '">' + (ZIEL_ICON[z.zugeordnet_typ] || '→') + ' ' + esc(z.zugeordnet_text) + '</button>' : '') +
+            '</div>' +
+            '<audio controls preload="none" src="' + esc(z.url) + '"></audio>' +
+            textTeil +
+        '</div>';
+    }
+
+    // Während getippt oder abgespielt wird, kein Neuzeichnen durch Realtime — danach nachholen.
+    function beschaeftigt() {
+        const a = document.activeElement;
+        if (a && a.matches && a.matches('.fe-sprache-text')) return true;
+        return [...document.querySelectorAll('#fe-liste audio')].some(x => !x.paused);
+    }
+    function nachholen() { if (S.nachladen && !beschaeftigt()) { S.nachladen = false; laden(); } }
+
+    async function textSpeichern(feld) {
+        const z = S.zeilen.find(x => x.id === feld.dataset.feText);
+        const neu = feld.value.trim();
+        if (!z || neu === (z.text || '').trim()) { nachholen(); return; }
+        const { error } = await sb().from('foto_eingang').update({ text: neu, text_status: 'fertig' }).eq('id', z.id);
+        if (error) { toast('Text nicht gespeichert: ' + error.message, 'error'); return; }
+        z.text = neu; z.text_status = 'fertig';
+        toast('Text gespeichert', 'success');
+        nachholen();
+    }
+
+    async function abschreibenNeu(knopf) {
+        const z = S.zeilen.find(x => x.id === knopf.dataset.feAbschreiben);
+        if (!z) return;
+        knopf.disabled = true; knopf.textContent = 'Läuft …';
+        try {
+            const { data } = await sb().auth.getSession();
+            const r = await fetch(FUNKTION, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + ((data && data.session && data.session.access_token) || '') },
+                body: JSON.stringify({ abschreiben: z.id })
+            });
+            const j = await r.json().catch(() => ({}));
+            if (!j.ok) throw new Error(j.text_fehler || j.error || ('Fehler ' + r.status));
+            Object.assign(z, { text: j.text, text_status: j.text_status, text_fehler: null });
+            zeichnen();
+        } catch (e) {
+            toast('Text erzeugen fehlgeschlagen: ' + e.message, 'error');
+            knopf.disabled = false; knopf.textContent = 'Text erzeugen';
+        }
+    }
+
     function leisteSetzen() {
         const leiste = document.getElementById('fe-leiste');
         if (!leiste) return;
@@ -137,6 +199,9 @@
     // Klicks in der Liste
     // ------------------------------------------------------------
     function klick(e) {
+        if (e.target.closest('audio, .fe-sprache-text')) return;
+        const neu = e.target.closest('[data-fe-abschreiben]');
+        if (neu) { e.stopPropagation(); abschreibenNeu(neu); return; }
         const ziel = e.target.closest('[data-fe-oeffnen]');
         if (ziel) {
             e.stopPropagation();
@@ -256,9 +321,15 @@
             '<div class="fe-fenster-inhalt">' + inhaltHtml + '</div>' +
             (fussHtml ? '<div class="fe-fenster-fuss">' + fussHtml + '</div>' : '') +
         '</div>';
+        // Klick daneben schließt NICHT mehr (beim Markieren im Titelfeld ging sonst alles zu).
+        // Schließen nur über ×, Abbrechen oder Esc — nach Eingaben mit Rückfrage.
+        let geaendert = false;
+        hg.addEventListener('input', () => { geaendert = true; });
+        hg.addEventListener('click', e => { if (e.target.closest('[data-fe-art], [data-fe-ziel]')) geaendert = true; });
         const zu = () => { hg.remove(); document.removeEventListener('keydown', taste); };
-        const taste = e => { if (e.key === 'Escape') zu(); };
-        hg.addEventListener('click', e => { if (e.target === hg || e.target.closest('[data-fe-zu]')) zu(); });
+        const fragen = () => { if (!geaendert || confirm('Wirklich schließen? Deine Eingaben gehen verloren.')) zu(); };
+        const taste = e => { if (e.key === 'Escape' && hg.isConnected) { e.preventDefault(); fragen(); } };
+        hg.addEventListener('click', e => { if (e.target.closest('[data-fe-zu]')) fragen(); });
         document.addEventListener('keydown', taste);
         document.body.appendChild(hg);
         return { el: hg, zu };
@@ -315,14 +386,18 @@
     function zuordnen() {
         const zeilen = gewaehlteZeilen();
         if (!zeilen.length) return;
-        const notizen = [...new Set(zeilen.map(z => z.notiz).filter(Boolean))].join('\n');
+        const hatTon = zeilen.some(istTon);
+        const nurTon = zeilen.every(istTon);
+        const notizen = [...new Set(zeilen.map(z => z.notiz).filter(Boolean))]
+            .concat(zeilen.filter(istTon).map(z => (z.text || '').trim()).filter(t => t && t !== '[keine Sprache erkannt]'))
+            .join('\n\n');
         let art = 'maschine', ziel = null;
         const f = fenster(zeilen.length + (zeilen.length === 1 ? ' Datei zuordnen' : ' Dateien zuordnen'),
             '<div class="fe-arten">' + ARTEN.map(a => '<button type="button" data-fe-art="' + a.id + '"' + (a.id === art ? ' class="active"' : '') + '>' + a.label + '</button>').join('') + '</div>' +
             '<input type="search" class="fe-feld" id="fe-such" placeholder="Suchen …" autocomplete="off">' +
             '<ul class="fe-treffer" id="fe-treffer"></ul>' +
             '<div id="fe-text-block"><label class="form-label-caps" for="fe-titel">Titel</label>' +
-            '<input class="fe-feld" id="fe-titel" value="Fotos aus der Werkstatt">' +
+            '<input class="fe-feld" id="fe-titel" value="' + (nurTon ? 'Sprachnotiz aus der Werkstatt' : hatTon ? 'Fotos und Sprachnotiz aus der Werkstatt' : 'Fotos aus der Werkstatt') + '">' +
             '<label class="form-label-caps" for="fe-text" style="margin-top:var(--space-2);display:block">Text</label>' +
             '<textarea class="fe-feld" id="fe-text">' + esc(notizen) + '</textarea></div>' +
             '<p class="fe-hinweis" id="fe-hinweis"></p>',
@@ -339,12 +414,14 @@
         function artSetzen(neu) {
             art = neu; ziel = null; $('#fe-ok').disabled = true;
             f.el.querySelectorAll('[data-fe-art]').forEach(b => b.classList.toggle('active', b.dataset.feArt === art));
-            $('#fe-text-block').style.display = (art === 'maschine' || art === 'adresse') ? '' : 'none';
+            const mitTitel = art === 'maschine' || art === 'adresse';
+            $('#fe-text-block').style.display = (mitTitel || hatTon) ? '' : 'none';
+            $('#fe-titel').style.display = $('label[for="fe-titel"]').style.display = mitTitel ? '' : 'none';
             $('#fe-hinweis').textContent = {
                 maschine: 'Neuer Eintrag in der Historie der Maschine, mit allen gewählten Fotos.',
                 adresse: 'Neuer Eintrag im Verlauf der Adresse, mit allen gewählten Fotos.',
-                servicebericht: 'Die Fotos werden an den Bericht angehängt (auch bei abgeschlossenen Berichten).',
-                vorgang: 'Die Fotos erscheinen unter den Dokumenten des Vorgangs.'
+                servicebericht: 'Die Fotos werden an den Bericht angehängt (auch bei abgeschlossenen Berichten).' + (hatTon ? ' Der Text kommt unter Bemerkungen — nicht bei abgeschlossenen Berichten.' : ''),
+                vorgang: 'Die Fotos erscheinen unter den Dokumenten des Vorgangs.' + (hatTon ? ' Der Text wird als neuer Stand eingetragen, die Aufnahme liegt bei den Dokumenten.' : '')
             }[art];
             treffer();
         }
@@ -382,10 +459,10 @@
         const wer = (window.activeUser && window.activeUser.id) || null;
         if (art === 'maschine' || art === 'adresse') {
             const zeile = {
-                type: art === 'maschine' ? 'photo' : 'note',
+                type: art === 'maschine' && zeilen.some(z => !istTon(z)) ? 'photo' : 'note',
                 title: titel || 'Fotos aus der Werkstatt',
                 content: text || null,
-                files: zeilen.map(z => z.url),
+                files: zeilen.filter(z => !istTon(z)).map(z => z.url),
                 created_by: wer
             };
             if (art === 'maschine') {
@@ -399,15 +476,20 @@
             if (art === 'maschine' && window.updateHistoryViewExternally) window.updateHistoryViewExternally(ziel.id);
             document.dispatchEvent(new CustomEvent('addressbook:changed'));
         } else if (art === 'servicebericht') {
-            const { data: cur, error: e1 } = await sb().from('service_entries').select('id, files').eq('id', ziel.id).single();
+            const { data: cur, error: e1 } = await sb().from('service_entries').select('id, files, remarks, is_finalized').eq('id', ziel.id).single();
             if (e1) throw e1;
             const files = Array.isArray(cur.files) ? cur.files.slice() : [];
-            zeilen.forEach(z => { if (!files.some(f => f && f.url === z.url)) files.push({ name: z.dateiname || z.pfad.split('/').pop(), type: z.typ || 'image/jpeg', url: z.url }); });
-            const { error } = await sb().from('service_entries').update({ files }).eq('id', ziel.id);
+            const upd = { files };
+            if (text && zeilen.some(istTon)) {
+                if (cur.is_finalized) toast('Bericht ist abgeschlossen — der Text wurde nicht unter Bemerkungen eingetragen.', 'warn');
+                else upd.remarks = [cur.remarks, 'Sprachnotiz ' + new Date().toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' }) + ': ' + text].filter(Boolean).join('\n');
+            }
+            zeilen.filter(z => !istTon(z)).forEach(z => { if (!files.some(f => f && f.url === z.url)) files.push({ name: z.dateiname || z.pfad.split('/').pop(), type: z.typ || 'image/jpeg', url: z.url }); });
+            const { error } = await sb().from('service_entries').update(upd).eq('id', ziel.id);
             if (error) throw error;
             if (typeof window.fetchServiceEntries === 'function') { try { window.fetchServiceEntries(); } catch (e) { /* lädt beim nächsten Öffnen */ } }
         } else if (art === 'vorgang') {
-            const { data: p, error: e1 } = await sb().from('internal_processes').select('attachments').eq('id', ziel.id).single();
+            const { data: p, error: e1 } = await sb().from('internal_processes').select('attachments, status_updates').eq('id', ziel.id).single();
             if (e1) throw e1;
             const liste = Array.isArray(p && p.attachments) ? p.attachments.slice() : [];
             const von = (window.activeUser && window.activeUser.name) || 'Foto-Eingang';
@@ -419,10 +501,16 @@
                     type: z.typ || 'image/jpeg', at: new Date().toISOString(), by: von + ' (Foto-Eingang, ' + (z.absender || '') + ')', step_id: null
                 });
             });
-            const { error } = await sb().from('internal_processes').update({ attachments: liste }).eq('id', ziel.id);
+            const felder = { attachments: liste };
+            if (text && zeilen.some(istTon)) {
+                felder.status_updates = (Array.isArray(p.status_updates) ? p.status_updates : []).concat([{
+                    text: '🎤 ' + text, by: von, by_id: (window.activeUser && window.activeUser.id) || null, at: new Date().toISOString()
+                }]);
+            }
+            const { error } = await sb().from('internal_processes').update(felder).eq('id', ziel.id);
             if (error) throw error;
             const lokal = ((window.eventsState && window.eventsState.processes) || []).find(x => String(x.id) === String(ziel.id));
-            if (lokal) lokal.attachments = liste;
+            if (lokal) Object.assign(lokal, felder);
         }
         const { error } = await sb().from('foto_eingang').update({
             zugeordnet_am: new Date().toISOString(),
@@ -627,6 +715,11 @@
     // ------------------------------------------------------------
     function start() {
         const liste = document.getElementById('fe-liste');
+        if (liste) {
+            liste.addEventListener('focusout', e => { if (e.target.matches('.fe-sprache-text')) textSpeichern(e.target); });
+            liste.addEventListener('pause', nachholen, true);
+            liste.addEventListener('ended', nachholen, true);
+        }
         if (liste) { liste.addEventListener('click', klick); liste.addEventListener('dragstart', ziehenStart); liste.addEventListener('pointerover', vorladen); liste.addEventListener('pointerdown', vorladen); }
         document.querySelectorAll('[data-fe-filter]').forEach(b => b.addEventListener('click', () => {
             S.filter = b.dataset.feFilter;
@@ -657,7 +750,8 @@
                 sb().channel('foto-eingang').on('postgres_changes', { event: '*', schema: 'public', table: 'foto_eingang' }, () => {
                     clearTimeout(buendel);
                     buendel = setTimeout(() => {
-                        if (window.currentActiveView === 'foto-eingang' && !document.querySelector('.fe-fenster-hg')) laden();
+                        if (window.currentActiveView === 'foto-eingang' && beschaeftigt()) { S.nachladen = true; zahlLaden(); }
+                        else if (window.currentActiveView === 'foto-eingang' && !document.querySelector('.fe-fenster-hg')) laden();
                         else zahlLaden();
                     }, 1500);
                 }).subscribe();

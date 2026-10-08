@@ -1251,7 +1251,7 @@
         const neu = [];
         const prio = () => 'Heute unbedingt';
         faelligeV.forEach(p => {
-            if (!(p.assigned_users || []).some(istMeins)) return;
+            if (!(window.procZustaendige ? window.procZustaendige(p) : (p.assigned_users || [])).some(istMeins)) return;
             neu.push({ typLabel: 'Vorgang', title: p.title || 'Vorgang', targetType: 'process', targetId: p.id, customerId: p.customer_id || null,
                 day: String(p.remind_at).slice(0, 10), datumText: wtDatum(p.remind_at), gruppe: prio(p.remind_at), auto: true,
                 ki: String(p.remind_at).slice(0, 10) < heute ? 'Wiedervorlage überfällig' : 'Wiedervorlage heute' });

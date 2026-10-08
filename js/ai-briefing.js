@@ -58,7 +58,7 @@
     }
     function angebotMeins(a, D) {
         const p = a.process_id && D.vorgaenge.find(v => String(v.id) === String(a.process_id));
-        return !!(p && meins(p.assigned_users));
+        return !!(p && meins((window.procZustaendige ? window.procZustaendige(p) : (p.assigned_users || []))));
     }
     const tageAlt = v => { const d = tag(v); return d ? Math.round((tag(new Date()) - d) / 86400000) : null; };
     const betrag = v => { const n = typeof v === 'number' ? v : parseFloat(String(v == null ? '' : v).replace(/\.(?=\d{3})/g, '').replace(',', '.')); return isNaN(n) ? '' : n.toLocaleString('de-DE', { maximumFractionDigits: 0 }) + ' €'; };
@@ -141,7 +141,7 @@
         let offenGesamt = 0;
         D.vorgaenge.forEach(p => {
             const zust = nutzerNamen(p.assigned_users);
-            if (nurMeins && !meins(p.assigned_users)) return;
+            if (nurMeins && !meins((window.procZustaendige ? window.procZustaendige(p) : (p.assigned_users || [])))) return;
             offenGesamt++;
             const steps = Array.isArray(p.steps) ? p.steps : [];
             const offen = steps.filter(s => !s.done);
@@ -427,7 +427,7 @@ Regeln: Nichts erfinden — nur was in den Daten steht. Daten, Uhrzeiten, Namen 
         if (!nurMeins) D.faellig.forEach(m => add({ wann: m.next_maintenance, typ: 'Wartung', titel: 'Wartung fällig', subject: maschine(m.id), targetType: 'machine', targetId: m.id, customerId: m.customer_id || null,
             zeile: 'Wartung fällig ' + (maschine(m.id) || '') + (m.company ? ' · ' + m.company : '') }));
         D.vorgaenge.forEach(p => {
-            if (nurMeins && !meins(p.assigned_users)) return;
+            if (nurMeins && !meins((window.procZustaendige ? window.procZustaendige(p) : (p.assigned_users || [])))) return;
             const offen = (Array.isArray(p.steps) ? p.steps : []).filter(s => !s.done);
             const stepHit = offen.find(s => s.remind_at && (im(s.remind_at, Z) || vorher(s.remind_at, Z)));
             const hit = p.remind_at && (im(p.remind_at, Z) || vorher(p.remind_at, Z));

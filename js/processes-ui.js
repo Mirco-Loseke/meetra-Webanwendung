@@ -1157,8 +1157,20 @@
             const frisch = window.angeboteByProcess && window.angeboteByProcess[String(proc.id)];
             const liste = ((window.angeboteListeByProcess && window.angeboteListeByProcess[String(proc.id)]) || []).slice();
             if (frisch) { const i = liste.findIndex(x => String(x.id) === String(frisch.id)); if (i === -1) liste.push(frisch); else liste[i] = frisch; }
-            if (liste.length > 1) return liste.map(x => renderEinAngebotBlock(proc, modus, x)).join('');
-            return renderEinAngebotBlock(proc, modus, liste[0] || null);
+            if (!liste.length) return renderEinAngebotBlock(proc, modus, null);
+            // Im Bearbeiten-Fenster: unter den vorhandenen Angeboten ein weiteres anhängen.
+            return liste.map(x => renderEinAngebotBlock(proc, modus, x)).join('') +
+                (modus === 'modal' ? angebotSucheHtml(proc, '+ Weiteres Angebot zu diesem Vorgang') : '');
+        };
+        function angebotSucheHtml(proc, label) {
+            return `
+                <div class="form-group" style="margin-bottom:0.75rem; position:relative;">
+                    <label class="form-label-caps">${label}</label>
+                    <input type="text" class="glass-input" id="edit-process-angebot-suche" placeholder="Angebot suchen (Belegnummer oder Firma) …" autocomplete="off"
+                           oninput="window.procAngebotSuche(this.value, '${proc.id}')" onfocus="window.procAngebotSuche(this.value, '${proc.id}')"
+                           onblur="setTimeout(() => { const d = document.getElementById('edit-process-angebot-treffer'); if (d) d.style.display = 'none'; }, 200)">
+                    <div id="edit-process-angebot-treffer" class="autocomplete-suggestions" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:9999; max-height:220px; overflow-y:auto; margin-top:4px;"></div>
+                </div>`;
         };
         function renderEinAngebotBlock(proc, modus, a) {
             if (!a) {
@@ -1351,7 +1363,8 @@
                 : (a.machine_label || '');
             const titelAlt = (document.getElementById('edit-process-title-input')?.value || proc.title || '').trim();
             const kopf = `Angebot ${a.belegnummer || ''}${maschine ? ' – ' + maschine : ''}`.trim();
-            const titelNeu = titelAlt && !titelAlt.startsWith('Angebot ' + (a.belegnummer || '')) ? `${kopf} – ${titelAlt}` : (titelAlt || kopf);
+            const schonAngebote = ((window.angeboteListeByProcess && window.angeboteListeByProcess[String(processId)]) || []).filter(x => String(x.id) !== String(angebotId)).length;
+            const titelNeu = schonAngebote ? (titelAlt || kopf) : titelAlt && !titelAlt.startsWith('Angebot ' + (a.belegnummer || '')) ? `${kopf} – ${titelAlt}` : (titelAlt || kopf);
 
             const felder = { title: titelNeu };
             if (quelle) {

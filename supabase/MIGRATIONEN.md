@@ -63,6 +63,8 @@ lassen als eine Migration auszulassen.
 | `supabase_add_invoice_todos.sql` | Rechnungsliste („wem muss noch eine Rechnung geschrieben werden") — ausklappbar rechts unter Vorgänge, Sichtbarkeit je Benutzer |
 | `supabase_add_todo_listen.sql` | Persönliche To-do-Liste (Knopf neben dem KI-Chat, gefüllt aus dem Briefing) — eine Zeile je Benutzer. Ohne Migration nur je Browser (2026-10-02) |
 | `supabase_add_foto_eingang.sql` | Foto-Eingang: `foto_geraete` (Schlüssel je Handy) + `foto_eingang` (hochgeladene Fotos, Zuordnung), Realtime. Dazu Function `foto-eingang` ausrollen (2026-10-07) |
+| `supabase_add_foto_eingang_sprache.sql` | Sprachaufnahmen im Foto-Eingang: Spalten `text`, `text_status`, `text_fehler`. Danach Function `foto-eingang` neu ausrollen (Secret `GEMINI_API_KEY` wie `ki-proxy`) (2026-10-08) |
+| `supabase_add_schritt_zustaendige.sql` | Trigger: wer einem Vorgangs-Schritt zugewiesen ist, wird automatisch Zuständiger des ganzen Vorgangs (assigned_users); zieht den Bestand nach (2026-10-07) |
 | `supabase_add_notification_prefs.sql` | Benachrichtigungs-Einstellungen je Benutzer, geräteübergreifend |
 | `supabase_add_erinnerung_owner.sql` | Angebots-Erinnerung gehört dem, der sie gesetzt hat (`erinnerung_by`) |
 | `supabase_add_angebot_vorgang.sql` | Jedes Angebot ist ein Vorgang (`angebote.process_id`); Zuständiger, Stand, Adresse, Maschine leben im Vorgang |

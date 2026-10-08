@@ -1,3 +1,17 @@
+// Zuständige eines Vorgangs = assigned_users PLUS jeder, dem ein Schritt zugewiesen ist
+// (ID und Name). Gilt für „Meine Vorgänge", Briefing und To-do. Die Datenbank trägt
+// Schritt-Zuständige zusätzlich per Trigger in assigned_users ein
+// (supabase/supabase_add_schritt_zustaendige.sql).
+window.procZustaendige = function (p) {
+    const out = Array.isArray(p && p.assigned_users) ? p.assigned_users.slice() : [];
+    (Array.isArray(p && p.steps) ? p.steps : []).forEach(st => {
+        if (!st) return;
+        if (st.assigned_id != null && st.assigned_id !== '') out.push(st.assigned_id);
+        if (st.assigned_to) out.push(st.assigned_to);
+    });
+    return out;
+};
+
 /* ========================================================= */
 /* =================== PROCESSSES MODULE =================== */
 /* ========================================================= */
@@ -278,7 +292,7 @@ window.buildProcessRemindersPanel = function(base) {
     const myId = String(window.activeUser?.id || localStorage.getItem('activeUserId') || '').toLowerCase().trim();
     const myName = String(window.activeUser?.name || '').toLowerCase().trim();
     const matchMe = (v) => { const x = String(v == null ? '' : v).toLowerCase().trim(); return x !== '' && ((myId && x === myId) || (myName && x === myName)); };
-    const processMine = (p) => Array.isArray(p.assigned_users) && p.assigned_users.some(matchMe);
+    const processMine = (p) => window.procZustaendige(p).some(matchMe);
     const stepMine = (s) => matchMe(s.assigned_id) || matchMe(s.assigned_to);
     (base || []).forEach(p => {
         if (p.status === 'erledigt') return;
@@ -389,7 +403,7 @@ window.renderProcesses = function(targetId, opts) {
     if (opts.onlyAssignedTo) {
         const targetStr = String(opts.onlyAssignedTo).toLowerCase().trim();
         const activeName = (window.activeUser?.name || '').toLowerCase().trim();
-        base = base.filter(p => Array.isArray(p.assigned_users) && p.assigned_users.some(u => {
+        base = base.filter(p => window.procZustaendige(p).some(u => {
             const uStr = String(u).toLowerCase().trim();
             return uStr === targetStr || (activeName && uStr === activeName);
         }));

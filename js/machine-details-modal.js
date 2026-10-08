@@ -282,6 +282,14 @@ window.initMachineDetailsModal = function () {
                     }
                 }
 
+                const histBtn = document.getElementById('machine-details-history-btn');
+                if (histBtn) {
+                    histBtn.onclick = () => {
+                        closeMachineDetailsModal();
+                        if (typeof window.openHistoryModal === 'function') window.openHistoryModal(machine.id);
+                    };
+                }
+
                 const editBtn = document.getElementById('machine-details-edit-btn');
                 if (editBtn) {
                     editBtn.onclick = () => {
