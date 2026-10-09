@@ -83,8 +83,9 @@
                 } catch (e) { console.warn('Mail: Ansprechpartner nicht ladbar', e); }
                 try {
                     const { data, error } = await window.supabaseClient.from('mail_zuordnungen').select('email, customer_id');
-                    if (!error) (data || []).forEach(z => S.zuordnungen.set((z.email || '').toLowerCase(), String(z.customer_id)));
-                    else throw error;
+                    if (error) throw error;
+                    (data || []).forEach(z => S.zuordnungen.set((z.email || '').toLowerCase(), String(z.customer_id)));
+                    lokaleZuordnungenHochladen();
                 } catch (e) {
                     // Migration fehlt → lokaler Rückfall
                     try { Object.entries(JSON.parse(localStorage.getItem('outlook_mail_zuordnungen') || '{}')).forEach(([a, id]) => S.zuordnungen.set(a, String(id))); } catch (e2) { /* egal */ }
@@ -110,6 +111,23 @@
         const dom = S.domainZuKunde.get(domainVon(adr));
         if (dom) return { kunde: dom, kontakt: null, quelle: 'domain' };
         return null;
+    }
+
+    /* Zuordnungen aus der Zeit vor der Tabelle (bzw. bei Netzfehler gemerkt)
+       lagen nur in diesem Browser — einmal in mail_zuordnungen schreiben, dann
+       den lokalen Schlüssel löschen. Vorhandene Einträge der Tabelle gewinnen. */
+    async function lokaleZuordnungenHochladen() {
+        let alle;
+        try { alle = JSON.parse(localStorage.getItem('outlook_mail_zuordnungen') || '{}'); } catch (e) { return; }
+        const neu = Object.entries(alle).filter(([a]) => !S.zuordnungen.has(a.toLowerCase()));
+        if (neu.length) {
+            const { error } = await window.supabaseClient.from('mail_zuordnungen').upsert(
+                neu.map(([a, id]) => ({ email: a.toLowerCase(), customer_id: id, user_id: window.activeUser ? window.activeUser.id : null })),
+                { onConflict: 'email', ignoreDuplicates: true });
+            if (error) { console.warn('Mail: lokale Zuordnungen nicht hochgeladen', error); return; }
+            neu.forEach(([a, id]) => S.zuordnungen.set(a.toLowerCase(), String(id)));
+        }
+        if (Object.keys(alle).length) localStorage.removeItem('outlook_mail_zuordnungen');
     }
 
     async function zuordnungSpeichern(adr, customerId) {

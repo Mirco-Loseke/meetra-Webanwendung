@@ -35,9 +35,21 @@
         if (!nutzerId()) return;
         if (!ohneTabelle && sb()) {
             const { data, error } = await sb().from('todo_listen').select('eintraege').eq('user_id', nutzerId()).maybeSingle();
-            if (!error) { eintraege = Array.isArray(data && data.eintraege) ? data.eintraege : lsLesen(); geladen = true; return; }
-            ohneTabelle = true;
-            console.warn('todo_listen fehlt — Migration supabase_add_todo_listen.sql ausführen. Liste läuft vorerst nur in diesem Browser.', error);
+            if (!error) {
+                eintraege = Array.isArray(data && data.eintraege) ? data.eintraege : lsLesen();
+                geladen = true;
+                // Liste stammte noch aus der Zeit ohne Tabelle (nur dieser Browser): einmal hochladen.
+                if (!data && eintraege.length) speichern();
+                return;
+            }
+            /* Nur eine wirklich fehlende Tabelle schaltet dauerhaft auf „nur lokal“.
+               Vorher reichte ein Netzaussetzer beim Laden, und die ganze Sitzung
+               wurde nichts mehr zum Server geschrieben. Die lokale Kopie bleibt
+               Zwischenspeicher für offline. */
+            if (error.code === '42P01' || error.code === 'PGRST205') {
+                ohneTabelle = true;
+                console.warn('todo_listen fehlt — Migration supabase_add_todo_listen.sql ausführen.', error);
+            }
         }
         eintraege = lsLesen();
         geladen = true;

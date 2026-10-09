@@ -113,6 +113,17 @@
     const ENTWURF_DB = 'miet-entwuerfe';
     const ENTWURF_STORE = 'entwuerfe';
     let entwurfKey = null;
+    /* Stand direkt nach dem Öffnen bzw. nach dem letzten Speichern. Nur wenn
+       der Bogen davon abweicht, gibt es einen Entwurf und beim Schließen eine
+       Rückfrage — vorher legte schon das bloße Öffnen einen „ungespeicherten
+       Stand“ an, und jedes weitere Öffnen fragte danach. */
+    let basisStand = null;
+    const standJetzt = () => JSON.stringify({ p: phase, d: daten });
+    const geaendert = () => !!(daten && basisStand !== null && standJetzt() !== basisStand);
+    if (window.registerUnsavedCheck) window.registerUnsavedCheck(() => {
+        const ov = document.getElementById('miet-overlay');
+        return !!(ov && ov.classList.contains('open') && geaendert());
+    });
     let entwurfUhr = null;
 
     function entwurfDb() {
@@ -147,6 +158,7 @@
         if (!entwurfKey || !daten) return;
         clearTimeout(entwurfUhr);
         entwurfUhr = setTimeout(() => {
+            if (!geaendert()) return;
             const stand = { gespeichertAm: Date.now(), phase: phase, daten: daten,
                             gespeicherteId: gespeicherteId, gespeichertesDoc: gespeichertesDoc };
             entwurfArbeit('readwrite', s => s.put(stand, entwurfKey))
@@ -222,23 +234,18 @@
         // kurz ein leerer Bogen auf.
         const geladen = agreementId ? await ladeVereinbarung(agreementId) : false;
 
-        // Liegt ein ungespeicherter Stand vor, wird er angeboten statt
-        // stillschweigend verworfen.
+        /* Gespeicherte Vereinbarung: es gibt nur den einen, gespeicherten Stand —
+           alte Entwürfe dazu werden still verworfen. Nur ein noch NIE
+           gespeicherter Bogen (Absturz, Akku leer) wird still wiederhergestellt,
+           sonst wäre die Arbeit weg. Keine Rückfrage mehr. */
         entwurfKey = `${machineId || 'ohne'}|${agreementId || 'neu'}`;
         const entwurf = await entwurfLesen(entwurfKey);
-        if (entwurf && entwurf.daten) {
-            const wann = new Date(entwurf.gespeichertAm || Date.now());
-            const text = `Es gibt einen ungespeicherten Stand vom ${wann.toLocaleDateString('de-DE')}, `
-                + `${wann.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr `
-                + `(inklusive Fotos).\n\nDiesen Stand fortsetzen?`;
-            if (window.confirm(text)) {
-                daten = entwurf.daten;
-                if (entwurf.phase) phase = entwurf.phase;
-                if (entwurf.gespeicherteId) gespeicherteId = entwurf.gespeicherteId;
-                if (entwurf.gespeichertesDoc) gespeichertesDoc = entwurf.gespeichertesDoc;
-            } else {
-                await entwurfLoeschen();
-            }
+        if (entwurf && entwurf.daten && !agreementId && !entwurf.gespeicherteId) {
+            daten = entwurf.daten;
+            if (entwurf.phase) phase = entwurf.phase;
+            window.showToast('Nicht gespeicherter Bogen wiederhergestellt — bitte speichern.');
+        } else if (entwurf) {
+            await entwurfLoeschen();
         }
 
         zeichneFenster();
@@ -248,6 +255,8 @@
         ladeHtml2Canvas().catch(() => { });
         if (typeof window.loadPDFGenerators === 'function') { try { window.loadPDFGenerators(); } catch (e) { } }
         uebernehmeEinweiserUnterschrift();
+        // Wiederhergestellter Entwurf gilt als ungespeichert, alles andere als Grundstand.
+        basisStand = (entwurf && entwurf.daten && !agreementId && !entwurf.gespeicherteId) ? '' : standJetzt();
         if (!geladen) ladeBetriebsstunden();
     };
 
@@ -345,7 +354,15 @@
         }
     }
 
-    window.closeMietvereinbarung = function () {
+    window.closeMietvereinbarung = function (ohneFrage) {
+        if (!ohneFrage && geaendert() && window.showUnsavedDialog) {
+            window.showUnsavedDialog({
+                overlayId: 'miet-ungespeichert',
+                onDiscard: () => { basisStand = standJetzt(); entwurfLoeschen(); window.closeMietvereinbarung(true); },
+                onSave: async () => { await window.mietSpeichern(); if (!geaendert()) window.closeMietvereinbarung(true); }
+            });
+            return;
+        }
         const ov = document.getElementById('miet-overlay');
         if (ov) ov.classList.remove('open');
         document.body.style.overflow = '';
@@ -493,7 +510,7 @@
         if (e && e.type === 'visibilitychange' && document.visibilityState === 'visible') return;
         clearTimeout(entwurfUhr);
         entwurfUhr = null;
-        if (!entwurfKey || !daten) return;
+        if (!entwurfKey || !daten || !geaendert()) return;
         const stand = { gespeichertAm: Date.now(), phase: phase, daten: daten,
                         gespeicherteId: gespeicherteId, gespeichertesDoc: gespeichertesDoc };
         entwurfArbeit('readwrite', s => s.put(stand, entwurfKey))
@@ -1608,6 +1625,12 @@
         return ordner.id;
     }
 
+    // Nach dem Speichern: das ist jetzt der Stand; Entwürfe laufen unter der echten ID.
+    function gespeichertMerken() {
+        basisStand = standJetzt();
+        if (gespeicherteId) entwurfKey = `${maschine ? maschine.id : 'ohne'}|${gespeicherteId}`;
+    }
+
     window.mietSpeichern = async function () {
         if (!daten) return;
         if (!window.supabaseClient || !window.FileUploadService) {
@@ -1709,6 +1732,7 @@
                 console.error('PDF konnte nicht erzeugt/hochgeladen werden:', pdfFehler,
                     'Ursprung:', pdfFehler && pdfFehler.ursprung);
                 await entwurfLoeschen();   // Eingaben und Fotos sind gesichert
+                gespeichertMerken();
                 // Die Ursache bleibt in der Fusszeile stehen — der Toast ist
                 // nach ein paar Sekunden weg, und ohne den Grund lässt sich
                 // nichts nachsehen.
@@ -1757,6 +1781,7 @@
 
             // Erst jetzt ist alles in der Datenbank — der Entwurf darf weg.
             await entwurfLoeschen();
+            gespeichertMerken();
 
             const jetzt = new Date();
             messPunkt('Dokument');
