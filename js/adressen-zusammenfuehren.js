@@ -66,6 +66,21 @@
                 if (data && data.length) bericht.push(data.length + '× ' + tab + (spalten.length > 1 ? ' (' + sp + ')' : ''));
             }
         }
+        // Mietvereinbarung: der Mieter steht zusätzlich im JSON (data.mieter.customer_id).
+        // Blieb er alt, schrieb der Bogen beim nächsten Speichern die gelöschte
+        // Adresse zurück → Fehler 23503 (rental_agreements_customer_fk).
+        {
+            const { data: mv, error: eM } = await sb.from('rental_agreements').select('id, data')
+                .eq('data->mieter->>customer_id', String(quelle.id));
+            if (eM && !fehlt(eM)) throw new Error('rental_agreements (Mieter): ' + eM.message);
+            for (const z of (mv || [])) {
+                const d = Object.assign({}, z.data);
+                d.mieter = Object.assign({}, d.mieter, { customer_id: ziel.id });
+                const { error: eU } = await sb.from('rental_agreements').update({ data: d }).eq('id', z.id);
+                if (eU) throw new Error('rental_agreements (Mieter): ' + eU.message);
+            }
+            if (mv && mv.length) bericht.push(mv.length + '× Mietvereinbarung (Mieter)');
+        }
         // Verknüpfung der beiden miteinander ist jetzt eine Selbst-Verknüpfung → weg
         const { error: eL } = await sb.from('customer_links').delete().eq('customer_id', ziel.id).eq('linked_customer_id', ziel.id);
         if (eL && !fehlt(eL)) throw new Error('customer_links: ' + eL.message);

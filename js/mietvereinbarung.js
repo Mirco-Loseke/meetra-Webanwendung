@@ -278,6 +278,9 @@
             ['mieter', 'geraet', 'miete', 'sauberkeit', 'einweisung', 'unterschriften'].forEach(k => {
                 if (d[k] && typeof d[k] === 'object') Object.assign(daten[k], d[k]);
             });
+            // Die Spalte customer_id ist maßgeblich: „Adressen zusammenführen“ hängt
+            // nur sie um, die Kopie im JSON zeigte danach auf die gelöschte Adresse.
+            if (data.customer_id) daten.mieter.customer_id = data.customer_id;
             if (d.pruefpunkte && typeof d.pruefpunkte === 'object') daten.pruefpunkte = d.pruefpunkte;
             if (d.auswahl && typeof d.auswahl === 'object') daten.auswahl = d.auswahl;
             if (Array.isArray(d.schaeden) && d.schaeden.length) daten.schaeden = d.schaeden;
@@ -1658,6 +1661,25 @@
         if (gespeicherteId) entwurfKey = `${maschine ? maschine.id : 'ohne'}|${gespeicherteId}`;
     }
 
+    /* Verweist der Mieter auf eine Adresse, die es nicht mehr gibt (zusammengeführt
+       oder gelöscht), scheiterte das Speichern am Fremdschlüssel
+       rental_agreements_customer_fk (23503). Dann über den Namen neu zuordnen,
+       sonst die Zuordnung lösen — der Name bleibt im Bogen stehen. */
+    async function kundeAbsichern() {
+        const id = daten.mieter.customer_id;
+        if (!id) return;
+        const { data, error } = await window.supabaseClient.from('customers').select('id').eq('id', id).maybeSingle();
+        if (error || data) return;
+        let neu = null;
+        if (daten.mieter.name) {
+            const { data: treffer } = await window.supabaseClient.from('customers').select('id')
+                .eq('name', daten.mieter.name).limit(2);
+            if (treffer && treffer.length === 1) neu = treffer[0].id;
+        }
+        console.warn('Mietvereinbarung: Adresse', id, 'gibt es nicht mehr →', neu || 'ohne Zuordnung');
+        daten.mieter.customer_id = neu;
+    }
+
     window.mietSpeichern = async function () {
         if (!daten) return;
         if (!window.supabaseClient || !window.FileUploadService) {
@@ -1697,6 +1719,7 @@
             messPunkt('Fotos');
 
             status('Wird gespeichert …');
+            await kundeAbsichern();
             const zeile = {
                 machine_id: maschine ? maschine.id : null,
                 customer_id: daten.mieter.customer_id || null,
