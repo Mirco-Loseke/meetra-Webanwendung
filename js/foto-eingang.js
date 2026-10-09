@@ -421,8 +421,8 @@
                 maschine: 'Neuer Eintrag in der Historie der Maschine, mit allen gewählten Fotos.',
                 adresse: 'Neuer Eintrag im Verlauf der Adresse, mit allen gewählten Fotos.',
                 servicebericht: 'Die Fotos werden an den Bericht angehängt (auch bei abgeschlossenen Berichten).' + (hatTon ? ' Der Text kommt unter Bemerkungen — nicht bei abgeschlossenen Berichten.' : ''),
-                vorgang: 'Die Fotos erscheinen unter den Dokumenten des Vorgangs.' + (hatTon ? ' Der Text wird als neuer Stand eingetragen, die Aufnahme liegt bei den Dokumenten.' : '')
-            }[art];
+                vorgang: 'Die Fotos erscheinen unter den Dokumenten des Vorgangs.' + (hatTon ? ' Der Text wird als neuer Stand eingetragen.' : '')
+            }[art] + (hatTon ? ' Die Tonaufnahme wird danach gelöscht — es bleibt nur der Text.' : '');
             treffer();
         }
         f.el.querySelectorAll('[data-fe-art]').forEach(b => b.addEventListener('click', () => artSetzen(b.dataset.feArt)));
@@ -441,6 +441,7 @@
             knopf.disabled = true; knopf.textContent = 'Speichert …';
             try {
                 await eintragen(art, ziel, zeilen, $('#fe-titel').value.trim(), $('#fe-text').value.trim());
+                await tonWegraeumen(zeilen.filter(istTon));
                 f.zu();
                 toast(zeilen.length + (zeilen.length === 1 ? ' Datei' : ' Dateien') + ' zugeordnet: ' + ziel.titel, 'success');
                 zeilen.forEach(z => S.gewaehlt.delete(z.id));
@@ -493,7 +494,7 @@
             if (e1) throw e1;
             const liste = Array.isArray(p && p.attachments) ? p.attachments.slice() : [];
             const von = (window.activeUser && window.activeUser.name) || 'Foto-Eingang';
-            zeilen.forEach(z => {
+            zeilen.filter(z => !istTon(z)).forEach(z => {
                 if (liste.some(a => a && a.url === z.url)) return;
                 liste.push({
                     id: 'att_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
@@ -581,6 +582,20 @@
             f.el.querySelector('#fe-wirklich').addEventListener('click', () => { ok = true; f.zu(); });
             new MutationObserver((m, o) => { if (!f.el.isConnected) { o.disconnect(); fertig(ok); } }).observe(document.body, { childList: true });
         });
+    }
+
+    // Nach dem Zuordnen zählt nur noch der Text im Ziel — die Tonaufnahme wird nicht
+    // aufgehoben: Datei aus R2 und Zeile aus dem Eingang löschen. Schlägt das fehl,
+    // bleibt sie unter „Zugeordnet“ stehen und lässt sich dort von Hand löschen.
+    async function tonWegraeumen(zeilen) {
+        for (const z of zeilen) {
+            try {
+                if (window.FileUploadService) await window.FileUploadService.deleteFile(z.pfad, { bucket: 'dateien', provider: 'cloudflare-r2' });
+                const { error } = await sb().from('foto_eingang').delete().eq('id', z.id);
+                if (error) throw error;
+                S.gewaehlt.delete(z.id);
+            } catch (e) { console.warn('Foto-Eingang: Aufnahme nicht weggeräumt', e); }
+        }
     }
 
     async function loeschen() {

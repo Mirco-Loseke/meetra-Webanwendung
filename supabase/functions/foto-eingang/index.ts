@@ -14,7 +14,7 @@
 //
 // Sprachaufnahmen (audio/*): werden wie Fotos abgelegt und danach von Google Gemini
 // abgeschrieben (Spalten text/text_status, Migration supabase_add_foto_eingang_sprache.sql).
-// Secrets wie ki-proxy: GEMINI_API_KEY, optional GEMINI_AUDIO_MODEL (Vorgabe gemini-2.5-flash).
+// Secrets wie ki-proxy: GEMINI_API_KEY (+ GEMINI_MODEL / GEMINI_FALLBACK_MODELS als Ausweichmodelle), kein eigenes nötig.
 // POST application/json { abschreiben: <id> } mit Authorization: Bearer <JWT eines App-Nutzers>
 //   → schreibt eine vorhandene Aufnahme erneut ab (Knopf „Text erzeugen" in der App).
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -31,7 +31,21 @@ const MAX_DATEI = 25 * 1024 * 1024;
 const MAX_ANZAHL = 30;
 const ERLAUBT = /^(image\/|video\/|audio\/|application\/pdf$)/;
 const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY') ?? '';
-const GEMINI_AUDIO_MODEL = Deno.env.get('GEMINI_AUDIO_MODEL') ?? 'gemini-2.5-flash';
+// Modelle für die Abschrift, der Reihe nach: Bei JEDEM Fehler (abgeschaltet, überlastet,
+// Limit, Zeitüberschreitung) geht es sofort mit dem nächsten weiter. Kein eigenes Secret
+// nötig — genutzt werden die vorhandenen GEMINI_MODEL / GEMINI_FALLBACK_MODELS von ki-proxy;
+// GEMINI_AUDIO_MODEL (optional) kommt nur nach vorn. Zuerst ein volles Flash-Modell (hört
+// besser als Flash-Lite). Reicht alles nicht, fragt die Function Google, welche Flash-Modelle
+// dieser Schlüssel kennt, und probiert die neuesten davon.
+// 2026-10-08: gemini-2.5-flash ist für neue Konten abgeschaltet, Google nennt 3.8-flash.
+const AUDIO_MODELLE = [
+    Deno.env.get('GEMINI_AUDIO_MODEL') ?? '',
+    'gemini-3.8-flash',
+    ...(Deno.env.get('GEMINI_FALLBACK_MODELS') ?? '').split(','),
+    Deno.env.get('GEMINI_MODEL') ?? '',
+].map(s => s.trim()).filter((m, i, a) => m && a.indexOf(m) === i);
+const VERSUCH_MS = 60_000;
+let letztesGutesModell = '';   // lebt, solange die Function warm ist
 const ABSCHRIFT_PROMPT = 'Schreibe diese deutsche Sprachaufnahme wörtlich ab. Sie stammt aus einer Werkstatt für ' +
     'Recycling-Maschinen (Schredder, Siebanlagen, Bagger, Radlader): jemand geht um eine Maschine und spricht Befunde ein. ' +
     'Fachbegriffe, Typbezeichnungen und Zahlen genau übernehmen. Füllwörter (äh, ähm) weglassen, sinnvolle Absätze und ' +
@@ -83,24 +97,66 @@ async function abschreiben(id: string, typ: string, daten: ArrayBuffer) {
         return;
     }
     await db.from('foto_eingang').update({ text_status: 'laeuft', text_fehler: null }).eq('id', id);
-    try {
-        const mime = typ.split(';')[0].trim() || 'audio/webm';
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_AUDIO_MODEL}:generateContent`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
-            body: JSON.stringify({
-                contents: [{ role: 'user', parts: [{ text: ABSCHRIFT_PROMPT }, { inline_data: { mime_type: mime, data: base64(daten) } }] }],
-                generationConfig: { temperature: 0 },
-            }),
-        });
-        const j = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(j?.error?.message || ('Gemini ' + res.status));
-        const text = (j?.candidates?.[0]?.content?.parts || []).map((p: { text?: string }) => p.text || '').join('').trim();
-        if (!text) throw new Error('Leere Antwort');
-        await db.from('foto_eingang').update({ text, text_status: 'fertig', text_fehler: null }).eq('id', id);
-    } catch (e) {
-        await db.from('foto_eingang').update({ text_status: 'fehler', text_fehler: String((e as Error).message || e).slice(0, 300) }).eq('id', id);
+    const mime = typ.split(';')[0].trim() || 'audio/webm';
+    const body = JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: ABSCHRIFT_PROMPT }, { inline_data: { mime_type: mime, data: base64(daten) } }] }],
+        generationConfig: { temperature: 0 },
+    });
+    const fehler: string[] = [];
+    const versucht = new Set<string>();
+
+    async function versuch(modell: string) {
+        versucht.add(modell);
+        try {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modell}:generateContent`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
+                body, signal: AbortSignal.timeout(VERSUCH_MS),
+            });
+            const j = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(j?.error?.message || ('HTTP ' + res.status));
+            const text = (j?.candidates?.[0]?.content?.parts || []).map((p: { text?: string }) => p.text || '').join('').trim();
+            if (!text) throw new Error('leere Antwort');
+            return text;
+        } catch (e) {
+            const m = (e as Error).name === 'TimeoutError' ? 'keine Antwort in 60 s' : String((e as Error).message || e);
+            fehler.push(`${modell}: ${m.slice(0, 120)}`);
+            console.warn('Abschrift', modell, m);
+            return '';
+        }
     }
+
+    const reihe = [letztesGutesModell, ...AUDIO_MODELLE].filter((m, i, a) => m && a.indexOf(m) === i);
+    let text = '';
+    for (const m of reihe) { text = await versuch(m); if (text) { letztesGutesModell = m; break; } }
+    if (!text) {
+        for (const m of await flashModelle()) {
+            if (versucht.has(m)) continue;
+            text = await versuch(m);
+            if (text) { letztesGutesModell = m; break; }
+        }
+    }
+    if (text) await db.from('foto_eingang').update({ text, text_status: 'fertig', text_fehler: null }).eq('id', id);
+    else await db.from('foto_eingang').update({ text_status: 'fehler', text_fehler: ('Kein Modell hat geantwortet — ' + fehler.join(' | ')).slice(0, 600) }).eq('id', id);
+}
+
+// Notnagel: die neuesten Flash-Modelle, die dieser Schlüssel laut Google nutzen darf (höchstens 4).
+let flashCache: string[] | null = null;
+async function flashModelle(): Promise<string[]> {
+    if (flashCache) return flashCache;
+    try {
+        const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': GEMINI_API_KEY } });
+        const d = await r.json();
+        const vers = (n: string) => parseFloat((/gemini-(\d+(?:\.\d+)?)/.exec(n) || ['', '0'])[1]);
+        flashCache = (d.models || [])
+            .filter((m: { name: string; supportedGenerationMethods?: string[] }) =>
+                /gemini-[\d.]+-flash/.test(m.name) && !/image|tts|live|audio-dialog|embedding/.test(m.name) &&
+                (m.supportedGenerationMethods || []).includes('generateContent'))
+            .map((m: { name: string }) => m.name.replace(/^models\//, ''))
+            .sort((a: string, b: string) => (vers(b) - vers(a)) || (Number(a.includes('lite')) - Number(b.includes('lite'))))
+            .slice(0, 4);
+    } catch { flashCache = []; }
+    return flashCache!;
 }
 
 // Läuft nach der Antwort weiter, damit das Handy nicht auf die Abschrift warten muss.

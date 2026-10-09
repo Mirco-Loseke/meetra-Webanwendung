@@ -175,7 +175,7 @@
     <link rel="stylesheet" href="css/views/tasks.css?v=6">
     <link rel="stylesheet" href="css/views/service-reports.css?v=4">
     <link rel="stylesheet" href="css/views/machines.css?v=1">
-    <link rel="stylesheet" href="css/views/timeline.css?v=46">
+    <link rel="stylesheet" href="css/views/timeline.css?v=51">
     <link rel="stylesheet" href="css/views/procurement.css?v=1">
     <link rel="stylesheet" href="css/views/settings.css?v=7">
     <link rel="stylesheet" href="css/views/user-edit.css?v=2">
@@ -1974,8 +1974,13 @@
                                 </div>
                             </div>
 
-                            <button class="tlv-tool" id="tlv-frei-btn" title="Übersicht: wer macht was und wer ist wann frei">Wer ist frei?</button>
+                            <button class="tlv-tool tlv-tool-plus" id="tlv-plan-neu" title="Vermietung, Vorführung oder Aufbereitung eintragen — auch unbestätigt"><span class="tlv-lang">+ Vermietung</span><span class="tlv-kurz">+ Neu</span></button>
 
+                            <button class="tlv-tool" id="tlv-frei-btn" title="Übersicht: wer macht was und wer ist wann frei"><span class="tlv-lang">Wer ist frei?</span><span class="tlv-kurz">Frei?</span></button>
+
+                            <button class="tlv-icon-btn" id="tlv-ics" title="Kalender exportieren (.ics) — in Outlook per Doppelklick öffnen oder importieren" aria-label="Kalender exportieren">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"></rect><line x1="3" y1="10" x2="21" y2="10"></line><line x1="8" y1="3" x2="8" y2="7"></line><line x1="16" y1="3" x2="16" y2="7"></line><polyline points="9 15 12 18 15 15"></polyline><line x1="12" y1="12" x2="12" y2="18"></line></svg>
+                            </button>
                             <button class="tlv-icon-btn" id="tlv-vollbild" title="Vollbild — Menü und Kopfleiste ausblenden" aria-label="Vollbild">
                                 <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="9 3 3 3 3 9"></polyline><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><polyline points="15 21 21 21 21 15"></polyline></svg>
                             </button>
@@ -3057,7 +3062,7 @@
                                 <tr>
                                     <td><strong>Google Gemini</strong><br><span class="ds-klein">Sprachaufnahmen (Foto-Eingang)</span></td>
                                     <td>Abschrift eingesprochener Notizen aus der Handy-App „meetra Fotos" in Text</td>
-                                    <td>die <strong>Tonaufnahme selbst — nicht pseudonymisiert</strong>; ausgesprochene Namen, Kunden, Orte und Nummern gehen mit. Aufnahme und Text liegen danach in R2 bzw. Supabase (<code>foto_eingang</code>)</td>
+                                    <td>die <strong>Tonaufnahme selbst — nicht pseudonymisiert</strong>; ausgesprochene Namen, Kunden, Orte und Nummern gehen mit. Die Aufnahme liegt bis zum Zuordnen in R2 und wird dabei gelöscht; nur der Text bleibt in der Datenbank</td>
                                     <td>Automatisch nach dem Hochladen über die Edge Function <code>foto-eingang</code>; der Schlüssel liegt serverseitig. Verarbeitung außerhalb der EU möglich. Hinweis an die Mitarbeiter: nur Sachliches zur Maschine einsprechen</td>
                                 </tr>
                                 <tr>
@@ -6752,7 +6757,7 @@
     <script src="js/ai-task-extend.js?v=5"></script>
     <script src="js/ki-erkennung.js?v=3"></script>
     <script src="js/ki-auswertung.js?v=1"></script>
-    <script src="js/ki-chat.js?v=15"></script>
+    <script src="js/ki-chat.js?v=16"></script>
     <script>
         window.addEventListener('load', () => {
             if (typeof window.initTaskTemplates === 'function') {
@@ -8453,13 +8458,13 @@
     <!-- /@partial:modals/picker-modals.html -->
 
 <script src="js/auth.js?v=1"></script>
-<script src="js/users.js?v=7"></script>
+<script src="js/users.js?v=8"></script>
 <script src="js/machines-grouped.js?v=53"></script>
-<script src="js/timeline-view.js?v=77"></script>
+<script src="js/timeline-view.js?v=82"></script>
 <script src="js/voice-dictation.js?v=2"></script>
 <script src="js/handy-check.js?v=7"></script>
 <script src="js/globale-suche.js?v=8"></script>
-<script src="js/foto-eingang.js?v=10"></script>
+<script src="js/foto-eingang.js?v=11"></script>
 </body>
 
 </html>

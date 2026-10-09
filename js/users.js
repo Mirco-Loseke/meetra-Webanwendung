@@ -397,7 +397,7 @@ function szSetzen(liste) {
 }
 function szErlaubt(t) {
     if (t === 'mehr') return true;
-    const cb = document.getElementById('perm-' + t);
+    const cb = document.getElementById('perm-' + (t === 'vermietung' ? 'timeline' : t));
     return !cb || cb.checked;   // Ansicht für diesen Benutzer abgeschaltet → nicht anbieten
 }
 function szZeichnen() {

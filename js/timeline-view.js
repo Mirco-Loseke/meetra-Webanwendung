@@ -33,7 +33,8 @@
     var SORTEN = {
         miete:     { label: 'Vermietung',    farbe: 'var(--tlv-miete)' },
         service:   { label: 'Serviceeinsatz', farbe: 'var(--tlv-service)' },
-        aufgabe:   { label: 'Aufgabe',       farbe: 'var(--tlv-aufgabe)' }
+        aufgabe:   { label: 'Aufgabe',       farbe: 'var(--tlv-aufgabe)' },
+        aufbereitung: { label: 'Aufbereitung', farbe: 'var(--tlv-aufbereitung)' }
     };
     var SORTE_QUELLE = {
         miete: 'rental_agreements', service: 'service_entries', aufgabe: 'tasks'
@@ -44,6 +45,8 @@
         rental_agreements:  { von: 'data.miete.beginn', bis: 'data.miete.ende', schreibbar: true,
                               hinweis: 'Die Daten liegen im JSONB-Feld data. Fuer Filtern und Sortieren '
                                      + 'in der Datenbank waeren echte Spalten noetig.' },
+        timeline_planung:   { von: 'von', bis: 'bis', schreibbar: true,
+                              braucht: 'supabase_add_timeline_planung.sql' },
         subtasks:           { von: 'start_date', bis: 'end_date', schreibbar: true,
                               braucht: 'supabase_add_subtask_planung.sql' }
     };
@@ -57,7 +60,7 @@
        unter dem Team und ist beim Oeffnen zugeklappt. */
     var GRP_OHNE = 'ohne Zuordnung';
     var PRESETS = {
-        vermiet:   { label: 'Vermietflotte',    achse: 'maschine', sorten: ['miete'] },
+        vermiet:   { label: 'Vermietflotte',    achse: 'maschine', sorten: ['miete', 'aufbereitung'] },
         service:   { label: 'Serviceeinsätze',  achse: 'monteur',  sorten: ['service'] },
         aufgaben:  { label: 'Aufgaben',         achse: 'aufgabe',  sorten: ['aufgabe'] }
     };
@@ -140,6 +143,8 @@
     var TERMINE = [], ABWESEND = [];
     // Steht die Tabelle `absences` schon? Erst dann gibt es das Formular.
     var ABWESEND_DA = false;
+    // Steht die Tabelle `timeline_planung` (supabase_add_timeline_planung.sql)?
+    var PLANUNG_DA = false;
     /* Wann die Daten zuletzt aus der Datenbank kamen. Ohne das hier stand die
        Timeline auf dem Stand des ERSTEN Oeffnens: eine zwischendurch
        gespeicherte Mietvereinbarung tauchte bis zum Neuladen der Seite nicht
@@ -222,7 +227,10 @@
                sie, bleibt die Liste leer und alles andere laeuft weiter. */
             client.from('maintenance_events').select('*'),
             client.from('event_participants').select('event_id, user_id, user_name'),
-            client.from('absences').select('*')
+            client.from('absences').select('*'),
+            // Geplante Vermietungen/Vorführungen (Knopf „+ Vermietung").
+            // Fehlt die Tabelle noch, bleibt es still leer.
+            client.from('timeline_planung').select('*')
         ];
 
         var erg = await Promise.all(abfragen.map(function (p) {
@@ -256,6 +264,8 @@
         ABWESEND = [];
         ABWESEND_DA = !!(erg[8] && !erg[8].error);
         if (ABWESEND_DA) ladeAbwesenheiten(erg[8].data || []);
+        PLANUNG_DA = !!(erg[9] && !erg[9].error);
+        if (PLANUNG_DA) (erg[9].data || []).forEach(planungAlsItems);
 
         S.geladen = true;
         S.laedt = false;
@@ -485,6 +495,59 @@
         });
     }
 
+    /* Planung aus `timeline_planung`: ein Balken für Vermietung/Vorführung
+       und — falls eingetragen — ein grauer Aufbereitungsbalken direkt
+       dahinter. Der hängt am Hauptbalken (`aufVon`) und wandert mit. */
+    var PLAN_ART = { miete: 'Vermietung', vorfuehrung: 'Vorführung', aufbereitung: 'Aufbereitung' };
+    function aufbereitungTage(wert, einheit) {
+        var w = parseFloat(String(wert == null ? '' : wert).replace(',', '.'));
+        if (!isFinite(w) || w <= 0) return 0;
+        return Math.max(1, Math.ceil(einheit === 'h' ? w / 8 : w));
+    }
+    function aufbereitungText(wert, einheit) {
+        return fmtDe(parseFloat(String(wert).replace(',', '.'))) + (einheit === 'h' ? ' Std.' : ' Tag(e)');
+    }
+    function plusTage(k, n) { var d = parse(k); d.setDate(d.getDate() + n); return key(d); }
+    function planungAlsItems(r) {
+        var von = ausDB(r.von), bis = ausDB(r.bis) || von;
+        if (!von) return;
+        if (bis < von) bis = von;
+        var art = PLAN_ART[r.art] ? r.art : 'miete';
+        var kunde = r.kunde_name || kundeText(r.customer_id) || null;
+        var basis = {
+            dbId: r.id, quelle: 'timeline_planung', art: art,
+            maschine: r.machine_id != null ? String(r.machine_id) : null,
+            kunde: kunde, kundeId: r.customer_id || null, notiz: r.notiz || '',
+            unsicher: !!r.unsicher,
+            aufWert: r.aufbereitung_wert, aufEinheit: r.aufbereitung_einheit || 'd'
+        };
+        var haupt = Object.assign({}, basis, {
+            id: 'tp-' + r.id,
+            sorte: art === 'aufbereitung' ? 'aufbereitung' : 'miete',
+            titel: (art === 'miete' ? '' : PLAN_ART[art] + (kunde ? ' · ' : '')) + (kunde || (art === 'miete' ? 'Vermietung' : '')),
+            von: von, bis: bis,
+            status: bis < key(HEUTE) ? 'zurueck' : (von > key(HEUTE) ? 'reserviert' : 'draussen')
+        });
+        if (art === 'aufbereitung' && basis.aufWert) haupt.titel = 'Aufbereitung · ' + aufbereitungText(basis.aufWert, basis.aufEinheit);
+        ITEMS.push(haupt);
+        var n = art === 'aufbereitung' ? 0 : aufbereitungTage(r.aufbereitung_wert, basis.aufEinheit);
+        if (n) ITEMS.push(Object.assign({}, basis, {
+            id: 'tpa-' + r.id, quelle: 'timeline_planung_auf', sorte: 'aufbereitung', aufVon: haupt.id,
+            titel: 'Aufbereitung · ' + aufbereitungText(r.aufbereitung_wert, basis.aufEinheit),
+            von: plusTage(bis, 1), bis: plusTage(bis, n)
+        }));
+    }
+    // Aufbereitung hinter ihrem Hauptbalken herziehen (nach Verschieben/Verlängern).
+    function aufbereitungNachziehen() {
+        ITEMS.forEach(function (a) {
+            if (!a.aufVon) return;
+            var h = eintrag(a.aufVon); if (!h) return;
+            var n = aufbereitungTage(h.aufWert, h.aufEinheit) || 1;
+            a.von = plusTage(h.bis, 1); a.bis = plusTage(h.bis, n);
+            a.unsicher = h.unsicher;
+        });
+    }
+
     // ------------------------------------------------------------------
     // Nachschlagen / Ableitungen
     // ------------------------------------------------------------------
@@ -493,7 +556,8 @@
     function eintrag(id) { for (var i = 0; i < ITEMS.length; i++) if (ITEMS[i].id === id) return ITEMS[i]; return null; }
     /* Eine Miete ohne eingetragenen Zeitraum liegt nur vorlaeufig auf heute —
        sie darf die Maschine nicht als belegt/vermietet ausweisen. */
-    function blockt(i) { return i.sorte === 'miete' && !i.vorlaeufig; }
+    // Unbestätigte Planung blockt ebenfalls nicht — sie „könnte“ nur sein.
+    function blockt(i) { return i.sorte === 'miete' && !i.vorlaeufig && !i.unsicher; }
     function belegtSorte(i) { return i.sorte === 'miete'; }
     function schreibbar(i) {
         var q = QUELLEN[i.quelle];
@@ -675,6 +739,9 @@
                 dat.miete.beginn = it.von;
                 dat.miete.ende = it.bis;
                 await pruefe(client.from('rental_agreements').update({ data: dat }).eq('id', it.dbId));
+
+            } else if (it.quelle === 'timeline_planung') {
+                await pruefe(client.from('timeline_planung').update({ von: it.von, bis: it.bis }).eq('id', it.dbId));
             }
         } catch (e) {
             console.error('[timeline] Speichern fehlgeschlagen', e);
@@ -1082,6 +1149,9 @@
         var wurzel = document.getElementById('timeline');
         presetAbgleichen();
         filterZahlAbgleichen();
+        aufbereitungNachziehen();
+        var neuBtn = document.getElementById('tlv-plan-neu');
+        if (neuBtn) neuBtn.hidden = !(S.achse === 'maschine' && S.sorten.has('miete'));
 
         if (!S.geladen) { buehne.innerHTML = '<div class="tlv-laedt">Daten werden geladen …</div>'; return; }
 
@@ -1267,6 +1337,8 @@
                    nur die Einrückung. */
                 if (z.eltern && S.achse === 'aufgabe') cls.push('summe');
                 if (i.vorlaeufig) cls.push('vorlaeufig');
+                if (i.unsicher) cls.push('unsicher');
+                if (i.sorte === 'aufbereitung') cls.push('aufbereitung');
                 // Maschine/WA (und bei eingeklappter Aufgabe "Verantwortlich: …")
                 // stehen zusaetzlich AUF dem Balken — jede Zeile laesst ihn
                 // (und seine Zeile) etwas hoeher werden, siehe zeilenBauen()
@@ -1461,6 +1533,9 @@
         // statt die Buehne waagerecht rollen zu lassen.
         var voll = S.raster === 'woche' ? 52 : 42;
         var min = S.raster === 'woche' ? 26 : 12;
+        /* Handy: nicht auf 12px quetschen (unlesbar, nicht greifbar) — lieber
+           lesbare Tage und die Bühne waagerecht wischen lassen. */
+        if (window.innerWidth <= 768) min = S.raster === 'woche' ? 48 : 38;
         var breite = Math.max(min, Math.floor((frei / n) * 100) / 100);
         wurzel.classList.toggle('tlv-eng', breite < voll);
         wurzel.classList.toggle('tlv-sehr-eng', breite < 24);
@@ -1741,7 +1816,15 @@
         // und die Buehne bekaeme je nach Rollstand eine andere Hoehe.
         var box = document.getElementById('main-content');
         var oben, hoehe;
-        if (box && box.clientHeight) {
+        if (window.innerWidth <= 768) {
+            /* Handy: hier rollt das Dokument, #main-content wächst mit — dagegen
+               gemessen lief die Höhe hoch (1.283px). Maß ist der Bildschirm
+               bis über die Schnellzugriff-Leiste unten. */
+            var nav = document.getElementById('kic-nav');
+            oben = buehne.getBoundingClientRect().top + window.scrollY;
+            hoehe = window.innerHeight - (nav && nav.offsetHeight ? nav.offsetHeight : 0);
+            oben = Math.min(oben, hoehe * 0.45);   // Kopfleiste darf weggerollt werden
+        } else if (box && box.clientHeight) {
             oben = buehne.getBoundingClientRect().top - box.getBoundingClientRect().top;
             hoehe = box.clientHeight;
         } else {
@@ -1849,6 +1932,39 @@
         if (z) z.el.classList.add('zielzeile');
     }
 
+    /* Finger: erst ~0,45 s still halten, dann verschieben/aufziehen.
+       Wer vorher wischt, scrollt nur — sonst legte jedes Wischen auf dem
+       Handy einen Balken an oder verschob einen. Maus/Stift: sofort. */
+    var HALTEN_MS = 450;
+    function touchHalten(ev, el, los) {
+        if (ev.pointerType !== 'touch') { los(ev); return; }
+        var x0 = ev.clientX, y0 = ev.clientY, fertig = false;
+        var t = setTimeout(function () {
+            fertig = true; weg();
+            el.classList.add('halten');
+            setTimeout(function () { el.classList.remove('halten'); }, 600);
+            if (navigator.vibrate) try { navigator.vibrate(15); } catch (e) {}
+            los(ev);
+        }, HALTEN_MS);
+        function abbruch(e) {
+            if (e.pointerId !== ev.pointerId) return;
+            if (e.type === 'pointermove' && Math.hypot(e.clientX - x0, e.clientY - y0) < 10) return;
+            clearTimeout(t); weg();
+        }
+        function weg() {
+            document.removeEventListener('pointermove', abbruch);
+            document.removeEventListener('pointerup', abbruch);
+            document.removeEventListener('pointercancel', abbruch);
+        }
+        document.addEventListener('pointermove', abbruch);
+        document.addEventListener('pointerup', abbruch);
+        document.addEventListener('pointercancel', abbruch);
+    }
+    // Läuft ein Ziehen per Finger, darf die Seite nicht mitscrollen.
+    document.addEventListener('touchmove', function (e) {
+        if (drag || upZug) e.preventDefault();
+    }, { passive: false });
+
     function haengeAn(start, n) {
         tlStart = start;
         var wurzel = document.getElementById('timeline');
@@ -1871,7 +1987,7 @@
         });
 
         Array.prototype.forEach.call(wurzel.querySelectorAll('.tlv-bar'), function (bar) {
-            bar.addEventListener('pointerdown', function (ev) {
+            bar.addEventListener('pointerdown', function (ev0) { touchHalten(ev0, bar, function (ev) {
                 var it = eintrag(bar.dataset.id);
                 if (!it) return;
                 var q = QUELLEN[it.quelle] || {};
@@ -1911,7 +2027,7 @@
                 bar.classList.add('zieht');
                 fangen(bar, ev);
                 ev.preventDefault();
-            });
+            }); });
             bar.addEventListener('click', function (ev) {
                 if (bar._bewegt) { bar._bewegt = false; return; }
                 var it = eintrag(bar.dataset.id); if (!it) return;
@@ -1993,6 +2109,7 @@
                 neuVorher: { von: it.von, bis: it.bis,
                              ohneDatum: !!it.ohneDatum, vorlaeufig: !!it.vorlaeufig }
             };
+            if (ev.pointerType === 'touch') drag.bewegt = true;   // schon gehalten (touchHalten)
             drag.halten = setTimeout(function () {
                 if (drag && drag.modus === 'neu') drag.bewegt = true;
             }, 400);
@@ -2009,7 +2126,7 @@
                 tr.title = 'Linke UND rechte Maustaste zusammen drücken und ziehen — '
                          + 'so lang wird der Balken. Eine Taste allein legt nichts an.';
             }
-            tr.addEventListener('pointerdown', function (ev) {
+            tr.addEventListener('pointerdown', function (ev0) { if (ev0.target.closest('.tlv-bar')) return; touchHalten(ev0, tr, function (ev) {
                 if (!zweiTasten(ev)) return;
                 if (ev.target.closest('.tlv-bar')) return;   // hat einen eigenen Handler
                 // Auf der freien Spur gilt immer: neu aufziehen. Auch wenn die
@@ -2018,7 +2135,7 @@
                 var it = eintrag(tr.dataset.row || '');
                 if (!it) return;
                 aufziehen(it, tr, tr.querySelector('.tlv-bar[data-id="' + it.id + '"]'), ev);
-            });
+            }); });
         });
 
         /* Zweite Taste dazudrücken löst KEIN weiteres pointerdown aus — der
@@ -2719,8 +2836,31 @@
            Servicebericht selbst. Wandern beim Verschieben trotzdem mit. */
 
 
-        h += '<div class="acts">' + oeffnenKnopf(it) + '</div>';
+        var plan = it.quelle === 'timeline_planung' || it.quelle === 'timeline_planung_auf'
+            ? eintrag('tp-' + it.dbId) : null;
+        if (plan) {
+            h += '<div class="kv"><span>Art</span><b>' + esc(PLAN_ART[plan.art]) + '</b></div>'
+               + '<div class="kv"><span>Status</span><b>' + (plan.unsicher ? 'noch nicht bestätigt' : 'bestätigt') + '</b></div>'
+               + (plan.aufWert && plan.art !== 'aufbereitung'
+                   ? '<div class="kv"><span>Aufbereitung danach</span><b>' + esc(aufbereitungText(plan.aufWert, plan.aufEinheit)) + '</b></div>' : '')
+               + (plan.notiz ? '<div class="kv"><span>Notiz</span><b>' + esc(plan.notiz) + '</b></div>' : '');
+            h += '<div class="acts">'
+               + '<button class="btn-primary" id="tlv-plan-bearb">Bearbeiten</button>'
+               + (plan.unsicher ? '<button class="btn-secondary" id="tlv-plan-ok">Bestätigen</button>' : '')
+               + '<button class="btn-secondary" id="tlv-plan-weg">Löschen</button>'
+               + '</div>';
+        } else {
+            h += '<div class="acts">' + oeffnenKnopf(it) + '</div>';
+        }
         p.innerHTML = h;
+        if (plan) {
+            var pb = document.getElementById('tlv-plan-bearb');
+            if (pb) pb.onclick = function () { planDialog(plan); };
+            var pok = document.getElementById('tlv-plan-ok');
+            if (pok) pok.onclick = function () { planBestaetigen(plan); };
+            var pw = document.getElementById('tlv-plan-weg');
+            if (pw) pw.onclick = function () { planLoeschen(plan); };
+        }
 
         var zu = document.getElementById('tlv-panel-zu');
         if (zu) zu.onclick = function () { S.gewaehlt = null; zeichnePanel(); };
@@ -2784,6 +2924,289 @@
                 window.openMachineDetails(it.maschine); return;
             }
         } catch (e) { console.error('[timeline] Öffnen fehlgeschlagen', e); }
+    }
+
+    // ------------------------------------------------------------------
+    // Planung anlegen/bearbeiten (Knopf „+ Vermietung“)
+    // ------------------------------------------------------------------
+    function planErsetzen(row) {
+        ITEMS = ITEMS.filter(function (i) {
+            return !((i.quelle === 'timeline_planung' || i.quelle === 'timeline_planung_auf')
+                     && String(i.dbId) === String(row.id));
+        });
+        if (row.von) planungAlsItems(row);
+        S.gewaehlt = row.von ? eintrag('tp-' + row.id) : null;
+        zeichne(); zeichnePanel();
+    }
+    async function planBestaetigen(plan) {
+        var client = sb(); if (!client) return;
+        var r = await client.from('timeline_planung').update({ unsicher: false }).eq('id', plan.dbId).select().single();
+        if (r.error) { meldung('Nicht gespeichert: ' + r.error.message, false); return; }
+        planErsetzen(r.data);
+    }
+    async function planLoeschen(plan) {
+        if (!confirm('Diese geplante ' + PLAN_ART[plan.art] + ' löschen?')) return;
+        var client = sb(); if (!client) return;
+        var r = await client.from('timeline_planung').delete().eq('id', plan.dbId);
+        if (r.error) { meldung('Nicht gelöscht: ' + r.error.message, false); return; }
+        planErsetzen({ id: plan.dbId });
+    }
+    function maschinenSuche(q) {
+        var t = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
+        return MASCHINEN.filter(function (m) {
+            var s = (m.voll + ' ' + m.serial + ' ' + m.firma + ' ' + m.kat).toLowerCase();
+            return t.every(function (x) { return s.indexOf(x) >= 0; });
+        }).slice(0, 40);
+    }
+    function planDialog(plan) {
+        var alt = document.getElementById('tlv-plan-dlg'); if (alt) alt.remove();
+        var d = {
+            art: plan ? plan.art : 'miete',
+            maschine: plan ? plan.maschine : null,
+            kundeId: plan ? plan.kundeId : null, kunde: plan ? (plan.kunde || '') : '',
+            von: plan ? plan.von : key(HEUTE), bis: plan ? plan.bis : plusTage(key(HEUTE), 6),
+            unsicher: plan ? plan.unsicher : false,
+            aufWert: plan && plan.aufWert != null ? fmtDe(+plan.aufWert) : '',
+            aufEinheit: plan ? plan.aufEinheit : 'd',
+            notiz: plan ? plan.notiz : ''
+        };
+        var mStart = maschine(d.maschine);
+        var el = document.createElement('div');
+        el.id = 'tlv-plan-dlg';
+        el.innerHTML =
+            '<div class="tlv-plan-box" role="dialog" aria-modal="true" aria-labelledby="tlv-plan-titel">'
+          + '<header class="tlv-plan-kopf"><h3 id="tlv-plan-titel">' + (plan ? 'Planung bearbeiten' : 'Vermietung hinzufügen') + '</h3>'
+          + '<button type="button" class="tlv-plan-x" data-x aria-label="Schließen">&times;</button></header>'
+          + '<div class="tlv-plan-inhalt">'
+          + '<div class="tlv-plan-arten" role="radiogroup" aria-label="Art">'
+          + Object.keys(PLAN_ART).map(function (k) {
+                return '<button type="button" role="radio" data-art="' + k + '"><i></i>' + PLAN_ART[k] + '</button>';
+            }).join('')
+          + '</div>'
+          + '<div class="tlv-plan-feld" data-nur="kunde"><label for="tlv-plan-kunde">Kunde</label>'
+          + '<div class="tlv-plan-such"><input type="search" id="tlv-plan-kunde" class="tlv-plan-input" autocomplete="off" placeholder="Name, Kundennummer oder Ort …" value="' + esc(d.kunde) + '">'
+          + '<ul class="tlv-plan-liste" id="tlv-plan-kunde-menu" hidden></ul></div></div>'
+          + '<div class="tlv-plan-feld"><label for="tlv-plan-maschine">Maschine</label>'
+          + '<div class="tlv-plan-such"><input type="search" id="tlv-plan-maschine" class="tlv-plan-input" autocomplete="off" placeholder="Typ, Seriennummer oder Kunde …" value="'
+          + esc(mStart ? mStart.name + (mStart.nr ? ' ' + mStart.nr : '') : '') + '">'
+          + '<ul class="tlv-plan-liste" id="tlv-plan-maschine-menu" hidden></ul></div></div>'
+          + '<div class="tlv-plan-zeit">'
+          + '<div class="tlv-plan-feld"><label for="tlv-plan-von">Von</label><input type="date" id="tlv-plan-von" class="tlv-plan-input" value="' + d.von + '"></div>'
+          + '<div class="tlv-plan-feld" data-nur="zeitraum"><label for="tlv-plan-bis">Bis</label><input type="date" id="tlv-plan-bis" class="tlv-plan-input" value="' + d.bis + '"></div>'
+          + '<div class="tlv-plan-feld tlv-plan-tage" data-nur="zeitraum"><label for="tlv-plan-tage">Tage</label><input type="number" min="1" id="tlv-plan-tage" class="tlv-plan-input" value="' + (tage(d.von, d.bis) + 1) + '"></div>'
+          + '</div>'
+          + '<label class="tlv-plan-unsicher"><input type="checkbox" id="tlv-plan-unsicher"' + (d.unsicher ? ' checked' : '') + '>'
+          + '<span class="tlv-plan-muster" aria-hidden="true"></span>'
+          + '<span><b>Noch nicht bestätigt</b><small>voraussichtlich — erscheint gestrichelt in der Timeline</small></span></label>'
+          + '<div class="tlv-plan-auf">'
+          + '<label for="tlv-plan-auf" id="tlv-plan-auf-lab">Aufbereitung / Instandsetzung danach</label>'
+          + '<div class="tlv-plan-auf-zeile"><input type="text" inputmode="decimal" id="tlv-plan-auf" class="tlv-plan-input" placeholder="optional, z. B. 4 oder 1,5" value="' + esc(d.aufWert) + '">'
+          + '<div class="tlv-plan-einheit" role="radiogroup" aria-label="Einheit">'
+          + '<button type="button" data-einheit="h">Std.</button><button type="button" data-einheit="d">Tage</button></div>'
+          + '<input type="hidden" id="tlv-plan-einheit" value="' + (d.aufEinheit === 'h' ? 'h' : 'd') + '"></div>'
+          + '<small class="tlv-plan-hilfe">Wird grau direkt hinter den Zeitraum gelegt · 8 Std. = 1 Tag</small></div>'
+          + '<div class="tlv-plan-feld"><label for="tlv-plan-notiz">Notiz</label>'
+          + '<textarea id="tlv-plan-notiz" class="tlv-plan-input" rows="2" placeholder="optional">' + esc(d.notiz) + '</textarea></div>'
+          + '</div>'
+          + '<footer class="tlv-plan-fuss"><button type="button" class="btn-secondary" data-x>Abbrechen</button>'
+          + '<button type="button" class="btn-primary" id="tlv-plan-ok-btn">Speichern</button></footer>'
+          + '</div>';
+        document.body.appendChild(el);
+
+        function $(id) { return document.getElementById(id); }
+        function artSetzen(a) {
+            d.art = a;
+            Array.prototype.forEach.call(el.querySelectorAll('[data-art]'), function (b) {
+                b.classList.toggle('aktiv', b.dataset.art === a);
+            });
+            var auf = a === 'aufbereitung';
+            Array.prototype.forEach.call(el.querySelectorAll('[data-nur]'), function (x) { x.hidden = auf; });
+            $('tlv-plan-auf-lab').textContent = auf ? 'Dauer der Aufbereitung' : 'Aufbereitung / Instandsetzung nach Vermietung';
+        }
+        artSetzen(d.art);
+        function einheitSetzen(e) {
+            $('tlv-plan-einheit').value = e;
+            Array.prototype.forEach.call(el.querySelectorAll('[data-einheit]'), function (b) {
+                b.classList.toggle('aktiv', b.dataset.einheit === e);
+            });
+        }
+        einheitSetzen($('tlv-plan-einheit').value);
+        el.querySelector('.tlv-plan-einheit').onclick = function (e) {
+            var b = e.target.closest('[data-einheit]'); if (b) einheitSetzen(b.dataset.einheit);
+        };
+        el.querySelector('.tlv-plan-arten').onclick = function (e) {
+            var b = e.target.closest('[data-art]'); if (b) artSetzen(b.dataset.art);
+        };
+
+        function menu(inputId, suche, zeile, waehlen) {
+            var inp = $(inputId), ul = $(inputId + '-menu'), liste = [], aktiv = -1;
+            function markieren(n) {
+                aktiv = n;
+                Array.prototype.forEach.call(ul.children, function (li, ix) { li.classList.toggle('aktiv', ix === n); });
+                if (ul.children[n]) ul.children[n].scrollIntoView({ block: 'nearest' });
+            }
+            async function fuellen() {
+                liste = await suche(inp.value);
+                ul.innerHTML = liste.map(function (x, ix) { return '<li data-ix="' + ix + '">' + zeile(x) + '</li>'; }).join('')
+                    || '<li class="leer">nichts gefunden</li>';
+                ul.hidden = false; aktiv = -1;
+            }
+            inp.addEventListener('input', fuellen);
+            inp.addEventListener('focus', fuellen);
+            inp.addEventListener('blur', function () { setTimeout(function () { ul.hidden = true; }, 150); });
+            inp.addEventListener('keydown', function (e) {
+                if (ul.hidden || !liste.length) return;
+                if (e.key === 'ArrowDown') { e.preventDefault(); markieren(Math.min(liste.length - 1, aktiv + 1)); }
+                else if (e.key === 'ArrowUp') { e.preventDefault(); markieren(Math.max(0, aktiv - 1)); }
+                else if (e.key === 'Enter' && aktiv >= 0) { e.preventDefault(); waehlen(liste[aktiv]); ul.hidden = true; }
+            });
+            ul.addEventListener('pointerdown', function (e) {
+                var li = e.target.closest('li[data-ix]'); if (!li) return;
+                e.preventDefault();
+                waehlen(liste[+li.dataset.ix]); ul.hidden = true;
+            });
+        }
+        menu('tlv-plan-kunde', async function (q) {
+            d.kundeId = null; d.kunde = q;
+            return window.customerCacheSearch ? await window.customerCacheSearch(q, 12) : [];
+        }, function (k) {
+            return '<b>' + esc(k.name || k.matchcode || '') + '</b><small>'
+                 + esc([k.customer_number, k.city].filter(Boolean).join(' · ')) + '</small>';
+        }, function (k) {
+            d.kundeId = k.id; d.kunde = k.name || k.matchcode || '';
+            $('tlv-plan-kunde').value = d.kunde;
+        });
+        menu('tlv-plan-maschine', function (q) { d.maschine = null; return maschinenSuche(q); }, function (m) {
+            return '<b>' + esc(m.name) + '</b><small>' + esc([m.nr, m.firma].filter(Boolean).join(' · ')) + '</small>';
+        }, function (m) {
+            d.maschine = m.id;
+            $('tlv-plan-maschine').value = m.name + (m.nr ? ' ' + m.nr : '');
+        });
+
+        // von / bis / Dauer halten sich gegenseitig aktuell.
+        $('tlv-plan-von').onchange = function () {
+            if (!this.value) return;
+            $('tlv-plan-bis').value = plusTage(this.value, Math.max(1, +$('tlv-plan-tage').value || 1) - 1);
+        };
+        $('tlv-plan-bis').onchange = function () {
+            var v = $('tlv-plan-von').value;
+            if (!v || !this.value) return;
+            if (this.value < v) this.value = v;
+            $('tlv-plan-tage').value = tage(v, this.value) + 1;
+        };
+        $('tlv-plan-tage').oninput = function () {
+            var v = $('tlv-plan-von').value, n = Math.max(1, Math.round(+this.value || 1));
+            if (v) $('tlv-plan-bis').value = plusTage(v, n - 1);
+        };
+
+        function zu() { el.remove(); document.removeEventListener('keydown', esc_); }
+        function esc_(e) { if (e.key === 'Escape') zu(); }
+        document.addEventListener('keydown', esc_);
+        Array.prototype.forEach.call(el.querySelectorAll('[data-x]'), function (b) { b.onclick = zu; });
+        el.addEventListener('mousedown', function (e) { if (e.target === el) zu(); });
+
+        $('tlv-plan-ok-btn').onclick = async function () {
+            var client = sb();
+            if (!client) { meldung('Keine Verbindung zur Datenbank.', false); return; }
+            if (!d.maschine) { meldung('Bitte eine Maschine aus der Liste wählen.', false); $('tlv-plan-maschine').focus(); return; }
+            var von = $('tlv-plan-von').value;
+            if (!von) { meldung('Bitte ein Startdatum eintragen.', false); return; }
+            var aufRoh = $('tlv-plan-auf').value.trim(), einheit = $('tlv-plan-einheit').value;
+            var aufZahl = aufRoh ? parseDe(aufRoh) : null;
+            if (aufRoh && !(isFinite(aufZahl) && aufZahl > 0)) { meldung('Aufbereitung: bitte eine Zahl eintragen.', false); return; }
+            var bis = $('tlv-plan-bis').value || von;
+            if (d.art === 'aufbereitung') {
+                if (!aufZahl) { meldung('Bitte die Dauer der Aufbereitung eintragen.', false); $('tlv-plan-auf').focus(); return; }
+                bis = plusTage(von, aufbereitungTage(aufZahl, einheit) - 1);
+            }
+            if (bis < von) bis = von;
+            var zeile = {
+                art: d.art, machine_id: isNaN(+d.maschine) ? d.maschine : +d.maschine,
+                customer_id: d.art === 'aufbereitung' ? null : (d.kundeId || null),
+                kunde_name: d.art === 'aufbereitung' ? null : (d.kunde || null),
+                von: von, bis: bis,
+                unsicher: $('tlv-plan-unsicher').checked,
+                aufbereitung_wert: aufZahl, aufbereitung_einheit: einheit,
+                notiz: $('tlv-plan-notiz').value.trim() || null
+            };
+            if (!plan) zeile.created_by = window.activeUser ? window.activeUser.id : null;
+            this.disabled = true;
+            var r = plan
+                ? await client.from('timeline_planung').update(zeile).eq('id', plan.dbId).select().single()
+                : await client.from('timeline_planung').insert(zeile).select().single();
+            this.disabled = false;
+            if (r.error) {
+                var fehlt = /timeline_planung/.test(r.error.message || '') && /exist|find|schema/i.test(r.error.message || '');
+                meldung(fehlt ? 'Tabelle fehlt — bitte supabase/supabase_add_timeline_planung.sql in Supabase ausführen.'
+                              : 'Nicht gespeichert: ' + r.error.message, false);
+                return;
+            }
+            PLANUNG_DA = true;
+            zu();
+            planErsetzen(r.data);
+        };
+        setTimeout(function () { $(plan ? 'tlv-plan-von' : 'tlv-plan-kunde').focus(); }, 30);
+    }
+
+    // ------------------------------------------------------------------
+    // Kalender-Export (.ics) — Outlook öffnet die Datei per Doppelklick.
+    // Exportiert wird, was gerade sichtbar ist (Filter, Person, Suche),
+    // als ganztägige Termine. Feste UID je Eintrag: ein zweiter Import
+    // aktualisiert statt zu verdoppeln. Später ggf. Abgleich über Graph.
+    // ------------------------------------------------------------------
+    function icsText(s) {
+        return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/;/g, '\\;')
+            .replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+    }
+    function icsFalten(z) {
+        var aus = [];
+        while (z.length > 74) { aus.push(z.slice(0, 74)); z = ' ' + z.slice(74); }
+        aus.push(z);
+        return aus.join('\r\n');
+    }
+    function icsExport() {
+        var list = sichtbar().filter(function (i) {
+            return !i.ohneDatum && (trifft(i) !== false);
+        });
+        if (!list.length) { meldung('Nichts zu exportieren — die Ansicht ist leer.', false); return; }
+        var jetzt = new Date().toISOString().replace(/[-:]/g, '').replace(/\.\d+/, '');
+        var z = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//meetra//Timeline//DE',
+                 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:meetra Timeline'];
+        list.forEach(function (i) {
+            var m = maschine(i.maschine);
+            var art = i.art ? PLAN_ART[i.art] : SORTEN[i.sorte].label;
+            var titel = (i.unsicher ? '(?) ' : '') + art + ': ' + i.titel + (m ? ' — ' + m.name : '');
+            var info = [
+                i.unsicher ? 'Noch nicht bestätigt' : '',
+                m ? 'Maschine: ' + [m.name, m.nr].filter(Boolean).join(' ') : '',
+                i.kunde ? 'Kunde: ' + i.kunde : '',
+                i.einsatzort ? 'Einsatzort: ' + i.einsatzort : '',
+                i.aufWert && i.art !== 'aufbereitung' && !i.aufVon
+                    ? 'Aufbereitung danach: ' + aufbereitungText(i.aufWert, i.aufEinheit) : '',
+                i.preis ? 'Tagessatz: ' + i.preis + ' €' : '',
+                i.notiz || ''
+            ].filter(Boolean).join('\n');
+            z.push('BEGIN:VEVENT',
+                'UID:' + i.id + '@meetra-timeline',
+                'DTSTAMP:' + jetzt,
+                'DTSTART;VALUE=DATE:' + i.von.replace(/-/g, ''),
+                'DTEND;VALUE=DATE:' + plusTage(i.bis, 1).replace(/-/g, ''),
+                'SUMMARY:' + icsText(titel),
+                'STATUS:' + (i.unsicher ? 'TENTATIVE' : 'CONFIRMED'),
+                'TRANSP:TRANSPARENT',
+                'CATEGORIES:' + icsText(art));
+            if (info) z.push('DESCRIPTION:' + icsText(info));
+            if (i.einsatzort) z.push('LOCATION:' + icsText(i.einsatzort));
+            z.push('END:VEVENT');
+        });
+        z.push('END:VCALENDAR');
+        var blob = new Blob([z.map(icsFalten).join('\r\n') + '\r\n'], { type: 'text/calendar;charset=utf-8' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'meetra-timeline-' + key(HEUTE) + '.ics';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
+        meldung(list.length + ' Einträge exportiert — Datei in Outlook öffnen.', false);
     }
 
     // ------------------------------------------------------------------
@@ -2990,6 +3413,8 @@
         an('tlv-prev', 'click', function () { schiebe(-1); });
         an('tlv-next', 'click', function () { schiebe(1); });
         an('tlv-frei-btn', 'click', function () { zeichneFrei(); });
+        an('tlv-plan-neu', 'click', function () { planDialog(null); });
+        an('tlv-ics', 'click', function () { icsExport(); });
         an('tlv-weiter', 'click', function () { weiterRechts(); });
         an('tlv-enger', 'click', function () { engerMachen(); });
         an('tlv-heute', 'click', function () { zumHeute(); });
@@ -3082,6 +3507,14 @@
     // ------------------------------------------------------------------
     // Start — beim ersten Anzeigen der Ansicht laden
     // ------------------------------------------------------------------
+    /* Handy-Leiste „Vermietung“ (js/ki-chat.js): Timeline mit Vermietflotte. */
+    window.timelineVermietung = function () {
+        setzePreset('vermiet');
+        if (location.hash.slice(1) !== 'timeline') location.hash = 'timeline';
+        else { baueBedienung(); zeichne(); }
+    };
+    window.timelinePresetAktiv = function () { return S.preset; };
+
     function ansichtGeoeffnet() {
         baueBedienung();
         if (S.laedt) return;

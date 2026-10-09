@@ -1373,3 +1373,213 @@ body.tlv-vollbild #tlv-vollbild { background: rgba(56, 189, 248, .18); border-co
     #timeline { --tlv-label-w: 118px; }
     .tlv-label .n .maschine { font-size: var(--fs-xs); }
 }
+
+/* ---------------- Planung: „+ Vermietung“ ----------------
+   Unbestätigt = gestrichelter Rand + Schraffur („könnte sein“),
+   Aufbereitung = grau, schraffiert. Dialog: js/timeline-view.js planDialog(). */
+:root { --tlv-aufbereitung: #9ca3af; }
+#tlv-plan-dlg { --tlv-miete: var(--success, #22c55e); }
+#tlv-plan-neu[hidden] { display: none; }
+.tlv-tool-plus { font-weight: var(--fw-semibold); }
+.tlv-bar.unsicher {
+    border-style: dashed;
+    border-width: 2px;
+    border-left-style: dashed;
+    background:
+        repeating-linear-gradient(135deg,
+            color-mix(in srgb, var(--c) 22%, transparent) 0 6px,
+            transparent 6px 12px),
+        rgba(11, 18, 32, .75);
+}
+.tlv-bar.aufbereitung {
+    background:
+        repeating-linear-gradient(135deg,
+            rgba(156, 163, 175, .22) 0 6px,
+            rgba(156, 163, 175, .1) 6px 12px),
+        rgba(30, 35, 45, .9);
+    color: var(--text-2);
+}
+.tlv-bar.aufbereitung.unsicher { border-color: var(--c); }
+
+#tlv-plan-dlg {
+    position: fixed; inset: 0; z-index: 10010;   /* über Handy-Leiste #kic-nav (9002) */
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(2, 6, 15, .62);
+    backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+    padding: var(--space-4);
+    color-scheme: dark;
+}
+.tlv-plan-box {
+    width: min(500px, 100%); max-height: calc(100dvh - 32px);
+    display: flex; flex-direction: column;
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, .55);
+    overflow: hidden;
+}
+.tlv-plan-kopf {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: var(--space-4) var(--space-5) var(--space-2);
+}
+.tlv-plan-kopf h3 { margin: 0; font-family: var(--font-heading); font-size: var(--fs-lg); color: var(--text-1); }
+.tlv-plan-x {
+    width: 32px; height: 32px; border-radius: 50%; border: 0; cursor: pointer;
+    background: rgba(255, 255, 255, .06); color: var(--text-2); font-size: 20px; line-height: 1;
+}
+.tlv-plan-x:hover { background: rgba(255, 255, 255, .12); color: var(--text-1); }
+.tlv-plan-inhalt {
+    flex: 1; overflow: auto; padding: var(--space-2) var(--space-5) var(--space-4);
+    display: flex; flex-direction: column; gap: var(--space-4);
+}
+
+/* Art: Segment-Schalter */
+.tlv-plan-arten {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px;
+    background: rgba(255, 255, 255, .04); border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, .06);
+}
+.tlv-plan-arten button {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    height: 36px; border: 0; border-radius: 7px;
+    background: transparent; color: var(--text-2); font: inherit; font-size: var(--fs-sm);
+    font-weight: var(--fw-medium, 500); cursor: pointer; transition: background .15s, color .15s;
+}
+.tlv-plan-arten button i { width: 10px; height: 10px; border-radius: 3px; background: var(--tlv-miete); opacity: .5; box-sizing: border-box; }
+.tlv-plan-arten button[data-art="vorfuehrung"] i { background: transparent; border: 2px dashed var(--tlv-miete); }
+.tlv-plan-arten button[data-art="aufbereitung"] i { background: var(--tlv-aufbereitung); }
+.tlv-plan-arten button:hover { color: var(--text-1); }
+.tlv-plan-arten button.aktiv { background: rgba(255, 255, 255, .1); color: var(--text-1); box-shadow: 0 1px 3px rgba(0, 0, 0, .3); }
+.tlv-plan-arten button.aktiv i { opacity: 1; }
+
+/* Felder */
+.tlv-plan-feld { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.tlv-plan-feld > label, .tlv-plan-auf > label {
+    font-size: var(--fs-xs, 12px); font-weight: var(--fw-semibold); color: var(--text-3);
+    letter-spacing: .02em;
+}
+.tlv-plan-input {
+    width: 100%; box-sizing: border-box; height: 40px; padding: 0 12px;
+    border-radius: var(--radius-sm, 8px); border: 1px solid rgba(255, 255, 255, .12);
+    background: rgba(255, 255, 255, .04); color: var(--text-1); font: inherit; font-size: var(--fs-sm);
+    transition: border-color .15s, background .15s;
+}
+textarea.tlv-plan-input { height: auto; min-height: 64px; padding: 10px 12px; resize: vertical; }
+.tlv-plan-input::placeholder { color: var(--text-3); }
+.tlv-plan-input:focus { outline: none; border-color: var(--info, #38bdf8); background: rgba(56, 189, 248, .06); }
+.tlv-plan-box [hidden] { display: none !important; }
+
+/* Suchliste: undurchsichtig, schwebt ueber den folgenden Feldern */
+.tlv-plan-such { position: relative; }
+.tlv-plan-liste {
+    position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 10;
+    margin: 0; padding: 4px; list-style: none;
+    max-height: 264px; overflow: auto;
+    background: #1e293b; border: 1px solid rgba(255, 255, 255, .14);
+    border-radius: var(--radius-sm, 8px); box-shadow: 0 12px 32px rgba(0, 0, 0, .5);
+}
+.tlv-plan-liste li {
+    display: flex; flex-direction: column; gap: 1px;
+    padding: 8px 10px; border-radius: 6px; cursor: pointer;
+}
+.tlv-plan-liste li b { font-weight: var(--fw-medium, 500); color: var(--text-1); font-size: var(--fs-sm);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tlv-plan-liste li small { color: var(--text-3); font-size: var(--fs-xs, 12px); }
+.tlv-plan-liste li small:empty { display: none; }
+.tlv-plan-liste li:hover, .tlv-plan-liste li.aktiv { background: rgba(56, 189, 248, .14); }
+.tlv-plan-liste li.leer { color: var(--text-3); cursor: default; }
+.tlv-plan-liste li.leer:hover { background: none; }
+
+/* Zeitraum */
+.tlv-plan-zeit { display: grid; grid-template-columns: 1fr 1fr 80px; gap: var(--space-2); }
+.tlv-plan-tage .tlv-plan-input { text-align: center; }
+
+/* Unbestaetigt: Karte mit Muster-Vorschau */
+.tlv-plan-unsicher {
+    display: flex; align-items: center; gap: 12px; cursor: pointer;
+    padding: 10px 12px; border-radius: var(--radius-sm, 8px);
+    border: 1px solid rgba(255, 255, 255, .1); background: rgba(255, 255, 255, .03);
+}
+.tlv-plan-unsicher:has(input:checked) {
+    border-color: color-mix(in srgb, var(--tlv-miete) 60%, transparent);
+    background: color-mix(in srgb, var(--tlv-miete) 8%, transparent);
+}
+.tlv-plan-unsicher input { width: 18px; height: 18px; accent-color: var(--tlv-miete); flex: none; margin: 0; }
+.tlv-plan-muster {
+    flex: none; width: 42px; height: 18px; border-radius: 4px; box-sizing: border-box;
+    border: 2px dashed var(--tlv-miete);
+    background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--tlv-miete) 30%, transparent) 0 4px, transparent 4px 8px);
+}
+.tlv-plan-unsicher span:last-child { display: flex; flex-direction: column; }
+.tlv-plan-unsicher b { font-weight: var(--fw-medium, 500); color: var(--text-1); font-size: var(--fs-sm); }
+.tlv-plan-unsicher small { color: var(--text-3); font-size: var(--fs-xs, 12px); }
+
+/* Aufbereitung */
+.tlv-plan-auf {
+    display: flex; flex-direction: column; gap: 6px;
+    padding: 12px; border-radius: var(--radius-sm, 8px);
+    background: repeating-linear-gradient(135deg, rgba(156, 163, 175, .06) 0 6px, transparent 6px 12px);
+    border: 1px solid rgba(156, 163, 175, .22);
+}
+.tlv-plan-auf-zeile { display: flex; gap: var(--space-2); }
+.tlv-plan-auf-zeile .tlv-plan-input { flex: 1; min-width: 0; }
+.tlv-plan-einheit {
+    display: flex; flex: none; padding: 3px; gap: 2px; border-radius: var(--radius-sm, 8px);
+    background: rgba(255, 255, 255, .05); border: 1px solid rgba(255, 255, 255, .1);
+}
+.tlv-plan-einheit button {
+    border: 0; padding: 0 12px; border-radius: 6px; cursor: pointer;
+    background: transparent; color: var(--text-2); font: inherit; font-size: var(--fs-sm);
+}
+.tlv-plan-einheit button.aktiv { background: var(--tlv-aufbereitung); color: #0f172a; font-weight: var(--fw-semibold); }
+.tlv-plan-hilfe { color: var(--text-3); font-size: var(--fs-xs, 12px); }
+
+.tlv-plan-fuss {
+    display: flex; justify-content: flex-end; gap: var(--space-2);
+    padding: var(--space-3) var(--space-5);
+    border-top: 1px solid rgba(255, 255, 255, .08); background: rgba(255, 255, 255, .02);
+}
+
+@media (max-width: 768px) {
+    #tlv-plan-dlg { padding: 0; align-items: flex-end; }
+    .tlv-plan-box { width: 100%; max-height: 94dvh; border-radius: 16px 16px 0 0; }
+    .tlv-plan-kopf { padding: var(--space-3) var(--space-4) var(--space-1); }
+    .tlv-plan-inhalt { padding: var(--space-2) var(--space-4) var(--space-3); gap: var(--space-3); }
+    .tlv-plan-input { height: 44px; font-size: 16px; }
+    .tlv-plan-zeit { grid-template-columns: 1fr 1fr; }
+    .tlv-plan-zeit .tlv-plan-tage { grid-column: 1 / -1; }
+    .tlv-plan-arten button { height: 40px; font-size: 14px; }
+    .tlv-plan-fuss { padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom)); }
+    .tlv-plan-fuss button { flex: 1; min-height: 44px; }
+}
+
+/* Touch: erst halten (ca. 0,45 s), dann ziehen. Normales Wischen scrollt. */
+.tlv-bar.halten { outline: 2px solid var(--info, #38bdf8); outline-offset: 1px; }
+.tlv-track.halten { background: rgba(56, 189, 248, .08); }
+@media (pointer: coarse) {
+    .tlv-bar, .tlv-bar .grip { touch-action: pan-x pan-y; }
+    .tlv-bar .grip { width: 16px; }
+}
+
+/* ---------------- Handy-Kopfleiste (2026-10-09) ----------------
+   Vorher 4 Reihen Knöpfe (268px) über einer gequetschten Bühne. Jetzt:
+   Titel+Blättern | Suche+Voreinstellung | Werkzeuge in einer Reihe. */
+.tlv-kurz { display: none; }
+@media (max-width: 768px) {
+    .tlv-lang { display: none; }
+    .tlv-kurz { display: inline; }
+    .tlv-topbar { gap: 6px; padding-bottom: var(--space-2); }
+    .tlv-topbar-left { flex-wrap: nowrap; gap: 6px; }
+    .tlv-titel { font-size: var(--fs-md, 16px); }
+    .tlv-hinweisleiste { display: none; }
+    .tlv-range { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tlv-topbar-right { gap: 6px; }
+    .tlv-suchfeld { flex: 1 1 150px; }
+    .tlv-topbar-right > .tlv-select { flex: 0 0 auto; width: 104px; }
+    .tlv-input, .tlv-tool, .tlv-icon-btn { height: 36px; }
+    .tlv-tool { padding: 0 10px; }
+    .tlv-icon-btn { width: 36px; }
+    #tlv-vollbild { display: none; }
+    .tlv-bar { font-size: 13px; }
+    #tlv-panel { z-index: 10005; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+}

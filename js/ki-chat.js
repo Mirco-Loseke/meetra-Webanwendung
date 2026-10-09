@@ -33,6 +33,7 @@
         tasks: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
         processes: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/>',
         addressbook: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+        vermietung: '<rect x="1" y="6" width="14" height="10" rx="1"/><path d="M15 9h4l3 3v4h-7z"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>',
         mehr: '<line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>',
         ki: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/>',
         kamera: '<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>',
@@ -53,9 +54,11 @@
         home: 'Start', tasks: 'Aufgaben', processes: 'Vorgänge', addressbook: 'Adressen', machines: 'Maschinen',
         service: 'Berichte', calendar: 'Wartung', timeline: 'Timeline', mail: 'Mail', routenplanung: 'Route',
         listen: 'Listen', accounting: 'Buchhalt.', documents: 'Dokumente', protocols: 'Protokolle',
-        settings: 'Einstell.', mehr: 'Menü'
+        settings: 'Einstell.', vermietung: 'Vermietung', mehr: 'Menü'
     };
-    function sidebarLink(t) { return document.querySelector(`.sidebar-nav li a[data-target="${t}"]`); }
+    // „vermietung“ ist keine eigene Ansicht: Timeline mit Voreinstellung Vermietflotte.
+    const ALIAS = { vermietung: 'timeline' };
+    function sidebarLink(t) { return document.querySelector(`.sidebar-nav li a[data-target="${ALIAS[t] || t}"]`); }
     function navSymbol(t, groesse) {
         if (SVG[t]) return ico(t, groesse);
         const svg = sidebarLink(t)?.querySelector('svg');
@@ -74,6 +77,7 @@
         const seen = new Set();
         const liste = [...document.querySelectorAll('.sidebar-nav li a[data-target]')].map(a => a.getAttribute('data-target'))
             .filter(t => t && !seen.has(t) && seen.add(t));
+        if (seen.has('timeline')) liste.push('vermietung');
         liste.push('mehr');
         return liste.map(t => ({ t, l: navLabel(t), svg: navSymbol(t, 20) }));
     };
@@ -149,6 +153,10 @@
             if (t === 'ki') return umschalten();
             schliessen();
             if (t === 'mehr') { if (window.toggleMobileSidebar) window.toggleMobileSidebar(); return; }
+            if (t === 'vermietung' && window.timelineVermietung) {
+                if (window.closeMobileSidebar) window.closeMobileSidebar();
+                window.timelineVermietung(); navAktiv(); return;
+            }
             if (window.closeMobileSidebar) window.closeMobileSidebar();
             // wie ein Klick auf den Sidebar-Link (href="#…"): Hash setzen, damit die
             // Ansichten ihre Lade-Logik am hashchange genauso durchlaufen
@@ -228,7 +236,7 @@
         if (!an) schliessen();
         navZeichnen();
         document.querySelectorAll('#kic-nav [data-nav]').forEach(b => {
-            const link = document.querySelector(`.sidebar-nav li a[data-target="${b.dataset.nav}"]`);
+            const link = sidebarLink(b.dataset.nav);
             b.hidden = !!(link && link.parentElement.style.display === 'none');
         });
         navAktiv();
@@ -237,7 +245,10 @@
         const auf = !document.getElementById('kic-panel')?.hidden;
         const v = window.currentActiveView || (location.hash || '#home').slice(1);
         document.querySelectorAll('#kic-nav [data-nav]').forEach(b => {
-            b.classList.toggle('aktiv', auf ? b.dataset.nav === 'ki' : b.dataset.nav === v);
+            const vm = v === 'timeline' && window.timelinePresetAktiv && window.timelinePresetAktiv() === 'vermiet'
+                && document.querySelector('#kic-nav [data-nav="vermietung"]');
+            b.classList.toggle('aktiv', auf ? b.dataset.nav === 'ki'
+                : (vm ? b.dataset.nav === 'vermietung' : b.dataset.nav === v));
         });
     }
 

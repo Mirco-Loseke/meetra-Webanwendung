@@ -128,7 +128,7 @@
                         <tr>
                             <td><strong>Google Gemini</strong><br><span class="ds-klein">Sprachaufnahmen (Foto-Eingang)</span></td>
                             <td>Abschrift eingesprochener Notizen aus der Handy-App „meetra Fotos" in Text</td>
-                            <td>die <strong>Tonaufnahme selbst — nicht pseudonymisiert</strong>; ausgesprochene Namen, Kunden, Orte und Nummern gehen mit. Aufnahme und Text liegen danach in R2 bzw. Supabase (<code>foto_eingang</code>)</td>
+                            <td>die <strong>Tonaufnahme selbst — nicht pseudonymisiert</strong>; ausgesprochene Namen, Kunden, Orte und Nummern gehen mit. Die Aufnahme liegt bis zum Zuordnen in R2 und wird dabei gelöscht; nur der Text bleibt in der Datenbank</td>
                             <td>Automatisch nach dem Hochladen über die Edge Function <code>foto-eingang</code>; der Schlüssel liegt serverseitig. Verarbeitung außerhalb der EU möglich. Hinweis an die Mitarbeiter: nur Sachliches zur Maschine einsprechen</td>
                         </tr>
                         <tr>
