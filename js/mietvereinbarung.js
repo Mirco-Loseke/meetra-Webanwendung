@@ -2275,8 +2275,46 @@
                 <tbody data-splitbox>${zeilen}</tbody>
             </table>
             <button type="button" data-nurerste onclick="window.mietSchadenZeile()" style="margin-top:6px; background:#f3f4f6; border:1px solid #9ca3af; border-radius:6px; padding:3px 10px; font-size:11.5px; font-weight:700; cursor:pointer;">+ Zeile</button>
+            ${maschine ? `<button type="button" data-nurerste onclick="window.mietVorschaedenLaden()" title="Schäden aus der letzten Mietvereinbarung dieser Maschine übernehmen" style="margin-top:6px; margin-left:6px; background:#ecfdf5; border:1px solid #10b981; color:#065f46; border-radius:6px; padding:3px 10px; font-size:11.5px; font-weight:700; cursor:pointer;">⟲ Vorschäden laden</button>` : ""}
         </div>`;
     }
+
+    /* Vorschäden der Maschine aus ihren früheren Mietvereinbarungen holen
+       (jüngste zuerst, alle mit Einträgen). Bereits vorhandene Zeilen bleiben,
+       Doppelte (gleiche Nr./Position/Beschreibung) kommen nicht noch einmal. */
+    window.mietVorschaedenLaden = async function () {
+        if (!maschine || !window.supabaseClient) return;
+        let q = window.supabaseClient.from('rental_agreements').select('id, created_at, data')
+            .eq('machine_id', maschine.id).order('created_at', { ascending: false }).limit(30);
+        if (gespeicherteId) q = q.neq('id', gespeicherteId);
+        const { data, error } = await q;
+        if (error) { window.showToast('Vorschäden konnten nicht geladen werden: ' + error.message); return; }
+        const leer = z => !String(z.nr || '').trim() && !String(z.position || '').trim() && !String(z.beschreibung || '').trim();
+        const schl = z => [z.nr, z.position, z.beschreibung].map(x => String(x || '').trim().toLowerCase()).join('|');
+        const vorhanden = new Set((daten.schaeden || []).filter(z => !leer(z)).map(schl));
+        const neu = [];
+        let quelle = null;
+        (data || []).forEach(v => {
+            ((v.data && v.data.schaeden) || []).forEach(z => {
+                if (leer(z) || vorhanden.has(schl(z))) return;
+                vorhanden.add(schl(z));
+                neu.push({ nr: z.nr || '', position: z.position || '', beschreibung: z.beschreibung || '' });
+                if (!quelle) quelle = v;
+            });
+        });
+        if (!neu.length) {
+            window.showToast((data || []).length ? 'Keine weiteren Vorschäden in früheren Mietvereinbarungen dieser Maschine.'
+                                                 : 'Für diese Maschine gibt es noch keine frühere Mietvereinbarung.');
+            return;
+        }
+        daten.schaeden = (daten.schaeden || []).filter(z => !leer(z)).concat(neu);
+        // Laufende Nummer ergänzen, wo keine steht
+        daten.schaeden.forEach((z, i) => { if (!String(z.nr || '').trim()) z.nr = String(i + 1); });
+        zeichneInhalt();
+        const wann = quelle && quelle.created_at ? new Date(quelle.created_at).toLocaleDateString('de-DE') : '';
+        window.showToast(neu.length + (neu.length === 1 ? ' Vorschaden' : ' Vorschäden') + ' übernommen'
+            + (wann ? ' (zuletzt aus der Vereinbarung vom ' + wann + ')' : '') + ' — bitte prüfen.');
+    };
 
     // ---------- 5. Fotos ----------
     // Beide Saetze stehen immer auf dem Bogen — auf dem Ausdruck sollen
