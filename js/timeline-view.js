@@ -1152,6 +1152,9 @@
         aufbereitungNachziehen();
         var neuBtn = document.getElementById('tlv-plan-neu');
         if (neuBtn) neuBtn.hidden = !(S.achse === 'maschine' && S.sorten.has('miete'));
+        // „Wer ist frei?“ gehört zu Service und Aufgaben, nicht zur Vermietflotte.
+        var freiBtn = document.getElementById('tlv-frei-btn');
+        if (freiBtn) freiBtn.hidden = S.preset === 'vermiet' || !(S.sorten.has('service') || S.sorten.has('aufgabe'));
 
         if (!S.geladen) { buehne.innerHTML = '<div class="tlv-laedt">Daten werden geladen …</div>'; return; }
 

@@ -1583,3 +1583,15 @@ textarea.tlv-plan-input { height: auto; min-height: 64px; padding: 10px 12px; re
     .tlv-bar { font-size: 13px; }
     #tlv-panel { z-index: 10005; padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
 }
+
+/* Rückgängig-Meldung nie unter To-do-/KI-Knopf (#todo-fab, #kic-fab: 58px, 22px vom Rand)
+   bzw. auf dem Handy über der Schnellzugriff-Leiste und dem To-do-Knopf. */
+#tlv-toast { bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); }
+#tlv-toast.knapp { right: calc(env(safe-area-inset-right, 0px) + 22px); bottom: calc(env(safe-area-inset-bottom, 0px) + 96px); }
+#tlv-frei-btn[hidden] { display: none; }
+@media (max-width: 768px) {
+    #tlv-toast, #tlv-toast.knapp {
+        bottom: calc(env(safe-area-inset-bottom, 0px) + var(--kic-nav-h, 62px) + 64px);
+        max-width: calc(100vw - 24px);
+    }
+}
