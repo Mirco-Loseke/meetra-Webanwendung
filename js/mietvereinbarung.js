@@ -118,7 +118,10 @@
        Rückfrage — vorher legte schon das bloße Öffnen einen „ungespeicherten
        Stand“ an, und jedes weitere Öffnen fragte danach. */
     let basisStand = null;
-    const standJetzt = () => JSON.stringify({ p: phase, d: daten });
+    // Lange Texte (Fotos/Unterschriften als Daten-URL, mehrere MB) nur über
+    // Länge + Ende vergleichen — sonst kostete jede Eingabe spürbar Zeit.
+    const standJetzt = () => JSON.stringify({ p: phase, d: daten },
+        (k, v) => (typeof v === 'string' && v.length > 300) ? v.length + ':' + v.slice(-64) : v);
     const geaendert = () => !!(daten && basisStand !== null && standJetzt() !== basisStand);
     if (window.registerUnsavedCheck) window.registerUnsavedCheck(() => {
         const ov = document.getElementById('miet-overlay');
@@ -440,9 +443,9 @@
                         <button type="button" onclick="window.mietZoom(1)" title="Größer">+</button>
                     </span>
                     <span class="miet-note" id="miet-status"></span>
-                    <span id="miet-seitenzahl" style="font-size:0.78rem; color:rgba(255,255,255,0.45);"></span>
-                    <button class="btn-secondary" onclick="window.closeMietvereinbarung()">Schließen</button>
-                    <button class="btn-secondary" onclick="window.mietDrucken()">Drucken / PDF</button>
+                    <span id="miet-seitenzahl" class="miet-seitenzahl"></span>
+                    <button class="btn-secondary miet-foot-zu" onclick="window.closeMietvereinbarung()">Schließen</button>
+                    <button class="btn-secondary miet-foot-druck" onclick="window.mietDrucken()"><span class="miet-lang">Drucken / PDF</span><span class="miet-kurz">PDF</span></button>
                     <button class="btn-primary" id="miet-save-btn" onclick="window.mietSpeichern()">Speichern</button>
                 </div>
             </div>
@@ -634,7 +637,11 @@
     let bilderRunden = 0;
 
     function bilderAbwarten(container) {
+        // Foto-Kacheln haben eine feste Höhe (.miet-photo-box) — ihr Nachladen
+        // ändert den Umbruch nicht. Vorher baute JEDES nachladende Foto den
+        // ganzen Bogen bis zu viermal neu auf: das machte das Öffnen zäh.
         const offen = Array.from(container.querySelectorAll('img'))
+            .filter(i => !i.closest('.miet-photo-box'))
             .filter(i => !i.complete || !i.naturalWidth);
         if (!offen.length) { bilderRunden = 0; return; }
         if (bilderRunden > 3) return;   // Notbremse gegen Endlosschleifen
@@ -711,12 +718,27 @@
 
         const beweglich = () => Array.from(box.children).filter(n => n.hasAttribute('data-split'));
 
+        /* Wie viele Zeilen vom Ende müssen weg, damit die Seite passt?
+           Früher Zeile für Zeile verschoben und jedes Mal gemessen — über
+           1.000 Messungen (jede ein Layout), erstes Öffnen ~6 s. Jetzt per
+           Halbierung: ~log2(Zeilen) Messungen, gleiches Ergebnis. */
+        const alle = beweglich();
+        const L = alle.length;
+        const anker = L ? alle[L - 1].nextSibling : null;
+        const setze = (m) => {
+            while (restBox.firstChild) box.insertBefore(restBox.firstChild, anker);
+            for (let i = L - m; i < L; i++) restBox.appendChild(alle[i]);
+        };
         let bewegt = 0;
-        while (laeuftUeber(seite)) {
-            const k = beweglich();
-            if (k.length <= 1) break;
-            restBox.insertBefore(k[k.length - 1], restBox.firstChild);
-            bewegt++;
+        if (L > 1 && laeuftUeber(seite)) {
+            let lo = 1, hi = L - 1;   // mindestens eine Zeile bleibt stehen
+            while (lo < hi) {
+                const mitte = (lo + hi) >> 1;
+                setze(mitte);
+                if (laeuftUeber(seite)) lo = mitte + 1; else hi = mitte;
+            }
+            setze(lo);
+            bewegt = lo;
         }
         // Eine Gruppenueberschrift darf nicht allein am Seitenende stehen.
         const k = beweglich();
@@ -729,7 +751,7 @@
         // Auftrennen nicht — dann lieber den ganzen Block umbrechen.
         // Alles zurueckschieben und aufgeben.
         if (!bewegt || beweglich().length < (mindestRest || 1)) {
-            while (restBox.firstChild) box.appendChild(restBox.firstChild);
+            while (restBox.firstChild) box.insertBefore(restBox.firstChild, anker);
             return null;
         }
         return rest;
@@ -1462,7 +1484,12 @@
             // <head> mit den Stilen bleibt.
             const optionen = {
                 scale: skala, backgroundColor: '#ffffff', useCORS: true, logging: false,
-                ignoreElements: el => !(el.contains(pages) || pages.contains(el) || document.head.contains(el))
+                // Stylesheets IMMER behalten: mietvereinbarung.css (und weitere)
+                // werden im <body> eingebunden. Fielen sie weg, wurde der Bogen
+                // ohne seine Stile im dunklen App-Design aufgenommen — blasse
+                // Schrift auf Weiss, dunkle Datumsfelder, kein Briefbogen.
+                ignoreElements: el => !(el.contains(pages) || pages.contains(el) || document.head.contains(el)
+                    || el.tagName === 'LINK' || el.tagName === 'STYLE')
             };
 
             // EIN Aufruf für den GANZEN Bogen statt einer je Seite.
@@ -1962,6 +1989,15 @@
                      onblur="window.mietSeitenPruefen()">${esc(wert)}</div>`;
     }
 
+    // Feld mit fester Mindesthöhe von n Zeilen (z. B. Sonstiges: 3). Enter macht
+    // eine neue Zeile; innerText statt textContent, sonst gingen die Umbrüche verloren.
+    function txtZeilen(pfad, wert, n) {
+        return `<div class="miet-in miet-txt miet-zeilen" contenteditable="true" spellcheck="false"
+                     style="--miet-zeilen:${n}" data-feld="${esc(pfad)}"
+                     oninput="window.mietFeld('${pfad}', this.innerText.replace(/\\n+$/, ''))"
+                     onblur="window.mietSeitenPruefen()">${esc(wert)}</div>`;
+    }
+
     // Mehrzeiliges Feld (Zeilenumbruch erlaubt).
     function txtMehr(pfad, wert, platzhalter) {
         return `<div class="miet-in miet-txt" contenteditable="true" spellcheck="false"
@@ -1981,6 +2017,15 @@
         if (schadenHatInhalt() === schadenLeer) { zeichneInhalt(); return true; }
         const seiten = document.querySelectorAll('.miet-page');
         for (let i = 0; i < seiten.length; i++) {
+            // Die erste Seite ist per --miet-fit-f verkleinert: ihre Layouthöhe
+            // ist die UNverkleinerte und lief damit immer „über“ — jedes
+            // Verlassen eines Feldes baute so den ganzen Bogen neu auf.
+            const fit = seiten[i].querySelector('.miet-fit');
+            if (fit) {
+                const f = parseFloat(fit.style.getPropertyValue('--miet-fit-f')) || 1;
+                if (fit.scrollHeight * f > innen(seiten[i]).clientHeight + 2) { zeichneInhalt(); return true; }
+                continue;
+            }
             if (laeuftUeber(seiten[i])) { zeichneInhalt(); return true; }
         }
         return false;
@@ -2154,7 +2199,7 @@
                 </tr>
                 <tr data-split>
                     <td>${esc(f.sonstiges || 'Sonstiges:')}</td><td class="miet-num"></td>
-                    <td colspan="${sp.length}">${txt('sauberkeit.sonstiges', s.sonstiges)}</td>
+                    <td colspan="${sp.length}">${txtZeilen('sauberkeit.sonstiges', s.sonstiges, 3)}</td>
                 </tr>
                 <tr data-split>
                     <td>${esc(f.einweisung || 'Einweisung stattgefunden')}</td><td class="miet-num"></td>
@@ -2231,7 +2276,7 @@
                     : ''}
                     <span style="color:${bild ? '#047857' : '#9ca3af'}; font-weight:800;">Bild ${i + 1}</span> ${esc(pos)}
                 </div>
-                <div class="miet-photo-box">${bild ? `<img src="${bild}" alt="">` : 'Antippen zum Aufnehmen'}</div>
+                <div class="miet-photo-box">${bild ? `<img decoding="async" src="${bild}" alt="">` : 'Antippen zum Aufnehmen'}</div>
                 ${bild ? '<span class="miet-photo-zoom">Zum Vergrößern tippen</span>' : ''}
             </div>`;
         }).join('');
@@ -2266,7 +2311,7 @@
                 <button type="button" class="miet-photo-del" onclick="event.stopPropagation(); window.mietZusatzLoeschen('${esc(welche)}', '${esc(z.pos)}')" title="Bild entfernen">&times;</button>
                 <div class="miet-photo-name"><span style="color:#047857; font-weight:800;">Zusatz ${i + 1}</span>
                     <input type="date" class="miet-zusatz-datum" value="${esc(z.datum || '')}" onchange="window.mietZusatzFeld('${esc(welche)}', '${esc(z.pos)}', 'datum', this.value)" title="Datum der Aufnahme"></div>
-                <div class="miet-photo-box"><img src="${satz[z.pos]}" alt=""></div>
+                <div class="miet-photo-box miet-gross" onclick="window.mietBildAnsehen('${esc(welche)}', '${esc(z.pos)}')" title="Groß ansehen"><img decoding="async" src="${satz[z.pos]}" alt=""></div>
                 <input type="text" class="miet-zusatz-text" value="${esc(z.text || '')}" placeholder="Beschreibung, z. B. Kratzer Haube links" onchange="window.mietZusatzFeld('${esc(welche)}', '${esc(z.pos)}', 'text', this.value)">
             </div>`).join('');
         return `
@@ -3113,20 +3158,26 @@
     let lbIndex = 0;
     let lbWelche = 'uebergabe';
 
+    /* Alle Bilder in EINER Reihe: Übergabe (feste Ansichten, dann ergänzte
+       Zusatzbilder), danach Rücknahme genauso. Vorher nur die festen Ansichten
+       der gerade gezeigten Phase — Zusatzbilder ließen sich gar nicht groß öffnen. */
     function lbListe() {
-        const satz = daten.fotos[lbWelche] || {};
-        return fotoPositionen().filter(p => satz[p]);
-    }
-
-    function phasenWort() {
-        return lbWelche === 'uebergabe' ? 'bei Übergabe' : 'bei Rücknahme';
+        const out = [];
+        ['uebergabe', 'ruecknahme'].forEach(w => {
+            const satz = (daten.fotos && daten.fotos[w]) || {};
+            fotoPositionen().forEach((p, i) => { if (satz[p]) out.push({ w, pos: p, titel: `Bild ${i + 1} — ${p}` }); });
+            zusatzListe(w).forEach((z, i) => {
+                out.push({ w, pos: z.pos, titel: `Zusatz ${i + 1}` + (z.text ? ' — ' + z.text : '') + (z.datum ? ` (${z.datum.split('-').reverse().join('.')})` : '') });
+            });
+        });
+        return out;
     }
 
     window.mietBildAnsehen = function (welche, position) {
         lbWelche = welche;
         const liste = lbListe();
         if (!liste.length) return;
-        lbIndex = Math.max(0, liste.indexOf(position));
+        lbIndex = Math.max(0, liste.findIndex(x => x.w === welche && x.pos === position));
         lbOffen = true;
         document.getElementById('miet-lightbox').classList.add('open');
         document.addEventListener('keydown', lbTaste);
@@ -3157,15 +3208,19 @@
         if (!liste.length) { window.mietBildZu(); return; }
         if (lbIndex > liste.length - 1) lbIndex = liste.length - 1;
 
-        const pos = liste[lbIndex];
-        document.getElementById('miet-lb-img').src = daten.fotos[lbWelche][pos];
+        const b = liste[lbIndex];
+        lbWelche = b.w;
+        const phase = b.w === 'uebergabe' ? 'Übergabe' : 'Rücknahme';
+        document.getElementById('miet-lb-img').src = daten.fotos[b.w][b.pos];
         document.getElementById('miet-lb-title').innerHTML =
-            `Bild ${fotoPositionen().indexOf(pos) + 1} ${esc(phasenWort())} — ${esc(pos)}` +
-            `<small>${lbIndex + 1} von ${liste.length} vorhandenen Bildern</small>`;
+            `${esc(phase)}: ${esc(b.titel)}` +
+            `<small>${lbIndex + 1} von ${liste.length} Bildern</small>`;
         document.getElementById('miet-lb-prev').disabled = lbIndex === 0;
         document.getElementById('miet-lb-next').disabled = lbIndex === liste.length - 1;
-        document.getElementById('miet-lb-dots').innerHTML = liste.map((p, i) =>
-            `<button type="button" class="miet-lb-dot${i === lbIndex ? ' on' : ''}" title="${esc(p)}" onclick="window.mietBildSpringen(${i})"></button>`).join('');
+        // Punkte: Übergabe und Rücknahme durch eine Lücke getrennt
+        document.getElementById('miet-lb-dots').innerHTML = liste.map((x, i) =>
+            (i && x.w !== liste[i - 1].w ? '<span class="miet-lb-trenner"></span>' : '')
+            + `<button type="button" class="miet-lb-dot${i === lbIndex ? ' on' : ''}" title="${esc((x.w === 'uebergabe' ? 'Übergabe: ' : 'Rücknahme: ') + x.titel)}" onclick="window.mietBildSpringen(${i})"></button>`).join('');
     }
 
     function lbTaste(e) {

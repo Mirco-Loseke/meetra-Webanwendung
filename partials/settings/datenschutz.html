@@ -5,7 +5,7 @@
     <div class="users-header-container">
         <h1>Datenschutz</h1>
         <div class="users-header-actions">
-            <button class="btn-secondary" onclick="window.print()">Drucken / als PDF sichern</button>
+            <button class="btn-secondary" onclick="document.body.classList.add('ds-druck'); window.addEventListener('afterprint', () => document.body.classList.remove('ds-druck'), { once: true }); window.print()">Drucken / als PDF sichern</button>
             <button class="btn-back-custom" data-target="settings">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                     stroke-width="3" stroke-linecap="round" stroke-linejoin="round">

@@ -2321,3 +2321,59 @@ textarea.miet-in {
     .miet-foot .miet-note, .miet-foot #miet-seitenzahl { font-size: .7rem; }
 }
 @media screen and (max-width: 768px) { .miet-pages:not(.miet-a4) .miet-einweis-zelle { white-space: normal !important; } .miet-pages:not(.miet-a4) .miet-einweis-zelle > div { margin-top: 4px; } }
+
+/* Großansicht: Lücke zwischen Übergabe- und Rücknahme-Punkten; Zusatzbilder anklickbar */
+.miet-lb-trenner { display: inline-block; width: 14px; }
+.miet-gross { cursor: zoom-in; }
+
+
+/* Fußleiste (2026-10-09): am Handy EINE Zeile statt drei (121px → ~64px).
+   Schließen steht oben als ×, die Seitenzahl ist dort entbehrlich. */
+.miet-seitenzahl { font-size: 0.78rem; color: rgba(255, 255, 255, 0.45); }
+.miet-kurz { display: none; }
+@media screen and (max-width: 768px) {
+    .miet-foot { flex-wrap: nowrap; gap: 8px; padding: 10px 10px calc(10px + env(safe-area-inset-bottom)); }
+    .miet-foot .miet-note:empty, .miet-foot .miet-seitenzahl, .miet-foot .miet-foot-zu { display: none; }
+    .miet-foot .miet-note:not(:empty) { position: absolute; left: 10px; right: 10px; bottom: calc(100% + 4px);
+        background: rgba(15, 23, 42, .95); padding: 6px 10px; border-radius: 8px; margin: 0; }
+    .miet-foot { position: relative; }
+    .miet-lang { display: none; }
+    .miet-kurz { display: inline; }
+    .miet-foot .miet-zoom { margin-right: auto; }
+    .miet-foot .btn-secondary, .miet-foot .btn-primary { min-height: 44px; padding: 0 16px; }
+    .miet-foot .btn-primary { flex: 1; max-width: 160px; }
+}
+
+/* Großansicht + Unterschrift am Handy: Pfeile lagen links/rechts AUSSERHALB
+   des Bildschirms (−40px / 369px), Knöpfe im Unterschriftsfeld nur 34px hoch. */
+@media screen and (max-width: 768px) {
+    #miet-lightbox .miet-lb-stage { position: relative; }
+    #miet-lightbox .miet-lb-nav {
+        position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
+        background: rgba(0, 0, 0, .5); border-color: rgba(255, 255, 255, .25);
+    }
+    #miet-lightbox #miet-lb-prev { left: 6px; }
+    #miet-lightbox #miet-lb-next { right: 6px; }
+    #miet-lightbox .miet-lb-nav:disabled { opacity: 0; pointer-events: none; }
+    .miet-pad-card button { min-height: 44px; }
+}
+
+/* Sonstiges (Abnahme): immer 3 Zeilen hoch, Umbrüche bleiben erhalten. */
+.miet-zeilen {
+    white-space: pre-wrap;
+    min-height: calc(var(--miet-zeilen, 3) * 1.35em);
+    line-height: 1.35;
+}
+
+/* Seite 1 (Mieter, Gerät, Abnahme) muss auf EIN Blatt — mit dem 3-zeiligen
+   „Sonstiges" wurde sie sonst auf 70 % verkleinert. Zeilen dort enger setzen
+   statt die Schrift zu schrumpfen. Am Handy-Bildschirm bleiben die Zeilen
+   zum Tippen groß; im A4-/PDF-Modus und im Druck gilt die enge Fassung. */
+@media print, screen and (min-width: 769px) {
+    .miet-fit .miet-table td, .miet-fit .miet-table th { padding-top: 2px; padding-bottom: 2px; }
+    .miet-fit .miet-in { padding-top: 0; padding-bottom: 0; }
+    .miet-fit .miet-block { margin-bottom: 12px; }
+}
+.miet-pages.miet-a4 .miet-fit .miet-table td, .miet-pages.miet-a4 .miet-fit .miet-table th,
+.miet-pages.miet-pdf .miet-fit .miet-table td, .miet-pages.miet-pdf .miet-fit .miet-table th { padding-top: 2px; padding-bottom: 2px; }
+.miet-pages.miet-a4 .miet-fit .miet-in, .miet-pages.miet-pdf .miet-fit .miet-in { padding-top: 0; padding-bottom: 0; }

@@ -68,6 +68,8 @@
     const ausgang = new Map();
     function alleZu() {
         try { window.closeTaskPrintModal && document.getElementById('task-print-modal') && window.closeTaskPrintModal(); } catch (e) { /* egal */ }
+        try { if (document.querySelector('#miet-overlay.open')) window.closeMietvereinbarung(true); } catch (e) { /* egal */ }
+        document.getElementById('tlv-plan-dlg')?.remove();
         document.querySelectorAll('.modal-backdrop.show, .modal-backdrop.active').forEach(m => m.classList.remove('show', 'active'));
         // .modal-backdrop-Fenster nur über die Klasse schließen — ein display:none
         // bliebe kleben und das Fenster ginge danach nicht mehr auf. Alte .modal-Fenster
@@ -147,6 +149,15 @@
         L.push(['Suche mit Treffern', async () => { await window.openGlobaleSuche(); await warte(2500); const i = document.getElementById('gs-input'); if (i) { i.value = 'backhus'; i.dispatchEvent(new Event('input')); } }]);
         L.push(['To-do-Liste', () => window.openTodoListe()]);
         L.push(['KI-Chat', () => window.openKiChat()]);
+        L.push(['Mietvereinbarung', async () => {
+            const { data } = await window.supabaseClient.from('rental_agreements').select('id, machine_id').order('created_at', { ascending: false }).limit(1);
+            if (data && data[0]) await window.openMietvereinbarung(data[0].machine_id, data[0].id);
+            else await window.openMietvereinbarung(m, null);
+        }]);
+        L.push(['Timeline: Vermietung hinzufügen', async () => {
+            window.timelineVermietung(); await warte(1500);
+            document.getElementById('tlv-plan-neu')?.click();
+        }]);
         return L.filter(([, fn]) => { try { return typeof fn === 'function'; } catch (e) { return false; } });
     }
 

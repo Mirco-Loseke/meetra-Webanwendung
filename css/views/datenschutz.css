@@ -31,11 +31,14 @@
 .ds-tabelle tr:last-child td { border-bottom: 0; }
 
 /* Drucken: Glas und Farben weg, damit die Anlage lesbar auf Papier kommt */
+/* Nur wenn die Datenschutz-Seite selbst druckt (body.ds-druck) — ohne diese
+   Bedingung galt "alles unsichtbar" für JEDEN Druck der App, die Mietvereinbarung
+   kam als leere Seiten heraus. */
 @media print {
-    body * { visibility: hidden; }
-    #settings-datenschutz, #settings-datenschutz * { visibility: visible; }
-    #settings-datenschutz { position: absolute; inset: 0; }
-    #settings-datenschutz .users-header-actions { display: none; }
+    body.ds-druck * { visibility: hidden; }
+    body.ds-druck #settings-datenschutz, body.ds-druck #settings-datenschutz * { visibility: visible; }
+    body.ds-druck #settings-datenschutz { position: absolute; inset: 0; }
+    body.ds-druck #settings-datenschutz .users-header-actions { display: none; }
     .ds-karte { background: #fff !important; border: 1px solid #ccc !important; box-shadow: none !important;
                 backdrop-filter: none !important; break-inside: avoid; }
     .ds-karte, .ds-karte p, .ds-karte li, .ds-tabelle td { color: #111 !important; }
