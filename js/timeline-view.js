@@ -1270,10 +1270,21 @@
         buehneNavBinden(buehne);
         var zeilen = zeilenBauen(list, key(start), key(ende));
         if (!zeilen.length) {
+            /* Statt nur „Zurück zu heute" (stand man schon auf heute, tat der
+               Knopf scheinbar nichts): direkt zum letzten Eintrag davor bzw.
+               zum nächsten danach springen — gilt für die aktuelle Auswahl. */
+            var vonK = key(start), bisK = key(ende), vorher = null, nachher = null;
+            list.forEach(function (i) {
+                if (i.bis < vonK && (!vorher || i.bis > vorher.bis)) vorher = i;
+                if (i.von > bisK && (!nachher || i.von < nachher.von)) nachher = i;
+            });
+            var heuteDrin = nowPos >= 0 && nowPos < n;
             buehne.innerHTML = '<div class="tlv-leer">In diesem Zeitraum steht nichts an. '
-                + '<button type="button" class="tlv-leer-heute" onclick="window.timelineHeute()">Zurück zu heute</button> '
-                + '— oder anderen Zeitraum wählen, eine andere Voreinstellung nehmen '
-                + 'oder „auch leere Zeilen" einschalten.</div>';
+                + (vorher ? '<button type="button" class="tlv-leer-heute" onclick="window.timelineSpringen(\'' + vorher.von + '\')">‹ Letzter Eintrag (' + esc(tagKurz(vorher.von)) + ')</button> ' : '')
+                + (!heuteDrin ? '<button type="button" class="tlv-leer-heute" onclick="window.timelineHeute()">Zurück zu heute</button> ' : '')
+                + (nachher ? '<button type="button" class="tlv-leer-heute" onclick="window.timelineSpringen(\'' + nachher.von + '\')">Nächster Eintrag (' + esc(tagKurz(nachher.von)) + ') ›</button> ' : '')
+                + (!vorher && !nachher ? '— für diese Auswahl gibt es überhaupt keine Einträge. Andere Voreinstellung oder Filter wählen.' : '')
+                + '</div>';
             zeichneUngeplant();
             return;
         }
@@ -3280,6 +3291,13 @@
         if (buehne) buehne.scrollLeft = 0;
     }
     window.timelineHeute = zumHeute;
+    // Fenster so legen, dass der Tag vorne sichtbar ist (das Fenster beginnt 7 Tage vor dem Anker).
+    window.timelineSpringen = function (k) {
+        var d = parse(k); d.setDate(d.getDate() + 5);
+        S.anker = d; S.spalten = S.basisSpalten; S.zoomFest = false; zeichne();
+        var buehne = document.getElementById('tlv-buehne');
+        if (buehne) buehne.scrollLeft = 0;
+    };
     function schiebe(r) {
         if (S.raster === 'woche') S.anker.setDate(S.anker.getDate() + 28 * r);
         else S.anker.setDate(S.anker.getDate() + 7 * r);

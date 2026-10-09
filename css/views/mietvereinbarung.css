@@ -2377,3 +2377,12 @@ textarea.miet-in {
 .miet-pages.miet-a4 .miet-fit .miet-table td, .miet-pages.miet-a4 .miet-fit .miet-table th,
 .miet-pages.miet-pdf .miet-fit .miet-table td, .miet-pages.miet-pdf .miet-fit .miet-table th { padding-top: 2px; padding-bottom: 2px; }
 .miet-pages.miet-a4 .miet-fit .miet-in, .miet-pages.miet-pdf .miet-fit .miet-in { padding-top: 0; padding-bottom: 0; }
+
+/* Druck/PDF: nur Kacheln MIT Foto. Leere Kästen („Antippen zum Aufnehmen")
+   bleiben weg, ihr Platz bleibt frei; Überschrift + Unterschriften bleiben. */
+@media print {
+    .miet-photo-slot:not(.filled) { display: none !important; }
+    .miet-photo-grid:not(:has(.miet-photo-slot.filled)) { display: none !important; }
+}
+.miet-pages.miet-pdf .miet-photo-slot:not(.filled) { display: none !important; }
+.miet-pages.miet-pdf .miet-photo-grid:not(:has(.miet-photo-slot.filled)) { display: none !important; }

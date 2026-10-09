@@ -1820,8 +1820,15 @@
             // Wichtig: der Entwurf bleibt stehen — beim nächsten Öffnen
             // wird genau dieser Stand wieder angeboten.
             status('Speichern fehlgeschlagen — der Stand bleibt als Entwurf erhalten.');
-            if (/rental_agreements|rental_agreement_id|attachments/.test((e && e.message) || '')) {
-                window.showToast('Migration fehlt: supabase/supabase_add_rental_agreements.sql in Supabase ausführen.');
+            /* Nur bei wirklich fehlender Tabelle/Spalte von „Migration“ reden.
+               Vorher reichte JEDER Fehler, dessen Text „rental_agreements“
+               enthielt (Rechte, Zeitüberschreitung, Prüfregel …) — die echte
+               Ursache war dann verdeckt. Alle Migrationen sind gelaufen (09.10.). */
+            const fehlt = e && (['42P01', '42703', 'PGRST204', 'PGRST205'].includes(e.code)
+                || /does not exist|could not find .* column|schema cache/i.test(e.message || ''));
+            if (fehlt) {
+                window.showToast('Datenbank-Spalte/Tabelle fehlt: ' + (e.message || e.code)
+                    + ' — supabase/supabase_mietvereinbarung_komplett.sql prüfen.');
             } else {
                 // Supabase liefert die eigentliche Ursache oft erst in
                 // details/hint/code — ohne die tappt man im Dunkeln.
