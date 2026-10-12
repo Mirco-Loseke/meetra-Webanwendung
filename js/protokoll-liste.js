@@ -229,10 +229,12 @@
                     </div>
                     <button type="button" class="btn-close-modal" onclick="window.protokollListeSchliessen()">&times;</button>
                 </div>
-                <div class="uvvp-body">${inhalt}</div>
+                <div class="uvvp-body">
+                    <button type="button" class="btn-primary" style="width:100%; margin-bottom:12px;" onclick="window.protokollListeNeu()">＋ Neu anlegen</button>
+                    ${inhalt}
+                </div>
                 <div class="uvvp-foot">
                     <button type="button" class="btn-secondary" onclick="window.protokollListeSchliessen()">Schließen</button>
-                    <button type="button" class="btn-primary" onclick="window.protokollListeNeu()">Neu anlegen</button>
                 </div>
             </div>`;
     }

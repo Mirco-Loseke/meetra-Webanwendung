@@ -161,10 +161,12 @@
                     </div>
                     <button type="button" class="miet-close" onclick="window.mietListeSchliessen()" title="Schließen">&times;</button>
                 </div>
-                <div class="miet-liste-inhalt">${inhalt}</div>
+                <div class="miet-liste-inhalt">
+                    <button type="button" class="btn-primary" style="width:100%; margin-bottom:12px;" onclick="window.mietListeSchliessen(); window.openMietvereinbarung('${esc(maschineId)}')">＋ Neu anlegen</button>
+                    ${inhalt}
+                </div>
                 <div class="miet-liste-fuss">
                     <button type="button" class="btn-secondary" onclick="window.mietListeSchliessen()">Schließen</button>
-                    <button type="button" class="btn-primary" onclick="window.mietListeSchliessen(); window.openMietvereinbarung('${esc(maschineId)}')">Neue anlegen</button>
                 </div>
             </div>`;
         document.body.appendChild(ov);

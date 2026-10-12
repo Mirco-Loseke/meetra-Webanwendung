@@ -315,7 +315,7 @@
          gewinnt. Diese Zeile loeschen = alles wie vorher. -->
     <link rel="stylesheet" href="css/components/dropdown-look.css?v=5">
     <!-- MIETVEREINBARUNG (1/3) — eigenstaendig, diese Zeile loeschen = weg -->
-    <link rel="stylesheet" href="css/views/mietvereinbarung.css?v=55">
+    <link rel="stylesheet" href="css/views/mietvereinbarung.css?v=57">
     <link rel="stylesheet" href="css/views/einstellungen.css?v=18">
 
     <!-- @partial:modals/pin-prompt-modal.html -->
@@ -4910,99 +4910,31 @@
                  Scrollbereich waren die unteren Knöpfe nicht erreichbar. -->
             <div class="modal-scroll-area">
 
-            <!-- Section 1: Create -->
-            <div class="accordion-section" style="margin-bottom: 1rem;">
-                <h3 onclick="toggleAccordion('create-section')"
-                    style="font-size: 0.8rem; color: rgba(255,255,255,0.9); text-transform: uppercase; margin-bottom: 0.75rem; letter-spacing: 1px; font-weight: 700; cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; user-select: none;">
-                    <span style="display:flex; align-items:center; gap:6px;">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                        Anlegen
-                    </span>
-                    <svg id="create-section-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-                        style="transition: transform 0.3s; transform: rotate(0deg);">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
-                </h3>
-                <div id="create-section" class="accordion-content"
-                    style="display: grid; gap: 0.6rem; margin-bottom: 0.5rem; max-height: 600px; overflow: hidden; transition: max-height 0.3s ease, opacity 0.3s ease; opacity: 1;">
-                    <button class="report-type-btn compact" onclick="startReportCreation('servicebericht')">
-                        <div class="icon-small">📄</div>
-                        <div class="text"><strong>Servicebericht</strong></div>
-                    </button>
-                    <button id="action-btn-intake" class="report-type-btn compact"
-                        onclick="startReportCreation('eingangsprotokoll')">
-                        <div class="icon-small">📥</div>
-                        <div class="text"><strong>Eingangsprotokoll</strong></div>
-                    </button>
-                    <button id="action-btn-acceptance" class="report-type-btn compact"
-                        onclick="startReportCreation('abnahmeprotokoll')">
-                        <div class="icon-small">✅</div>
-                        <div class="text"><strong>Abnahmeprotokoll</strong></div>
-                    </button>
-                    <!-- MIETVEREINBARUNG (3/3a) — diesen Knopf loeschen = weg -->
-                    <button id="action-btn-rental" class="report-type-btn compact"
-                        onclick="startReportCreation('mietvereinbarung')">
-                        <div class="icon-small">🔑</div>
-                        <div class="text"><strong>Mietvereinbarung</strong></div>
-                    </button>
-                    <!-- Öffnet einen Servicebericht mit vorbelegten Kategorien (UVV,
-                         Wartung, Einweisung) und angehakten Prüfplänen —
-                         window.applyUvvWartungPreset in js/history-modal.js -->
-                    <button id="action-btn-uvv" class="report-type-btn compact"
-                        onclick="startReportCreation('uvv-protokoll')">
-                        <div class="icon-small">🛡️</div>
-                        <div class="text"><strong>Internes UVV &amp; Wartungsprotokoll</strong></div>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Section 2: View -->
-            <div class="accordion-section" style="margin-bottom: 1rem;">
-                <h3 onclick="toggleAccordion('view-section')"
-                    style="font-size: 0.8rem; color: rgba(255,255,255,0.9); text-transform: uppercase; margin-bottom: 0.75rem; letter-spacing: 1px; font-weight: 700; cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; user-select: none;">
-                    <span style="display:flex; align-items:center; gap:6px;">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                        Ansehen
-                    </span>
-                    <svg id="view-section-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-                        style="transition: transform 0.3s; transform: rotate(-90deg);">
-                        <polyline points="6 9 12 15 18 9"></polyline>
-                    </svg>
-                </h3>
-                <!-- Startet eingeklappt (max-height: 0) — aufgeklappt wird über den Kopf
-                     darüber, siehe window.toggleAccordion. -->
-                <div id="view-section" class="accordion-content"
-                    style="display: grid; gap: 0.6rem; max-height: 0px; overflow: hidden; transition: max-height 0.3s ease, opacity 0.3s ease; opacity: 0;">
-                    <button class="report-type-btn compact secondary"
-                        onclick="showMachineDocuments('servicebericht')">
-                        <div class="icon-small">📄</div>
-                        <div class="text"><strong>Servicebericht</strong></div>
-                    </button>
-                    <button class="report-type-btn compact secondary"
-                        onclick="showMachineDocuments('eingangsprotokoll')">
-                        <div class="icon-small">📥</div>
-                        <div class="text"><strong>Eingangsprotokoll</strong></div>
-                    </button>
-                    <button class="report-type-btn compact secondary"
-                        onclick="showMachineDocuments('abnahmeprotokoll')">
-                        <div class="icon-small">✅</div>
-                        <div class="text"><strong>Abnahmeprotokoll</strong></div>
-                    </button>
-                    <!-- MIETVEREINBARUNG (3/3c) — diesen Knopf loeschen = weg -->
-                    <button class="report-type-btn compact secondary"
-                        onclick="showMietvereinbarungenForMachine()">
-                        <div class="icon-small">🔑</div>
-                        <div class="text"><strong>Mietvereinbarung</strong></div>
-                    </button>
-                    <!-- Interne Berichte (Titel „Servicebericht (Intern)") -->
-                    <button class="report-type-btn compact secondary"
-                        onclick="showMachineDocuments('intern')">
-                        <div class="icon-small">🛡️</div>
-                        <div class="text"><strong>Internes UVV &amp; Wartungsprotokoll</strong></div>
-                    </button>
-                </div>
+            <!-- Eine Liste je Beleg-Art: Klick öffnet die Übersicht der Maschine
+                 (js/protokoll-liste.js bzw. js/mietvereinbarung-liste.js) mit
+                 „Neu anlegen“ oben und den vorhandenen Belegen darunter. -->
+            <div style="display: grid; gap: 0.6rem;">
+                <button class="report-type-btn compact" onclick="showMachineDocuments('servicebericht')">
+                    <div class="icon-small">📄</div>
+                    <div class="text"><strong>Servicebericht</strong></div>
+                </button>
+                <button id="action-btn-intake" class="report-type-btn compact" onclick="showMachineDocuments('eingangsprotokoll')">
+                    <div class="icon-small">📥</div>
+                    <div class="text"><strong>Eingangsprotokoll</strong></div>
+                </button>
+                <button id="action-btn-acceptance" class="report-type-btn compact" onclick="showMachineDocuments('abnahmeprotokoll')">
+                    <div class="icon-small">✅</div>
+                    <div class="text"><strong>Abnahmeprotokoll</strong></div>
+                </button>
+                <!-- MIETVEREINBARUNG (3/3a) — diesen Knopf loeschen = weg -->
+                <button id="action-btn-rental" class="report-type-btn compact" onclick="showMachineDocuments('mietvereinbarung')">
+                    <div class="icon-small">🔑</div>
+                    <div class="text"><strong>Mietvereinbarung</strong></div>
+                </button>
+                <button id="action-btn-uvv" class="report-type-btn compact" onclick="showMachineDocuments('intern')">
+                    <div class="icon-small">🛡️</div>
+                    <div class="text"><strong>Internes UVV &amp; Wartungsprotokoll</strong></div>
+                </button>
             </div>
 
             </div><!-- /modal-scroll-area -->
@@ -6731,10 +6663,10 @@
     <script src="js/machines-grouped.js?v=53"></script>
     <script src="js/protocols.js?v=57"></script>
     <!-- MIETVEREINBARUNG (2/3) — eigenstaendig, diese Zeile loeschen = weg -->
-    <script src="js/mietvereinbarung-vorlagen.js?v=19"></script>
+    <script src="js/mietvereinbarung-vorlagen.js?v=24"></script>
     <script src="js/einstellungen.js?v=1"></script>
-    <script src="js/mietvereinbarung.js?v=69"></script>
-    <script src="js/mietvereinbarung-liste.js?v=2"></script>
+    <script src="js/mietvereinbarung.js?v=71"></script>
+    <script src="js/mietvereinbarung-liste.js?v=3"></script>
 
     </main>
     </div><!-- End main-wrapper -->
@@ -7486,7 +7418,7 @@
     <script src="js/ausgangsrechnungen.js?v=2"></script>
     <script src="js/documents-r2.js?v=13"></script>
     <script src="js/checklists.js?v=7"></script>
-    <script src="js/protokoll-liste.js?v=3"></script>
+    <script src="js/protokoll-liste.js?v=4"></script>
     <script src="js/customers.js?v=8"></script>
     <script src="js/autosave.js?v=2"></script>
     <script src="js/unsaved-guard.js?v=1"></script>

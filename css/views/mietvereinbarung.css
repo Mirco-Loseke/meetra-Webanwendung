@@ -2422,3 +2422,34 @@ textarea.miet-in {
     .miet-sign-pad .miet-sign-hint { visibility: hidden !important; }
 }
 .miet-pages.miet-pdf .miet-sign-pad .miet-sign-hint { visibility: hidden !important; }
+
+/* Ohne Fotos stehen Übergabe und Rücknahme direkt untereinander —
+   deutlicher Abstand, damit die zwei Unterschriftenpaare nicht verwechselt werden. */
+.miet-foto-ohne + .miet-foto-ohne,
+.miet-block + .miet-foto-ohne { margin-top: 18mm; }
+
+/* Kalender-Symbol hinter dem Datum gehört nicht aufs Papier. */
+@media print {
+    .miet-page input::-webkit-calendar-picker-indicator { opacity: 0 !important; }
+}
+.miet-pages.miet-pdf input::-webkit-calendar-picker-indicator { opacity: 0 !important; }
+
+/* Vollbild (PC/iPad, Knopf ⛶ in der Kopfleiste, Standard an): Fenster
+   füllt den Bildschirm, das Blatt darf bis 140 % wachsen (skaliereSeiten). */
+@media screen and (min-width: 769px) {
+    .miet-overlay.miet-vollbild { padding: 0; }
+    .miet-overlay.miet-vollbild .miet-modal {
+        max-width: none;
+        max-height: none;
+        height: 100vh;
+        height: 100dvh;
+        border-radius: 0;
+        border: none;
+    }
+}
+@media screen and (max-width: 768px) {
+    .miet-vollbild-btn { display: none; }
+}
+@media print {
+    .miet-vollbild-btn { display: none !important; }
+}

@@ -344,7 +344,7 @@
     // die Datenbank warten. Eingetragen wird nur, wenn das Feld noch leer
     // ist, damit eine eigene Eingabe nie ueberschrieben wird.
     async function ladeBetriebsstunden() {
-        if (!maschine || !window.supabaseClient) return;
+        if (!maschine || !window.supabaseClient || vorlage.ohne_betriebsstunden) return;
         try {
             const [bericht, manuell] = await Promise.all([
                 window.supabaseClient
@@ -444,6 +444,7 @@
                 : 'Ohne Maschinenbezug'}</div>
                     </div>
                     <div class="miet-head-spacer"></div>
+                    <button class="miet-close miet-vollbild-btn" onclick="window.mietVollbild()" title="Vollbild an/aus">&#x26F6;</button>
                     <button class="miet-close" onclick="window.closeMietvereinbarung()" title="Schließen">&times;</button>
                 </div>
 
@@ -529,6 +530,10 @@
             </div>`;
         document.body.appendChild(ov);
         ov.classList.add('open');
+        // Vollbild (PC/iPad) — Standard an, je Browser gemerkt.
+        let vb = true;
+        try { vb = localStorage.getItem('miet_vollbild') !== '0'; } catch (e) { /* egal */ }
+        ov.classList.toggle('miet-vollbild', vb);
         document.body.style.overflow = 'hidden';
         zeichneInhalt();
         dropZuhoerer(document.getElementById('miet-pages'));
@@ -983,6 +988,15 @@
         if (el) el.textContent = Math.round(zoom * 100) + '%';
     }
 
+    window.mietVollbild = function () {
+        const ov = document.getElementById('miet-overlay');
+        if (!ov) return;
+        const an = !ov.classList.contains('miet-vollbild');
+        ov.classList.toggle('miet-vollbild', an);
+        try { localStorage.setItem('miet_vollbild', an ? '1' : '0'); } catch (e) { /* egal */ }
+        skaliereSeiten();
+    };
+
     function skaliereSeiten() {
         const wrap = document.getElementById('miet-pages-wrap');
         const pages = document.getElementById('miet-pages');
@@ -1000,7 +1014,9 @@
         }
         pages.style.removeProperty('--miet-zoom');
         const breite = 210 * 96 / 25.4; // A4-Breite in CSS-Pixeln
-        const faktor = Math.min(1, (wrap.clientWidth - 4) / breite);
+        const ov = document.getElementById('miet-overlay');
+        const max = ov && ov.classList.contains('miet-vollbild') ? 1.4 : 1;
+        const faktor = Math.min(max, (wrap.clientWidth - 4) / breite);
         pages.style.setProperty('--miet-scale', faktor);
         wrap.style.height = (pages.scrollHeight * faktor) + 'px';
     }
@@ -2130,6 +2146,7 @@
     // ---------- 2. Mietgeraet und Konditionen ----------
     function geraetBlock() {
         const g = daten.geraet, k = daten.miete;
+        const ohneBs = !!vorlage.ohne_betriebsstunden;
         const b = vorlage.bloecke || {};
         const f = vorlage.felder || {};
         return `
@@ -2150,15 +2167,15 @@
                 </tr>
                 <tr>
                     <td class="miet-label">${esc(f.beginn || 'Mietbeginn:')}</td>
-                    <td><input type="date" class="miet-in" value="${esc(k.beginn)}" oninput="window.mietFeld('miete.beginn', this.value)"></td>
-                    <td class="miet-label">${esc(f.betriebsstunden || 'Betriebsstunden:')}</td>
-                    <td>${txt('miete.beginn_bs', k.beginn_bs, 'h')}</td>
+                    <td${ohneBs ? ' colspan="3"' : ''}><input type="date" class="miet-in" value="${esc(k.beginn)}" oninput="window.mietFeld('miete.beginn', this.value)"></td>
+                    ${ohneBs ? '' : `<td class="miet-label">${esc(f.betriebsstunden || 'Betriebsstunden:')}</td>
+                    <td>${txt('miete.beginn_bs', k.beginn_bs, 'h')}</td>`}
                 </tr>
                 <tr>
                     <td class="miet-label">${esc(f.ende || 'Mietende:')}</td>
-                    <td><input type="date" class="miet-in" value="${esc(k.ende)}" oninput="window.mietFeld('miete.ende', this.value)"></td>
-                    <td class="miet-label">${esc(f.betriebsstunden || 'Betriebsstunden:')}</td>
-                    <td>${txt('miete.ende_bs', k.ende_bs, 'h')}</td>
+                    <td${ohneBs ? ' colspan="3"' : ''}><input type="date" class="miet-in" value="${esc(k.ende)}" oninput="window.mietFeld('miete.ende', this.value)"></td>
+                    ${ohneBs ? '' : `<td class="miet-label">${esc(f.betriebsstunden || 'Betriebsstunden:')}</td>
+                    <td>${txt('miete.ende_bs', k.ende_bs, 'h')}</td>`}
                 </tr>
                 <tr>
                     <td class="miet-label">${esc(f.tagessatz || 'Tagessatz pro Werktag')}</td>

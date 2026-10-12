@@ -63,8 +63,8 @@
             einweisung: 'Einweisung stattgefunden',
             unterschrift_vermieter: 'Unterschrift Vermieter',
             unterschrift_mieter: 'Unterschrift Mieter',
-            // Steht über den Übergabe-Unterschriften; leer = kein Hinweis.
-            hinweis_anleitung: 'Der Maschine liegt eine Kurzbeschreibung zum Einsatz und zum bestimmungsgemäßen Gebrauch bei. Sie befindet sich in der Regel im Steuerkasten. Die Kurzbeschreibung ersetzt nicht die Original-Betriebsanleitung des Herstellers, die wir Ihnen auf Wunsch gerne zusenden.'
+            // Steht über den Übergabe-Unterschriften; nur wo in der Vorlage eingetragen (Standard leer).
+            hinweis_anleitung: ''
         },
 
         // Pruefspalten der Abnahmetabelle. Die erste gilt als Übergabe,
@@ -327,6 +327,8 @@
         return {
             titel: c.titel || s.titel,
             zusatzinfo: c.zusatzinfo != null ? c.zusatzinfo : s.zusatzinfo,
+            // Geräte ohne Stundenzähler (z. B. Hebebühne): keine Betriebsstunden-Felder.
+            ohne_betriebsstunden: !!c.ohne_betriebsstunden,
             schlusssatz: c.schlusssatz != null ? c.schlusssatz : s.schlusssatz,
             bloecke: Object.assign({}, s.bloecke, c.bloecke || {}),
             felder: Object.assign({}, s.felder, c.felder || {}),
@@ -503,6 +505,10 @@
         renderEditor();
     };
 
+    window.mietVorlageOhneBs = function (an) {
+        if (bearbeitet && bearbeitet.config) bearbeitet.config.ohne_betriebsstunden = !!an;
+    };
+
     // Knopf „Anlegen" oben rechts.
     window.mietVorlageNeu = function () {
         window.openMietVorlage('neu');
@@ -582,7 +588,8 @@
         // Nur die Maschinenkategorien (Einstellungen → Kategorien →
         // "Maschinenkategorien", type 'machine'): selbstfahrender Umsetzer,
         // Rotorschaufel, Schlauchtrommelwagen, Siebtrommelmaschine …
-        const kategorien = (window.categoryList || []).filter(k => k.type === 'machine');
+        const kategorien = (window.categoryList || []).filter(k => k.type === 'machine' || !k.type)
+            .sort((x, y) => String(x.name || '').localeCompare(String(y.name || ''), 'de'));
         const gewaehlt = new Set((bearbeitet.category_ids || []).map(String));
         const gewaehlteNamen = kategorien.filter(k => gewaehlt.has(String(k.id))).map(k => k.name);
         const kopf = `
@@ -626,7 +633,10 @@
             </p>`
             + feldZeile('Titel des Bogens', 'titel', c.titel)
             + feldZeile('Zusatzinfo (Tagessatz)', 'zusatzinfo', c.zusatzinfo)
-            + feldZeile('Schlusssatz', 'schlusssatz', c.schlusssatz);
+            + feldZeile('Schlusssatz', 'schlusssatz', c.schlusssatz)
+            + `<div class="miet-editor-row"><span>Betriebsstunden</span>
+                <label style="display:flex; align-items:center; gap:8px;"><input type="checkbox" ${c.ohne_betriebsstunden ? 'checked' : ''}
+                    onchange="window.mietVorlageOhneBs(this.checked)"> Gerät hat keinen Stundenzähler — Felder weglassen</label></div>`;
 
         // --- Überschriften
         const bloecke = Object.keys(c.bloecke).map(k =>
@@ -1108,10 +1118,46 @@
         }
     }
 
+    // Radlader-Vorlage (Wunsch 2026-10-12): wird einmalig angelegt, solange es
+    // keine Vorlage mit „Radlader“ im Namen gibt — danach normal bearbeitbar.
+    // Kategorie: die Maschinenkategorie mit „Radlader“ im Namen, sonst leer.
+    const RADLADER = {
+        baugruppen: [
+            { gruppe: 'Kabine', punkte: ['Frontscheibe/Seitenscheiben', 'Fahrersitz/Sicherheitsgurt', 'Spiegel', 'Armaturen/Warnleuchten', 'Hauben/Abdeckungen'] },
+            { gruppe: 'Räder', punkte: ['Felgen', 'Reifen (Profil/Schäden)', 'Kotflügel'] },
+            { gruppe: 'Hubarm, Hydraulik', punkte: ['Hubarm/Schwinge', 'Schnellwechsler', 'Zylinder', 'Hydraulikschläuche/Leckagen', 'Bolzen/Lager abgeschmiert'] },
+            { gruppe: 'E-Anlage', punkte: ['Scheinwerfer/Arbeitsscheinwerfer', 'Rundumleuchte', 'Rücklichter/Blinker', 'Hupe/Rückfahrwarner', 'Zündschloss', 'Schlüssel'] },
+            { gruppe: 'Anbaugeräte', punkte: ['Große Schaufel', 'Kleine Schaufel', 'Palettengabel'] },
+            { gruppe: 'Betriebsstoffe', punkte: ['AdBlue Füllstand', 'Motoröl/Kühlwasser'] }
+        ],
+        fotos: ['Vorne rechts', 'Vorne', 'Vorne links', 'Links', 'Hinten links', 'Hinten', 'Hinten rechts', 'Rechts',
+                'Kabine innen', 'Anbaugerät', 'Betriebsstunden']
+    };
+    async function radladerAnlegenFallsFehlt() {
+        if (tabelleFehlt || !window.supabaseClient) return;
+        if (vorlagen.some(v => /radlader/i.test(v.name || ''))) return;
+        const kat = (window.categoryList || []).find(k => (k.type === 'machine' || !k.type) && /rad\s*lader/i.test(k.name || ''));
+        const belegt = kat && vorlagen.some(v => katIds(v).includes(String(kat.id)));
+        try {
+            const { error } = await window.supabaseClient.from('rental_templates').insert([{
+                name: 'Radlader',
+                category_ids: kat && !belegt ? [kat.id] : [],
+                category_id: kat && !belegt ? kat.id : null,
+                config: mitStandard(tiefeKopie(RADLADER))
+            }]);
+            if (error) throw error;
+            await window.fetchMietVorlagen();
+            window.showToast('Vorlage „Radlader“ angelegt' + (kat && !belegt ? '' : ' — bitte Kategorie wählen') + '.');
+        } catch (e) {
+            console.warn('Radlader-Vorlage konnte nicht angelegt werden:', e && e.message);
+        }
+    }
+
     // Wird beim Öffnen der Einstellungsseite aufgerufen.
     window.mietVorlagenOeffnen = async function () {
         await window.fetchMietVorlagen();
         await anlegenFallsLeer();
+        await radladerAnlegenFallsFehlt();
     };
 
     document.addEventListener('DOMContentLoaded', () => {
