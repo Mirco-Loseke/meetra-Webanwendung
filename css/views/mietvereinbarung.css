@@ -2481,3 +2481,18 @@ textarea.miet-in {
     font-size: 13px;
 }
 .miet-ew-zeile span { display: block; font-size: 9.5px; color: #4b5563; margin-top: 1mm; }
+
+/* Schalter „Einweisungserklärung“ in der Fußleiste neben Drucken / PDF. */
+.miet-ew-schalter {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-1, #fff);
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+}
+.miet-ew-schalter input { width: 18px; height: 18px; accent-color: var(--success, #22c55e); cursor: pointer; }
+@media print { .miet-ew-schalter { display: none !important; } }

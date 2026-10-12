@@ -483,6 +483,10 @@
                     <span class="miet-note" id="miet-status"></span>
                     <span id="miet-seitenzahl" class="miet-seitenzahl"></span>
                     <button class="btn-secondary miet-foot-zu" onclick="window.closeMietvereinbarung()">Schließen</button>
+                    <label class="miet-ew-schalter" title="Unterschriftenseite Einweisungserklärung als letztes Blatt beilegen">
+                        <input type="checkbox" ${daten.einweisungsseite === 'ja' ? 'checked' : ''} onchange="window.mietEinweisungsseite(this.checked)">
+                        <span class="miet-lang">Einweisungserklärung</span><span class="miet-kurz">Einw.</span>
+                    </label>
                     <button class="btn-secondary miet-foot-druck" onclick="window.mietDrucken()"><span class="miet-lang">Drucken / PDF</span><span class="miet-kurz">PDF</span></button>
                     <button class="btn-primary" id="miet-save-btn" onclick="window.mietSpeichern()">Speichern</button>
                 </div>
@@ -2307,26 +2311,15 @@
                     <td${sp.length > 2 ? ` colspan="${sp.length - 1}"` : ''}>${durch}</td>`;
                     })()}
                 </tr>
-                <tr data-split>
-                    <td>Unterschriftenseite Einweisungserklärung</td><td class="miet-num"></td>
-                    <td class="miet-checkcell" colspan="${sp.length}">${jaNeinSeite()}</td>
-                </tr>
                 </tbody>
             </table>
         </div>`;
     }
 
-    // Ja/Nein für die Einweisungs-Unterschriftenseite. Anders als jaNein()
-    // zeichnet das den Bogen neu — die Seite kommt dazu oder fällt weg.
-    function jaNeinSeite() {
-        const w = daten.einweisungsseite;
-        return `<span>
-            <span class="miet-check${w === 'ja' ? ' on' : ''}" onclick="window.mietEinweisungsseite('ja')"><span class="miet-dot"></span>Ja</span>
-            <span class="miet-check miet-no${w === 'nein' ? ' on' : ''}" onclick="window.mietEinweisungsseite('nein')"><span class="miet-dot"></span>Nein</span>
-        </span>`;
-    }
-    window.mietEinweisungsseite = function (wert) {
-        daten.einweisungsseite = daten.einweisungsseite === wert ? null : wert;
+    // Schalter „Einweisungserklärung“ in der Fußleiste (neben Drucken / PDF):
+    // an = Unterschriftenseite als letztes Blatt dazu. Steht nicht auf dem Bogen.
+    window.mietEinweisungsseite = function (an) {
+        daten.einweisungsseite = an ? 'ja' : 'nein';
         zeichneInhalt();
         entwurfMerken();
     };
