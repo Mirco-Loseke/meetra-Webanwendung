@@ -1,0 +1,1510 @@
+// ==========================================
+// CUSTOMERS & FIRMENEINSTELLUNGEN MODULE
+// ==========================================
+// Handles Company settings (HQ location), CSV/Excel client-side import for Sage 100 
+// addresses, and autocomplete customer searches for machine association.
+
+(function () {
+    'use strict';
+
+    console.log('Loading customers module...');
+
+    // Global state for importing
+    let parsedHeaders = [];
+    let parsedRows = [];
+
+    // Initialize module on load
+    document.addEventListener('DOMContentLoaded', () => {
+        setupImportListeners();
+        // Load settings if database client is initialized
+        if (window.supabaseClient) {
+            window.loadFirmendaten();
+        }
+    });
+
+    // ==========================================
+    // TAB NAVIGATION
+    // ==========================================
+    window.switchImportTab = function (tabName) {
+        // Toggle tabs
+        document.querySelectorAll('#settings-import .settings-tab').forEach(tab => {
+            if (tab.getAttribute('data-tab') === tabName) {
+                tab.classList.add('active');
+            } else {
+                tab.classList.remove('active');
+            }
+        });
+
+        // Toggle contents
+        document.querySelectorAll('#settings-import .tab-content').forEach(content => {
+            if (content.id === `${tabName}-tab-content`) {
+                content.classList.remove('hidden');
+                content.classList.add('active');
+            } else {
+                content.classList.add('hidden');
+                content.classList.remove('active');
+            }
+        });
+    };
+
+    // ==========================================
+    // HQ FIRMENDATEN (DATABASE/LOCAL CACHE)
+    // ==========================================
+    window.saveFirmendaten = async function (event) {
+        if (event) event.preventDefault();
+        
+        const name = document.getElementById('company-hq-name').value.trim();
+        const street = document.getElementById('company-hq-street').value.trim();
+        const zip = document.getElementById('company-hq-zip').value.trim();
+        const city = document.getElementById('company-hq-city').value.trim();
+        const country = document.getElementById('company-hq-country').value.trim();
+
+        const companyData = { name, street, zip, city, country };
+
+        try {
+            if (!window.supabaseClient) throw new Error('Supabase Client nicht initialisiert');
+
+            const { error } = await window.supabaseClient
+                .from('app_settings')
+                .upsert({ key: 'company_hq', value: companyData });
+
+            if (error) throw error;
+
+            window.showToast('Firmendaten erfolgreich gespeichert!');
+            localStorage.setItem('meetra_company_hq', JSON.stringify(companyData));
+        } catch (err) {
+            console.error('Failed to save firmendaten to Supabase:', err);
+            // Fallback to local storage
+            localStorage.setItem('meetra_company_hq', JSON.stringify(companyData));
+            window.showToast('Firmendaten lokal gespeichert (Fehler bei Cloud-Synchronisierung): ' + err.message);
+        }
+    };
+
+    window.loadFirmendaten = async function () {
+        // Instant load from localStorage
+        const cached = localStorage.getItem('meetra_company_hq');
+        if (cached) {
+            try {
+                populateFirmUI(JSON.parse(cached));
+            } catch (e) { }
+        }
+
+        // Fetch from Supabase for sync
+        if (window.supabaseClient) {
+            try {
+                const { data, error } = await window.supabaseClient
+                    .from('app_settings')
+                    .select('value')
+                    .eq('key', 'company_hq')
+                    // limit(1) statt single(): single() antwortet mit 406, wenn
+                    // noch keine Zeile da ist — eine rote Meldung ohne Grund.
+                    .limit(1);
+
+                const zeile = data && data[0];
+                if (!error && zeile && zeile.value) {
+                    populateFirmUI(zeile.value);
+                    localStorage.setItem('meetra_company_hq', JSON.stringify(zeile.value));
+                }
+            } catch (err) {
+                console.error('Failed to load firmendaten from database:', err);
+            }
+        }
+    };
+
+    function populateFirmUI(data) {
+        if (!data) return;
+        const nameEl = document.getElementById('company-hq-name');
+        const streetEl = document.getElementById('company-hq-street');
+        const zipEl = document.getElementById('company-hq-zip');
+        const cityEl = document.getElementById('company-hq-city');
+        const countryEl = document.getElementById('company-hq-country');
+
+        if (nameEl) nameEl.value = data.name || '';
+        if (streetEl) streetEl.value = data.street || '';
+        if (zipEl) zipEl.value = data.zip || '';
+        if (cityEl) cityEl.value = data.city || '';
+        if (countryEl) countryEl.value = data.country || 'Deutschland';
+    }
+
+    // ==========================================
+    // DYNAMIC EXCEL/CSV PARSER & SAGE IMPORT
+    // ==========================================
+    function setupImportListeners() {
+        const dropzone = document.getElementById('customer-import-dropzone');
+        const fileInput = document.getElementById('customer-import-input');
+
+        if (!dropzone || !fileInput) return;
+
+        dropzone.addEventListener('click', () => fileInput.click());
+
+        dropzone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropzone.style.borderColor = 'var(--color-primary-green)';
+            dropzone.style.background = 'rgba(0, 150, 64, 0.05)';
+        });
+
+        dropzone.addEventListener('dragleave', () => {
+            dropzone.style.borderColor = 'rgba(255,255,255,0.15)';
+            dropzone.style.background = 'rgba(255,255,255,0.02)';
+        });
+
+        dropzone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropzone.style.borderColor = 'rgba(255,255,255,0.15)';
+            dropzone.style.background = 'rgba(255,255,255,0.02)';
+            
+            if (e.dataTransfer.files.length > 0) {
+                handleImportFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleImportFile(e.target.files[0]);
+            }
+        });
+    }
+
+    async function handleImportFile(file) {
+        const ext = file.name.split('.').pop().toLowerCase();
+        if (ext === 'xlsx' || ext === 'xls') {
+            await parseExcelFile(file);
+        } else if (ext === 'csv') {
+            await parseCSVFile(file);
+        } else {
+            window.showToast('Bitte wählen Sie eine gültige Excel- (.xlsx, .xls) oder CSV-Datei (.csv) aus.');
+        }
+    }
+
+    // Dynamically load SheetJS (xlsx) from CDN
+    async function loadXLSXLibrary() {
+        if (window.XLSX) return true;
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+            script.onload = () => resolve(true);
+            script.onerror = (err) => reject(new Error('Excel-Bibliothek konnte nicht geladen werden. Bitte Internetverbindung prüfen.'));
+            document.head.appendChild(script);
+        });
+    }
+    window.loadXLSXLibrary = loadXLSXLibrary;
+
+    async function parseExcelFile(file) {
+        try {
+            // Show status
+            const dropzone = document.getElementById('customer-import-dropzone');
+            const originalHtml = dropzone.innerHTML;
+            dropzone.innerHTML = `
+                <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
+                    <div class="loading-spinner" style="border:4px solid rgba(255,255,255,0.1); border-top:4px solid var(--color-primary-green); border-radius:50%; width:32px; height:32px; animation:spin 1s linear infinite;"></div>
+                    <span>Lade Excel-Bibliothek und verarbeite Datei...</span>
+                </div>
+            `;
+
+            await loadXLSXLibrary();
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                    if (jsonData.length === 0) {
+                        throw new Error('Die Excel-Datei scheint leer zu sein.');
+                    }
+
+                    parsedHeaders = jsonData[0].map(h => h ? h.toString().trim() : '');
+                    parsedRows = jsonData.slice(1).filter(r => r.length > 0 && r.some(cell => cell !== null && cell !== undefined && cell !== ''));
+
+                    showMappingConfig(originalHtml);
+                } catch (err) {
+                    window.showToast('Fehler beim Lesen der Excel-Datei: ' + err.message);
+                    dropzone.innerHTML = originalHtml;
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        } catch (err) {
+            window.showToast(err.message);
+            resetImportUI();
+        }
+    }
+
+    async function parseCSVFile(file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            try {
+                const buffer = e.target.result;
+                
+                // Try decoding as UTF-8 first (with fatal error on invalid sequences)
+                let text;
+                try {
+                    const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
+                    text = utf8Decoder.decode(buffer);
+                } catch (utf8Err) {
+                    // Fallback to Windows-1252 / ISO-8859-1 for German ANSI/Sage exports
+                    console.log('UTF-8 decoding failed. Falling back to windows-1252 encoding.');
+                    const ansiDecoder = new TextDecoder('windows-1252');
+                    text = ansiDecoder.decode(buffer);
+                }
+
+                const lines = text.split(/\r?\n/);
+                if (lines.length === 0 || (lines.length === 1 && lines[0] === '')) {
+                    throw new Error('Die CSV-Datei scheint leer zu sein.');
+                }
+
+                // Autodetect delimiter (semicolon or comma)
+                const firstLine = lines[0];
+                const semicolonCount = (firstLine.match(/;/g) || []).length;
+                const commaCount = (firstLine.match(/,/g) || []).length;
+                const delimiter = semicolonCount >= commaCount ? ';' : ',';
+
+                // Basic CSV row splitter that handles quoted strings
+                const parsedData = lines.map(line => {
+                    const result = [];
+                    let current = '';
+                    let inQuotes = false;
+                    for (let i = 0; i < line.length; i++) {
+                        const char = line[i];
+                        if (char === '"') {
+                            inQuotes = !inQuotes;
+                        } else if (char === delimiter && !inQuotes) {
+                            result.push(current.trim().replace(/^"|"$/g, ''));
+                            current = '';
+                        } else {
+                            current += char;
+                        }
+                    }
+                    result.push(current.trim().replace(/^"|"$/g, ''));
+                    return result;
+                }).filter(row => row.length > 0 && row.some(cell => cell !== ''));
+
+                if (parsedData.length === 0) {
+                    throw new Error('Es konnten keine gültigen Zeilen in der CSV gefunden werden.');
+                }
+
+                parsedHeaders = parsedData[0];
+                parsedRows = parsedData.slice(1);
+
+                showMappingConfig();
+            } catch (err) {
+                window.showToast('Fehler beim Parsen der CSV-Datei: ' + err.message);
+                resetImportUI();
+            }
+        };
+        // Read as ArrayBuffer so TextDecoder can decode it with custom encoding.
+        reader.readAsArrayBuffer(file);
+    }
+
+    function showMappingConfig(originalDropzoneHtml) {
+        const dropzone = document.getElementById('customer-import-dropzone');
+        const configSection = document.getElementById('import-config-section');
+        const statsEl = document.getElementById('import-stats');
+
+        if (dropzone) dropzone.classList.add('hidden');
+        if (configSection) configSection.classList.remove('hidden');
+
+        if (statsEl) {
+            statsEl.textContent = `${parsedRows.length} Kundenadressen zum Import bereit.`;
+        }
+
+        // Populate column dropdowns
+        const dropdownIds = [
+            'map-address-num', 'map-cust-num', 'map-matchcode', 'map-name', 'map-street',
+            'map-zip', 'map-city', 'map-country', 'map-phone', 'map-email'
+        ];
+
+        dropdownIds.forEach(id => {
+            const select = document.getElementById(id);
+            if (!select) return;
+
+            select.innerHTML = '<option value="">-- Nicht zugeordnet --</option>';
+            parsedHeaders.forEach((header, index) => {
+                const opt = document.createElement('option');
+                opt.value = index;
+                opt.textContent = `${header} (Spalte ${index + 1})`;
+                select.appendChild(opt);
+            });
+
+            // Perform intelligent auto-mapping
+            const defaultIndex = findMatchingHeaderIndex(id, parsedHeaders);
+            if (defaultIndex !== -1) {
+                select.value = defaultIndex;
+            }
+        });
+    }
+
+    function findMatchingHeaderIndex(fieldId, headers) {
+        const mappingKeywords = {
+            'map-address-num': ['adressnummer', 'adresse', 'adrnr', 'adress-nr', 'adressnr', 'address number', 'addressnum'],
+            'map-cust-num': ['konto', 'kdnr', 'kundennummer', 'kunden-nr', 'kundennr', 'client number', 'customer number', 'id'],
+            'map-matchcode': ['match', 'matchcode', 'suchbegriff', 'kurzname', 'kürzel'],
+            'map-name': ['name1', 'name', 'firma', 'kundenname', 'bezeichnung', 'company', 'name 1'],
+            'map-street': ['strasse', 'straße', 'str', 'address', 'street'],
+            'map-zip': ['plz', 'postleitzahl', 'zip', 'zipcode', 'postal', 'plz/ort'],
+            'map-city': ['ort', 'stadt', 'city', 'plz/ort'],
+            'map-country': ['land', 'staat', 'country', 'lnd'],
+            'map-phone': ['telefon', 'tel', 'phone', 'mobil', 'tel.', 'tel1'],
+            'map-email': ['email', 'e-mail', 'mail', 'emailadresse', 'e-mail-adresse']
+        };
+
+        const keywords = mappingKeywords[fieldId] || [];
+        
+        for (let i = 0; i < headers.length; i++) {
+            const h = headers[i].toLowerCase();
+            // Exact match first
+            if (keywords.includes(h)) return i;
+            // Fuzzy match
+            if (keywords.some(kw => h.includes(kw))) return i;
+        }
+
+        // Specific fallbacks (e.g. Sage 100 specific labels)
+        if (fieldId === 'map-name') {
+            const matchIndex = headers.findIndex(h => h.toLowerCase().startsWith('name'));
+            if (matchIndex !== -1) return matchIndex;
+        }
+
+        return -1;
+    }
+
+    window.cancelImport = function () {
+        resetImportUI();
+    };
+
+    // ------------------------------------------------------------------
+    // Dopplungen beim Adressimport: Auswahl je Adresse + dauerhafte Sperrliste
+    // ------------------------------------------------------------------
+    // Sage legt Firmen manchmal doppelt an und kann sie nicht mehr löschen.
+    // Hier entscheidet der Nutzer je Adresse, ob sie importiert wird; abgewählte
+    // Adressnummern landen in app_settings ('customer_import_ausgeschlossen')
+    // und werden bei künftigen Importen ohne Rückfrage übersprungen.
+    async function ladeImportAusschluss() {
+        try {
+            const { data } = await window.supabaseClient
+                .from('app_settings').select('value').eq('key', 'customer_import_ausgeschlossen').limit(1);
+            const liste = data && data[0] && Array.isArray(data[0].value) ? data[0].value : [];
+            return new Set(liste.map(String));
+        } catch (e) { return new Set(); }
+    }
+    async function speichereImportAusschluss(bisher, neue) {
+        const alle = new Set(bisher);
+        neue.forEach(n => alle.add(String(n)));
+        try {
+            const { error } = await window.supabaseClient
+                .from('app_settings').upsert({ key: 'customer_import_ausgeschlossen', value: [...alle] });
+            if (error) console.warn('Sperrliste nicht gespeichert:', error.message);
+        } catch (e) { console.warn('Sperrliste nicht gespeichert:', e); }
+    }
+    // Sperrliste leeren (Einstellungen → Adressimport, falls mal eine Adresse
+    // doch gewollt ist): beim nächsten Import wird wieder gefragt.
+    window.importAusschlussLeeren = async function () {
+        if (!confirm('Sperrliste der beim Import ausgeschlossenen Adressen leeren? Beim nächsten Import wird für diese wieder gefragt.')) return;
+        await window.supabaseClient.from('app_settings').upsert({ key: 'customer_import_ausgeschlossen', value: [] });
+        window.showToast('Sperrliste geleert.');
+    };
+
+    // Fenster: jede mögliche Dopplung mit Häkchen „importieren". Liefert
+    // { nichtImportieren: [adressnummern] } oder null bei Abbruch.
+    function importDublettenDialog(dubletten, schonAusgeschlossen) {
+        return new Promise((fertig) => {
+            const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            const alt = document.getElementById('import-dubletten-modal');
+            if (alt) alt.remove();
+            const el = document.createElement('div');
+            el.id = 'import-dubletten-modal';
+            el.style.cssText = 'position:fixed; inset:0; z-index:100000; background:rgba(0,0,0,0.7); display:flex; align-items:center; justify-content:center; padding:16px;';
+            el.innerHTML = `
+                <div style="background:#0f172a; border:1px solid rgba(255,255,255,0.15); border-radius:16px; width:min(760px, 100%); max-height:90vh; display:flex; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.8); color:#fff; font-family:'Inter',sans-serif;">
+                    <div style="padding:18px 22px 10px;">
+                        <h3 style="margin:0 0 6px; font-size:1.1rem;">${dubletten.length} mögliche Dopplung${dubletten.length === 1 ? '' : 'en'} erkannt</h3>
+                        <p style="margin:0; font-size:0.85rem; color:rgba(255,255,255,0.6); line-height:1.4;">
+                            Haken weg = diese Adresse wird <strong>nicht</strong> importiert und beim nächsten Import ohne Rückfrage übersprungen.
+                            Eindeutige Treffer (gleiche E-Mail/Telefon/Adressnr.) werden ohnehin automatisch zusammengeführt.
+                            ${schonAusgeschlossen ? `<br>${schonAusgeschlossen} Adresse(n) sind aus früheren Importen bereits dauerhaft ausgeschlossen.` : ''}
+                        </p>
+                        <div style="margin-top:8px; display:flex; gap:8px;">
+                            <button type="button" class="btn-secondary" style="padding:5px 10px; font-size:0.78rem;" data-alle="1">Alle importieren</button>
+                            <button type="button" class="btn-secondary" style="padding:5px 10px; font-size:0.78rem;" data-alle="0">Keine importieren</button>
+                        </div>
+                    </div>
+                    <div style="overflow-y:auto; padding:0 22px; flex:1;">
+                        ${dubletten.map((d, i) => `
+                        <label style="display:flex; align-items:flex-start; gap:10px; padding:9px 0; border-top:1px solid rgba(255,255,255,0.08); cursor:pointer; font-size:0.86rem; line-height:1.35;">
+                            <input type="checkbox" data-i="${i}" checked style="margin-top:3px; accent-color:#10b981; width:16px; height:16px; flex-shrink:0;">
+                            <span>${esc(d.text)}</span>
+                        </label>`).join('')}
+                    </div>
+                    <div style="padding:14px 22px 18px; display:flex; justify-content:flex-end; gap:10px; border-top:1px solid rgba(255,255,255,0.1);">
+                        <button type="button" class="btn-secondary" data-abbruch="1">Import abbrechen</button>
+                        <button type="button" class="btn-primary" data-weiter="1">Weiter mit Import</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(el);
+            el.querySelectorAll('[data-alle]').forEach(b => b.addEventListener('click', () => {
+                const an = b.dataset.alle === '1';
+                el.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = an; });
+            }));
+            el.querySelector('[data-abbruch]').addEventListener('click', () => { el.remove(); fertig(null); });
+            el.querySelector('[data-weiter]').addEventListener('click', () => {
+                const nicht = [];
+                el.querySelectorAll('input[type=checkbox]').forEach(cb => {
+                    if (!cb.checked) nicht.push(dubletten[Number(cb.dataset.i)].c.address_number);
+                });
+                el.remove();
+                fertig({ nichtImportieren: nicht });
+            });
+        });
+    }
+
+    window.resetImportUI = function () {
+        parsedHeaders = [];
+        parsedRows = [];
+
+        const dropzone = document.getElementById('customer-import-dropzone');
+        const configSection = document.getElementById('import-config-section');
+        const progressSection = document.getElementById('import-progress-section');
+        const resultSection = document.getElementById('import-result-section');
+        const fileInput = document.getElementById('customer-import-input');
+
+        if (dropzone) {
+            dropzone.classList.remove('hidden');
+            // Restore dropzone content
+            dropzone.innerHTML = `
+                <input type="file" id="customer-import-input" accept=".csv, .xls, .xlsx" class="hidden-file-input" style="display: none;">
+                <div style="display: flex; flex-direction: column; align-items: center; gap: 12px;">
+                    <span style="font-size: 3rem;">📥</span>
+                    <span style="font-weight: 700; color: #fff; font-size: 1.1rem;">Datei auswählen oder hierher ziehen</span>
+                    <span style="font-size: 0.85rem; color: rgba(255,255,255,0.4);">Unterstützte Formate: Excel (.xlsx, .xls) oder CSV (.csv)</span>
+                </div>
+            `;
+            setupImportListeners();
+        }
+        if (fileInput) fileInput.value = '';
+        if (configSection) configSection.classList.add('hidden');
+        if (progressSection) progressSection.classList.add('hidden');
+        if (resultSection) resultSection.classList.add('hidden');
+    };
+
+    window.executeImport = async function () {
+        const configSection = document.getElementById('import-config-section');
+        const progressSection = document.getElementById('import-progress-section');
+        const progressBar = document.getElementById('import-progress-bar');
+        const progressDetails = document.getElementById('import-progress-details');
+        const resultSection = document.getElementById('import-result-section');
+        const resultMessage = document.getElementById('import-result-message');
+
+        const mapAddressNum = document.getElementById('map-address-num').value;
+        const mapCustNum = document.getElementById('map-cust-num').value;
+        const mapMatchcode = document.getElementById('map-matchcode').value;
+        const mapName = document.getElementById('map-name').value;
+        const mapStreet = document.getElementById('map-street').value;
+        const mapZip = document.getElementById('map-zip').value;
+        const mapCity = document.getElementById('map-city').value;
+        const mapCountry = document.getElementById('map-country').value;
+        const mapPhone = document.getElementById('map-phone').value;
+        const mapEmail = document.getElementById('map-email').value;
+
+        // Validation
+        if (mapAddressNum === '' || mapName === '') {
+            window.showToast('Die Felder "Adressnummer" und "Firmenname / Kundenname" sind Pflichtfelder und müssen zugeordnet werden.');
+            return;
+        }
+
+        if (configSection) configSection.classList.add('hidden');
+        if (progressSection) progressSection.classList.remove('hidden');
+
+        function formatCountryName(countryStr) {
+            if (!countryStr) return 'Deutschland';
+            const c = countryStr.toString().trim().toLowerCase();
+            if (c === 'de' || c === 'deu' || c === 'd' || c === 'germany' || c === 'deutschland') {
+                return 'Deutschland';
+            }
+            if (c === 'at' || c === 'aut' || c === 'österreich' || c === 'oesterreich' || c === 'austria') {
+                return 'Österreich';
+            }
+            if (c === 'ch' || c === 'che' || c === 'schweiz' || c === 'switzerland') {
+                return 'Schweiz';
+            }
+            if (c === 'fr' || c === 'fra' || c === 'frankreich' || c === 'france') {
+                return 'Frankreich';
+            }
+            if (c === 'nl' || c === 'nld' || c === 'niederlande' || c === 'netherlands') {
+                return 'Niederlande';
+            }
+            if (c === 'be' || c === 'bel' || c === 'belgien' || c === 'belgium') {
+                return 'Belgien';
+            }
+            if (c === 'it' || c === 'ita' || c === 'italien' || c === 'italy') {
+                return 'Italien';
+            }
+            if (c === 'pl' || c === 'pol' || c === 'polen' || c === 'poland') {
+                return 'Polen';
+            }
+            if (c === 'cz' || c === 'cze' || c === 'tschechien' || c === 'czechia' || c === 'czech republic') {
+                return 'Tschechien';
+            }
+            return countryStr.toString().trim().charAt(0).toUpperCase() + countryStr.toString().trim().slice(1);
+        }
+
+        const customersToUpsert = [];
+        
+        parsedRows.forEach(row => {
+            const addressNum = row[mapAddressNum]?.toString().trim();
+            const custNum = mapCustNum !== '' ? row[mapCustNum]?.toString().trim() : null;
+            const name = row[mapName]?.toString().trim();
+
+            if (!addressNum || !name) return; // Skip invalid rows
+
+            // Construct values with clean fallbacks
+            let street = mapStreet !== '' ? row[mapStreet]?.toString().trim() : null;
+            let zip = mapZip !== '' ? row[mapZip]?.toString().trim() : null;
+            let city = mapCity !== '' ? row[mapCity]?.toString().trim() : null;
+
+            // In some exports, ZIP and City are combined in one field (e.g. "12345 Musterstadt")
+            // Let's attempt to separate them if only ZIP is mapped but contains spaces, etc.
+            if (mapZip !== '' && mapCity === '' && zip && zip.includes(' ')) {
+                const parts = zip.split(' ');
+                if (parts[0].match(/^\d{4,5}$/)) {
+                    zip = parts[0];
+                    city = parts.slice(1).join(' ');
+                }
+            }
+
+            customersToUpsert.push({
+                address_number: addressNum,
+                customer_number: custNum || null,
+                name: name,
+                // Matchcode/Land vorerst NICHT mit Fallback befüllen: ein Re-Import einer Liste, die
+                // diese Spalte nicht enthält (z.B. reine Kundenliste ohne Matchcode), soll einen
+                // zuvor gesetzten Wert nicht mit einem Platzhalter überschreiben (siehe Merge unten).
+                matchcode: mapMatchcode !== '' ? (row[mapMatchcode]?.toString().trim() || null) : null,
+                street: street || null,
+                zip_code: zip || null,
+                city: city || null,
+                country: mapCountry !== '' ? formatCountryName(row[mapCountry]) : null,
+                phone: mapPhone !== '' ? (row[mapPhone]?.toString().trim() || null) : null,
+                email: mapEmail !== '' ? (row[mapEmail]?.toString().trim() || null) : null
+            });
+        });
+
+        if (customersToUpsert.length === 0) {
+            window.showToast('Keine gültigen Zeilen mit Adressnummer und Name zum Importieren gefunden.');
+            resetImportUI();
+            return;
+        }
+
+        try {
+            if (!window.supabaseClient) throw new Error('Supabase Client nicht initialisiert');
+
+            // Bestehende Kunden zu den importierten Adressnummern laden: Adress- und Kundenliste
+            // werden oft abwechselnd importiert und enthalten meist nicht dieselben Spalten (z.B.
+            // hat die Kundenliste eine Kundennummer aber keine Straße, die Adressliste umgekehrt).
+            // Ohne diesen Merge würde ein Re-Import die jeweils fehlenden Felder auf NULL setzen
+            // statt sie zu ergänzen — Felder, die in DIESEM Import nicht zugeordnet sind, werden
+            // daher mit dem bisherigen Wert aufgefüllt statt überschrieben.
+            const addressNumbers = [...new Set(customersToUpsert.map(c => c.address_number))];
+            const existingByAddressNumber = {};
+            const lookupChunkSize = 500;
+            for (let i = 0; i < addressNumbers.length; i += lookupChunkSize) {
+                const numChunk = addressNumbers.slice(i, i + lookupChunkSize);
+                const { data: existing, error: lookupError } = await window.supabaseClient
+                    .from('customers')
+                    .select('id, address_number, customer_number, matchcode, street, zip_code, city, country, phone, email')
+                    .in('address_number', numChunk);
+                if (lookupError) throw lookupError;
+                (existing || []).forEach(c => { existingByAddressNumber[c.address_number] = c; });
+            }
+
+            const normalize = (s) => (s || '').toString().trim().toLowerCase().replace(/\s+/g, ' ');
+            const normPhone = (s) => (s || '').toString().replace(/[^\d+]/g, '').replace(/^00/, '+');
+            const normStreet = (s) => normalize(s).replace(/stra(ss|ß)e/g, 'str').replace(/[.,]/g, '').replace(/\s+/g, ' ').trim();
+            // Ähnlichkeit 0..1 (Levenshtein-basiert), für "fast gleicher Name".
+            const strSim = (a, b) => {
+                a = a || ''; b = b || '';
+                if (!a || !b) return 0;
+                if (a === b) return 1;
+                const m = a.length, n = b.length;
+                const dp = Array.from({ length: m + 1 }, (_, i) => i);
+                for (let j = 1; j <= n; j++) {
+                    let prev = dp[0]; dp[0] = j;
+                    for (let i = 1; i <= m; i++) {
+                        const tmp = dp[i];
+                        dp[i] = Math.min(dp[i] + 1, dp[i - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+                        prev = tmp;
+                    }
+                }
+                return 1 - dp[m] / Math.max(m, n);
+            };
+
+            const unmatched = customersToUpsert.filter(c => !existingByAddressNumber[c.address_number]);
+
+            // Alle erkannten UNKLAREN möglichen Dopplungen sammeln -> eine einzige Rückfrage am Ende.
+            // Eindeutige Treffer werden weiter unten automatisch zusammengeführt (ohne Nachfrage).
+            const possibleDuplicates = [];
+
+            // (A) Firmen, die bereits MIT einer (anderen) Adressnummer existieren. Sage legt Firmen
+            // manchmal versehentlich doppelt an — nicht blind übernehmen, aber auch nicht blind
+            // zusammenführen (zwei Adressnummern können echte Standorte sein): nur nachfragen.
+            if (unmatched.length > 0) {
+                const { data: realCandidates, error: realCandError } = await window.supabaseClient
+                    .from('customers')
+                    .select('name, address_number, customer_number, zip_code, street')
+                    .not('address_number', 'is', null);
+                if (realCandError) throw realCandError;
+
+                const realByName = {};
+                (realCandidates || []).forEach(c => {
+                    const key = normalize(c.name);
+                    if (!key) return;
+                    (realByName[key] = realByName[key] || []).push(c);
+                });
+
+                unmatched.forEach(c => {
+                    const candidates = realByName[normalize(c.name)] || [];
+                    const matched = candidates.find(o =>
+                        (c.zip_code && o.zip_code && normalize(o.zip_code) === normalize(c.zip_code)) ||
+                        (c.street && o.street && normStreet(o.street) === normStreet(c.street))
+                    );
+                    if (matched) {
+                        possibleDuplicates.push({ c: c, text:
+                            `${c.name} (PLZ ${c.zip_code || '?'}) — neu: Adressnr. ${c.address_number}, bestehend: Adressnr. ${matched.address_number}${matched.customer_number ? `, Kdnr. ${matched.customer_number}` : ''}`
+                        });
+                    }
+                });
+            }
+
+            // (B) Bestehende Datensätze OHNE Adressnummer — das sind v.a. MANUELL angelegte Adressen.
+            // Damit der Import sie nicht ein zweites Mal anlegt, über MEHRERE Signale abgleichen:
+            //   exakter Name / gleiche E-Mail / gleiche Telefonnummer / gleicher Matchcode
+            //   -> eindeutig -> automatisch zusammenführen (bekommt jetzt die Adressnummer).
+            //   nur ÄHNLICHER Name (+ gleiche PLZ/Straße) -> nicht automatisch, sondern nachfragen.
+            const toUpdateOrphan = []; // { id, payload }
+            const usedOrphanIds = new Set();
+
+            if (unmatched.length > 0) {
+                const orphanCols = 'id, name, customer_number, matchcode, street, zip_code, city, country, phone, email';
+                let orphans = [];
+                const pageSize = 1000;
+                for (let from = 0; ; from += pageSize) {
+                    const { data: page, error: orphanError } = await window.supabaseClient
+                        .from('customers')
+                        .select(orphanCols)
+                        .is('address_number', null)
+                        .range(from, from + pageSize - 1);
+                    if (orphanError) throw orphanError;
+                    orphans = orphans.concat(page || []);
+                    if (!page || page.length < pageSize) break;
+                }
+
+                const byName = {}, byEmail = {}, byPhone = {}, byMatchcode = {};
+                const push = (map, key, o) => { if (key) (map[key] = map[key] || []).push(o); };
+                orphans.forEach(o => {
+                    push(byName, normalize(o.name), o);
+                    push(byEmail, normalize(o.email), o);
+                    push(byPhone, normPhone(o.phone), o);
+                    push(byMatchcode, normalize(o.matchcode), o);
+                });
+                const free = (arr) => (arr || []).filter(o => !usedOrphanIds.has(o.id));
+
+                unmatched.forEach(c => {
+                    let match = null;
+                    const nName = free(byName[normalize(c.name)]);
+                    const nEmail = c.email ? free(byEmail[normalize(c.email)]) : [];
+                    const nPhone = normPhone(c.phone) ? free(byPhone[normPhone(c.phone)]) : [];
+                    const nMc = c.matchcode ? free(byMatchcode[normalize(c.matchcode)]) : [];
+
+                    if (nEmail.length === 1) match = nEmail[0];
+                    else if (nPhone.length === 1) match = nPhone[0];
+                    else if (nName.length === 1) match = nName[0];
+                    else if (nName.length > 1) {
+                        const refined = nName.filter(o =>
+                            (c.zip_code && o.zip_code && normalize(o.zip_code) === normalize(c.zip_code)) ||
+                            (c.street && o.street && normStreet(o.street) === normStreet(c.street))
+                        );
+                        if (refined.length === 1) match = refined[0];
+                    }
+                    if (!match && nMc.length === 1) match = nMc[0];
+
+                    if (match) {
+                        usedOrphanIds.add(match.id);
+                        existingByAddressNumber[c.address_number] = match;
+                        c._mergeIntoOrphanId = match.id;
+                        return;
+                    }
+
+                    // Kein eindeutiger Treffer: ähnlichen Namen + gleiche PLZ/Straße als mögliche
+                    // Dublette melden (Nutzer entscheidet), statt still ein Duplikat anzulegen.
+                    const near = orphans.find(o => !usedOrphanIds.has(o.id) &&
+                        strSim(normalize(c.name), normalize(o.name)) >= 0.86 &&
+                        ((c.zip_code && o.zip_code && normalize(o.zip_code) === normalize(c.zip_code)) ||
+                         (c.street && o.street && normStreet(o.street) === normStreet(c.street))));
+                    if (near) {
+                        possibleDuplicates.push({ c: c, text:
+                            `${c.name} (PLZ ${c.zip_code || '?'}) — ähnlich zu bestehender Adresse ohne Adressnr.: „${near.name}"${near.customer_number ? ` (Kdnr. ${near.customer_number})` : ''}`
+                        });
+                    }
+                });
+            }
+
+            // Unklare Dopplungen: der Nutzer wählt JE ADRESSE, ob sie importiert
+            // wird. Abgewählte Adressnummern werden dauerhaft gemerkt (app_settings
+            // 'customer_import_ausgeschlossen') — Sage kann solche Doppelanlagen
+            // nicht löschen, und beim nächsten Import soll nicht wieder gefragt werden.
+            const ausgeschlossen = await ladeImportAusschluss();
+            const vorabRaus = possibleDuplicates.filter(d => ausgeschlossen.has(String(d.c.address_number)));
+            const offen = possibleDuplicates.filter(d => !ausgeschlossen.has(String(d.c.address_number)));
+            let rausNummern = new Set(vorabRaus.map(d => String(d.c.address_number)));
+            if (offen.length > 0) {
+                const wahl = await importDublettenDialog(offen, vorabRaus.length);
+                if (!wahl) { resetImportUI(); return; }
+                wahl.nichtImportieren.forEach(nr => rausNummern.add(String(nr)));
+                if (wahl.nichtImportieren.length) await speichereImportAusschluss(ausgeschlossen, wahl.nichtImportieren);
+            }
+            if (rausNummern.size) {
+                for (let i = customersToUpsert.length - 1; i >= 0; i--) {
+                    if (rausNummern.has(String(customersToUpsert[i].address_number))) customersToUpsert.splice(i, 1);
+                }
+                window.showToast(`${rausNummern.size} Adresse(n) nicht importiert (als Dopplung ausgeschlossen).`);
+            }
+
+            customersToUpsert.forEach(c => {
+                const existing = existingByAddressNumber[c.address_number];
+                if (existing) {
+                    Object.keys(c).forEach(key => {
+                        if (key === 'address_number' || key === 'name' || key === '_mergeIntoOrphanId') return;
+                        if (c[key] == null && existing[key] != null) c[key] = existing[key];
+                    });
+                }
+                // Endgültiger Fallback erst NACH dem Merge, also nur falls wirklich nirgends ein
+                // Wert bekannt ist (weder in diesem Import noch beim bisherigen Datensatz).
+                if (c.matchcode == null) c.matchcode = c.name;
+                if (c.country == null) c.country = 'Deutschland';
+
+                if (c._mergeIntoOrphanId) {
+                    const orphanId = c._mergeIntoOrphanId;
+                    delete c._mergeIntoOrphanId;
+                    toUpdateOrphan.push({ id: orphanId, payload: c });
+                }
+            });
+
+            // Per Name/PLZ/Straße gefundene alte Datensätze (ohne Adressnummer) gezielt per id
+            // aktualisieren — die bekommen dadurch jetzt eine Adressnummer und werden bei
+            // zukünftigen Importen ganz normal über diese gefunden, statt erneut zu duplizieren.
+            for (const { id, payload } of toUpdateOrphan) {
+                const { error: orphanUpdError } = await window.supabaseClient
+                    .from('customers')
+                    .update(payload)
+                    .eq('id', id);
+                if (orphanUpdError) throw orphanUpdError;
+            }
+
+            const toUpsert = customersToUpsert.filter(c => !toUpdateOrphan.some(o => o.payload === c));
+            const total = customersToUpsert.length;
+            const chunkSize = 100;
+            let processed = toUpdateOrphan.length;
+            if (progressBar) progressBar.style.width = `${Math.min(100, Math.round((processed / total) * 100))}%`;
+            if (progressDetails) progressDetails.textContent = `${processed} von ${total} verarbeitet...`;
+
+            for (let i = 0; i < toUpsert.length; i += chunkSize) {
+                const chunk = toUpsert.slice(i, i + chunkSize);
+
+                const { error } = await window.supabaseClient
+                    .from('customers')
+                    .upsert(chunk, { onConflict: 'address_number' });
+
+                if (error) throw error;
+
+                processed += chunk.length;
+                const progress = Math.min(100, Math.round((processed / total) * 100));
+                if (progressBar) progressBar.style.width = `${progress}%`;
+                if (progressDetails) progressDetails.textContent = `${processed} von ${total} verarbeitet...`;
+            }
+
+            // Success
+            if (progressSection) progressSection.classList.add('hidden');
+            if (resultSection) resultSection.classList.remove('hidden');
+            if (resultMessage) {
+                resultMessage.textContent = `Erfolgreich ${total} Kundenadressen aus Sage 100 importiert und aktualisiert${toUpdateOrphan.length > 0 ? ` (davon ${toUpdateOrphan.length} mit bestehendem Kunden ohne Adressnummer zusammengeführt)` : ''}.`;
+            }
+
+            // Neu importierte/aktualisierte Kunden können bislang unzuordenbare Angebote
+            // (Kundenmatchcode ohne passenden Kunden) jetzt eindeutig machen.
+            if (typeof window.autoAssignAngeboteMachines === 'function') {
+                window.autoAssignAngeboteMachines().then(() => {
+                    if (typeof window.fetchAngebote === 'function') window.fetchAngebote(true);
+                });
+            }
+        } catch (err) {
+            window.showToast('Fehler beim Datenbankimport: ' + err.message);
+            resetImportUI();
+        }
+    };
+
+    // ==========================================
+    // CUSTOMER AUTOCOMPLETE SEARCH & FILL (MACHINE FORM)
+    // ==========================================
+    let machineSearchTimeout = null;
+    let operatorSearchTimeout = null;
+    let locationSearchTimeout = null;
+
+    // Verschiebt eine Vorschlagsliste nach document.body und positioniert sie fixiert über dem
+    // zugehörigen Eingabefeld — sonst bleibt sie hinter dem backdrop-filter des Modals "unsichtbar"/durchsichtig.
+    window.positionSuggestionsBoxFixed = function (inputId, boxId) {
+        const input = document.getElementById(inputId);
+        const box = document.getElementById(boxId);
+        if (!input || !box) return;
+        if (box.parentElement !== document.body) {
+            document.body.appendChild(box);
+        }
+        const rect = input.getBoundingClientRect();
+        box.style.position = 'fixed';
+        box.style.top = `${rect.bottom + 4}px`;
+        box.style.left = `${rect.left}px`;
+        box.style.width = `${rect.width}px`;
+        box.style.zIndex = '999999';
+    };
+
+    window.searchCustomersForMachine = function () {
+        clearTimeout(machineSearchTimeout);
+        machineSearchTimeout = setTimeout(async () => {
+            const query = document.getElementById('machine-customer-search').value.trim();
+            const suggestionsBox = document.getElementById('machine-customer-suggestions');
+
+            if (!query || query.length < 2) {
+                suggestionsBox.style.display = 'none';
+                suggestionsBox.innerHTML = '';
+                return;
+            }
+
+            suggestionsBox.style.display = 'block';
+            suggestionsBox.innerHTML = '<div style="padding:10px; color:rgba(255,255,255,0.5);">Suche...</div>';
+
+            try {
+                if (!window.supabaseClient) throw new Error('Supabase Client nicht initialisiert');
+
+                // Suche im Browser über den Kunden-Cache (js/lookup-cache.js) — kein Serverruf pro Tastendruck
+                const data = await window.customerCacheSearch(query, 10);
+
+                if (data.length === 0) {
+                    suggestionsBox.innerHTML = '<div style="padding:10px; color:rgba(255,255,255,0.4);">Keine Kunden gefunden</div>';
+                    return;
+                }
+
+                suggestionsBox.innerHTML = '';
+                data.forEach(cust => {
+                    const div = document.createElement('div');
+                    div.style.cssText = 'padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer; color:#fff; transition: background 0.2s;';
+                    div.onmouseover = () => div.style.background = 'rgba(255,255,255,0.08)';
+                    div.onmouseout = () => div.style.background = 'transparent';
+                    
+                    const label = cust.matchcode ? `[${cust.matchcode}] ${cust.name}` : cust.name;
+                    let details = '';
+                    if (cust.address_number) details += `Adr. ${cust.address_number} `;
+                    if (cust.customer_number) details += `(Kdnr. ${cust.customer_number}) `;
+                    if (cust.city) details += `- ${cust.city}`;
+                    
+                    div.innerHTML = `
+                        <div style="font-weight:700; font-size:0.95rem;">${label}</div>
+                        <div style="font-size:0.8rem; color:rgba(255,255,255,0.4); margin-top:2px;">${details}</div>
+                    `;
+
+                    div.onclick = () => {
+                        window.selectCustomerForMachine(cust);
+                    };
+
+                    suggestionsBox.appendChild(div);
+                });
+            } catch (err) {
+                console.error('Autocomplete search failed:', err);
+                suggestionsBox.innerHTML = '<div style="padding:10px; color:red;">Fehler bei der Suche</div>';
+            }
+        }, 60);
+    };
+
+    window.searchOperatorsForMachine = function () {
+        clearTimeout(operatorSearchTimeout);
+        operatorSearchTimeout = setTimeout(async () => {
+            const query = document.getElementById('machine-operator-search').value.trim();
+            const suggestionsBox = document.getElementById('machine-operator-suggestions');
+
+            if (!query || query.length < 2) {
+                suggestionsBox.style.display = 'none';
+                suggestionsBox.innerHTML = '';
+                return;
+            }
+
+            suggestionsBox.style.display = 'block';
+            suggestionsBox.innerHTML = '<div style="padding:10px; color:rgba(255,255,255,0.5);">Suche...</div>';
+            window.positionSuggestionsBoxFixed('machine-operator-search', 'machine-operator-suggestions');
+
+            try {
+                if (!window.supabaseClient) throw new Error('Supabase Client nicht initialisiert');
+
+                // Suche im Browser über den Kunden-Cache (js/lookup-cache.js) — kein Serverruf pro Tastendruck
+                const data = await window.customerCacheSearch(query, 10);
+
+                if (data.length === 0) {
+                    suggestionsBox.innerHTML = '<div style="padding:10px; color:rgba(255,255,255,0.4);">Keine Betreiber gefunden</div>';
+                    return;
+                }
+
+                suggestionsBox.innerHTML = '';
+                data.forEach(cust => {
+                    const div = document.createElement('div');
+                    div.style.cssText = 'padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer; color:#fff; transition: background 0.2s;';
+                    div.onmouseover = () => div.style.background = 'rgba(255,255,255,0.08)';
+                    div.onmouseout = () => div.style.background = 'transparent';
+                    
+                    const label = cust.matchcode ? `[${cust.matchcode}] ${cust.name}` : cust.name;
+                    let details = '';
+                    if (cust.address_number) details += `Adr. ${cust.address_number} `;
+                    if (cust.customer_number) details += `(Kdnr. ${cust.customer_number}) `;
+                    if (cust.city) details += `- ${cust.city}`;
+                    
+                    div.innerHTML = `
+                        <div style="font-weight:700; font-size:0.95rem;">${label}</div>
+                        <div style="font-size:0.8rem; color:rgba(255,255,255,0.4); margin-top:2px;">${details}</div>
+                    `;
+
+                    div.onclick = () => {
+                        window.selectOperatorForMachine(cust);
+                    };
+
+                    suggestionsBox.appendChild(div);
+                });
+            } catch (err) {
+                console.error('Autocomplete operator search failed:', err);
+                suggestionsBox.innerHTML = '<div style="padding:10px; color:red;">Fehler bei der Suche</div>';
+            }
+        }, 60);
+    };
+
+    window.selectOperatorForMachine = function (cust) {
+        document.getElementById('machine-customer-id').value = cust.id;
+        document.getElementById('machine-customer-number').value = cust.customer_number || '';
+        document.getElementById('machine-owner').value = cust.name || '';
+        document.getElementById('machine-operator-street').value = cust.street || '';
+        document.getElementById('machine-operator-zip').value = cust.zip_code || '';
+        document.getElementById('machine-operator-city').value = cust.city || '';
+        document.getElementById('machine-operator-country').value = cust.country || 'Deutschland';
+
+        window.updateCombinedAddresses();
+
+        // Populate search input
+        const searchInput = document.getElementById('machine-operator-search');
+        searchInput.value = cust.matchcode ? `[${cust.matchcode}] ${cust.name}` : cust.name;
+        
+        const suggestionsBox = document.getElementById('machine-operator-suggestions');
+        suggestionsBox.style.display = 'none';
+        suggestionsBox.innerHTML = '';
+    };
+
+    window.searchLocationsForMachine = function () {
+        clearTimeout(locationSearchTimeout);
+        locationSearchTimeout = setTimeout(async () => {
+            const query = document.getElementById('machine-location-search').value.trim();
+            const suggestionsBox = document.getElementById('machine-location-suggestions');
+
+            if (!query || query.length < 2) {
+                suggestionsBox.style.display = 'none';
+                suggestionsBox.innerHTML = '';
+                return;
+            }
+
+            suggestionsBox.style.display = 'block';
+            suggestionsBox.innerHTML = '<div style="padding:10px; color:rgba(255,255,255,0.5);">Suche...</div>';
+            window.positionSuggestionsBoxFixed('machine-location-search', 'machine-location-suggestions');
+
+            try {
+                if (!window.supabaseClient) throw new Error('Supabase Client nicht initialisiert');
+
+                // Suche im Browser über den Kunden-Cache (js/lookup-cache.js) — kein Serverruf pro Tastendruck
+                const data = await window.customerCacheSearch(query, 10);
+
+                if (data.length === 0) {
+                    suggestionsBox.innerHTML = '<div style="padding:10px; color:rgba(255,255,255,0.4);">Keine Standorte gefunden</div>';
+                    return;
+                }
+
+                suggestionsBox.innerHTML = '';
+                data.forEach(cust => {
+                    const div = document.createElement('div');
+                    div.style.cssText = 'padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer; color:#fff; transition: background 0.2s;';
+                    div.onmouseover = () => div.style.background = 'rgba(255,255,255,0.08)';
+                    div.onmouseout = () => div.style.background = 'transparent';
+                    
+                    const label = cust.matchcode ? `[${cust.matchcode}] ${cust.name}` : cust.name;
+                    let details = '';
+                    if (cust.address_number) details += `Adr. ${cust.address_number} `;
+                    if (cust.customer_number) details += `(Kdnr. ${cust.customer_number}) `;
+                    if (cust.city) details += `- ${cust.city}`;
+                    
+                    div.innerHTML = `
+                        <div style="font-weight:700; font-size:0.95rem;">${label}</div>
+                        <div style="font-size:0.8rem; color:rgba(255,255,255,0.4); margin-top:2px;">${details}</div>
+                    `;
+
+                    div.onclick = () => {
+                        window.selectLocationForMachine(cust);
+                    };
+
+                    suggestionsBox.appendChild(div);
+                });
+            } catch (err) {
+                console.error('Autocomplete location search failed:', err);
+                suggestionsBox.innerHTML = '<div style="padding:10px; color:red;">Fehler bei der Suche</div>';
+            }
+        }, 60);
+    };
+
+    window.selectLocationForMachine = function (cust) {
+        document.getElementById('machine-location-customer-id').value = cust.id;
+        document.getElementById('machine-location-company').value = cust.name || '';
+        document.getElementById('machine-location-street').value = cust.street || '';
+        document.getElementById('machine-location-zip').value = cust.zip_code || '';
+        document.getElementById('machine-location-city').value = cust.city || '';
+        document.getElementById('machine-location-country').value = cust.country || 'Deutschland';
+
+        window.updateCombinedAddresses();
+
+        // Populate search input
+        const searchInput = document.getElementById('machine-location-search');
+        searchInput.value = cust.matchcode ? `[${cust.matchcode}] ${cust.name}` : cust.name;
+        
+        const suggestionsBox = document.getElementById('machine-location-suggestions');
+        suggestionsBox.style.display = 'none';
+        suggestionsBox.innerHTML = '';
+    };
+
+    window.selectCustomerForMachine = function (cust) {
+        document.getElementById('machine-customer-id').value = cust.id;
+        document.getElementById('machine-customer-number').value = cust.customer_number || '';
+        document.getElementById('machine-owner').value = cust.name || '';
+        document.getElementById('machine-operator-street').value = cust.street || '';
+        document.getElementById('machine-operator-zip').value = cust.zip_code || '';
+        document.getElementById('machine-operator-city').value = cust.city || '';
+        document.getElementById('machine-operator-country').value = cust.country || 'Deutschland';
+
+        // Auto-fill Standort too by default
+        document.getElementById('machine-location-company').value = cust.name || '';
+        document.getElementById('machine-location-street').value = cust.street || '';
+        document.getElementById('machine-location-zip').value = cust.zip_code || '';
+        document.getElementById('machine-location-city').value = cust.city || '';
+        document.getElementById('machine-location-country').value = cust.country || 'Deutschland';
+
+        // Update combined compatibility fields
+        window.updateCombinedAddresses();
+
+        // Lock search UI
+        const searchInput = document.getElementById('machine-customer-search');
+        const displayLabel = cust.matchcode ? `[${cust.matchcode}] ${cust.name}` : cust.name;
+        searchInput.value = displayLabel;
+        searchInput.disabled = true;
+
+        const opSearch = document.getElementById('machine-operator-search');
+        if (opSearch) opSearch.value = displayLabel;
+        const locSearch = document.getElementById('machine-location-search');
+        if (locSearch) locSearch.value = displayLabel;
+
+        document.getElementById('btn-clear-customer').style.display = 'block';
+        
+        // Hide suggestions
+        const suggestionsBox = document.getElementById('machine-customer-suggestions');
+        suggestionsBox.style.display = 'none';
+        suggestionsBox.innerHTML = '';
+    };
+
+    window.clearSelectedCustomerForMachine = function () {
+        document.getElementById('machine-customer-id').value = '';
+        const locCustIdEl = document.getElementById('machine-location-customer-id');
+        if (locCustIdEl) locCustIdEl.value = '';
+        document.getElementById('machine-customer-number').value = '';
+        document.getElementById('machine-owner').value = '';
+        document.getElementById('machine-operator-street').value = '';
+        document.getElementById('machine-operator-zip').value = '';
+        document.getElementById('machine-operator-city').value = '';
+        document.getElementById('machine-operator-country').value = 'Deutschland';
+
+        document.getElementById('machine-location-company').value = '';
+        document.getElementById('machine-location-street').value = '';
+        document.getElementById('machine-location-zip').value = '';
+        document.getElementById('machine-location-city').value = '';
+        document.getElementById('machine-location-country').value = 'Deutschland';
+
+        const opSearch = document.getElementById('machine-operator-search');
+        if (opSearch) opSearch.value = '';
+        const locSearch = document.getElementById('machine-location-search');
+        if (locSearch) locSearch.value = '';
+
+        window.updateCombinedAddresses();
+
+        const searchInput = document.getElementById('machine-customer-search');
+        searchInput.value = '';
+        searchInput.disabled = false;
+        searchInput.focus();
+
+        document.getElementById('btn-clear-customer').style.display = 'none';
+    };
+
+    window.copyOperatorAddressToLocation = function () {
+        document.getElementById('machine-location-company').value = document.getElementById('machine-owner').value;
+        document.getElementById('machine-location-street').value = document.getElementById('machine-operator-street').value;
+        document.getElementById('machine-location-zip').value = document.getElementById('machine-operator-zip').value;
+        document.getElementById('machine-location-city').value = document.getElementById('machine-operator-city').value;
+        document.getElementById('machine-location-country').value = document.getElementById('machine-operator-country').value;
+        
+        window.updateCombinedAddresses();
+    };
+
+    window.toggleMachineWorkshopUI = async function (inWorkshop) {
+        const customerGroup = document.getElementById('machine-customer-search-group');
+        const operatorGroup = document.getElementById('machine-operator-address-group');
+        const locationGroup = document.getElementById('machine-location-address-group');
+        const displayGroup = document.getElementById('machine-meetra-address-display');
+        const displayText = document.getElementById('machine-meetra-address-text');
+
+        if (inWorkshop) {
+            if (customerGroup) customerGroup.style.display = 'none';
+            if (operatorGroup) operatorGroup.style.display = 'none';
+            if (locationGroup) locationGroup.style.display = 'none';
+            if (displayGroup) {
+                displayGroup.style.display = 'block';
+                displayGroup.classList.remove('hidden');
+            }
+
+            if (displayText) {
+                displayText.innerHTML = 'Lade Werkstatt-Adresse...';
+                try {
+                    // Fetch HQ from database
+                    let hq = null;
+                    if (window.supabaseClient) {
+                        const { data: hqData } = await window.supabaseClient
+                            .from('app_settings')
+                            .select('value')
+                            .eq('key', 'company_hq')
+                            .limit(1);   // siehe oben: single() gibt 406 ohne Zeile
+                        if (hqData && hqData[0] && hqData[0].value) {
+                            hq = hqData[0].value;
+                        }
+                    }
+
+                    if (!hq) {
+                        const cached = localStorage.getItem('meetra_company_hq');
+                        if (cached) hq = JSON.parse(cached);
+                    }
+
+                    if (hq) {
+                        const parts = [
+                            hq.name || 'Meetra GmbH',
+                            hq.street || '',
+                            [hq.zip, hq.city].filter(Boolean).join(' '),
+                            hq.country || 'Deutschland'
+                        ].filter(Boolean);
+                        displayText.innerHTML = parts.join('<br>');
+                    } else {
+                        displayText.innerHTML = 'Meetra GmbH<br>Am Alten Bahnhof 6<br>38122 Braunschweig<br>Deutschland';
+                    }
+                } catch (err) {
+                    console.error('Fehler beim Laden der Werkstattadresse:', err);
+                    displayText.innerHTML = 'Meetra GmbH<br>Am Alten Bahnhof 6<br>38122 Braunschweig<br>Deutschland';
+                }
+            }
+        } else {
+            // customerGroup stays hidden (removed from UI)
+            if (operatorGroup) operatorGroup.style.display = 'block';
+            if (locationGroup) locationGroup.style.display = 'block';
+            if (displayGroup) {
+                displayGroup.style.display = 'none';
+                displayGroup.classList.add('hidden');
+            }
+        }
+    };
+
+
+    window.updateCombinedAddresses = function () {
+        const opStreet = document.getElementById('machine-operator-street').value.trim();
+        const opZip = document.getElementById('machine-operator-zip').value.trim();
+        const opCity = document.getElementById('machine-operator-city').value.trim();
+        const opCountry = document.getElementById('machine-operator-country').value.trim();
+
+        const locStreet = document.getElementById('machine-location-street').value.trim();
+        const locZip = document.getElementById('machine-location-zip').value.trim();
+        const locCity = document.getElementById('machine-location-city').value.trim();
+        const locCountry = document.getElementById('machine-location-country').value.trim();
+
+        const opCombined = [opStreet, [opZip, opCity].filter(Boolean).join(' '), opCountry].filter(Boolean).join(', ');
+        const locCombined = [locStreet, [locZip, locCity].filter(Boolean).join(' '), locCountry].filter(Boolean).join(', ');
+
+        document.getElementById('machine-address-input').value = opCombined;
+        document.getElementById('machine-location-input').value = locCombined;
+    };
+
+    // ==========================================
+    // GOOGLE MAPS ROUTE PLANNING FOR MACHINES
+    // ==========================================
+    window.planRouteForMachine = async function (machineId) {
+        const machine = (window.machineList || []).find(m => m.id == machineId);
+        if (!machine) return;
+
+        // Collect destination address: prioritize location, fallback to operator address
+        const destination = [
+            machine.location_street || machine.operator_street,
+            [machine.location_zip || machine.operator_zip, machine.location_city || machine.operator_city].filter(Boolean).join(' '),
+            machine.location_country || machine.operator_country
+        ].filter(Boolean).join(', ');
+
+        if (!destination) {
+            window.showToast('Für diese Maschine ist keine Adresse hinterlegt.');
+            return;
+        }
+
+        // Fetch own HQ address from settings
+        let origin = '';
+        const cached = localStorage.getItem('meetra_company_hq');
+        if (cached) {
+            try {
+                const hq = JSON.parse(cached);
+                origin = [hq.street, [hq.zip, hq.city].filter(Boolean).join(' '), hq.country].filter(Boolean).join(', ');
+            } catch(e){}
+        }
+
+        if (!origin && window.supabaseClient) {
+            try {
+                const { data: hqData } = await window.supabaseClient
+                    .from('app_settings')
+                    .select('value')
+                    .eq('key', 'company_hq')
+                    .single();
+                if (hqData && hqData.value) {
+                    const hq = hqData.value;
+                    origin = [hq.street, [hq.zip, hq.city].filter(Boolean).join(' '), hq.country].filter(Boolean).join(', ');
+                }
+            } catch(e){}
+        }
+
+        const url = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`;
+        window.open(url, '_blank');
+    };
+
+    // =========================================================
+    // DYNAMIC SCRIPT LOADERS FOR PERFORMANCE OPTIMIZATION
+    // =========================================================
+
+    // Dynamically load Leaflet library (CSS & JS)
+    // ─────────────────────────────────────────────────────────────────────────
+    // Leaflet auf Deutsch
+    // ─────────────────────────────────────────────────────────────────────────
+    // Leaflet liefert seine Bedienelemente nur auf Englisch ("Zoom in",
+    // "Close popup" …). Die Texte stecken in Prototype-Optionen bzw. werden
+    // beim Aufbau des Popups hart gesetzt – beides wird hier einmalig
+    // überschrieben, bevor die erste Karte erzeugt wird. Damit sind ALLE
+    // Karten der App (Maschinenstandort, Routenplanung) automatisch deutsch.
+    let leafletGermanized = false;
+
+    window.applyGermanLeafletDefaults = function () {
+        if (leafletGermanized || !window.L) return;
+        leafletGermanized = true;
+
+        // Zoom-Schaltflächen
+        if (L.Control.Zoom) {
+            L.Control.Zoom.prototype.options.zoomInTitle = 'Vergrößern';
+            L.Control.Zoom.prototype.options.zoomOutTitle = 'Verkleinern';
+        }
+
+        // Quellenangabe unten rechts: nur EINE Zeile. Der Leaflet-Eigenwerbung-
+        // Zusatz ist optional und fliegt raus – die Nennung der Kartenquelle
+        // bleibt, die ist lizenzrechtlich vorgeschrieben.
+        if (L.Control.Attribution) {
+            L.Control.Attribution.prototype.options.prefix = false;
+        }
+
+        // Maßstabsleiste auf metrische Einheiten festnageln (keine Meilen)
+        if (L.Control.Scale) {
+            L.Control.Scale.prototype.options.metric = true;
+            L.Control.Scale.prototype.options.imperial = false;
+        }
+
+        // Schließen-Kreuz im Popup: Leaflet setzt aria-label/title beim Aufbau
+        // selbst auf Englisch, deshalb hier nach dem Aufbau nachziehen.
+        if (L.Popup) {
+            const originalInitLayout = L.Popup.prototype._initLayout;
+            L.Popup.prototype._initLayout = function () {
+                originalInitLayout.call(this);
+                if (this._closeButton) {
+                    this._closeButton.setAttribute('aria-label', 'Popup schließen');
+                    this._closeButton.setAttribute('title', 'Popup schließen');
+                }
+            };
+        }
+
+        // Fehlertext, wenn eine Kachel nicht geladen werden kann
+        if (L.TileLayer) {
+            L.TileLayer.prototype.options.errorTileUrl = L.TileLayer.prototype.options.errorTileUrl || '';
+        }
+    };
+
+    // Deutschsprachige Kartenkacheln (OpenStreetMap Deutschland).
+    // Dieser Stil bevorzugt deutsche Ortsnamen (name:de), wo sie in OSM
+    // hinterlegt sind – innerhalb DACH also durchgängig deutsch.
+    window.createGermanTileLayer = function (options) {
+        return L.tileLayer('https://tile.openstreetmap.de/{z}/{x}/{y}.png', Object.assign({
+            maxZoom: 19,
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende'
+        }, options || {}));
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Kartenansichten: Karte / Luftbild / Gelände
+    // ─────────────────────────────────────────────────────────────────────────
+    // Alle drei Quellen sind ohne Schlüssel nutzbar. Die zuletzt gewählte
+    // Ansicht wird pro Karte gemerkt, damit sie beim nächsten Öffnen wieder da ist.
+    window.addGermanBaseLayers = function (map, storageKey) {
+        const standard = window.createGermanTileLayer();
+
+        // Luftbild (Esri World Imagery) mit deutscher Beschriftung darüber,
+        // sonst wäre auf dem Satellitenbild kein Ortsname zu sehen.
+        const luftbild = L.layerGroup([
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                attribution: 'Luftbild: Esri, Maxar, Earthstar Geographics'
+            }),
+            L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+                maxZoom: 19,
+                attribution: ''
+            })
+        ]);
+
+        // Gelände: topografische Karte mit Höhenlinien und Schummerung –
+        // das Relief ist dadurch plastisch erkennbar (deutsches Projekt).
+        const gelaende = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            maxZoom: 17,
+            attribution: 'Kartendaten: &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-Mitwirkende, SRTM &middot; Darstellung: <a href="https://opentopomap.org" target="_blank" rel="noopener">OpenTopoMap</a> (CC-BY-SA)'
+        });
+
+        const layers = { 'Karte': standard, 'Luftbild': luftbild, 'Gelände': gelaende };
+
+        let saved = null;
+        try { saved = localStorage.getItem('map_layer_' + (storageKey || 'default')); } catch (e) {}
+        (layers[saved] || standard).addTo(map);
+
+        L.control.layers(layers, null, { position: 'topright' }).addTo(map);
+
+        map.on('baselayerchange', (e) => {
+            try { localStorage.setItem('map_layer_' + (storageKey || 'default'), e.name); } catch (err) {}
+        });
+
+        return layers;
+    };
+
+    window.loadLeaflet = async function () {
+        if (window.L) { window.applyGermanLeafletDefaults(); return; }
+
+        // Add stylesheet
+        const link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+        link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
+        link.crossOrigin = '';
+        document.head.appendChild(link);
+
+        // Add script
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+            script.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
+            script.crossOrigin = '';
+            script.onload = () => { window.applyGermanLeafletDefaults(); resolve(); };
+            script.onerror = (err) => reject(new Error('Leaflet konnte nicht geladen werden. Bitte Internetverbindung prüfen.'));
+            document.head.appendChild(script);
+        });
+    };
+
+    // Dynamically load jsPDF and jsPDF-autotable
+    window.loadPDFGenerators = async function () {
+        if (window.jspdf) return;
+
+        // Load jsPDF
+        await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+            script.onload = () => resolve();
+            script.onerror = (err) => reject(new Error('jsPDF-Bibliothek konnte nicht geladen werden. Bitte Internetverbindung prüfen.'));
+            document.head.appendChild(script);
+        });
+
+        // Load jsPDF-autotable
+        await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js';
+            script.onload = () => resolve();
+            script.onerror = (err) => reject(new Error('jsPDF-AutoTable-Bibliothek konnte nicht geladen werden. Bitte Internetverbindung prüfen.'));
+            document.head.appendChild(script);
+        });
+    };
+
+    // Laedt die lokal eingebettete Noto-Sans-Schriftart (lib/notosans-font.js) nach, damit jsPDF
+    // Sonderzeichen ausserhalb von WinAnsi (z.B. rumaenische Diakritika a-breve, s-comma, t-comma)
+    // korrekt als echte Glyphen einbettet statt sie beim Rendern in externen PDF-Readern durch "?"
+    // zu ersetzen — jsPDFs eingebaute Standardschriften (helvetica/times/courier) koennen diese
+    // Zeichen nicht darstellen.
+    window.loadUnicodePdfFont = async function () {
+        if (window.NOTOSANS_FONT_BASE64) return;
+        await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'lib/notosans-font.js';
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Schriftart fuer Sonderzeichen konnte nicht geladen werden.'));
+            document.head.appendChild(script);
+        });
+    };
+
+    // Registriert die Noto-Sans-Schriftart auf einer konkreten jsPDF-Instanz (muss pro
+    // "new jsPDF()"-Aufruf einmal ausgefuehrt werden, da jsPDF Schriften pro Dokument verwaltet).
+    window.registerUnicodeFont = function (doc) {
+        if (!window.NOTOSANS_FONT_BASE64 || !doc) return false;
+        doc.addFileToVFS('NotoSans-Regular.ttf', window.NOTOSANS_FONT_BASE64.normal);
+        doc.addFont('NotoSans-Regular.ttf', 'NotoSans', 'normal');
+        doc.addFileToVFS('NotoSans-Bold.ttf', window.NOTOSANS_FONT_BASE64.bold);
+        doc.addFont('NotoSans-Bold.ttf', 'NotoSans', 'bold');
+        return true;
+    };
+
+    // Dynamically load PDF.js (for invoice reading / rendering thumbnails)
+    window.loadPDFReader = async function () {
+        if (window.pdfjsLib) return;
+
+        const LOCAL = 'lib/pdf.min.js';
+        const LOCAL_WORKER = 'lib/pdf.worker.min.js';
+        const CDN = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js';
+        const CDN_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+        function tryLoad(src, workerSrc) {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = src;
+                script.onload = () => {
+                    if (window['pdfjs-dist/build/pdf']) {
+                        window.pdfjsLib = window['pdfjs-dist/build/pdf'];
+                        window.pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+                    }
+                    resolve();
+                };
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        try {
+            await tryLoad(LOCAL, LOCAL_WORKER);
+        } catch {
+            await tryLoad(CDN, CDN_WORKER).catch(() => {
+                throw new Error('PDF.js konnte weder lokal noch per CDN geladen werden.');
+            });
+        }
+    };
+
+    // Das AWS-SDK wird nicht mehr geladen: R2 läuft über die Edge Function r2-sign
+    // (js/file-upload-service-r2.js), ohne Schlüssel im Browser.
+})();

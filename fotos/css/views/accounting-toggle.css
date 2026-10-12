@@ -1,0 +1,17 @@
+/* ==========================================================
+   Buchhaltung: Schalter "bezahlt"
+   ==========================================================
+   Ausgelagert aus index.html (vormals Zeilen 3632-3640).
+   Wird per <link> an unveraenderter Stelle geladen — die Reihenfolge
+   gegenueber css/style.css darf nicht vertauscht werden.
+   ========================================================== */
+
+#acc-is-paid:checked+.toggle-slider {
+    background-color: var(--color-primary-green) !important;
+    border-color: transparent !important;
+}
+
+#acc-is-paid:checked+.toggle-slider .toggle-circle {
+    transform: translateX(20px);
+    background-color: #fff !important;
+}

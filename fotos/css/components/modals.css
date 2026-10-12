@@ -1,0 +1,492 @@
+/* ========================================================= */
+/* ==================== MODAL STYLES ======================= */
+/* ========================================================= */
+
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(15, 23, 42, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    z-index: 9999;
+    backdrop-filter: blur(var(--blur-surface));
+    -webkit-backdrop-filter: blur(var(--blur-surface));
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-y: auto;
+    padding: 5vh 1rem;
+}
+
+.modal-backdrop.active,
+.modal-backdrop.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-content {
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(var(--blur-overlay));
+    -webkit-backdrop-filter: blur(var(--blur-overlay));
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-xl);
+    padding: 2.5rem;
+    width: 90%;
+    margin: auto;
+    position: relative;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    animation: modalSlideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: visible !important;
+}
+
+.modal-body {
+    overflow-y: auto !important;
+    max-height: calc(90vh - 160px);
+    padding-right: 8px;
+}
+
+/* Scrollbar Styling for Modal Body */
+.modal-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius-sm);
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-sm);
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes modalSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-backdrop.show .modal-content {
+    transform: translateY(0);
+}
+
+.modal-form-area {
+    background: var(--glass-inner-light);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border: 1px solid var(--glass-border);
+}
+
+/* Aktionsleiste am Modal-Ende (Speichern / Abbrechen) */
+.modal-actions,
+.pme-modal-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 2rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+@media (max-width: 600px) {
+    .modal-actions,
+    .pme-modal-actions {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .modal-actions > button,
+    .pme-modal-actions > button {
+        width: 100%;
+    }
+}
+
+/* Leerzustand ("Keine Einträge vorhanden") */
+.empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    color: rgba(255, 255, 255, 0.55);
+    font-family: var(--font-body);
+}
+
+.empty-state h3 {
+    margin: 0 0 0.5rem 0;
+    color: #fff;
+    font-weight: 700;
+}
+
+.empty-hint,
+.placeholder-text {
+    color: rgba(255, 255, 255, 0.45);
+    font-family: var(--font-body);
+    font-size: var(--fs-md);
+}
+
+.modal-content h2 {
+    margin-top: 0;
+    font-family: var(--font-body);
+    color: white;
+    margin-bottom: 2rem;
+    font-size: clamp(1.4rem, 4vw, 1.8rem);
+    font-weight: 700;
+}
+
+/* Zweispaltiges Layout des "Vorgang hinzufügen"-Dialogs (Desktop nutzt die
+   volle Breite; unter 900px wird wieder einspaltig gestapelt). */
+.proc-add-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 28px;
+    align-items: start;
+}
+.proc-add-col { min-width: 0; }
+@media (max-width: 900px) {
+    .proc-add-columns { grid-template-columns: 1fr; gap: 0; }
+}
+
+/* ── Vorgang bearbeiten: ausklappbare "Bemerkung / Notiz" ───────────────
+   Kopfzeile mit +/−, darin Bemerkung und der Stand-Verlauf.
+   Jeder Stand-Eintrag beginnt mit Datum und Nutzer. */
+.proc-note-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    color: var(--text-2);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background var(--motion-fast, 0.15s) ease;
+}
+.proc-note-toggle:hover { background: rgba(255, 255, 255, 0.08); }
+.proc-note-plus { flex: none; transition: transform 0.2s ease; }
+.proc-note-toggle[aria-expanded="true"] .proc-note-plus { transform: rotate(45deg); }
+.proc-note-hint {
+    margin-left: auto;
+    font-size: var(--fs-xs);
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--text-3);
+}
+.proc-note-body {
+    padding: var(--space-3) var(--space-3) var(--space-2);
+    margin-top: var(--space-2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.02);
+}
+.proc-note-stand-row {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+}
+.proc-note-stand-row textarea { flex: 1; }
+.proc-note-add {
+    flex: none;
+    padding: var(--space-2) var(--space-3);
+    background: rgba(96, 165, 250, 0.14);
+    border: 1px solid rgba(96, 165, 250, 0.35);
+    border-radius: var(--radius-md);
+    color: #93c5fd;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    cursor: pointer;
+}
+.proc-note-add:hover { background: rgba(96, 165, 250, 0.24); }
+.proc-note-history {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    max-height: 260px;
+    overflow-y: auto;
+}
+@media (max-width: 768px) {
+    .proc-note-stand-row { flex-direction: column; align-items: stretch; }
+}
+
+/* Stand-Zeile: Diktier-Knopf und „Eintragen" stehen rechts untereinander. */
+.proc-note-stand-actions {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+.proc-note-stand-actions .mic-btn { justify-content: center; }
+@media (max-width: 768px) {
+    .proc-note-stand-actions { flex-direction: row; }
+    .proc-note-stand-actions .proc-note-add { flex: 1; }
+}
+
+/* „Stand" steht bewusst ausserhalb des Ausklapps „Bemerkung / Notiz" —
+   es wird im Alltag am haeufigsten gebraucht. Leicht abgesetzt, damit die
+   Zugehoerigkeit zum Notiz-Bereich darueber erkennbar bleibt. */
+.proc-stand-block {
+    padding: var(--space-3) var(--space-3) var(--space-2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+/* =========================================================
+   BERECHTIGUNGEN im Benutzer-Fenster (#edit-permissions-section)
+   Drei einklappbare Blöcke: Hauptmenü, Einstellungen, Löschen.
+   ========================================================= */
+.perm-heading {
+    display: block;
+    margin-bottom: 0.75rem;
+    color: var(--color-primary-green);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: var(--fs-sm);
+}
+
+.perm-group {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    margin-bottom: 12px;
+    backdrop-filter: blur(12px);
+    overflow: hidden;
+}
+
+.perm-group-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 0.9rem 1.25rem;
+    cursor: pointer;
+    list-style: none;
+    font-size: var(--fs-xs);
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.45);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    user-select: none;
+}
+
+.perm-group-head::-webkit-details-marker {
+    display: none;
+}
+
+.perm-group-head::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+    margin-left: auto;
+    margin-right: 2px;
+    transition: transform var(--dur-base) ease;
+}
+
+.perm-group[open] > .perm-group-head::after {
+    transform: rotate(-135deg);
+}
+
+.perm-group-head:hover {
+    color: rgba(255, 255, 255, 0.75);
+}
+
+.perm-group-count {
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.perm-group > .perm-grid,
+.perm-group > .perm-delete-master,
+.perm-group > .perm-delete-hint {
+    margin: 0 1.25rem;
+}
+
+.perm-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding-bottom: 1.1rem;
+}
+
+.perm-group-danger {
+    background: rgba(239, 68, 68, 0.06);
+    border-color: rgba(239, 68, 68, 0.25);
+}
+
+.perm-group-danger .perm-group-head {
+    color: rgba(248, 113, 113, 0.75);
+}
+
+.perm-delete-master {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: #f87171;
+    font-weight: 700;
+}
+
+.perm-delete-hint {
+    margin-top: 6px !important;
+    margin-bottom: 10px !important;
+    font-size: var(--fs-xs);
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+#perm-delete-areas.is-disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+@media (max-width: 768px) {
+    .perm-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* „Vorgang erstellen": bereits vorhandene offene Vorgänge zur gewählten
+   Adresse (js/processes-ui.js, zeigeVorhandeneVorgaenge). */
+.proc-vorhandene {
+    margin-bottom: 0.9rem;
+    padding: 10px 12px;
+    border-radius: var(--radius-md, 12px);
+    border: 1px solid rgba(59, 130, 246, 0.45);
+    background: rgba(59, 130, 246, 0.08);
+}
+.proc-vorhandene-kopf {
+    display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px;
+    margin-bottom: 6px;
+    color: #93c5fd; font-weight: 800; font-size: var(--fs-sm, 0.85rem);
+}
+.proc-vorhandene-hinweis { color: rgba(255, 255, 255, .55); font-weight: 600; font-size: var(--fs-xs, 0.75rem); }
+.proc-vorhandene-zeile {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 0;
+    border-top: 1px solid rgba(255, 255, 255, .06);
+}
+.proc-vorhandene-punkt { flex: none; width: 9px; height: 9px; border-radius: 50%; }
+.proc-vorhandene-titel { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff; font-weight: 600; font-size: var(--fs-sm, 0.85rem); }
+.proc-vorhandene-meta { flex: none; color: rgba(255, 255, 255, .6); font-size: var(--fs-xs, 0.75rem); white-space: nowrap; }
+.proc-vorhandene-btn {
+    flex: none;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1.5px solid rgba(147, 197, 253, 0.85);
+    background: rgba(59, 130, 246, 0.85);
+    color: #fff; font: inherit; font-size: var(--fs-xs, 0.75rem); font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 0 14px rgba(59, 130, 246, 0.55);
+}
+.proc-vorhandene-btn:hover { background: #3b82f6; box-shadow: 0 0 20px rgba(59, 130, 246, 0.8); }
+@media (max-width: 600px) {
+    .proc-vorhandene-zeile { flex-wrap: wrap; }
+    .proc-vorhandene-titel { flex-basis: 100%; white-space: normal; }
+}
+
+/* Adressbuch → Verlauf: „Vorgang öffnen" blau und leuchtend, damit man ihn
+   sofort findet (Knopf in js/addressbook.js, processBtnHtml). */
+.ab-vorgang-oeffnen {
+    padding: 5px 12px; margin-left: auto;
+    font-size: 0.78rem; font-weight: 800;
+    display: inline-flex; align-items: center; gap: 6px;
+    border-radius: 999px;
+    border: 1.5px solid rgba(147, 197, 253, 0.9);
+    background: rgba(59, 130, 246, 0.9);
+    color: #fff; cursor: pointer;
+    box-shadow: 0 0 16px rgba(59, 130, 246, 0.65);
+    animation: ab-vorgang-puls 2.4s ease-in-out infinite;
+}
+.ab-vorgang-oeffnen:hover { background: #3b82f6; animation: none; box-shadow: 0 0 22px rgba(59, 130, 246, 0.9); }
+@keyframes ab-vorgang-puls {
+    0%, 100% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.45); }
+    50%      { box-shadow: 0 0 22px rgba(59, 130, 246, 0.9); }
+}
+
+/* Pseudonymisierungs-Hinweis unter KI-Vorschauen (js/ki-pseudonym.js) */
+.ki-ps-hinweis { font-size: var(--fs-xs); color: var(--text-3); margin: 0 0 var(--space-3); padding: 6px 10px; border: 1px solid rgba(167,139,250,0.25); border-radius: var(--radius-sm); background: rgba(167,139,250,0.06); }
+.ki-ps-hinweis a { color: #c4b5fd; }
+.ki-ps-details { margin-top: var(--space-2); }
+.ki-ps-bericht { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-2); }
+.ki-ps-gruppe b { color: var(--text-2); }
+.ki-ps-gruppe ul { margin: 2px 0 0; padding-left: 1rem; }
+.ki-ps-gruppe li { margin: 1px 0; }
+.ki-ps-orig { color: var(--text-1); }
+.ki-ps-bericht code { background: rgba(255,255,255,0.08); padding: 0 4px; border-radius: 3px; }
+.ki-ps-raus { margin-top: var(--space-2); }
+.ki-ps-raus summary { cursor: pointer; color: #c4b5fd; }
+.ki-ps-raus pre { white-space: pre-wrap; max-height: 40vh; overflow: auto; background: rgba(0,0,0,0.3); padding: var(--space-2); border-radius: var(--radius-sm); font-size: var(--fs-2xs); }
+/* Kontrolle „Was ging raus?" (kiPseudonym.pruefHtml): Platzhalter grün, Verdacht rot */
+.ki-ps-ampel { font-size: var(--fs-sm); padding: 8px 12px; border-radius: var(--radius-sm); margin-bottom: var(--space-2); }
+.ki-ps-ampel ul { margin: 6px 0 0; padding-left: 1.2rem; }
+.ki-ps-ampel-gruen { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.35); color: #6ee7b7; }
+.ki-ps-ampel-rot { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.4); color: #fca5a5; }
+.ki-ps-markiert mark { border-radius: 3px; padding: 0 3px; color: inherit; }
+.ki-ps-markiert .ki-ps-ph { background: rgba(16,185,129,0.28); }
+.ki-ps-markiert .ki-ps-verdacht { background: rgba(239,68,68,0.45); outline: 1px solid rgba(252,165,165,0.8); cursor: help; }
+
+/* ---------- KI-Briefing (js/ai-briefing.js) ---------- */
+.ki-briefing-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: 20px; font-size: var(--fs-xs); font-weight: 700; color: #c4b5fd; background: rgba(139,92,246,0.14); border: 1px solid rgba(167,139,250,0.45); cursor: pointer; white-space: nowrap; transition: background 0.2s, color 0.2s; }
+.ki-briefing-btn:hover { background: rgba(139,92,246,0.3); color: #fff; }
+#ki-briefing-modal { z-index: 20000; align-items: flex-start; }
+.ki-briefing-wahl { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-2); }
+.ki-briefing-seg { display: inline-flex; border: 1px solid rgba(167,139,250,0.4); border-radius: 10px; overflow: hidden; }
+.ki-briefing-seg button { background: transparent; border: 0; color: var(--text-2); padding: 6px 14px; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; }
+.ki-briefing-seg button + button { border-left: 1px solid rgba(167,139,250,0.3); }
+.ki-briefing-seg button.active { background: rgba(139,92,246,0.3); color: #fff; }
+.ki-briefing-wahl label { font-size: var(--fs-sm); color: var(--text-2); display: flex; align-items: center; gap: 6px; }
+
+/* Freigabe-Fenster „Das geht an die KI" (js/ki-pseudonym.js, freigabeFragen) */
+.ki-ps-ersetzt { text-decoration: underline wavy #ef4444; text-decoration-thickness: 2px; text-underline-offset: 3px; cursor: help; }
+.ki-freigabe-legende { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); font-size: var(--fs-xs); color: var(--text-2); }
+.ki-freigabe-legende mark.ki-ps-verdacht,
+.ki-freigabe .ki-ps-markiert .ki-ps-verdacht { background: rgba(245,158,11,0.35); outline: 1px solid rgba(251,191,36,0.8); color: inherit; border-radius: 3px; padding: 0 3px; }
+.ki-freigabe-tabs { display: flex; gap: var(--space-2); margin: var(--space-2) 0; }
+.ki-freigabe-tabs button { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: var(--text-2); border-radius: var(--radius-sm); padding: 6px 12px; cursor: pointer; font-size: var(--fs-sm); }
+.ki-freigabe-tabs button.aktiv { background: rgba(167,139,250,0.2); border-color: rgba(167,139,250,0.6); color: var(--text-1); }
+.ki-freigabe-text pre { white-space: pre-wrap; word-break: break-word; margin: 0; font-family: inherit; font-size: var(--fs-sm); line-height: 1.55; }
+.ki-freigabe-text hr { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: var(--space-3) 0; }
+
+/* KI-Fenster mit eigenem Scrollbereich (max-height:90vh inline). Die Regel
+   .modal-content { overflow: visible !important } oben (für Aufklappmenüs in
+   Vorgangs-/Termin-Fenstern) ließ hier die KI-Vorschläge unten aus dem Kasten
+   laufen. Diese Fenster haben nur native Auswahlfelder → Scrollen ist sicher. */
+#ai-task-extend-modal > .modal-content,
+#ab-ai-task-modal > .modal-content {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: contain;
+}
+/* breiter, damit die Vorschlagstitel nicht abgeschnitten werden */
+#ai-task-extend-modal > .modal-content { max-width: 880px !important; width: 94% !important; }

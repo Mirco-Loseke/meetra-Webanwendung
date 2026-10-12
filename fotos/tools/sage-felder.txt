@@ -1,0 +1,465 @@
+﻿Datenbank: OLMeetra auf Meetra-SA
+Erstellt: 2026-09-22 16:19
+
+===== TABELLEN (Adressen / Kunden / Konten / Belege) =====
+  BCSPjmAdressenKontakt                      11 Spalten         0 Zeilen
+  BCSPjmAdressenKontaktFolge                  5 Spalten         0 Zeilen
+  BSMyVertriebsphaseKontaktVorlage           12 Spalten         0 Zeilen
+  KHKAdressen                                43 Spalten       807 Zeilen
+  KHKAdressenBelegartenEMailZuordnung         8 Spalten         0 Zeilen
+  KHKAdressenBelegartenKommunikation         11 Spalten         0 Zeilen
+  KHKAdressenformate                          4 Spalten         3 Zeilen
+  KHKAdressenTelefon                          6 Spalten      1021 Zeilen
+  KHKAdressenverweise                         7 Spalten        85 Zeilen
+  KHKArchivVKBelege                         166 Spalten       607 Zeilen
+  KHKArtikelKunden                           10 Spalten       124 Zeilen
+  KHKBelegartenAdressen                       5 Spalten        17 Zeilen
+  KHKDublettenAdressen                       19 Spalten       807 Zeilen
+  KHKGSKontoauszuege                         71 Spalten         0 Zeilen
+  KHKKontokorrent                            94 Spalten       456 Zeilen
+  KHKStatVKKunden                             7 Spalten       566 Zeilen
+  KHKStatVKKundenGruppen                      7 Spalten         0 Zeilen
+  KHKTextbausteineKontokorrent                5 Spalten         0 Zeilen
+  KHKVersandBelegeVKBelege                    7 Spalten         0 Zeilen
+  KHKVKBelegarten                            39 Spalten        26 Zeilen
+  KHKVKBelege                               164 Spalten      1899 Zeilen
+  KHKVKBelegePositionen                     106 Spalten     15233 Zeilen
+  KHKVKBelegePositionenChargen               10 Spalten         0 Zeilen
+  KHKVKBelegePositionenLager                 10 Spalten     28941 Zeilen
+  KHKVKBelegePositionenLieferinfo            12 Spalten         0 Zeilen
+  KHKVKBelegePositionenReferenz              15 Spalten      5194 Zeilen
+  KHKVKBelegePositionenSerienNr               7 Spalten         4 Zeilen
+  KHKVKBelegeStaffelrabatte                   9 Spalten         0 Zeilen
+  KHKVKBelegeSteuern                          6 Spalten      1899 Zeilen
+  KHKVKBelegeStuecklisten                    47 Spalten     15852 Zeilen
+  KHKVKBelegeVorgaenge                        4 Spalten      1688 Zeilen
+  KHKVKBelegeZKD                             21 Spalten      1997 Zeilen
+  KHKVKBelegeZuschlaege                      20 Spalten         0 Zeilen
+  KHKWebshopPreislistenKundengruppen          4 Spalten         0 Zeilen
+  tKHKDublettenAdressen                      17 Spalten         0 Zeilen
+  tKHKDublettenAdressenOnline                18 Spalten         0 Zeilen
+  tKHKPrintLieferadressen                     9 Spalten         0 Zeilen
+
+===== SPALTEN KHKAdressen =====
+  Adresse                                int
+  Mandant                                smallint
+  Kategorie                              smallint
+  Matchcode                              varchar(50)
+  Anrede                                 varchar(50)
+  Name1                                  varchar(50)
+  Name2                                  varchar(50)
+  LieferZusatz                           varchar(64)
+  LieferStrasse                          varchar(64)
+  LieferLand                             varchar(3)
+  LieferPLZ                              varchar(24)
+  LieferOrt                              varchar(40)
+  PostZusatz                             varchar(64)
+  PostStrasse                            varchar(64)
+  PostLand                               varchar(3)
+  PostPLZ                                varchar(24)
+  PostOrt                                varchar(40)
+  Ansprache                              varchar(50)
+  Telefon                                varchar(32)
+  Telefax                                varchar(32)
+  Mobilfunk                              varchar(32)
+  EMail                                  varchar(255)
+  Homepage                               varchar(130)
+  Memo                                   varchar(-1)
+  Sprache                                varchar(3)
+  Erstkontakt                            datetime
+  Gruppe                                 varchar(10)
+  A1Besteuerung                          smallint
+  Auswertungskennzeichen                 varchar(10)
+  Referenz                               varchar(20)
+  Aktiv                                  smallint
+  Abladestelle                           varchar(5)
+  Werkschluessel                         varchar(3)
+  Sonderfunktion                         smallint
+  Timestamp                              timestamp
+  USER_BeispielHersteller                varchar(200)
+  USER_Maschinenhersteller               varchar(200)
+  USER_Maschinenbezeichnung              varchar(250)
+  USER_BeispielBezeichnung               varchar(200)
+  USER_Maschinenmotor                    varchar(200)
+  USER_Beispielmotor                     varchar(200)
+  USER_Maschinenhaenlder                 varchar(150)
+  USER_Beispielhaendler                  varchar(150)
+
+===== SPALTEN KHKVKBelege =====
+  BelID                                  int
+  Mandant                                smallint
+  Belegkennzeichen                       varchar(3)
+  Belegart                               varchar(50)
+  Belegjahr                              smallint
+  Belegnummer                            int
+  Matchcode                              varchar(50)
+  Periode                                int
+  Belegstatus                            smallint
+  Interessent                            smallint
+  A0AdressNr                             int
+  A0Empfaenger                           varchar(20)
+  A0Anrede                               varchar(50)
+  A0Name1                                varchar(50)
+  A0Name2                                varchar(50)
+  A0Zusatz                               varchar(64)
+  A0AnsprechpartnerID                    int
+  A0Ansprechpartner                      varchar(64)
+  A0Einmalkunde                          smallint
+  A0EinmalkundeAdrNr                     int
+  A0Matchcode                            varchar(50)
+  A0Strasse                              varchar(64)
+  A0Land                                 varchar(3)
+  A0PLZ                                  varchar(24)
+  A0Ort                                  varchar(40)
+  A1AdressNr                             int
+  A1Anrede                               varchar(50)
+  A1Name1                                varchar(50)
+  A1Name2                                varchar(50)
+  A1Zusatz                               varchar(64)
+  A1AnsprechpartnerID                    int
+  A1Ansprechpartner                      varchar(64)
+  A1Strasse                              varchar(64)
+  A1Land                                 varchar(3)
+  A1PLZ                                  varchar(24)
+  A1Ort                                  varchar(40)
+  Kundengruppe                           varchar(10)
+  Preiskennzeichen                       smallint
+  Rechnungsempfaenger                    varchar(20)
+  RechnungAnsprechpartnerID              int
+  A2Ansprechpartner                      varchar(64)
+  Lieferwoche                            int
+  Liefertermin                           datetime
+  Tour                                   varchar(10)
+  WKz                                    varchar(3)
+  WKzKursFw                              float
+  Belegdatum                             datetime
+  Bearbeiter                             varchar(128)
+  Versand                                varchar(10)
+  Rabatt1                                money
+  Rabattbetrag1                          money
+  Rabattbasis1                           money
+  RabattAbsolut1                         smallint
+  Rabatttext1                            varchar(40)
+  Rabatt2                                money
+  Rabattbetrag2                          money
+  Rabattbasis2                           money
+  RabattAbsolut2                         smallint
+  Rabatttext2                            varchar(40)
+  Rabatt3                                money
+  Rabattbetrag3                          money
+  Rabattbasis3                           money
+  RabattAbsolut3                         smallint
+  Rabatttext3                            varchar(40)
+  Kopftext                               varchar(-1)
+  KopftextHTML                           varchar(-1)
+  KopftextRTF                            varchar(-1)
+  Fusstext                               varchar(-1)
+  FusstextHTML                           varchar(-1)
+  FusstextRTF                            varchar(-1)
+  Vertreter                              varchar(10)
+  Provisionsfaehig                       smallint
+  Provision                              money
+  Provisionssatz                         money
+  ProvisionUmsatzbezogen                 smallint
+  Provisionsgruppe                       varchar(10)
+  Kostenstelle                           varchar(20)
+  Kostentraeger                          varchar(20)
+  Rechnungskreis                         varchar(10)
+  Formularvariante                       varchar(10)
+  Sprache                                varchar(3)
+  Erloescode                             smallint
+  Auswertungskennzeichen                 varchar(10)
+  Gueltigkeitsdauer                      datetime
+  ReferenzBelID                          int
+  ReferenzSteuerPeriode                  int
+  Referenznummer                         varchar(50)
+  Referenzzeichen                        varchar(80)
+  ZWInternEW                             money
+  Zwischensumme                          money
+  Nettobetrag                            money
+  NettobetragEW                          money
+  Steuerbetrag                           money
+  Bruttobetrag                           money
+  BruttobetragEW                         money
+  Gewicht                                money
+  Besteuerung                            smallint
+  EULand                                 varchar(2)
+  EUUStID                                varchar(15)
+  A1Besteuerung                          smallint
+  LagerJobID                             int
+  Druckprozess                           int
+  Memo                                   varchar(-1)
+  FibuTan                                int
+  Journal                                smallint
+  Status                                 smallint
+  StatusBearbeiter                       varchar(128)
+  StatusDatum                            datetime
+  StatusSperre                           smallint
+  StatusStatistik                        int
+  StatusStatistiklauf                    smallint
+  SammelrechnungSperre                   smallint
+  Lieferbedingung                        varchar(10)
+  Verkehrszweig                          varchar(10)
+  Geschaeftsart                          varchar(10)
+  FibuTanWE                              int
+  FibuTanWB                              int
+  Zession                                smallint
+  ZessionDatum                           datetime
+  Zessionar                              varchar(50)
+  BelegHerkunft                          smallint
+  Belegerstellung                        int
+  FibuTanVAR                             int
+  FibuTanVAR2                            int
+  ProjektinfoBis                         datetime
+  ZwischensummeOhneAZ                    money
+  SaveStatus                             int
+  AngKalkId                              int
+  PKonfigID                              varchar(20)
+  Kommissionierungsfreigabe              smallint
+  A2Anrede                               varchar(50)
+  A2Name1                                varchar(50)
+  A2Name2                                varchar(50)
+  A2Zusatz                               varchar(64)
+  A2Strasse                              varchar(64)
+  A2Land                                 varchar(3)
+  A2PLZ                                  varchar(24)
+  A2Ort                                  varchar(40)
+  Werkschluessel                         varchar(3)
+  Abladestelle                           varchar(5)
+  RecalcBrutto                           smallint
+  XMLExport                              smallint
+  XMLIstExportiert                       smallint
+  Bestellreferenz                        varchar(20)
+  Lieferinfo                             smallint
+  DruckLieferinfoLieferadressen          smallint
+  SepaLsMandatVersionId                  int
+  WSBestellNr                            varchar(255)
+  WSBestellNrProduktportal               varchar(255)
+  WSProduktportal                        varchar(255)
+  WSKdNr                                 varchar(255)
+  WSEmail                                varchar(255)
+  WSNettobetrag                          money
+  WSBruttobetrag                         money
+  VorID                                  int
+  Steuertext                             varchar(-1)
+  IstSammelbeleg                         smallint
+  BruttobetragNichtSkontierfaehig        money
+  FibuTanVAR3                            int
+  SagePaymentCloudReference              varchar(50)
+  LeiZeitraumVon                         datetime
+  LeiZeitraumBis                         datetime
+  Timestamp                              timestamp
+  USER_Maschine                          varchar(60)
+
+===== SPALTEN KHKVKBelegePositionen =====
+  BelPosID                               int
+  Mandant                                smallint
+  BelID                                  int
+  VorPosID                               int
+  Index                                  int
+  Position                               varchar(50)
+  PosType                                smallint
+  Status                                 smallint
+  Artikelnummer                          varchar(31)
+  AuspraegungID                          int
+  Artikelgruppe                          varchar(15)
+  Hauptartikelgruppe                     varchar(15)
+  Vaterartikelgruppe                     varchar(15)
+  StuecklistenTyp                        smallint
+  StuecklistenAndruck                    smallint
+  Nachweispflicht                        smallint
+  Bezeichnung1                           varchar(50)
+  Bezeichnung2                           varchar(50)
+  Lieferwoche                            int
+  Liefertermin                           datetime
+  Steuercode                             smallint
+  Steuerperiode                          int
+  Steuerklasse                           smallint
+  Erloescode                             smallint
+  Wareneinsatzcode                       smallint
+  Warenbestandcode                       smallint
+  Sachkonto                              varchar(20)
+  SachkontoWZ                            varchar(20)
+  SachkontoWB                            varchar(20)
+  Kostenstelle                           varchar(20)
+  Kostentraeger                          varchar(20)
+  Einzelpreis                            money
+  EinzelpreisNks                         smallint
+  EinzelpreisManuell                     smallint
+  RabattfaehigPos                        smallint
+  RabattfaehigArtikel                    smallint
+  Rabatt                                 money
+  Rabattbetrag                           money
+  Gesamtpreis                            money
+  GesamtpreisIntern                      money
+  GesamtpreisInternBrutto                money
+  GesamtpreisInternEW                    money
+  IstGewaehrleistung                     smallint
+  MittlererEK                            money
+  Roherloesberechnung                    smallint
+  Festpreis                              int
+  Roherloes                              money
+  Menge                                  money
+  Mengeneinheit                          varchar(5)
+  MengeArt                               smallint
+  MengeBasis                             money
+  MengeBasiseinheit                      varchar(5)
+  MengeBasisNKS                          smallint
+  MengeVKEinheit                         varchar(5)
+  MengeVKUmrechnung                      money
+  MengeVKBerechnung                      varchar(50)
+  MengeVKDimensionen                     varchar(50)
+  MengeVKNKS                             smallint
+  MengeVPEinheit                         varchar(5)
+  MengeVPUmrechnung                      money
+  MengeVPNKS                             smallint
+  Dimensionstext                         varchar(-1)
+  DimensionstextHTML                     varchar(-1)
+  DimensionstextRTF                      varchar(-1)
+  Langtext                               varchar(-1)
+  LangtextHTML                           varchar(-1)
+  LangtextRTF                            varchar(-1)
+  Preiseinheit                           int
+  IstErledigt                            smallint
+  Seitenumbruch                          smallint
+  Provisionsfaehig                       smallint
+  Provisionssatz                         money
+  Provision                              money
+  Chargenpflicht                         smallint
+  Einzelgewicht                          money
+  Gesamtgewicht                          money
+  MengeGPEinheit                         varchar(5)
+  MengeGPUmrechnung                      money
+  GrundpreisBasis                        money
+  IstReserviert                          smallint
+  Variantendruck                         smallint
+  Artikelart                             smallint
+  RessourcenRef                          varchar(20)
+  BildTan                                int
+  FibuTanAZ                              int
+  Lagerplatzzuordnung                    smallint
+  SaveStatus                             int
+  ProjektEKBelPosID                      int
+  AngKalkPosId                           int
+  Kalkulation                            varchar(20)
+  PKonfigID                              varchar(20)
+  UrsprungsID                            int
+  ZubehoerKennung                        smallint
+  ZubehoerText                           varchar(-1)
+  ZubehoerTextHTML                       varchar(-1)
+  ZubehoerTextRTF                        varchar(-1)
+  ZubehoerID                             int
+  Artikelmemo                            varchar(-1)
+  MittlererEKManuell                     smallint
+  Einzeleigenmasse                       money
+  Gesamteigenmasse                       money
+  PKonfigPosID                           int
+  SCKennzeichen                          smallint
+  IstSkontierfaehig                      smallint
+  BezugPosition                          int
+  Timestamp                              timestamp
+
+===== BELEGARTEN in KHKVKBelege =====
+
+  -- Spalte Belegkennzeichen --
+     VFR                          602 Belege
+     VLL                          337 Belege
+     VPA                          327 Belege
+     VVA                          216 Belege
+     VVW                          121 Belege
+     VLW                          107 Belege
+     VSD                          104 Belege
+     VFS                           36 Belege
+     VFG                           16 Belege
+     VSL                           11 Belege
+     VFP                           11 Belege
+     VLR                            6 Belege
+     VPX                            3 Belege
+     VSS                            2 Belege
+
+  -- Spalte Belegart --
+     Rechnung                     602 Belege
+     Lieferschein                 337 Belege
+     Angebot                      327 Belege
+     Auftragsbestätigung          216 Belege
+     Werkstattauftrag             121 Belege
+     Materialentnahme             107 Belege
+     Direktrechnung               104 Belege
+     Stornorechnung                36 Belege
+     Gutschrift                    16 Belege
+     Proformarechnung              11 Belege
+     Sofortrechnung                11 Belege
+     Rücklieferschein               6 Belege
+     Kostenvoranschlag              3 Belege
+     Sofortauftrag                  2 Belege
+
+  -- Spalte A0AnsprechpartnerID --
+     0                           1872 Belege
+     291                            8 Belege
+     114                            7 Belege
+     263                            4 Belege
+     285                            1 Belege
+     683                            1 Belege
+     391                            1 Belege
+     110                            1 Belege
+     287                            1 Belege
+     461                            1 Belege
+     318                            1 Belege
+     335                            1 Belege
+
+  -- Spalte A0Ansprechpartner --
+                                 1875 Belege
+     Herrn Jürgen Huber             8 Belege
+     Herrn Erwin Kurz               7 Belege
+     Herrn Andreas Rottenkolber       4 Belege
+     Frau Alina Heumann             1 Belege
+     Herrn Lars Gramberg            1 Belege
+     Herrn Carsten Pundt            1 Belege
+     Herrn Daniel Stampfl           1 Belege
+     Herrn Corvin Stief             1 Belege
+
+  -- Spalte A1AnsprechpartnerID --
+     0                           1883 Belege
+     291                            3 Belege
+     263                            3 Belege
+     114                            2 Belege
+     293                            2 Belege
+     285                            1 Belege
+     683                            1 Belege
+     335                            1 Belege
+     391                            1 Belege
+     110                            1 Belege
+     287                            1 Belege
+
+  -- Spalte A1Ansprechpartner --
+                                 1887 Belege
+     Herrn Jürgen Huber             3 Belege
+     Herrn Andreas Rottenkolber       3 Belege
+     Herrn Erwin Kurz               2 Belege
+     Herrn Lars Gramberg            1 Belege
+     Herrn Carsten Pundt            1 Belege
+     Herrn Daniel Stampfl           1 Belege
+     Herrn Corvin Stief             1 Belege
+
+  -- Spalte Preiskennzeichen --
+     0                           1899 Belege
+
+  -- Spalte RechnungAnsprechpartnerID --
+     0                           1894 Belege
+     291                            2 Belege
+     114                            1 Belege
+     287                            1 Belege
+     335                            1 Belege
+
+  -- Spalte A2Ansprechpartner --
+                                 1894 Belege
+     Herrn Jürgen Huber             2 Belege
+     Herrn Erwin Kurz               1 Belege
+     Herrn Corvin Stief             1 Belege
+     Herrn Lars Gramberg            1 Belege
+
+  -- Spalte Auswertungskennzeichen --
+                                 1899 Belege
+
+  -- Spalte Geschaeftsart --
+                                 1899 Belege

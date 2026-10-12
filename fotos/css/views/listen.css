@@ -1,0 +1,110 @@
+/* ========================================================= */
+/* ================== LISTEN VIEW STYLES ==================== */
+/* ========================================================= */
+
+.ang-charts-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+    margin-bottom: 1.25rem;
+}
+
+.ang-nachfass-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 6px;
+    cursor: pointer;
+    font-size: var(--fs-md);
+    font-family: var(--font-body);
+    transition: filter 0.15s ease;
+}
+
+.ang-nachfass-row:hover {
+    filter: brightness(1.25);
+}
+
+.angebote-cards {
+    display: none;
+}
+
+.ang-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-left-width: 4px;
+    border-radius: var(--radius-md);
+    padding: 14px;
+    margin-bottom: 10px;
+    font-family: var(--font-body);
+}
+
+.angebote-table-wrap tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.07);
+}
+
+.angebote-table-wrap tbody tr:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.angebote-cards .ang-card:nth-child(even) {
+    background: rgba(255, 255, 255, 0.09);
+}
+
+.ang-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.ang-card-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.ang-card-fields label {
+    display: block;
+    font-size: var(--fs-2xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #fff;
+    margin-bottom: 4px;
+}
+
+/* Die Angebotsliste darf nie breiter als der Bildschirm werden — nur die
+   Tabelle scrollt in ihrem Rahmen (.angebote-table-wrap). Ohne diese Grenze
+   dehnte die 1650px breite Tabelle die ganze Seite samt Statistik-Kacheln,
+   und die Blätter-Pfeile hatten nichts mehr zu scrollen. */
+#listen,
+#listen-tab-content-angebote,
+#angebote-list-container {
+    max-width: 100%;
+    min-width: 0;
+}
+.angebote-glass-card {
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+}
+
+/* Endgültige Sperre: die Breite des Listen-Bereichs hängt NIE vom Inhalt ab
+   (contain: inline-size) und läuft nie über den Bildschirm hinaus. Nur die
+   Tabelle scrollt seitlich in ihrem eigenen Rahmen. */
+#listen {
+    overflow-x: clip;
+}
+#listen-tab-content-angebote,
+#angebote-list-container {
+    contain: inline-size;
+    width: 100%;
+}
+.angebote-glass-card {
+    width: 100%;
+    box-sizing: border-box;
+}

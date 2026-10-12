@@ -1,0 +1,133 @@
+                <!-- ========================================================= -->
+                <!-- ================== DOKUMENTE ============================ -->
+                <!-- ========================================================= -->
+                <section id="documents" class="view hidden">
+                    <div class="view-header-layout">
+                        <!-- Top Row: Title (Left) / Search (Right) -->
+                        <div class="view-header-row-top">
+                            <div class="view-header-left">
+                                <h1 style="margin: 0; display:flex; align-items:center; gap:12px;">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path
+                                            d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z">
+                                        </path>
+                                    </svg>
+                                    Dokumente
+                                </h1>
+                            </div>
+                            <div class="view-header-right">
+                                <div class="custom-search-wrapper" style="width: 250px;">
+                                    <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <circle cx="11" cy="11" r="8"></circle>
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                    </svg>
+                                    <input type="text" id="doc-search-input" placeholder="Dokument suchen..."
+                                        autocomplete="off" oninput="window.filterDocuments()">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bottom Row: Filters (Left) / Upload Button (Right) -->
+                        <div class="view-header-row-bottom">
+                            <div class="view-header-left" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                                <div class="custom-filter-dropdown" id="doc-category-dropdown"
+                                    onclick="window.toggleDocCategoryDropdown(event)" style="min-width: 200px;">
+                                    <span class="filter-label" id="selected-categories-label">Alle Typen</span>
+                                    <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                    <div class="custom-filter-menu">
+                                        <ul class="dropdown-options" id="doc-category-options">
+                                            <!-- dynamically populated by documents.js -->
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="custom-filter-dropdown" id="doc-machine-cat-filter-dropdown"
+                                    onclick="window.toggleDocMachineCatFilterDropdown(event)" style="min-width: 200px;">
+                                    <span class="filter-label" id="selected-machine-cat-filter-label">Alle Maschinenkategorien</span>
+                                    <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                    <div class="custom-filter-menu">
+                                        <ul class="dropdown-options" id="doc-machine-cat-filter-options">
+                                            <!-- dynamically populated by documents-r2.js -->
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="custom-filter-dropdown" id="doc-series-filter-dropdown"
+                                    onclick="window.toggleDocSeriesFilterDropdown(event)" style="min-width: 200px;">
+                                    <span class="filter-label" id="selected-series-filter-label">Alle Maschinenserien</span>
+                                    <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <polyline points="6 9 12 15 18 9"></polyline>
+                                    </svg>
+                                    <div class="custom-filter-menu">
+                                        <ul class="dropdown-options" id="doc-series-filter-options">
+                                            <!-- dynamically populated by documents-r2.js -->
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="view-header-right" style="display: flex; gap: 10px;">
+                                <button id="btn-new-folder" class="btn-primary btn-red-animated"
+                                    onclick="window.handleNewFolderClick()"
+                                    style="display: flex; align-items: center; gap: 8px;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path
+                                            d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z">
+                                        </path>
+                                        <line x1="12" y1="11" x2="12" y2="17"></line>
+                                        <line x1="9" y1="14" x2="15" y2="14"></line>
+                                    </svg>
+                                    <span class="btn-text">Neuer Ordner</span>
+                                </button>
+                                <button class="btn-primary btn-red-animated" onclick="window.openDocumentUploadModal()"
+                                    style="display: flex; align-items: center; gap: 8px;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                    Hochladen
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gesamtgröße aller Dokumente -->
+                    <div id="doc-total-size-label" class="doc-total-size-label"></div>
+
+                    <!-- Breadcrumbs -->
+                    <div id="doc-breadcrumbs" class="doc-breadcrumbs"
+                        style="padding: 10px 0; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; opacity: 0.8;">
+                        <span class="breadcrumb-item" style="cursor: pointer; color: var(--accent-color);"
+                            onclick="window.navigateToFolder(null)">Alle Dokumente</span>
+                    </div>
+
+                    <div id="documents-grid" class="documents-unified-grid">
+                        <!-- Cards will be populated by JS -->
+                    </div>
+
+                    <div id="documents-empty-state" class="empty-state hidden"
+                        style="padding: 5rem 2rem; text-align: center;">
+                        <div style="margin-bottom: 1.5rem; opacity: 0.1;">
+                            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="1.5">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                            </svg>
+                        </div>
+                        <h3 style="color: white; margin-bottom: 0.5rem;">Keine Dokumente gefunden</h3>
+                        <p style="color: rgba(255,255,255,0.4);">Lade dein erstes technisches Dokument hoch.</p>
+                    </div>
+                </section>

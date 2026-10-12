@@ -1,0 +1,28 @@
+FOTO-EINGANG EINRICHTEN (meetra Fotos)
+=====================================
+
+1) TABELLEN ANLEGEN
+   https://supabase.com/dashboard/project/rtnpyziwyaqrlfazxkyr/sql/new
+   Inhalt von supabase/supabase_add_foto_eingang.sql einfügen -> Run.
+
+2) FUNCTION AUSROLLEN (Dashboard, ohne CLI)
+   https://supabase.com/dashboard/project/rtnpyziwyaqrlfazxkyr/functions
+   -> "Deploy a new function" -> "Via Editor"
+   -> Name GENAU: foto-eingang
+   -> Inhalt von supabase/functions/foto-eingang/index.ts komplett einfügen -> Deploy
+
+3) JWT-PRÜFUNG AUSSCHALTEN (wichtig!)
+   Functions -> foto-eingang -> Reiter "Details" (bzw. "Settings")
+   -> "Enforce JWT Verification" / "Verify JWT" AUS -> Save.
+   Grund: die Handys sind nicht angemeldet; geschützt wird über den Geräte-Schlüssel.
+   Bleibt es an, kommt auf dem Handy "Keine Verbindung" bzw. 401.
+
+4) SECRETS: nichts zu tun. Die Function nutzt dieselben R2_* Secrets wie r2-sign;
+   SUPABASE_URL und SUPABASE_SERVICE_ROLE_KEY stellt Supabase selbst bereit.
+
+Alternativ mit CLI (im Ordner meetra Webapp):
+   supabase functions deploy foto-eingang --project-ref rtnpyziwyaqrlfazxkyr --no-verify-jwt
+
+5) TEST
+   App -> Foto-Eingang -> "📱 Handys" -> Name eingeben -> Anlegen -> Link öffnen.
+   Steht oben "✓ Eingerichtet für …", läuft alles. Ein Foto schicken -> erscheint im Eingang.

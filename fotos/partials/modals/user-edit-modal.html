@@ -1,0 +1,163 @@
+    <!-- Edit User Modal — Aufbau: Kopf (Avatar, Name, Zusammenfassung) · Reiter links ·
+         Inhalt rechts (scrollt) · Fußleiste. Stile: css/views/user-edit.css, Logik: js/users.js.
+         IDs edit-user-* / perm-* nicht umbenennen — saveUserEdit sammelt alle
+         input[id^=perm-] unter #edit-permissions-section. -->
+    <div id="user-edit-modal" class="ue-backdrop" style="display: none;">
+        <div class="ue-dialog" role="dialog" aria-modal="true" aria-labelledby="ue-titel">
+            <input type="hidden" id="edit-user-id">
+
+            <header class="ue-kopf">
+                <div class="ue-avatar" id="ue-avatar">?</div>
+                <div class="ue-kopf-text">
+                    <h2 id="ue-titel">Benutzer bearbeiten</h2>
+                    <div class="ue-kopf-sub" id="ue-kopf-sub"></div>
+                </div>
+                <button type="button" class="ue-x" onclick="closeEditUserModal()" title="Schließen (Esc)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </header>
+
+            <div class="ue-rumpf">
+                <nav class="ue-reiter" id="ue-reiter">
+                    <button type="button" class="ue-tab aktiv" data-ue-tab="profil">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></svg>
+                        <span>Profil</span>
+                    </button>
+                    <button type="button" class="ue-tab ue-tab-perm" data-ue-tab="ansichten">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+                        <span>Ansichten</span><em class="ue-zahl" id="perm-count-sidebar"></em>
+                    </button>
+                    <button type="button" class="ue-tab ue-tab-perm" data-ue-tab="einstellungen">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+                        <span>Einstellungen</span><em class="ue-zahl" id="perm-count-settings"></em>
+                    </button>
+                    <button type="button" class="ue-tab ue-tab-perm ue-tab-gefahr" data-ue-tab="loeschen">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0-1 14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2L4 6"/></svg>
+                        <span>Löschrechte</span><em class="ue-zahl" id="perm-count-delete"></em>
+                    </button>
+
+                    <div class="ue-uebernehmen ue-tab-perm" id="ue-uebernehmen-box">
+                        <label for="ue-uebernehmen">Rechte übernehmen von</label>
+                        <select id="ue-uebernehmen" data-no-enhance></select>
+                        <small>Kopiert alle Schalter — gespeichert wird erst mit „Speichern".</small>
+                    </div>
+                </nav>
+
+                <div class="ue-inhalt">
+                    <!-- PROFIL -->
+                    <section class="ue-seite aktiv" data-ue-seite="profil">
+                        <div class="ue-felder">
+                            <div class="ue-feld">
+                                <label for="edit-user-name">Name</label>
+                                <input type="text" id="edit-user-name" class="glass-input">
+                            </div>
+                            <div class="ue-feld">
+                                <label for="edit-user-email">E-Mail-Adresse <span class="ue-hint">Anmeldung &amp; Löschrechte in der Datenbank</span></label>
+                                <input type="email" id="edit-user-email" class="glass-input" placeholder="name@meetra-recycling.de">
+                            </div>
+                            <div class="ue-feld">
+                                <label for="edit-user-pin">PIN <span class="ue-hint">optional, 4–8 Ziffern</span></label>
+                                <input type="text" id="edit-user-pin" class="glass-input" placeholder="leer lassen = keine PIN" inputmode="numeric">
+                            </div>
+                        </div>
+
+                        <div class="ue-feld">
+                            <label>Unterschrift <span class="ue-hint">wird in neuen Serviceberichten als Techniker-Unterschrift vorbelegt</span></label>
+                            <div id="user-signature-preview-container" class="ue-unterschrift" onclick="window.openUserSignaturePad()">
+                                <span id="user-signature-placeholder">✍️ Klicken zum Unterschreiben</span>
+                                <img id="user-signature-preview-img" class="hidden" alt="Unterschrift">
+                                <button type="button" id="btn-clear-user-signature" class="hidden ue-mini-gefahr" onclick="event.stopPropagation(); window.clearUserSignature()">Entfernen</button>
+                            </div>
+                            <input type="hidden" id="edit-user-signature">
+                        </div>
+                    </section>
+
+                    <div id="edit-permissions-section">
+                        <!-- ANSICHTEN (Hauptmenü, aus der Sidebar erzeugt) + Zusatzlisten -->
+                        <section class="ue-seite" data-ue-seite="ansichten">
+                            <div class="ue-abschnitt-kopf">
+                                <div>
+                                    <h3>Hauptmenü</h3>
+                                    <p>Welche Bereiche der Benutzer in der Seitenleiste sieht.</p>
+                                </div>
+                                <div class="ue-alle"><button type="button" data-ue-alle="perm-sidebar-pages" data-an="1">Alle an</button><button type="button" data-ue-alle="perm-sidebar-pages" data-an="0">Alle aus</button></div>
+                            </div>
+                            <div id="perm-sidebar-pages" class="ue-raster"></div>
+
+                            <div class="ue-abschnitt-kopf ue-abstand">
+                                <div>
+                                    <h3>Zusatzlisten</h3>
+                                    <p>Sonderbereiche, die nicht in der Seitenleiste stehen.</p>
+                                </div>
+                            </div>
+                            <div class="ue-raster">
+                                <label class="ue-toggle"><span class="ue-toggle-text">Rechnungsliste<small>ausklappbar unter Vorgänge</small></span><input type="checkbox" id="perm-rechnungsliste"><span class="ue-switch"></span></label>
+                                <label class="ue-toggle"><span class="ue-toggle-text">Belege an der Adresse<small>Rechnungen &amp; Umsätze aus Sage</small></span><input type="checkbox" id="perm-belege"><span class="ue-switch"></span></label>
+                            </div>
+
+                            <!-- Handy-Leiste: Belegung in permissions.schnellzugriff (js/users.js, js/ki-chat.js) -->
+                            <div class="ue-abschnitt-kopf ue-abstand">
+                                <div>
+                                    <h3>Handy-Leiste unten</h3>
+                                    <p>Bis zu 5 Schnellzugriffe in eigener Reihenfolge — „KI" steht immer ganz rechts. Ausgeblendete Ansichten erscheinen auch hier nicht.</p>
+                                </div>
+                                <div class="ue-alle"><button type="button" id="ue-sz-standard">Standard</button></div>
+                            </div>
+                            <input type="hidden" id="ue-schnellzugriff" value="">
+                            <div class="ue-sz-vorschau" id="ue-sz-vorschau" aria-label="Vorschau der Leiste"></div>
+                            <div class="ue-sz-liste" id="ue-sz-liste"></div>
+                            <div class="ue-sz-hinzu-titel">Hinzufügen</div>
+                            <div class="ue-sz-hinzu" id="ue-sz-hinzu"></div>
+                        </section>
+
+                        <!-- EINSTELLUNGEN — Unterseiten -->
+                        <section class="ue-seite" data-ue-seite="einstellungen">
+                            <div class="ue-abschnitt-kopf">
+                                <div>
+                                    <h3>Einstellungen</h3>
+                                    <p>Welche Unterseiten unter „Einstellungen" erreichbar sind.</p>
+                                </div>
+                                <div class="ue-alle"><button type="button" data-ue-alle="perm-settings-subpages-box" data-an="1">Alle an</button><button type="button" data-ue-alle="perm-settings-subpages-box" data-an="0">Alle aus</button></div>
+                            </div>
+                            <div id="perm-settings-subpages-box" class="ue-raster">
+                                <label class="ue-toggle"><span class="ue-toggle-text">Benutzerverwaltung</span><input type="checkbox" id="perm-users"><span class="ue-switch"></span></label>
+                                <label class="ue-toggle"><span class="ue-toggle-text">Kategorien</span><input type="checkbox" id="perm-categories"><span class="ue-switch"></span></label>
+                                <label class="ue-toggle"><span class="ue-toggle-text">Protokollvorlagen</span><input type="checkbox" id="perm-protocol-templates"><span class="ue-switch"></span></label>
+                                <label class="ue-toggle"><span class="ue-toggle-text">Textbausteine</span><input type="checkbox" id="perm-settings-textbausteine"><span class="ue-switch"></span></label>
+                                <label class="ue-toggle"><span class="ue-toggle-text">Firmendaten</span><input type="checkbox" id="perm-settings-firmeneinstellungen"><span class="ue-switch"></span></label>
+                                <label class="ue-toggle"><span class="ue-toggle-text">Import</span><input type="checkbox" id="perm-settings-import"><span class="ue-switch"></span></label>
+                                <label class="ue-toggle"><span class="ue-toggle-text">UVV &amp; Wartungspläne</span><input type="checkbox" id="perm-settings-uvv-wartungsplaene"><span class="ue-switch"></span></label>
+                                <label class="ue-toggle"><span class="ue-toggle-text">KI-Konfiguration</span><input type="checkbox" id="perm-settings-ai"><span class="ue-switch"></span></label>
+                                <label class="ue-toggle"><span class="ue-toggle-text">Outlook-Verbindung</span><input type="checkbox" id="perm-settings-outlook"><span class="ue-switch"></span></label>
+                                <label class="ue-toggle"><span class="ue-toggle-text">Datenschutz</span><input type="checkbox" id="perm-settings-datenschutz"><span class="ue-switch"></span></label>
+                            </div>
+                        </section>
+
+                        <!-- LÖSCHRECHTE -->
+                        <section class="ue-seite" data-ue-seite="loeschen">
+                            <label class="ue-master">
+                                <span class="ue-toggle-text">Darf Einträge löschen<small>Hauptschalter — aus heißt: nirgends löschen. Wird auch in der Datenbank durchgesetzt.</small></span>
+                                <input type="checkbox" id="perm-delete"><span class="ue-switch"></span>
+                            </label>
+
+                            <div class="ue-abschnitt-kopf ue-abstand">
+                                <div>
+                                    <h3>Bereiche</h3>
+                                    <p>An = darf in diesem Bereich löschen.</p>
+                                </div>
+                                <div class="ue-alle"><button type="button" data-ue-alle="perm-delete-areas" data-an="1">Alle an</button><button type="button" data-ue-alle="perm-delete-areas" data-an="0">Alle aus</button></div>
+                            </div>
+                            <!-- Bereiche kommen aus window.DELETE_AREAS (js/permissions.js) -->
+                            <div id="perm-delete-areas" class="ue-raster"></div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+
+            <footer class="ue-fuss">
+                <span class="ue-fuss-info" id="ue-fuss-info"></span>
+                <button type="button" class="btn-secondary" onclick="closeEditUserModal()">Abbrechen</button>
+                <button type="button" class="btn-primary" onclick="saveUserEdit()">Speichern</button>
+            </footer>
+        </div>
+    </div>

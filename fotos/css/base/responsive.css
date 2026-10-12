@@ -1,0 +1,2790 @@
+/* ========================================================= */
+/* ===== RESPONSIVE DESIGN, MOBILE & GLASS OVERHAUL ========= */
+/* ========================================================= */
+
+.responsive-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+}
+
+.responsive-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.responsive-grid-location {
+    display: grid;
+    grid-template-columns: 2fr 1fr 2fr;
+    gap: 0.75rem;
+}
+
+.btn-row-responsive {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .responsive-grid-3,
+    .responsive-grid-2,
+    .responsive-grid-location {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+    
+    .btn-row-responsive {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 8px !important;
+    }
+    
+    .btn-row-responsive button {
+        width: 100% !important;
+        font-size: var(--fs-sm) !important;
+        padding: 8px 10px !important;
+        height: auto !important;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .modal-backdrop, 
+    .modal-new {
+        padding: 0 !important;
+        align-items: stretch !important;
+        justify-content: stretch !important;
+    }
+    
+    .modal-backdrop .modal-content, 
+    .modal-new .modal-content {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100% !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        padding: 1.5rem 1rem !important;
+        display: flex !important;
+        flex-direction: column !important;
+        border: none !important;
+        box-shadow: none !important;
+        box-sizing: border-box !important;
+    }
+    
+    .modal-backdrop .modal-scroll-area, 
+    .modal-new .modal-scroll-area, 
+    .modal-backdrop .modal-body, 
+    .modal-new .modal-body, 
+    .modal-backdrop .modal-form-area, 
+    .modal-new .modal-form-area,
+    .modal-backdrop .custom-scrollbar,
+    .modal-new .custom-scrollbar {
+        max-height: none !important;
+        flex: 1 !important;
+        overflow-y: auto !important;
+        padding-right: 0 !important;
+    }
+}
+
+/* Inline-gestylte Bearbeiten-Fenster (nicht .modal-backdrop/.modal-new,
+   sondern per id + inline width/max-width): auf dem Handy ebenfalls Vollbild.
+   Die Innencontainer haben inline-Styles OHNE !important, deshalb greift hier
+   CSS mit !important. Neues Fenster dieser Bauart? id unten ergänzen. */
+@media (max-width: 768px) {
+    #plan-editor-modal,
+    #label-article-modal,
+    #label-import-modal,
+    #user-edit-modal {
+        padding: 0 !important;
+        align-items: stretch !important;
+        justify-content: stretch !important;
+    }
+    #plan-editor-modal > .glass-card,
+    #label-article-modal > .glass-card,
+    #label-import-modal > .glass-card,
+    #user-edit-modal > .glass-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100% !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+        border: none !important;
+        margin: 0 !important;
+        padding: 1.25rem 1rem !important;
+        box-shadow: none !important;
+        box-sizing: border-box !important;
+        overflow-y: auto !important;
+    }
+}
+
+@media (max-width: 1024px) {
+    #tasks .calendar-view-tabs {
+        display: none !important;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    #documents .view-header-row-bottom {
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 1.5rem !important;
+    }
+    #documents .view-header-row-bottom .view-header-left {
+        width: auto !important;
+        margin-top: 0 !important;
+    }
+    #documents .view-header-row-bottom .view-header-right {
+        width: auto !important;
+        margin-top: 0 !important;
+        justify-content: flex-end !important;
+    }
+    #documents .view-header-row-bottom .custom-filter-dropdown {
+        width: auto !important;
+        min-width: 220px !important;
+    }
+}
+
+@media (max-width: 1024px) {
+    #document-preview-modal .modal-content {
+        max-width: 100vw !important;
+        width: 100vw !important;
+        max-height: 100vh !important;
+        height: 100vh !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        padding: 0.25rem 0.5rem !important;
+        border: none !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .protocol-modal-overlay {
+        padding: 0 !important;
+        align-items: stretch !important;
+        justify-content: stretch !important;
+    }
+    
+    .protocol-modal {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100% !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        border-radius: 0 !important;
+        margin: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .protocol-modal-header {
+        padding: 0.625rem 0.75rem !important;
+    }
+
+    .protocol-modal-content {
+        padding: 0.75rem 0.5rem !important;
+    }
+
+    .protocol-modal-actions {
+        padding: 0.625rem 0.75rem 0.875rem 0.75rem !important;
+        gap: 6px !important;
+    }
+
+    .modal-backdrop .modal-content, 
+    .modal-new .modal-content {
+        padding: 1.25rem 0.5rem !important;
+    }
+
+    body.focus-mode-active .view {
+        padding: 0.5rem 10px !important;
+    }
+
+    .subtask-item {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 6px !important;
+        width: 100% !important;
+    }
+    .subtask-item > div:first-child {
+        width: 100% !important;
+    }
+    .subtask-item > .subtask-action-btn {
+        margin-left: 28px !important;
+    }
+    .subtask-item[draggable="true"] {
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: flex-start !important;
+    }
+    .subtask-item[draggable="true"] > .subtask-drag-handle {
+        width: auto !important;
+        min-width: auto !important;
+        flex-shrink: 0 !important;
+    }
+    .subtask-item[draggable="true"] > div:not(.subtask-drag-handle) {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 6px !important;
+        width: auto !important;
+        flex: 1 !important;
+    }
+    .subtask-item[draggable="true"] > div:not(.subtask-drag-handle) > .subtask-action-btn {
+        margin-left: 0 !important;
+    }
+
+    #tasks .view-header-layout,
+    #processes .view-header-layout {
+        gap: 0.4rem !important;
+        margin-bottom: 1rem !important;
+    }
+    #tasks .view-header-row-bottom,
+    #processes .view-header-row-bottom {
+        gap: 0.4rem !important;
+    }
+    #tasks .view-header-left,
+    #tasks .view-header-right,
+    #processes .view-header-left,
+    #processes .view-header-right {
+        margin-top: 0.25rem !important;
+    }
+
+    .settings-tabs-container {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+    }
+    .settings-tabs {
+        width: 100% !important;
+        display: flex !important;
+        gap: 6px !important;
+        overflow-x: visible !important;
+        justify-content: space-between !important;
+        border-bottom: none !important;
+    }
+    .settings-tab {
+        flex: 1 !important;
+        text-align: center !important;
+        padding: 8px 4px !important;
+        font-size: clamp(0.7rem, 2.8vw, 0.85rem) !important;
+        white-space: nowrap !important;
+    }
+    .template-item {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 10px !important;
+        padding: 12px !important;
+    }
+    .template-item > div:last-child {
+        width: 100% !important;
+        justify-content: flex-start !important;
+        flex-wrap: wrap !important;
+    }
+    #supergroups-tab-content div[style*="display: flex"][style*="gap: 10px"],
+    #subtasks-tab-content div[style*="display: flex"][style*="gap: 10px"] {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        background: rgba(255,255,255,0.02) !important;
+        padding: 12px !important;
+    }
+    #supergroups-tab-content div[style*="display: flex"][style*="gap: 10px"] input,
+    #subtasks-tab-content div[style*="display: flex"][style*="gap: 10px"] input,
+    #supergroups-tab-content div[style*="display: flex"][style*="gap: 10px"] button,
+    #subtasks-tab-content div[style*="display: flex"][style*="gap: 10px"] button {
+        width: 100% !important;
+        height: 44px !important;
+    }
+    #quicktemplate-list {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+    .template-card-premium {
+        padding: 16px !important;
+    }
+
+    .users-header-container {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 12px !important;
+        margin-bottom: 1.5rem !important;
+        padding: 0 !important;
+    }
+    .users-header-actions {
+        width: 100% !important;
+    }
+    .users-header-actions .btn-back-custom {
+        width: 100% !important;
+        justify-content: center !important;
+        display: flex !important;
+    }
+    #users .users-header-actions,
+    #categories .users-header-actions,
+    #uvv .users-header-actions {
+        display: grid !important;
+        grid-template-columns: auto 1fr !important;
+        gap: 8px !important;
+        align-items: stretch !important;
+    }
+    #users .users-header-actions .btn-back-custom,
+    #categories .users-header-actions .btn-back-custom,
+    #uvv .users-header-actions .btn-back-custom {
+        width: auto !important;
+        padding: 0 12px !important;
+        font-size: var(--fs-xs) !important;
+        white-space: nowrap !important;
+    }
+    #users .users-header-actions .btn-add-bg,
+    #categories .users-header-actions .btn-add-bg,
+    #uvv .users-header-actions .btn-add-bg {
+        width: 100% !important;
+        height: auto !important;
+        min-height: unset !important;
+        align-self: stretch !important;
+        justify-content: center !important;
+        margin-top: 0 !important;
+    }
+    #users .users-header-actions .btn-back-custom,
+    #categories .users-header-actions .btn-back-custom,
+    #uvv .users-header-actions .btn-back-custom {
+        align-self: stretch !important;
+    }
+    #users .btn-label-full,
+    #categories .btn-label-full,
+    #uvv .btn-label-full {
+        display: none !important;
+    }
+    #users .btn-label-short,
+    #categories .btn-label-short,
+    #uvv .btn-label-short {
+        display: inline !important;
+    }
+
+    #sidebar.mobile-open .sidebar-header .logo {
+        display: block !important;
+        opacity: 1 !important;
+        transform: scale(1) !important;
+        pointer-events: auto !important;
+    }
+    #sidebar.mobile-open .sidebar-header .logo-icon {
+        display: none !important;
+        opacity: 0 !important;
+    }
+
+    #categories .user-item-content {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 10px !important;
+        padding: 12px 10px !important;
+    }
+    #categories .user-details {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 4px !important;
+        padding-left: 0 !important;
+        width: 100% !important;
+    }
+    #categories .user-details span {
+        padding-right: 0 !important;
+    }
+    #categories .user-actions {
+        width: 100% !important;
+        justify-content: flex-end !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+        padding-top: 8px !important;
+        margin-top: 4px !important;
+    }
+
+    .task-list-row-premium td span,
+    .task-list-row-premium td > div > span,
+    .task-table td[data-label="Aufgabe"] span {
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+    }
+
+    .task-card-title {
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+    }
+
+    .task-table {
+        min-width: 0 !important;
+        width: 100% !important;
+        display: block !important;
+    }
+    .task-table thead { display: none !important; }
+    .task-table tbody {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 8px !important;
+        width: 100% !important;
+    }
+    .task-list-row-premium {
+        display: block !important;
+        width: 100% !important;
+        border-radius: var(--radius-md) !important;
+        overflow: visible !important;
+        box-sizing: border-box !important;
+    }
+    .task-list-row-premium td {
+        display: block !important;
+        width: 100% !important;
+        padding: 8px 12px !important;
+        border: none !important;
+        box-sizing: border-box !important;
+        overflow: visible !important;
+    }
+    .task-list-row-premium td[data-label="Status"],
+    .task-list-row-premium td[data-label="Fällig"],
+    .task-list-row-premium td[data-label="Zugewiesen"],
+    .task-list-row-premium td[data-label="Maschine"],
+    .task-list-row-premium td[data-label="Aktionen"] {
+        display: none !important;
+    }
+    .task-list-row-premium td[data-label="Aufgabe"] {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+        overflow: visible !important;
+    }
+    .task-list-row-premium td[data-label="Aufgabe"] > div:first-child {
+        flex-shrink: 0 !important;
+        padding-top: 2px !important;
+    }
+    .task-list-row-premium td[data-label="Aufgabe"] > div:first-child .task-quick-complete {
+        width: 20px !important;
+        height: 20px !important;
+        min-width: 20px !important;
+    }
+    .task-list-row-premium td[data-label="Aufgabe"] > div:last-child {
+        flex: 1 !important;
+        min-width: 0 !important;
+        overflow: visible !important;
+        gap: 5px !important;
+    }
+    .task-list-row-premium td[data-label="Aufgabe"] > div:last-child > span:first-child {
+        font-size: var(--fs-md) !important;
+        line-height: 1.4 !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        display: block !important;
+    }
+
+    .subtask-item {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: flex-start !important;
+        gap: 5px !important;
+        overflow: visible !important;
+    }
+    .subtask-item > div:not(.subtask-drag-handle) {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        align-items: flex-start !important;
+        gap: 4px !important;
+        flex: 1 !important;
+        min-width: 0 !important;
+    }
+    .subtask-drag-handle {
+        flex: 0 0 auto !important;
+        flex-shrink: 0 !important;
+    }
+    .subtask-text-row .task-quick-complete {
+        width: 18px !important;
+        height: 18px !important;
+        min-width: 18px !important;
+        align-self: center !important;
+        margin-top: 0 !important;
+    }
+    .subtask-text-row .task-quick-complete svg {
+        width: 12px !important;
+        height: 12px !important;
+    }
+    .subtask-text-row {
+        flex: 0 0 100% !important;
+        min-width: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+        overflow: visible !important;
+    }
+    .subtask-text-row span,
+    .subtask-text-row .ghost-input {
+        font-size: var(--fs-md) !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        overflow: visible !important;
+        text-overflow: unset !important;
+        flex: 1 !important;
+        min-width: 0 !important;
+        line-height: 1.4 !important;
+    }
+    .subtask-item > div > button {
+        flex: 0 0 auto !important;
+        white-space: normal !important;
+        max-width: none !important;
+        height: auto !important;
+        min-height: 24px !important;
+        font-size: var(--fs-2xs) !important;
+        padding: 3px 8px !important;
+        overflow: visible !important;
+        margin-top: 0 !important;
+        word-break: break-word !important;
+    }
+    .subtask-item > div > button span {
+        overflow: visible !important;
+        text-overflow: unset !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+    }
+}
+
+.subtask-action-btn {
+    box-sizing: border-box;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+.subtask-action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+    filter: brightness(1.2) !important;
+}
+.subtask-action-btn:active {
+    transform: translateY(1px);
+    filter: brightness(0.9) !important;
+}
+
+@media (max-width: 768px) {
+    #machine-details-edit-btn {
+        padding: 0 !important;
+        width: 36px !important;
+        justify-content: center !important;
+        right: 62px !important;
+    }
+    #machine-details-edit-btn .machine-details-edit-label {
+        display: none;
+    }
+    .machine-details-header {
+        padding-right: 100px !important;
+    }
+}
+
+.maint-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 1.25rem;
+}
+
+/* Vorgänge hat 5 Filter-Kacheln (Offen, In Arbeit, Wartet, Erledigt, >7 Tage) —
+   die sollen auf iPad und Rechner in EINER Reihe passen; erst auf dem Handy umbrechen.
+   Höhere Spezifität (#processes) schlägt die 900px-2-Spalten-Regel weiter unten. */
+#processes .maint-kpi-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+}
+#processes .maint-kpi-tile {
+    padding: 12px 10px;
+    min-width: 0;
+}
+@media (max-width: 600px) {
+    #processes .maint-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+.maint-kpi-tile {
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.03);
+    transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+    text-align: left;
+    font-family: var(--font-body);
+}
+.maint-kpi-tile:hover {
+    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.06);
+}
+.maint-kpi-tile.active {
+    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.08);
+}
+.maint-kpi-value {
+    font-family: var(--font-heading);
+    font-size: var(--fs-2xl);
+    font-weight: 800;
+    line-height: 1.1;
+}
+.maint-kpi-label {
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.45);
+    margin-top: 4px;
+}
+.maint-chart-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
+    padding: 16px 18px 12px 18px;
+    margin-bottom: 1.5rem;
+}
+.maint-chart-title {
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.45);
+    margin: 0 0 10px 0;
+    font-family: var(--font-body);
+}
+.maint-chart-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 90px;
+}
+.maint-chart-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    min-width: 0;
+}
+.maint-chart-bar {
+    width: 100%;
+    max-width: 42px;
+    border-radius: 5px 5px 0 0;
+    min-height: 2px;
+}
+.maint-chart-count {
+    font-size: var(--fs-2xs);
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 3px;
+    font-family: var(--font-body);
+}
+.maint-chart-month {
+    font-size: var(--fs-2xs);
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.35);
+    margin-top: 6px;
+    font-family: var(--font-body);
+    white-space: nowrap;
+}
+.maint-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+.maint-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-left-width: 3px;
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    transition: background 0.15s ease;
+    font-family: var(--font-body);
+}
+.maint-card:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+.maint-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+.maint-card-machine {
+    color: var(--color-primary-green);
+    font-weight: 800;
+    font-size: var(--fs-base);
+    line-height: 1.3;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+.maint-badge {
+    font-size: var(--fs-2xs);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 800;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.maint-card-dates {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: var(--fs-sm);
+    color: rgba(255, 255, 255, 0.65);
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+.maint-card-dates b {
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 700;
+}
+.maint-progress-track {
+    height: 5px;
+    border-radius: var(--radius-xs);
+    background: rgba(255, 255, 255, 0.07);
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+.maint-progress-fill {
+    height: 100%;
+    border-radius: var(--radius-xs);
+}
+.maint-card-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.maint-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.75);
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    font-family: var(--font-body);
+}
+.maint-action-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+@media (max-width: 900px) {
+    .maint-cards-grid {
+        grid-template-columns: 1fr;
+    }
+    .maint-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+    .maint-chart-bars {
+        height: 70px;
+        gap: 5px;
+    }
+    .maint-chart-col:nth-child(n+8) {
+        display: none;
+    }
+}
+
+.proc-charts-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 1.5rem;
+}
+.proc-chart-stack {
+    width: 100%;
+    max-width: 42px;
+    display: flex;
+    flex-direction: column;
+    min-height: 2px;
+    overflow: hidden;
+    border-radius: 5px 5px 0 0;
+}
+.proc-type-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+.proc-type-label {
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    width: 110px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: var(--font-body);
+}
+.proc-type-track {
+    flex: 1;
+    height: 8px;
+    border-radius: var(--radius-xs);
+    background: rgba(255, 255, 255, 0.06);
+    overflow: hidden;
+}
+.proc-type-fill {
+    height: 100%;
+    border-radius: var(--radius-xs);
+}
+.proc-type-count {
+    font-size: var(--fs-sm);
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.7);
+    width: 26px;
+    text-align: right;
+    flex-shrink: 0;
+    font-family: var(--font-body);
+}
+.proc-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    align-items: start;
+}
+
+/* Sortier-Leiste über den Vorgangs-Karten (Alter / Termin) */
+.proc-sort-bar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 1rem 0 0.75rem;
+    font-family: var(--font-body);
+}
+.proc-sort-label {
+    font-size: var(--fs-sm);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.45);
+}
+.proc-sort-btn {
+    padding: 6px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    cursor: pointer;
+    font-family: var(--font-body);
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.proc-sort-btn:hover {
+    background: rgba(255, 255, 255, 0.09);
+    color: #fff;
+}
+.proc-sort-btn.active {
+    background: rgba(59, 130, 246, 0.18);
+    border-color: rgba(59, 130, 246, 0.55);
+    color: #93c5fd;
+}
+.proc-sort-hint {
+    font-size: var(--fs-sm);
+    color: rgba(255, 255, 255, 0.35);
+    font-weight: 600;
+}
+@media (max-width: 768px) {
+    .proc-sort-hint {
+        display: none;
+    }
+    .proc-sort-btn {
+        flex: 1;
+        min-width: 0;
+    }
+}
+.proc-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-left-width: 4px;
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    transition: background 0.15s ease;
+    font-family: var(--font-body);
+}
+.proc-card:hover {
+    background: rgba(255, 255, 255, 0.045);
+}
+
+/* Alt = auffällig. Der farbige linke Rand bleibt der Status, deshalb wird
+   das Alter über Flächenton und Rahmen gezeigt, nicht über den Rand. */
+.proc-card.is-old {
+    background: rgba(248, 113, 113, 0.05);
+    border-color: rgba(248, 113, 113, 0.22);
+}
+.proc-card.is-very-old {
+    background: rgba(248, 113, 113, 0.1);
+    border-color: rgba(248, 113, 113, 0.4);
+    box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.12) inset;
+}
+.proc-card-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+.proc-card-head > span:first-child {
+    flex-shrink: 0;
+}
+.proc-card-headmain {
+    flex: 1;
+    min-width: 0;
+}
+.proc-card-title {
+    font-weight: 700;
+    color: #fff;
+    font-size: var(--fs-base);
+    line-height: 1.3;
+    word-break: break-word;
+}
+.proc-card-meta {
+    font-size: var(--fs-sm);
+    color: rgba(255, 255, 255, 0.4);
+    font-weight: 600;
+    margin-top: 3px;
+}
+.proc-card-machine {
+    margin-bottom: 8px;
+}
+.proc-card-remark {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    font-size: var(--fs-md);
+}
+.proc-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding-top: 10px;
+}
+@media (max-width: 900px) {
+    .proc-cards-grid {
+        grid-template-columns: 1fr;
+    }
+}
+@media (max-width: 768px) {
+    .proc-charts-row {
+        grid-template-columns: 1fr;
+    }
+    .proc-type-label {
+        width: 90px;
+    }
+}
+
+.ang-charts-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+    margin-bottom: 1.25rem;
+}
+.ang-nachfass-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 6px;
+    cursor: pointer;
+    font-size: var(--fs-md);
+    font-family: var(--font-body);
+    transition: filter 0.15s ease;
+}
+.ang-nachfass-row:hover {
+    filter: brightness(1.25);
+}
+.angebote-cards {
+    display: none;
+}
+.ang-card {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-left-width: 4px;
+    border-radius: var(--radius-md);
+    padding: 14px;
+    margin-bottom: 10px;
+    font-family: var(--font-body);
+}
+.angebote-table-wrap tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, 0.07);
+}
+.angebote-table-wrap tbody tr:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+.angebote-cards .ang-card:nth-child(even) {
+    background: rgba(255, 255, 255, 0.09);
+}
+.ang-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+.ang-card-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.ang-card-fields label {
+    display: block;
+    font-size: var(--fs-2xs);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #fff;
+    margin-bottom: 4px;
+}
+@media (max-width: 900px) {
+    .angebote-table-wrap {
+        display: none;
+    }
+    .angebote-cards {
+        display: block;
+    }
+    .maint-chart-bars .maint-chart-col:nth-child(n+8) {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    #listen .view-header-row-top {
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+    }
+    #listen .view-header-left {
+        width: auto !important;
+        flex-wrap: nowrap !important;
+    }
+    #listen .view-header-right {
+        width: auto !important;
+        flex: 1 !important;
+        flex-wrap: nowrap !important;
+        justify-content: flex-end !important;
+    }
+    .listen-toolbar {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        flex-wrap: wrap !important;
+        overflow-x: visible !important;
+        gap: 0.6rem !important;
+    }
+    .listen-filters {
+        display: grid !important;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 8px !important;
+    }
+    .listen-filters > * {
+        width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box;
+    }
+    .listen-filters > select,
+    .listen-filters > div.glass-form-input {
+        grid-column: span 2;
+    }
+    .listen-filters > input {
+        grid-column: 1 / 5;
+    }
+    .listen-filters > button {
+        grid-column: 5 / 7;
+        justify-content: center;
+        padding: 0 6px !important;
+    }
+    .angebote-glass-card {
+        padding: 0.75rem 0.9rem 1rem !important;
+    }
+    .ang-nachfass-row {
+        gap: 8px;
+        padding: 8px 10px;
+    }
+}
+@media (max-width: 480px) {
+    #listen-tab-content-angebote .maint-kpi-value {
+        font-size: var(--fs-lg);
+    }
+    #listen-tab-content-angebote .maint-kpi-tile {
+        padding: 12px;
+    }
+}
+
+/* Angebote-Tabelle am Desktop (Stand 2026-09-15): KEINE festen Spaltenanteile
+   mehr. Die Tabelle hat in js/listen.js eine Mindestbreite (1500px) und
+   scrollt bei Bedarf seitlich — Erinnerung und Löschen dürfen rechts aus
+   dem Bild laufen, Status/Zuständig/Maschine/Stand bleiben lesbar. Die
+   früheren nth-child-Prozentwerte passten nach jeder neuen Spalte nicht
+   mehr (Zuständig war 7 %, Erinnerung 3 % breit — praktisch unsichtbar). */
+@media (min-width: 901px) {
+    #listen-tab-content-angebote .angebote-table-wrap {
+        overflow-x: auto;
+    }
+    #listen-tab-content-angebote .angebote-table-wrap table {
+        table-layout: auto;
+    }
+    #listen-tab-content-angebote .angebote-table-wrap th,
+    #listen-tab-content-angebote .angebote-table-wrap td {
+        padding-left: 8px;
+        padding-right: 8px;
+        vertical-align: middle;
+    }
+    #listen-tab-content-angebote .angebote-table-wrap input.glass-form-input {
+        box-sizing: border-box;
+    }
+}
+
+.dash-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+.dash-quick-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+.dash-quick-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.75);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+    font-family: var(--font-body);
+    white-space: nowrap;
+}
+.dash-quick-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+.dash-kpi-grid {
+    grid-template-columns: repeat(5, 1fr);
+}
+.dash-main-grid {
+    display: grid;
+    grid-template-columns: 1.25fr 1fr;
+    gap: 12px;
+    align-items: start;
+}
+.dash-todo-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 0 8px 8px 0;
+    cursor: pointer;
+    font-size: var(--fs-md);
+    font-weight: 600;
+    font-family: var(--font-body);
+    transition: filter 0.15s ease;
+}
+.dash-todo-row:hover {
+    filter: brightness(1.3);
+}
+.dash-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    border-radius: var(--radius-pill);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.75);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    font-family: var(--font-body);
+}
+.dash-chip:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+@media (max-width: 1100px) {
+    .dash-kpi-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+@media (max-width: 900px) {
+    .dash-kpi-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .dash-main-grid {
+        grid-template-columns: 1fr;
+    }
+    .dash-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}
+
+.double-kpi-tile {
+    display: flex !important;
+    padding: 0 !important;
+    overflow: hidden;
+    align-items: stretch;
+}
+.double-kpi-subtile {
+    flex: 1;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.double-kpi-subtile:first-child {
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+.double-kpi-subtile:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+@media (max-width: 600px) {
+    .dash-header h1 {
+        font-size: var(--fs-xl) !important;
+    }
+    .dash-quick-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        width: 100%;
+    }
+    .dash-quick-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 0 8px;
+    }
+    .dash-kpi-grid .double-kpi-tile {
+        grid-column: 1 / -1;
+    }
+    .dash-main-grid {
+        gap: 10px;
+    }
+    .maint-chart-card {
+        padding: 14px 14px 10px 14px;
+    }
+    .dash-todo-row {
+        font-size: var(--fs-sm);
+        padding: 8px 10px;
+    }
+}
+@media (max-width: 480px) {
+    #home .maint-kpi-value {
+        font-size: var(--fs-xl);
+    }
+    #home .maint-kpi-tile {
+        padding: 12px;
+    }
+    #home .maint-kpi-label {
+        font-size: var(--fs-2xs);
+    }
+}
+
+@media (max-width: 600px) {
+    #home .dash-card-truncate {
+        white-space: normal !important;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        word-break: break-word;
+        font-size: 0.95em;
+        line-height: 1.25;
+    }
+    #home h3.dash-card-truncate {
+        font-size: var(--fs-base) !important;
+    }
+    #home .dash-machine-pill {
+        font-size: var(--fs-xs) !important;
+        padding: 4px 8px !important;
+        align-items: flex-start !important;
+    }
+    #home .dash-machine-pill svg {
+        margin-top: 2px;
+    }
+    #home .dash-order-pill {
+        font-size: var(--fs-2xs) !important;
+        padding: 2px 7px !important;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+}
+
+@keyframes bell-pulse-urgent {
+    0%   { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.8); transform: scale(1); }
+    40%  { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); transform: scale(1.08); }
+    60%  { transform: scale(0.97); }
+    80%  { transform: scale(1.04); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); transform: scale(1); }
+}
+
+@keyframes bell-pulse-soon {
+    0%   { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7); }
+    60%  { box-shadow: 0 0 0 7px rgba(251, 191, 36, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+}
+
+.reminder-bell-urgent {
+    background: rgba(239, 68, 68, 0.18) !important;
+    border: 1.5px solid rgba(239, 68, 68, 0.6) !important;
+    color: var(--danger) !important;
+    animation: bell-pulse-urgent 1.8s ease-in-out infinite;
+}
+
+.reminder-bell-soon {
+    background: rgba(251, 191, 36, 0.12) !important;
+    border: 1.5px solid rgba(251, 191, 36, 0.5) !important;
+    color: var(--warning) !important;
+    animation: bell-pulse-soon 2.5s ease-in-out infinite;
+}
+
+.acc-eval-kpi-grid,
+.fin-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.acc-eval-kpi {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    min-width: 0;
+}
+.acc-eval-kpi-value {
+    font-size: var(--fs-base);
+    font-weight: 900;
+    font-family: var(--font-heading);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.acc-eval-kpi-label {
+    font-size: var(--fs-2xs);
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.45);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.acc-eval-charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+#machine-evaluation-modal .modal-content {
+    overflow-y: auto !important;
+    max-height: 90vh !important;
+}
+#machine-evaluation-modal .modal-content::-webkit-scrollbar {
+    width: 6px;
+}
+#machine-evaluation-modal .modal-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+#machine-evaluation-modal .modal-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-sm);
+}
+#machine-evaluation-modal .modal-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.22);
+}
+#machine-evaluation-modal table.eval-table td:first-child,
+#machine-evaluation-modal table.eval-table th:first-child {
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 900px) {
+    .acc-eval-kpi-grid,
+    .fin-summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .acc-eval-charts-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    #machine-evaluation-modal .modal-header > div {
+        width: 100%;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    #machine-evaluation-modal .modal-header > div > select,
+    #machine-evaluation-modal .modal-header .real-select-hidden + div {
+        flex: 1;
+    }
+    #financial-dashboard-modal .modal-header > div {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 480px) {
+    .acc-eval-kpi-grid,
+    .fin-summary-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    .acc-eval-kpi {
+        padding: 10px 12px;
+    }
+    .acc-eval-kpi-value {
+        font-size: var(--fs-md);
+    }
+}
+
+.fin-type-tab {
+    padding: 7px 18px;
+    border-radius: 99px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.5);
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s ease, opacity 0.2s ease, background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+    font-family: var(--font-body);
+}
+.fin-type-tab:hover {
+    background: rgba(255, 255, 255, 0.09);
+    color: #fff;
+}
+.fin-type-tab.active {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
+.fin-type-tab.active[data-type="incoming"] {
+    background: rgba(239, 68, 68, 0.18);
+    border-color: rgba(239, 68, 68, 0.45);
+    color: var(--danger-soft);
+}
+.fin-type-tab.active[data-type="outgoing"] {
+    background: rgba(16, 185, 129, 0.18);
+    border-color: rgba(16, 185, 129, 0.45);
+    color: var(--color-primary-green);
+}
+@media (max-width: 480px) {
+    #fin-type-tabs .fin-type-tab {
+        flex: 1;
+        padding: 8px 4px;
+        text-align: center;
+    }
+}
+
+#settings,
+#home {
+    background: transparent;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    min-height: 100vh;
+}
+#calendar,
+#machines,
+#service,
+#workshop,
+#protocols,
+#settings-etiketten,
+#documents,
+#listen,
+#tasks,
+#processes,
+#accounting {
+    background: transparent;
+}
+
+#listen .glass-card {
+    background: rgba(15, 23, 42, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(var(--blur-raised));
+    -webkit-backdrop-filter: blur(var(--blur-raised));
+    box-shadow:
+        0 12px 32px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+#listen .maint-kpi-tile,
+#listen .maint-chart-card {
+    background: rgba(15, 23, 42, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(var(--blur-surface));
+    -webkit-backdrop-filter: blur(var(--blur-surface));
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), background 0.45s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#listen .maint-kpi-tile:hover,
+#listen .maint-chart-card:hover {
+    background: rgba(15, 23, 42, 0.42);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+#accounting .glass-card {
+    background: rgba(15, 23, 42, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(var(--blur-raised));
+    -webkit-backdrop-filter: blur(var(--blur-raised));
+    box-shadow:
+        0 12px 32px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+#accounting .acc-eval-kpi,
+#accounting .maint-kpi-tile,
+#accounting .maint-chart-card {
+    background: rgba(15, 23, 42, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    backdrop-filter: blur(var(--blur-surface));
+    -webkit-backdrop-filter: blur(var(--blur-surface));
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), background 0.45s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#accounting .acc-eval-kpi:hover,
+#accounting .maint-kpi-tile:hover,
+#accounting .maint-chart-card:hover {
+    background: rgba(15, 23, 42, 0.42);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+#accounting .acc-eval-kpi-label,
+#accounting .maint-kpi-label,
+#accounting .maint-chart-title,
+#accounting .maint-chart-count,
+#accounting .maint-chart-month {
+    color: #fff;
+}
+
+#listen .maint-kpi-label,
+#listen .maint-chart-title,
+#listen .maint-chart-count,
+#listen .maint-chart-month,
+#listen .proc-type-count {
+    color: #fff;
+}
+#listen .ang-nachfass-row {
+    border-radius: var(--radius-sm);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), filter 0.3s ease;
+}
+#listen .ang-nachfass-row:hover {
+    transform: translateX(4px);
+    filter: brightness(1.25);
+}
+
+#home .maint-kpi-tile,
+#home .maint-chart-card {
+    background: rgba(255, 255, 255, 0.055);
+    backdrop-filter: blur(var(--blur-raised)) saturate(150%);
+    -webkit-backdrop-filter: blur(var(--blur-raised)) saturate(150%);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+    transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), background 0.45s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#home .maint-kpi-tile:hover,
+#home .maint-chart-card:hover {
+    background: rgba(255, 255, 255, 0.09);
+    transform: translateY(-3px) scale(1.015);
+    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+#home .maint-kpi-tile:active {
+    transform: translateY(-1px) scale(0.99);
+    transition-duration: 0.15s;
+}
+
+#home .maint-kpi-tile,
+#home .maint-chart-card,
+#calendar .maint-kpi-tile,
+#calendar .maint-chart-card {
+    border-color: rgba(255, 255, 255, 0.22);
+}
+#home .maint-kpi-tile:hover,
+#calendar .maint-kpi-tile:hover {
+    border-color: rgba(255, 255, 255, 0.35);
+}
+#home .maint-kpi-label,
+#calendar .maint-kpi-label {
+    color: #fff;
+}
+#home .maint-chart-title,
+#calendar .maint-chart-title {
+    color: #fff;
+}
+#home .maint-chart-count,
+#calendar .maint-chart-count {
+    color: #fff;
+}
+#home .maint-chart-month,
+#calendar .maint-chart-month {
+    color: #fff;
+}
+#home .dash-quick-btn,
+#calendar .dash-quick-btn {
+    border-color: rgba(255, 255, 255, 0.28);
+    color: #fff;
+}
+#home .dash-quick-btn:hover,
+#calendar .dash-quick-btn:hover {
+    border-color: rgba(255, 255, 255, 0.45);
+}
+#home .dash-chip,
+#calendar .dash-chip {
+    border-color: rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
+#calendar .maint-card {
+    border-color: rgba(255, 255, 255, 0.18);
+}
+#calendar .maint-card-dates {
+    color: #fff;
+}
+#calendar .proc-type-count {
+    color: #fff;
+}
+#home .double-kpi-subtile:first-child {
+    border-right-color: rgba(255, 255, 255, 0.2);
+}
+
+#settings-etiketten .glass-card,
+#settings-uvv-wartungsplaene .glass-card,
+#settings-firmeneinstellungen .glass-card,
+#settings-import .glass-card,
+#settings-textbausteine .glass-card,
+#settings-ai .glass-card,
+#users .user-list-container,
+#categories .user-list-container,
+#label-tab-content-etiketten,
+#label-tab-content-beschriftung,
+#label-tab-content-vorlagen {
+    background: rgba(15, 23, 42, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-lg);
+    backdrop-filter: blur(var(--blur-raised));
+    -webkit-backdrop-filter: blur(var(--blur-raised));
+    box-shadow:
+        0 12px 32px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+#users .user-list-container,
+#categories .user-list-container,
+#label-tab-content-etiketten,
+#label-tab-content-beschriftung,
+#label-tab-content-vorlagen {
+    padding: 1.5rem 1.75rem;
+    margin-top: 0.5rem;
+}
+
+#label-tab-content-beschriftung.hidden,
+#label-tab-content-vorlagen.hidden,
+#label-tab-content-etiketten.hidden {
+    display: none;
+}
+
+details.category-group-details {
+    width: 100%;
+}
+summary.category-group-title {
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+summary.category-group-title::-webkit-details-marker {
+    display: none;
+}
+.group-title-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.group-chevron {
+    transition: transform 0.2s ease;
+    opacity: 0.7;
+}
+details.category-group-details[open] .group-chevron {
+    transform: rotate(180deg);
+}
+
+/* ================================================== */
+/* VIEW HEADER RESPONSIVE OVERRIDES                  */
+/* ================================================== */
+@media (max-width: 1024px) {
+    .view-header-row-top,
+    .view-header-row-bottom {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.75rem !important;
+    }
+
+    .view-header-left,
+    .view-header-right {
+        width: 100% !important;
+        justify-content: flex-start !important;
+    }
+
+    .custom-search-wrapper,
+    .search-wrapper,
+    .custom-filter-dropdown,
+    .glass-select,
+    .filter-group-glass {
+        width: 100% !important;
+        max-width: none !important;
+        margin-right: 0 !important;
+    }
+
+    .filter-group-glass {
+        flex-direction: column !important;
+        gap: 8px !important;
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+    }
+
+    .btn-add-bg {
+        width: 100% !important;
+        justify-content: center !important;
+        margin-top: 0.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .view-header-row-top,
+    .view-header-row-bottom {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .view-header-left,
+    .view-header-right {
+        width: 100%;
+        margin-top: 1rem;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+
+    .custom-search-wrapper {
+        width: 100% !important;
+    }
+}
+
+/* ================================================== */
+/* SIDEBAR: TABLET & MOBILE                          */
+/* ================================================== */
+
+/* Overlay hinter der ausgeklappten Mobil-Sidebar */
+#sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: rgba(2, 6, 23, 0.6);
+    backdrop-filter: blur(var(--blur-surface));
+    -webkit-backdrop-filter: blur(var(--blur-surface));
+}
+
+/* iPad / kleine Laptops: Sidebar dauerhaft schmal (nur Icons) */
+/* iPad / kleine Laptops: schmal ist nur der STARTZUSTAND, nicht die
+   Festlegung. Der rote Knopf klappt die Sidebar wieder auf — genau wie am
+   Desktop. Vorher war sie hier fest auf 80px genagelt und `#sidebar-toggle`
+   ausgeblendet; damit gab es auf dem Tablet gar keine Beschriftungen mehr.
+   Alle Regeln haengen deshalb an `.collapsed` statt am Geraet. Auf dem Handy
+   (<=768px) bleibt es beim Off-Canvas-Menue weiter unten, dort gibt es den
+   Knopf bewusst nicht. */
+@media (min-width: 769px) and (max-width: 1024px) {
+    #sidebar.collapsed .nav-link span {
+        display: none;
+    }
+
+    #sidebar.collapsed .nav-link {
+        padding: 14px 0;
+        justify-content: center;
+        margin: 4px 10px;
+    }
+
+    #sidebar.collapsed .sidebar-header .logo {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    #sidebar.collapsed .sidebar-header .logo-icon {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    #sidebar.collapsed .sidebar-user-profile {
+        justify-content: center;
+        padding: 16px 0;
+    }
+
+    #sidebar.collapsed .sidebar-user-profile .user-info {
+        display: none;
+    }
+
+    /* Der Knopf gehoert auf dem Tablet wieder dazu. */
+    #sidebar-toggle {
+        display: flex !important;
+    }
+}
+
+/* Mobil: Sidebar als Off-Canvas-Menü */
+@media (max-width: 768px) {
+    #sidebar {
+        width: 280px !important;
+        transform: translateX(-100%);
+        transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1001;
+    }
+
+    #sidebar.mobile-open {
+        transform: translateX(0);
+        box-shadow: 0 0 60px rgba(0, 0, 0, 0.6);
+        /* Ausgeklappt liegt das Menü über dem Inhalt — mit der
+           Grundtransparenz (0.4 / 0.32 / 0.42) schimmert die Seite
+           dahinter durch und die Einträge sind schlecht zu lesen.
+           Deshalb hier 20 Prozentpunkte weniger durchsichtig. */
+        background: linear-gradient(180deg,
+                rgba(15, 23, 42, 0.6) 0%,
+                rgba(30, 27, 75, 0.52) 50%,
+                rgba(2, 6, 23, 0.62) 100%);
+    }
+
+    /* Auf Mobil immer die volle Beschriftung zeigen */
+    #sidebar.collapsed {
+        width: 280px !important;
+    }
+
+    #sidebar.collapsed .nav-link span {
+        display: inline;
+    }
+
+    #sidebar.collapsed .nav-link {
+        padding: 14px 20px;
+        justify-content: flex-start;
+        margin: 4px 12px;
+    }
+
+    #sidebar.collapsed .sidebar-user-profile {
+        justify-content: flex-start;
+        padding: 8px 12px;
+    }
+
+    #sidebar.collapsed .sidebar-user-profile .user-info {
+        display: flex;
+    }
+
+    #sidebar-overlay.active {
+        display: block;
+    }
+
+    /* Desktop-Einklapp-Button entfällt, Hamburger in der Topbar übernimmt */
+    #sidebar-toggle {
+        display: none !important;
+    }
+
+    #mobile-sidebar-toggle {
+        display: inline-flex !important;
+    }
+
+    #main-wrapper,
+    #main-wrapper.collapsed-sidebar,
+    #app-layout:has(#sidebar.collapsed) #main-wrapper {
+        margin-left: 0 !important;
+    }
+
+    #topbar,
+    #app-layout:has(#sidebar.collapsed) #topbar {
+        left: 0 !important;
+        padding: 0 1rem;
+    }
+}
+
+/* ================================================== */
+/* HANDY-FEINSCHLIFF                                 */
+/* ================================================== */
+
+/* iOS zoomt beim Antippen eines Eingabefelds automatisch hinein, sobald
+   dessen Schrift kleiner als 16px ist — und zoomt danach nicht von allein
+   zurück, die Ansicht bleibt verschoben. 225 der 305 Felder lagen darunter.
+   Die 16px sind hier eine Verhaltensschwelle von Safari, keine Stilfrage:
+   dieser Wert darf nicht „aus Designgründen" kleiner gesetzt werden. */
+@media (max-width: 768px) {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="search"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="date"],
+    input[type="time"],
+    input[type="datetime-local"],
+    input[type="month"],
+    input:not([type]),
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+
+    /* Die Regel oben ist ein blanker Element-Selektor (0,0,1) und verliert
+       deshalb gegen bestehende Regeln, die die Schriftgröße selbst per
+       !important setzen — konkret gegen `.glass-form-input` (0,1,0) und
+       `[id^="settings-"] input[type="text"]` (0,2,1) in views/settings.css
+       sowie `#accounting-modal .glass-form-input` (1,1,0) in
+       views/accounting-modal.css. Das vorangestellte `body` hebt die
+       Spezifität hier jeweils genau eine Stufe über den Gegenspieler.
+       Wer einen dieser Selektoren umbenennt, muss ihn hier mitziehen. */
+    body [id^="settings-"] input[type],
+    body [id^="settings-"] select,
+    body [id^="settings-"] textarea,
+    body input.glass-form-input,
+    body select.glass-form-input,
+    body textarea.glass-form-input,
+    body input.glass-input,
+    body select.glass-input,
+    body textarea.glass-input,
+    body #accounting-modal .glass-form-input,
+    body #machine-evaluation-modal select,
+    body #acc-global-machine-search,
+    body #acc-global-workshop-machine,
+    body #acc-global-assignment-area {
+        font-size: 16px !important;
+    }
+}
+
+/* Notch und Home-Balken: durch viewport-fit=cover im <meta viewport> reicht
+   die Seite unter beide. Alles was fest am Rand klebt, braucht deshalb
+   echten Abstand — sonst liegt die Kopfzeile unter dem Notch und der
+   unterste Knopf unter dem Home-Balken. env() ist 0, wo es kein Notch gibt,
+   die Regel kostet auf Android und im Browser also nichts. */
+@media (max-width: 768px) {
+    /* Angebote-Karten (Listen → Angebote). Die Felder, die über die ganze
+       Zeile gehen (Bemerkung, Maschine, Erinnerung), tragen in js/listen.js
+       nur ein `min-width`, kein `width` — sie blieben deshalb auf der
+       Standardbreite eines <input> stehen (249px) und liessen rechts rund
+       70px der Karte leer. Hier füllen sie ihre Rasterzelle aus.
+       Die Höhen von 34/36px sind zudem knapp für Finger — 42px trifft
+       sicherer, ohne die Karte spürbar länger zu machen. */
+    .ang-card-fields input,
+    .ang-card-fields select,
+    .ang-card-fields .glass-form-input {
+        width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+    }
+    .ang-card-fields input,
+    .ang-card-fields select {
+        height: 42px !important;
+    }
+    .ang-card-fields > div {
+        min-width: 0 !important;
+    }
+
+    /* Fokusmodus, Kinomodus, Geschwindigkeitsregler und die Spaltenwahl
+       1/2/3 sind Werkzeuge für den grossen Bildschirm — auf dem Handy
+       ergeben sie keinen Sinn (nebeneinander passt ohnehin nur eine Spalte)
+       und sie drängen die beiden Knöpfe weg, die man unterwegs braucht.
+       Sichtbar bleiben nur „KI-Erfassung" und „Aufgabe erstellen". */
+    #focus-mode-container,
+    .cinema-mode-controls {
+        display: none !important;
+    }
+
+    /* Aufgaben randlos über die volle Breite. Das -10px hebt genau den
+       Seitenrand von #main-content wieder auf, die Karten laufen dadurch bis
+       an den Displayrand. Die Gruppierung bleibt bestehen: .kanban-column
+       trägt weiter Titel und Zähler („Offen 3" / „Erledigt"), verliert aber
+       Seitenabstand, Seitenrahmen und Radius. Der Gruppentitel bekommt
+       seinen Abstand einzeln zurück, sonst klebt er am Rand.
+       Oben/unten behalten die Karten ihren 3px-Rahmen — der trennt sie
+       weiterhin sichtbar voneinander. */
+    /* Reihenfolge auf dem Handy: Offen -> Werkstatt -> Erledigt.
+       „Erledigt" steckt im Markup in #tasks-board, die Werkstatt-Liste
+       daneben in .tasks-with-workshop — untereinander gestapelt stand die
+       Werkstatt dadurch UNTER den erledigten Aufgaben. `display: contents`
+       löst den Kasten von #tasks-board auf, seine beiden Spalten werden
+       damit zu direkten Flex-Kindern von .tasks-with-workshop und lassen
+       sich zusammen mit dem Werkstatt-Panel per `order` sortieren.
+       Weil #tasks-board dann keinen eigenen Kasten mehr hat, wandern die
+       randlosen -10px an die Spalten selbst. */
+    #tasks .tasks-with-workshop {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important; /* sonst schrumpfen die Spalten auf ihren Inhalt (Karten 100px breit) */
+        gap: 1rem !important;
+    }
+    #tasks #tasks-board {
+        display: contents !important;
+    }
+    #tasks .kanban-column[data-status="open"] { order: 1; }
+    #tasks #workshop-panel { order: 2; }
+    #tasks .kanban-column[data-status="completed"] { order: 3; }
+    #tasks .kanban-column {
+        margin-left: -10px !important;
+        margin-right: -10px !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        border-radius: 0 !important;
+    }
+    /* Eingeklappt bleibt nur die Kopfzeile stehen — die soll dann nicht wie
+       eine leere Spalte wirken und muss gut treffbar sein. */
+    #tasks .kanban-column[data-status="completed"] > .column-title {
+        min-height: 48px;
+        display: flex;
+        align-items: center;
+    }
+    #tasks .kanban-column > .column-title {
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+    #tasks .task-card {
+        border-left: none !important;
+        border-right: none !important;
+        border-radius: 0 !important;
+        padding: 14px 12px !important;
+    }
+
+    /* Aufgaben-Karte: Kopfzeile ist [Titel] [Bild] [Sternchen/Bearbeiten/
+       Löschen] nebeneinander. Auf dem Handy nahm das 121px-Bild dem
+       Maschinentitel so viel Breite, dass er umbrach und kaum lesbar war.
+       Deshalb: Titel und Knöpfe bleiben oben in einer Zeile, das Bild rutscht
+       per order/flex-basis in eine eigene Zeile darunter und wird 10% kleiner
+       (121 → 109px). `flex: 0 0 100%` erzwingt den Umbruch, `max-width`
+       klammert es wieder auf 109px, die auto-Ränder zentrieren es.
+       Die Masse am <img> steht inline in js/tasks.js — daher !important.
+       Nur noch Ersatz für Geräte ohne Container-Queries — sonst gilt die
+       Kartenbreiten-Regel in views/tasks.css; beide zusammen setzten das Bild
+       neben den Titel und quetschten ihn auf ~50px. */
+    @supports not (container-type: inline-size) {
+    .task-card-header {
+        flex-wrap: wrap !important;
+        align-items: flex-start !important;
+    }
+    .task-card-header > div:first-child {
+        order: 1;
+        flex: 1 1 0 !important;
+        min-width: 0 !important;
+    }
+    .task-card-header .task-card-actions {
+        order: 2;
+        flex: 0 0 auto !important;
+    }
+    /* Erzwingt den Zeilenumbruch vor dem Bild. `flex-basis:100%` am Bild
+       selbst reicht nicht: ein `max-width` würde die Flex-Basis schon vor
+       der Umbruchberechnung kappen, das Bild bliebe neben den Knöpfen. */
+    .task-card-header::after {
+        content: "";
+        order: 3;
+        flex: 0 0 100%;
+        height: 0;
+    }
+    .task-card-header .task-card-machine-thumb {
+        order: 4;
+        flex: 0 0 auto !important;
+        width: 109px !important;
+        height: 109px !important;
+        margin: 10px auto 0 auto !important;
+        align-self: center !important;
+    }
+    }
+    /* Maschinentitel: darf umbrechen und lange Namen trennen, statt
+       abgeschnitten oder über den Rand geschoben zu werden. */
+    .task-card-header .task-card-machine {
+        min-width: 0 !important;
+        white-space: normal !important;
+        overflow-wrap: break-word !important;
+        word-break: normal !important;
+    }
+    .task-card-header > div:first-child { word-break: normal !important; }
+
+    /* Seitenränder: die Innenabstände stapelten sich auf dem Handy —
+       #main-content 32px + #settings/#home 24px = 56px je Seite. Von 375px
+       blieben so nur 263px Inhalt übrig, fast ein Drittel der Breite ging
+       für leeren Rand drauf. Hier zusammen 14px je Seite, das reicht als
+       Luft zum Displayrand und gibt rund 80px zurück.
+       Betrifft nur Inhaltsseiten: Modals liegen als `position: fixed`
+       ausserhalb von #main-content und behalten ihre eigenen Abstände. */
+    #main-content {
+        padding-left: 10px !important;
+        padding-right: 10px !important;
+    }
+    #settings,
+    #home {
+        padding-left: 4px !important;
+        padding-right: 4px !important;
+    }
+
+    /* Einstellungs-Übersicht (die Kacheln nach Klick auf „Einstellungen"):
+       zwei Spalten sind auf dem Handy zu schmal. Bei 375px bleibt je Kachel
+       rund 147px, davon gehen 2x32px Innenabstand und das 64px-Icon ab — für
+       die Überschrift blieben ein paar Pixel, „Benutzerverwaltung" wurde
+       deshalb zu „Be… ve" abgeschnitten. Darum eine Kachel pro Zeile, dazu
+       kleineres Icon und kleinere Überschrift, damit Titel und Beschreibung
+       in einer Zeile stehen statt Wort für Wort umzubrechen.
+       Das font-size am <h2> steht inline im Markup (ohne !important) — das
+       !important hier schlägt es. */
+    .settings-grid {
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+        margin-top: 20px !important;
+    }
+    .settings-card {
+        padding: 18px 20px !important;
+        min-height: 0 !important;
+    }
+    .settings-card h2 {
+        font-size: 1.15rem !important;
+        line-height: 1.25 !important;
+    }
+    .settings-card > div:first-child {
+        gap: 12px !important;
+        margin-bottom: 0.6rem !important;
+    }
+    .settings-icon-container {
+        width: 46px !important;
+        height: 46px !important;
+    }
+    .settings-icon-container svg {
+        width: 26px !important;
+        height: 26px !important;
+    }
+
+    /* Einstellungen: feste Mehrspalten-Raster stehen dort als Inline-Style im
+       Markup und brechen von sich aus nie um. Auf 375px bleibt pro Spalte so
+       wenig übrig, dass die Beschriftung unlesbar wird — deshalb hier alles
+       untereinander. Die Inline-Styles haben kein !important, ein !important
+       hier genügt also.
+       `1fr 2fr`  = PLZ / Ort in den Firmeneinstellungen
+       `1fr 600px` = Beschriftungs-Editor mit fester 600px-Vorschauspalte,
+                     die auf dem Handy sonst weit über den Rand hinausläuft. */
+    #settings .form-row,
+    [id^="settings-"] .form-row,
+    .beschriftung-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+
+    /* Stückliste im Beschriftungs-Editor: sechs Spalten (Art.-Nr., Bez. 1,
+       Bez. 2, Menge, Einheit, Löschen) ergäben je rund 50px. Stattdessen die
+       drei Textfelder je über die volle Breite, darunter Menge / Einheit / ×
+       in einer Reihe. Die Kopfzeile entfällt — welches Feld welches ist,
+       sagen die Platzhalter in js/labels.js (dort mitpflegen!). */
+    .beschriftung-stueckliste-head {
+        display: none !important;
+    }
+    #beschriftung-stueckliste-rows .beschriftung-row {
+        grid-template-columns: 1fr 1fr 34px !important;
+    }
+    #beschriftung-stueckliste-rows .beschriftung-row > input:nth-child(-n+3) {
+        grid-column: 1 / -1 !important;
+    }
+
+    /* Social-Icons (Instagram, Facebook, YouTube, LinkedIn) raus: sie stehen
+       per flex:1 mitten in der Topbar und nehmen dort den Platz weg, den auf
+       dem Handy das Hamburger-Menü, die Glocke und der Benutzer brauchen.
+       Nur die Topbar-Leiste — .social-links in der Sidebar bleibt. */
+    .header-social-links {
+        display: none !important;
+    }
+
+    #topbar,
+    #app-layout:has(#sidebar.collapsed) #topbar {
+        height: calc(70px + env(safe-area-inset-top));
+        padding-top: env(safe-area-inset-top);
+    }
+
+    #main-wrapper,
+    #main-wrapper.collapsed-sidebar,
+    #app-layout:has(#sidebar.collapsed) #main-wrapper {
+        padding-top: calc(70px + env(safe-area-inset-top)) !important;
+    }
+
+    #sidebar {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .modal-backdrop .modal-content,
+    .modal-new .modal-content,
+    .protocol-modal,
+    #plan-editor-modal > .glass-card,
+    #label-article-modal > .glass-card,
+    #label-import-modal > .glass-card,
+    #user-edit-modal > .glass-card {
+        padding-top: max(1.25rem, env(safe-area-inset-top)) !important;
+        padding-bottom: max(1.25rem, env(safe-area-inset-bottom)) !important;
+    }
+}
+
+/* ================================================== */
+/* TOUCH-FEINSCHLIFF (Handy UND iPad)                */
+/* ================================================== */
+
+/* `hover: none` + `pointer: coarse` trifft Finger-Geraete (Handy, iPad),
+   nicht aber ein Notebook mit Touchscreen samt Maus. Am Finger gibt es kein
+   :hover â€” der Browser feuert es beim Antippen trotzdem einmal und laesst es
+   danach am Element haengen, bis irgendwo anders hingetippt wird. Karten
+   blieben so dauerhaft aufgehellt bzw. angehoben. Deshalb hier zurueckgedreht. */
+@media (hover: none) and (pointer: coarse) {
+    .maint-card:hover,
+    .proc-card:hover,
+    .dash-todo-row:hover,
+    .dash-chip:hover,
+    .dash-quick-btn:hover,
+    .ang-nachfass-row:hover,
+    .maint-kpi-tile:hover,
+    .maint-chart-card:hover,
+    #listen .maint-chart-card:hover,
+    #accounting .maint-chart-card:hover,
+    #home .maint-chart-card:hover,
+    #calendar .maint-kpi-tile:hover,
+    #listen .ang-nachfass-row:hover,
+    .double-kpi-subtile:hover,
+    .angebote-table-wrap tbody tr:hover,
+    .maint-action-btn:hover,
+    .proc-sort-btn:hover,
+    .subtask-action-btn:hover,
+    .fin-type-tab:hover {
+        transform: none !important;
+        filter: none !important;
+    }
+
+    /* Graue Blitz-Flaeche, die iOS und Android beim Antippen ueber den Knopf
+       legen â€” passt nicht zum Glas-Design. Rueckmeldung gibt :active. */
+    a, button, .clickable, .row-clickable,
+    .task-card, .proc-card, .maint-card, .ang-card,
+    .maint-kpi-tile, .dash-quick-btn, .dash-chip, .settings-card {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Ohne `touch-action: manipulation` wartet Safari nach jedem Tipp 300ms
+       ab, ob ein Doppeltipp (Zoom) folgt. Knoepfe fuehlen sich dadurch traege
+       an. Nur auf Bedienelemente gesetzt, nicht auf Textflaechen. */
+    button, a, input[type="checkbox"], input[type="radio"],
+    select, .clickable, .row-clickable, .settings-tab, .fin-type-tab {
+        touch-action: manipulation;
+    }
+
+    /* Fingerkuppe trifft rund 44px. Kleine Icon-Knoepfe (Loeschen, Stern,
+       Bearbeiten) lagen bei 24 bis 30px. Die sichtbare Groesse bleibt, der
+       Trefferbereich waechst ueber ein Pseudoelement nach aussen â€” dadurch
+       verschiebt sich nichts im Layout. */
+    .subtask-action-btn,
+    .maint-action-btn,
+    .task-card-actions button,
+    .ang-card-top button,
+    .proc-card-head button {
+        position: relative;
+    }
+    .subtask-action-btn::after,
+    .maint-action-btn::after,
+    .task-card-actions button::after,
+    .ang-card-top button::after,
+    .proc-card-head button::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 44px;
+        height: 44px;
+        transform: translate(-50%, -50%);
+    }
+
+    /* Traegheitsscrollen in allen Bereichen, die selbst scrollen. Fehlt es,
+       stoppt der Inhalt in aelteren iOS-Fassungen abrupt am Finger. */
+    .modal-scroll-area,
+    .modal-body,
+    .modal-form-area,
+    .custom-scrollbar,
+    .table-responsive-wrapper,
+    .angebote-table-wrap,
+    .accounting-table-container,
+    .menu-panel {
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
+/* ================================================== */
+/* IPAD (769 bis 1024px)                             */
+/* ================================================== */
+
+/* iPad-Safari zoomt genau wie das iPhone in jedes Feld hinein, dessen
+   Schrift unter 16px liegt â€” die Regel im Abschnitt HANDY-FEINSCHLIFF endete
+   aber bei 768px. Hier dieselben Selektoren fuer den iPad-Bereich.
+   Wer dort etwas umbenennt, muss es auch hier mitziehen. */
+@media (min-width: 769px) and (max-width: 1024px) and (pointer: coarse) {
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    input[type="search"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="date"],
+    input[type="time"],
+    input[type="datetime-local"],
+    input[type="month"],
+    input:not([type]),
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+
+    body [id^="settings-"] input[type],
+    body [id^="settings-"] select,
+    body [id^="settings-"] textarea,
+    body input.glass-form-input,
+    body select.glass-form-input,
+    body textarea.glass-form-input,
+    body input.glass-input,
+    body select.glass-input,
+    body textarea.glass-input,
+    body #accounting-modal .glass-form-input {
+        font-size: 16px !important;
+    }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+    /* Fenster fuellten auf dem iPad entweder den ganzen Bildschirm (durch
+       feste Breiten im Markup) oder standen als schmaler Streifen mittendrin.
+       92vw/92vh laesst rundum sichtbar Hintergrund stehen, ohne dass der
+       Inhalt einschnuert. */
+    .modal-backdrop .modal-content,
+    .modal-new .modal-content {
+        max-width: 92vw !important;
+        max-height: 92vh !important;
+    }
+
+    /* Startseite: fuenf Kacheln nebeneinander ergaben auf 1024px minus
+       80px Sidebar je rund 180px â€” Zahl und Beschriftung passten nicht mehr
+       nebeneinander. Drei pro Reihe. */
+    .dash-kpi-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+
+    /* 1.25fr / 1fr laesst der rechten Spalte auf dem iPad rund 380px â€” die
+       Listen darin (Aufgaben, Maschinen) brachen Wort fuer Wort um.
+       Untereinander ist dort besser lesbar. */
+    .dash-main-grid,
+    .acc-eval-charts-grid,
+    .fin-summary-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Die Diagramm-Reihen setzen `auto-fit, minmax(260px, ...)` und ergaeben
+       auf dem iPad drei sehr schmale Saeulendiagramme. Zwei sind lesbar. */
+    .ang-charts-row,
+    .proc-charts-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    /* Die Angebote-Tabelle hat zwoelf Spalten und ist mit festen Prozent-
+       Breiten gebaut. Auf dem iPad wird sie waagerecht scrollbar, statt die
+       Zellen bis zur Unlesbarkeit zu quetschen. */
+    .angebote-table-wrap {
+        overflow-x: auto !important;
+    }
+    .angebote-table-wrap table {
+        min-width: 900px;
+    }
+}
+
+/* ================================================== */
+/* HANDY: NICHTS DARF SEITWAERTS HERAUSRAGEN         */
+/* ================================================== */
+
+@media (max-width: 768px) {
+    /* Einzelne breite Elemente (Tabellen, feste Pixelbreiten aus Inline-
+       Styles) schoben die ganze Seite waagerecht â€” man wischte den Inhalt
+       versehentlich zur Seite und die Topbar rutschte mit. Der Riegel sitzt
+       auf #main-content, nicht auf <body>: `overflow: hidden` am Wurzel-
+       element wuerde `position: sticky` in den Listen ausser Kraft setzen.
+       `clip` statt `hidden`, weil `overflow-x: hidden` das Element selbst zum
+       Scroll-Container macht (overflow-y wird dann auf `auto` gerechnet) und
+       dadurch ebenfalls jedes `position: sticky` darin bricht. `clip` laesst
+       overflow-y auf `visible`. */
+    #main-content {
+        overflow-x: clip !important;
+        max-width: 100vw !important;
+    }
+
+    /* Tabellen bleiben trotzdem vollstaendig erreichbar â€” sie scrollen
+       innerhalb ihres eigenen Rahmens. */
+    .table-responsive-wrapper,
+    .angebote-table-wrap,
+    .accounting-table-container {
+        overflow-x: auto !important;
+        max-width: 100% !important;
+    }
+
+    /* Lange Bezeichnungen ohne Leerzeichen (Maschinennummern, Mailadressen,
+       Dateinamen) sind sonst breiter als die Karte und schieben sie auf. */
+    .task-card,
+    .proc-card,
+    .maint-card,
+    .ang-card,
+    .dash-todo-row,
+    .settings-card {
+        overflow-wrap: anywhere;
+        min-width: 0;
+    }
+
+    /* Kalender-Ansicht: die Monatsuebersicht braucht sieben Spalten. Statt
+       sie zu quetschen, darf sie scrollen. */
+    #calendar .table-responsive-wrapper table {
+        min-width: 640px;
+    }
+}
+
+
+/* ================================================== */
+/* HANDY: FENSTER UND FORMULARE                       */
+/* ================================================== */
+/* Die Bearbeiten-Fenster sind ueberwiegend mit Inline-Styles gebaut:
+   feste Zwei-Spalten-Raster, 2rem Innenabstand, Ueberschriften mit
+   1.8rem. Auf dem Desktop stimmt das, auf 375px Breite bleiben pro
+   Spalte rund 150px uebrig — Beschriftungen brechen mitten im Wort,
+   Eingabefelder werden unbedienbar schmal.
+
+   Inline-Styles schlagen jede Stylesheet-Regel, deshalb hier `!important`
+   und Treffer ueber `[style*=...]`: das greift genau die Raster, die im
+   Markup fest verdrahtet sind, und laesst `auto-fit`/`auto-fill`-Raster
+   in Ruhe — die brechen von selbst sauber um. */
+
+@media (max-width: 768px) {
+
+    /* --- Feste Mehrspalten-Raster auf eine Spalte --- */
+    .modal-content [style*="1fr 1fr"],
+    .modal-content [style*="1.5fr 1fr"],
+    .modal-content [style*="1fr 1.5fr"],
+    .modal-content [style*="1fr 2fr"],
+    .modal-content [style*="2fr 1fr"],
+    .modal-new [style*="1fr 1fr"],
+    .modal-new [style*="1.5fr 1fr"],
+    .modal-new [style*="1fr 1.5fr"],
+    .modal-new [style*="1fr 2fr"],
+    .modal-new [style*="2fr 1fr"],
+    #main-content [style*="1fr 1fr"],
+    #main-content [style*="1.5fr 1fr"],
+    #main-content [style*="1fr 1.5fr"],
+    #main-content [style*="1fr 2fr"],
+    #main-content [style*="2fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* --- Knöpfe oben in der Fensterecke (absolut positioniert) ---
+       Sie ignorieren den Innenabstand und lagen in der Homebildschirm-App unter
+       der Notch/Statusleiste. Inline-top ohne !important wird hier überstimmt. */
+    .modal-content .btn-close-modal,
+    .procurement-close-btn,
+    #machine-details-edit-btn,
+    #lbx-close,
+    #ab-ai-summary-modal [data-abs-close].ab-icon-btn {
+        top: calc(14px + env(safe-area-inset-top, 0px)) !important;
+    }
+
+    /* --- Innenabstaende der Fenster --- */
+    /* 2rem ringsum sind auf 375px 64px, also ein Sechstel der Breite. */
+    /* Oben/unten mit Notch und Home-Balken (Homebildschirm-App, black-translucent) —
+       ohne max(…env…) hob diese Regel den Abstand aus „HANDY-FEINSCHLIFF“ wieder auf. */
+    .modal-content,
+    .modal-new .modal-content {
+        padding: max(1rem, env(safe-area-inset-top)) 0.9rem max(1rem, env(safe-area-inset-bottom)) !important;
+        border-radius: 16px !important;
+    }
+
+    /* --- Ueberschriften --- */
+    /* 1.8rem = 29px: passt auf dem Desktop, sprengt auf dem Handy die
+       Kopfzeile und draengt den Schliessen-Knopf heraus. */
+    .modal-content h2,
+    .modal-new h2 {
+        font-size: 1.15rem !important;
+        line-height: 1.25 !important;
+        overflow-wrap: anywhere;
+    }
+
+    .modal-content h3,
+    .modal-new h3 {
+        font-size: 1rem !important;
+    }
+
+    /* --- Knopfleisten --- */
+    /* Nebeneinander bleiben zwei Knoepfe mit Text wie "ÄNDERUNGEN
+       SPEICHERN" unter 44px Hoehe nicht lesbar — also untereinander,
+       Hauptaktion oben. */
+    .modal-content .modal-actions,
+    .modal-new .modal-actions,
+    .ab-form-actions {
+        flex-direction: column-reverse !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+    }
+
+    .modal-content .modal-actions > button,
+    .modal-new .modal-actions > button,
+    .ab-form-actions > button {
+        width: 100% !important;
+        flex: none !important;
+    }
+
+    /* Die Statuszeile des Auto-Speicherns steht sonst als erstes Element
+       einer column-reverse-Leiste ganz unten. */
+    .autosave-status,
+    .ab-autosave-status {
+        order: -1;
+        margin-right: 0 !important;
+        text-align: center;
+    }
+
+    /* --- Feste Pixelbreiten in Formularen --- */
+    /* Kleinfelder (Uhrzeit, Anzahl, Kuerzel) mit fester Breite passen
+       einzeln, in einer Reihe schieben sie die Karte auf. */
+    .modal-content input[style*="width: 250px"],
+    .modal-content input[style*="width: 300px"],
+    .modal-content select[style*="width: 250px"],
+    .modal-content [style*="min-width: 200px"],
+    .modal-content [style*="min-width: 220px"] {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+
+    /* --- Reihen aus Feldern --- */
+    /* Inline-`display: flex` laesst Felder nicht umbrechen. Bewusst nur
+       Reihen, die wirklich Eingabefelder enthalten — eine pauschale Regel
+       wuerde auch Kopfzeilen umbrechen und den Schliessen-Knopf unter den
+       Titel schieben. `:has()` gibt es ab iOS 15.4, also genau ab der
+       Mindestversion dieser App; aeltere Browser ignorieren die Regel
+       einfach, statt etwas kaputt zu machen. */
+    .modal-content [style*="display: flex"]:has(> input, > select, > textarea, > .form-group),
+    .modal-new [style*="display: flex"]:has(> input, > select, > textarea, > .form-group) {
+        flex-wrap: wrap;
+    }
+}
+
+/* Handy: Sortier-Leiste der Vorgänge und Reiter der Buchhaltung ragten
+   um einige Pixel über den Rand (waagerechter Versatz um 17 px bzw. 8 px).
+   Beschriftung in eine eigene Zeile, Reiter dürfen umbrechen. */
+@media (max-width: 768px) {
+    #processes .proc-sort-label { flex-basis: 100%; }
+    #accounting .calendar-view-tabs { flex-wrap: wrap !important; max-width: 100%; }
+    #accounting .calendar-view-tabs > * { flex: 1 1 auto; min-width: 0; }
+}
+
+/* Einstellungen auf dem Handy (Prüfung 2026-09-24): KI-Auswahlfeld hatte
+   min-width 200px + 130px Beschriftung, die Etiketten-Zeilen brachen nicht um
+   — beides ragte über den Rand. */
+@media (max-width: 768px) {
+    #settings-ai .ki-zeile > * { min-width: 0 !important; max-width: 100%; }
+    #settings-ai .ki-zeile .glass-form-input,
+    #settings-ai .ki-zeile > div { flex: 1 1 100% !important; min-width: 0 !important; }
+    #settings-etiketten .label-article-row { flex-wrap: wrap !important; }
+    #settings-etiketten .label-article-row > * { min-width: 0; }
+}
+
+/* ==========================================================
+   GROSSE SCHRIFT / SEITENZOOM AUF DEM HANDY (2026-10-01)
+   Wer am iPhone den Seitenzoom (Safari „aA") oder die Anzeige
+   vergrößert, bekommt in CSS-Pixeln einen schmaleren Bildschirm:
+   375px bei 125 % → 300px, bei 150 % → 250px. Damit die App dann
+   nutzbar bleibt, schrumpft hier stufenweise die rem-Basis (alle
+   --fs-* Tokens hängen daran), Überschriften und die Kopfzeile.
+   Eingabefelder bleiben bei 16px (iOS-Zoom-Schwelle, s. oben).
+   ========================================================== */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+@media (max-width: 768px) {
+    .view h1 { font-size: var(--fs-2xl) !important; }
+}
+/* Name oben rechts: nur das Kürzel, sobald es eng wird */
+@media (max-width: 400px) {
+    #topbar .sidebar-user-profile .user-info { display: none !important; }
+}
+/* Normale iPhones haben 375–440px — verkleinert wird erst darunter,
+   also nur bei vergrößertem Zoom/Schrift. */
+@media (max-width: 370px) {
+    html { font-size: 15px; }
+    .view h1 { font-size: 1.5rem !important; gap: 8px !important; }
+    .view h1 > svg { width: 22px; height: 22px; flex-shrink: 0; }
+    #kic-nav button { font-size: 0.625rem; letter-spacing: -0.1px; }
+}
+@media (max-width: 330px) {
+    html { font-size: 14px; }
+    .view h1 { font-size: 1.3rem !important; }
+    #kic-nav button { font-size: 0.5625rem; gap: 2px; }
+    #kic-nav button svg { width: 20px; height: 20px; }
+    #kic-nav .kic-nav-ki svg { width: 18px; height: 18px; padding: 5px; }
+    .dash-order-pill { white-space: normal !important; max-width: 100%; }
+    .kic-chips { grid-template-columns: 1fr; }
+}
+@media (max-width: 280px) {
+    html { font-size: 13px; }
+    #kic-nav button span { display: none; }
+}
+
+/* Tippflächen auf dem Handy: mindestens ~36px (vorher 23–25px) */
+@media (max-width: 768px) {
+    .ab-zuordnung-zu { min-height: 34px; }
+    #processes button[aria-label="Suche leeren"], #processes button[title="Suche leeren"] { min-width: 36px; min-height: 36px; }
+    .tlv-range button, .tlv-topbar button { min-height: 34px; min-width: 34px; }
+}
+
+/* Vorgangs-Fenster auf dem Handy (2026-10-01):
+   - Adress-Banner: Name und Knopf „Adresse öffnen" nebeneinander ließen dem
+     Namen ~100px — er brach Wort für Wort über fünf Zeilen. Knopf jetzt darunter.
+   - .msg-Ablagefelder (Outlook-Datei hineinziehen) sind am Handy nicht nutzbar. */
+@media (max-width: 768px) {
+    #edit-process-address-banner > div:nth-child(2),
+    #process-add-address-banner > div:nth-child(2) { flex-wrap: wrap; font-size: var(--fs-base) !important; }
+    #edit-process-address-name,
+    #process-add-address-name { flex: 1 1 0; min-width: 0; }
+    #edit-process-address-banner button,
+    #process-add-address-banner button { flex: 1 1 100%; justify-content: center; min-height: 38px; }
+    .form-group:has(> #edit-process-msg-dropzone),
+    .form-group:has(> #process-add-msg-dropzone),
+    .form-group:has(> #manual-email-msg-dropzone),
+    .form-group:has(> #email-msg-dropzone),
+    #process-header-msg-dropzone,
+    #ai-capture-msg-dropzone { display: none !important; }
+}
+@media (max-width: 768px) {
+    .ki-briefing-btn { min-height: 34px; }
+    .service-quickinfo-btn { min-width: 34px !important; min-height: 34px !important; }
+    .task-quick-complete { min-width: 34px; min-height: 34px; }
+}
+
+/* ==========================================================
+   KÄSTEN & TEXT AUF DEM HANDY (2026-10-01, per Messung gefunden)
+   ========================================================== */
+@media (max-width: 768px) {
+    /* Maschinen: Kategorie-Überschrift war fest 1.8rem + 15px Abstand ohne
+       Umbruch — „Schlauchtrommelwagen" lief 60px aus dem Kasten. */
+    .machine-category-header h2 {
+        font-size: var(--fs-xl) !important;
+        gap: 8px !important;
+        flex-wrap: wrap;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+    /* Trennlinie zwischen Kategorien war 4rem breiter als der Inhalt */
+    .category-separator { width: 100%; margin: 3rem 0; }
+
+    /* Kennzahl-Kacheln: 1fr allein lässt große Beträge die Spalte sprengen
+       (Angebote: 195/170/81px). minmax(0,1fr) = wirklich gleich breit. */
+    .maint-kpi-tile { min-width: 0; overflow-wrap: anywhere; }
+
+    /* Vorgänge → Erinnerungen: „Für mich" wurde über den Rand geschoben */
+    .proc-remind-kopf { flex-wrap: wrap; row-gap: 8px !important; }
+
+    /* Adressbuch: „Route zusammenstellen" lief aus dem Knopf */
+    #addressbook .ab-toolbar button { white-space: normal; line-height: 1.2; }
+}
+@media (max-width: 600px) {
+    .maint-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 768px) {
+    /* Listen: vier Filter mit fester Breite (115–190px) standen mit Suche und
+       Knopf in EINER Zeile (nowrap) — jeder Filter wurde auf 53px gequetscht. */
+    .listen-filters {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px !important;
+        width: 100%;
+        flex-shrink: 1 !important;
+    }
+    .listen-filters > * { width: auto !important; min-width: 0; }
+    .listen-filters > input,
+    .listen-filters > button { grid-column: 1 / -1; width: 100% !important; justify-content: center; }
+    .listen-toolbar { flex-wrap: wrap; }
+
+    /* Serviceberichte: Löschen-Knopf ragte 9px aus der Karte */
+    /* Abgeschlossene Berichte haben 4 Knöpfe (Status 150px + 3 runde) — passte
+       mit 32px Kartenrand nicht. Erster Knopf darf schrumpfen, Rand kleiner. */
+    .service-card-actions { margin-left: 0 !important; margin-right: 0 !important; gap: 6px !important; padding-left: 0 !important; padding-right: 0 !important; }
+    .service-card-actions > :first-child { flex: 1 1 0 !important; min-width: 0 !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #service .card-grid > .card { padding-left: 16px !important; padding-right: 16px !important; }
+}
+@media (max-width: 768px) {
+    /* Listen → Angebote: 12 Monatsbalken mit Beträgen passten nicht in die
+       Breite (Beschriftung hielt jeden Balken auf ≥40px). */
+    .ang-monatsbalken { gap: 2px !important; min-width: 0; }
+    .ang-monatsbalken > * { min-width: 0; }
+    .ang-monatsbalken > * > * { font-size: 0.5625rem !important; max-width: 100%; overflow-wrap: anywhere; text-align: center; }
+}
+@media (max-width: 768px) {
+    /* Vorgangskarte: Symbol-Leiste (Anhänge, Mails, Schritte …) rechts im Fuß
+       lief bei mehreren Symbolen bis zu 57px aus der Karte — jetzt Umbruch. */
+    .proc-card-footer { flex-wrap: wrap; row-gap: 8px; }
+    .proc-card-footer > * { min-width: 0; max-width: 100%; }
+    .proc-card-footer > div[style*="display: flex"] { flex-wrap: wrap; }
+    /* Wartungs-Diagramm Startseite: Monatsnamen 3px zu breit für die Spalte */
+    .maint-chart-month { font-size: 0.5625rem; letter-spacing: -0.2px; overflow: hidden; }
+    .maint-chart-card { min-width: 0; }
+}
+@media (max-width: 400px) {
+    /* Inline-Raster „repeat(auto-fit, minmax(280px, 1fr))" u. ä.: auf dem Handy
+       ohnehin einspaltig — die feste Mindestbreite lief bei Zoom über den Rand. */
+    #main-content [style*="auto-fit, minmax("],
+    #main-content [style*="auto-fill, minmax("],
+    .modal-new [style*="auto-fit, minmax("],
+    .modal-backdrop [style*="auto-fit, minmax("] {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+    /* Zellen mit „span 2" erzeugten sonst eine schmale Zusatzspalte */
+    #main-content [style*="auto-fit, minmax("] > *,
+    .modal-new [style*="auto-fit, minmax("] > *,
+    .modal-backdrop [style*="auto-fit, minmax("] > * { grid-column: 1 / -1 !important; }
+}
+@media (max-width: 768px) {
+    /* Angebot im Vorgang: Status über die Breite, VK/EK/Realisierbar/Spanne zu zweit */
+    /* Doppelte Klasse + Kontext: muss die allgemeine auto-fit-Regel oben schlagen */
+    #main-content .ang-felder.ang-felder, .modal-new .ang-felder.ang-felder, .modal-backdrop .ang-felder.ang-felder { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    #main-content .ang-felder.ang-felder > *, .modal-new .ang-felder.ang-felder > *, .modal-backdrop .ang-felder.ang-felder > * { grid-column: auto !important; min-width: 0; }
+    #main-content .ang-felder.ang-felder > :first-child, .modal-new .ang-felder.ang-felder > :first-child, .modal-backdrop .ang-felder.ang-felder > :first-child { grid-column: 1 / -1 !important; }
+}
+@media (max-width: 360px) {
+    /* Listen → Angebote: sechsstellige Beträge (304.000,00) fehlten 3–7px */
+    #listen input.glass-form-input { padding-left: 8px !important; padding-right: 8px !important; }
+}
+@media (max-width: 768px) {
+    /* Aufgabe → Unteraufgaben: Titel teilte sich die Zeile mit dem Abzeichen
+       und wurde abgeschnitten — Titel volle Breite, Abzeichen darunter. */
+    #task-modal .subtask-content-row > input.glass-input-minimal { flex: 1 1 100% !important; }
+}

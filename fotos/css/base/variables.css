@@ -1,0 +1,97 @@
+/* ========================================================= */
+/* ============= DESIGN SYSTEM TOKENS & VARIABLES =========== */
+/* ========================================================= */
+
+.reduced-fx,
+.reduced-fx * {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+:root {
+    /* Midnight Glass Color Palette */
+    --midnight-deep: #0f172a;
+    --midnight-blue: #1e293b;
+    --primary-red: #be1e2d;
+    --secondary-green: #22c55e;
+    --glass-bg: rgba(15, 23, 42, 0.6);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --glass-inner-light: rgba(255, 255, 255, 0.05);
+    --bg-gradient: radial-gradient(circle at 10% 20%, rgba(14, 165, 233, 0.25) 0%, transparent 60%),
+        radial-gradient(circle at 85% 15%, rgba(59, 130, 246, 0.2) 0%, transparent 50%),
+        radial-gradient(circle at 70% 80%, rgba(30, 58, 138, 0.2) 0%, transparent 50%),
+        radial-gradient(circle at 40% 90%, rgba(15, 23, 42, 0.5) 0%, transparent 70%),
+        #0f172a;
+    --app-gradient: radial-gradient(130% 100% at 20% 0%, rgba(125, 211, 252, 0.16) 0%, rgba(125, 211, 252, 0) 60%),
+        radial-gradient(120% 100% at 100% 30%, rgba(96, 165, 250, 0.12) 0%, rgba(96, 165, 250, 0) 60%);
+
+    /* Alt-Namen — zeigen auf die semantischen Tokens aus tokens.css,
+       damit bestehender Code weiterlaeuft. Neue Regeln bitte direkt
+       mit --text-1 / --text-3 / --font-body schreiben. */
+    --color-primary-red: var(--primary-red);
+    --color-primary-green: var(--secondary-green);
+    --color-white: #fff;
+    --color-text: var(--text-1);
+    --color-secondary: var(--text-3);
+    --font-serif: var(--font-body);
+    --font-sans: var(--font-body);
+
+    /* Protocol Category Accents - ORIGINAL VIBRANT */
+    --protocol-accent: #10b981;
+    --accent-rotorschaufel: #10b981;
+    --accent-umsetzer: #4d94ff;
+    --accent-brecher: #ffa64d;
+    --accent-default: #10b981;
+
+    /* Spacing & Layout */
+    --spacing-unit: 8px;
+    --border-radius: 24px;
+    --transition-speed: 0.3s;
+}
+
+/* Category Accent Themes */
+.theme-rotorschaufel {
+    --protocol-accent: var(--accent-rotorschaufel);
+}
+
+.theme-umsetzer {
+    --protocol-accent: var(--accent-umsetzer);
+}
+
+.theme-brecher {
+    --protocol-accent: var(--accent-brecher);
+}
+
+.protocol-modal-container.theme-rotorschaufel .btn-primary,
+.protocol-modal-container.theme-umsetzer .btn-primary,
+.protocol-modal-container.theme-brecher .btn-primary {
+    background: var(--protocol-accent);
+    box-shadow: 0 0 8px var(--protocol-accent);
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0px) translateX(0px);
+    }
+    50% {
+        transform: translateY(-30px) translateX(15px);
+    }
+}
+
+@keyframes pulse-glow {
+    0% {
+        box-shadow: 0 0 10px rgba(190, 30, 45, 0.2);
+    }
+    100% {
+        box-shadow: 0 0 25px rgba(190, 30, 45, 0.5);
+    }
+}
+
+@keyframes pulse-glow-task {
+    0% {
+        box-shadow: 0 0 5px rgba(255, 255, 255, 0.05);
+    }
+    100% {
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.15);
+    }
+}

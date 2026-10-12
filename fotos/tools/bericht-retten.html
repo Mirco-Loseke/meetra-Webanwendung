@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bericht retten</title>
+<!--
+  Liest die lokale Offline-Kopie der Serviceberichte (IndexedDB „meetra_offline")
+  auf DIESEM Gerät — ohne die App zu starten. Die App würde beim Start mit Internet
+  die Kopien mit dem aktuellen Serverstand überschreiben; dieses Werkzeug schreibt
+  nichts, es liest nur und bietet den Fund als Datei zum Herunterladen an.
+  Muss unter derselben Adresse laufen wie die App (…/tools/bericht-retten.html).
+-->
+<style>
+  :root { --bg:#0f172a; --card:#1e293b; --text:#f1f5f9; --muted:#94a3b8; --ok:#34d399; --warn:#fb923c; --line:rgba(255,255,255,0.1); }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui, sans-serif; padding:16px; }
+  h1 { font-size:1.3rem; margin:0 0 4px; }
+  p { color:var(--muted); margin:0 0 14px; max-width:760px; }
+  .leiste { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  input { background:var(--card); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px 10px; font-size:15px; min-width:240px; }
+  button { background:#334155; color:var(--text); border:1px solid var(--line); border-radius:8px; padding:8px 12px; font-size:14px; cursor:pointer; }
+  button.haupt { background:#065f46; border-color:var(--ok); }
+  .karte { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:10px; }
+  .kopf { display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; font-weight:600; }
+  .meta { color:var(--muted); font-size:13px; }
+  .quelle { color:var(--warn); font-size:12px; text-transform:uppercase; letter-spacing:0.05em; }
+  pre { white-space:pre-wrap; word-break:break-word; font-size:13px; color:var(--muted); margin:8px 0 0; max-height:160px; overflow:auto; }
+  #status { color:var(--muted); margin-bottom:10px; }
+</style>
+</head>
+<body>
+<h1>Servicebericht retten</h1>
+<p>Zeigt die Serviceberichte, die auf <strong>diesem Gerät</strong> noch lokal gespeichert sind — auch Fassungen, die in der Datenbank inzwischen überschrieben wurden. Es wird nichts verändert. Passenden Bericht mit „Herunterladen" sichern.</p>
+<div class="leiste">
+  <input id="suche" placeholder="Filtern: Datum, Maschine, Text (z. B. 2026-09-22 oder Arjes)">
+  <button class="haupt" id="alle">Alle als Datei sichern</button>
+</div>
+<div id="status">Lese lokale Daten …</div>
+<div id="liste"></div>
+<script>
+(function () {
+  'use strict';
+  var funde = [];
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+
+  function laden(datei, daten) {
+    var blob = new Blob([JSON.stringify(daten, null, 2)], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = datei;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+  }
+
+  function alleLesen(db, store) {
+    return new Promise(function (ok) {
+      if (!db.objectStoreNames.contains(store)) return ok([]);
+      var req = db.transaction(store, 'readonly').objectStore(store).getAll();
+      req.onsuccess = function () { ok(req.result || []); };
+      req.onerror = function () { ok([]); };
+    });
+  }
+
+  function maschinenname(id) {
+    try {
+      var liste = JSON.parse(localStorage.getItem('meetra_machines_cache') || 'null');
+      if (Array.isArray(liste)) {
+        var m = liste.find(function (x) { return String(x.id) === String(id); });
+        if (m) return [m.manufacturer, m.name, m.serial ? '#' + m.serial : ''].filter(Boolean).join(' ');
+      }
+    } catch (e) { }
+    return 'Maschine ' + id;
+  }
+
+  function zeichnen() {
+    var q = document.getElementById('suche').value.trim().toLowerCase();
+    var liste = funde.filter(function (f) { return !q || JSON.stringify(f.daten).toLowerCase().indexOf(q) > -1 || f.maschine.toLowerCase().indexOf(q) > -1; });
+    document.getElementById('status').textContent = liste.length + ' von ' + funde.length + ' lokal gespeicherten Berichten';
+    document.getElementById('liste').innerHTML = liste.map(function (f, i) {
+      var d = f.daten;
+      return '<div class="karte"><div class="kopf"><span>' + esc(d.title || 'Servicebericht') + ' · ' + esc(d.datum_von || d.date || '') + '</span>'
+        + '<button data-i="' + funde.indexOf(f) + '">Herunterladen</button></div>'
+        + '<div class="meta">' + esc(f.maschine) + ' · Bericht-Nr. ' + esc(d.id != null ? d.id : '—') + ' · zuletzt geändert ' + esc(d.updated_at || '?') + '</div>'
+        + '<div class="quelle">' + esc(f.quelle) + '</div>'
+        + '<pre>' + esc((d.description || '') + (Array.isArray(d.tasks) && d.tasks.length ? '\n\nArbeiten: ' + d.tasks.map(function (t) { return t.task || t.description || ''; }).join('; ') : '')) + '</pre></div>';
+    }).join('');
+  }
+
+  document.getElementById('liste').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-i]'); if (!b) return;
+    var f = funde[+b.dataset.i];
+    laden('servicebericht_' + (f.daten.id || 'lokal') + '_' + (f.daten.datum_von || 'ohne-datum') + '.json', f.daten);
+  });
+  document.getElementById('alle').addEventListener('click', function () {
+    laden('serviceberichte_lokal_' + new Date().toISOString().slice(0, 10) + '.json', funde.map(function (f) { return Object.assign({ _quelle: f.quelle }, f.daten); }));
+  });
+  document.getElementById('suche').addEventListener('input', zeichnen);
+
+  if (!window.indexedDB) { document.getElementById('status').textContent = 'Dieser Browser hat keinen lokalen Speicher.'; return; }
+  // Ohne Versionsnummer öffnen: nie ein Upgrade auslösen, nichts anlegen oder ändern.
+  var req = indexedDB.open('meetra_offline');
+  req.onerror = function () { document.getElementById('status').textContent = 'Lokaler Speicher nicht lesbar: ' + req.error; };
+  req.onsuccess = function () {
+    var db = req.result;
+    Promise.all([
+      alleLesen(db, 'service_full_cache').then(function (l) { return l.map(function (d) { return { quelle: 'Vollkopie', daten: d }; }); }),
+      alleLesen(db, 'pending_service').then(function (l) { return l.map(function (d) { return { quelle: 'Noch nicht hochgeladener Entwurf', daten: Object.assign({}, d.data || d.report || {}, d) }; }); }),
+      alleLesen(db, 'service_cache').then(function (l) { return l.map(function (d) { return { quelle: 'Listeneintrag (ohne Details)', daten: d }; }); })
+    ]).then(function (teile) {
+      funde = [].concat.apply([], teile);
+      funde.forEach(function (f) { f.maschine = maschinenname(f.daten.machine_id); });
+      funde.sort(function (a, b) { return String(b.daten.datum_von || b.daten.date || '').localeCompare(String(a.daten.datum_von || a.daten.date || '')); });
+      db.close();
+      if (!funde.length) { document.getElementById('status').textContent = 'Auf diesem Gerät sind keine Serviceberichte lokal gespeichert.'; return; }
+      document.getElementById('suche').value = '2026-09-22';
+      zeichnen();
+    });
+  };
+})();
+</script>
+</body>
+</html>

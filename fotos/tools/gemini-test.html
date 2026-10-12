@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Gemini-Test</title>
+<!--
+  Eigenständige Testseite (nicht Teil der App): Gemini über die
+  OpenAI-kompatible Schnittstelle direkt aus dem Browser aufrufen.
+  Der Key bleibt in localStorage dieses Browsers — für den Test in Ordnung,
+  in der App gehört er in die Edge Function (siehe groq-proxy).
+  Key holen: https://aistudio.google.com/apikey
+-->
+<style>
+  body { font: 15px/1.45 system-ui, sans-serif; background: #14171d; color: #e7e9ee; margin: 0; padding: 24px; }
+  h1 { font-size: 20px; margin: 0 0 16px; }
+  .zeile { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+  input, select, textarea, button { font: inherit; border-radius: 8px; border: 1px solid #3a4150; background: #1d222b; color: #fff; padding: 8px 10px; }
+  input[type=password] { width: 420px; }
+  textarea { width: 100%; box-sizing: border-box; min-height: 90px; }
+  button { cursor: pointer; background: #2563eb; border-color: #2563eb; }
+  button.sek { background: #2a313d; border-color: #3a4150; }
+  .karte { background: #1a1f27; border: 1px solid #2c333f; border-radius: 12px; padding: 14px; margin-top: 14px; }
+  .fragen label { display: block; margin: 8px 0; }
+  .fragen input { width: 100%; box-sizing: border-box; }
+  pre { white-space: pre-wrap; background: #0f1218; padding: 10px; border-radius: 8px; font-size: 13px; }
+  .muted { color: #9aa3b2; font-size: 13px; }
+  .ok { color: #34d399; } .err { color: #f87171; }
+</style>
+</head>
+<body>
+<h1>Gemini-Test: Vorgang aus Freitext mit Rückfragen</h1>
+
+<div class="zeile">
+  <input type="password" id="key" placeholder="Gemini API-Key (AIza…)" autocomplete="off">
+  <select id="modell" title="Wird bei Google abgefragt, sobald ein Key eingetragen ist">
+    <option value="gemini-2.5-flash">gemini-2.5-flash</option>
+    <option value="gemini-2.5-flash-lite">gemini-2.5-flash-lite</option>
+  </select>
+  <button class="sek" id="modelle-laden" title="Verfügbare Modelle bei Google abfragen">Modelle laden</button>
+  <label class="muted" title="Gemini 3.x überlegt vor der Antwort (Reasoning) — für ein Formular unnötig und langsam"><input type="checkbox" id="denken"> Nachdenken erlauben (langsamer)</label>
+  <button class="sek" id="pruefen">Verbindung prüfen</button>
+  <span id="status" class="muted"></span>
+</div>
+
+<textarea id="text" placeholder="z. B.: Bei Müller Recycling in Osnabrück soll die Ballenpresse gewartet werden, Thomas soll hin, Kunde will vorher ein Angebot"></textarea>
+<div class="zeile">
+  <button id="senden">An Gemini schicken</button>
+  <button class="sek" id="neu">Neu anfangen</button>
+  <span class="muted" id="verbrauch"></span>
+</div>
+
+<div class="karte" id="ausgabe" style="display:none;">
+  <div id="vorschau"></div>
+  <div class="fragen" id="fragen"></div>
+  <div class="zeile" id="antwort-zeile" style="display:none;"><button id="antworten">Antworten schicken</button></div>
+</div>
+
+<div class="karte">
+  <div class="muted">Rohantwort</div>
+  <pre id="roh">–</pre>
+</div>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const URL = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+  const KEY = 'gemini_test_key';
+  $('key').value = localStorage.getItem(KEY) || '';
+  $('key').addEventListener('change', () => { localStorage.setItem(KEY, $('key').value.trim()); modelleLaden(); });
+
+  // Verfügbare Modelle direkt bei Google abfragen — die Liste ändert sich laufend
+  // (z. B. „gemini-2.5-pro ist für neue Nutzer nicht mehr verfügbar").
+  async function modelleLaden() {
+    const key = $('key').value.trim(); if (!key) return;
+    $('status').textContent = 'Modelle werden geladen …'; $('status').className = 'muted';
+    try {
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': key } });
+      const d = await r.json();
+      if (!r.ok) throw new Error(erklaeren(r.status, d, ''));
+      const ids = (d.models || [])
+        .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+        .map(m => m.name.replace('models/', ''))
+        .filter(id => /^gemini/.test(id) && !/tts|image|audio|embedding|live|robotics|computer-use/i.test(id))
+        .sort((a, b) => (/flash/.test(b) - /flash/.test(a)) || b.localeCompare(a, undefined, { numeric: true }));
+      if (!ids.length) throw new Error('Google hat keine Text-Modelle für diesen Key geliefert.');
+      // Vorgabe: neuestes stabiles Flash-Modell (höchste Versionsnummer, kein preview/exp);
+      // ältere Versionen (2.5) listet Google zwar noch, lehnt sie für neue Konten aber ab.
+      const stabil = ids.filter(id => /flash/.test(id) && !/preview|exp/.test(id));
+      const vers = id => parseFloat((/gemini-(\d+(?:\.\d+)?)/.exec(id) || [0, 0])[1]);
+      const neuestes = stabil.sort((a, b) => vers(b) - vers(a) || (/lite/.test(b) - /lite/.test(a)))[0];
+      $('modell').innerHTML = ids.map(id => '<option value="' + id + '">' + id + '</option>').join('');
+      $('modell').value = neuestes || ids[0];
+      $('status').textContent = ids.length + ' Modelle verfügbar — Vorgabe: ' + $('modell').value; $('status').className = 'ok';
+    } catch (e) { $('status').textContent = 'Modelle konnten nicht geladen werden: ' + e.message; $('status').className = 'err'; }
+  }
+  $('modelle-laden').addEventListener('click', modelleLaden);
+  if ($('key').value) modelleLaden();
+
+  const heute = new Date().toISOString().slice(0, 10);
+  const SYSTEM = `Du bist der Assistent einer Werkstatt-Webapp (Maschinenbau/Recycling, Deutschland). Heute ist ${heute}.
+Aus Freitext legst du einen VORGANG an. Antworte AUSSCHLIESSLICH mit JSON, ohne Markdown:
+{
+  "vorgang": { "titel": "", "beschreibung": "", "kunde": "", "maschine": "", "zustaendig": "", "start": "JJJJ-MM-TT|null", "ende": "JJJJ-MM-TT|null", "prioritaet": "normal|hoch", "schritte": ["…"] },
+  "fehlende_angaben": [ { "feld": "start", "frage": "…" } ],
+  "bereit": false
+}
+Regeln:
+- Rate NICHTS, was nicht im Text steht. Fehlt etwas Wesentliches (Zeitraum/Termin, Kunde, Zuständiger, bei Reparaturen die Maschine), stelle dazu eine kurze, konkrete Rückfrage in "fehlende_angaben". Höchstens 3 Fragen auf einmal, die wichtigste zuerst.
+- Relative Zeitangaben ("nächste Woche", "morgen") in Datum umrechnen.
+- Sind alle wesentlichen Angaben da: "fehlende_angaben": [] und "bereit": true.
+- Bereits gegebene Antworten des Nutzers einarbeiten, nie erneut fragen.
+- Sprache: Deutsch, knapp.`;
+
+  let verlauf = [];
+  let tokens = 0;
+
+  // Fehler von Google in verständliche Hinweise übersetzen — mit Ursache und nächstem Schritt.
+  function erklaeren(status, d, text) {
+    if (Array.isArray(d)) d = d[0];   // Google liefert den Fehler manchmal als Array
+    const msg = (d && d.error && (d.error.message || d.error.status)) || '';
+    const roh = ' [' + status + (msg ? ': ' + msg.slice(0, 220) : text ? ': ' + text.replace(/\s+/g, ' ').slice(0, 220) : '') + ']';
+    if (status === 400 && /API key not valid|API_KEY_INVALID|valid API key/i.test(msg)) return 'Der API-Key wird von Google abgelehnt. Prüfen: vollständig kopiert, keine Leerzeichen — oder unter aistudio.google.com/apikey neu erzeugen.' + roh;
+    if (status === 400 && /location|region/i.test(msg)) return 'Google lehnt den Standort des Kontos ab. Im Google-Konto das Land prüfen (Deutschland) oder ein anderes Konto nehmen.' + roh;
+    if (status === 400 && /model/i.test(msg)) return 'Das gewählte Modell kennt Google nicht (mehr). Oben ein anderes Modell wählen.' + roh;
+    if (status === 400) return 'Google versteht die Anfrage nicht — vermutlich das Modell oder das JSON-Format. Andere Modellwahl versuchen.' + roh;
+    if (status === 401 || status === 403) {
+      if (/API key|permission|PERMISSION_DENIED|not authorized/i.test(msg)) return 'Der Key hat keine Berechtigung für die Gemini-API — im Google-Cloud-Projekt ist die „Generative Language API" nicht aktiv, oder der Key ist eingeschränkt (API-Restriktionen). Einfachster Weg: in AI Studio einen neuen Key in einem NEUEN Projekt erzeugen.' + roh;
+      if (/leaked|compromised|revoked|expired/i.test(msg)) return 'Der Key wurde von Google gesperrt oder ist abgelaufen — neuen Key erzeugen.' + roh;
+      return 'Zugriff verweigert — Key prüfen oder neu erzeugen.' + roh;
+    }
+    if (status === 404) return 'Das Modell „' + $('modell').value + '" gibt es unter dieser Adresse nicht. Oben ein anderes Modell wählen.' + roh;
+    if (status === 429) {
+      if (/quota.*0|limit: 0|not enabled|billing/i.test(msg)) return 'Kontingent ist 0 — der Free-Tier ist in diesem Projekt (noch) nicht aktiv oder das Modell braucht Abrechnung. Ein paar Minuten warten, sonst Flash-Lite versuchen oder Key in neuem Projekt anlegen.' + roh;
+      if (/per minute|RPM|TPM/i.test(msg)) return 'Zu viele Anfragen pro Minute (Free-Tier-Grenze). 30–60 Sekunden warten und erneut senden.' + roh;
+      if (/per day|RPD|daily/i.test(msg)) return 'Tageskontingent des Free-Tiers ausgeschöpft — morgen wieder, oder anderes Modell (Flash-Lite hat mehr).' + roh;
+      return 'Kontingent überschritten — kurz warten, bei Wiederholung anderes Modell wählen.' + roh;
+    }
+    if (status === 500 || status === 503) return 'Google-Seite hat gerade ein Problem (Überlastung). In einer Minute erneut versuchen.' + roh;
+    return 'Unerwartete Antwort von Google.' + roh;
+  }
+
+  async function rufen(messages) {
+    const key = $('key').value.trim();
+    if (!key) throw new Error('Kein API-Key eingetragen — oben ins Feld einfügen (aistudio.google.com/apikey).');
+    // Zwei Formate: klassisch „AIza…" (39 Zeichen) und neu „AQ.…" (länger)
+    if (!/^(AIza[0-9A-Za-z_\-]{30,}|AQ\.[0-9A-Za-z_\-\.]{20,})$/.test(key)) throw new Error('Das sieht nicht wie ein Gemini-Key aus: er beginnt mit „AIza" (39 Zeichen) oder „AQ." (länger). Eingefügt: ' + key.length + ' Zeichen, beginnt mit „' + key.slice(0, 4) + '". Leerzeichen oder Zeilenumbruch mitkopiert?');
+    if (!navigator.onLine) throw new Error('Keine Internetverbindung.');
+    let res, text;
+    const t0 = performance.now();
+    const body = { model: $('modell').value, messages, temperature: 0.2, max_tokens: 1200, response_format: { type: 'json_object' } };
+    // Reasoning so weit wie möglich herunter: 2.5 kann „none" (aus), 3.x nur „minimal"/„low".
+    // Welche Stufe das Modell annimmt, wird durchprobiert (rufen.stufe) und im Status gezeigt.
+    const STUFEN = ['none', 'minimal', 'low'];
+    if (!$('denken').checked) {
+      const s = STUFEN[messages.__stufe || 0];
+      if (s) body.reasoning_effort = s;
+      if (s === 'none') body.extra_body = { google: { thinking_config: { thinking_budget: 0 } } };
+    }
+    try {
+      res = await fetch(URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+        body: JSON.stringify(body)
+      });
+      text = await res.text();
+      rufen.dauer = Math.round(performance.now() - t0);
+    } catch (e) {
+      throw new Error('Google ist nicht erreichbar (Netzwerk/Firewall/Adblocker blockiert generativelanguage.googleapis.com). Technisch: ' + e.message);
+    }
+    let d; try { d = JSON.parse(text); } catch (e) { d = null; }
+    if (!res.ok) {
+      // „no longer available … use models/gemini-x" → einmal automatisch auf das empfohlene Modell wechseln
+      const e0 = Array.isArray(d) ? d[0] : d;
+      const m = e0 && e0.error && /use models\/([a-z0-9.\-]+)/i.exec(e0.error.message || '');
+      // Modell lehnt diese Reasoning-Stufe ab → nächste Stufe probieren, zuletzt ganz ohne Angabe
+      const emsg = (e0 && e0.error && e0.error.message) || '';
+      if (res.status === 400 && /reasoning|thinking|budget/i.test(emsg) && !$('denken').checked) {
+        messages.__stufe = (messages.__stufe || 0) + 1;
+        const naechste = STUFEN[messages.__stufe];
+        $('status').textContent = 'Modell lehnt Reasoning „' + STUFEN[messages.__stufe - 1] + '" ab (' + emsg.slice(0, 80) + ') — probiere ' + (naechste ? '„' + naechste + '"' : 'ohne Angabe') + ' …';
+        if (!naechste) $('denken').checked = true;
+        return rufen(messages);
+      }
+      if (m && !messages.__retry) {
+        const neu = m[1];
+        if (![...$('modell').options].some(o => o.value === neu)) $('modell').add(new Option(neu, neu));
+        $('modell').value = neu;
+        $('status').textContent = 'Modell von Google abgelehnt — wechsle auf ' + neu + ' …';
+        messages.__retry = true;
+        return rufen(messages);
+      }
+      throw new Error(erklaeren(res.status, d, text));
+    }
+    if (!d || !d.choices || !d.choices[0] || !d.choices[0].message) throw new Error('Antwort ohne Inhalt — Google hat nichts geliefert (evtl. Sicherheitsfilter). Rohantwort: ' + text.slice(0, 300));
+    if (d.choices[0].finish_reason === 'length') $('status').textContent += ' (Antwort abgeschnitten — max_tokens)';
+    if (d.usage) { tokens += d.usage.total_tokens || 0; $('verbrauch').textContent = 'Token diese Sitzung: ' + tokens + ' (letzte Anfrage: ' + (d.usage.total_tokens || 0) + ', Dauer ' + (rufen.dauer / 1000).toFixed(1) + ' s, Reasoning: ' + (body.reasoning_effort || 'Standard') + (d.usage.completion_tokens_details && d.usage.completion_tokens_details.reasoning_tokens ? ', davon Denk-Token ' + d.usage.completion_tokens_details.reasoning_tokens : '') + ')'; }
+    return d.choices[0].message.content;
+  }
+
+  function zeigen(inhalt) {
+    $('roh').textContent = inhalt;
+    let j; try { j = JSON.parse(inhalt); } catch (e) { $('ausgabe').style.display = ''; $('fragen').innerHTML = ''; $('antwort-zeile').style.display = 'none'; $('vorschau').innerHTML = '<span class="err">Gemini hat kein gültiges JSON geliefert (' + e.message + ') — siehe Rohantwort unten. Meist hilft: nochmal senden oder Modell wechseln.</span>'; return; }
+    if (!j.vorgang) { $('ausgabe').style.display = ''; $('fragen').innerHTML = ''; $('antwort-zeile').style.display = 'none'; $('vorschau').innerHTML = '<span class="err">JSON ohne Feld „vorgang" — das Modell hat sich nicht ans Schema gehalten (Rohantwort unten).</span>'; return; }
+    const v = j.vorgang || {};
+    $('ausgabe').style.display = '';
+    $('vorschau').innerHTML = '<b>' + (v.titel || '(kein Titel)') + '</b>'
+      + '<div class="muted">Kunde: ' + (v.kunde || '–') + ' · Maschine: ' + (v.maschine || '–') + ' · Zuständig: ' + (v.zustaendig || '–') + ' · ' + (v.start || '?') + ' – ' + (v.ende || '?') + ' · Priorität: ' + (v.prioritaet || '–') + '</div>'
+      + (v.beschreibung ? '<p>' + v.beschreibung + '</p>' : '')
+      + ((v.schritte || []).length ? '<ol>' + v.schritte.map(s => '<li>' + s + '</li>').join('') + '</ol>' : '')
+      + (j.bereit ? '<p class="ok">✔ Alle Angaben da — könnte jetzt angelegt werden.</p>' : '');
+    const f = j.fehlende_angaben || [];
+    $('fragen').innerHTML = f.map((q, i) => '<label>' + q.frage + '<input data-feld="' + (q.feld || '') + '" id="f' + i + '" placeholder="Antwort …"></label>').join('');
+    $('antwort-zeile').style.display = f.length ? '' : 'none';
+    if (f.length) $('f0').focus();
+  }
+
+  async function senden(userText) {
+    $('status').textContent = 'Gemini denkt …'; $('status').className = 'muted';
+    verlauf.push({ role: 'user', content: userText });
+    try {
+      const antwort = await rufen([{ role: 'system', content: SYSTEM }].concat(verlauf));
+      verlauf.push({ role: 'assistant', content: antwort });
+      zeigen(antwort);
+      $('status').textContent = 'OK'; $('status').className = 'ok';
+    } catch (e) { $('status').textContent = 'Fehler: ' + e.message; $('status').className = 'err'; verlauf.pop(); }
+  }
+
+  $('senden').addEventListener('click', () => { const t = $('text').value.trim(); if (!t) return; verlauf = []; tokens = 0; senden(t); });
+  $('antworten').addEventListener('click', () => {
+    const teile = [...document.querySelectorAll('#fragen input')].map(i => i.value.trim() ? (i.dataset.feld + ': ' + i.value.trim()) : '').filter(Boolean);
+    if (!teile.length) return;
+    senden('Antworten: ' + teile.join('; '));
+  });
+  $('neu').addEventListener('click', () => { verlauf = []; $('ausgabe').style.display = 'none'; $('roh').textContent = '–'; $('text').value = ''; $('status').textContent = ''; });
+  $('pruefen').addEventListener('click', async () => {
+    $('status').textContent = 'prüfe …'; $('status').className = 'muted';
+    try { const a = await rufen([{ role: 'user', content: 'Antworte nur mit OK' }]); $('status').textContent = 'Verbindung OK (' + a.trim().slice(0, 20) + ')'; $('status').className = 'ok'; }
+    catch (e) { $('status').textContent = 'Fehler: ' + e.message; $('status').className = 'err'; }
+  });
+})();
+</script>
+</body>
+</html>

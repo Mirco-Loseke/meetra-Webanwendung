@@ -1,0 +1,123 @@
+﻿Datenbank: OLMeetra auf Meetra-SA   (2026-09-22 16:40)
+
+===== ANSCHRIFTEN-PFLEGEGRAD (von 807 Adressen) =====
+  LieferStrasse            795 gefuellt
+  LieferOrt                784 gefuellt
+  LieferPLZ                792 gefuellt
+  PostStrasse               13 gefuellt
+  PostOrt                   13 gefuellt
+  Telefon                  578 gefuellt
+  EMail                    530 gefuellt
+  Matchcode                807 gefuellt
+  USER_Hersteller          137 gefuellt
+  USER_Bezeichnung         136 gefuellt
+
+===== KHKAdressen.Kategorie =====
+  Kategorie 0        777
+  Kategorie 41        28
+  Kategorie 1          2
+
+===== KHKAdressen.Aktiv =====
+  Aktiv -1       807
+
+===== SPALTEN KHKKontokorrent =====
+  Kto                                varchar(20)
+  KtoArt                             varchar(1)
+  Mandant                            smallint
+  KtoTyp                             smallint
+  Matchcode                          varchar(50)
+  Adresse                            int
+  StandardAdresse                    int
+  WKz                                varchar(3)
+  Sammelkto                          smallint
+  Bebuchbarkeit                      int
+  Besteuerung                        smallint
+  EULand                             varchar(2)
+  EUUStID                            varchar(15)
+  EUDreiecksgeschaeft                smallint
+  Zahlungskond                       varchar(10)
+  Inkassoart                         varchar(10)
+  Nettobedingung                     varchar(255)
+  Skontobedingung1                   varchar(255)
+  Skontobedingung2                   varchar(255)
+  Skontoprozent1                     money
+  Skontoprozent2                     money
+  Kreditlimit                        money
+  Gruppe                             varchar(10)
+  Vertreter                          varchar(10)
+  Mahnwesen                          smallint
+  Zahlungsverkehr                    smallint
+  Zahlungsavis                       smallint
+  LetzteMahnung                      datetime
+  Zahlungsmoral                      varchar(10)
+  Liefermoral                        varchar(10)
+  GegenKto                           varchar(20)
+  Kostenstelle                       varchar(20)
+  Kostentraeger                      varchar(20)
+  Tour                               varchar(10)
+  Rechnungsempfaenger                varchar(20)
+  Rechnungskreis                     varchar(10)
+  LetzterUmsatz                      datetime
+  Formularvariante                   varchar(10)
+  IstGesperrt                        smallint
+  Auswertungskennzeichen             varchar(10)
+  Preisliste                         int
+  Rabattliste                        int
+  Erloescode                         smallint
+  Provisionsfaehig                   smallint
+  Preiskennzeichen                   smallint
+  Rabattsatz                         money
+  Referenznummer                     varchar(80)
+  Versand                            varchar(10)
+  Lieferbedingung                    varchar(10)
+  Verkehrszweig                      varchar(10)
+  Geschaeftsart                      varchar(10)
+  Rabattgruppe                       varchar(10)
+  ABCKlasse                          varchar(1)
+  Teillieferungen                    smallint
+  DataNormLiefKuerzel                varchar(5)
+  Aktiv                              smallint
+  KundenSteuerNr                     varchar(20)
+  ZessionarID                        int
+  TransferSchemaID                   int
+  AwvMeldungTeilnahme                smallint
+  AwvMeldeformularOeffnen            smallint
+  AwvBelegart                        smallint
+  AwvKennzahl                        varchar(3)
+  AwvKapitelnummer                   smallint
+  AwvWarenbezeichnung                varchar(140)
+  AwvLand                            varchar(2)
+  WSKdNr                             varchar(255)
+  WSGuid                             varchar(36)
+  WSIstNeukunde                      smallint
+  WSIstGeaendert                     smallint
+  WSName                             varchar(50)
+  WSEmail                            varchar(255)
+  EigeneUStId                        varchar(15)
+  AngefragteUStId                    varchar(15)
+  PruefName                          varchar(100)
+  PruefStrasse                       varchar(64)
+  PruefPlz                           varchar(24)
+  PruefOrt                           varchar(40)
+  AntwortDatum                       datetime
+  AntwortCode                        int
+  AntwortUStId                       varchar(1)
+  AntwortName                        varchar(1)
+  AntwortStrasse                     varchar(1)
+  AntwortPlz                         varchar(1)
+  AntwortOrt                         varchar(1)
+  Bestaetigung                       varchar(1)
+  ERechnungTyp                       smallint
+  PrintQrCode                        smallint
+  RechnungTypCH                      smallint
+  LeitwegID                          varchar(46)
+  Timestamp                          timestamp
+  USER_Baujahr                       varchar(80)
+  USER_Maschinenbezeichnung          varchar(120)
+  USER_Maschinenmenge                int
+
+===== SPALTEN KHKVKBelegeVorgaenge =====
+  BelID                              int
+  VorID                              int
+  Mandant                            smallint
+  Timestamp                          timestamp

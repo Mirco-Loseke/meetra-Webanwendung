@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>meetra Fotos</title>
+<link rel="manifest" href="manifest.json" id="manifest-link">
+<script>
+  // iPhone: das Home-Bildschirm-Symbol hat einen EIGENEN Speicher (nicht der von Safari).
+  // Ohne Manifest nimmt iOS beim „Zum Home-Bildschirm" die aktuelle Adresse — inklusive
+  // ?k=<Schlüssel>. So richtet sich das Symbol beim ersten Start selbst ein.
+  if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) {
+    var ml = document.getElementById("manifest-link"); if (ml) ml.remove();
+  }
+</script>
+<link rel="apple-touch-icon" href="../assets/icons/fotos-apple-touch-icon.png">
+<link rel="icon" href="../assets/icons/fotos-icon-192.png">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="meetra Fotos">
+<!--
+  meetra Fotos — eigenständige Startbildschirm-App für die Werkstatt.
+  Keine Anmeldung: Zugang über einen Geräte-Schlüssel, den die App unter
+  Foto-Eingang → „Handys" erzeugt (Link/QR: fotos/?k=<Schlüssel>).
+  Der Schlüssel darf nur in den Eingang hochladen (Edge Function foto-eingang).
+  Android: erscheint im Teilen-Menü (share_target, sw.js parkt die Dateien
+  im Cache „meetra-geteilt" und leitet auf ?geteilt=1 weiter).
+-->
+<style>
+    :root {
+        --bg: #000; --fl: #15171c; --rand: #2a2e36; --text: #f4f5f7; --leise: #9aa1ad;
+        --gruen: #10a068; --rot: #e5484d;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+        background: var(--bg); color: var(--text);
+        font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+        display: flex; flex-direction: column; gap: 16px;
+        -webkit-tap-highlight-color: transparent;
+    }
+    header { display: flex; align-items: center; gap: 10px; }
+    header img { width: 36px; height: 36px; border-radius: 8px; }
+    header h1 { font-size: 20px; margin: 0; font-weight: 700; }
+    header .wer { margin-left: auto; color: var(--leise); font-size: 13px; }
+    .gross {
+        flex: 1; min-height: 220px; border: 2px dashed var(--rand); border-radius: 20px;
+        background: var(--fl); color: var(--text); font-size: 24px; font-weight: 700;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+        cursor: pointer;
+    }
+    .gross:active { background: #1d2027; }
+    .gross span { font-size: 64px; line-height: 1; }
+    .gross small { font-size: 14px; font-weight: 400; color: var(--leise); }
+    .reihe { display: flex; gap: 10px; }
+    .reihe button { flex: 1; }
+    button.knopf {
+        min-height: 52px; border-radius: 14px; border: 1px solid var(--rand);
+        background: var(--fl); color: var(--text); font-size: 17px; font-weight: 600; cursor: pointer;
+    }
+    button.knopf.haupt { background: var(--gruen); border-color: var(--gruen); color: #fff; }
+    button.knopf:disabled { opacity: .5; }
+    label { font-size: 14px; color: var(--leise); display: block; margin-bottom: 6px; }
+    textarea {
+        width: 100%; min-height: 64px; resize: vertical; border-radius: 12px; border: 1px solid var(--rand);
+        background: var(--fl); color: var(--text); font: inherit; font-size: 16px; padding: 10px 12px;
+    }
+    .vorschau { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; }
+    .vorschau div { position: relative; aspect-ratio: 1; border-radius: 10px; overflow: hidden; background: var(--fl); }
+    .vorschau img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .vorschau .datei { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 12px; color: var(--leise); padding: 4px; text-align: center; word-break: break-all; }
+    .vorschau button {
+        position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; border-radius: 50%;
+        border: none; background: rgba(0,0,0,.7); color: #fff; font-size: 15px; line-height: 1; cursor: pointer;
+    }
+    .meldung { border-radius: 14px; padding: 14px 16px; font-size: 17px; font-weight: 600; text-align: center; }
+    .meldung.ok { background: rgba(16,160,104,.18); color: #5ee0a8; }
+    .meldung.fehler { background: rgba(229,72,77,.18); color: #ff9a9d; }
+    .meldung.info { background: var(--fl); color: var(--leise); font-weight: 400; }
+    .balken { height: 8px; border-radius: 4px; background: var(--fl); overflow: hidden; }
+    .balken i { display: block; height: 100%; width: 0; background: var(--gruen); transition: width .2s; }
+    .hidden { display: none !important; }
+    .einrichten { color: var(--leise); font-size: 15px; text-align: center; margin-top: 20vh; }
+    /* Serien-Kamera: Vollbild, beliebig oft auslösen */
+    .serie { position: fixed; inset: 0; z-index: 50; background: #000; display: flex; flex-direction: column; }
+    .serie video { flex: 1; min-height: 0; width: 100%; object-fit: cover; background: #000; }
+    .serie-oben { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: center;
+        padding: max(12px, env(safe-area-inset-top)) 16px 12px; background: linear-gradient(rgba(0,0,0,.6), transparent); }
+    .serie-zahl { font-size: 18px; font-weight: 700; }
+    .serie-blitz { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; transition: opacity .15s; }
+    .serie-streifen { display: flex; gap: 6px; overflow-x: auto; padding: 8px 12px; min-height: 72px; background: #000; }
+    .serie-streifen img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+    .serie-unten { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        padding: 12px 20px max(16px, env(safe-area-inset-bottom)); background: #000; }
+    .serie-unten .knopf { flex: 0 0 auto; min-width: 96px; padding: 0 14px; }
+    .ausloeser { width: 78px; height: 78px; border-radius: 50%; border: 5px solid #fff; background: #fff; box-shadow: inset 0 0 0 3px #000; cursor: pointer; flex-shrink: 0; }
+    .ausloeser:active { transform: scale(.92); }
+    /* Einsprechen: ein Tipp startet, ein Tipp beendet und schickt ab */
+    button.sprechen { min-height: 72px; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 20px; }
+    button.sprechen .sp-symbol { font-size: 28px; }
+    button.sprechen small { font-size: 15px; font-weight: 400; color: var(--leise); }
+    button.sprechen.laeuft { background: var(--rot); border-color: var(--rot); color: #fff; animation: sp-puls 1.6s ease-in-out infinite; }
+    button.sprechen.laeuft small { color: #fff; font-variant-numeric: tabular-nums; }
+    @keyframes sp-puls { 50% { box-shadow: 0 0 0 8px rgba(229,72,77,.25); } }
+</style>
+</head>
+<body>
+<header>
+    <img src="../assets/icons/fotos-icon-192.png" alt="">
+    <h1>meetra Fotos</h1>
+    <span class="wer" id="wer"></span>
+</header>
+
+<div id="ohne" class="einrichten hidden">
+    Dieses Handy ist noch nicht eingerichtet.<br><br>
+    Bitte in der meetra-App unter <b>Foto-Eingang → Handys</b> einen Einrichtungs-Link
+    erzeugen und hier öffnen.<br><br>
+    Oder den Einrichtungs-Link hier einfügen:<br><br>
+    <textarea id="link-feld" placeholder="https://…/fotos/index.html?k=…" style="min-height:80px"></textarea><br><br>
+    <button class="knopf haupt" id="link-ok" type="button" style="width:100%">Einrichten</button>
+</div>
+
+<main id="mit" class="hidden" style="display:flex;flex-direction:column;gap:16px;flex:1">
+    <input type="file" id="wahl" accept="image/*,video/*,application/pdf" multiple hidden>
+    <input type="file" id="kamera" accept="image/*" capture="environment" hidden>
+
+    <button class="gross" id="gross" type="button">
+        <span>📷</span>Fotos auswählen
+        <small>Galerie, mehrere auf einmal</small>
+    </button>
+    <button class="knopf sprechen" id="knopf-sprechen" type="button">
+        <span class="sp-symbol">🎤</span><span class="sp-text">Einsprechen</span><small class="sp-zeit"></small>
+    </button>
+    <div class="reihe">
+        <button class="knopf haupt" id="knopf-serie" type="button">📸 Fotoserie</button>
+        <button class="knopf" id="knopf-kamera" type="button">Einzelfoto</button>
+    </div>
+
+    <div class="vorschau" id="vorschau"></div>
+
+    <div id="senden-block" class="hidden" style="display:flex;flex-direction:column;gap:12px">
+        <div>
+            <label for="notiz">Wozu? (freiwillig — Maschine, Kunde, Seriennummer …)</label>
+            <textarea id="notiz" placeholder="z. B. Schaden an der Walze, Kunde Müller"></textarea>
+        </div>
+        <button class="knopf haupt" id="senden" type="button">Abschicken</button>
+    </div>
+    <div class="balken hidden" id="balken"><i></i></div>
+    <div id="meldung" class="meldung hidden"></div>
+</main>
+
+<div class="serie hidden" id="serie">
+    <video id="serie-video" playsinline autoplay muted></video>
+    <div class="serie-blitz" id="serie-blitz"></div>
+    <div class="serie-oben">
+        <span class="serie-zahl" id="serie-zahl">0 Fotos</span>
+        <button class="knopf" id="serie-drehen" type="button" style="min-height:40px;padding:0 12px">🔄</button>
+    </div>
+    <div class="serie-streifen" id="serie-streifen"></div>
+    <div class="serie-unten">
+        <button class="knopf" id="serie-abbruch" type="button">Abbrechen</button>
+        <button class="ausloeser" id="serie-ausloeser" type="button" aria-label="Foto aufnehmen"></button>
+        <button class="knopf haupt" id="serie-fertig" type="button">Fertig</button>
+    </div>
+</div>
+
+<script>
+(function () {
+    'use strict';
+    var FUNKTION = 'https://rtnpyziwyaqrlfazxkyr.supabase.co/functions/v1/foto-eingang';
+    var KEY = 'meetra_fotos_schluessel';
+    var NAME = 'meetra_fotos_name';
+    var JE_ANFRAGE = 4;
+    var MAX_KANTE = 2200;
+
+    var $ = function (id) { return document.getElementById(id); };
+    var dateien = [];
+
+    function speicher(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } }
+
+    function meldung(text, art) {
+        var m = $('meldung');
+        m.textContent = text; m.className = 'meldung ' + (art || 'info');
+    }
+
+    // Einrichtung über ?k=<Schlüssel>; danach aus der Adresszeile entfernen.
+    async function einrichten() {
+        var p = new URLSearchParams(location.search);
+        var k = p.get('k');
+        // Schon mit genau diesem Schlüssel eingerichtet (Start vom Home-Bildschirm): nichts tun.
+        if (k && k === speicher(KEY)) { anzeigen(); return; }
+        if (k) {
+            // Den Schlüssel in der Adresse LASSEN: iPhone legt das Symbol mit genau dieser
+            // Adresse an (siehe oben) — nur so kennt das Symbol ihn.
+            try {
+                var r = await fetch(FUNKTION + '?schluessel=' + encodeURIComponent(k));
+                var j = await r.json();
+                if (!j.ok) throw new Error(j.error || 'ungültig');
+                speicher(KEY, k); speicher(NAME, j.name || '');
+                anzeigen();
+                meldung('✓ Eingerichtet für „' + (j.name || '') + '". Jetzt zum Startbildschirm hinzufügen.', 'ok');
+                return;
+            } catch (e) {
+                anzeigen();
+                meldung('Einrichtung fehlgeschlagen: ' + e.message, 'fehler');
+                if (!speicher(KEY)) alert('Einrichtung fehlgeschlagen: ' + e.message + ' — bitte in der App einen neuen Link erzeugen.');
+                return;
+            }
+        }
+        anzeigen();
+    }
+
+    function anzeigen() {
+        var da = !!speicher(KEY);
+        $('ohne').classList.toggle('hidden', da);
+        $('mit').classList.toggle('hidden', !da);
+        $('wer').textContent = da ? (speicher(NAME) || '') : '';
+    }
+
+    function zeichnen() {
+        var v = $('vorschau');
+        v.innerHTML = '';
+        dateien.forEach(function (f, i) {
+            var d = document.createElement('div');
+            if (f.type.indexOf('image/') === 0) {
+                var img = document.createElement('img');
+                img.src = URL.createObjectURL(f);
+                img.onload = function () { URL.revokeObjectURL(img.src); };
+                d.appendChild(img);
+            } else {
+                var s = document.createElement('div'); s.className = 'datei';
+                s.textContent = f.type.indexOf('audio/') === 0 ? '🎤 Sprachaufnahme' : f.name;
+                d.appendChild(s);
+            }
+            var x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', 'Entfernen');
+            x.onclick = function () { dateien.splice(i, 1); zeichnen(); };
+            d.appendChild(x);
+            v.appendChild(d);
+        });
+        $('senden-block').classList.toggle('hidden', !dateien.length);
+        $('senden').textContent = dateien.length ? dateien.length + (dateien.length === 1 ? ' Datei' : ' Dateien') + ' abschicken' : 'Abschicken';
+        $('gross').querySelector('small').textContent = dateien.length ? 'Weitere hinzufügen' : 'Galerie, mehrere auf einmal';
+    }
+
+    function hinzu(liste) {
+        for (var i = 0; i < liste.length; i++) dateien.push(liste[i]);
+        $('meldung').classList.add('hidden');
+        zeichnen();
+    }
+
+    // Große Fotos verkleinern (Handyfotos haben oft 5–10 MB). Was der Browser
+    // nicht lesen kann (z. B. HEIC in Chrome), geht unverändert raus.
+    async function verkleinern(f) {
+        if (!/^image\/(jpeg|png|webp)$/.test(f.type) || f.size < 900 * 1024 || !window.createImageBitmap) return f;
+        try {
+            var bmp = await createImageBitmap(f, { imageOrientation: 'from-image' });
+            var s = Math.min(1, MAX_KANTE / Math.max(bmp.width, bmp.height));
+            var c = document.createElement('canvas');
+            c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+            c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+            var blob = await new Promise(function (res) { c.toBlob(res, 'image/jpeg', 0.85); });
+            if (!blob || blob.size >= f.size) return f;
+            return new File([blob], f.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' });
+        } catch (e) { return f; }
+    }
+
+    async function senden() {
+        var k = speicher(KEY);
+        if (!k || !dateien.length) return;
+        var knopf = $('senden'); knopf.disabled = true;
+        var balken = $('balken'); balken.classList.remove('hidden');
+        var notiz = $('notiz').value.trim();
+        var gesamt = dateien.length, fertig = 0, fehler = [];
+        meldung('Wird geschickt …', 'info');
+        var rest = dateien.slice();
+        while (rest.length) {
+            var teil = rest.splice(0, JE_ANFRAGE);
+            var fd = new FormData();
+            fd.append('notiz', notiz);
+            for (var i = 0; i < teil.length; i++) fd.append('fotos', await verkleinern(teil[i]), teil[i].name);
+            try {
+                var r = await fetch(FUNKTION, { method: 'POST', headers: { 'x-foto-schluessel': k }, body: fd });
+                var j = await r.json().catch(function () { return {}; });
+                if (r.status === 403) throw new Error('Dieses Handy ist gesperrt oder der Schlüssel ist ungültig.');
+                fertig += j.angekommen || 0;
+                (j.fehler || []).forEach(function (t) { fehler.push(t); });
+                if (!r.ok && !j.angekommen) fehler.push(j.error || ('Fehler ' + r.status));
+            } catch (e) {
+                fehler.push(e.message === 'Failed to fetch' ? 'Keine Verbindung' : e.message);
+                if (/gesperrt/.test(e.message)) break;
+            }
+            balken.firstElementChild.style.width = Math.round((gesamt - rest.length) / gesamt * 100) + '%';
+        }
+        knopf.disabled = false;
+        setTimeout(function () { balken.classList.add('hidden'); balken.firstElementChild.style.width = '0'; }, 600);
+        if (fertig === gesamt) {
+            dateien = []; $('notiz').value = ''; zeichnen();
+            meldung('✓ ' + fertig + (fertig === 1 ? ' Datei' : ' Dateien') + ' angekommen', 'ok');
+            if (navigator.vibrate) navigator.vibrate(80);
+        } else {
+            // Nur die Angekommenen fallen weg wäre ungenau — alles bleibt stehen, damit man erneut senden kann.
+            meldung((fertig ? fertig + ' von ' + gesamt + ' angekommen. ' : 'Nicht angekommen. ') + fehler.slice(0, 2).join(' · '), 'fehler');
+        }
+    }
+
+    // Android: über „Teilen" geschickte Dateien, vom Service Worker geparkt.
+    async function geteilteHolen() {
+        var p = new URLSearchParams(location.search);
+        if (!p.has('geteilt') || !window.caches) return;
+        history.replaceState(null, '', location.pathname);
+        try {
+            var cache = await caches.open('meetra-geteilt');
+            var keys = await cache.keys();
+            var liste = [], text = '';
+            for (var i = 0; i < keys.length; i++) {
+                var r = await cache.match(keys[i]);
+                if (/\/text$/.test(keys[i].url)) text = await r.text();
+                else {
+                    var blob = await r.blob();
+                    var name = decodeURIComponent(r.headers.get('x-name') || 'foto.jpg');
+                    liste.push(new File([blob], name, { type: blob.type || 'image/jpeg' }));
+                }
+                await cache.delete(keys[i]);
+            }
+            if (liste.length) hinzu(liste);
+            if (text) $('notiz').value = text;
+        } catch (e) { meldung('Geteilte Fotos konnten nicht übernommen werden.', 'fehler'); }
+    }
+
+    $('link-ok').onclick = function () {
+        var t = $('link-feld').value.trim();
+        var m = t.match(/[?&]k=([^&s#]+)/);
+        var k = m ? decodeURIComponent(m[1]) : t;
+        if (k.length < 20) { alert('Das sieht nicht nach einem Einrichtungs-Link aus.'); return; }
+        location.href = location.pathname + '?k=' + encodeURIComponent(k);
+    };
+    $('gross').onclick = function () { $('wahl').click(); };
+    // ---------- Fotoserie: eigene Kamera, beliebig viele Fotos am Stück ----------
+    // Die Fotos bleiben bis „Fertig" nur im Speicher des Handys; danach stehen sie
+    // in der Vorschau und gehen mit „Abschicken" alle zusammen raus.
+    var serie = { strom: null, fotos: [], vorne: false };
+    async function serieStart() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { $('kamera').click(); return; }
+        try {
+            if (serie.strom) serie.strom.getTracks().forEach(function (t) { t.stop(); });
+            serie.strom = await navigator.mediaDevices.getUserMedia({ audio: false, video: {
+                facingMode: serie.vorne ? 'user' : { ideal: 'environment' },
+                width: { ideal: 2560 }, height: { ideal: 1920 } } });
+            $('serie-video').srcObject = serie.strom;
+            $('serie').classList.remove('hidden');
+            serieZahl();
+        } catch (e) {
+            alert('Kamera nicht verfügbar: ' + (e.name === 'NotAllowedError' ? 'Zugriff wurde nicht erlaubt. Bitte in den Einstellungen des Handys die Kamera für diese Seite erlauben.' : e.message));
+        }
+    }
+    function serieZahl() {
+        var n = serie.fotos.length;
+        $('serie-zahl').textContent = n + (n === 1 ? ' Foto' : ' Fotos');
+        $('serie-fertig').textContent = n ? 'Fertig (' + n + ')' : 'Fertig';
+    }
+    function serieAusloesen() {
+        var v = $('serie-video');
+        if (!v.videoWidth) return;
+        var c = document.createElement('canvas');
+        var s = Math.min(1, MAX_KANTE / Math.max(v.videoWidth, v.videoHeight));
+        c.width = Math.round(v.videoWidth * s); c.height = Math.round(v.videoHeight * s);
+        c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+        var b = $('serie-blitz'); b.style.opacity = '.7'; setTimeout(function () { b.style.opacity = '0'; }, 90);
+        if (navigator.vibrate) navigator.vibrate(30);
+        c.toBlob(function (blob) {
+            if (!blob) return;
+            var nr = serie.fotos.length + 1;
+            var f = new File([blob], 'serie-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '-' + nr + '.jpg', { type: 'image/jpeg' });
+            serie.fotos.push(f);
+            var img = document.createElement('img'); img.src = URL.createObjectURL(blob);
+            var st = $('serie-streifen'); st.appendChild(img); st.scrollLeft = st.scrollWidth;
+            serieZahl();
+        }, 'image/jpeg', 0.85);
+    }
+    function serieEnde(uebernehmen) {
+        if (!uebernehmen && serie.fotos.length && !confirm(serie.fotos.length + ' Fotos verwerfen?')) return;
+        if (serie.strom) serie.strom.getTracks().forEach(function (t) { t.stop(); });
+        serie.strom = null;
+        $('serie').classList.add('hidden');
+        if (uebernehmen && serie.fotos.length) hinzu(serie.fotos);
+        serie.fotos = [];
+        $('serie-streifen').querySelectorAll('img').forEach(function (i) { URL.revokeObjectURL(i.src); i.remove(); });
+    }
+    $('knopf-serie').onclick = serieStart;
+    $('serie-ausloeser').onclick = serieAusloesen;
+    $('serie-fertig').onclick = function () { serieEnde(true); };
+    $('serie-abbruch').onclick = function () { serieEnde(false); };
+    $('serie-drehen').onclick = function () { serie.vorne = !serie.vorne; serieStart(); };
+    // ---------- Einsprechen: Tonaufnahme, beim Beenden sofort abschicken ----------
+    // Fotos, die währenddessen entstehen, gehen mit derselben Sendung raus.
+    // Den Text schreibt der Server (Gemini) — das Handy wartet darauf nicht.
+    var ton = { rec: null, strom: null, teile: [], start: 0, uhr: null, sperre: null };
+    function tonTyp() {
+        var k = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac'];
+        for (var i = 0; i < k.length; i++) if (window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(k[i])) return k[i];
+        return '';
+    }
+    function tonAnzeige() {
+        var b = $('knopf-sprechen'), an = !!ton.rec;
+        b.classList.toggle('laeuft', an);
+        b.querySelector('.sp-symbol').textContent = an ? '⏹' : '🎤';
+        b.querySelector('.sp-text').textContent = an ? 'Beenden & senden' : 'Einsprechen';
+        var s = an ? Math.floor((Date.now() - ton.start) / 1000) : 0;
+        b.querySelector('.sp-zeit').textContent = an ? Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2) : '';
+    }
+    async function bildschirmAn() {
+        try { if (navigator.wakeLock) ton.sperre = await navigator.wakeLock.request('screen'); } catch (e) { ton.sperre = null; }
+    }
+    async function tonStart() {
+        if (!window.MediaRecorder || !navigator.mediaDevices) { alert('Dieses Handy kann im Browser nicht aufnehmen.'); return; }
+        try {
+            ton.strom = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+        } catch (e) {
+            alert('Mikrofon nicht verfügbar: ' + (e.name === 'NotAllowedError' ? 'Zugriff wurde nicht erlaubt. Bitte in den Einstellungen des Handys das Mikrofon für diese Seite erlauben.' : e.message));
+            return;
+        }
+        var typ = tonTyp();
+        ton.rec = new MediaRecorder(ton.strom, typ ? { mimeType: typ, audioBitsPerSecond: 32000 } : undefined);
+        ton.teile = [];
+        ton.rec.ondataavailable = function (e) { if (e.data && e.data.size) ton.teile.push(e.data); };
+        ton.rec.onstop = tonFertig;
+        ton.rec.start(5000);
+        ton.start = Date.now();
+        ton.uhr = setInterval(tonAnzeige, 1000);
+        $('meldung').classList.add('hidden');
+        bildschirmAn();
+        if (navigator.vibrate) navigator.vibrate(60);
+        tonAnzeige();
+    }
+    function tonStopp() { if (ton.rec && ton.rec.state !== 'inactive') ton.rec.stop(); }
+    function tonFertig() {
+        var typ = (ton.rec && ton.rec.mimeType) || 'audio/webm';
+        var dauer = Date.now() - ton.start;
+        if (ton.strom) ton.strom.getTracks().forEach(function (t) { t.stop(); });
+        clearInterval(ton.uhr);
+        if (ton.sperre) { ton.sperre.release().catch(function () {}); ton.sperre = null; }
+        var blob = new Blob(ton.teile, { type: typ });
+        ton.rec = null; ton.strom = null; ton.teile = [];
+        tonAnzeige();
+        if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
+        if (dauer < 1500 || !blob.size) { meldung('Aufnahme zu kurz — nichts geschickt.', 'info'); return; }
+        var endung = /mp4|aac/.test(typ) ? 'm4a' : 'webm';
+        var name = 'sprache-' + new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-') + '.' + endung;
+        dateien.push(new File([blob], name, { type: typ.split(';')[0] }));
+        zeichnen();
+        senden();
+    }
+    $('knopf-sprechen').onclick = function () { if (ton.rec) tonStopp(); else tonStart(); };
+    // Wake Lock fällt beim Wegschalten weg — beim Zurückkommen wieder holen.
+    document.addEventListener('visibilitychange', function () { if (!document.hidden && ton.rec && !ton.sperre) bildschirmAn(); });
+    window.addEventListener('beforeunload', function (e) { if (ton.rec) { e.preventDefault(); e.returnValue = ''; } });
+    $('knopf-kamera').onclick = function () { $('kamera').click(); };
+    $('wahl').onchange = function () { hinzu(this.files); this.value = ''; };
+    $('kamera').onchange = function () { hinzu(this.files); this.value = ''; };
+    $('senden').onclick = senden;
+
+    if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+        navigator.serviceWorker.register('../sw.js', { scope: '../' }).catch(function () { /* geht auch ohne */ });
+    }
+    einrichten().then(geteilteHolen);
+})();
+</script>
+</body>
+</html>

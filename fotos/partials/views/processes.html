@@ -1,0 +1,58 @@
+<!-- ========================================================= -->
+<!-- ================== VORGÄNGE (PROCESSES) ================ -->
+<!-- ========================================================= -->
+<section id="processes" class="view hidden">
+    <div class="view-header-layout">
+        <!-- Top Row: Title (Left) / Search (Right) -->
+        <div class="view-header-row-top">
+            <div class="view-header-left" style="display: flex; align-items: center; gap: 10px;">
+                <h1 style="margin: 0; display:flex; align-items:center; gap:12px;">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                        <polyline points="12 11 12 17 15 14"></polyline>
+                    </svg>
+                    Vorgänge
+                </h1>
+            </div>
+            <div class="view-header-right" style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <div style="position: relative; display: flex; align-items: center;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="position:absolute; left:12px; pointer-events:none;"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="text" id="process-search-input" class="glass-input" autocomplete="off"
+                        placeholder="Suchen: Adresse, Titel, Maschine..."
+                        oninput="window.renderProcesses('standalone-processes-container')"
+                        style="width: 260px; max-width: 42vw; padding-left: 38px; padding-right: 30px; height: 40px;">
+                    <button type="button" title="Suche leeren"
+                        onclick="const i=document.getElementById('process-search-input'); i.value=''; window.renderProcesses('standalone-processes-container'); i.focus();"
+                        style="position:absolute; right:8px; background:none; border:none; color:rgba(255,255,255,0.4); cursor:pointer; padding:4px; display:flex; align-items:center;">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <div class="calendar-view-tabs" style="margin-bottom: 0;">
+                    <!-- Standard ist „Meine Vorgänge" — der aktive Zustand steht
+                         hier UND in window.isMyProcessesFilterActive (js/processes.js). -->
+                    <button class="calendar-tab-btn" id="btn-process-tab-all"
+                        onclick="window.filterProcessesByUser('all')">Alle Vorgänge</button>
+                    <button class="calendar-tab-btn active" id="btn-process-user-me"
+                        onclick="window.filterProcessesByUser('me')">Meine Vorgänge</button>
+                </div>
+                <button class="btn-add-bg" onclick="window.openAiCaptureModal('vorgaenge')"
+                    title="Aus Freitext automatisch Vorgänge erzeugen"
+                    style="background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.4); color: #a78bfa;">
+                    <span style="font-size:1.05rem;">✨</span>
+                    KI-Erfassung
+                </button>
+                <button class="btn-add-bg btn-red-animated" onclick="window.openProcessAddModal()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Vorgang erstellen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="standalone-processes-container" style="margin-top: 1rem;">
+        <!-- Processes will be rendered here -->
+    </div>
+</section>

@@ -1,0 +1,104 @@
+                <!-- ========================================================= -->
+                <!-- ================== EINSTELLUNGEN ======================== -->
+                <!-- ========================================================= -->
+                <!-- Übersicht in Gruppen. Jede Kachel: .settings-card + data-target
+                     (Klick → switchView in js/app-init.js, Rechte in js/permissions.js).
+                     Farbe je Kachel über --ic. Stile: css/views/einstellungen.css -->
+                <section id="settings" class="view hidden">
+                    <div class="est-kopf">
+                        <div>
+                            <h1>Einstellungen</h1>
+                            <p class="est-untertitel">Team, Stammdaten, Vorlagen und Verbindungen der App</p>
+                        </div>
+                        <label class="est-suche">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                            <input type="search" id="est-suche" placeholder="Einstellung suchen …" autocomplete="off">
+                        </label>
+                    </div>
+
+                    <div class="est-gruppe">
+                        <h2 class="est-gruppe-titel">Team &amp; Zugriff</h2>
+                        <div class="settings-grid est-raster">
+                            <div class="settings-card est-karte" data-target="users" style="--ic:#34d399">
+                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                                <div class="est-text"><h2>Benutzerverwaltung</h2><p class="settings-card-desc">Benutzer, Ansichten und Löschrechte</p></div>
+                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                            </div>
+                            <div class="settings-card est-karte" data-target="settings-datenschutz" style="--ic:#2dd4bf">
+                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div>
+                                <div class="est-text"><h2>Datenschutz</h2><p class="settings-card-desc">Welche Daten wo verarbeitet werden — Verarbeitungsverzeichnis</p></div>
+                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="est-gruppe">
+                        <h2 class="est-gruppe-titel">Stammdaten</h2>
+                        <div class="settings-grid est-raster">
+                            <div class="settings-card est-karte" data-target="settings-firmeneinstellungen" style="--ic:#fbbf24">
+                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></div>
+                                <div class="est-text"><h2>Firmendaten</h2><p class="settings-card-desc">Eigene Firmenadresse, Start der Routenplanung</p></div>
+                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                            </div>
+                            <div class="settings-card est-karte" data-target="categories" style="--ic:#f87171">
+                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41 13.42 20.58a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></div>
+                                <div class="est-text"><h2>Kategorien</h2><p class="settings-card-desc">Maschinenkategorien und Serien</p></div>
+                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                            </div>
+                            <div class="settings-card est-karte" data-target="settings-import" style="--ic:#a3e635">
+                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+                                <div class="est-text"><h2>Import</h2><p class="settings-card-desc">Adressen und Artikel einlesen</p></div>
+                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="est-gruppe">
+                        <h2 class="est-gruppe-titel">Vorlagen &amp; Formulare</h2>
+                        <div class="settings-grid est-raster">
+                            <div class="settings-card est-karte" data-target="protocol-templates" style="--ic:#60a5fa">
+                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+                                <div class="est-text"><h2>Protokollvorlagen</h2><p class="settings-card-desc">Eingangs- und Abnahmeprotokolle</p></div>
+                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                            </div>
+                            <div class="settings-card est-karte" data-target="settings-uvv-wartungsplaene" style="--ic:#10b981">
+                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div>
+                                <div class="est-text"><h2>UVV &amp; Wartungspläne</h2><p class="settings-card-desc">Prüf- und Wartungspläne, Zuordnung zu Maschinen</p></div>
+                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                            </div>
+                            <div class="settings-card est-karte" data-target="miet-vorlagen" style="--ic:#34d399">
+                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg></div>
+                                <div class="est-text"><h2>Mietvereinbarungen</h2><p class="settings-card-desc">Bogen, Prüfpunkte, Tagessätze und Vertragstext je Maschinentyp</p></div>
+                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                            </div>
+                            <div class="settings-card est-karte" data-target="settings-textbausteine" style="--ic:#22d3ee">
+                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+                                <div class="est-text"><h2>Textbausteine</h2><p class="settings-card-desc">Vorlagen für Übergruppen und Unteraufgaben</p></div>
+                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                            </div>
+                            <div class="settings-card est-karte" data-target="settings-etiketten" style="--ic:#f472b6">
+                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></div>
+                                <div class="est-text"><h2>Etiketten</h2><p class="settings-card-desc">Artikel- und Palettenetiketten drucken</p></div>
+                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="est-gruppe">
+                        <h2 class="est-gruppe-titel">Verbindungen</h2>
+                        <div class="settings-grid est-raster">
+                            <div class="settings-card est-karte" data-target="settings-outlook" style="--ic:#60a5fa">
+                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+                                <div class="est-text"><h2>Outlook</h2><p class="settings-card-desc">Microsoft-Konto: Posteingang, Kontakte, Mailversand</p></div>
+                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                            </div>
+                            <div class="settings-card est-karte" data-target="settings-ai" style="--ic:#a78bfa">
+                                <div class="est-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.8L20 10l-6.1 1.2L12 17l-1.9-5.8L4 10l6.1-1.2z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></div>
+                                <div class="est-text"><h2>KI-Konfiguration</h2><p class="settings-card-desc">Anbieter, Verbindung und Modell der KI</p></div>
+                                <svg class="est-pfeil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="9 6 15 12 9 18"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="est-leer" id="est-leer" hidden>Keine Einstellung gefunden.</div>
+                </section>

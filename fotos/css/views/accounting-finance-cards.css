@@ -1,0 +1,95 @@
+/* ==========================================================
+   Buchhaltung: Kennzahlen-Karten der Auswertung
+   ==========================================================
+   Ausgelagert aus index.html (vormals Zeilen 3739-3825).
+   Wird per <link> an unveraenderter Stelle geladen — die Reihenfolge
+   gegenueber css/style.css darf nicht vertauscht werden.
+   ========================================================== */
+
+.fin-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.fin-section-title {
+    font-size: var(--fs-md);
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.fin-item {
+    display: grid;
+    grid-template-columns: 90px 1fr 120px;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.03);
+    font-size: var(--fs-md);
+    align-items: center;
+}
+
+.fin-item div {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media (max-width: 1024px) {
+    .modal-content {
+        max-width: 95% !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .modal-header {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 15px !important;
+    }
+
+    .modal-header h2 {
+        font-size: var(--fs-lg) !important;
+    }
+
+    .modal-header>div {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .fin-item {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto;
+    }
+
+    .fin-item div:nth-child(2) {
+        grid-column: span 2;
+        order: 1;
+        white-space: normal;
+    }
+
+    .fin-item div:nth-child(1) {
+        order: 2;
+    }
+
+    .fin-item div:nth-child(3) {
+        order: 3;
+    }
+}
+
+.fin-total-banner {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(16, 185, 129, 0.1));
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 1.5rem;
+    border-radius: var(--radius-lg);
+    display: flex;
+    justify-content: space-around;
+    text-align: center;
+    margin-bottom: 2rem;
+}

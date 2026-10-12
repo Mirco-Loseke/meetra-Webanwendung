@@ -1,0 +1,1532 @@
+// ==========================================================
+// Servicebericht-Formular: Maschinenauswahl, Ansprechpartner, Techniker, Speichern
+// ==========================================================
+// Ausgelagert aus index.html (vormals Zeilen 10488-11520).
+// Wird in index.html an unveraenderter Stelle per <script src> geladen;
+// die Reihenfolge der Skripte entspricht der fruaeheren Reihenfolge im
+// Inline-Block und darf nicht vertauscht werden.
+// ==========================================================
+        // ==========================================
+        // SERVICEEINSÄTZE LOGIC
+        // ==========================================
+        window.openReportTypeModal = function () {
+            const modal = document.getElementById('report-type-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.style.display = 'flex';
+                requestAnimationFrame(() => {
+                    modal.classList.add('show');
+                });
+            }
+        };
+
+        window.closeReportTypeModal = function () {
+            const modal = document.getElementById('report-type-modal');
+            if (modal) {
+                modal.classList.remove('show');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    modal.style.display = 'none';
+                }, 300);
+            }
+        };
+
+
+        let currentEditingServiceId = null;
+
+
+
+        window.closeServiceberichtModal = function (force = false) {
+            if (!force && serviceberichtIsDirty) {
+                window.showUnsavedDialog({
+                    overlayId: 'servicebericht-confirm-close-overlay',
+                    onDiscard: () => window.closeServiceberichtModal(true),
+                    onSave: () => window.saveAndCloseServicebericht()
+                });
+                return;
+            }
+            serviceberichtIsDirty = false;
+            const sperrId = window.currentEditingServiceId || currentEditingServiceId;
+            if (sperrId) {
+                window.releaseServiceberichtLock(sperrId);
+            }
+            // Keine ID über das Schließen hinaus mitschleppen (siehe saveServiceberichtData).
+            currentEditingServiceId = null;
+            const modal = document.getElementById('servicebericht-modal');
+            if (modal) {
+                modal.removeEventListener('input', onServiceberichtFieldChange);
+                modal.removeEventListener('change', onServiceberichtFieldChange);
+                modal.classList.remove('show');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                    modal.style.display = 'none';
+                }, 300);
+            }
+        };
+
+        // Machine Selection Logic
+        function renderServiceMachineList(filter = '') {
+            console.log('Rendering Service Machine List. Filter:', filter);
+            const list = document.getElementById('service-machine-list');
+            if (!list) { console.error('Service machine list element not found'); return; }
+
+            // Ensure data availability
+            const machines = window.machineList || machineList || [];
+            const categories = window.categoryList || categoryList || [];
+
+
+            const filtered = machines.filter(m => {
+                // Resolve Category Name
+                const cat = categories.find(c => c.id === m.category_id);
+                const catName = cat ? cat.name : '';
+
+                const fullSearchString = `${m.manufacturer || ''} ${m.name || ''} ${m.serial || ''} ${m.year || ''}
+        ${catName} `.toLowerCase();
+                return fullSearchString.includes(filter.toLowerCase());
+            });
+
+            if (filtered.length === 0) {
+                list.innerHTML = `<div class="empty-hint"
+                    style="text-align: center; padding: 2rem; color: rgba(255,255,255,0.3);">Keine Maschinen gefunden.</div>`;
+                return;
+            }
+
+            list.innerHTML = filtered.map(m => {
+                const cat = categories.find(c => c.id === m.category_id);
+                const catName = cat ? cat.name : 'Unkategorisiert';
+
+                // Build full title string: "Manufacturer Name #Serial (Year)"
+                const titleParts = [
+                    m.manufacturer,
+                    m.name,
+                    m.serial ? `#${m.serial} ` : '',
+                    m.year ? `(${m.year})` : ''
+                ].filter(Boolean).join(' ');
+
+                return `
+                        <div class="premium-item"
+                    onclick="selectServiceMachine(${m.id}, '${m.manufacturer}', '${m.name}', '${m.serial || ''}', '${m.image_url || ''}', '${catName}', '${m.year || ''}')"
+                    id="machine-item-${m.id}" style="font-family: 'Inter', sans-serif;">
+            <div class="premium-item-img">
+                ${m.image_url ? `<img src="${window.getMachineThumbnailUrl ? window.getMachineThumbnailUrl(m.image_url) : m.image_url}" loading="lazy" onerror="this.onerror=null;this.src='${m.image_url}';">` : `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3"></circle>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>`}
+            </div >
+                        <div class="premium-item-info">
+                            <strong style="color: white; font-weight: 600;">${titleParts}</strong>
+                            <small style="display: flex; gap: 8px; align-items: center; color: rgba(255,255,255,0.6);">
+                                <span style="color: var(--color-primary-green);">${catName}</span>
+                            </small>
+                        </div>
+        </div >
+                        `;
+            }).join('');
+        }
+
+        window.filterServiceMachines = function () {
+            const search = document.getElementById('service-machine-search').value;
+            renderServiceMachineList(search);
+        };
+
+        window.selectServiceMachine = function (id, manufacturer, name, serial, imageUrl, categoryName, year) {
+            document.getElementById('selected-machine-id').value = id;
+            document.querySelectorAll('#service-machine-list .premium-item').forEach(el => el.classList.remove('selected'));
+            const selectedItem = document.getElementById(`machine-item-${id}`);
+            if (selectedItem) selectedItem.classList.add('selected');
+
+            // Update Preview
+            const previewContainer = document.getElementById('selected-machine-preview');
+            const previewImg = document.getElementById('preview-image');
+            const previewName = document.getElementById('preview-name');
+            const previewCategory = document.getElementById('preview-category');
+            const previewSerial = document.getElementById('preview-serial');
+
+            if (previewContainer) {
+                previewContainer.classList.remove('hidden');
+                previewContainer.style.display = 'block'; // Ensure visibility
+
+                const machineTitle = `${manufacturer} ${name}`;
+                const metaSuffix = `${serial ? ` #${serial}` : ''}${year ? ` (${year})` : ''}`;
+
+                previewName.textContent = machineTitle;
+                if (previewCategory) previewCategory.textContent = categoryName || '';
+                previewSerial.textContent = metaSuffix.trim();
+
+                if (imageUrl && imageUrl !== 'undefined' && imageUrl !== 'null') {
+                    previewImg.innerHTML = `<img src="${imageUrl}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                } else {
+                                        previewImg.innerHTML = `<div
+            style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;"><svg
+                width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path
+                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                </path>
+            </svg></div>`;
+                }
+
+                // Load associated customer details
+                if (typeof window.updateServiceCustomerPreview === 'function') {
+                    window.updateServiceCustomerPreview(id);
+                }
+            }
+            if (typeof window.handleChecklistMachineChange === 'function') {
+                window.handleChecklistMachineChange();
+            }
+        };
+
+        // Update customer details in Servicebericht modal
+        window.updateServiceCustomerPreview = async function (machineId) {
+            const custPreview = document.getElementById('selected-machine-customer-preview');
+            const custNameEl = document.getElementById('service-customer-name');
+            const custAddrEl = document.getElementById('service-customer-address');
+            const custRouteEl = document.getElementById('service-customer-route');
+            const custRouteLink = document.getElementById('service-customer-route-link');
+
+            if (!custPreview) return;
+
+            const machine = (window.machineList || []).find(m => m.id == machineId);
+            if (!machine) {
+                custPreview.classList.add('hidden');
+                custPreview.style.display = 'none';
+                const locFieldsWrapper = document.getElementById('service-location-fields-wrapper');
+                if (locFieldsWrapper) {
+                    locFieldsWrapper.classList.add('hidden');
+                    locFieldsWrapper.style.display = 'none';
+                }
+                const locToggleBtnReset = document.getElementById('btn-toggle-location');
+                if (locToggleBtnReset) locToggleBtnReset.textContent = '+ Abw. Maschinenstandort hinzufügen';
+                if (typeof window.renderServiceCpSuggestions === 'function') window.renderServiceCpSuggestions(null);
+                return;
+            }
+
+            const locFieldsWrapper = document.getElementById('service-location-fields-wrapper');
+            const locToggleBtn = document.getElementById('btn-toggle-location');
+            if (locFieldsWrapper) {
+                document.getElementById('service-location-company').value = machine.location_company || '';
+                document.getElementById('service-location-street').value = machine.location_street || '';
+                document.getElementById('service-location-zip').value = machine.location_zip || '';
+                document.getElementById('service-location-city').value = machine.location_city || '';
+                document.getElementById('service-location-country').value = machine.location_country || 'Deutschland';
+                const hasLocation = !!(machine.location_street || machine.location_city || machine.location_zip);
+                const norm = s => (s || '').trim().toLowerCase();
+                const sameAsOperator = hasLocation &&
+                    norm(machine.location_street) === norm(machine.operator_street) &&
+                    norm(machine.location_zip) === norm(machine.operator_zip) &&
+                    norm(machine.location_city) === norm(machine.operator_city);
+                const showLocation = hasLocation && !sameAsOperator;
+                locFieldsWrapper.classList.toggle('hidden', !showLocation);
+                locFieldsWrapper.style.display = showLocation ? 'block' : 'none';
+                if (locToggleBtn) locToggleBtn.textContent = showLocation ? '- Abw. Maschinenstandort entfernen' : '+ Abw. Maschinenstandort hinzufügen';
+            }
+
+            if (typeof window.renderServiceCpSuggestions === 'function') window.renderServiceCpSuggestions(machine);
+
+            if (machine.customer_id) {
+                custPreview.classList.remove('hidden');
+                custPreview.style.display = 'block';
+                custNameEl.textContent = 'Lade Kundendaten...';
+                custAddrEl.textContent = '';
+                if (custRouteEl) custRouteEl.style.display = 'none';
+
+                try {
+                    const { data: cust, error } = await window.supabaseClient
+                        .from('customers')
+                        .select('id, name, matchcode, customer_number, street, zip_code, city, country')
+                        .eq('id', machine.customer_id)
+                        .single();
+
+                    if (!error && cust) {
+                        custNameEl.innerHTML = cust.customer_number ? `Kundennummer: ${cust.customer_number}<br><strong>${cust.name}</strong>` : `<strong>${cust.name}</strong>`;
+                        
+                        const addrParts = [cust.street, [cust.zip_code, cust.city].filter(Boolean).join(' '), cust.country].filter(Boolean);
+                        custAddrEl.innerHTML = addrParts.join('<br>');
+
+                        // Setup route planning link
+                        if (custRouteEl && custRouteLink) {
+                            custRouteEl.style.display = 'block';
+                            const destination = addrParts.join(', ');
+                            
+                            // Fetch own HQ address from app_settings
+                            let origin = '';
+                            try {
+                                const { data: hqData } = await window.supabaseClient
+                                    .from('app_settings')
+                                    .select('value')
+                                    .eq('key', 'company_hq')
+                                    .single();
+                                if (hqData && hqData.value) {
+                                    const hq = hqData.value;
+                                    origin = [hq.street, [hq.zip, hq.city].filter(Boolean).join(' '), hq.country].filter(Boolean).join(', ');
+                                }
+                            } catch(e){}
+
+                            // Fallback to local cache if offline
+                            if (!origin) {
+                                const cached = localStorage.getItem('meetra_company_hq');
+                                if (cached) {
+                                    try {
+                                        const hq = JSON.parse(cached);
+                                        origin = [hq.street, [hq.zip, hq.city].filter(Boolean).join(' '), hq.country].filter(Boolean).join(', ');
+                                    } catch(e){}
+                                }
+                            }
+
+                            custRouteLink.href = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`;
+                        }
+                    } else {
+                        useMachineAddressFallback(machine);
+                    }
+                } catch (err) {
+                    console.error('Failed to fetch customer for service preview:', err);
+                    useMachineAddressFallback(machine);
+                }
+            } else if (machine.company || machine.operator_street) {
+                useMachineAddressFallback(machine);
+            } else {
+                custPreview.classList.add('hidden');
+                custPreview.style.display = 'none';
+            }
+
+            async function useMachineAddressFallback(m) {
+                custPreview.classList.remove('hidden');
+                custPreview.style.display = 'block';
+                
+                const company = m.company || 'Unbekannter Betreiber';
+                custNameEl.innerHTML = m.customer_number ? `Kundennummer: ${m.customer_number}<br><strong>${company}</strong>` : `<strong>${company}</strong>`;
+
+                const addrParts = [
+                    m.operator_street,
+                    [m.operator_zip, m.operator_city].filter(Boolean).join(' '),
+                    m.operator_country
+                ].filter(Boolean);
+
+                if (addrParts.length > 0) {
+                    custAddrEl.innerHTML = addrParts.join('<br>');
+                    
+                    // Setup route planning link
+                    if (custRouteEl && custRouteLink) {
+                        custRouteEl.style.display = 'block';
+                        const destination = addrParts.join(', ');
+                        
+                        let origin = '';
+                        const cached = localStorage.getItem('meetra_company_hq');
+                        if (cached) {
+                            try {
+                                const hq = JSON.parse(cached);
+                                origin = [hq.street, [hq.zip, hq.city].filter(Boolean).join(' '), hq.country].filter(Boolean).join(', ');
+                            } catch(e){}
+                        }
+                        
+                        custRouteLink.href = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`;
+                    }
+                } else {
+                    custAddrEl.textContent = 'Keine Adresse hinterlegt.';
+                    if (custRouteEl) custRouteEl.style.display = 'none';
+                }
+            }
+        };
+
+        // Hotel / Unterkunft Felder ein-/ausblenden
+        window.toggleHotelFields = function () {
+            const wrapper = document.getElementById('service-hotel-fields-wrapper');
+            const btn = document.getElementById('btn-toggle-hotel');
+            if (!wrapper) return;
+
+            const show = wrapper.classList.contains('hidden');
+            if (!show && !confirm('Hotel / Unterkunft wirklich entfernen?')) return;
+            wrapper.classList.toggle('hidden', !show);
+            wrapper.style.display = show ? 'block' : 'none';
+
+            if (btn) btn.textContent = show ? '- Hotel entfernen' : '+ Hotel hinzufügen';
+
+            if (!show) {
+                ['service-hotel-company', 'service-hotel-street', 'service-hotel-zip', 'service-hotel-city', 'service-hotel-country'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.value = '';
+                });
+            }
+        };
+
+        // ── Contact person helpers (machine edit form) ──────────────────────────
+        function _cpEsc(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+        window.createMachineContactPersonRow = function(data) {
+            const row = document.createElement('div');
+            row.className = 'contact-person-row';
+            row.style.cssText = 'position:relative;padding:0.9rem 0.9rem 0.9rem 0.9rem;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:12px;margin-bottom:0.6rem;';
+            const _anr = _cpEsc(data?.anrede);
+            const _opt = (v) => `<option value="${v}" ${_anr === v ? 'selected' : ''}>${v || '—'}</option>`;
+            row.innerHTML = `
+                <button type="button" onclick="if(confirm('Ansprechpartner entfernen?'))this.closest('.contact-person-row').remove()" style="position:absolute;top:7px;right:7px;width:22px;height:22px;border-radius:50%;background:rgba(190,30,45,0.9);border:none;color:white;cursor:pointer;font-size:1.1rem;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;">−</button>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.6rem;padding-right:28px;">
+                    <div><label style="font-size:0.7rem;color:rgba(255,255,255,0.45);margin-bottom:3px;display:block;">Anrede</label><select class="cp-anrede" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:white;padding:6px 9px;font-size:0.85rem;box-sizing:border-box;">${_opt('')}${_opt('Herr')}${_opt('Frau')}${_opt('Divers')}</select></div>
+                    <div><label style="font-size:0.7rem;color:rgba(255,255,255,0.45);margin-bottom:3px;display:block;">Name</label><input type="text" class="cp-name" value="${_cpEsc(data?.name)}" placeholder="Max Mustermann" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:white;padding:6px 9px;font-size:0.85rem;box-sizing:border-box;"></div>
+                    <div><label style="font-size:0.7rem;color:rgba(255,255,255,0.45);margin-bottom:3px;display:block;">Position</label><input type="text" class="cp-position" value="${_cpEsc(data?.position)}" placeholder="z.B. Geschäftsführer" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:white;padding:6px 9px;font-size:0.85rem;box-sizing:border-box;"></div>
+                    <div><label style="font-size:0.7rem;color:rgba(255,255,255,0.45);margin-bottom:3px;display:block;">Telefon</label><input type="text" class="cp-phone" value="${_cpEsc(data?.phone)}" placeholder="0123 456789" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:white;padding:6px 9px;font-size:0.85rem;box-sizing:border-box;"></div>
+                    <div style="grid-column:span 2;"><label style="font-size:0.7rem;color:rgba(255,255,255,0.45);margin-bottom:3px;display:block;">E-Mail</label><input type="email" class="cp-email" value="${_cpEsc(data?.email)}" placeholder="max@firma.de" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:white;padding:6px 9px;font-size:0.85rem;box-sizing:border-box;"></div>
+                </div>`;
+            return row;
+        };
+        window.addMachineContactPerson = function() {
+            const list = document.getElementById('machine-contact-persons-list');
+            if (list) list.appendChild(window.createMachineContactPersonRow({}));
+        };
+        window.renderMachineContactPersons = function(persons) {
+            const list = document.getElementById('machine-contact-persons-list');
+            if (!list) return;
+            list.innerHTML = '';
+            (persons || []).forEach(p => list.appendChild(window.createMachineContactPersonRow(p)));
+        };
+        window.collectMachineContactPersons = function() {
+            return Array.from(document.querySelectorAll('#machine-contact-persons-list .contact-person-row')).map(row => ({
+                anrede: row.querySelector('.cp-anrede')?.value.trim() || '',
+                name: row.querySelector('.cp-name')?.value.trim() || '',
+                phone: row.querySelector('.cp-phone')?.value.trim() || '',
+                position: row.querySelector('.cp-position')?.value.trim() || '',
+                email: row.querySelector('.cp-email')?.value.trim() || ''
+            })).filter(p => p.name || p.phone || p.position || p.email);
+        };
+
+        // ── Contact person helpers (service report form) ─────────────────────
+        window.addServiceContactPerson = function(prefill) {
+            const list = document.getElementById('service-contact-persons-list');
+            if (!list) return;
+            const row = document.createElement('div');
+            row.className = 'service-cp-row';
+            row.style.cssText = 'position:relative;padding:0.45rem 0.65rem 0.5rem;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:9px;margin-bottom:0.35rem;';
+            row.innerHTML = `
+                <button type="button" onclick="if(confirm('Ansprechpartner entfernen?'))this.closest('.service-cp-row').remove()" style="position:absolute;top:5px;right:5px;width:18px;height:18px;border-radius:50%;background:rgba(190,30,45,0.9);border:none;color:white;cursor:pointer;font-size:0.9rem;line-height:1;padding:0;display:flex;align-items:center;justify-content:center;">−</button>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0.4rem;padding-right:22px;">
+                    <div><label style="font-size:0.65rem;color:rgba(255,255,255,0.4);margin-bottom:2px;display:block;">Name</label><input type="text" class="scp-name glass-form-input" value="${_cpEsc(prefill?.name)}" placeholder="Max Mustermann" style="width:100%;box-sizing:border-box;padding:4px 8px;font-size:0.8rem;"></div>
+                    <div><label style="font-size:0.65rem;color:rgba(255,255,255,0.4);margin-bottom:2px;display:block;">Telefon</label><input type="text" class="scp-phone glass-form-input" value="${_cpEsc(prefill?.phone)}" placeholder="0123 456789" style="width:100%;box-sizing:border-box;padding:4px 8px;font-size:0.8rem;"></div>
+                    <div><label style="font-size:0.65rem;color:rgba(255,255,255,0.4);margin-bottom:2px;display:block;">Position</label><input type="text" class="scp-position glass-form-input" value="${_cpEsc(prefill?.position)}" placeholder="z.B. Geschäftsführer" style="width:100%;box-sizing:border-box;padding:4px 8px;font-size:0.8rem;"></div>
+                </div>`;
+            list.appendChild(row);
+        };
+        window.collectServiceContactPersons = function() {
+            return Array.from(document.querySelectorAll('#service-contact-persons-list .service-cp-row')).map(row => ({
+                name: row.querySelector('.scp-name')?.value.trim() || '',
+                phone: row.querySelector('.scp-phone')?.value.trim() || '',
+                position: row.querySelector('.scp-position')?.value.trim() || ''
+            })).filter(p => p.name || p.phone || p.position);
+        };
+        // Ansprechpartner-Vorschläge = an der Maschine hinterlegte Personen
+        // PLUS die Ansprechpartner der Adresse (customer_contacts) hinter der
+        // Maschine. Beide Quellen werden zusammengeführt und nach Name/Telefon
+        // dedupliziert (Maschine hat Vorrang).
+        window._serviceCpMachine = [];
+        window._serviceCpAddress = [];
+        function _renderServiceCpChips() {
+            const box = document.getElementById('service-cp-suggestions');
+            const chips = document.getElementById('service-cp-suggestion-chips');
+            const btn = document.getElementById('btn-show-cp-suggestions');
+            if (!box || !chips) return;
+            const seen = new Set();
+            const all = [];
+            [...(window._serviceCpMachine || []), ...(window._serviceCpAddress || [])].forEach(p => {
+                if (!p || (!p.name && !p.phone && !p.position)) return;
+                const key = (p.name || '').trim().toLowerCase() + '|' + (p.phone || '').trim();
+                if (seen.has(key)) return;
+                seen.add(key);
+                all.push(p);
+            });
+            if (!all.length) { box.style.display = 'none'; if (btn) btn.style.display = 'none'; return; }
+            chips.innerHTML = all.map((p, i) => `<button type="button" onclick="window.addServiceContactPerson(${JSON.stringify(p).replace(/"/g,'&quot;')})" style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);color:rgba(255,255,255,0.85);padding:3px 8px;border-radius:16px;font-size:0.75rem;cursor:pointer;white-space:nowrap;">${_cpEsc(p.name)||'Ansprechpartner '+(i+1)}${p.position?' · '+_cpEsc(p.position):''}</button>`).join('');
+            if (btn) btn.style.display = '';
+            box.style.display = 'block';
+        }
+        window.renderServiceCpSuggestions = function(machine) {
+            window._serviceCpMachine = (machine && Array.isArray(machine.contact_persons)) ? machine.contact_persons : [];
+            window._serviceCpAddress = [];
+            _renderServiceCpChips();
+            const customerId = machine && machine.customer_id;
+            if (customerId && window.supabaseClient) {
+                window.supabaseClient
+                    .from('customer_contacts')
+                    .select('name, position, phone, mobile')
+                    .eq('customer_id', customerId)
+                    .then(({ data }) => {
+                        window._serviceCpAddress = (data || []).map(c => ({
+                            name: c.name || '',
+                            phone: c.phone || c.mobile || '',
+                            position: c.position || ''
+                        }));
+                        _renderServiceCpChips();
+                    })
+                    .catch(() => {});
+            }
+        };
+        window.toggleServiceCpSuggestions = function() {
+            const box = document.getElementById('service-cp-suggestions');
+            if (!box) return;
+            box.style.display = box.style.display === 'none' ? 'block' : 'none';
+        };
+
+        // Maschinenstandort: Adressen aus dem Kunden-Cache durchsuchen.
+        // Freitext bleibt möglich (Baustelle o. ä.) — die Liste ist nur ein Angebot.
+        let serviceLocSuche = null;
+        const escLoc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+        function serviceLocBoxZu() {
+            const box = document.getElementById('service-location-suggestions');
+            if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+        }
+
+        window.searchServiceLocation = function () {
+            clearTimeout(serviceLocSuche);
+            serviceLocSuche = setTimeout(async () => {
+                const input = document.getElementById('service-location-company');
+                const box = document.getElementById('service-location-suggestions');
+                if (!input || !box) return;
+                const q = input.value.trim();
+                if (q.length < 2 || typeof window.customerCacheSearch !== 'function') { serviceLocBoxZu(); return; }
+
+                const treffer = await window.customerCacheSearch(q, 10);
+                if (!treffer.length) { serviceLocBoxZu(); return; }
+
+                box.innerHTML = treffer.map((c, i) => {
+                    const label = c.matchcode ? `[${c.matchcode}] ${c.name || ''}` : (c.name || '');
+                    const adr = [c.street, [c.zip_code, c.city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+                    return `<div class="svc-loc-item" data-i="${i}" style="padding:10px 14px; border-bottom:1px solid rgba(255,255,255,0.05); cursor:pointer; color:#fff;">
+                        <div style="font-weight:700; font-size:0.95rem;">${escLoc(label)}</div>
+                        <div style="font-size:0.8rem; color:rgba(255,255,255,0.45); margin-top:2px;">${escLoc(adr)}</div>
+                    </div>`;
+                }).join('');
+                box.onmousedown = (e) => {
+                    const el = e.target.closest('.svc-loc-item');
+                    if (!el) return;
+                    e.preventDefault();
+                    const c = treffer[+el.dataset.i];
+                    document.getElementById('service-location-company').value = c.name || '';
+                    document.getElementById('service-location-street').value = c.street || '';
+                    document.getElementById('service-location-zip').value = c.zip_code || '';
+                    document.getElementById('service-location-city').value = c.city || '';
+                    document.getElementById('service-location-country').value = c.country || 'Deutschland';
+                    serviceLocBoxZu();
+                };
+                box.style.display = 'block';
+                if (typeof window.positionSuggestionsBoxFixed === 'function') {
+                    window.positionSuggestionsBoxFixed('service-location-company', 'service-location-suggestions');
+                }
+            }, 60);
+        };
+
+        document.addEventListener('focusout', (e) => {
+            if (e.target && e.target.id === 'service-location-company') setTimeout(serviceLocBoxZu, 150);
+        });
+
+        // Maschinenstandort toggle
+        window.toggleLocationFields = function() {
+            const wrapper = document.getElementById('service-location-fields-wrapper');
+            const btn = document.getElementById('btn-toggle-location');
+            if (!wrapper) return;
+            const show = wrapper.classList.contains('hidden');
+            if (!show && !confirm('Abweichenden Maschinenstandort wirklich entfernen?')) return;
+            if (show) {
+                const machineId = document.getElementById('selected-machine-id')?.value;
+                const machine = machineId ? (window.machineList || []).find(m => String(m.id) === String(machineId)) : null;
+                if (machine && (machine.location_street || machine.location_city || machine.location_zip)) {
+                    document.getElementById('service-location-company').value = machine.location_company || '';
+                    document.getElementById('service-location-street').value = machine.location_street || '';
+                    document.getElementById('service-location-zip').value = machine.location_zip || '';
+                    document.getElementById('service-location-city').value = machine.location_city || '';
+                    document.getElementById('service-location-country').value = machine.location_country || '';
+                }
+            } else {
+                // Beim Entfernen die Felder wirklich leeren, damit der Bericht einen leeren
+                // Standort-Snapshot speichert und der Standort nach dem Neuladen NICHT wieder auftaucht.
+                ['service-location-company','service-location-street','service-location-zip','service-location-city']
+                    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+                const countryEl = document.getElementById('service-location-country');
+                if (countryEl) countryEl.value = 'Deutschland';
+            }
+            wrapper.classList.toggle('hidden', !show);
+            wrapper.style.display = show ? 'block' : 'none';
+            if (btn) btn.textContent = show ? '− Abw. Maschinenstandort entfernen' : '+ Abw. Maschinenstandort';
+        };
+
+        // Google Maps route helpers
+        window.openMapsRoute = function(destAddress) {
+            if (!destAddress || !destAddress.trim()) return;
+            let origin = '';
+            try {
+                const hq = JSON.parse(localStorage.getItem('meetra_company_hq') || '{}');
+                if (hq.street || hq.city) {
+                    origin = [hq.street, hq.zip, hq.city, hq.country].filter(Boolean).join(', ');
+                }
+            } catch(e) {}
+            const url = 'https://www.google.com/maps/dir/?api=1' +
+                (origin ? '&origin=' + encodeURIComponent(origin) : '') +
+                '&destination=' + encodeURIComponent(destAddress);
+            window.open(url, '_blank');
+        };
+        window.openMapsRouteForBetreiber = function() {
+            const name = document.getElementById('service-customer-name')?.textContent?.trim() || '';
+            const addr = document.getElementById('service-customer-address')?.textContent?.trim() || '';
+            window.openMapsRoute([name, addr].filter(Boolean).join(', '));
+        };
+        window.openMapsRouteForLocation = function() {
+            const parts = ['service-location-street','service-location-zip','service-location-city','service-location-country']
+                .map(id => document.getElementById(id)?.value?.trim() || '').filter(Boolean);
+            window.openMapsRoute(parts.join(', '));
+        };
+        window.openMapsRouteForHotel = function() {
+            const parts = ['service-hotel-company','service-hotel-street','service-hotel-zip','service-hotel-city','service-hotel-country']
+                .map(id => document.getElementById(id)?.value?.trim() || '').filter(Boolean);
+            window.openMapsRoute(parts.join(', '));
+        };
+
+        // Technician Dropdown Multi-Select Logic
+        let selectedTechs = [];
+
+        function renderTechDropdown() {
+            const list = document.getElementById('tech-option-list');
+            if (!list) return;
+
+            const users = window.userList || [];
+            list.innerHTML = users.map(u => {
+                const isSelected = selectedTechs.includes(u.id);
+                const initials = u.initials || u.name.substring(0, 2).toUpperCase();
+                const color = u.color || '#666';
+                return `
+                        <div onclick="toggleTechnician(${u.id})"
+                             style="display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; cursor: pointer; transition: background 0.15s; background: ${isSelected ? 'rgba(16,185,129,0.12)' : 'transparent'};"
+                             onmouseover="if(!${isSelected}) this.style.background='rgba(255,255,255,0.04)'"
+                             onmouseout="this.style.background='${isSelected ? 'rgba(16,185,129,0.12)' : 'transparent'}'">
+                            <div style="width:34px; height:34px; border-radius:50%; background:${color}; display:flex; align-items:center; justify-content:center; font-size:0.75rem; font-weight:800; color:#fff; flex-shrink:0; font-family:'Inter',sans-serif;">${initials}</div>
+                            <span style="flex:1; color:#fff; font-size:0.95rem; font-weight:500; font-family:'Inter',sans-serif;">${u.name}</span>
+                            ${isSelected ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>` : ''}
+                        </div>
+                    `;
+            }).join('');
+
+            // Update trigger pills
+            const pillsContainer = document.getElementById('tech-selected-pills');
+            const placeholder = document.getElementById('tech-placeholder-text');
+            if (!pillsContainer) return;
+
+            const selectedUsers = users.filter(u => selectedTechs.includes(u.id));
+            pillsContainer.innerHTML = selectedUsers.map(u => {
+                const initials = u.initials || u.name.substring(0, 2).toUpperCase();
+                const color = u.color || '#666';
+                return `<div style="display:inline-flex; align-items:center; gap:6px; background:${color}22; border:1px solid ${color}55; border-radius:20px; padding:3px 10px 3px 4px; font-size:0.82rem; font-weight:700; color:#fff; font-family:'Inter',sans-serif;">
+                        <div style="width:22px; height:22px; border-radius:50%; background:${color}; display:flex; align-items:center; justify-content:center; font-size:0.65rem; font-weight:800; color:#fff;">${initials}</div>
+                        ${u.name}
+                    </div>`;
+            }).join('');
+
+            if (placeholder) placeholder.style.display = selectedUsers.length > 0 ? 'none' : 'flex';
+        }
+
+        window.toggleTechDropdown = function () {
+            const panel = document.getElementById('tech-dropdown-panel');
+            const trigger = document.getElementById('tech-dropdown-trigger');
+            if (!panel) return;
+            const isOpen = panel.style.display !== 'none';
+            panel.style.display = isOpen ? 'none' : 'block';
+            if (trigger) trigger.style.borderColor = isOpen ? 'rgba(255,255,255,0.1)' : 'rgba(16,185,129,0.5)';
+            if (!isOpen) renderTechDropdown();
+        };
+
+        window.toggleTechnician = function (id) {
+            const vorherErster = selectedTechs.length > 0 ? selectedTechs[0] : null;
+            const idx = selectedTechs.indexOf(id);
+            if (idx > -1) {
+                selectedTechs.splice(idx, 1);
+            } else {
+                selectedTechs.push(id);
+            }
+            const hiddenInput = document.getElementById('selected-technician-ids');
+            if (hiddenInput) hiddenInput.value = JSON.stringify(selectedTechs);
+            renderTechDropdown();
+            applyAutoTechSignature(vorherErster);
+        };
+
+        // Füllt die Techniker-Unterschrift mit der hinterlegten Unterschrift des ersten
+        // ausgewählten Technikers (bei mehreren Technikern bewusst nur einer, nicht alle).
+        // Wechselt der Techniker (Timo → Gerd), wechselt die Unterschrift mit — auch in
+        // einem gespeicherten Bericht, sofern dort die hinterlegte Unterschrift des
+        // bisherigen Technikers steht. Eine von Hand gezeichnete bleibt unangetastet.
+        async function applyAutoTechSignature(vorherErster) {
+            const techSigInput = document.getElementById('service-tech-signature');
+            if (!techSigInput) return;
+            if (techSigInput.value && !window._techSigIsAutofilled) {
+                if (vorherErster == null || typeof window.userSignatur !== 'function') return;
+                if (String(selectedTechs[0]) === String(vorherErster)) return;   // Erster unverändert
+                const alteSig = (await window.userSignatur(vorherErster)) || '';
+                if (!alteSig || techSigInput.value !== alteSig) return;          // von Hand gezeichnet
+            }
+
+            const primaryTechId = selectedTechs.length > 0 ? selectedTechs[0] : null;
+            // Unterschriftsbild wird nicht mehr mit der Nutzerliste geladen, sondern hier nachgeholt.
+            const sig = primaryTechId != null && typeof window.userSignatur === 'function' ? (await window.userSignatur(primaryTechId)) || '' : '';
+            // Inzwischen anderer Techniker gewählt? Dann gilt der spätere Aufruf.
+            if (primaryTechId != null && String(selectedTechs[0]) !== String(primaryTechId)) return;
+
+            techSigInput.value = sig;
+            const img = document.getElementById('tech-signature-preview-img');
+            const ph = document.getElementById('tech-signature-placeholder');
+            const btn = document.getElementById('btn-clear-tech-signature');
+            if (sig) {
+                if (img) { img.src = sig; img.classList.remove('hidden'); img.style.display = 'block'; }
+                if (ph) ph.classList.add('hidden');
+                if (btn) btn.classList.remove('hidden');
+                window._techSigIsAutofilled = true;
+            } else {
+                if (img) { img.src = ''; img.classList.add('hidden'); img.style.display = 'none'; }
+                if (ph) ph.classList.remove('hidden');
+                if (btn) btn.classList.add('hidden');
+                window._techSigIsAutofilled = false;
+            }
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function (e) {
+            const wrapper = document.getElementById('tech-dropdown-wrapper');
+            const panel = document.getElementById('tech-dropdown-panel');
+            const trigger = document.getElementById('tech-dropdown-trigger');
+            if (wrapper && !wrapper.contains(e.target) && panel && panel.style.display !== 'none') {
+                panel.style.display = 'none';
+                if (trigger) trigger.style.borderColor = 'rgba(255,255,255,0.1)';
+            }
+        });
+
+        let serviceFiles = []; // New files to upload
+        let existingServiceFiles = []; // Files already in DB
+        let removedServiceFiles = [];
+        let serviceberichtIsDirty = false;
+        function markServiceberichtDirty() { serviceberichtIsDirty = true; }
+        function onServiceberichtFieldChange() { serviceberichtIsDirty = true; }
+        // Reload-Schutz: der Merker ist modul-lokal, deshalb als Prueffunktion anmelden.
+        if (typeof window.registerUnsavedCheck === 'function') window.registerUnsavedCheck(() => serviceberichtIsDirty);
+
+        // Der Merker wurde nirgends gesetzt: closeServiceberichtModal haengt die
+        // beiden Zuhoerer beim Schliessen zwar ab, angemeldet hat sie aber nie
+        // jemand. Dadurch blieb serviceberichtIsDirty immer false — weder die
+        // Rueckfrage beim Schliessen noch der Reload-Schutz kamen je zum Zug.
+        // Deshalb beim Oeffnen anmelden (und den Merker zuruecksetzen, weil das
+        // Fuellen der Felder per Skript keine Ereignisse ausloest).
+        // Achtung: js/service-entries.js definiert openServiceberichtModal und
+        // wird SPAETER geladen als diese Datei — deshalb erst beim
+        // DOMContentLoaded umhaengen, sonst waere hier noch nichts da.
+        document.addEventListener('DOMContentLoaded', function () {
+            const origOpenServicebericht = window.openServiceberichtModal;
+            if (typeof origOpenServicebericht !== 'function') return;
+            window.openServiceberichtModal = function (daten) {
+                const res = origOpenServicebericht.apply(this, arguments);
+                serviceberichtIsDirty = false;
+                // Neuer Bericht: ALLES vom vorher geöffneten Bericht leeren. Die
+                // Fehlerbeschreibung, Bemerkungen, Datumsfelder, Techniker und die
+                // Technikerunterschrift wurden bisher nie zurückgesetzt und standen
+                // im neuen Bericht einfach weiter drin.
+                if (!daten) {
+                    ['service-description', 'service-remarks', 'service-date-start', 'service-date-end',
+                     'service-tech-sig-date', 'service-customer-sig-date', 'service-tech-signature']
+                        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+                    const titel = document.getElementById('service-report-title');
+                    if (titel) titel.value = titel.defaultValue || 'Servicebericht';
+                    window._techSigIsAutofilled = false;
+                    window._serviceDateStartAutoVal = null;
+                    selectedTechs.length = 0;
+                    const techIds = document.getElementById('selected-technician-ids');
+                    if (techIds) techIds.value = '[]';
+                    renderTechDropdown();
+                }
+                // Neuer Bericht: die Unterschriften-Vorschau des vorher geöffneten
+                // Berichts stehen lassen wäre irreführend — das versteckte Feld ist
+                // leer, das Bild aber noch zu sehen. populateServiceberichtForm()
+                // läuft hier nicht (es steigt bei fehlenden Daten sofort aus).
+                if (!daten) {
+                    [['signature-preview-img', 'signature-placeholder', 'btn-clear-signature'],
+                     ['tech-signature-preview-img', 'tech-signature-placeholder', 'btn-clear-tech-signature']]
+                        .forEach(([imgId, phId, btnId]) => {
+                            const img = document.getElementById(imgId), ph = document.getElementById(phId), btn = document.getElementById(btnId);
+                            const wert = document.getElementById(imgId === 'signature-preview-img' ? 'service-customer-signature' : 'service-tech-signature');
+                            if (wert && wert.value) return;   // z. B. hinterlegte Technikerunterschrift
+                            if (img) { img.src = ''; img.classList.add('hidden'); img.style.display = 'none'; }
+                            if (ph) ph.classList.remove('hidden');
+                            if (btn) btn.classList.add('hidden');
+                        });
+                }
+                const modal = document.getElementById('servicebericht-modal');
+                if (modal) {
+                    modal.removeEventListener('input', onServiceberichtFieldChange);
+                    modal.removeEventListener('change', onServiceberichtFieldChange);
+                    modal.addEventListener('input', onServiceberichtFieldChange);
+                    modal.addEventListener('change', onServiceberichtFieldChange);
+                }
+                return res;
+            };
+        });
+
+        async function handleServiceFiles(files) {
+            // Bereits ausgewaehlte und bereits gespeicherte Anhaenge nicht erneut
+            // aufnehmen — sonst laedt der Bericht dieselbe Aufnahme zweimal hoch.
+            const vorhanden = serviceFiles.concat(existingServiceFiles || []);
+            const { neu, doppelt } = await window.PhotoDedupe.pruefeAuswahl(files, vorhanden);
+            window.PhotoDedupe.meldeDoppelte(doppelt);
+            neu.forEach(eintrag => serviceFiles.push(eintrag.file));
+            renderServiceFilePreviews();
+        }
+
+        function renderServiceFilePreviews() {
+            const previewGrid = document.getElementById('service-file-previews');
+            if (!previewGrid) return;
+            previewGrid.innerHTML = '';
+
+            // 1. Render Existing Files
+            existingServiceFiles.forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'file-preview-item';
+                item.style.position = 'relative'; // Ensure relative positioning for overlays
+
+                // Handle legacy string URLs vs new Object structure
+                const isLegacy = typeof file === 'string';
+                const url = isLegacy ? file : file.url;
+                const name = isLegacy ? 'Datei' : file.name;
+                const type = isLegacy ? '?' : file.type;
+
+                const isImg = (type && type.startsWith('image/')) || (url && url.match(/\.(jpg|jpeg|png|gif|webp)$/i));
+
+                if (isImg) {
+                    item.innerHTML = `<img src="${url}">
+        <div
+            style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: white; font-size: 0.6rem; padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            ${name}
+        </div>
+        <button class="remove-btn delete-permission-required" data-del-area="fotos" onclick="removeExistingServiceFile(${index})">&times;</button>`;
+                    item.querySelector('img').addEventListener('error', () => verwaistePruefen(file), { once: true });
+                } else {
+                    // PDF/Doc
+                    let typeLabel = 'DOK';
+                    if (type === 'application/pdf' || (url && url.endsWith('.pdf'))) typeLabel = 'PDF';
+
+                    item.innerHTML = `<div
+                            style="padding: 0.5rem; text-align: center; color: white; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                            <span style="font-weight: 900; font-size: 0.8rem; opacity: 0.5;">${typeLabel}</span>
+                            <span
+                                style="font-size: 0.7rem; word-break: break-all; overflow: hidden; max-height: 3em; line-height: 1.2;">${name}</span>
+                        </div>
+                        <button class="remove-btn delete-permission-required" data-del-area="fotos" onclick="removeExistingServiceFile(${index})">&times;</button>`;
+                }
+                previewGrid.appendChild(item);
+            });
+
+            // 2. Render New Files
+            serviceFiles.forEach((file, index) => {
+                const item = document.createElement('div');
+                item.className = 'file-preview-item';
+                item.style.position = 'relative';
+
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        item.innerHTML = `<img src="${e.target.result}">
+        <div
+            style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.6); color: white; font-size: 0.6rem; padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+            ${file.name}
+        </div>
+        <button class="remove-btn" onclick="removeServiceFile(${index})">&times;</button>`;
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    let typeLabel = 'DOK';
+                    if (file.type === 'application/pdf') typeLabel = 'PDF';
+
+                    item.innerHTML = `<div
+                            style="padding: 0.5rem; text-align: center; color: white; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                            <span style="font-weight: 900; font-size: 0.8rem; opacity: 0.5;">${typeLabel}</span>
+                            <span
+                                style="font-size: 0.7rem; word-break: break-all; overflow: hidden; max-height: 3em; line-height: 1.2;">${file.name}</span>
+                        </div>
+                        <button class="remove-btn" onclick="removeServiceFile(${index})">&times;</button>`;
+                }
+                previewGrid.appendChild(item);
+            });
+        }
+
+        window.removeServiceFile = function (index) {
+            serviceFiles.splice(index, 1);
+            renderServiceFilePreviews();
+        };
+
+        // Bild laedt nicht: nur wenn der Speicher 404 meldet (Datei wurde
+        // anderswo geloescht), fliegt der Verweis raus. Offline/Netzfehler
+        // aendern nichts — sonst verschwaenden Bilder ohne Grund.
+        async function verwaistePruefen(file) {
+            const url = typeof file === 'string' ? file : file && file.url;
+            if (!url || !/^https?:/i.test(url)) return;
+            let status = 0;
+            try { status = (await fetch(url, { method: 'HEAD', cache: 'no-store' })).status; } catch (e) { return; }
+            if (status !== 404) return;
+            const idx = existingServiceFiles.indexOf(file);
+            if (idx < 0) return;
+            existingServiceFiles.splice(idx, 1);
+            renderServiceFilePreviews();
+
+            // Sofort in der DB nachziehen — sonst zeigt die Liste weiter
+            // "1 Anhang", solange der Bericht nicht gespeichert wurde.
+            const entryId = window.currentEditingServiceId;
+            if (!entryId || !window.supabaseClient) return;
+            try {
+                const { data, error } = await window.supabaseClient
+                    .from('service_entries').select('files').eq('id', entryId).single();
+                if (error) throw error;
+                const neu = (Array.isArray(data.files) ? data.files : []).filter(f =>
+                    (typeof f === 'string' ? f : f && f.url) !== url);
+                const { error: upErr } = await window.supabaseClient
+                    .from('service_entries').update({ files: neu }).eq('id', entryId);
+                if (upErr) throw upErr;
+                try {
+                    await window.supabaseClient.from('documents')
+                        .update({ attachments: neu.filter(f => f && f.url).map(f => ({
+                            name: f.name || (f.url || '').split('/').pop(),
+                            url: f.url, path: f.path || null, type: f.type || ''
+                        })) })
+                        .eq('service_entry_id', entryId);
+                } catch (docErr) { console.warn('Anhänge am Dokument nicht aktualisierbar:', docErr && docErr.message); }
+
+                [window.allServiceEntries, window.serviceEntryList].forEach(list => {
+                    const eintrag = (list || []).find(x => String(x.id) === String(entryId));
+                    if (eintrag) eintrag.files = neu;
+                });
+                window[`_sf${entryId}`] = neu;
+                if (typeof window.renderServiceEntries === 'function') window.renderServiceEntries();
+                if (typeof window.showToast === 'function') window.showToast('Gelöschtes Bild aus dem Bericht entfernt.');
+            } catch (err) {
+                console.warn('Verwaisten Anhang nicht entfernbar:', err && err.message);
+                if (typeof window.showToast === 'function') {
+                    window.showToast('Ein gelöschtes Bild wurde aus dem Bericht entfernt – bitte speichern.');
+                }
+            }
+        }
+
+        window.removeExistingServiceFile = function (index) {
+            // Schon gespeicherte Anhänge = Löschen → Löschrecht „Fotos" nötig
+            if (typeof window.canDelete === 'function' && !window.canDelete('Fotos')) return;
+            const file = existingServiceFiles[index];
+            if (file) {
+                removedServiceFiles.push(file);
+            }
+            existingServiceFiles.splice(index, 1);
+            renderServiceFilePreviews();
+        };
+
+        // Collects current form state into a plain object — used both for online save and offline draft
+        window._buildServiceReportData = function () {
+            const machineId = document.getElementById('selected-machine-id')?.value;
+            const catIdsVal = document.getElementById('service-category-id')?.value;
+            let categoryIds = [];
+            try { categoryIds = catIdsVal ? JSON.parse(catIdsVal) : []; } catch (e) { categoryIds = catIdsVal ? [parseInt(catIdsVal)] : []; }
+
+            const dateStart = document.getElementById('service-date-start')?.value;
+            const dateEnd   = document.getElementById('service-date-end')?.value;
+
+            return {
+                machine_id:             parseInt(machineId),
+                category_id:            categoryIds.length > 0 ? categoryIds[0] : null,
+                category_ids:           categoryIds,
+                title:                  document.getElementById('service-report-title')?.value || 'Servicebericht',
+                date:                   dateStart,
+                datum_von:              dateStart,
+                datum_bis:              dateEnd || null,
+                hours:                  0,
+                previous_report_id:     window._servicePreviousReportId || null,
+                technicians:            (typeof selectedTechs !== 'undefined') ? selectedTechs : [],
+                files:                  [...existingServiceFiles],
+                description:            document.getElementById('service-description')?.value,
+                remarks:                document.getElementById('service-remarks')?.value || null,
+                travel_distance_km:     parseFloat(document.getElementById('service-driving-distance')?.value) || null,
+                travel_time_minutes:    parseInt(document.getElementById('service-driving-time')?.value) || null,
+                customer_signature:     document.getElementById('service-customer-signature')?.value || null,
+                customer_name:          document.getElementById('service-customer-signee-name')?.value.trim() || null,
+                tech_signature:         document.getElementById('service-tech-signature')?.value || null,
+                operating_hours:        document.getElementById('service-operating-hours')?.value || null,
+                workshop_order_number:  (function() {
+                    const y = document.getElementById('service-workshop-year-digit')?.value.trim() || '';
+                    const s = document.getElementById('service-workshop-order-suffix')?.value.trim() || '';
+                    return s ? `202${y}-40${s.padStart(3, '0')}` : null;
+                })(),
+                work_log:               typeof window.getWorkLogTableData   === 'function' ? window.getWorkLogTableData()   : [],
+                tasks:                  typeof window.getTasksTableData     === 'function' ? window.getTasksTableData()     : [],
+                materials:              typeof window.getMaterialsTableData === 'function' ? window.getMaterialsTableData() : [],
+                checklist_payload:      typeof window.getChecklistPayload   === 'function' ? window.getChecklistPayload()   : null,
+                status_repaired:        document.getElementById('service-status-repaired')?.checked || false,
+                status_repaired_en:     document.getElementById('service-status-repaired-en')?.checked || false,
+                tech_sig_date:          document.getElementById('service-tech-sig-date')?.value || null,
+                customer_sig_date:      document.getElementById('service-customer-sig-date')?.value || null,
+                contact_persons:        typeof window.collectServiceContactPersons === 'function' ? window.collectServiceContactPersons() : [],
+                hotel_company:          document.getElementById('service-hotel-company')?.value.trim() || null,
+                hotel_street:           document.getElementById('service-hotel-street')?.value.trim() || null,
+                hotel_zip:              document.getElementById('service-hotel-zip')?.value.trim() || null,
+                hotel_city:             document.getElementById('service-hotel-city')?.value.trim() || null,
+                hotel_country:          document.getElementById('service-hotel-country')?.value.trim() || null,
+                location_snapshot:      window._buildServiceLocationSnapshot()
+            };
+        };
+
+        // ── SICHERHEITSNETZ gegen Datenverlust ────────────────────────────
+        // Beim Bearbeiten eines bestehenden Berichts darf ein LEERES Formularfeld
+        // niemals einen vorhandenen Wert in der Datenbank überschreiben. Fehlt ein
+        // Feld im Formular (z.B. weil die Vorbefüllung es nicht gesetzt hat), wird
+        // der zuletzt geladene Wert (Baseline) beibehalten statt gelöscht.
+        window._applyServiceEditGuard = function (data) {
+            const base = window._serviceReportBaseline;
+            if (!data || !base) return data; // nur beim Bearbeiten (Baseline gesetzt)
+            const PROTECT = ['machine_id', 'category_id', 'category_ids', 'title', 'date', 'datum_von',
+                'technicians', 'files', 'description', 'remarks', 'customer_signature', 'customer_name',
+                'tech_signature', 'operating_hours', 'workshop_order_number', 'work_log', 'tasks',
+                'materials', 'checklist_payload', 'contact_persons'];
+            const isEmpty = (v) => v == null || v === '' ||
+                (Array.isArray(v) && v.length === 0) ||
+                (typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0);
+            PROTECT.forEach(f => { if (isEmpty(data[f]) && !isEmpty(base[f])) data[f] = base[f]; });
+            return data;
+        };
+
+        // ── Formular aus einem bestehenden Bericht vorbefüllen (Bearbeiten) ──
+        // War verloren gegangen: das Modal setzte nur die ID, füllte aber keine
+        // Felder — dadurch war beim Bearbeiten alles leer und Speichern überschrieb
+        // den Datensatz. Diese Funktion stellt die Vorbefüllung wieder her.
+        // Maschinenauswahl sperren: Suchfeld und Liste verstecken, "FIXIERT" zeigen.
+        // Wird beim Bearbeiten eines bereits gespeicherten Berichts benutzt — die
+        // Maschine eines Berichts darf nachträglich nicht mehr gewechselt werden.
+        window.lockServiceMachineSelection = function () {
+            const modal = document.getElementById('servicebericht-modal');
+            if (!modal) return;
+            const searchBox = modal.querySelector('.machine-selector-wrapper .search-input-container');
+            const list = document.getElementById('service-machine-list');
+            const lockHint = document.getElementById('selection-lock-hint');
+            if (searchBox) searchBox.style.display = 'none';
+            if (list) list.style.display = 'none';
+            if (lockHint) { lockHint.classList.remove('hidden'); lockHint.style.display = 'flex'; }
+        };
+
+        window.populateServiceberichtForm = function (d) {
+            if (!d) return;
+            const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = (v == null ? '' : v); };
+
+            // Maschine vorauswählen
+            const machine = (window.machineList || []).find(m => m.id === d.machine_id || m.id == d.machine_id);
+            if (machine) {
+                let catName = '';
+                try { const c = (window.categoryList || []).find(x => x.id === machine.category_id); catName = c ? c.name : (machine.category || ''); } catch (e) {}
+                try { window.selectServiceMachine(machine.id, machine.manufacturer, machine.name, machine.serial || machine.serial_number, machine.image_url, catName, machine.year); }
+                catch (e) { console.warn('Maschine vorauswählen fehlgeschlagen:', e); setVal('selected-machine-id', d.machine_id); }
+            } else if (d.machine_id != null) {
+                setVal('selected-machine-id', d.machine_id);
+            }
+            if (d.machine_id != null && d.machine_id !== '') window.lockServiceMachineSelection();
+
+            // Kategorie(n)
+            const catIds = Array.isArray(d.category_ids) && d.category_ids.length ? d.category_ids : (d.category_id != null ? [d.category_id] : []);
+            if (catIds.length) {
+                setVal('service-category-id', JSON.stringify(catIds));
+                try {
+                    const names = catIds.map(id => { const c = (window.categoryList || []).find(x => x.id === id || x.id == id); return c ? c.name : null; }).filter(Boolean);
+                    const txt = document.getElementById('service-category-text');
+                    if (txt && names.length) txt.textContent = names.join(', ');
+                } catch (e) {}
+                if (typeof window.renderSelectedServiceCategories === 'function') { try { window.renderSelectedServiceCategories(); } catch (e) {} }
+            }
+
+            // Kopf / Datum / Texte
+            setVal('service-report-title', d.title);
+            setVal('service-date-start', d.datum_von || d.date);
+            setVal('service-date-end', d.datum_bis);
+            setVal('service-description', d.description);
+            setVal('service-remarks', d.remarks);
+            setVal('service-operating-hours', d.operating_hours);
+            setVal('service-driving-distance', d.travel_distance_km);
+            setVal('service-driving-time', d.travel_time_minutes);
+            if (typeof window.updateDrivingTimeHoursPreview === 'function') { try { window.updateDrivingTimeHoursPreview(); } catch (e) {} }
+
+            // Werkstattauftragsnummer 202Y-40XXX -> Jahresziffer + Suffix
+            if (d.workshop_order_number) {
+                const m = String(d.workshop_order_number).match(/^202(\d)-40(\d+)$/);
+                if (m) { setVal('service-workshop-year-digit', m[1]); setVal('service-workshop-order-suffix', String(parseInt(m[2], 10))); }
+            }
+
+            // Status
+            const sr = document.getElementById('service-status-repaired'); if (sr) sr.checked = !!d.status_repaired;
+            const sre = document.getElementById('service-status-repaired-en'); if (sre) sre.checked = !!d.status_repaired_en;
+
+            // Unterschriften: versteckte Werte + Vorschau (best effort)
+            setVal('service-customer-signature', d.customer_signature);
+            setVal('service-customer-signee-name', d.customer_name);
+            setVal('service-tech-signature', d.tech_signature);
+            setVal('service-tech-sig-date', d.tech_sig_date);
+            setVal('service-customer-sig-date', d.customer_sig_date);
+            if (d.tech_signature) window._techSigIsAutofilled = false;
+            // Vorschaubild setzen ODER zurücksetzen. Das Zurücksetzen fehlte: wer einen
+            // unterschriebenen Bericht schloss und einen neuen anlegte, sah dort weiter
+            // die fremde Unterschrift — gespeichert wurde sie nicht, aber es sah so aus.
+            const showSig = (imgId, phId, btnId, val) => {
+                const img = document.getElementById(imgId), ph = document.getElementById(phId), btn = document.getElementById(btnId);
+                if (val) {
+                    if (img) { img.src = val; img.classList.remove('hidden'); img.style.display = 'block'; }
+                    if (ph) ph.classList.add('hidden');
+                    if (btn) btn.classList.remove('hidden');
+                } else {
+                    if (img) { img.src = ''; img.classList.add('hidden'); img.style.display = 'none'; }
+                    if (ph) ph.classList.remove('hidden');
+                    if (btn) btn.classList.add('hidden');
+                }
+            };
+            showSig('tech-signature-preview-img', 'tech-signature-placeholder', 'btn-clear-tech-signature', d.tech_signature);
+            // Die Kundenunterschrift heißt im Markup OHNE Präfix („signature-preview-img",
+            // index.html). Hier standen „customer-…"-IDs, die es nie gab — die gespeicherte
+            // Unterschrift blieb beim Bearbeiten deshalb unsichtbar, obwohl sie im
+            // versteckten Feld und im PDF vorhanden war.
+            showSig('signature-preview-img', 'signature-placeholder', 'btn-clear-signature', d.customer_signature);
+
+            // Techniker (Closure-Variable selectedTechs)
+            try {
+                selectedTechs.length = 0;
+                (Array.isArray(d.technicians) ? d.technicians : []).forEach(t => selectedTechs.push(t));
+                const hidden = document.getElementById('selected-technician-ids');
+                if (hidden) hidden.value = JSON.stringify(selectedTechs);
+                if (typeof renderTechDropdown === 'function') renderTechDropdown();
+            } catch (e) { console.warn('Techniker setzen fehlgeschlagen:', e); }
+
+            // Arbeitszeiten / Aufgaben / Material (Tabellen wurden vorher geleert)
+            (Array.isArray(d.work_log) ? d.work_log : []).forEach(r => { if (typeof window.addWorkLogTableRow === 'function') window.addWorkLogTableRow(r); });
+            (Array.isArray(d.tasks) ? d.tasks : []).forEach(r => { if (typeof window.addTasksTableRow === 'function') window.addTasksTableRow(r); });
+            (Array.isArray(d.materials) ? d.materials : []).forEach(r => { if (typeof window.addMaterialsTableRow === 'function') window.addMaterialsTableRow(r); });
+
+            // Ansprechpartner
+            (Array.isArray(d.contact_persons) ? d.contact_persons : []).forEach(p => { if (typeof window.addServiceContactPerson === 'function') window.addServiceContactPerson(p); });
+
+            // Checkliste
+            // Immer aufrufen — auch ohne gespeicherte Prüfliste: sonst bleiben die
+            // Pläne des zuvor offenen Berichts stehen und tauchen hier wieder auf.
+            // Ein leeres Objekt heißt „Bericht hatte keine Pläne" (nichts nachträglich anhaken).
+            if (typeof window.loadChecklistPayload === 'function') {
+                try { window.loadChecklistPayload(d.checklist_payload || { checklists: [] }); } catch (e) { console.warn('Checkliste laden fehlgeschlagen:', e); }
+            }
+
+            // Bereits gespeicherte Dateien (Closure-Variable existingServiceFiles)
+            try {
+                existingServiceFiles = Array.isArray(d.files) ? d.files.slice() : [];
+                if (typeof renderServiceFilePreviews === 'function') renderServiceFilePreviews();
+            } catch (e) {}
+
+            // Abweichender Standort-Snapshot
+            try {
+                const snap = d.location_snapshot;
+                if (snap && (snap.street || snap.city || snap.zip || snap.company)) {
+                    setVal('service-location-company', snap.company);
+                    setVal('service-location-street', snap.street);
+                    setVal('service-location-zip', snap.zip);
+                    setVal('service-location-city', snap.city);
+                    setVal('service-location-country', snap.country || 'Deutschland');
+                    const wrap = document.getElementById('service-location-fields-wrapper');
+                    if (wrap) { wrap.classList.remove('hidden'); wrap.style.display = 'block'; }
+                    const btn = document.getElementById('btn-toggle-location');
+                    if (btn) btn.textContent = '- Abw. Maschinenstandort entfernen';
+                }
+            } catch (e) {}
+
+            window._servicePreviousReportId = d.previous_report_id || null;
+            if (typeof window.renderServiceLinkField === 'function') window.renderServiceLinkField();
+        };
+
+        // ---------------------------------------------------------------
+        // Bestehende Berichte nachträglich verknüpfen
+        // ---------------------------------------------------------------
+        // Bisher entstand eine Verknüpfung ausschließlich beim Anlegen über
+        // „Folgebericht". Zwei bereits gespeicherte Berichte ließen sich gar
+        // nicht verbinden — dafür ist dieses Feld da. Geschrieben wird
+        // dieselbe Spalte (previous_report_id), die Anzeige mit Ketten-Symbol
+        // in Historie und Liste greift dadurch automatisch.
+        window.renderServiceLinkField = function () {
+            const box = document.getElementById('service-link-field');
+            if (!box) return;
+
+            // Nur beim Bearbeiten sinnvoll: ein noch nicht gespeicherter
+            // Bericht kann nicht Ziel einer Verknüpfung sein.
+            if (!window.currentEditingServiceId) { box.style.display = 'none'; return; }
+            box.style.display = 'block';
+
+            const machineId = document.getElementById('selected-machine-id')?.value;
+            const eigene = String(window.currentEditingServiceId);
+            const kandidaten = (window.allServiceEntries || [])
+                .filter(e => String(e.id) !== eigene)
+                .filter(e => !machineId || String(e.machine_id) === String(machineId))
+                .sort((a, b) => new Date(b.date || b.created_at || 0) - new Date(a.date || a.created_at || 0))
+                .slice(0, 200);
+
+            const gewaehlt = window._servicePreviousReportId ? String(window._servicePreviousReportId) : '';
+            const fmt = (e) => {
+                const d = e.date || e.created_at;
+                const datum = d ? new Date(d).toLocaleDateString('de-DE') : 'ohne Datum';
+                return `${datum} — ${e.title || 'Servicebericht'}`;
+            };
+
+            box.innerHTML = `
+                <label class="form-label-caps" style="display:block; margin-bottom:0.4rem;">Gehört zu Bericht</label>
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <select id="service-link-select" class="glass-form-input" style="flex:1; min-width:220px;">
+                        <option value="">— keine Verknüpfung —</option>
+                        ${kandidaten.map(e => `<option value="${e.id}"${String(e.id) === gewaehlt ? ' selected' : ''}>${
+                            String(fmt(e)).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                        }</option>`).join('')}
+                    </select>
+                    ${gewaehlt ? `<button type="button" class="btn-secondary" style="padding:8px 12px; font-size:0.82rem;"
+                        onclick="window.jumpToServicebericht(${gewaehlt})">Ansehen</button>` : ''}
+                </div>
+                <small style="display:block; margin-top:5px; color:rgba(255,255,255,0.45); font-size:0.75rem;">
+                    Dieser Bericht wird als Folgebericht des gewählten geführt. Wirksam nach dem Speichern.
+                    ${kandidaten.length ? '' : 'Für diese Maschine gibt es keinen weiteren Bericht.'}
+                </small>`;
+
+            const sel = document.getElementById('service-link-select');
+            if (sel) {
+                sel.addEventListener('change', () => {
+                    window._servicePreviousReportId = sel.value || null;
+                    // Neu zeichnen, damit der „Ansehen"-Knopf mitkommt.
+                    window.renderServiceLinkField();
+                    if (window.showToast) {
+                        window.showToast(sel.value
+                            ? 'Verknüpfung gesetzt — mit dem Speichern wird sie übernommen.'
+                            : 'Verknüpfung gelöst — mit dem Speichern wird sie übernommen.');
+                    }
+                });
+            }
+        };
+
+        // Standort-Snapshot: nur wenn die Standort-Felder sichtbar sind, wird ein abweichender
+        // Standort gespeichert. Ausgeblendet (= entfernt) => leerer Snapshot, damit der Standort
+        // nach dem Neuladen nicht wieder aus dem Maschinen-Stammsatz erscheint.
+        window._buildServiceLocationSnapshot = function () {
+            const wrapper = document.getElementById('service-location-fields-wrapper');
+            const visible = wrapper && !wrapper.classList.contains('hidden');
+            const val = id => (visible ? (document.getElementById(id)?.value.trim() || null) : null);
+            return {
+                company: val('service-location-company'),
+                street:  val('service-location-street'),
+                zip:     val('service-location-zip'),
+                city:    val('service-location-city'),
+                country: val('service-location-country')
+            };
+        };
+
+        // Submit Logic
+        window.saveServiceberichtData = async function () {
+            if (!supabaseClient) throw new Error('Supabase client ist nicht initialisiert!');
+
+            // Bearbeiten-ID aus dem Modal übernehmen: openServiceberichtModal setzt
+            // window.currentEditingServiceId. Ohne diese Übernahme bliebe die lokale
+            // Variable null -> Speichern liefe fälschlich als INSERT und legte einen
+            // DOPPELTEN Bericht an, statt den bestehenden zu aktualisieren.
+            //
+            // IMMER übernehmen — auch wenn es null ist. Früher nur bei gesetzter ID:
+            // öffnete man danach einen NEUEN Bericht (openServiceberichtModal(null),
+            // z. B. über die KI-Erfassung), stand hier noch die ID des zuvor
+            // bearbeiteten Berichts. Das Speichern lief dann als UPDATE auf den
+            // alten Bericht und überschrieb ihn mit Maschine und Inhalt des neuen —
+            // der alte Bericht war „verschwunden".
+            currentEditingServiceId = (window.currentEditingServiceId != null && window.currentEditingServiceId !== '')
+                ? window.currentEditingServiceId : null;
+
+            const machineId = document.getElementById('selected-machine-id').value;
+            const dateStart = document.getElementById('service-date-start').value;
+            const dateEnd = document.getElementById('service-date-end').value;
+            const description = document.getElementById('service-description').value;
+
+            if (!machineId || !dateStart || !description) {
+                if (!dateStart) {
+                    toggleServiceReportSection('service-group-1-header', true);
+                }
+                if (!description) {
+                    toggleServiceReportSection('service-group-2-header', true);
+                }
+                window.showToast('Bitte Maschine, Datum und Beschreibung ausfüllen.');
+                throw new Error('validation_error');
+            }
+
+            // ── Offline path ───────────────────────────────────────────────
+            if (window.offlineService && await window.isLikelyOffline()) {
+                const reportDataOffline = window._applyServiceEditGuard(window._buildServiceReportData());
+                // Offline dieselbe Absicherung: Update nur auf den geöffneten Bericht.
+                if (currentEditingServiceId && (!window._serviceReportBaseline
+                    || String(window._serviceReportBaseline.id) !== String(currentEditingServiceId)
+                    || window._serviceReportBaseline.is_finalized)) {
+                    window.showToast('Gespeichert wurde nicht: die Bericht-Zuordnung ist unklar. Bitte Fenster schließen und neu öffnen.', 'error');
+                    throw new Error('update_blockiert');
+                }
+                const action   = (typeof currentEditingServiceId !== 'undefined' && currentEditingServiceId) ? 'update' : 'insert';
+                const serverId = (typeof currentEditingServiceId !== 'undefined') ? currentEditingServiceId : null;
+                const baseline = window._serviceReportBaseline || null;
+                const pendingFiles = [...serviceFiles]; // Fotos/Dokumente: Upload erfolgt automatisch beim nächsten Sync
+
+                // Stabiler Schlüssel für noch nicht angelegte Berichte (action 'insert'): bleibt
+                // über mehrere Offline-Speicherungen DERSELBEN Sitzung gleich, damit saveDraft
+                // denselben Entwurf aktualisiert statt jedes Mal einen weiteren anzulegen
+                // (sonst würden beim Sync mehrere doppelte Berichte entstehen).
+                if (action === 'insert' && !window._offlineDraftKey) {
+                    window._offlineDraftKey = 'tmp_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+                }
+
+                await window.offlineService.saveDraft(action, serverId, baseline, reportDataOffline, pendingFiles, window._offlineDraftKey);
+                serviceFiles = [];
+                window.updatePendingBadge();
+                const fileNote = pendingFiles.length > 0
+                    ? ` Inkl. ${pendingFiles.length} Anhang${pendingFiles.length > 1 ? 'ängen' : ''}, wird automatisch mit hochgeladen.`
+                    : '';
+                window.showSyncToast('Offline gespeichert — wird synchronisiert sobald Verbindung besteht.' + fileNote, 'info');
+                return; // skip online save
+            }
+
+            console.log('Preparing files for Servicebericht...');
+
+            // 1. Prepare Final Files Array
+            const finalFiles = [...existingServiceFiles];
+
+            // 2. Upload New Files via Cloudflare R2 (parallelisiert statt nacheinander)
+            if (serviceFiles.length > 0) {
+                const machine = (window.machineList || []).find(m => m.id == machineId);
+                const folderName = machine ? window.getMachineFolderName(machine.id, machine.manufacturer, machine.name, machine.serial || machine.serial_number, machine.year) : `Maschinen/${machineId}`;
+                const pathGenerator = (file, i) => {
+                    const cleanName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+                    return `${folderName}/Serviceberichte/${Date.now()}-${i}-${cleanName}`;
+                };
+
+                const uploadResults = await window.FileUploadService.uploadFiles(
+                    serviceFiles,
+                    pathGenerator,
+                    { bucket: 'dateien', compress: true, concurrency: 5, provider: 'cloudflare-r2' }
+                );
+
+                uploadResults.forEach((result, i) => {
+                    finalFiles.push({
+                        name: serviceFiles[i].name,
+                        type: serviceFiles[i].type,
+                        url: result.url
+                    });
+                });
+            }
+            
+            // Clear new files array since they are uploaded and now in existingServiceFiles
+            serviceFiles = [];
+            existingServiceFiles = [...finalFiles];
+
+            // 3. Save to database
+            const reportTitle = document.getElementById('service-report-title')?.value || 'Servicebericht';
+            const catIdsVal = document.getElementById('service-category-id')?.value;
+            let categoryIds = [];
+            try {
+                categoryIds = catIdsVal ? JSON.parse(catIdsVal) : [];
+            } catch (e) {
+                categoryIds = catIdsVal ? [parseInt(catIdsVal)] : [];
+            }
+
+            const reportData = {
+                machine_id: parseInt(machineId),
+                category_id: categoryIds.length > 0 ? categoryIds[0] : null,
+                category_ids: categoryIds,
+                title: reportTitle,
+                date: dateStart,
+                datum_von: dateStart,
+                datum_bis: dateEnd || null,
+                hours: 0,
+                previous_report_id: window._servicePreviousReportId || null,
+                technicians: (typeof selectedTechs !== 'undefined') ? selectedTechs : [],
+                files: finalFiles,
+                description: description,
+                remarks: document.getElementById('service-remarks')?.value || null,
+                travel_distance_km: parseFloat(document.getElementById('service-driving-distance')?.value) || null,
+                travel_time_minutes: parseInt(document.getElementById('service-driving-time')?.value) || null,
+                customer_signature: document.getElementById('service-customer-signature')?.value || null,
+                customer_name: document.getElementById('service-customer-signee-name')?.value.trim() || null,
+                tech_signature: document.getElementById('service-tech-signature')?.value || null,
+                operating_hours: document.getElementById('service-operating-hours')?.value || null,
+                workshop_order_number: (function() {
+                    const yearDigit = document.getElementById('service-workshop-year-digit')?.value.trim() || '';
+                    const suffix = document.getElementById('service-workshop-order-suffix')?.value.trim() || '';
+                    if (suffix) {
+                        return `202${yearDigit}-40${suffix.padStart(3, '0')}`;
+                    }
+                    return null;
+                })(),
+                work_log: typeof window.getWorkLogTableData === 'function' ? window.getWorkLogTableData() : [],
+                tasks: typeof window.getTasksTableData === 'function' ? window.getTasksTableData() : [],
+                materials: typeof window.getMaterialsTableData === 'function' ? window.getMaterialsTableData() : [],
+                checklist_payload: typeof window.getChecklistPayload === 'function' ? window.getChecklistPayload() : null,
+                status_repaired: document.getElementById('service-status-repaired')?.checked || false,
+                status_repaired_en: document.getElementById('service-status-repaired-en')?.checked || false,
+                tech_sig_date: document.getElementById('service-tech-sig-date')?.value || null,
+                customer_sig_date: document.getElementById('service-customer-sig-date')?.value || null,
+                contact_persons: typeof window.collectServiceContactPersons === 'function' ? window.collectServiceContactPersons() : [],
+                hotel_company: document.getElementById('service-hotel-company')?.value.trim() || null,
+                hotel_street: document.getElementById('service-hotel-street')?.value.trim() || null,
+                hotel_zip: document.getElementById('service-hotel-zip')?.value.trim() || null,
+                hotel_city: document.getElementById('service-hotel-city')?.value.trim() || null,
+                hotel_country: document.getElementById('service-hotel-country')?.value.trim() || null,
+                // Per-Bericht-Snapshot des Maschinenstandorts. Damit bleibt ein abweichender
+                // Standort auf DIESEN Bericht beschränkt und "wandert" nicht auf andere Berichte
+                // derselben Maschine (der Maschinen-Stammstandort wird bewusst NICHT überschrieben).
+                location_snapshot: window._buildServiceLocationSnapshot()
+            };
+
+            // Sicherheitsnetz: leere Felder überschreiben beim Bearbeiten keine
+            // vorhandenen DB-Werte (siehe _applyServiceEditGuard).
+            window._applyServiceEditGuard(reportData);
+
+            console.log('Sending Servicebericht data to Supabase:', reportData);
+
+            let dbError;
+            if (typeof currentEditingServiceId !== 'undefined' && currentEditingServiceId) {
+                // If it already has PDF fields, keep them during normal save
+                const { data: currentRecord } = await supabaseClient
+                    .from('service_entries')
+                    .select('pdf_url, pdf_path, pdf_created_at, is_finalized, machine_id')
+                    .eq('id', currentEditingServiceId)
+                    .single();
+                // Schutz vor Überschreiben eines FREMDEN Berichts: geschrieben wird nur,
+                // wenn die ID zu genau dem Bericht gehört, der geöffnet wurde (Baseline),
+                // er nicht abgeschlossen ist und die Maschine noch dieselbe ist.
+                // (Vorfall 2026-09-28: abgeschlossener EYS-Bericht mit Backhus überschrieben.)
+                const base = window._serviceReportBaseline;
+                const fremd = !base || String(base.id) !== String(currentEditingServiceId);
+                if (fremd || (currentRecord && currentRecord.is_finalized)
+                    || (currentRecord && base && String(currentRecord.machine_id) !== String(base.machine_id))) {
+                    console.error('Servicebericht-Speichern blockiert:', { currentEditingServiceId, baseline: base && base.id, record: currentRecord });
+                    window.showToast(currentRecord && currentRecord.is_finalized
+                        ? 'Gespeichert wurde nicht: der Ziel-Bericht ist abgeschlossen. Bitte Fenster schließen und den Bericht neu anlegen.'
+                        : 'Gespeichert wurde nicht: die Bericht-Zuordnung ist unklar. Bitte Fenster schließen und neu öffnen — nichts wurde überschrieben.', 'error');
+                    throw new Error('update_blockiert');
+                }
+                if (currentRecord) {
+                    reportData.pdf_url = currentRecord.pdf_url;
+                    reportData.pdf_path = currentRecord.pdf_path;
+                    reportData.pdf_created_at = currentRecord.pdf_created_at;
+                }
+
+                const { error: updateError } = await supabaseClient
+                    .from('service_entries')
+                    .update(reportData)
+                    .eq('id', currentEditingServiceId);
+                dbError = updateError;
+            } else {
+                const { data: insertData, error: insertError } = await supabaseClient
+                    .from('service_entries')
+                    .insert([reportData])
+                    .select('id');
+                dbError = insertError;
+                if (!dbError && insertData && insertData.length > 0) {
+                    currentEditingServiceId = insertData[0].id;
+                    window.currentEditingServiceId = insertData[0].id; // beide synchron halten
+                    // Ab jetzt ist das „der geöffnete Bericht" — sonst würde das nächste
+                    // Speichern (z. B. beim Abschließen) von der Absicherung oben blockiert.
+                    window._serviceReportBaseline = Object.assign({}, reportData, { id: insertData[0].id });
+                }
+            }
+
+            if (dbError) {
+                console.error('Supabase DB Error (Servicebericht):', dbError);
+                throw dbError;
+            }
+
+            // Delete removed files from Cloudflare R2
+            if (removedServiceFiles.length > 0) {
+                for (const file of removedServiceFiles) {
+                    await deleteFileEntryStorage(file);
+                }
+                removedServiceFiles = [];
+            }
+
+            // --- Maintenance Logic Integration ---
+            const targetMachineId = reportData.machine_id;
+            const serviceDate = reportData.date;
+            const overrideDate = document.getElementById('service-next-maintenance-override')?.value;
+
+            const machineRef = machineList.find(m => m.id === targetMachineId);
+            if (machineRef) {
+                const categoryRef = categoryList.find(c => c.id === machineRef.category_id);
+
+                // Nur wenn im Servicebericht wirklich eine Wartung/UVV gewählt wurde, zählt der
+                // Bericht als Wartungstermin. Reine Reparatur-/Serviceberichte lassen "Letzte/
+                // Nächste Wartung" unberührt (kein Überschreiben mit dem Reparaturdatum).
+                const maintArt = (typeof window.extractServiceMaintArt === 'function')
+                    ? window.extractServiceMaintArt(reportData.checklist_payload) : '';
+                const isMaintenanceReport = !!maintArt;
+
+                // WICHTIG: Der Standort wird NICHT mehr in den Maschinen-Stammsatz zurückgeschrieben.
+                // Ein (evtl. abweichender) Standort gehört zum jeweiligen Bericht (location_snapshot)
+                // und darf nicht auf andere Berichte derselben Maschine durchschlagen. Der
+                // Stamm-Maschinenstandort wird ausschließlich im Maschinen-Formular gepflegt.
+                const machineUpdate = {};
+
+                if (isMaintenanceReport) {
+                    let nextMaintDate;
+                    if (overrideDate) {
+                        nextMaintDate = new Date(overrideDate).toISOString();
+                    } else {
+                        const interval = machineRef.maintenance_interval_months || (categoryRef ? categoryRef.default_maintenance_interval_months : 12) || 12;
+                        nextMaintDate = window.computeRolledNextMaintenance(serviceDate, interval);
+                    }
+
+                    let updatedFiles = machineRef.files ? [...machineRef.files] : [];
+                    updatedFiles = updatedFiles.filter(f => f.type !== 'meta' || f.key !== 'is_next_maintenance_auto');
+                    if (!overrideDate) {
+                        updatedFiles.push({ type: 'meta', key: 'is_next_maintenance_auto', property: 'true' });
+                    }
+
+                    machineUpdate.last_maintenance = serviceDate;
+                    machineUpdate.next_maintenance = nextMaintDate;
+                    machineUpdate.files = updatedFiles;
+                }
+
+                if (Object.keys(machineUpdate).length > 0) {
+                    const { error: machineUpdateError } = await supabaseClient
+                        .from('machines')
+                        .update(machineUpdate)
+                        .eq('id', targetMachineId);
+
+                    if (machineUpdateError) {
+                        console.error('Error updating machine maintenance dates:', machineUpdateError);
+                    }
+                }
+            }
+
+            if (typeof fetchServiceEntries === 'function') await fetchServiceEntries();
+            if (typeof fetchMachines === 'function') await fetchMachines();
+
+            return currentEditingServiceId;
+        };
+
+        window.submitServicebericht = async function () {
+            const submitBtn = document.querySelector('button[onclick="submitServicebericht()"]');
+            const originalText = submitBtn ? submitBtn.textContent : 'Speichern';
+
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Speichere...';
+            }
+
+            try {
+                await window.saveServiceberichtData();
+                serviceberichtIsDirty = false;
+                window.showToast('Servicebericht wurde erfolgreich gespeichert!');
+                closeServiceberichtModal();
+            } catch (err) {
+                if (err.message !== 'validation_error') {
+                    console.error('CRITICAL ERROR saving service report:', err);
+                    window.showToast('Fehler beim Speichern: ' + (err.message || JSON.stringify(err)));
+                }
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = originalText;
+                }
+            }
+        };
+
+        window.saveAndCloseServicebericht = async function () {
+            serviceberichtIsDirty = false;
+            await window.submitServicebericht();
+        };

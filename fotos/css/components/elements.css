@@ -1,0 +1,229 @@
+/* ========================================================= */
+/* ============ ALLGEMEINE UI-ELEMENTE (SHARED) ============ */
+/* ========================================================= */
+
+/* --------------------------------------------------------- */
+/* Tabs & Akkordeons                                          */
+/* --------------------------------------------------------- */
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+    animation: fadeIn 0.25s ease;
+}
+
+.tab-content.hidden {
+    display: none !important;
+}
+
+.accordion-section {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.accordion-content {
+    padding: 0 1.25rem 1.25rem 1.25rem;
+}
+
+.accordion-content.hidden {
+    display: none;
+}
+
+.history-content-inner {
+    padding: 1rem 1.25rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    font-family: var(--font-body);
+    font-size: var(--fs-md);
+    color: rgba(255, 255, 255, 0.75);
+}
+
+/* --------------------------------------------------------- */
+/* Karten-Bausteine                                           */
+/* --------------------------------------------------------- */
+
+.card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 1rem 1.25rem;
+    min-width: 0;
+}
+
+.card-title {
+    margin: 0;
+    font-family: var(--font-heading);
+    font-size: var(--fs-base);
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.25;
+}
+
+.card-description {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: var(--fs-md);
+    color: rgba(255, 255, 255, 0.55);
+    line-height: 1.4;
+}
+
+.card-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: auto;
+    padding: 0.75rem 1.25rem 1rem 1.25rem;
+}
+
+.card-image-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 140px;
+    background: rgba(255, 255, 255, 0.03);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.25);
+}
+
+/* --------------------------------------------------------- */
+/* Tabellen-Wrapper & Scroll-Helfer                           */
+/* --------------------------------------------------------- */
+
+.table-responsive-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--radius-lg);
+}
+
+.table-responsive-wrapper::-webkit-scrollbar {
+    height: 6px;
+}
+
+.table-responsive-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-sm);
+}
+
+.hide-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+}
+
+/* --------------------------------------------------------- */
+/* Lade-Indikatoren                                           */
+/* --------------------------------------------------------- */
+
+.spinner,
+.loading-spinner,
+.spinner-small {
+    animation: spinnerRotate 0.9s linear infinite;
+    transform-origin: center;
+}
+
+.loading-spinner,
+.spinner-small {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: #fff;
+    border-radius: var(--radius-circle);
+    box-sizing: border-box;
+}
+
+.loading-spinner {
+    width: 28px;
+    height: 28px;
+    border-width: 3px;
+    margin: 2rem auto;
+}
+
+@keyframes spinnerRotate {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* --------------------------------------------------------- */
+/* Bestätigungs-Häkchen                                       */
+/* --------------------------------------------------------- */
+
+.checkmark-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-circle);
+    background: rgba(34, 197, 94, 0.15);
+    border: 2px solid rgba(34, 197, 94, 0.5);
+    color: var(--secondary-green);
+    margin: 0 auto 1rem auto;
+}
+
+.checkmark-svg {
+    width: 28px;
+    height: 28px;
+    stroke: currentColor;
+    stroke-width: 3;
+    fill: none;
+}
+
+/* --------------------------------------------------------- */
+/* Kunden-Vorschläge (Autocomplete-Einträge)                  */
+/* --------------------------------------------------------- */
+
+.cust-name {
+    font-family: var(--font-body);
+    font-size: var(--fs-md);
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.25;
+}
+
+.cust-details {
+    font-family: var(--font-body);
+    font-size: var(--fs-sm);
+    color: rgba(255, 255, 255, 0.5);
+    line-height: 1.3;
+}
+
+/* --------------------------------------------------------- */
+/* Scrollbare Bereiche in Modals                              */
+/* --------------------------------------------------------- */
+
+.pme-table-scroll {
+    max-height: 340px;
+    overflow-y: auto;
+    padding-right: 2px;
+}
+
+.pme-table-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.pme-table-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-sm);
+}
+
+.template-group-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}

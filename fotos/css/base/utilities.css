@@ -1,0 +1,65 @@
+/* ==========================================================
+   WIEDERKEHRENDE MUSTER
+   ==========================================================
+   Diese Klassen ersetzen style="…"-Attribute, die im Markup immer wieder
+   identisch auftauchten. Vorteil: eine Schriftgroesse oder Farbe aendert man
+   hier einmal statt an achtzig Stellen.
+
+   Bewusst NICHT hierher gewandert sind Muster wie display:none oder
+   position:relative — die werden teils zur Laufzeit per JavaScript gesetzt
+   und muessen inline bleiben.
+
+   Diese Datei wird als letztes Stylesheet geladen: die Regeln standen vorher
+   inline und haben damit alles uebertroffen. Wuerde sie frueher geladen,
+   koennten Modul-Stylesheets sie ueberschreiben und das Aussehen sich aendern.
+   ========================================================== */
+
+/* Beschriftung ueber einem Eingabefeld — Grossbuchstaben, gesperrt, gedaempft */
+.form-label-caps {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: var(--fs-md);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    display: block;
+}
+
+/* Anklickbare Zeile: Symbol und Text nebeneinander */
+.row-clickable {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+/* Nur der Mauszeiger — fuer Elemente, die auf Klick reagieren */
+.clickable {
+    cursor: pointer;
+}
+
+/* Kleiner, zurueckgenommener Begleittext */
+.text-muted-sm {
+    font-size: var(--fs-md);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+/* Pulsierendes Leuchten für den aktiven „Für mich"-Erinnerungsfilter (js/processes.js) */
+@keyframes proc-mine-glow {
+    0%, 100% { box-shadow: 0 0 0 1px rgba(16,185,129,0.35), 0 0 12px rgba(16,185,129,0.45); }
+    50%      { box-shadow: 0 0 0 1px rgba(16,185,129,0.55), 0 0 20px rgba(16,185,129,0.75); }
+}
+
+/* Löschen-Berechtigung: Ohne den Haken „Einträge löschen" (body.disable-delete)
+   werden alle Lösch-Buttons ausgeblendet. js/permissions.js setzt die Klasse,
+   canDelete() ist die zusätzliche Absicherung dahinter. */
+body.disable-delete .delete-permission-required {
+    display: none !important;
+}
+
+/* Knöpfe mit zwei Beschriftungen (lang/kurz): am Schreibtisch gilt die
+   lange, auf dem Handy schaltet responsive.css auf die kurze um. Ohne
+   diese Regel standen beide nebeneinander ("KATEGORIE ANLEGEN ANLEGEN"). */
+.btn-label-short {
+    display: none;
+}

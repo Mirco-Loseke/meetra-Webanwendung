@@ -1,0 +1,23 @@
+/* =========================================================
+   DIESE DATEI WIRD NICHT MEHR GELADEN
+   ---------------------------------------------------------
+   Sie hat die CSS-Bausteine frueher per @import eingebunden. Das
+   hatte zwei Nachteile:
+
+     1. Kette statt parallel: der Browser entdeckte die Dateien erst,
+        nachdem style.css geladen und geparst war.
+     2. Das ?v=N an style.css bustete die importierten Dateien NICHT —
+        deren URL blieb gleich, der Browser nahm die alte Fassung und
+        Aenderungen kamen ohne jede Fehlermeldung nie an.
+
+   Seit 25.08.2026 stehen die Bausteine als eigene <link>-Zeilen in
+   index.html, in derselben Reihenfolge wie vorher (die Reihenfolge
+   entscheidet ueber die Spezifitaet und ist bindend). Jede Datei hat
+   dort ihr eigenes ?v=N.
+
+   NEUE CSS-DATEI? -> <link> in index.html eintragen (an der richtigen
+   Stelle der Reihenfolge) und in die PRECACHE-Liste in sw.js.
+
+   Die Datei bleibt leer bestehen, weil aeltere Service-Worker-Caches
+   und Lesezeichen sie noch anfragen koennen.
+   ========================================================= */

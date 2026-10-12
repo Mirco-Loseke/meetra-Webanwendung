@@ -1,0 +1,1161 @@
+// ==========================================================
+// MIETVEREINBARUNG — VORLAGEN
+// ----------------------------------------------------------
+// Legt fest, WIE der Mietvereinbarungs-Bogen aussieht: Titel,
+// Beschriftungen, Baugruppen, Pruefspalten, Fotopositionen und
+// Vertragstext. Je Maschinentyp (Kategorie) kann eine eigene
+// Vorlage hinterlegt werden — genau wie bei den Protokollvorlagen.
+//
+// Gespeichert wird in der Supabase-Tabelle "rental_templates"
+// (Migration: supabase/supabase_add_rental_templates.sql).
+// Fehlt die Tabelle, arbeitet die App mit dem Standard weiter und
+// die Einstellungsseite sagt, was zu tun ist.
+//
+// Ersetzt die frueheren js/mietvereinbarung-texte.js.
+// ==========================================================
+
+(function () {
+    'use strict';
+
+    // ------------------------------------------------------
+    // Standardvorlage — Wortlaut aus der Word-Vorlage
+    // "meetra VORLAGE Mietvertrag Trommelsiebmaschine HIPPO".
+    // Sie greift immer dann, wenn fuer den Maschinentyp nichts
+    // hinterlegt ist, und dient neuen Vorlagen als Ausgangspunkt.
+    // ------------------------------------------------------
+    window.MIET_VORLAGE_STANDARD = {
+        titel: 'Mietvereinbarung',
+        zusatzinfo: 'Der Tagessatz enthält 6 Betriebsstunden, jede Betriebsstunde darüber hinaus, wird zusätzlich berechnet.',
+        schlusssatz: 'Es gelten unsere umseitigen Mietbedingungen.',
+
+        // Ueberschriften der Abschnitte
+        bloecke: {
+            mieter: 'Mieter',
+            geraet: 'Mietgerät',
+            abnahme: 'Zustand der Baugruppen',
+            schaeden: 'Schadenstabelle bekannter Vorschäden',
+            fotos_uebergabe: 'Fotos bei Übergabe',
+            fotos_ruecknahme: 'Fotos bei Rücknahme',
+            bestaetigung_uebergabe: 'o. g. Angaben bei Übergabe bestätigt',
+            bestaetigung_ruecknahme: 'o. g. Angaben bei Rücknahme bestätigt'
+        },
+
+        // Beschriftungen der einzelnen Zeilen
+        felder: {
+            name: 'Name:',
+            street: 'Straße:',
+            zip_city: 'PLZ/Ort:',
+            ausweis: 'Ausweisnummer:',
+            einsatzort: 'Einsatzort:',
+            geraet: 'Mietgerät:',
+            abholdatum: 'Abhol-/Lieferdatum:',
+            uhrzeit: 'Uhrzeit:',
+            beginn: 'Mietbeginn:',
+            ende: 'Mietende:',
+            betriebsstunden: 'Betriebsstunden:',
+            tagessatz: 'Tagessatz pro Werktag',
+            zusatzinfo: 'Zusatzinfo:',
+            baugruppe: 'Baugruppe',
+            sauberkeit: 'Sauberkeit, Füllstand',
+            gereinigt: 'Gereinigt',
+            diesel: 'Diesel Füllstand',
+            sonstiges: 'Sonstiges:',
+            einweisung: 'Einweisung stattgefunden',
+            unterschrift_vermieter: 'Unterschrift Vermieter',
+            unterschrift_mieter: 'Unterschrift Mieter',
+            // Steht über den Übergabe-Unterschriften; leer = kein Hinweis.
+            hinweis_anleitung: 'Der Maschine liegt eine Kurzbeschreibung zum Einsatz und zum bestimmungsgemäßen Gebrauch bei. Sie befindet sich in der Regel im Steuerkasten. Die Kurzbeschreibung ersetzt nicht die Original-Betriebsanleitung des Herstellers, die wir Ihnen auf Wunsch gerne zusenden.'
+        },
+
+        // Pruefspalten der Abnahmetabelle. Die erste gilt als Übergabe,
+        // die zweite als Rücknahme; weitere sind zusaetzliche Spalten.
+        spalten: [
+            { id: 'uebergabe', label: 'Zustand bei Übernahme' },
+            { id: 'ruecknahme', label: 'Zustand bei Rückgabe' }
+        ],
+
+        baugruppen: [
+            { gruppe: 'Rahmen, Räder', punkte: ['Felgen/Reifen', 'Unterfahrschutz', 'Kotflügel/Schmutzfänger', 'Hauben/Klappen/Deckel'] },
+            { gruppe: 'Bänder, Zylinder', punkte: ['Bunkerband', 'Heckband', 'Seitenband', 'Zylinder'] },
+            { gruppe: 'Siebtrommel', punkte: ['Beschädigung/Beulen'] },
+            { gruppe: 'E-Anlage', punkte: ['Scheinwerfer/Rundumleuchte', 'Rücklichter/Rückstrahler', 'Zündschloss', 'Schlüssel'] }
+        ],
+
+        fotos: [
+            'Vorne rechts', 'Vorne', 'Vorne links', 'Links',
+            'Hinten links', 'Hinten', 'Hinten rechts', 'Rechts',
+            'Betriebsstunden'
+        ],
+
+        texte: {
+            // „stand" ist der Fassungsstand des Vertragstextes. Wird der
+            // Wortlaut hier geändert, MUSS die Zahl hochgezählt werden: gespeicherte
+            // Vorlagen mit einem älteren (oder fehlendem) Stand bekommen dann beim
+            // Öffnen automatisch diesen Text — siehe textMitStandard(). Ohne das
+            // hing jede vor der Änderung angelegte Vorlage für immer am alten
+            // Wortlaut, obwohl er rechtlich überholt ist.
+            stand: 2,
+            titel: 'Mietbedingungen und Vereinbarungen',
+            abschnitte: [
+                // ---- Zweite Rechtsseite: allgemeine Mietbedingungen ----
+                // Wortlaut aus der bisherigen Papiervorlage übernommen.
+                {
+                    titel: 'Allgemeines',
+                    absaetze: [
+                        'Die nachstehenden Bedingungen gelten für sämtliche Rechte und Pflichten aus dem Mietvertrag. Abweichungen davon sind nur gültig, wenn sie zwischen den Vertragsparteien schriftlich vereinbart worden sind.'
+                    ]
+                },
+                {
+                    titel: '2. Mietobjekt',
+                    absaetze: [
+                        'a) Umfang',
+                        'Der Vermieter überläßt dem Mieter die in den Lieferungsunterlagen näher bezeichneten Geräte zur Benutzung. Maßgebend ist der Mietvertrag des Vermieters.',
+                        'b) Eigentum',
+                        'Das Mietobjekt samt Bestandteilen und Zubehör bleibt während der ganzen Mietdauer ausschließliches Eigentum des Vermieters. Wird das Mietobjekt vom Mieter auf Grundstücke oder in Räume gebracht, die Dritten gehören, so hat der Mieter diese Dritten unverzüglich über das Eigentum des Vermieters am Mietobjekt zu unterrichten. Bei Verschiebung des Mietobjektes von einem Bauobjekt zum anderen ist der Vermieter sofort schriftlich zu verständigen. Das Gerät könnte GPS-überwacht sein.',
+                        'c) Verwendung',
+                        'Ohne vorherige schriftliche Zustimmung des Vermieters dürfen keine Änderungen (insbesondere zusätzliche Einbauten) am Mietobjekt vorgenommen werden. Betriebs- und Wartungsvorschriften des Vermieters sowie Weisungen betr. sachgemäße Verwendung und zusätzliche Belastung sind strikt einzuhalten. Der Mieter ist nicht befugt, Dritten Rechte am Mietobjekt einzuräumen oder ihnen Rechte aus dem Mietvertrag abzutreten; insbesondere sind Untermiete oder Weiterverleihen des Mietobjektes untersagt.'
+                    ]
+                },
+                {
+                    titel: '3. Mietzins',
+                    absaetze: [
+                        'a) Grundlage',
+                        'Der vereinbarte Mietzins gilt für die vereinbarte Zeitdauer bei einem einschichtigen Betrieb von max. 8 Stunden pro Tag (Wochenmiete), ohne Samstag und Sonntag oder für die vereinbarte Anzahl von Einsätzen. Bei mehrschichtigem Betrieb oder einer größeren Anzahl von Einsätzen ist ein Zuschlag zum vereinbarten Mietzins zu entrichten. Der Mietzins ist auch dann für die ganze Mietdauer geschuldet, wenn die normale Betriebszeit nicht voll ausgenützt oder das Mietobjekt vor Ablauf der Mietdauer zurückgegeben wird. Im vereinbarten Mietzins sind die Verlade-, Transport-, Montage-, Demontage-, Verpackungs- und Versicherungskosten nicht inbegriffen; diese werden extra berechnet.',
+                        'b) Fälligkeit',
+                        'Der Mietzins ist im Voraus zu entrichten, erstmals bei Versandbereitschaft.',
+                        'c) Verzug',
+                        'Befindet sich der Mieter mit seiner Zahlung im Rückstand, so kann ihm der Vermieter bei Mieten, die für ein halbes Jahr oder länger abgeschlossen sind, eine Frist von 30 Tagen, bei Mieten von kürzerer Dauer eine solche von 6 Tagen mit der Androhung ansetzen, daß, sofern nicht innerhalb dieser Frist der rückständige Mietzins bezahlt werde, der Mietvertrag mit deren Ablauf aufgelöst sei. Spricht der Vermieter den Rücktritt vom Vertrag aus, so hat der Mieter das Mietobjekt unverzüglich dem Vermieter zurückzusenden, wobei die Transport- und Versicherungskosten für die Rücksendung sowie anfällige weitere damit verbundene Spesen zu seinen Lasten gehen. Der Mieter bleibt zur Bezahlung des Mietzinses bis zum Ende der vereinbarten Mietdauer verpflichtet; der Vermieter muß sich jedoch anrechnen lassen, was er durch anderweitige Verwendung des Mietobjektes während der Mietdauer erlangt.'
+                    ]
+                },
+                {
+                    titel: '4. Mietbeginn',
+                    absaetze: [
+                        'a) Zeitpunkt',
+                        'Die Miete beginnt mit dem Tag der Versandbereitschaft beim Vermieter bzw. der Abholung des Mietobjektes durch den Mieter. Der Vermieter hat das Mietobjekt zum vereinbarten Zeitpunkt auf dem vorgesehenen Beförderungsweg zu versenden bzw. zur Abholung durch den Mieter bereitzuhalten. Der Mieter ist von der Versandbereitschaft unverzüglich in Kenntnis zu setzen.',
+                        'b) Gefahrenübereignung',
+                        'Die Gefahr geht auf den Mieter über, sobald die Sendung dem Frachtführer, Spediteur oder Mieter zur Verfügung gestellt wird, je nachdem, ob Versand oder Abholung durch den Mieter vorliegt.'
+                    ]
+                },
+                {
+                    titel: '5. Montage und Demontage',
+                    absaetze: [
+                        'Nur wenn ausdrücklich vereinbart, übernimmt der Vermieter die Montage und Demontage des Mietobjektes. In anderen Fällen stellt er dem Mieter auf Verlangen Monteure zur Verfügung gegen Berechnung der Reise-, Arbeits- und Wartezeit, der Reisespesen und Unterhaltskosten (auch für Sonn- und Feiertage während der Montagedauer). Können die Monteure ohne ihr Verschulden und ohne Verschulden des Vermieters eine Arbeit nicht beginnen oder weiterführen, so gehen alle daraus entstehenden Mehrkosten zu Lasten des Mieters, auch wenn für die Montage- und Demontagearbeiten eine Pauschalsumme vereinbart wurde. Der Mieter hat auch die notwendigen Hilfskräfte und Montageeinrichtungen gemäß Vereinbarung rechtzeitig zur Verfügung zu stellen. Insofern der Mieter verpflichtet ist, dem Vermieter Monteure oder Hilfskräfte zu stellen, sind Löhne, Sozialleistungen, Versicherungsprämien usw. vom Mieter zu tragen. Das vom Vermieter gestellte Personal wird von ihm entlohnt und gegen Krankheit und Unfälle versichert. Die vom Vermieter angegebenen Montage- und Demontagezeiten sind nicht verbindlich. Unverschuldete Hindernisse, höhere Gewalt, schlechte Witterung usw. können eine Terminverlängerung zur Folge haben. Nichteinhalten der Montage- und Demontagezeiten infolge oben genannter Gründe gibt dem Mieter weder ein Recht auf Rückzug des Auftrages noch auf Schadenersatz.'
+                    ]
+                },
+                {
+                    titel: '6. Pflichten des Vermieters',
+                    absaetze: [
+                        'a) Haftung',
+                        'Der Vermieter hat das Mietobjekt in der Beschaffenheit und Leistungsfähigkeit zu übergeben, wie sie im Mietvertrag festgelegt wurden. Mängel in der vertragsgemäßen Gebrauchsbereitschaft hat der Vermieter so rasch wie möglich auf seine Kosten zu beheben. Alle weitergehenden Ansprüche und jede weitere Haftung des Vermieters für direkte oder indirekte Schäden des Mieters (wie solche aus der Unbenutzbarkeit des Mietobjektes und der Belangung des Mieters wegen Drittschaden, die mit der Lieferung, Rückgabe und dem Betrieb des Mietobjektes im Zusammenhang stehen) sind ausdrücklich ausgeschlossen. Vorbehalten bleiben Schäden, die vom Vermieter persönlich nachweislich grobfahrlässig oder in rechtswidriger Absicht verursacht werden.',
+                        'b) Wird der Vermieter von einem Dritten aus einem Schadenereignis in Anspruch genommen und liegt solidarische Haftung vor, so kann er für sämtliche Anforderungen auf den Mieter Regreß nehmen, sofern ihn persönlich nachweislich kein grobes Verschulden trifft.'
+                    ]
+                },
+                {
+                    titel: '7. Prüfungspflicht des Mieters',
+                    absaetze: [
+                        'Der Mieter hat das Mietobjekt sofort nach Erhalt zu prüfen und anfällige Mängel dem Vermieter unverzüglich schriftlich anzuzeigen. Sofern bei diesem innerhalb von 8 Arbeitstagen seit Eintreffen des Mietobjektes am Empfangsort bzw. seit Abholung desselben keine Mängelrüge eintrifft, gilt das Mietobjekt als vom Mieter genehmigt. Spätere Beanstandungen werden nur entgegengenommen, wenn die Mängel bei Eintreffen bzw. Abholung trotz ordentlicher Prüfung nicht erkennbar waren und der Mieter innerhalb einer Woche seit Entdeckung des Mangels schriftlich reklamiert. Beanstandungen des Mietobjektes entheben den Mieter nicht von der Pflicht zur termingemäßen Bezahlung des Mietzinses.'
+                    ]
+                },
+                {
+                    titel: '8. Unterhalt des Mietobjektes',
+                    absaetze: [
+                        'a) Unterhalts- und Meldepflicht',
+                        'Der Mieter hat das Mietobjekt mit aller Sorgfalt zu behandeln, es unter Beachtung der vom Vermieter erlassenen Betriebsvorschriften und Weisungen sachgemäß zu verwenden, zu bedienen und zu warten. Funktioniert das Mietobjekt nach Ansicht des Mieters nicht ordnungsgemäß, hat er den Vermieter sofort zu benachrichtigen. Die Benutzung des Mietobjektes ist durch den Mieter so lange einzustellen, bis die Störung durch den Vermieter überprüft und ggf. die notwendige Reparatur vorgenommen ist. Der schuldige Teil trägt die Kosten für die Instandhaltung. Eine Haftung seitens des Vermieters für irgendwelche Ansprüche anderer Art ist ausgeschlossen.',
+                        'b) Untersuchung des Mietobjektes',
+                        'Der Vermieter ist berechtigt, das Mietobjekt jederzeit nach vorheriger Vereinbarung mit dem Mieter auf seinen Zustand zu untersuchen oder untersuchen zu lassen. Weisungen des Vermieters oder seiner Gruppe für Bedienung, Überwachung, Unterhalt und Wartung des Mietobjektes hat der Mieter strikt zu befolgen.',
+                        'c) Reparaturen',
+                        'Während der Mietdauer notwendig werdende Reparaturen hat der Mieter unverzüglich durch den Vermieter vornehmen zu lassen. Nur mit dessen schriftlicher Zustimmung darf der Mieter Reparaturen selbst vornehmen oder durch einen Dritten ausführen lassen, ansonsten er die Kosten und die Verantwortung selbst zu tragen hat.',
+                        'd) Kosten',
+                        'Verschleißteile und Kraftstoff gehen zu Lasten des Mieters. Die Kosten für Reparaturen und Ersatzteile hat der Mieter zu tragen, sofern es sich nicht um Kosten für die Behebung eines vom Vermieter zu vertretenden Mangels handelt, der vom Mieter rechtzeitig und ordnungsgemäß gerügt worden ist. Die durch normale Abnützung des Mietobjektes bewirkten Reparaturen sowie die durch vertragsgemäßen Gebrauch entstandene Wertminderung gehen zu Lasten des Vermieters.',
+                        'e) Haftung des Mieters für das Mietobjekt',
+                        'Der Mieter haftet vom Zeitpunkt des Gefahrenüberganges bis zum Eintreffen des Mietobjektes beim Vermieter oder dem von ihm bezeichneten Ort anläßlich der Rückgabe für jeden Verlust und/oder jede Beschädigung des Mietobjektes und die im Zusammenhang damit stehenden Kosten ohne Rücksicht darauf, ob sie durch sein Verschulden oder das seiner Hilfsperson, durch Verschulden Dritter, durch Zufall oder höhere Gewalt verursacht wurde.'
+                    ]
+                },
+                {
+                    titel: '9. Versicherung',
+                    absaetze: [
+                        'Der Mieter ist verpflichtet, mit Wirkung ab Gefahrenübergang bis und mit der Rückgabe des Mietobjektes zugunsten des Vermieters sämtliche notwendigen Versicherungen abzuschließen, wie beispielsweise Diebstahl-, Feuer-, Explosions- (inkl. Motorenexplosion), Elementarschaden-, Transport-, Maschinenbruch-, Montage- und Demontageversicherung. Ist der Mieter nicht in der Lage, den Abschluß der notwendigen Versicherung nachzuweisen, so ist der Vermieter berechtigt, diese zu Lasten des Mieters selbst abzuschließen. In diesem Fall erklärt sich der Mieter mit den geltenden allgemeinen Versicherungsbedingungen des Vermieters einverstanden. Der Mieter hat jeden Schadenfall dem Vermieter unverzüglich zu melden. Im Schadensfall ist eine Selbstbeteiligung von 1.500 € zu leisten.'
+                    ]
+                },
+                {
+                    titel: '10. Beendigung der Miete',
+                    absaetze: [
+                        'a) Kündigung',
+                        'Ist keine feste Dauer der Miete vereinbart worden, so ist jede Partei berechtigt, das Mietverhältnis unter Beachtung der vereinbarten Kündigungsfrist aufzulösen.',
+                        'b) Rücktritt',
+                        'Der Vermieter kann mit sofortiger Wirkung ohne vorherige Mahnung oder Fristansetzung den Rücktritt vom Vertrag erklären, wenn',
+                        '- dem Mietobjekt wegen übermäßiger Beanspruchung oder mangelhaften Unterhalts Gefahr droht und der Mieter trotz Aufforderung des Vermieters innerhalb angemessener Frist keine Abhilfe schafft.',
+                        '- das Mietobjekt untervermietet wird oder Dritten andere Rechte daran eingeräumt oder ihnen Rechte aus dem Mietvertrag abgetreten worden sind.',
+                        '- Verletzungen anderer vertraglicher Abmachungen vorliegen.',
+                        'Verletzt der Mieter andere vertragliche Verpflichtungen, kann der Vermieter vorzeitig vom Vertrag zurücktreten, wenn der Mieter trotz schriftlicher Mahnung sich Pflichtverletzungen zuschulden kommen läßt. Erklärt der Vermieter den Rücktritt vom Vertrag, kann er das Mietobjekt auf Kosten des Mieters zurücknehmen. Der Mieter bleibt überdies zur Leistung von Schadenersatz verpflichtet.',
+                        'c) Rückgabe des Mietobjektes',
+                        'Der Mieter hat das gleiche vom Vermieter erhaltene Mietobjekt in gereinigtem und gebrauchsfähigem Zustand am Domizil des Vermieters oder an einen anderen von diesem bezeichneten, nicht weiter entfernten Ort zurückzuliefern. Der Mieter hat die Rücksendung vorher schriftlich dem Vermieter anzuzeigen. Die Rücksendung hat entsprechend der Anlieferung zu erfolgen und ist mit Lieferschein zu versehen. Entspricht das Mietobjekt bei der Rückgabe diesen Anforderungen nicht oder weist es andere Mängel auf, wird die Miete verlängert, bis die Gebrauchsfähigkeit bzw. Betriebsbereitschaft wieder hergestellt oder die Mängel behoben sind. Die Instandstellung erfolgt auf Kosten des Mieters. Dem Vermieter bleibt die Geltendmachung weiterer Schadenersatzansprüche vorbehalten. Der Vermieter hat das Mietobjekt nach Erhalt sofort zu prüfen und anfällige Mängel dem Mieter unverzüglich schriftlich mitzuteilen. Für die Mängelrüge gilt Art. 7 hiervon sinngemäß. Der Mieter haftet für das Mietobjekt bis zum Zeitpunkt, in dem dieses beim Vermieter eintrifft. Wird die Maschine im nicht gereinigten Zustand zurückgegeben, wird eine Reinigungspauschale von 80 € erhoben.'
+                    ]
+                },
+                {
+                    titel: '11. Fracht- und Verladekosten',
+                    absaetze: [
+                        'Die Fracht- und Verladekosten für den Versand des Mietobjektes bei Beginn der Miete wie auch bei der Rücksendung nach deren Beendigung hat der Mieter zu tragen. Wird das Mietobjekt nicht ab Domizil des Vermieters geliefert, muß sich der Mieter höchstens die Frachtkosten anrechnen lassen, die sich bei Lieferung ab Domizil ergeben würden. Das gleiche gilt, wenn das Mietobjekt nicht an das Domizil des Vermieters zurückzuliefern ist.'
+                    ]
+                },
+                {
+                    titel: '12. Anwendbares Recht',
+                    absaetze: [
+                        'Die abgeschlossenen Verträge unterstehen dem deutschen Recht.'
+                    ]
+                },
+                {
+                    titel: '13. Erfüllungsort und Gerichtsstand',
+                    absaetze: [
+                        'Für sämtliche Verpflichtungen aus diesem Vertrag gilt als Erfüllungsort der Ort des Sitzes des Vermieters. Gerichtsstand für die Beurteilung von Streitigkeiten aus diesem Vertrag ist der Sitz des Vermieters (Oldenburg).'
+                    ]
+                },
+
+                // ---- Ergänzende Vereinbarungen zum Bogen (stehen bewusst HINTEN) ----
+                {
+                    titel: 'Geltungsbereich und ergänzende Vereinbarungen',
+                    absaetze: [
+                        'Die auf den vorhergehenden Seiten aufgeführten Hinweise, Bedingungen und Sicherheitshinweise sind Bestandteil dieser Vereinbarung und gelten zusätzlich und ergänzend zu den nachfolgenden Regelungen.',
+                        'Sämtliche auf dieser und den vorhergehenden Seiten aufgeführten Bestimmungen sind vom Mieter zu beachten und gelten für die gesamte Dauer des Mietverhältnisses. Die Regelungen dieser Seite ergänzen die zuvor genannten Bestimmungen und ersetzen diese nicht.',
+                        'Bei Widersprüchen zwischen einzelnen Regelungen gelten die vertraglich vereinbarten Regelungen des Mietvertrages. Zwingende gesetzliche Vorschriften bleiben unberührt.',
+                        'Mit seiner Unterschrift bestätigt der Mieter, dass ihm alle Seiten vollständig vorgelegt wurden, er deren Inhalt zur Kenntnis genommen hat und die darin enthaltenen Regelungen anerkennt.'
+                    ]
+                },
+                {
+                    titel: 'Übergabe, Einweisung und Pflichten des Mieters',
+                    absaetze: [
+                        'Der Mieter bestätigt mit seiner Unterschrift, dass ihm die Maschine in einem ordnungsgemäßen und betriebsbereiten Zustand übergeben wurde. Der Mieter hatte Gelegenheit, die Maschine vor der Übernahme zu besichtigen und auf erkennbare Mängel zu überprüfen.',
+                        'Bereits bei Übergabe vorhandene Beschädigungen, Mängel oder sonstige Abweichungen vom ordnungsgemäßen Zustand werden in einem Übergabeprotokoll dokumentiert und gegebenenfalls durch Fotos festgehalten. Diese bei Übergabe festgestellten und dokumentierten Beschädigungen gelten als bereits vor Beginn der Mietzeit vorhanden und werden dem Mieter nicht als während der Mietzeit verursachte Schäden zugerechnet.',
+                        'Der Mieter wurde in die Bedienung, den bestimmungsgemäßen Gebrauch sowie den sicheren Umgang mit der Maschine eingewiesen. Die wesentlichen Bedienungs- und Sicherheitshinweise wurden erläutert. Die Original-Betriebsanleitung sowie gegebenenfalls weitere zur Maschine gehörende Unterlagen sind vom Mieter zu beachten.',
+                        'Der Mieter verpflichtet sich, die Maschine während der gesamten Mietdauer ausschließlich bestimmungsgemäß, sachgerecht und entsprechend der Betriebsanleitung zu verwenden. Die Maschine darf nur von Personen bedient werden, die hierfür geeignet, entsprechend eingewiesen und – soweit gesetzlich vorgeschrieben – entsprechend qualifiziert oder berechtigt sind.',
+                        'Sämtliche während der Mietdauer vom Mieter zu beachtenden gesetzlichen, behördlichen und betrieblichen Anforderungen, die sich aus dem Einsatz der Maschine ergeben, sind vom Mieter eigenverantwortlich einzuhalten. Hierzu gehören insbesondere die Einhaltung der geltenden Sicherheits-, Arbeitsschutz- und Unfallverhütungsvorschriften sowie gegebenenfalls erforderliche Genehmigungen, Einweisungen und Absicherungen am Einsatzort.',
+                        'Der Mieter hat die Maschine vor jeder Inbetriebnahme auf erkennbare Beschädigungen, Mängel und einen sicheren Betriebszustand zu überprüfen. Festgestellte Mängel oder sicherheitsrelevante Auffälligkeiten sind dem Vermieter unverzüglich mitzuteilen. Bei sicherheitsrelevanten Mängeln darf die Maschine bis zur Klärung bzw. Behebung des Mangels nicht weiter betrieben werden.',
+                        'Der Mieter ist verpflichtet, die Maschine während der Mietdauer pfleglich und sachgemäß zu behandeln und vor vermeidbaren Beschädigungen, unsachgemäßer Nutzung sowie unbefugtem Zugriff zu schützen.',
+                        'Der Mieter trägt die Verantwortung für Schäden an der Maschine, die während der Mietdauer durch unsachgemäße Bedienung, bestimmungswidrige Verwendung, grob fahrlässiges oder vorsätzliches Verhalten, Missachtung der Betriebsanleitung oder sonstige vom Mieter zu vertretende Umstände entstehen, soweit der Mieter hierfür nach den gesetzlichen Vorschriften haftet.',
+                        'Die vom Vermieter vorgegebenen Wartungs-, Pflege- und Kontrollintervalle sind einzuhalten, soweit diese dem Mieter übertragen wurden. Reparaturen, technische Veränderungen, Umbauten oder sonstige Eingriffe in die Maschine dürfen nur nach vorheriger Zustimmung des Vermieters vorgenommen werden. Eigenmächtige Veränderungen an sicherheitsrelevanten Einrichtungen sind untersagt.',
+                        'Der Mieter hat für einen ordnungsgemäßen Einsatzort und sichere Betriebsbedingungen zu sorgen. Insbesondere ist sicherzustellen, dass die Maschine entsprechend ihrer vorgesehenen Verwendung eingesetzt wird und keine Gefährdungen für Personen, Sachen oder die Maschine entstehen.',
+                        'Die Verwendung der Maschine außerhalb des vereinbarten Einsatzbereichs sowie die Überlassung an Dritte ist nur mit vorheriger Zustimmung des Vermieters zulässig, soweit im Mietvertrag nichts Abweichendes vereinbart wurde.',
+                        'Bei Verlust, Diebstahl, Unfall, Beschädigung oder sonstigen außergewöhnlichen Ereignissen ist der Vermieter unverzüglich zu informieren. Der Mieter hat alle zumutbaren Maßnahmen zu treffen, um weitere Schäden zu verhindern oder zu begrenzen.',
+                        'Bei Rückgabe wird der Zustand der Maschine erneut überprüft und mit dem bei Übergabe dokumentierten Zustand abgeglichen. Neu hinzugekommene Beschädigungen oder Abweichungen, die nicht auf der normalen vertragsgemäßen Abnutzung beruhen, werden im Rückgabeprotokoll festgehalten und gegebenenfalls fotografisch dokumentiert.',
+                        'Bei Rückgabe ist die Maschine grundsätzlich in dem Zustand zurückzugeben, in dem sie übernommen wurde, unter Berücksichtigung der vertragsgemäßen Abnutzung. Vom Mieter verursachte Verschmutzungen, Beschädigungen oder fehlende Ausrüstungsteile können dem Mieter nach Maßgabe der gesetzlichen und vertraglichen Bestimmungen in Rechnung gestellt werden.',
+                        'Zwingende gesetzliche Pflichten und Haftungsregelungen bleiben von den vorstehenden Vereinbarungen unberührt.'
+                    ]
+                },
+                {
+                    titel: 'Dokumentation des Zustands bei Übergabe',
+                    absaetze: [
+                        'Die bei Übergabe festgestellten Beschädigungen und Mängel sind im Übergabeprotokoll vollständig zu dokumentieren. Soweit sinnvoll, sind die entsprechenden Stellen zusätzlich durch Fotografien zu dokumentieren. Das Übergabeprotokoll wird von Vermieter und Mieter bestätigt und ist Bestandteil der Mietunterlagen.',
+                        'Der Mieter bestätigt mit seiner Unterschrift, dass die im Übergabeprotokoll aufgeführten Beschädigungen und Mängel bei Übernahme der Maschine bereits vorhanden waren.'
+                    ]
+                }
+            ]
+        }
+    };
+
+    // ------------------------------------------------------
+    // Geladene Vorlagen
+    // ------------------------------------------------------
+    let vorlagen = [];          // Zeilen aus rental_templates
+    let tabelleFehlt = false;   // Migration noch nicht gelaufen?
+    let bearbeitet = null;      // Vorlage im Editor
+    let katMenuOffen = false;   // Kategorie-Menü im Editor aufgeklappt?
+
+    const esc = (s) => String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+    function tiefeKopie(o) {
+        return JSON.parse(JSON.stringify(o));
+    }
+
+    // Ein Prüfpunkt war früher nur ein Text und darf das bleiben. Seit
+    // 2026-08-25 kann er zusätzlich Ausführungen zur Auswahl haben
+    // (z. B. Siebkorb 12 mm / 25 mm) und als "optional" gelten.
+    // Diese Funktion macht aus beidem dieselbe Form — sie wird auch von
+    // js/mietvereinbarung.js benutzt, damit alte Vorlagen weiterlaufen.
+    window.mietPunktLesen = function (p) {
+        if (p && typeof p === 'object') {
+            return {
+                text: p.text || '',
+                optional: !!p.optional,
+                mehrfach: !!p.mehrfach,
+                optionen: Array.isArray(p.optionen) ? p.optionen.filter(Boolean) : []
+            };
+        }
+        return { text: String(p == null ? '' : p), optional: false, mehrfach: false, optionen: [] };
+    };
+
+    // ------------------------------------------------------
+    // Tagessätze nach Ausstattung
+    // ------------------------------------------------------
+    // Eine Vorlage kann Preisregeln tragen:
+    //   preise: [{ tagessatz: '450,00 €/Tag',
+    //              bedingungen: [{ punkt: 'Siebkorb', option: '40 x 110' },
+    //                            { punkt: 'Kaskadensieb', verbaut: true }] }]
+    // Eine Bedingung verweist per Text auf einen Prüfpunkt der Vorlage —
+    // nicht per Nummer, weil die sich beim Umsortieren ändert. "option"
+    // heißt: diese Ausführung ist am Bogen gewählt; "verbaut" heißt: der
+    // optionale Prüfpunkt hat in irgendeiner Spalte ein Kreuz.
+    //
+    // Es gewinnt die Regel, deren Bedingungen ALLE zutreffen und die die
+    // meisten Bedingungen hat; bei Gleichstand die zuerst eingetragene.
+    // Eine Regel ohne Bedingung ist der Grundpreis.
+    //
+    // "ausstattung" ist eine Liste dessen, was am Bogen gesetzt ist:
+    //   [{ punkt: 'Siebkorb', option: '40 x 110' }, { punkt: 'Kaskadensieb', verbaut: true }]
+    window.mietPreisErmitteln = function (preise, ausstattung) {
+        const liste = Array.isArray(preise) ? preise : [];
+        const ist = Array.isArray(ausstattung) ? ausstattung : [];
+        const trifft = (b) => ist.some(a => a.punkt === b.punkt
+            && (b.verbaut ? !!a.verbaut : (a.option != null && a.option === b.option)));
+        let beste = null;
+        liste.forEach(r => {
+            const bed = Array.isArray(r.bedingungen) ? r.bedingungen : [];
+            if (!String(r.tagessatz || '').trim()) return;
+            if (!bed.every(trifft)) return;
+            if (!beste || bed.length > beste.bedingungen.length) beste = { tagessatz: r.tagessatz, bedingungen: bed };
+        });
+        return beste ? String(beste.tagessatz) : '';
+    };
+
+    // Fehlt in einer gespeicherten Vorlage ein Feld, wird es aus dem
+    // Standard ergaenzt. So bleiben aeltere Vorlagen benutzbar, wenn
+    // spaeter neue Felder dazukommen.
+    function mitStandard(config) {
+        const s = window.MIET_VORLAGE_STANDARD;
+        const c = config && typeof config === 'object' ? config : {};
+        return {
+            titel: c.titel || s.titel,
+            zusatzinfo: c.zusatzinfo != null ? c.zusatzinfo : s.zusatzinfo,
+            schlusssatz: c.schlusssatz != null ? c.schlusssatz : s.schlusssatz,
+            bloecke: Object.assign({}, s.bloecke, c.bloecke || {}),
+            felder: Object.assign({}, s.felder, c.felder || {}),
+            spalten: (Array.isArray(c.spalten) && c.spalten.length) ? c.spalten : tiefeKopie(s.spalten),
+            baugruppen: Array.isArray(c.baugruppen) ? c.baugruppen : tiefeKopie(s.baugruppen),
+            fotos: (Array.isArray(c.fotos) && c.fotos.length) ? c.fotos : s.fotos.slice(),
+            preise: Array.isArray(c.preise) ? c.preise : [],
+            texte: textMitStandard(c.texte)
+        };
+    }
+
+    // Vertragstext einer gespeicherten Vorlage gegen den aktuellen Stand
+    // abgleichen. Vorlagen, die vor der Textumstellung angelegt wurden, haben
+    // keinen oder einen älteren "stand" — die bekommen den aktuellen Wortlaut
+    // (Allgemeines, 2.–13., danach die ergänzenden Vereinbarungen). Ein eigener
+    // Text, der MIT dem aktuellen Stand gespeichert wurde, bleibt unangetastet.
+    function textMitStandard(texte) {
+        const s = window.MIET_VORLAGE_STANDARD;
+        if (!texte || !Array.isArray(texte.abschnitte) || !texte.abschnitte.length) {
+            return tiefeKopie(s.texte);
+        }
+        if (Number(texte.stand || 0) < Number(s.texte.stand || 0)) {
+            console.info('Mietvereinbarung: Vertragstext der Vorlage auf den aktuellen Stand gehoben.');
+            return tiefeKopie(s.texte);
+        }
+        return texte;
+    }
+
+    // Kategorien einer Vorlage als Liste von IDs (Strings).
+    // Neu ist category_ids (Mehrfachauswahl); category_id bleibt als
+    // Altbestand bestehen, solange die Migration noch nicht lief.
+    function katIds(v) {
+        const ids = Array.isArray(v && v.category_ids) ? v.category_ids : [];
+        const alle = ids.map(String).filter(Boolean);
+        if (!alle.length && v && v.category_id) alle.push(String(v.category_id));
+        return alle;
+    }
+
+    // Vom Bogen aufgerufen: passende Vorlage zum Maschinentyp.
+    window.getMietVorlage = function (categoryId) {
+        const treffer = categoryId
+            ? vorlagen.find(v => katIds(v).includes(String(categoryId)))
+            : null;
+        return mitStandard(treffer ? treffer.config : null);
+    };
+
+    let geladen = false;
+    window.mietVorlagenGeladen = () => geladen;
+
+    window.fetchMietVorlagen = async function () {
+        if (!window.supabaseClient) return;
+        geladen = true;
+        try {
+            const { data, error } = await window.supabaseClient
+                .from('rental_templates')
+                .select('*')
+                .order('name', { ascending: true });
+            if (error) throw error;
+            vorlagen = data || [];
+            tabelleFehlt = false;
+        } catch (e) {
+            console.warn('Mietvorlagen konnten nicht geladen werden:', e && e.message);
+            vorlagen = [];
+            tabelleFehlt = true;
+        }
+        renderVorlagenListe();
+    };
+
+    // ------------------------------------------------------
+    // Übersicht (Einstellungen → Mietvereinbarungen)
+    // ------------------------------------------------------
+    // Kartenname der eingebauten Vorlage, solange nichts gespeichert ist.
+    const STANDARD_NAME = 'Mietvereinbarung Siebtrommel';
+
+    // chips: [Maschinentypen, „N Prüfpunkte"] — Stile .mvl-* in css/views/einstellungen.css
+    function karte(titel, chips, gespeichert, oeffnen, loeschen, kopieren) {
+        const [typen, punkte] = chips;
+        const ohneTyp = !gespeichert || /kein Maschinentyp/.test(typen);
+        return `
+        <div class="mvl-karte${gespeichert ? '' : ' standard'}" onclick="${oeffnen}">
+            <div class="mvl-zeile">
+                <div class="mvl-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg></div>
+                <h2 class="mvl-titel">${esc(titel)}</h2>
+                ${kopieren ? `<button type="button" class="mv-ikon blau" onclick="event.stopPropagation(); ${kopieren}" title="Vorlage kopieren">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>` : ''}
+                ${loeschen ? `<button type="button" class="mv-ikon rot delete-permission-required" data-del-area="mietvereinbarungen" onclick="event.stopPropagation(); ${loeschen}" title="Vorlage löschen">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>` : ''}
+            </div>
+            <div class="mvl-chips">
+                ${gespeichert ? '' : '<span class="mvl-chip">Eingebaute Standardvorlage</span>'}
+                <span class="mvl-chip${ohneTyp ? '' : ' gruen'}">${esc(typen)}</span>
+                <span class="mvl-chip">${esc(punkte)}</span>
+            </div>
+            <p class="mvl-unter">${gespeichert ? 'Klicken zum Bearbeiten' : 'Klicken, um daraus eine eigene Vorlage zu machen'}</p>
+        </div>`;
+    }
+
+    function renderVorlagenListe() {
+        const liste = document.getElementById('miet-vorlagen-liste');
+        if (!liste) return;
+
+        const hinweis = tabelleFehlt ? `
+            <div style="grid-column:1/-1; background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.4); border-radius:14px; padding:16px 18px; color:#fbbf24; font-size:0.9rem;">
+                <strong>Tabelle „rental_templates" fehlt.</strong><br>
+                Bis die Migration <code>supabase/supabase_add_rental_templates.sql</code> in Supabase
+                ausgeführt wurde, benutzt jede Mietvereinbarung die eingebaute Standardvorlage.
+                Bearbeiten und Anlegen ist erst danach möglich.
+            </div>` : '';
+
+        const kategorieName = (v) => {
+            const namen = katIds(v).map(id => {
+                const k = (window.categoryList || []).find(x => String(x.id) === String(id));
+                return k ? k.name : null;
+            }).filter(Boolean);
+            return namen.length ? namen.join(', ') : 'kein Maschinentyp zugeordnet';
+        };
+        const punkte = (config) => (mitStandard(config).baugruppen || [])
+            .reduce((a, g) => a + (g.punkte || []).length, 0);
+
+        // Gespeicherte Vorlagen; ist noch keine da, steht die eingebaute
+        // Siebtrommel-Vorlage als Ausgangspunkt in der Liste.
+        const karten = vorlagen.length
+            ? vorlagen.map(v => karte(
+                v.name,
+                [kategorieName(v), `${punkte(v.config)} Prüfpunkte`],
+                true,
+                `window.openMietVorlage('${esc(v.id)}')`,
+                `window.mietVorlageLoeschen('${esc(v.id)}')`,
+                `window.mietVorlageKopieren('${esc(v.id)}')`)).join('')
+            : karte(
+                STANDARD_NAME,
+                ['Siebtrommel', `${punkte(null)} Prüfpunkte`],
+                false,
+                `window.openMietVorlage('standard')`,
+                null,
+                `window.mietVorlageKopieren('standard')`);
+
+        liste.innerHTML = hinweis + karten;
+    }
+
+    window.openMietVorlagen = function () {
+        window.switchView('miet-vorlagen');
+        window.fetchMietVorlagen();
+    };
+
+    // ------------------------------------------------------
+    // Editor
+    // ------------------------------------------------------
+    // id = Kennung einer gespeicherten Vorlage, oder 'standard' fuer die
+    // eingebaute Siebtrommel-Vorlage, oder 'neu' fuer eine leere.
+    window.openMietVorlage = function (id) {
+        katMenuOffen = false;
+        const vorhanden = vorlagen.find(v => String(v.id) === String(id));
+
+        if (vorhanden) {
+            bearbeitet = {
+                id: vorhanden.id,
+                category_ids: katIds(vorhanden),
+                name: vorhanden.name,
+                config: mitStandard(vorhanden.config)
+            };
+        } else {
+            bearbeitet = {
+                id: null,
+                category_ids: [],
+                name: id === 'neu' ? 'Neue Mietvereinbarung' : STANDARD_NAME,
+                config: mitStandard(null)
+            };
+        }
+
+        const titel = document.getElementById('miet-vorlage-titel');
+        if (titel) titel.textContent = bearbeitet.name || 'Vorlage bearbeiten';
+        window.switchView('miet-vorlage-editor');
+        renderEditor();
+    };
+
+    // Knopf „Anlegen" oben rechts.
+    window.mietVorlageNeu = function () {
+        window.openMietVorlage('neu');
+    };
+
+    // Kopie einer bestehenden Vorlage: derselbe Aufbau, aber als neue
+    // Vorlage. Die Kategorien bleiben bewusst leer — sonst gäbe es für
+    // eine Kategorie zwei Vorlagen und es wäre Zufall, welche greift.
+    // Gespeichert wird erst beim Klick auf „Speichern".
+    window.mietVorlageKopieren = function (id) {
+        const v = vorlagen.find(x => String(x.id) === String(id));
+        katMenuOffen = false;
+        bearbeitet = {
+            id: null,
+            category_ids: [],
+            name: `${v ? v.name : STANDARD_NAME} (Kopie)`,
+            config: mitStandard(v ? tiefeKopie(v.config) : null)
+        };
+
+        const titel = document.getElementById('miet-vorlage-titel');
+        if (titel) titel.textContent = bearbeitet.name;
+        window.switchView('miet-vorlage-editor');
+        renderEditor();
+        window.showToast('Kopie angelegt — Kategorien wählen und speichern.');
+    };
+
+    window.mietVorlageLoeschen = async function (id) {
+        const v = vorlagen.find(x => String(x.id) === String(id));
+        if (!v) return;
+        if (!confirm(`Vorlage „${v.name}" wirklich löschen?`)) return;
+        try {
+            const { error } = await window.supabaseClient.from('rental_templates').delete().eq('id', id);
+            if (error) throw error;
+            await window.fetchMietVorlagen();
+            window.showToast('Vorlage gelöscht.');
+        } catch (e) {
+            console.error('Vorlage löschen fehlgeschlagen:', e);
+            window.showToast('Löschen fehlgeschlagen: ' + (e.message || 'unbekannter Fehler'));
+        }
+    };
+
+    function zeileText(pfad, wert, platzhalter) {
+        return `<input class="glass-form-input" value="${esc(wert)}" placeholder="${esc(platzhalter || '')}"
+                       oninput="window.mietVorlageFeld('${pfad}', this.value)">`;
+    }
+
+    function renderEditor() {
+        const box = document.getElementById('miet-vorlage-editor-inhalt');
+        if (!box || !bearbeitet) return;
+        const c = bearbeitet.config;
+
+        // breit=true: Abschnitt nimmt beide Spalten ein (siehe
+        // .miet-editor-grid in css/views/mietvereinbarung.css).
+        // Jeder Abschnitt bekommt eine Anker-ID für die Navigation links
+        // (.mve-nav, css/views/einstellungen.css); anzahl = kleine Zahl daneben.
+        const navEintraege = [];
+        const abschnitt = (titel, inhalt, breit, anzahl) => {
+            const id = 'mve-' + navEintraege.length;
+            navEintraege.push({ id, titel, anzahl });
+            return `
+            <div class="miet-editor-card${breit ? ' wide' : ''}" id="${id}">
+                <h3>${esc(titel)}</h3>
+                <div class="miet-editor-body">${inhalt}</div>
+            </div>`;
+        };
+        const MUELL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>';
+        const weg = (onclick, title, aus) => `<button type="button" class="mv-ikon rot" title="${esc(title)}" onclick="${onclick}" ${aus ? 'disabled' : ''}>${MUELL}</button>`;
+        const plus = (onclick, text) => `<button type="button" class="mve-plus" onclick="${onclick}">+ ${esc(text)}</button>`;
+
+        const feldZeile = (label, pfad, wert) => `
+            <div class="miet-editor-row">
+                <span>${esc(label)}</span>
+                ${zeileText(pfad, wert)}
+            </div>`;
+
+        // --- Kopf
+        // Nur die Maschinenkategorien (Einstellungen → Kategorien →
+        // "Maschinenkategorien", type 'machine'): selbstfahrender Umsetzer,
+        // Rotorschaufel, Schlauchtrommelwagen, Siebtrommelmaschine …
+        const kategorien = (window.categoryList || []).filter(k => k.type === 'machine' || !k.type)
+            .sort((x, y) => String(x.name || '').localeCompare(String(y.name || ''), 'de'));
+        const gewaehlt = new Set((bearbeitet.category_ids || []).map(String));
+        const gewaehlteNamen = kategorien.filter(k => gewaehlt.has(String(k.id))).map(k => k.name);
+        const kopf = `
+            <div class="miet-editor-row">
+                <span>Name der Vorlage</span>
+                <input class="glass-form-input" value="${esc(bearbeitet.name)}"
+                       oninput="window.mietVorlageName(this.value)">
+            </div>
+            <div class="miet-editor-row top">
+                <span>Gilt für Maschinenkategorien</span>
+                <div>
+                    ${kategorien.length ? `
+                    <div style="position:relative;">
+                        <button type="button" onclick="event.stopPropagation(); window.mietVorlageKatMenu()"
+                            style="width:100%; padding:10px 13px; border-radius:10px; border:1px solid rgba(255,255,255,0.12);
+                                   background:rgba(255,255,255,0.04); color:${gewaehlteNamen.length ? 'rgba(255,255,255,0.85)' : 'rgba(255,255,255,0.35)'};
+                                   font-family:'Inter',sans-serif; font-size:0.88rem; cursor:pointer; text-align:left;
+                                   display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                            <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${gewaehlteNamen.length ? esc(gewaehlteNamen.join(', ')) : 'Maschinenkategorie wählen …'}</span>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="opacity:0.5; flex-shrink:0;"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <div id="miet-kat-menu" onclick="event.stopPropagation()"
+                            style="display:${katMenuOffen ? 'block' : 'none'}; position:absolute; top:100%; left:0; right:0; z-index:500;
+                                   background:#0b1220; border:1px solid rgba(255,255,255,0.15); border-radius:10px; margin-top:4px;
+                                   max-height:260px; overflow-y:auto; box-shadow:0 12px 40px rgba(0,0,0,0.7);">
+                            ${kategorien.map(k => {
+                                const sel = gewaehlt.has(String(k.id));
+                                return `<div onclick="window.mietVorlageKategorie('${esc(k.id)}')"
+                                    style="padding:10px 14px; cursor:pointer; font-size:0.88rem; border-bottom:1px solid rgba(255,255,255,0.06);
+                                           color:${sel ? '#10b981' : '#fff'}; background:${sel ? 'rgba(16,185,129,0.15)' : 'transparent'};">
+                                    ${sel ? '✓ ' : ''}${esc(k.name)}
+                                </div>`;
+                            }).join('')}
+                        </div>
+                    </div>` : `<span style="font-size:0.84rem; color:rgba(255,255,255,0.4);">Keine Maschinenkategorien angelegt.</span>`}
+                </div>
+            </div>
+            <p class="miet-editor-hint">
+                Wird eine Mietvereinbarung an einer Maschine aus einer dieser Kategorien angelegt,
+                gilt automatisch diese Vorlage. Mehrfachauswahl möglich — ohne Zuordnung bleibt sie ungenutzt.
+            </p>`
+            + feldZeile('Titel des Bogens', 'titel', c.titel)
+            + feldZeile('Zusatzinfo (Tagessatz)', 'zusatzinfo', c.zusatzinfo)
+            + feldZeile('Schlusssatz', 'schlusssatz', c.schlusssatz);
+
+        // --- Überschriften
+        const bloecke = Object.keys(c.bloecke).map(k =>
+            feldZeile(k.replace(/_/g, ' '), 'bloecke.' + k, c.bloecke[k])).join('');
+
+        // --- Beschriftungen
+        const felder = Object.keys(c.felder).map(k =>
+            feldZeile(k.replace(/_/g, ' '), 'felder.' + k, c.felder[k])).join('');
+
+        // --- Spalten
+        const spalten = `
+            <p class="mve-hint">
+                Die erste Spalte gilt als Übergabe, die zweite als Rücknahme. Weitere Spalten
+                erscheinen zusätzlich auf dem Bogen.
+            </p>
+            ${c.spalten.map((s, i) => `
+            <div class="mve-liste-zeile">
+                <span class="mve-nr">${i + 1}</span>
+                <input class="glass-form-input" value="${esc(s.label)}"
+                       oninput="window.mietVorlageSpalte(${i}, this.value)">
+                ${weg(`window.mietVorlageSpalteWeg(${i})`, 'Spalte entfernen', c.spalten.length <= 1)}
+            </div>`).join('')}
+            ${plus('window.mietVorlageSpalteNeu()', 'Spalte')}`;
+
+        // --- Baugruppen
+        const baugruppen = c.baugruppen.map((g, gi) => `
+            <div class="mve-box">
+                <div class="mve-box-kopf">
+                    <input class="glass-form-input" value="${esc(g.gruppe)}"
+                           oninput="window.mietVorlageGruppe(${gi}, this.value)">
+                    ${weg(`window.mietVorlageGruppeWeg(${gi})`, 'Baugruppe löschen')}
+                </div>
+                ${(g.punkte || []).map((roh, pi) => {
+                    const p = window.mietPunktLesen(roh);
+                    return `
+                <div class="mve-punkt">
+                    <div class="mve-liste-zeile">
+                        <input class="glass-form-input" value="${esc(p.text)}"
+                               oninput="window.mietVorlagePunkt(${gi}, ${pi}, this.value)">
+                        <label class="mve-schalter" title="Optional: steht grau auf dem Bogen und wird nur gedruckt, wenn etwas angekreuzt ist.">
+                            <input type="checkbox" ${p.optional ? 'checked' : ''}
+                                   onchange="window.mietVorlagePunktOptional(${gi}, ${pi}, this.checked)"> Optional
+                        </label>
+                        ${weg(`window.mietVorlagePunktWeg(${gi}, ${pi})`, 'Prüfpunkt entfernen')}
+                    </div>
+                    <div class="mve-liste-zeile" style="margin-bottom:0;">
+                        <input class="glass-form-input" value="${esc(p.optionen.join('; '))}" style="font-size:var(--fs-sm);"
+                               placeholder="Ausführungen zur Auswahl, mit Semikolon getrennt — z. B. 12 mm; 25 mm; 40 mm"
+                               oninput="window.mietVorlagePunktOptionen(${gi}, ${pi}, this.value)">
+                        <label class="mve-schalter" title="Mehrere Ausführungen gleichzeitig auswählbar.">
+                            <input type="checkbox" ${p.mehrfach ? 'checked' : ''}
+                                   onchange="window.mietVorlagePunktMehrfach(${gi}, ${pi}, this.checked)"> Mehrfach
+                        </label>
+                    </div>
+                </div>`;
+                }).join('')}
+                ${plus(`window.mietVorlagePunktNeu(${gi})`, 'Prüfpunkt')}
+            </div>`).join('')
+            + plus('window.mietVorlageGruppeNeu()', 'Baugruppe');
+
+        // --- Fotos
+        const fotos = c.fotos.map((f, i) => `
+            <div class="mve-liste-zeile">
+                <span class="mve-nr">${i + 1}</span>
+                <input class="glass-form-input" value="${esc(f)}"
+                       oninput="window.mietVorlageFoto(${i}, this.value)">
+                ${weg(`window.mietVorlageFotoWeg(${i})`, 'Position entfernen')}
+            </div>`).join('')
+            + plus('window.mietVorlageFotoNeu()', 'Position');
+
+        // --- Tagessätze nach Ausstattung
+        // Zur Auswahl stehen alle Ausführungen der Prüfpunkte und alle
+        // optionalen Prüfpunkte („verbaut"). Ein <select> reicht hier —
+        // die Liste ist kurz und ein Klick fügt die Bedingung hinzu.
+        const bedingungWahl = preisBedingungen();
+        const bedingungText = (b) => b.verbaut ? b.punkt + ' verbaut' : b.punkt + ': ' + b.option;
+        const preise = `
+            <p class="mve-hint">
+                Der Tagessatz wird auf dem Bogen automatisch eingetragen, sobald die gewählten
+                Ausführungen und angekreuzten Optionen zu einer Regel passen. Es gilt die Regel mit den
+                meisten zutreffenden Bedingungen; eine Regel ohne Bedingung ist der Grundpreis.
+                Der Betrag am Bogen bleibt von Hand änderbar.
+            </p>
+            ${(c.preise || []).map((r, ri) => `
+            <div class="mve-box">
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <input class="glass-form-input" value="${esc(r.tagessatz || '')}" style="width:170px; font-weight:700;"
+                           placeholder="z. B. 450,00 €/Tag"
+                           oninput="window.mietVorlagePreis(${ri}, this.value)">
+                    <span style="font-size:0.8rem; color:rgba(255,255,255,0.45);">wenn</span>
+                    ${(r.bedingungen || []).length ? (r.bedingungen || []).map((b, bi) => `
+                    <span style="display:inline-flex; align-items:center; gap:6px; padding:5px 10px; border-radius:999px;
+                                 background:rgba(16,185,129,0.15); color:#10b981; font-size:0.8rem; font-weight:600;">
+                        ${esc(bedingungText(b))}
+                        <span style="cursor:pointer; opacity:0.7;" title="Bedingung entfernen"
+                              onclick="window.mietVorlagePreisBedingungWeg(${ri}, ${bi})">&times;</span>
+                    </span>`).join('<span style="font-size:0.75rem; color:rgba(255,255,255,0.4);">und</span>')
+                    : '<span style="font-size:0.8rem; color:rgba(255,255,255,0.35); font-style:italic;">keine Bedingung — Grundpreis</span>'}
+                    <select class="glass-form-input" style="width:auto; max-width:260px; font-size:0.82rem; padding:6px 10px;"
+                            onchange="window.mietVorlagePreisBedingungNeu(${ri}, this.value); this.value='';">
+                        <option value="">+ Bedingung …</option>
+                        ${bedingungWahl.map((b, wi) => `<option value="${wi}">${esc(bedingungText(b))}</option>`).join('')}
+                    </select>
+                    <span style="margin-left:auto;">${weg(`window.mietVorlagePreisWeg(${ri})`, 'Tagessatz entfernen')}</span>
+                </div>
+            </div>`).join('')}
+            ${bedingungWahl.length ? '' : `<p class="mve-hint">
+                Bedingungen brauchen Prüfpunkte mit Ausführungen (z. B. Siebkorb: 40 x 110; 60 x 110)
+                oder optionale Prüfpunkte (z. B. Kaskadensieb) — siehe „Baugruppen und Prüfpunkte".</p>`}
+            ${plus('window.mietVorlagePreisNeu()', 'Tagessatz')}`;
+
+        // --- Vertragstext
+        const texte = feldZeile('Überschrift', 'texte.titel', c.texte.titel)
+            + c.texte.abschnitte.map((a, ai) => `
+            <div class="mve-box" style="margin-top:12px;">
+                <div class="mve-box-kopf">
+                    <span class="mve-nr">§${ai + 1}</span>
+                    <input class="glass-form-input" value="${esc(a.titel || '')}"
+                           oninput="window.mietVorlageAbschnitt(${ai}, this.value)">
+                    ${weg(`window.mietVorlageAbschnittWeg(${ai})`, 'Abschnitt löschen')}
+                </div>
+                ${(a.absaetze || []).map((p, pi) => `
+                <div class="mve-liste-zeile" style="align-items:flex-start;">
+                    <textarea class="glass-form-input" rows="3" style="resize:vertical;"
+                              oninput="window.mietVorlageAbsatz(${ai}, ${pi}, this.value)">${esc(p)}</textarea>
+                    ${weg(`window.mietVorlageAbsatzWeg(${ai}, ${pi})`, 'Absatz entfernen')}
+                </div>`).join('')}
+                ${plus(`window.mietVorlageAbsatzNeu(${ai})`, 'Absatz')}
+            </div>`).join('')
+            + `<div style="margin-top:12px;">${plus('window.mietVorlageAbschnittNeu()', 'Abschnitt')}</div>`;
+
+        const punkteGesamt = c.baugruppen.reduce((n, g) => n + (g.punkte || []).length, 0);
+        const karten = abschnitt('Grunddaten', kopf, true)
+            + abschnitt('Baugruppen und Prüfpunkte', baugruppen, false, punkteGesamt)
+            + abschnitt('Prüfspalten', spalten, false, c.spalten.length)
+            + abschnitt('Fotopositionen', fotos, false, c.fotos.length)
+            + abschnitt('Tagessätze nach Ausstattung', preise, true, (c.preise || []).length)
+            + abschnitt('Vertragstext', texte, true, c.texte.abschnitte.length)
+            + abschnitt('Überschriften der Abschnitte', bloecke)
+            + abschnitt('Beschriftungen der Zeilen', felder);
+
+        // Neu zeichnen (z. B. nach „+ Prüfpunkt"): Scrollstand des Inhalts behalten
+        const altInhalt = box.querySelector('.mve-inhalt');
+        const scrollAlt = altInhalt ? altInhalt.scrollTop : 0;
+        box.innerHTML = `<div class="mve-layout">
+            <nav class="mve-nav" id="mve-nav">${navEintraege.map((n, i) =>
+                `<a href="#${n.id}" data-mve="${n.id}" class="${i === 0 ? 'aktiv' : ''}">${esc(n.titel)}${n.anzahl != null ? `<em>${n.anzahl}</em>` : ''}</a>`).join('')}</nav>
+            <div class="mve-inhalt"><div class="miet-editor-grid">${karten}</div></div>
+        </div>`;
+        mveNavVerdrahten(scrollAlt);
+    }
+
+    // Abschnitts-Navigation. Aufbau wie in Desktop-Programmen: die Leiste links
+    // steht, nur der Inhalt rechts (.mve-inhalt) scrollt in einem eigenen Bereich
+    // bis zum unteren Fensterrand. (position:sticky greift hier nicht, weil
+    // #main-content overflow:auto hat, aber nicht selbst scrollt — ein
+    // Nachschieben per Skript ruckelte sichtbar.)
+
+    function mveHoehe() {
+        const inhalt = document.querySelector('#miet-vorlage-editor-inhalt .mve-inhalt');
+        if (!inhalt || !inhalt.offsetParent) return;
+        const oben = inhalt.getBoundingClientRect().top;
+        let h = Math.max(320, Math.floor(window.innerHeight - oben - 16));
+        inhalt.style.height = h + 'px';
+        // Abstände unterhalb (Innenabstand von #main-content) würden die Seite
+        // sonst ein paar Pixel scrollbar machen → zweiter Scrollbalken
+        const zuViel = document.body.scrollHeight - window.innerHeight;
+        if (zuViel > 0 && h - zuViel >= 320) inhalt.style.height = (h - zuViel) + 'px';
+    }
+    window.addEventListener('resize', mveHoehe);
+    function mveNavVerdrahten(scrollAlt) {
+        const nav = document.getElementById('mve-nav');
+        const inhalt = document.querySelector('#miet-vorlage-editor-inhalt .mve-inhalt');
+        if (!nav || !inhalt) return;
+        // Seite nach oben, dann den Inhaltsbereich bis zum Fensterrand ziehen
+        const seite = document.scrollingElement || document.documentElement;
+        seite.scrollTop = 0;
+        document.body.scrollTop = 0;
+        mveHoehe();
+        requestAnimationFrame(mveHoehe);
+        if (scrollAlt) inhalt.scrollTop = scrollAlt;
+
+        nav.onclick = (e) => {
+            const a = e.target.closest('a[data-mve]');
+            if (!a) return;
+            e.preventDefault();
+            const ziel = document.getElementById(a.dataset.mve);
+            if (ziel) inhalt.scrollTo({ top: ziel.offsetTop - 4, behavior: 'smooth' });
+        };
+        // Markierung: der letzte Abschnitt, dessen Anfang oben erreicht ist
+        // (am Ende des Scrollbereichs immer der letzte). Bewegt nichts, schaltet nur die Klasse.
+        const karten = [...inhalt.querySelectorAll('.miet-editor-card[id]')];
+        let zuletzt = '';
+        const markieren = () => {
+            const y = inhalt.scrollTop + 40;
+            let id = karten.length ? karten[0].id : '';
+            karten.forEach(k => { if (k.offsetTop <= y) id = k.id; });
+            if (inhalt.scrollTop + inhalt.clientHeight >= inhalt.scrollHeight - 2 && karten.length) id = karten[karten.length - 1].id;
+            if (id === zuletzt) return;
+            zuletzt = id;
+            nav.querySelectorAll('a').forEach(a => a.classList.toggle('aktiv', a.dataset.mve === id));
+            const aktiv = nav.querySelector('a.aktiv');
+            if (aktiv && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = aktiv.offsetLeft - 8;
+        };
+        inhalt.onscroll = markieren;
+        markieren();
+    }
+
+    // ------------------------------------------------------
+    // Änderungen am Editor
+    // ------------------------------------------------------
+    window.mietVorlageName = function (wert) {
+        bearbeitet.name = wert;
+        const titel = document.getElementById('miet-vorlage-titel');
+        if (titel) titel.textContent = wert || 'Vorlage bearbeiten';
+    };
+
+    // Ein Klick im Menü schaltet die Kategorie an bzw. aus; das Menü
+    // bleibt dabei offen, damit mehrere hintereinander gewählt werden
+    // können. Ein Klick daneben schließt es.
+    window.mietVorlageKategorie = function (id) {
+        if (!Array.isArray(bearbeitet.category_ids)) bearbeitet.category_ids = [];
+        const liste = bearbeitet.category_ids;
+        const pos = liste.indexOf(String(id));
+        if (pos === -1) liste.push(String(id)); else liste.splice(pos, 1);
+        katMenuOffen = true;
+        renderEditor();
+    };
+
+    window.mietVorlageKatMenu = function () {
+        katMenuOffen = !katMenuOffen;
+        const menu = document.getElementById('miet-kat-menu');
+        if (menu) menu.style.display = katMenuOffen ? 'block' : 'none';
+    };
+
+    document.addEventListener('click', function () {
+        if (!katMenuOffen) return;
+        katMenuOffen = false;
+        const menu = document.getElementById('miet-kat-menu');
+        if (menu) menu.style.display = 'none';
+    });
+
+    window.mietVorlageFeld = function (pfad, wert) {
+        const teile = pfad.split('.');
+        let ziel = bearbeitet.config;
+        for (let i = 0; i < teile.length - 1; i++) ziel = ziel[teile[i]];
+        ziel[teile[teile.length - 1]] = wert;
+    };
+
+    // Aus der Beschriftung wird eine technische Kennung abgeleitet; sie
+    // haelt die angekreuzten Werte zusammen und darf sich nicht mehr
+    // aendern, sobald die Spalte einmal existiert.
+    function kennung(label) {
+        return 'sp_' + String(label).toLowerCase()
+            .replace(/[äöüß]/g, m => ({ 'ä': 'ae', 'ö': 'oe', 'ü': 'ue', 'ß': 'ss' }[m]))
+            .replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') + '_' + Date.now().toString(36).slice(-4);
+    }
+
+    window.mietVorlageSpalte = function (i, wert) { bearbeitet.config.spalten[i].label = wert; };
+    window.mietVorlageSpalteNeu = function () {
+        bearbeitet.config.spalten.push({ id: kennung('Spalte'), label: 'Weitere Prüfung' });
+        renderEditor();
+    };
+    window.mietVorlageSpalteWeg = function (i) {
+        if (bearbeitet.config.spalten.length <= 1) return;
+        bearbeitet.config.spalten.splice(i, 1);
+        renderEditor();
+    };
+
+    window.mietVorlageGruppe = function (gi, wert) { bearbeitet.config.baugruppen[gi].gruppe = wert; };
+    window.mietVorlageTrommeltyp = function (gi, an) { bearbeitet.config.baugruppen[gi].trommeltyp = !!an; };
+    window.mietVorlageGruppeNeu = function () {
+        bearbeitet.config.baugruppen.push({ gruppe: 'Neue Baugruppe', punkte: ['Neuer Prüfpunkt'] });
+        renderEditor();
+    };
+    window.mietVorlageGruppeWeg = function (gi) {
+        bearbeitet.config.baugruppen.splice(gi, 1);
+        renderEditor();
+    };
+    // Prüfpunkte werden beim ersten Anfassen von Text auf Objekt gehoben —
+    // alte Vorlagen bleiben dadurch lesbar, bis jemand sie bearbeitet.
+    function punktObjekt(gi, pi) {
+        const gruppe = bearbeitet.config.baugruppen[gi];
+        const aktuell = window.mietPunktLesen(gruppe.punkte[pi]);
+        gruppe.punkte[pi] = aktuell;
+        return aktuell;
+    }
+
+    window.mietVorlagePunkt = function (gi, pi, wert) { punktObjekt(gi, pi).text = wert; };
+
+    window.mietVorlagePunktOptional = function (gi, pi, an) {
+        punktObjekt(gi, pi).optional = !!an;
+    };
+
+    window.mietVorlagePunktMehrfach = function (gi, pi, an) {
+        punktObjekt(gi, pi).mehrfach = !!an;
+    };
+
+    window.mietVorlagePunktOptionen = function (gi, pi, wert) {
+        punktObjekt(gi, pi).optionen = String(wert || '')
+            .split(';').map(s => s.trim()).filter(Boolean);
+    };
+    window.mietVorlagePunktNeu = function (gi) {
+        bearbeitet.config.baugruppen[gi].punkte.push('Neuer Prüfpunkt');
+        renderEditor();
+    };
+    window.mietVorlagePunktWeg = function (gi, pi) {
+        bearbeitet.config.baugruppen[gi].punkte.splice(pi, 1);
+        renderEditor();
+    };
+
+    // Tagessätze nach Ausstattung: alles, was als Bedingung taugt —
+    // jede Ausführung eines Prüfpunkts und jeder optionale Prüfpunkt.
+    function preisBedingungen() {
+        const liste = [];
+        (bearbeitet.config.baugruppen || []).forEach(g => (g.punkte || []).forEach(roh => {
+            const p = window.mietPunktLesen(roh);
+            if (!p.text) return;
+            p.optionen.forEach(o => liste.push({ punkt: p.text, option: o }));
+            if (p.optional) liste.push({ punkt: p.text, verbaut: true });
+        }));
+        return liste;
+    }
+    function preisRegel(ri) {
+        if (!Array.isArray(bearbeitet.config.preise)) bearbeitet.config.preise = [];
+        return bearbeitet.config.preise[ri];
+    }
+    window.mietVorlagePreis = function (ri, wert) { const r = preisRegel(ri); if (r) r.tagessatz = wert; };
+    window.mietVorlagePreisNeu = function () {
+        if (!Array.isArray(bearbeitet.config.preise)) bearbeitet.config.preise = [];
+        bearbeitet.config.preise.push({ tagessatz: '', bedingungen: [] });
+        renderEditor();
+    };
+    window.mietVorlagePreisWeg = function (ri) {
+        bearbeitet.config.preise.splice(ri, 1);
+        renderEditor();
+    };
+    window.mietVorlagePreisBedingungNeu = function (ri, wi) {
+        if (wi === '') return;
+        const r = preisRegel(ri);
+        const b = preisBedingungen()[Number(wi)];
+        if (!r || !b) return;
+        if (!Array.isArray(r.bedingungen)) r.bedingungen = [];
+        const gleich = r.bedingungen.some(x => x.punkt === b.punkt && !!x.verbaut === !!b.verbaut && x.option === b.option);
+        if (!gleich) r.bedingungen.push(b);
+        renderEditor();
+    };
+    window.mietVorlagePreisBedingungWeg = function (ri, bi) {
+        const r = preisRegel(ri);
+        if (!r || !Array.isArray(r.bedingungen)) return;
+        r.bedingungen.splice(bi, 1);
+        renderEditor();
+    };
+
+    window.mietVorlageFoto = function (i, wert) { bearbeitet.config.fotos[i] = wert; };
+    window.mietVorlageFotoNeu = function () {
+        bearbeitet.config.fotos.push('Neue Ansicht');
+        renderEditor();
+    };
+    window.mietVorlageFotoWeg = function (i) {
+        if (bearbeitet.config.fotos.length <= 1) return;
+        bearbeitet.config.fotos.splice(i, 1);
+        renderEditor();
+    };
+
+    window.mietVorlageAbschnitt = function (ai, wert) { bearbeitet.config.texte.abschnitte[ai].titel = wert; };
+    window.mietVorlageAbschnittNeu = function () {
+        bearbeitet.config.texte.abschnitte.push({ titel: 'Neuer Abschnitt', absaetze: [''] });
+        renderEditor();
+    };
+    window.mietVorlageAbschnittWeg = function (ai) {
+        bearbeitet.config.texte.abschnitte.splice(ai, 1);
+        renderEditor();
+    };
+    window.mietVorlageAbsatz = function (ai, pi, wert) { bearbeitet.config.texte.abschnitte[ai].absaetze[pi] = wert; };
+    window.mietVorlageAbsatzNeu = function (ai) {
+        bearbeitet.config.texte.abschnitte[ai].absaetze.push('');
+        renderEditor();
+    };
+    window.mietVorlageAbsatzWeg = function (ai, pi) {
+        bearbeitet.config.texte.abschnitte[ai].absaetze.splice(pi, 1);
+        renderEditor();
+    };
+
+    // ------------------------------------------------------
+    // Speichern / Zurücksetzen / Vorschau
+    // ------------------------------------------------------
+    window.mietVorlageSpeichern = async function () {
+        if (!bearbeitet) return;
+        if (!window.supabaseClient) { window.showToast('Keine Verbindung zur Datenbank.'); return; }
+
+        if (!String(bearbeitet.name || '').trim()) {
+            window.showToast('Bitte einen Namen für die Vorlage eintragen.');
+            return;
+        }
+
+        // Kategorie-IDs sind je nach Datenbank uuid ODER bigint. Im Editor
+        // wird mit Text gearbeitet; rein numerische Werte gehen als Zahl
+        // zurück, sonst lehnt eine bigint-Spalte den Text ab.
+        const ids = (bearbeitet.category_ids || [])
+            .map(String).filter(Boolean)
+            .map(v => /^\d+$/.test(v) ? Number(v) : v);
+        const zeile = {
+            name: bearbeitet.name.trim(),
+            category_ids: ids,
+            // Altbestand: die erste Kategorie bleibt zusätzlich in category_id,
+            // damit ältere Abfragen weiter etwas finden.
+            category_id: ids[0] || null,
+            config: bearbeitet.config
+        };
+
+        try {
+            if (bearbeitet.id) {
+                const { error } = await window.supabaseClient
+                    .from('rental_templates').update(zeile).eq('id', bearbeitet.id);
+                if (error) throw error;
+            } else {
+                const { data, error } = await window.supabaseClient
+                    .from('rental_templates').insert([zeile]).select().single();
+                if (error) throw error;
+                bearbeitet.id = data.id;
+            }
+            await window.fetchMietVorlagen();
+            window.showToast('Vorlage gespeichert.');
+        } catch (e) {
+            console.error('Vorlage speichern fehlgeschlagen:', e);
+            if (/category_ids/.test((e && e.message) || '')) {
+                window.showToast('Spalte „category_ids" fehlt — Migration supabase/supabase_add_rental_template_categories.sql in Supabase ausführen.');
+                return;
+            }
+            window.showToast('Speichern fehlgeschlagen: ' + (e.message || 'unbekannter Fehler'));
+        }
+    };
+
+    window.mietVorlageZuruecksetzen = function () {
+        if (!bearbeitet) return;
+        if (!confirm('Alle Anpassungen dieser Vorlage verwerfen und den Standard laden?')) return;
+        bearbeitet.config = mitStandard(null);
+        renderEditor();
+        window.showToast('Standard geladen — noch nicht gespeichert.');
+    };
+
+    // Zeigt den Bogen so, wie er mit dieser Vorlage aussieht.
+    window.mietVorlageVorschau = function () {
+        if (!bearbeitet) return;
+        // Der Bogen holt sich die Vorlage ueber getMietVorlage. Damit die
+        // ungespeicherten Aenderungen sichtbar werden, wird die Funktion
+        // fuer diesen einen Aufruf ueberlagert.
+        const echt = window.getMietVorlage;
+        window.getMietVorlage = () => tiefeKopie(bearbeitet.config);
+        try {
+            window.openMietvereinbarung(null);
+        } finally {
+            window.getMietVorlage = echt;
+        }
+    };
+
+    // Beim Öffnen der Einstellungskarte neu laden; einmal beim Start
+    // vorladen, damit eine Mietvereinbarung sofort die richtige Vorlage
+    // bekommt.
+    // Beim allerersten Öffnen ist die Tabelle leer. Damit die Liste nicht
+    // leer bleibt, wird die eingebaute Siebtrommel-Vorlage einmalig als
+    // echte Vorlage angelegt — ab da ist sie ganz normal bearbeitbar und
+    // bleibt bestehen, auch wenn weitere dazukommen.
+    async function anlegenFallsLeer() {
+        if (tabelleFehlt || vorlagen.length || !window.supabaseClient) return;
+        const kat = (window.categoryList || []).find(k => /sieb|trommel/i.test(k.name || ''));
+        try {
+            const { error } = await window.supabaseClient.from('rental_templates').insert([{
+                name: STANDARD_NAME,
+                category_ids: kat ? [kat.id] : [],
+                category_id: kat ? kat.id : null,
+                config: mitStandard(null)
+            }]);
+            if (error) throw error;
+            await window.fetchMietVorlagen();
+        } catch (e) {
+            console.warn('Standardvorlage konnte nicht angelegt werden:', e && e.message);
+        }
+    }
+
+    // Radlader-Vorlage (Wunsch 2026-10-12): wird einmalig angelegt, solange es
+    // keine Vorlage mit „Radlader“ im Namen gibt — danach normal bearbeitbar.
+    // Kategorie: die Maschinenkategorie mit „Radlader“ im Namen, sonst leer.
+    const RADLADER = {
+        baugruppen: [
+            { gruppe: 'Kabine', punkte: ['Frontscheibe/Seitenscheiben', 'Fahrersitz/Sicherheitsgurt', 'Spiegel', 'Armaturen/Warnleuchten', 'Hauben/Abdeckungen'] },
+            { gruppe: 'Räder', punkte: ['Felgen', 'Reifen (Profil/Schäden)', 'Kotflügel'] },
+            { gruppe: 'Hubarm, Hydraulik', punkte: ['Hubarm/Schwinge', 'Schnellwechsler', 'Zylinder', 'Hydraulikschläuche/Leckagen', 'Bolzen/Lager abgeschmiert'] },
+            { gruppe: 'E-Anlage', punkte: ['Scheinwerfer/Arbeitsscheinwerfer', 'Rundumleuchte', 'Rücklichter/Blinker', 'Hupe/Rückfahrwarner', 'Zündschloss', 'Schlüssel'] },
+            { gruppe: 'Anbaugeräte', punkte: ['Große Schaufel', 'Kleine Schaufel', 'Palettengabel'] },
+            { gruppe: 'Betriebsstoffe', punkte: ['AdBlue Füllstand', 'Motoröl/Kühlwasser'] }
+        ],
+        fotos: ['Vorne rechts', 'Vorne', 'Vorne links', 'Links', 'Hinten links', 'Hinten', 'Hinten rechts', 'Rechts',
+                'Kabine innen', 'Anbaugerät', 'Betriebsstunden']
+    };
+    async function radladerAnlegenFallsFehlt() {
+        if (tabelleFehlt || !window.supabaseClient) return;
+        if (vorlagen.some(v => /radlader/i.test(v.name || ''))) return;
+        const kat = (window.categoryList || []).find(k => (k.type === 'machine' || !k.type) && /rad\s*lader/i.test(k.name || ''));
+        const belegt = kat && vorlagen.some(v => katIds(v).includes(String(kat.id)));
+        try {
+            const { error } = await window.supabaseClient.from('rental_templates').insert([{
+                name: 'Radlader',
+                category_ids: kat && !belegt ? [kat.id] : [],
+                category_id: kat && !belegt ? kat.id : null,
+                config: mitStandard(tiefeKopie(RADLADER))
+            }]);
+            if (error) throw error;
+            await window.fetchMietVorlagen();
+            window.showToast('Vorlage „Radlader“ angelegt' + (kat && !belegt ? '' : ' — bitte Kategorie wählen') + '.');
+        } catch (e) {
+            console.warn('Radlader-Vorlage konnte nicht angelegt werden:', e && e.message);
+        }
+    }
+
+    // Wird beim Öffnen der Einstellungsseite aufgerufen.
+    window.mietVorlagenOeffnen = async function () {
+        await window.fetchMietVorlagen();
+        await anlegenFallsLeer();
+        await radladerAnlegenFallsFehlt();
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const karte = document.querySelector('.settings-card[data-target="miet-vorlagen"]');
+        if (karte) karte.addEventListener('click', () => window.mietVorlagenOeffnen());
+        setTimeout(() => { if (!geladen) window.fetchMietVorlagen(); }, 2500);
+    });
+
+    console.log('Mietvereinbarungs-Vorlagen geladen.');
+})();

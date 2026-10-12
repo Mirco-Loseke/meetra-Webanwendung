@@ -1,0 +1,1093 @@
+/* ========================================================= */
+/* ================= SERVICE ENTRIES MODULE ================ */
+/* ========================================================= */
+
+window.allServiceEntries = [];
+window.serviceEntryList = [];
+window.currentEditingServiceId = null;
+window.serviceEntriesLimit = 40;
+window.selectedServiceCategories = [];
+window.selectedTechs = [];
+
+window.fetchServiceEntries = async function() {
+    if (!window.supabaseClient) return;
+
+    const list = document.getElementById('service-entries-list');
+
+    // 1. Zuerst SOFORT aus IndexedDB Cache laden (falls vorhanden)
+    let cacheLoaded = false;
+    if (window.offlineService) {
+        try {
+            const cached = await window.offlineService.getAllCachedEntries();
+            if (cached && cached.length > 0) {
+                window.allServiceEntries = cached;
+                window.serviceEntryList = window.allServiceEntries;
+                window.renderServiceEntries();
+                cacheLoaded = true;
+            }
+        } catch (e) {
+            console.error('Offline-Cache beim Vorsortieren nicht ladbar:', e);
+        }
+    }
+
+    // Wenn offline, brechen wir nach dem Cache-Laden ab
+    if (!navigator.onLine) {
+        if (!cacheLoaded && list) {
+            list.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: rgba(255,255,255,0.4); padding: 2rem;">Offline: Keine zwischengespeicherten Daten vorhanden.</div>';
+        }
+        return;
+    }
+
+    // Wenn kein Cache geladen wurde, Lade-Indikator zeigen
+    if (!cacheLoaded && list) {
+        list.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: white; padding: 2rem;">Lade Serviceeinsätze...</div>';
+    }
+
+    // 2. Frische Daten vom Server holen
+    let data, error;
+    // customer_signed ist eine generierte Spalte (supabase_add_service_signed_flag.sql):
+    // nur ja/nein statt des ganzen Unterschriftsbilds — die Liste zeigt damit,
+    // ob der Kunde unterschrieben hat. Fehlt die Spalte noch, ohne sie laden.
+    const SPALTEN = 'id, machine_id, category_id, category_ids, title, date, datum_von, datum_bis, hours, technicians, pdf_url, pdf_path, files, is_finalized, finalized_at, workshop_order_number, previous_report_id';
+    const laden = (spalten) => window.withTimeout(
+        window.supabaseClient.from('service_entries').select(spalten).order('date', { ascending: false }),
+        6000 // 6 Sekunden Timeout
+    );
+    try {
+        // Fehlende Spalte merken (js/app-core.js) statt bei jedem Laden einen 400er zu erzeugen.
+        const signFlag = typeof window.dbKannDas !== 'function' || window.dbKannDas('service_customer_signed');
+        let result = await laden(signFlag ? SPALTEN + ', customer_signed' : SPALTEN);
+        if (result.error && signFlag && /customer_signed/i.test(result.error.message || '')) {
+            if (typeof window.dbKannDasMerken === 'function') window.dbKannDasMerken('service_customer_signed', false);
+            result = await laden(SPALTEN);
+        }
+        data = result.data; error = result.error;
+    } catch (timeoutErr) {
+        error = timeoutErr;
+    }
+
+    if (error) {
+        console.error('Error fetching service entries:', error);
+        if (!cacheLoaded && list) {
+            list.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: rgba(255,200,200,0.8);">Fehler beim Laden: ${error.message}</div>`;
+        }
+        return;
+    }
+
+    window.allServiceEntries = data || [];
+    window.serviceEntryList = window.allServiceEntries;
+    window.renderServiceEntries();
+
+    // Cache aktualisieren
+    if (window.offlineService) {
+        window.offlineService.cacheEntries(window.allServiceEntries);
+        window.syncFullServiceEntriesForOffline();
+    }
+};
+
+window.syncFullServiceEntriesForOffline = async function() {
+    if (!window.supabaseClient || !navigator.onLine || !window.offlineService) return;
+    try {
+        const lastSync = localStorage.getItem('last_service_entries_sync') || '1970-01-01T00:00:00.000Z';
+
+        let { data, error } = await window.supabaseClient
+            .from('service_entries')
+            .select('*')
+            .gt('updated_at', lastSync);
+
+        if (error) {
+            console.warn('Inkrementeller Filter fehlgeschlagen, lade alle Berichte ungefiltert:', error);
+            const fullResult = await window.supabaseClient.from('service_entries').select('*');
+            data = fullResult.data;
+            error = fullResult.error;
+        }
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+            await window.offlineService.cacheFullEntries(data);
+            console.log(`[offlineSync] Sync durchgeführt: ${data.length} Berichte für Offline-Nutzung zwischengespeichert.`);
+        }
+
+        localStorage.setItem('last_service_entries_sync', new Date().toISOString());
+    } catch (e) {
+        console.warn('Offline-Vollsync der Serviceberichte fehlgeschlagen:', e);
+    }
+};
+
+// Eine Sperre gilt nur als "aktiv", solange sie höchstens so alt ist. Ein
+// geöffneter Bericht hält sie per Heartbeat frisch; wird der Tab geschlossen
+// (oder stürzt ab), altert sie und ist nach wenigen Sekunden wieder frei —
+// so wird niemand mehr fälschlich als "drin" angezeigt.
+const SERVICEBERICHT_LOCK_STALE_SEC = 40;
+const SERVICEBERICHT_LOCK_HEARTBEAT_MS = 15000;
+let _serviceLockHeartbeat = null;
+let _serviceLockId = null;
+
+function _startServiceLockHeartbeat(id) {
+    _stopServiceLockHeartbeat();
+    _serviceLockId = id;
+    const myName = (window.activeUser && window.activeUser.name) || 'Unbekannt';
+    _serviceLockHeartbeat = setInterval(() => {
+        if (!navigator.onLine || !window.supabaseClient || !_serviceLockId) return;
+        window.supabaseClient
+            .from('service_entries')
+            .update({ locked_by: myName, locked_at: new Date().toISOString() })
+            .eq('id', _serviceLockId)
+            .then(() => {}, () => {});
+    }, SERVICEBERICHT_LOCK_HEARTBEAT_MS);
+}
+function _stopServiceLockHeartbeat() {
+    if (_serviceLockHeartbeat) { clearInterval(_serviceLockHeartbeat); _serviceLockHeartbeat = null; }
+    _serviceLockId = null;
+}
+
+window.tryAcquireServiceberichtLock = async function(entry) {
+    const myName = (window.activeUser && window.activeUser.name) || 'Unbekannt';
+    const lockedAtMs = entry.locked_at ? new Date(entry.locked_at).getTime() : 0;
+    const lockAgeSec = (Date.now() - lockedAtMs) / 1000;
+
+    if (entry.locked_by && entry.locked_by !== myName && lockAgeSec < SERVICEBERICHT_LOCK_STALE_SEC) {
+        window.showToast(`Dieser Servicebericht wird gerade von ${entry.locked_by} bearbeitet und kann daher nicht geöffnet werden.`);
+        return false;
+    }
+
+    try {
+        await window.supabaseClient
+            .from('service_entries')
+            .update({ locked_by: myName, locked_at: new Date().toISOString() })
+            .eq('id', entry.id);
+    } catch (e) {
+        console.warn('Konnte Bearbeitungssperre nicht setzen:', e);
+    }
+    _startServiceLockHeartbeat(entry.id); // Sperre frisch halten, solange offen
+    return true;
+};
+
+window.releaseServiceberichtLock = async function (id) {
+    _stopServiceLockHeartbeat();
+    if (!id || !navigator.onLine || !window.supabaseClient) return;
+    try {
+        await window.supabaseClient
+            .from('service_entries')
+            .update({ locked_by: null, locked_at: null })
+            .eq('id', id);
+    } catch (e) {
+        console.warn('Konnte Bearbeitungssperre nicht freigeben:', e);
+    }
+};
+
+// Tab/Fenster geschlossen: Sperre sofort freigeben (best effort). Fällt das
+// aus (Absturz), sorgt der Stale-Timeout dafür, dass sie trotzdem frei wird.
+window.addEventListener('pagehide', () => {
+    const id = _serviceLockId;
+    _stopServiceLockHeartbeat();
+    if (id && window.supabaseClient) {
+        try {
+            window.supabaseClient.from('service_entries')
+                .update({ locked_by: null, locked_at: null }).eq('id', id).then(() => {}, () => {});
+        } catch (e) {}
+    }
+});
+
+// Übernimmt aus dem Vorgängerbericht, was gleich bleibt: Maschine,
+// Kategorien, Techniker und die Werkstattauftragsnummer. Alles andere
+// (Beschreibung, Arbeitsschritte, Material, Prüflisten) bleibt leer — es ist
+// ein neuer Einsatz, kein Abzug des alten.
+function uebernehmeAusVorgaenger(quelle) {
+    try {
+        if (quelle.machineId && typeof window.selectServiceMachine === 'function') {
+            const m = (window.machineList || []).find(x => String(x.id) === String(quelle.machineId));
+            if (m) {
+                const cat = (window.categoryList || []).find(c => c.id === m.category_id);
+                window.selectServiceMachine(m.id, m.manufacturer, m.name, m.serial,
+                    m.image_url, cat ? cat.name : '', m.year);
+            }
+        }
+
+        if (Array.isArray(quelle.categoryIds) && quelle.categoryIds.length
+            && typeof window.selectServiceCategory === 'function') {
+            window.selectServiceCategory(null);
+            const cats = window.categoryList || [];
+            quelle.categoryIds.forEach(id => {
+                const c = cats.find(x => String(x.id) === String(id));
+                if (c) window.selectServiceCategory(c.id, c.name);
+            });
+        }
+
+        if (Array.isArray(quelle.technicians) && quelle.technicians.length
+            && typeof window.toggleTechnician === 'function') {
+            quelle.technicians.forEach(id => window.toggleTechnician(id));
+        }
+
+        const jahr = document.getElementById('service-workshop-year-digit');
+        const suffix = document.getElementById('service-workshop-order-suffix');
+        if (jahr && quelle.workshopYearDigit) jahr.value = quelle.workshopYearDigit;
+        if (suffix && quelle.workshopOrderSuffix) suffix.value = quelle.workshopOrderSuffix;
+
+        if (window.showToast) window.showToast('Folgebericht — mit dem vorherigen Bericht verknüpft.');
+    } catch (e) {
+        console.warn('Übernahme aus dem Vorgängerbericht fehlgeschlagen:', e);
+    }
+}
+
+window.createFolgebericht = function () {
+    if (!window.currentEditingServiceId) return;
+    if (typeof window.serviceberichtIsDirty !== 'undefined' && window.serviceberichtIsDirty) {
+        window.showToast('Bitte zuerst die aktuellen Änderungen speichern, bevor ein Folgebericht erstellt wird.');
+        return;
+    }
+    const machineId = parseInt(document.getElementById('selected-machine-id')?.value) || null;
+    window._pendingFolgeberichtSource = {
+        previousId: window.currentEditingServiceId,
+        machineId: machineId,
+        categoryIds: (typeof window.selectedServiceCategories !== 'undefined' && Array.isArray(window.selectedServiceCategories)) ? [...window.selectedServiceCategories] : [],
+        // Techniker aus dem versteckten Feld lesen, nicht aus window.selectedTechs:
+        // toggleTechnician (js/service-report-form.js) pflegt eine modul-lokale
+        // Liste und schreibt sie nur dorthin — window.selectedTechs blieb leer.
+        technicians: (function () {
+            try {
+                const roh = document.getElementById('selected-technician-ids')?.value || '[]';
+                const arr = JSON.parse(roh);
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) { return []; }
+        })(),
+        workshopYearDigit: document.getElementById('service-workshop-year-digit')?.value.trim() || '',
+        workshopOrderSuffix: document.getElementById('service-workshop-order-suffix')?.value.trim() || ''
+    };
+    window.closeServiceberichtModal(true);
+    setTimeout(() => {
+        window.openServiceberichtModal(null);
+    }, 320);
+};
+
+window.jumpToServicebericht = function (id) {
+    const entry = (window.allServiceEntries || []).find(e => e.id === id);
+    if (!entry) {
+        window.showToast('Verknüpfter Bericht wurde nicht gefunden (evtl. gelöscht).');
+        return;
+    }
+    const modal = document.getElementById('servicebericht-modal');
+    const modalIsOpen = modal && modal.classList.contains('show');
+
+    const openTarget = () => {
+        if (entry.is_finalized) {
+            if (entry.pdf_url) {
+                window.open(entry.pdf_url, '_blank');
+            } else if (typeof window.showServiceQuickInfo === 'function') {
+                window.showServiceQuickInfo(id);
+            }
+        } else if (typeof window.openEditServicebericht === 'function') {
+            window.openEditServicebericht(id);
+        }
+    };
+
+    if (modalIsOpen) {
+        window.closeServiceberichtModal(true);
+        setTimeout(openTarget, 320);
+    } else {
+        openTarget();
+    }
+};
+
+window.openEditServicebericht = async function (id) {
+    const entryHeader = (window.allServiceEntries || []).find(e => e.id === id);
+    if (!entryHeader) return;
+
+    if (entryHeader.is_finalized) {
+        window.showToast('Dieser Servicebericht wurde abgeschlossen und kann nicht mehr bearbeitet werden.');
+        return;
+    }
+
+    if (!navigator.onLine) {
+        if (window.offlineService) {
+            try {
+                const cached = await window.offlineService.getCachedFullEntry(id);
+                if (cached) {
+                    if (cached.is_finalized) {
+                        window.showToast('Dieser Servicebericht wurde abgeschlossen und kann nicht mehr bearbeitet werden.');
+                        return;
+                    }
+                    window.openServiceberichtModal(cached);
+                    return;
+                }
+            } catch (e) {
+                console.error('Offline-Cache konnte nicht geladen werden:', e);
+                window.showToast('Offline-Speicher nicht verfügbar: ' + (e.message || e));
+                return;
+            }
+        }
+        window.showToast('Dieser Servicebericht wurde noch nicht vollständig offline gespeichert. Bitte einmal mit Internet öffnen, danach kann offline weiterbearbeitet werden.');
+        return;
+    }
+
+    try {
+        document.body.style.cursor = 'wait';
+        const { data, error } = await window.supabaseClient
+            .from('service_entries')
+            .select('*')
+            .eq('id', id)
+            .single();
+        document.body.style.cursor = 'default';
+
+        if (error) throw error;
+        if (data) {
+            if (data.is_finalized) {
+                window.showToast('Dieser Servicebericht wurde abgeschlossen und kann nicht mehr bearbeitet werden.');
+                if (typeof window.fetchServiceEntries === 'function') window.fetchServiceEntries();
+                return;
+            }
+            const canOpen = await window.tryAcquireServiceberichtLock(data);
+            if (!canOpen) return;
+            if (window.offlineService) window.offlineService.cacheFullEntries([data]);
+            window.openServiceberichtModal(data);
+        }
+    } catch (err) {
+        document.body.style.cursor = 'default';
+        console.error('Failed to load service entry details:', err);
+        window.showToast('Verbindungsfehler: Details des Berichts konnten nicht geladen werden.');
+    }
+};
+
+// „Daten retten": sucht auf DIESEM Gerät die lokal (IndexedDB) gespeicherte
+// Vollkopie des gerade bearbeiteten Berichts und ergänzt damit leere Felder.
+// Überschreibt nichts, was aktuell schon Inhalt hat. Speichern erst nach Prüfung.
+window.rescueServiceReportData = async function () {
+    const id = window.currentEditingServiceId;
+    const toast = (m) => (window.showToast ? window.showToast(m) : alert(m));
+    if (!id) { toast('Nur beim Bearbeiten eines bereits gespeicherten Berichts möglich.'); return; }
+    if (!window.offlineService) { toast('Offline-Speicher auf diesem Gerät nicht verfügbar.'); return; }
+
+    let cached;
+    try { cached = await window.offlineService.getCachedFullEntry(id); }
+    catch (e) { toast('Lokale Kopie konnte nicht gelesen werden: ' + (e.message || e)); return; }
+    if (!cached) { toast('Auf diesem Gerät ist keine lokale Kopie dieses Berichts gespeichert. Bitte an einem Gerät versuchen, das den Bericht früher offen hatte.'); return; }
+
+    // Aktuellen Serverstand als Basis holen (falls online), sonst den Cache selbst.
+    let base = cached;
+    try {
+        if (navigator.onLine && window.supabaseClient) {
+            const { data } = await window.supabaseClient.from('service_entries').select('*').eq('id', id).single();
+            if (data) base = data;
+        }
+    } catch (e) { /* offline o. Fehler -> base bleibt cached */ }
+
+    const RECOVER = ['work_log', 'materials', 'tasks', 'description', 'remarks', 'checklist_payload',
+        'contact_persons', 'hours', 'operating_hours', 'travel_distance_km', 'travel_time_minutes',
+        'customer_name', 'customer_signature', 'tech_signature', 'tech_sig_date', 'customer_sig_date',
+        'status_repaired', 'status_repaired_en', 'title', 'category_id', 'category_ids',
+        'datum_von', 'datum_bis', 'date', 'technicians', 'workshop_order_number',
+        'hotel_company', 'hotel_street', 'hotel_zip', 'hotel_city', 'hotel_country'];
+    const isEmpty = (v) => v == null || v === '' ||
+        (Array.isArray(v) && v.length === 0) ||
+        (typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length === 0);
+
+    const merged = Object.assign({}, base);
+    const restored = [];
+    RECOVER.forEach(f => {
+        if (isEmpty(base[f]) && !isEmpty(cached[f])) { merged[f] = cached[f]; restored.push(f); }
+    });
+
+    if (!restored.length) {
+        toast('Lokale Kopie gefunden, aber sie enthält keine zusätzlichen Daten (evtl. auf diesem Gerät bereits überschrieben).');
+        return;
+    }
+    if (!confirm('Aus lokaler Kopie wiederherstellbar:\n\n• ' + restored.join('\n• ') +
+        '\n\nJetzt ins Formular übernehmen? Gespeichert wird erst, wenn du danach auf „Speichern" klickst.')) return;
+
+    window.closeServiceberichtModal(true);
+    setTimeout(() => {
+        window.openServiceberichtModal(merged);
+        toast('Wiederhergestellt: ' + restored.length + ' Felder. Bitte prüfen und dann speichern.');
+    }, 340);
+};
+
+window.openServiceberichtModal = function (editData = null) {
+    try {
+        const modal = document.getElementById('servicebericht-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.style.display = 'flex';
+            requestAnimationFrame(() => {
+                modal.classList.add('show');
+                const scrollArea = modal.querySelector('.modal-scroll-area');
+                if (scrollArea) scrollArea.scrollTop = 0;
+            });
+
+            const serviceCollapsibles = modal.querySelectorAll('.collapsible-section');
+            serviceCollapsibles.forEach(section => {
+                const content = section.querySelector('.section-content');
+                const chevron = section.querySelector('.toggle-chevron');
+                if (content) content.style.display = 'none';
+                if (chevron) chevron.style.transform = 'rotate(0deg)';
+            });
+
+            const titleEl = modal.querySelector('h2');
+            const machineSelector = modal.querySelector('.machine-selector-wrapper .search-input-container');
+            const machineList = document.getElementById('service-machine-list');
+            const lockHint = document.getElementById('selection-lock-hint');
+            const previewArea = document.getElementById('selected-machine-preview');
+
+            const custPreview = document.getElementById('selected-machine-customer-preview');
+            if (custPreview) { custPreview.classList.add('hidden'); custPreview.style.display = 'none'; }
+            if (previewArea) { previewArea.classList.add('hidden'); previewArea.style.display = 'none'; }
+            if (lockHint) lockHint.classList.add('hidden');
+            if (machineSelector) machineSelector.style.display = 'block';
+            if (machineList) machineList.style.display = 'block';
+
+            const selectedTechIds = document.getElementById('selected-technician-ids');
+            if (selectedTechIds) selectedTechIds.value = '';
+
+            const filePreviews = document.getElementById('service-file-previews');
+            if (filePreviews) filePreviews.innerHTML = '';
+
+            const drivingDistance = document.getElementById('service-driving-distance');
+            if (drivingDistance) drivingDistance.value = '';
+            const drivingTime = document.getElementById('service-driving-time');
+            if (drivingTime) drivingTime.value = '';
+            if (typeof window.updateDrivingTimeHoursPreview === 'function') window.updateDrivingTimeHoursPreview();
+            const customerSignature = document.getElementById('service-customer-signature');
+            if (customerSignature) customerSignature.value = '';
+            const customerSigneeName = document.getElementById('service-customer-signee-name');
+            if (customerSigneeName) customerSigneeName.value = '';
+
+            const operatingHours = document.getElementById('service-operating-hours');
+            if (operatingHours) operatingHours.value = '';
+            const serviceYearDigit = document.getElementById('service-workshop-year-digit');
+            if (serviceYearDigit) {
+                const curYear = String(new Date().getFullYear());
+                serviceYearDigit.value = curYear.charAt(3) || '6';
+            }
+            const serviceSuffix = document.getElementById('service-workshop-order-suffix');
+            if (serviceSuffix) serviceSuffix.value = '';
+            const cloudPdfBtn = document.getElementById('btn-servicebericht-cloud-pdf');
+            if (cloudPdfBtn) cloudPdfBtn.classList.remove('hidden');
+            const pdfStatusEl = document.getElementById('servicebericht-pdf-status');
+            if (pdfStatusEl) pdfStatusEl.textContent = 'Noch kein PDF gespeichert';
+            const workLogTableBody = document.getElementById('service-work-log-table-body');
+            if (workLogTableBody) workLogTableBody.innerHTML = '';
+            const tasksTableBody = document.getElementById('service-tasks-table-body');
+            if (tasksTableBody) tasksTableBody.innerHTML = '';
+            const materialsTableBody = document.getElementById('service-materials-table-body');
+            if (materialsTableBody) materialsTableBody.innerHTML = '';
+            const statusRepaired = document.getElementById('service-status-repaired');
+            if (statusRepaired) statusRepaired.checked = false;
+            const statusRepairedEn = document.getElementById('service-status-repaired-en');
+            if (statusRepairedEn) statusRepairedEn.checked = false;
+
+            const locCompanyInput = document.getElementById('service-location-company');
+            if (locCompanyInput) locCompanyInput.value = '';
+            const locStreetInput = document.getElementById('service-location-street');
+            if (locStreetInput) locStreetInput.value = '';
+            const locZipInput = document.getElementById('service-location-zip');
+            if (locZipInput) locZipInput.value = '';
+            const locCityInput = document.getElementById('service-location-city');
+            if (locCityInput) locCityInput.value = '';
+            const locCountryInput = document.getElementById('service-location-country');
+            if (locCountryInput) locCountryInput.value = 'Deutschland';
+            const locFieldsWrapper = document.getElementById('service-location-fields-wrapper');
+            if (locFieldsWrapper) { locFieldsWrapper.classList.add('hidden'); locFieldsWrapper.style.display = 'none'; }
+
+            const cpListReset = document.getElementById('service-contact-persons-list');
+            if (cpListReset) cpListReset.innerHTML = '';
+
+            ['service-hotel-company', 'service-hotel-street', 'service-hotel-zip', 'service-hotel-city', 'service-hotel-country'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = '';
+            });
+            const hotelFieldsWrapper = document.getElementById('service-hotel-fields-wrapper');
+            if (hotelFieldsWrapper) { hotelFieldsWrapper.classList.add('hidden'); hotelFieldsWrapper.style.display = 'none'; }
+
+            window.serviceFiles = [];
+            window.existingServiceFiles = [];
+            window.removedServiceFiles = [];
+            window.selectedTechs = [];
+
+            const rescueBtn = document.getElementById('btn-servicebericht-rescue');
+            // „Folgebericht anlegen" gibt es nur beim Bearbeiten — ein neuer
+            // Bericht hat noch keinen Vorgänger, mit dem er verknüpft werden
+            // könnte. Der Knopf stand im Markup dauerhaft auf `hidden` und
+            // wurde nirgends eingeblendet; die Verknüpfung war dadurch
+            // unerreichbar.
+            const followUpBtn = document.getElementById('btn-servicebericht-follow-up');
+            if (followUpBtn) followUpBtn.classList.toggle('hidden', !editData);
+
+            // Verknüpfungsfeld: nur beim Bearbeiten. Beim Anlegen gibt es noch
+            // keinen gespeicherten Bericht, an den etwas gehängt werden könnte.
+            const linkBox = document.getElementById('service-link-field');
+            if (linkBox && !editData) linkBox.style.display = 'none';
+
+            if (editData) {
+                window.currentEditingServiceId = editData.id;
+                window._serviceReportBaseline = Object.assign({}, editData);
+                if (titleEl) titleEl.textContent = 'Servicebericht bearbeiten';
+                if (rescueBtn) rescueBtn.classList.remove('hidden');
+                // Formular aus dem geladenen Bericht vorbefüllen (Maschine + alle Felder).
+                if (typeof window.populateServiceberichtForm === 'function') {
+                    try { window.populateServiceberichtForm(editData); }
+                    catch (e) { console.error('Vorbefüllung des Serviceberichts fehlgeschlagen:', e); }
+                }
+            } else {
+                window.currentEditingServiceId = null;
+                window._serviceReportBaseline = null;
+                window._servicePreviousReportId = null;
+                if (titleEl) titleEl.textContent = 'Neuer Servicebericht';
+                if (rescueBtn) rescueBtn.classList.add('hidden');
+
+                // Prüflisten leeren. Sie wurden hier bisher NICHT zurückgesetzt:
+                // loadChecklistPayload läuft nur beim Bearbeiten. Wer vorher
+                // einen Bericht mit UVV-/Wartungsplan offen hatte, sah dessen
+                // Haken und Antworten im neuen Bericht wieder — samt der
+                // gemerkten Eingaben aus dem Zwischenspeicher.
+                // Kategorie und Maschine wurden für einen NEUEN Bericht ebenfalls
+                // nie zurückgesetzt: das Kategoriefeld zeigte noch „UVV" vom
+                // vorigen Bericht, die Maschinen-ID steckte noch im Feld — und
+                // loadChecklistPayload hakte daraufhin gleich wieder Pläne an,
+                // die im neuen Bericht (z. B. nur „Reparatur") nichts zu suchen
+                // hatten. Erst leeren, dann die Prüflisten aufbauen; wer von
+                // einer Maschinenkarte kommt, setzt die Maschine danach neu.
+                const machineIdFeld = document.getElementById('selected-machine-id');
+                if (machineIdFeld) machineIdFeld.value = '';
+                const previewNameEl = document.getElementById('preview-name');
+                if (previewNameEl) previewNameEl.textContent = '';
+                document.querySelectorAll('#service-machine-list .premium-item.selected').forEach(el => el.classList.remove('selected'));
+                if (typeof window.selectServiceCategory === 'function') {
+                    try { window.selectServiceCategory(null); } catch (e) { /* Kategorien-Modul fehlt */ }
+                }
+                if (typeof window.loadChecklistPayload === 'function') {
+                    try { window.loadChecklistPayload(null); } catch (e) { /* ohne Prüflisten weiter */ }
+                }
+
+                // Folgebericht: window.createFolgebericht legt hier die Daten
+                // des Vorgängers ab und öffnet dann dieses Fenster. Ausgewertet
+                // wurden sie bisher NIRGENDS — der neue Bericht startete leer
+                // und ohne previous_report_id, die Verknüpfung entstand also nie.
+                const quelle = window._pendingFolgeberichtSource;
+                window._pendingFolgeberichtSource = null;
+                if (quelle) {
+                    window._servicePreviousReportId = quelle.previousId || null;
+                    setTimeout(() => uebernehmeAusVorgaenger(quelle), 60);
+                }
+            }
+        }
+    } catch (err) {
+        console.error('Error opening Servicebericht modal:', err);
+    }
+};
+
+window.renderServiceEntries = function () {
+    try {
+        const list = document.getElementById('service-entries-list');
+        const searchInput = document.getElementById('service-search-input');
+        if (!list) return;
+
+        const searchVal = searchInput ? searchInput.value.trim() : '';
+        const activeFiltersStr = JSON.stringify(window.activeServiceCategoryFilters);
+        if (window._lastServiceSearchVal !== searchVal || window._lastActiveServiceCategoryFilters !== activeFiltersStr) {
+            window.serviceEntriesLimit = 40;
+            window._lastServiceSearchVal = searchVal;
+            window._lastActiveServiceCategoryFilters = activeFiltersStr;
+        }
+
+        window.serviceEntriesLimit = window.serviceEntriesLimit || 40;
+
+        let entries = (window.allServiceEntries || []).filter(e =>
+            e.title !== 'Werkstattaufenthalt Beginn' &&
+            e.title !== 'Werkstattaufenthalt Ende'
+        );
+
+        // Filter by Category
+        if (window.activeServiceCategoryFilters && !window.activeServiceCategoryFilters.includes('all')) {
+            entries = entries.filter(e => {
+                const catId = e.category_id ? e.category_id.toString() : 'null';
+                return window.activeServiceCategoryFilters.includes(catId);
+            });
+        }
+
+        // Filter by Search
+        if (searchInput && searchInput.value.trim() !== '') {
+            const term = searchInput.value.toLowerCase();
+            entries = entries.filter(e => {
+                const machines = window.machineList || [];
+                const machine = machines.find(m => m.id === e.machine_id);
+                const machineName = machine ? `${machine.manufacturer} ${machine.name} ${machine.serial ? `#${machine.serial}` : ''} ${machine.year ? `(${machine.year})` : ''}` : '';
+
+                const text = `${e.title} ${e.description} ${e.date} ${machineName}`.toLowerCase();
+                return term.split(' ').every(word => text.includes(word));
+            });
+        }
+
+        if (entries.length === 0) {
+            const rawCount = (window.allServiceEntries || []).length;
+            const hasActiveFilter = (window.activeServiceCategoryFilters && !window.activeServiceCategoryFilters.includes('all'))
+                || (searchInput && searchInput.value.trim() !== '');
+            let message = 'Keine Serviceeinsätze gefunden.';
+            let showResetBtn = false;
+            if (rawCount > 0 && hasActiveFilter) {
+                message = `${rawCount} Servicebericht${rawCount > 1 ? 'e' : ''} vorhanden, aber durch Suche/Filter ausgeblendet.`;
+                showResetBtn = true;
+            } else if (!navigator.onLine && rawCount === 0) {
+                message = 'Offline: Noch keine Serviceberichte zwischengespeichert. Bitte einmal mit Internet öffnen.';
+            }
+            const emptyState = `
+<div class="empty-state" style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem; background: rgba(255,255,255,0.02); border-radius: 24px; border: 1px dashed rgba(255,255,255,0.1);">
+    <p style="color: rgba(255,255,255,0.4); font-size: 1.1rem;">${message}</p>
+    ${showResetBtn ? `<button onclick="window.activeServiceCategoryFilters=['all']; const si=document.getElementById('service-search-input'); if(si) si.value=''; window.renderServiceEntries();" style="margin-top:1rem; padding:8px 18px; border-radius:10px; background:rgba(59,130,246,0.15); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); cursor:pointer; font-weight:700;">Filter zurücksetzen</button>` : ''}
+</div>`;
+            list.innerHTML = emptyState;
+            return;
+        }
+
+        const totalEntriesCount = entries.length;
+        const hasMore = totalEntriesCount > window.serviceEntriesLimit;
+        const slicedEntries = entries.slice(0, window.serviceEntriesLimit);
+
+        const followUpByPreviousId = {};
+        (window.allServiceEntries || []).forEach(e => {
+            if (e.previous_report_id) followUpByPreviousId[e.previous_report_id] = e.id;
+        });
+
+        const renderServiceLinkBadge = (entry, position) => {
+            const linkedId = entry.previous_report_id || followUpByPreviousId[entry.id];
+            if (!linkedId) return '';
+            const title = entry.previous_report_id ? 'Folgebericht — zum vorherigen Bericht springen' : 'Hat einen Folgebericht — springen';
+            return `
+                <button class="service-link-badge" onclick="event.stopPropagation(); window.jumpToServicebericht(${linkedId})" title="${title}"
+                    style="position: absolute; ${position} z-index: 12; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid rgba(16,185,129,0.5); background: rgba(15,23,42,0.75); backdrop-filter: blur(6px); color: var(--color-primary-green); display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;"
+                    onmouseover="this.style.background='rgba(16,185,129,0.85)'; this.style.color='#fff'" onmouseout="this.style.background='rgba(15,23,42,0.75)'; this.style.color='var(--color-primary-green)'">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                </button>`;
+        };
+
+        const cardsHtml = slicedEntries.map(e => {
+            const machines = window.machineList || [];
+            const machine = machines.find(m => m.id === e.machine_id);
+            const machineImgFull = machine ? (machine.image_url || '') : '';
+            const machineImg = machineImgFull && window.getMachineThumbnailUrl ? window.getMachineThumbnailUrl(machineImgFull) : machineImgFull;
+            const dateObj = new Date(e.date);
+            const dateStr = dateObj.toLocaleDateString('de-DE');
+
+            let displayedCategories = [];
+            if (e.category_ids && Array.isArray(e.category_ids) && e.category_ids.length > 0) {
+                displayedCategories = e.category_ids.map(id => (window.categoryList || []).find(c => c.id === id)).filter(Boolean);
+            } else if (e.category_id) {
+                const cat = (window.categoryList || []).find(c => c.id === e.category_id);
+                if (cat) displayedCategories = [cat];
+            }
+
+            if (displayedCategories.length === 0) {
+                displayedCategories = [{ name: 'Allgemein', color: '#10b981', id: 0 }];
+            }
+
+            const mainCat = displayedCategories[0];
+            const fallbackPalette = ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899', '#ef4444', '#06b6d4', '#84cc16'];
+            const primaryCatColor = mainCat.color || fallbackPalette[mainCat.id % fallbackPalette.length];
+
+            let durationStr = '';
+            if (e.datum_von) {
+                const d1 = new Date(e.datum_von);
+                const d2 = e.datum_bis ? new Date(e.datum_bis) : new Date(e.datum_von);
+                d1.setHours(0, 0, 0, 0);
+                d2.setHours(0, 0, 0, 0);
+                const diffDays = Math.round(Math.abs(d2 - d1) / (1000 * 60 * 60 * 24)) + 1;
+
+                if (diffDays >= 30) {
+                    const months = Math.floor(diffDays / 30);
+                    const remainingDays = diffDays % 30;
+                    durationStr = ` (${months}. Monat${remainingDays > 0 ? ` ${remainingDays}. Tage` : ''})`;
+                } else {
+                    durationStr = diffDays === 1 ? ` (1. Tag)` : ` (${diffDays}. Tage)`;
+                }
+            }
+
+            let cleanDesc = e.description || '';
+            const lowDesc = cleanDesc.toLowerCase();
+            const isAutoEntry = lowDesc.includes('automatischer systemeintrag');
+
+            let displayOrderNum = e.auftragsnummer || e.workshop_order_number || '';
+            if (!displayOrderNum) {
+                const match = cleanDesc.match(/Werkstattauftrag[:\s]+([^\s\n]+)/i);
+                if (match && match[1]) {
+                    displayOrderNum = match[1].trim();
+                }
+            }
+
+            const hasOrderTag = !!displayOrderNum && displayOrderNum !== '—';
+
+            if (isAutoEntry) {
+                if (hasOrderTag) {
+                    cleanDesc = '';
+                } else {
+                    const parts = cleanDesc.split('\n');
+                    const titlePart = parts[0] || '';
+                    const numberPart = parts.slice(1).join('\n') || '';
+                    cleanDesc = `<span style="color: var(--color-primary-red, #ef4444); font-weight: 800;">${titlePart}</span>\n<span style="color: #ffffff; font-weight: 700;">${numberPart}</span>`;
+                }
+            } else {
+                cleanDesc = cleanDesc.replace(/Zeitraum:.*?\n?/gi, '').replace(/Auftragsnummer:.*?\n?/gi, '').replace(/Werkstattauftrag[:\s]+.*?\n?/gi, '').trim() || '';
+            }
+
+            const images = [];
+            const docs = [];
+            if (e.files && Array.isArray(e.files)) {
+                e.files.forEach(file => {
+                    const url = typeof file === 'string' ? file : file.url;
+                    const type = typeof file === 'string' ? '?' : file.type;
+                    const name = typeof file === 'string' ? 'Datei' : file.name;
+                    const isImg = url.match(/\.(jpg|jpeg|png|gif|webp)$/i) || (type && type.startsWith('image/'));
+                    if (isImg) images.push(url);
+                    else docs.push({ url, name });
+                });
+            }
+
+            window[`_sf${e.id}`] = e.files || [];
+
+            const isLinkedReport = !!(e.previous_report_id || followUpByPreviousId[e.id]);
+            const orderTagColor = isLinkedReport
+                ? { bg: 'rgba(245, 158, 11, 0.2)', border: 'rgba(252, 211, 77, 0.5)', text: '#fbbf24' }
+                : { bg: 'rgba(59, 130, 246, 0.2)', border: 'rgba(147, 197, 253, 0.5)', text: '#93c5fd' };
+
+            return `
+                    <div class="card" style="font-family: 'Inter', sans-serif; overflow: visible; display: flex; flex-direction: column; background: rgba(110, 122, 140, 0.45); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6); border: 3px solid ${primaryCatColor}66; border-top: 7px solid ${primaryCatColor}; border-radius: 20px; transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); position: relative; padding-top: 35px; padding-bottom: 14px; width: 100%; box-sizing: border-box; min-width: 0;">
+
+                        <div class="service-card-badge-row" style="position: absolute; top: -26px; right: 24px; left: auto; display: flex; flex-direction: row-reverse; gap: 8px; z-index: 10;">
+                            ${displayedCategories.map(cat => {
+                                const cColor = cat.color || fallbackPalette[cat.id % fallbackPalette.length];
+                                return `
+                                    <div class="service-card-badge" style="height: 40px; padding: 0 18px; background: ${cColor}; color: #ffffff; border-radius: 20px; font-size: 0.9rem; font-weight: 700; box-shadow: 0 0 15px ${cColor}60; border: 2.5px solid color-mix(in srgb, ${cColor}, #ffffff 60%); backdrop-filter: blur(8px); letter-spacing: 0.5px; display: flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; font-family: 'Inter', sans-serif;">
+                                        ${cat.name}
+                                    </div>`;
+                            }).join('')}
+                        </div>
+
+                        <button class="service-quickinfo-btn" onclick="event.stopPropagation(); window.showServiceQuickInfo(${e.id})" title="Stundenübersicht anzeigen"
+                            style="position: absolute; top: 8px; right: 8px; z-index: 12; width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,0.35); background: rgba(15,23,42,0.75); backdrop-filter: blur(6px); color: rgba(255,255,255,0.85); font-size: 0.78rem; font-weight: 700; font-style: italic; font-family: Georgia, serif; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0;"
+                            onmouseover="this.style.background='rgba(59,130,246,0.85)'; this.style.borderColor='rgba(147,197,253,0.9)'" onmouseout="this.style.background='rgba(15,23,42,0.75)'; this.style.borderColor='rgba(255,255,255,0.35)'">i</button>
+                        ${renderServiceLinkBadge(e, 'top: 8px; left: 8px;')}
+
+                        <div style="position: relative; width: 100%; height: var(--machine-image-height, 300px); overflow: hidden; background: linear-gradient(135deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));">
+                            <div onclick="openPhotosLightbox([${machineImgFull ? `'${machineImgFull}'` : ''}], 0)"
+                                 style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; cursor: ${machineImg ? 'pointer' : 'default'};">
+                                ${machineImg
+                                    ? `<img src="${machineImg}" loading="lazy" onerror="if(this.src!=='${machineImgFull}'){this.onerror=null;this.src='${machineImgFull}';}" style="width: 100%; height: 100%; object-fit: contain; display: block;">`
+                                    : `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" style="opacity: 0.15;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>`}
+                            </div>
+                        </div>
+                        <div class="card-content" style="padding: 1.25rem 1.25rem 2px 1.25rem; flex: 1; display: flex; flex-direction: column; gap: 0.75rem;">
+                            ${hasOrderTag ? `
+                            <div style="display: flex; justify-content: center; margin-bottom: 0.25rem; width: 100%;">
+                                <div onclick="event.stopPropagation(); window.editServiceOrderNumber(${e.id})" title="${isLinkedReport ? 'Teil einer verknüpften Berichtskette — ' : ''}Auftragsnummer ändern" style="height: 32px; padding: 0 16px; background: ${orderTagColor.bg}; border: 1.5px solid ${orderTagColor.border}; border-radius: 16px; color: ${orderTagColor.text}; font-size: 0.85rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; letter-spacing: 0.5px; backdrop-filter: blur(12px); text-transform: uppercase; cursor: pointer;">
+                                    Auftrag ${displayOrderNum}
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.75;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                </div>
+                            </div>` : `
+                            <div style="display: flex; justify-content: center; margin-bottom: 0.25rem; width: 100%;">
+                                <button onclick="event.stopPropagation(); window.editServiceOrderNumber(${e.id})" title="Auftragsnummer / Werkstattauftragsnummer nachtragen" style="height: 32px; padding: 0 16px; background: rgba(255,255,255,0.04); border: 1.5px dashed rgba(255,255,255,0.25); border-radius: 16px; color: rgba(255,255,255,0.5); font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px; letter-spacing: 0.5px; cursor: pointer; font-family: 'Inter', sans-serif; text-transform: uppercase;">
+                                    + Auftragsnummer
+                                </button>
+                            </div>`}
+
+                            <div style="display: flex; align-items: center; gap: 8px; color: #ffffff; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px; text-align: left; width: 100%;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.8;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                ${(e.datum_von && e.datum_bis && new Date(e.datum_von).toLocaleDateString('de-DE') !== new Date(e.datum_bis).toLocaleDateString('de-DE'))
+                                    ? new Date(e.datum_von).toLocaleDateString('de-DE') + ' - ' + new Date(e.datum_bis).toLocaleDateString('de-DE')
+                                    : (e.datum_von ? new Date(e.datum_von).toLocaleDateString('de-DE') : dateStr)}${durationStr}
+                                ${e.customer_signed ? `
+                                <span title="Der Kunde hat unterschrieben" style="margin-left: auto; display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; background: rgba(16,185,129,0.18); border: 1.5px solid rgba(16,185,129,0.55); color: #34d399; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.4px; white-space: nowrap;">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path><path d="M2 2l7.586 7.586"></path><circle cx="11" cy="11" r="2"></circle></svg>
+                                    Unterschrieben
+                                </span>` : ''}
+                            </div>
+
+                            ${machine && machine.company ? `
+                            <div class="service-card-company" style="display: flex; align-items: center; gap: 8px; color: #ffffff; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.5px; text-align: left; width: 100%; white-space: nowrap; overflow: hidden;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="opacity:0.8; flex-shrink: 0;"><path d="M3 21h18"></path><path d="M5 21V7l8-4v18"></path><path d="M19 21V11l-6-4"></path></svg>
+                                <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${machine.company}</span>
+                            </div>` : ''}
+
+                            <div style="min-width: 0; text-align: left; width: 100%;">
+                                <h2 style="margin: 0; font-size: clamp(0.95rem, 3.2vw, 1.75rem); color: var(--color-primary-green); font-weight: 900; line-height: 1.2; font-family: 'Outfit', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                    ${machine ? [machine.manufacturer, machine.name].filter(Boolean).join(' ') : 'Unbekannte Maschine'}
+                                </h2>
+                                ${machine ? `
+                                <div style="color: var(--color-primary-green); font-size: clamp(0.9rem, 3vw, 1.25rem); font-weight: 700; margin-top: 4px; opacity: 0.8; text-transform: uppercase;">
+                                    ${[machine.serial_number || machine.serial ? `#${machine.serial_number || machine.serial}` : null, machine.year ? `(${machine.year})` : null].filter(Boolean).join(' ')}
+                                </div>` : ''}
+                            </div>
+
+                            ${cleanDesc ? `
+                            <div style="margin-top: 4px; text-align: left; width: 100%;">
+                                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.4); font-weight: 800; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 0.5rem;">Fehlerbeschreibung / Kurzbeschreibung Einsatz</div>
+                                <p style="margin: 0; font-size: 0.95rem; color: rgba(255,255,255,0.7); line-height: 1.6; font-weight: 500; white-space: pre-wrap;">${cleanDesc}</p>
+                            </div>` : ''}
+                        </div>
+
+                        <div class="service-card-actions" style="margin-top: auto; display: flex; align-items: center; justify-content: center; gap: 10px; padding-top: 0.75rem; border-top: 1px solid rgba(255,255,255,0.06); margin-left: -0.25rem; margin-right: -0.25rem; padding-left: 1.25rem; padding-right: 1.25rem;">
+                            ${!e.is_finalized ? `
+                            <button class="btn-primary" onclick="openEditServicebericht(${e.id})" title="Bearbeiten"
+                                style="flex: 1; height: 44px; background: rgba(59, 130, 246, 0.85); color: #ffffff; border: 2.5px solid rgba(147, 197, 253, 0.8); border-radius: 20px; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; box-shadow: 0 4px 18px rgba(59, 130, 246, 0.6); backdrop-filter: blur(12px); padding: 0 16px; font-weight: 700; font-family: 'Inter', sans-serif;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                                Bearbeiten
+                            </button>
+                            ` : `
+                            <div title="Abgeschlossen — keine Bearbeitung mehr möglich" style="flex: 1; height: 44px; background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.45); border: 2px solid rgba(255,255,255,0.1); border-radius: 20px; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 700; font-family: 'Inter', sans-serif;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                                Abgeschlossen
+                            </div>
+                            `}
+                            ${(images.length > 0 || docs.length > 0 || e.is_finalized) ? `
+                            <div style="position: relative; flex: none;">
+                                <button onclick="event.stopPropagation(); window.openServiceAttachments(window._sf${e.id}, ${e.id}, ${e.machine_id || 'null'})" title="${e.is_finalized ? 'Anhänge öffnen / Fotos hinzufügen' : 'Anhänge öffnen'}"
+                                    style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(139,92,246,0.85); border: 2.5px solid rgba(196,181,253,0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 18px rgba(139,92,246,0.6); backdrop-filter: blur(12px); padding: 0;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+                                </button>
+                                ${(images.length + docs.length) > 0 ? `<span style="position: absolute; top: -4px; left: -4px; background: #ffffff; color: #7c3aed; font-size: 0.6rem; font-weight: 800; border-radius: 999px; min-width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; padding: 0 3px; line-height: 1; pointer-events: none;">${images.length + docs.length}</span>` : ''}
+                            </div>` : ''}
+                            ${e.pdf_url ? `
+                            <button onclick="event.stopPropagation(); window.previewDocument('${e.pdf_url}', 'Servicebericht', 'application/pdf')" title="PDF öffnen"
+                                style="flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(16, 185, 129, 0.85); border: 2.5px solid rgba(167, 243, 208, 0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 18px rgba(16, 185, 129, 0.6); backdrop-filter: blur(12px); padding: 0;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                            </button>
+                            ` : ''}
+                            <button class="btn-icon-circular delete delete-permission-required" data-del-area="historie" onclick="deleteServiceEntry(${e.id})" title="Löschen"
+                                style="flex: none; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(239, 68, 68, 0.85); border: 2.5px solid rgba(252, 165, 165, 0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 18px rgba(239, 68, 68, 0.6); backdrop-filter: blur(12px); padding: 0;">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 6h18"></path>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2-2v2"></path>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>`;
+        });
+
+        const activeCards = [];
+        const doneCards = [];
+        slicedEntries.forEach((e, i) => {
+            if (e.pdf_url) doneCards.push(cardsHtml[i]);
+            else activeCards.push(cardsHtml[i]);
+        });
+
+        let boardHtml = activeCards.join('');
+        if (doneCards.length > 0) {
+            boardHtml += `
+                <div style="grid-column: 1 / -1; margin-top: 1rem;">
+                    <div onclick="window.toggleServiceErledigtGroup()" style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 14px 22px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; user-select: none; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.07)'" onmouseout="this.style.background='rgba(255,255,255,0.04)'">
+                        <svg id="service-erledigt-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transition: transform 0.25s; color: rgba(255,255,255,0.6); transform: rotate(180deg);"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        <span style="font-weight: 800; font-size: 1rem; color: rgba(255,255,255,0.85); text-transform: uppercase; letter-spacing: 0.5px;">Erledigt (${doneCards.length})</span>
+                    </div>
+                    <div id="service-erledigt-group" class="card-grid" style="margin-top: 1rem;">
+                        ${doneCards.join('')}
+                    </div>
+                </div>`;
+        }
+
+        if (hasMore) {
+            boardHtml += `
+                <div style="grid-column: 1 / -1; display: flex; justify-content: center; margin-top: 2rem; margin-bottom: 2rem; width: 100%;">
+                    <button id="service-entries-more" onclick="window.loadMoreServiceEntries()" class="btn-premium" style="padding: 12px 30px; border-radius: 14px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; font-weight: 700; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4); transition: transform 0.2s;">
+                        Mehr Berichte laden (${totalEntriesCount - window.serviceEntriesLimit} verbleibend)
+                    </button>
+                </div>`;
+        }
+
+        list.innerHTML = boardHtml;
+
+        // Beim Scrollen von selbst nachladen (js/auto-nachladen.js).
+        // Muss nach dem Setzen von innerHTML passieren — vorher gibt es den
+        // Knopf noch nicht.
+        const mehrKnopf = document.getElementById('service-entries-more');
+        if (mehrKnopf && typeof window.autoNachladen === 'function') {
+            window.autoNachladen(mehrKnopf, () => window.loadMoreServiceEntries(),
+                { ladeText: 'Weitere Berichte werden geladen …' });
+        }
+    } catch (error) {
+        console.error('Error rendering service entries:', error);
+    }
+};
+
+window.loadMoreServiceEntries = function () {
+    window.serviceEntriesLimit = (window.serviceEntriesLimit || 40) + 40;
+    window.renderServiceEntries();
+};
+
+window.toggleServiceErledigtGroup = function() {
+    const group = document.getElementById('service-erledigt-group');
+    const chevron = document.getElementById('service-erledigt-chevron');
+    if (group) {
+        group.classList.toggle('hidden');
+        if (chevron) chevron.style.transform = group.classList.contains('hidden') ? 'rotate(0deg)' : 'rotate(180deg)';
+    }
+};
+
+// =========================================================
+// FOTOS NACHTRÄGLICH ANHÄNGEN (auch bei abgeschlossenen Berichten)
+// =========================================================
+// Ein abgeschlossener Bericht bleibt inhaltlich gesperrt — Fotos sind davon
+// ausgenommen: sie kommen oft erst nach dem Abschluss vom Kunden. Geschrieben
+// wird ausschließlich die Spalte `files`, alles andere bleibt unangetastet.
+// Das bereits erzeugte PDF wird NICHT neu gebaut; die Fotos hängen am Bericht.
+window.addPhotosToServiceEntry = function (entryId, machineId) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+    input.style.display = 'none';
+    document.body.appendChild(input);
+
+    input.onchange = async () => {
+        const files = Array.from(input.files || []);
+        input.remove();
+        if (!files.length) return;
+
+        if (!window.supabaseClient || !window.FileUploadService) {
+            window.showToast('Ohne Verbindung können keine Fotos hochgeladen werden.');
+            return;
+        }
+
+        const modal = document.getElementById('service-attachments-modal');
+        const status = modal && modal.querySelector('[data-sa-status]');
+        if (status) status.textContent = `${files.length} Foto(s) werden hochgeladen …`;
+
+        try {
+            const machine = (window.machineList || []).find(m => m.id == machineId);
+            const folderName = machine && typeof window.getMachineFolderName === 'function'
+                ? window.getMachineFolderName(machine.id, machine.manufacturer, machine.name, machine.serial || machine.serial_number, machine.year)
+                : `Maschinen/${machineId || 'ohne'}`;
+            const pathGenerator = (file, i) => {
+                const cleanName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+                return `${folderName}/Serviceberichte/${Date.now()}-${i}-${cleanName}`;
+            };
+
+            const uploadResults = await window.FileUploadService.uploadFiles(
+                files, pathGenerator,
+                { bucket: 'dateien', compress: true, concurrency: 5, provider: 'cloudflare-r2' }
+            );
+
+            // Aktuellen Stand frisch lesen: in der Zwischenzeit kann ein Kollege
+            // ebenfalls etwas angehängt haben — sonst würde das überschrieben.
+            const { data: aktuell } = await window.supabaseClient
+                .from('service_entries').select('files').eq('id', entryId).limit(1);
+            const bestehend = (aktuell && aktuell[0] && Array.isArray(aktuell[0].files)) ? aktuell[0].files : [];
+
+            const neu = bestehend.concat(uploadResults.map((r, i) => ({
+                name: files[i].name, type: files[i].type, url: r.url, path: r.path
+            })));
+
+            const { error } = await window.supabaseClient
+                .from('service_entries').update({ files: neu }).eq('id', entryId);
+            if (error) throw error;
+
+            // Dokument unter "Dokumente" nachziehen, damit dort der
+            // Anhänge-Knopf die neue Anzahl zeigt. Existiert (noch) kein
+            // Dokument, passiert schlicht nichts.
+            try {
+                await window.supabaseClient
+                    .from('documents')
+                    .update({ attachments: neu.filter(f => f && f.url).map(f => ({
+                        name: f.name || (f.url || '').split('/').pop(),
+                        url: f.url, path: f.path || null, type: f.type || ''
+                    })) })
+                    .eq('service_entry_id', entryId);
+            } catch (docErr) {
+                console.warn('Anhänge am Dokument nicht aktualisierbar:', docErr && docErr.message);
+            }
+
+            // Lokale Listen nachziehen, damit die Karte ohne Neuladen stimmt.
+            [window.allServiceEntries, window.serviceEntryList].forEach(list => {
+                const eintrag = (list || []).find(x => String(x.id) === String(entryId));
+                if (eintrag) eintrag.files = neu;
+            });
+            window[`_sf${entryId}`] = neu;
+
+            if (typeof window.renderServiceEntries === 'function') window.renderServiceEntries();
+            if (modal) modal.remove();
+            window.openServiceAttachments(neu, entryId, machineId);
+            window.showToast(`${files.length} Foto(s) hinzugefügt.`);
+        } catch (err) {
+            console.error('Fotos nicht anhängbar:', err);
+            if (status) status.textContent = '';
+            window.showToast('Hochladen fehlgeschlagen: ' + (err.message || err));
+        }
+    };
+
+    input.click();
+};
+
+// =========================================================
+// AUFTRAGS-/WERKSTATTAUFTRAGSNUMMER NACHTRAGEN
+// =========================================================
+// Wie beim nachtraeglichen Anhaengen von Fotos: ein abgeschlossener Bericht
+// bleibt inhaltlich gesperrt, diese eine Spalte ist davon ausgenommen — die
+// Nummer kommt oft erst aus der Werkstatt, wenn der Bericht schon zu ist.
+// Geschrieben wird ausschliesslich `workshop_order_number`; das bereits
+// erzeugte PDF wird NICHT neu gebaut.
+window.editServiceOrderNumber = function (entryId) {
+    const entry = (window.allServiceEntries || []).find(x => String(x.id) === String(entryId));
+    const aktuell = entry ? (entry.workshop_order_number || entry.auftragsnummer || '') : '';
+
+    const alt = document.getElementById('service-order-number-modal');
+    if (alt) alt.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'service-order-number-modal';
+    // Bewusst OHNE .modal-backdrop/.modal-new: .modal-backdrop startet mit
+    // opacity:0 und pointer-events:none und wird erst durch .show sichtbar —
+    // ohne die Klasse ist das Fenster unsichtbar und nicht anklickbar.
+    modal.style.cssText = 'position: fixed; inset: 0; z-index: 100000; background: rgba(0,0,0,0.85); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; padding: 1rem;';
+    modal.innerHTML = `
+        <div style="max-width: 420px; width: 100%; padding: 1.75rem; border-radius: 20px; background: rgba(15,23,42,0.97); border: 1px solid rgba(255,255,255,0.12); box-shadow: 0 20px 60px rgba(0,0,0,0.6); color: #fff; font-family: 'Inter', sans-serif;">
+            <h3 style="margin: 0 0 0.35rem 0; font-family: 'Outfit', sans-serif; font-size: 1.15rem;">Auftragsnummer</h3>
+            <p class="text-muted-sm" style="margin: 0 0 1rem 0;">Werkstatt-/Auftragsnummer für diesen Servicebericht. Leer lassen entfernt sie.</p>
+            <input type="text" id="service-order-number-input" class="glass-form-input" placeholder="z.B. 2026-40123" style="width: 100%; box-sizing: border-box; height: 46px; padding: 0 14px; font-size: 16px; color: #fff; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18); border-radius: 12px;">
+            <div style="display: flex; gap: 10px; margin-top: 1.25rem;">
+                <button class="btn-secondary" style="flex: 1;" onclick="document.getElementById('service-order-number-modal').remove()">Abbrechen</button>
+                <button class="btn-primary" style="flex: 1;" onclick="window.saveServiceOrderNumber(${entryId})">Speichern</button>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+
+    const input = modal.querySelector('#service-order-number-input');
+    input.value = aktuell;
+    input.focus();
+    input.select();
+    input.onkeydown = (ev) => {
+        if (ev.key === 'Enter') { ev.preventDefault(); window.saveServiceOrderNumber(entryId); }
+        if (ev.key === 'Escape') modal.remove();
+    };
+    modal.onclick = (ev) => { if (ev.target === modal) modal.remove(); };
+};
+
+window.saveServiceOrderNumber = async function (entryId) {
+    const modal = document.getElementById('service-order-number-modal');
+    const input = modal && modal.querySelector('#service-order-number-input');
+    if (!input) return;
+    const wert = input.value.trim();
+
+    if (!window.supabaseClient || !navigator.onLine) {
+        window.showToast('Ohne Verbindung kann die Auftragsnummer nicht gespeichert werden.');
+        return;
+    }
+
+    try {
+        const { error } = await window.supabaseClient
+            .from('service_entries')
+            .update({ workshop_order_number: wert || null })
+            .eq('id', entryId);
+        if (error) throw error;
+
+        [window.allServiceEntries, window.serviceEntryList].forEach(list => {
+            const eintrag = (list || []).find(x => String(x.id) === String(entryId));
+            if (eintrag) eintrag.workshop_order_number = wert || null;
+        });
+
+        if (modal) modal.remove();
+        if (typeof window.renderServiceEntries === 'function') window.renderServiceEntries();
+        window.showToast(wert ? `Auftragsnummer ${wert} gespeichert.` : 'Auftragsnummer entfernt.');
+    } catch (err) {
+        console.error('Auftragsnummer nicht speicherbar:', err);
+        window.showToast('Speichern fehlgeschlagen: ' + (err.message || err));
+    }
+};

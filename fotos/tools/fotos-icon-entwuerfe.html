@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>meetra Fotos – Symbol-Entwürfe</title>
+<style>
+    body { margin: 0; padding: 24px; background: #e9ebef; font: 15px system-ui, sans-serif; color: #111; }
+    h1 { font-size: 20px; margin: 0 0 18px; }
+    .reihe { display: flex; flex-wrap: wrap; gap: 28px; }
+    .karte { text-align: center; }
+    .karte svg { width: 180px; height: 180px; border-radius: 40px; box-shadow: 0 6px 18px rgba(0,0,0,.25); display: block; }
+    .karte b { display: block; margin-top: 10px; font-size: 17px; }
+    .karte span { display: block; color: #555; font-size: 13px; max-width: 190px; }
+    .handy { margin-top: 32px; background: url() #2b3a55; background: linear-gradient(160deg, #3b5998, #1c2a44); border-radius: 28px; padding: 26px; display: inline-grid; grid-template-columns: repeat(4, 70px); gap: 22px 26px; }
+    .handy div { text-align: center; color: #fff; font-size: 11px; }
+    .handy svg { width: 62px; height: 62px; border-radius: 14px; display: block; margin: 0 auto 5px; }
+</style>
+</head>
+<body>
+<h1>meetra Fotos – Symbol-Entwürfe</h1>
+<div class="reihe" id="reihe"></div>
+<div class="handy" id="handy"></div>
+
+<template id="A"><!-- Linse groß, Pfeile als Blende -->
+<svg viewBox="0 0 512 512"><defs>
+  <linearGradient id="a-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1b2433"/><stop offset="1" stop-color="#05070b"/></linearGradient>
+  <radialGradient id="a-glas" cx=".38" cy=".35" r=".75"><stop offset="0" stop-color="#2d3b52"/><stop offset=".6" stop-color="#0d1420"/><stop offset="1" stop-color="#05080d"/></radialGradient>
+</defs>
+<rect width="512" height="512" fill="url(#a-bg)"/>
+<circle cx="256" cy="256" r="178" fill="#e9edf2"/>
+<circle cx="256" cy="256" r="150" fill="#b9c1cc"/>
+<circle cx="256" cy="256" r="134" fill="url(#a-glas)"/>
+<image href="../assets/icons/meetra_arrows_icon.png" x="168" y="170" width="176" height="176"/>
+<ellipse cx="205" cy="190" rx="38" ry="20" fill="#fff" opacity=".18" transform="rotate(-35 205 190)"/>
+<circle cx="398" cy="118" r="18" fill="#be1e2d"/>
+</svg></template>
+
+<template id="B"><!-- Hell: Kamera-Umriss, Pfeile im Objektiv -->
+<svg viewBox="0 0 512 512"><defs>
+  <linearGradient id="b-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#eef1f5"/></linearGradient>
+</defs>
+<rect width="512" height="512" fill="url(#b-bg)"/>
+<path d="M110 176h62l26-38h116l26 38h62a34 34 0 0 1 34 34v170a34 34 0 0 1-34 34H110a34 34 0 0 1-34-34V210a34 34 0 0 1 34-34z" fill="none" stroke="#0f172a" stroke-width="26" stroke-linejoin="round"/>
+<circle cx="256" cy="292" r="86" fill="none" stroke="#0f172a" stroke-width="22"/>
+<image href="../assets/icons/meetra_arrows_icon.png" x="196" y="232" width="120" height="120"/>
+<circle cx="378" cy="222" r="13" fill="#be1e2d"/>
+</svg></template>
+
+<template id="C"><!-- Foto mit Hochlade-Pfeilen -->
+<svg viewBox="0 0 512 512"><defs>
+  <linearGradient id="c-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#10a068"/><stop offset="1" stop-color="#0a6b46"/></linearGradient>
+</defs>
+<rect width="512" height="512" fill="url(#c-bg)"/>
+<rect x="92" y="118" width="300" height="250" rx="34" fill="#fff" transform="rotate(-6 242 243)"/>
+<g transform="rotate(-6 242 243)">
+  <circle cx="170" cy="188" r="26" fill="#f5b942"/>
+  <path d="M118 340l78-92 56 64 40-44 78 72z" fill="#0f172a" opacity=".85"/>
+</g>
+<circle cx="372" cy="364" r="92" fill="#fff"/>
+<image href="../assets/icons/meetra_arrows_icon.png" x="314" y="306" width="116" height="116"/>
+</svg></template>
+
+<template id="D"><!-- Schwarz, schlicht: weiße Kamera, farbige Pfeile groß -->
+<svg viewBox="0 0 512 512">
+<rect width="512" height="512" fill="#000"/>
+<rect x="76" y="150" width="360" height="250" rx="52" fill="#fff"/>
+<rect x="186" y="112" width="140" height="62" rx="20" fill="#fff"/>
+<circle cx="256" cy="276" r="100" fill="#000"/>
+<circle cx="256" cy="276" r="84" fill="#fff"/>
+<image href="../assets/icons/meetra_arrows_icon.png" x="196" y="216" width="120" height="120"/>
+<rect x="356" y="182" width="44" height="22" rx="11" fill="#be1e2d"/>
+</svg></template>
+
+<script>
+var NAMEN = {
+  A: ['A · Objektiv', 'Nur ein großes Glas-Objektiv, die meetra-Pfeile als Blende. Modern, auf jedem Hintergrund gut erkennbar.'],
+  B: ['B · Hell & klar', 'Weißer Grund, dunkler Kamera-Umriss, Pfeile im Objektiv – passt zum Logo auf Weiß.'],
+  C: ['C · Foto schicken', 'meetra-Grün, Foto mit Pfeil-Plakette – sagt „Foto hochladen“ statt „Kamera“.'],
+  D: ['D · Bisheriges, aufgeräumt', 'Schwarz wie bisher, aber größere Pfeile und klarere Form.']
+};
+['A', 'B', 'C', 'D'].forEach(function (k) {
+  var svg = document.getElementById(k).innerHTML;
+  var d = document.createElement('div'); d.className = 'karte';
+  d.innerHTML = svg + '<b>' + NAMEN[k][0] + '</b><span>' + NAMEN[k][1] + '</span>';
+  document.getElementById('reihe').appendChild(d);
+  var h = document.createElement('div'); h.innerHTML = svg.replace(/id="([a-z]-[a-z]+)"/g, 'id="h$1"').replace(/url\(#([a-z]-[a-z]+)\)/g, 'url(#h$1)') + k;
+  document.getElementById('handy').appendChild(h);
+});
+</script>
+</body>
+</html>

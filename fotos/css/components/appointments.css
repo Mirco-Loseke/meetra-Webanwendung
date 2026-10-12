@@ -1,0 +1,213 @@
+/* ==========================================================
+   Termine mit Teilnehmern (js/appointments.js)
+   ==========================================================
+   Fenster „Termin anlegen" sowie die Daumen-Knöpfe und
+   Teilnehmerzeilen, die im Kalender und in den
+   Benachrichtigungen auftauchen.
+   ========================================================== */
+
+.appt-modal-content {
+    max-width: 520px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.appt-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--color-text);
+    cursor: pointer;
+}
+
+.appt-subject {
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(56, 189, 248, 0.28);
+    background: rgba(56, 189, 248, 0.09);
+    font-size: var(--fs-sm);
+}
+
+.appt-label {
+    display: block;
+    margin: 12px 0 6px;
+    font-size: var(--fs-2xs);
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--color-secondary);
+}
+
+.appt-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--fs-sm);
+    resize: vertical;
+}
+
+.appt-row {
+    display: flex;
+    gap: 12px;
+}
+
+/* Teilnehmerauswahl */
+.appt-users {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-height: 160px;
+    overflow-y: auto;
+}
+
+.appt-user {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 11px;
+    border-radius: 999px;
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.05);
+    font-size: var(--fs-sm);
+    cursor: pointer;
+}
+
+.appt-user:has(input:checked) {
+    border-color: rgba(52, 211, 153, 0.6);
+    background: rgba(52, 211, 153, 0.15);
+    color: #6ee7b7;
+}
+
+.appt-hint {
+    font-size: var(--fs-xs);
+    color: var(--color-secondary);
+}
+
+.appt-status {
+    margin-top: 10px;
+    font-size: var(--fs-xs);
+    color: var(--color-secondary);
+    min-height: 1em;
+}
+
+.appt-status.error {
+    color: #fca5a5;
+}
+
+.appt-actions-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+    justify-content: flex-end;
+}
+
+.appt-btn {
+    padding: 9px 16px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--color-text);
+    font-family: inherit;
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.appt-btn-primary {
+    border-color: rgba(52, 211, 153, 0.5);
+    background: rgba(52, 211, 153, 0.18);
+    color: #6ee7b7;
+}
+
+.appt-btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+/* ---------- Zusagen / Absagen (Kalender + Benachrichtigungen) ---------- */
+.appt-actions {
+    display: inline-flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.appt-thumb {
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--color-secondary);
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+
+.appt-thumb.up:hover,
+.appt-thumb.up.active {
+    border-color: rgba(52, 211, 153, 0.6);
+    background: rgba(52, 211, 153, 0.18);
+    color: #34d399;
+}
+
+.appt-thumb.down:hover,
+.appt-thumb.down.active {
+    border-color: rgba(248, 113, 113, 0.6);
+    background: rgba(248, 113, 113, 0.16);
+    color: #f87171;
+}
+
+/* Teilnehmerzeile unter einem Eintrag */
+.appt-part {
+    display: inline-block;
+    margin-right: 10px;
+    font-size: var(--fs-2xs);
+    font-weight: 600;
+}
+
+/* Uhrzeit und Teilnehmer am Kalendereintrag */
+.calw-entry-time {
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    color: #7dd3fc;
+}
+
+.calw-entry-parts {
+    margin-top: 4px;
+    line-height: 1.5;
+}
+
+/* Termin an einem Stopp der Route */
+.rp2-stop-appt {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 5px;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    border-left: 2px solid rgba(52, 211, 153, 0.6);
+    background: rgba(52, 211, 153, 0.1);
+    font-size: var(--fs-xs);
+    color: #6ee7b7;
+}
+
+.rp2-stop-appt strong {
+    font-variant-numeric: tabular-nums;
+}

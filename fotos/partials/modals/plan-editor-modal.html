@@ -1,0 +1,53 @@
+        <!-- Plan Editor Modal -->
+        <div id="plan-editor-modal" style="display:none; position:fixed; inset:0; z-index:100000; background:rgba(5,7,10,0.88); backdrop-filter:blur(12px); align-items:center; justify-content:center;">
+            <div class="glass-card pme-modal-inner" style="width:92%; max-width:820px; max-height:92vh; overflow-y:auto; padding:2rem; border-radius:20px; border:1.5px solid rgba(255,255,255,0.1); position:relative;">
+                <div class="pme-modal-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; padding-right:44px;">
+                    <h2 id="plan-modal-title" style="margin:0; font-family:'Outfit',sans-serif; font-size:1.35rem; color:#fff;">Wartungsplan bearbeiten</h2>
+                </div>
+                <button onclick="closePlanModal()" class="btn-close-modal" style="position:absolute; top:12px; right:16px;">&times;</button>
+                <div class="pme-fields-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:1.25rem; margin-bottom:1.25rem;">
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Plan-Titel</label>
+                        <input type="text" id="pme-title" class="glass-form-input" placeholder="z.B. Wartungsplan JT 580" style="height:44px;">
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:6px;">Maschinenserie</label>
+                        <div class="custom-filter-dropdown" id="pme-series-dropdown" onclick="window.togglePmeSeriesDropdown(event)" style="width: 100%; height: 44px; box-sizing: border-box;">
+                            <span class="filter-label" id="pme-series-label">Maschinenserie wählen...</span>
+                            <svg class="filter-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                            <div class="custom-filter-menu">
+                                <ul class="dropdown-options" id="pme-series-options">
+                                    <!-- Populated by JS -->
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-bottom:1.25rem;">
+                    <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:600; display:block; margin-bottom:8px;">Typ</label>
+                    <div style="display:flex; gap:8px;">
+                        <button id="pme-type-wartung" onclick="setPmeType('wartung')" style="padding:7px 18px; border-radius:20px; border:1.5px solid rgba(59,130,246,0.55); background:rgba(59,130,246,0.22); color:#60a5fa; font-weight:700; font-size:0.83rem; cursor:pointer; transition:all 0.15s;">Wartung</button>
+                        <button id="pme-type-uvv" onclick="setPmeType('uvv')" style="padding:7px 18px; border-radius:20px; border:1.5px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.4); font-weight:700; font-size:0.83rem; cursor:pointer; transition:all 0.15s;">UVV</button>
+                        <button id="pme-type-einweisung" onclick="setPmeType('einweisung')" style="padding:7px 18px; border-radius:20px; border:1.5px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.4); font-weight:700; font-size:0.83rem; cursor:pointer; transition:all 0.15s;">Einweisung</button>
+                    </div>
+                </div>
+                <div style="margin-bottom:0.75rem; display:flex; align-items:center; justify-content:space-between;">
+                    <label style="font-size:0.82rem; color:rgba(255,255,255,0.6); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Prüfpunkte</label>
+                    <button onclick="uvvAddItem()" style="padding:6px 14px; border-radius:8px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3); color:#10b981; font-weight:700; font-size:0.8rem; cursor:pointer; display:flex; align-items:center; gap:5px;">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        Hinzufügen
+                    </button>
+                </div>
+                <!-- Scrollable table wrapper -->
+                <div class="pme-table-scroll">
+                    <div class="pme-items-header" style="display:grid; grid-template-columns:20px 55px 1fr 2fr 110px 32px; gap:6px; padding:0 10px 6px; font-size:0.72rem; color:rgba(255,255,255,0.35); font-weight:700; text-transform:uppercase; letter-spacing:0.4px;">
+                        <span></span><span>Pos.</span><span>Kategorie</span><span>Beschreibung</span><span id="pme-col5-header">Intervall</span><span></span>
+                    </div>
+                    <div id="pme-items" style="display:flex; flex-direction:column; gap:6px; max-height:300px; overflow-y:auto; padding-right:2px;"></div>
+                </div>
+                <div class="pme-modal-actions" style="display:flex; justify-content:flex-end; gap:10px; margin-top:1.5rem; border-top:1px solid rgba(255,255,255,0.06); padding-top:1.25rem;">
+                    <button onclick="closePlanModal()" class="btn-secondary" style="padding:9px 20px;">Abbrechen</button>
+                    <button onclick="savePlanModal()" class="btn-primary" style="padding:9px 26px; font-weight:700;">Speichern</button>
+                </div>
+            </div>
+        </div>

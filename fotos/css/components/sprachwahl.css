@@ -1,0 +1,149 @@
+/* =========================================================
+   SPRACHWAHL für die PDF-Vorschau (js/servicebericht-pdf.js)
+   ---------------------------------------------------------
+   Ersetzt das frühere Klappmenü am Vorschau-Knopf: das hing am
+   unteren Rand des Formulars, klappte deshalb nach oben auf,
+   war schwer zu treffen und zeigte nicht, was gewählt wurde.
+   ========================================================= */
+
+.sprachwahl-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100002;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4);
+    background: rgba(3, 7, 18, 0.72);
+    backdrop-filter: blur(6px);
+    opacity: 0;
+    transition: opacity 0.18s ease;
+}
+
+.sprachwahl-overlay.is-open { opacity: 1; }
+
+.sprachwahl-karte {
+    width: 100%;
+    max-width: 420px;
+    border-radius: var(--radius-lg, 20px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.99));
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+    transform: translateY(10px) scale(0.99);
+    transition: transform 0.18s ease;
+    overflow: hidden;
+}
+
+.sprachwahl-overlay.is-open .sprachwahl-karte { transform: none; }
+
+.sprachwahl-kopf {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-5) var(--space-5) var(--space-3);
+}
+
+.sprachwahl-kopf h3 {
+    margin: 0;
+    font-size: 1.02rem;
+    font-weight: 800;
+    color: #fff;
+}
+
+.sprachwahl-kopf p {
+    margin: 4px 0 0;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.sprachwahl-zu {
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm, 9px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+}
+
+.sprachwahl-zu:hover { background: rgba(255, 255, 255, 0.12); }
+
+.sprachwahl-liste {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 var(--space-4) var(--space-4);
+}
+
+.sprachwahl-knopf {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 11px 14px;
+    border-radius: var(--radius-md, 13px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.04);
+    color: #fff;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.sprachwahl-knopf:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Sichtbare Rückmeldung: die gewählte Sprache bleibt markiert, solange
+   übersetzt und die Vorschau gebaut wird. */
+.sprachwahl-knopf.is-active {
+    background: rgba(139, 92, 246, 0.18);
+    border-color: rgba(139, 92, 246, 0.5);
+}
+
+.sprachwahl-flagge {
+    font-size: 1.35rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.sprachwahl-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.sprachwahl-text strong {
+    font-size: 0.92rem;
+    font-weight: 700;
+}
+
+.sprachwahl-text small {
+    font-size: 0.74rem;
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.sprachwahl-fuss {
+    padding: var(--space-3) var(--space-5) var(--space-4);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.76rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+@media (max-width: 768px) {
+    .sprachwahl-karte { max-width: none; }
+
+    /* 16px-Regel gilt hier nicht (keine Eingabefelder), aber die Flächen
+       dürfen ruhig größer sein — sie werden mit dem Daumen getroffen. */
+    .sprachwahl-knopf { padding: 14px 14px; }
+}

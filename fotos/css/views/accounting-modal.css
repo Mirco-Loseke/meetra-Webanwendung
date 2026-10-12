@@ -1,0 +1,183 @@
+/* ==========================================================
+   Buchhaltungs- und Auswertungs-Modal: kompaktes Layout
+   ==========================================================
+   Ausgelagert aus index.html (vormals Zeilen 3223-3397).
+   Wird per <link> an unveraenderter Stelle geladen — die Reihenfolge
+   gegenueber css/style.css darf nicht vertauscht werden.
+   ========================================================== */
+
+/* Kompaktes Layout für das Buchhaltungs- und das Auswertungs-Modal */
+#accounting-modal .modal-content,
+#machine-evaluation-modal .modal-content {
+    padding: 16px 20px !important;
+    border-radius: var(--radius-lg) !important;
+    max-width: 900px !important;
+}
+#accounting-modal .modal-header,
+#machine-evaluation-modal .modal-header {
+    padding-bottom: 8px !important;
+    margin-bottom: 12px !important;
+}
+#accounting-modal #accounting-modal-title,
+#machine-evaluation-modal h2 {
+    font-size: var(--fs-lg) !important;
+}
+#machine-evaluation-modal h3 {
+    font-size: var(--fs-md) !important;
+    margin: 14px 0 8px 0 !important;
+}
+#machine-evaluation-modal select {
+    height: 30px !important;
+    font-size: var(--fs-sm) !important;
+}
+#machine-evaluation-modal table.eval-table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    display: table !important;
+    background: transparent !important;
+    border: none !important;
+}
+#machine-evaluation-modal table.eval-table thead {
+    display: table-header-group !important;
+}
+#machine-evaluation-modal table.eval-table tbody {
+    display: table-row-group !important;
+}
+#machine-evaluation-modal table.eval-table tr {
+    display: table-row !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+#machine-evaluation-modal table.eval-table th,
+#machine-evaluation-modal table.eval-table td {
+    display: table-cell !important;
+    padding: 6px 10px !important;
+    font-size: var(--fs-sm) !important;
+    white-space: nowrap !important;
+    border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+    border-top: none !important;
+    width: auto !important;
+}
+#accounting-modal #acc-pdf-dropzone {
+    margin-bottom: 0.75rem !important;
+    padding: 10px !important;
+    border-radius: var(--radius-sm) !important;
+}
+#accounting-modal #acc-pdf-dropzone svg {
+    margin-bottom: 4px !important;
+    width: 20px !important;
+    height: 20px !important;
+}
+#accounting-modal #acc-pdf-dropzone div {
+    font-size: var(--fs-md) !important;
+}
+#accounting-modal #acc-pdf-dropzone div + div {
+    font-size: var(--fs-2xs) !important;
+}
+#accounting-modal form > div[style*="display: grid"] {
+    gap: 0.75rem !important;
+    margin-top: 0.5rem !important;
+}
+#accounting-modal form > div[style*="background: rgba(255,255,255,0.03)"] {
+    margin-top: 0.5rem !important;
+    padding: 0.75rem 1rem !important;
+    border-radius: var(--radius-md) !important;
+    gap: 0.75rem !important;
+}
+#acc-global-assignment-box {
+    margin-top: 0.5rem !important;
+    padding: 0.75rem 1rem !important;
+    border-radius: var(--radius-md) !important;
+}
+#acc-global-assignment-box > div:first-child {
+    margin-bottom: 6px !important;
+    font-size: var(--fs-2xs) !important;
+}
+#acc-global-assignment-box > div[style*="display: flex"] {
+    gap: 8px !important;
+}
+#acc-global-type-machine, #acc-global-type-other {
+    padding: 4px 10px !important;
+    font-size: var(--fs-xs) !important;
+}
+#acc-global-filter-all, #acc-global-filter-workshop {
+    padding: 3px 8px !important;
+    font-size: var(--fs-2xs) !important;
+}
+#acc-global-machine-search, #acc-global-workshop-machine, #acc-global-assignment-area {
+    height: 30px !important;
+    font-size: var(--fs-sm) !important;
+}
+#accounting-modal .form-group {
+    margin-bottom: 0px !important;
+}
+#accounting-modal .form-group label {
+    font-size: var(--fs-xs) !important;
+    margin-bottom: 3px !important;
+}
+#accounting-modal .glass-form-input {
+    height: 30px !important;
+    font-size: var(--fs-sm) !important;
+    padding: 0 10px !important;
+    border-radius: var(--radius-sm) !important;
+}
+#accounting-modal .real-select-hidden + div {
+    height: 30px !important;
+    font-size: var(--fs-sm) !important;
+    padding: 0 10px !important;
+    border-radius: var(--radius-sm) !important;
+}
+#accounting-items-container .item-row {
+    padding: 10px 12px !important;
+    border-radius: var(--radius-md) !important;
+    gap: 8px !important;
+    margin-bottom: 6px !important;
+}
+#accounting-items-container .item-row-header {
+    grid-template-columns: 1fr 70px 70px 85px auto !important;
+    gap: 8px !important;
+}
+#accounting-items-container .item-row-header button {
+    width: 30px !important;
+    height: 30px !important;
+}
+#accounting-items-container .acc-assignment-box {
+    padding-top: 8px !important;
+    gap: 8px !important;
+}
+#accounting-items-container .type-btn {
+    padding: 4px 10px !important;
+    font-size: var(--fs-xs) !important;
+}
+#accounting-items-container .filter-btn {
+    padding: 3px 8px !important;
+    font-size: var(--fs-2xs) !important;
+}
+#accounting-items-container .item-machine-search,
+#accounting-items-container .item-machine-workshop,
+#accounting-items-container .item-area-select {
+    height: 30px !important;
+    font-size: var(--fs-sm) !important;
+}
+#accounting-modal form > div[style*="margin-top: 3rem"] {
+    margin-top: 1rem !important;
+    padding-bottom: 0px !important;
+}
+#accounting-modal form button[type="submit"],
+#accounting-modal form button[onclick*="closeAccountingModal"] {
+    padding: 8px 16px !important;
+    font-size: var(--fs-md) !important;
+}
+/* Portale und Dropdowns deckend (nicht transparent) darstellen */
+#glass-dropdown-portal,
+#acc-machine-dropdown-portal,
+#acc-global-machine-dropdown-portal,
+.acc-year-list-shared {
+    background: #0f172a !important;
+    opacity: 1 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+}

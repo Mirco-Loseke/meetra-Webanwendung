@@ -1,0 +1,355 @@
+/* ==========================================================
+   ERINNERUNG ZUR UHRZEIT — Karten auf dem Bildschirm
+   ==========================================================
+   Gehoert zu js/reminder-alarm.js. Bewusst gross und kontrastreich:
+   die Aufgaben-Ansicht laeuft auf einem Fernseher in der Werkstatt,
+   dort muss man das aus einigen Metern Entfernung lesen koennen.
+   ========================================================== */
+
+#alarm-stack {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 84px);
+    right: calc(env(safe-area-inset-right, 0px) + 18px);
+    z-index: 100000;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: min(420px, calc(100vw - 36px));
+    pointer-events: none;
+}
+
+/* Viele Karten: Leiste oben mit „Benachrichtigungen später" (js/meldungs-takt.js) */
+#alarm-stack.alarm-pausiert {
+    display: none;
+}
+
+.alarm-spaeter-leiste {
+    order: -1;
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3, 12px);
+    padding: var(--space-2, 8px) var(--space-2, 8px) var(--space-2, 8px) var(--space-4, 16px);
+    background: rgba(15, 23, 42, 0.97);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-lg, 14px);
+    box-shadow: var(--shadow-2, 0 12px 30px rgba(0, 0, 0, 0.5));
+    color: var(--text-2, rgba(255, 255, 255, 0.75));
+    font-size: var(--fs-sm, 0.85rem);
+    font-weight: 600;
+}
+
+.alarm-spaeter-leiste button {
+    background: var(--warning, #fbbf24);
+    color: #111827;
+    border: none;
+    border-radius: var(--radius-md, 10px);
+    padding: var(--space-2, 8px) var(--space-3, 12px);
+    font-weight: 800;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.alarm-spaeter-leiste button:hover {
+    filter: brightness(1.08);
+}
+
+.alarm-card {
+    pointer-events: auto;
+    background: linear-gradient(140deg, rgba(30, 41, 59, 0.98), rgba(15, 23, 42, 0.99));
+    border: 2px solid var(--warning, #fbbf24);
+    border-radius: 18px;
+    padding: 18px 20px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(251, 191, 36, 0.2);
+    color: #fff;
+    opacity: 0;
+    transform: translateX(24px);
+    transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.34, 1.4, 0.64, 1);
+}
+.alarm-card.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.alarm-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.alarm-bell {
+    font-size: 1.05rem;
+    animation: alarm-shake 1.6s ease-in-out infinite;
+}
+@keyframes alarm-shake {
+    0%, 88%, 100% { transform: rotate(0deg); }
+    91% { transform: rotate(14deg); }
+    94% { transform: rotate(-12deg); }
+    97% { transform: rotate(8deg); }
+}
+.alarm-time {
+    font-size: 1.15rem;
+    font-weight: 900;
+    color: #fbbf24;
+    letter-spacing: -0.02em;
+}
+.alarm-kind {
+    margin-left: auto;
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.alarm-title {
+    font-size: 1.02rem;
+    font-weight: 800;
+    line-height: 1.25;
+    word-break: break-word;
+    cursor: pointer;
+}
+.alarm-title:hover { color: #fde68a; }
+.alarm-sub {
+    margin-top: 2px;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+.alarm-note {
+    margin-top: 6px;
+    font-size: 0.82rem;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.75);
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 5.6em;
+    overflow-y: auto;
+}
+
+/* Adresse (Kunde · PLZ Ort · Ansprechpartner) — wie im Vorgang lila,
+   damit man sofort sieht, um wen es geht. */
+.alarm-address {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: #a78bfa;
+    word-break: break-word;
+}
+.alarm-address svg { flex-shrink: 0; margin-top: 2px; }
+.alarm-address em {
+    font-style: normal;
+    font-weight: 600;
+    color: rgba(167, 139, 250, 0.8);
+}
+.alarm-steps {
+    margin-top: 5px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.alarm-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 10px;
+}
+/* Kompakte Knoepfe in einer Zeile: "Spaeter" und "Oeffnen" schlicht,
+   "Verstanden" als Hauptknopf rechts. */
+.alarm-btn-snooze { margin-right: auto; }
+.alarm-btn {
+    flex: 0 0 auto;
+    padding: 6px 12px;
+    border-radius: 9px;
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 700;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.75);
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+.alarm-btn:hover { background: rgba(255, 255, 255, 0.12); }
+.alarm-btn-ok {
+    border-color: rgba(251, 191, 36, 0.6);
+    background: rgba(251, 191, 36, 0.18);
+    color: #fde68a;
+}
+.alarm-btn-ok:hover { background: rgba(251, 191, 36, 0.3); }
+
+/* Auf dem Handy ueber die volle Breite unten — oben rechts verdeckt
+   sonst die Topbar. */
+@media (max-width: 768px) {
+    #alarm-stack {
+        top: auto;
+        left: calc(env(safe-area-inset-left, 0px) + 10px);
+        right: calc(env(safe-area-inset-right, 0px) + 10px);
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+        max-width: none;
+    }
+}
+
+/* Die einmalige Nachfrage "Meldungen einschalten?" — ruhiger als ein
+   Alarm, deshalb blau statt gelb und ohne wackelnde Glocke. */
+.alarm-ask {
+    border-color: rgba(96, 165, 250, 0.6);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(96, 165, 250, 0.2);
+}
+.alarm-ask .alarm-time { color: #93c5fd; font-size: 1.05rem; }
+.alarm-ask .alarm-bell { animation: none; }
+.alarm-ask .alarm-btn-ok {
+    border-color: rgba(96, 165, 250, 0.65);
+    background: rgba(96, 165, 250, 0.2);
+    color: #bfdbfe;
+}
+.alarm-ask .alarm-btn-ok:hover { background: rgba(96, 165, 250, 0.32); }
+
+/* "Bearbeiten" fuehrt direkt zum Vorgang bzw. Kalendereintrag. */
+.alarm-btn-edit {
+    border-color: rgba(96, 165, 250, 0.55);
+    background: rgba(96, 165, 250, 0.16);
+    color: #bfdbfe;
+}
+.alarm-btn-edit:hover { background: rgba(96, 165, 250, 0.28); }
+
+/* =========================================================
+   VORGANG ÜBERGEBEN (js/assignment-handoff.js)
+   Gleiche Karte wie der Wecker, aber blau statt bernstein —
+   das ist keine Uhrzeit, sondern eine Übergabe an dich.
+   ========================================================= */
+.handoff-card {
+    border-color: rgba(96, 165, 250, 0.8);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(96, 165, 250, 0.2);
+}
+
+.handoff-card .alarm-btn-ok {
+    border-color: rgba(96, 165, 250, 0.6);
+    background: rgba(96, 165, 250, 0.2);
+    color: #bfdbfe;
+}
+
+.handoff-card .alarm-btn-ok:hover {
+    background: rgba(96, 165, 250, 0.34);
+}
+
+/* Rückmeldung an den Ersteller — grün, das ist eine gute Nachricht. */
+.handoff-ack {
+    border-color: rgba(16, 185, 129, 0.8);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(16, 185, 129, 0.2);
+}
+
+.handoff-ack .alarm-btn-ok {
+    border-color: rgba(16, 185, 129, 0.6);
+    background: rgba(16, 185, 129, 0.2);
+    color: #a7f3d0;
+}
+
+.handoff-ack .alarm-btn-ok:hover {
+    background: rgba(16, 185, 129, 0.34);
+}
+
+/* Die Später-Auswahl klappt unter den Knöpfen auf. */
+.handoff-snooze {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.handoff-snooze[hidden] {
+    display: none;
+}
+
+.handoff-snooze-btn {
+    flex: 1 1 auto;
+    padding: 7px 10px !important;
+    font-size: 0.8rem !important;
+    white-space: nowrap;
+}
+
+/* =========================================================
+   SPÄTER-AUSWAHL AM WECKER (js/reminder-alarm.js)
+   Gleiches Verhalten wie bei der Übergabe-Karte: der Knopf
+   klappt eine Reihe fertiger Zeiten auf, statt stumm 10 Min.
+   zu nehmen. Der Pfeil zeigt, dass es etwas zu wählen gibt.
+   ========================================================= */
+.alarm-btn-snooze {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.alarm-btn-snooze::after {
+    content: '';
+    width: 0;
+    height: 0;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid currentColor;
+    opacity: 0.7;
+    transition: transform 0.15s ease;
+}
+
+.alarm-btn-snooze[aria-expanded="true"] {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.alarm-btn-snooze[aria-expanded="true"]::after {
+    transform: rotate(180deg);
+}
+
+.alarm-snooze-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.alarm-snooze-list[hidden] {
+    display: none;
+}
+
+.alarm-snooze-list .alarm-btn {
+    flex: 1 1 auto;
+    padding: 7px 10px;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+/* „Jetzt nicht" + Dauer (js/meldungs-takt.js, leisteAktualisieren) */
+.alarm-spaeter-wahl { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.alarm-spaeter-wahl select {
+    background: rgba(255, 255, 255, 0.08); color: var(--text-1, #f1f5f9);
+    border: 1px solid rgba(255, 255, 255, 0.2); border-radius: var(--radius-md, 10px);
+    padding: 6px 8px; font: inherit; font-size: var(--fs-sm, .8125rem); cursor: pointer;
+}
+.alarm-spaeter-wahl select option { color: #111827; }
+/* Schmal: Text und Knöpfe brechen um, statt über den Rand zu ragen */
+.alarm-spaeter-leiste { flex-wrap: wrap; }
+.alarm-spaeter-leiste > span { flex: 1 1 110px; min-width: 0; }
+.alarm-spaeter-wahl { margin-left: auto; }
+
+/* Gerät stumm (Einstellungen → Benachrichtigungen): auf diesem Gerät taucht
+   nichts auf — keine Karten, kein Zähler an der Glocke, kein Pulsieren. */
+body.geraet-stumm #alarm-stack,
+body.geraet-stumm #notif-badge { display: none !important; }
+body.geraet-stumm #notif-bell-btn,
+body.geraet-stumm .todo-puls { animation: none !important; }
+body.geraet-stumm #notif-bell-btn.has-unread,
+body.geraet-stumm #notif-bell-btn.has-overdue {
+    color: inherit;
+    border-color: transparent;
+    background: transparent;
+}
