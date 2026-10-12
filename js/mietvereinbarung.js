@@ -75,6 +75,8 @@
             auswahl: {},       // "nr" -> ['12 mm'] — gewählte Ausführungen
             trommeltyp: '',
             sauberkeit: { gereinigt: {}, diesel: {}, adblue: {}, sonstiges: '' },
+            // „Unterschriftenseite Einweisungserklärung“ beilegen: 'ja' | 'nein' | null
+            einweisungsseite: null,
             einweisung: { erfolgt: null, durch_id: '', durch_name: '' },
             schaeden: [{ nr: '', position: '', beschreibung: '' }],
             fotos: { uebergabe: {}, ruecknahme: {} },
@@ -315,6 +317,7 @@
             if (d.auswahl && typeof d.auswahl === 'object') daten.auswahl = d.auswahl;
             if (Array.isArray(d.schaeden) && d.schaeden.length) daten.schaeden = d.schaeden;
             if (d.trommeltyp != null) daten.trommeltyp = d.trommeltyp;
+            if (d.einweisungsseite != null) daten.einweisungsseite = d.einweisungsseite;
             if (d.plan_id) daten.plan_id = d.plan_id;
             if (d.zusatz && typeof d.zusatz === 'object') daten.zusatz = { uebergabe: d.zusatz.uebergabe || [], ruecknahme: d.zusatz.ruecknahme || [] };
 
@@ -654,6 +657,7 @@
         // Umfang wäre er unlesbar klein. Unterschrieben wird unter den Fotos,
         // eine eigene Bestätigungsseite gibt es deshalb nicht mehr.
         if (recht) verteileRechtstext(pages, recht);
+        if (daten.einweisungsseite === 'ja') eigeneSeite(pages, einweisungsseiteBlock());
         leereFelderMarkieren(pages);
         seitenNummerieren(pages);
         skaliereSeiten();
@@ -1774,6 +1778,7 @@
                 data: { mieter: daten.mieter, geraet: daten.geraet, miete: daten.miete,
                         pruefpunkte: daten.pruefpunkte, auswahl: daten.auswahl, trommeltyp: daten.trommeltyp,
                         sauberkeit: daten.sauberkeit, einweisung: daten.einweisung,
+                        einweisungsseite: daten.einweisungsseite || null,
                         schaeden: daten.schaeden, unterschriften: daten.unterschriften,
                         plan_id: daten.plan_id || null,
                         zusatz: { uebergabe: zusatzListe('uebergabe'), ruecknahme: zusatzListe('ruecknahme') } },
@@ -2302,8 +2307,59 @@
                     <td${sp.length > 2 ? ` colspan="${sp.length - 1}"` : ''}>${durch}</td>`;
                     })()}
                 </tr>
+                <tr data-split>
+                    <td>Unterschriftenseite Einweisungserklärung</td><td class="miet-num"></td>
+                    <td class="miet-checkcell" colspan="${sp.length}">${jaNeinSeite()}</td>
+                </tr>
                 </tbody>
             </table>
+        </div>`;
+    }
+
+    // Ja/Nein für die Einweisungs-Unterschriftenseite. Anders als jaNein()
+    // zeichnet das den Bogen neu — die Seite kommt dazu oder fällt weg.
+    function jaNeinSeite() {
+        const w = daten.einweisungsseite;
+        return `<span>
+            <span class="miet-check${w === 'ja' ? ' on' : ''}" onclick="window.mietEinweisungsseite('ja')"><span class="miet-dot"></span>Ja</span>
+            <span class="miet-check miet-no${w === 'nein' ? ' on' : ''}" onclick="window.mietEinweisungsseite('nein')"><span class="miet-dot"></span>Nein</span>
+        </span>`;
+    }
+    window.mietEinweisungsseite = function (wert) {
+        daten.einweisungsseite = daten.einweisungsseite === wert ? null : wert;
+        zeichneInhalt();
+        entwurfMerken();
+    };
+
+    // ---------- Einweisungserklärung: Unterschriftenseite ----------
+    // Nach „meetra VORLAGE Einweisungserklärung (D) Unterschriftenseite.docx“:
+    // eine Zeile für den Einweiser, darunter Zeilen für die Teilnehmer
+    // (Fahrer/Mechaniker). Zum Ausfüllen von Hand — leere Linien, kein
+    // „Hier unterschreiben“. Vorbelegt sind nur Einweiser und Datum, falls bekannt.
+    function einweisungsseiteBlock() {
+        const g = daten.geraet || {}, m = daten.mieter || {};
+        const geraet = [g.typ, g.bezeichnung, g.seriennummer ? '#' + g.seriennummer : ''].filter(Boolean).join(' · ');
+        const datum = daten.unterschriften.u_datum ? daten.unterschriften.u_datum.split('-').reverse().join('.') : '';
+        const zeile = (wer, d, name) => `
+            <div class="miet-ew-zeile">
+                <div><div class="miet-ew-linie">${esc(d || '')}</div><span>Tag der Einweisung, Abnahme, Übergabe</span></div>
+                <div><div class="miet-ew-linie">${esc(name || '')}</div><span>Name in Druckbuchstaben</span></div>
+                <div><div class="miet-ew-linie"></div><span>${wer}</span></div>
+            </div>`;
+        let teilnehmer = '';
+        for (let i = 0; i < 7; i++) teilnehmer += zeile('Unterschrift des Fahrers/Mechanikers');
+        return `
+        <div class="miet-block miet-ew">
+            <div class="miet-sheet-title">Einweisungserklärung</div>
+            <div class="miet-ew-kopf">
+                ${geraet ? `<div><b>Maschine:</b> ${esc(geraet)}</div>` : ''}
+                ${m.name ? `<div><b>Mieter:</b> ${esc(m.name)}</div>` : ''}
+            </div>
+            <p class="miet-ew-text">Mit ihrer Unterschrift bestätigen die Teilnehmer, dass sie in die Bedienung, die Sicherheitshinweise und den bestimmungsgemäßen Gebrauch der oben genannten Maschine eingewiesen wurden.</p>
+            <div class="miet-block-title">Einweiser</div>
+            ${zeile('Unterschrift des Einweisers', datum, daten.einweisung && daten.einweisung.durch_name)}
+            <div class="miet-block-title" style="margin-top:6mm;">Teilnehmer der Einweisung</div>
+            ${teilnehmer}
         </div>`;
     }
 
