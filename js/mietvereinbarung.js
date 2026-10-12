@@ -2237,7 +2237,7 @@
                 const auswahl = p.optionen.length
                     ? ` <span class="miet-pick miet-pick-klein${gewaehlt.length ? '' : ' leer'}"
                              onclick="window.mietAuswahlMenu(this, ${nr})"
-                        >${esc(gewaehlt.length ? gewaehlt.join(', ') : '— Ausführung wählen —')}</span>`
+                        >${gewaehlt.length ? esc(gewaehlt.join(', ')) : '<span class="miet-pick-hint">— Ausführung wählen —</span>'}</span>`
                     : '';
 
                 // Optionale Zeile: grau, mit Vermerk. Bleibt sie leer, wird
@@ -2289,7 +2289,7 @@
                         const durch = `<div style="display:flex; align-items:center; gap:6px;">
                             <span style="font-weight:700; white-space:nowrap;">durch:</span>
                             <div class="miet-pick${daten.einweisung.durch_name ? '' : ' leer'}" style="flex:1;"
-                                 onclick="window.mietEinweiserMenu(this)">${esc(daten.einweisung.durch_name || '— bitte wählen —')}</div>
+                                 onclick="window.mietEinweiserMenu(this)">${daten.einweisung.durch_name ? esc(daten.einweisung.durch_name) : '<span class="miet-pick-hint">— bitte wählen —</span>'}</div>
                         </div>`;
                         // Handy (Fließmodus): die zweite Phasenspalte ist dort ausgeblendet —
                         // „durch" deshalb unter Ja/Nein in dieselbe Zelle. PDF (a4Modus) wie bisher.

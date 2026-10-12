@@ -391,6 +391,9 @@
         const notizen = [...new Set(zeilen.map(z => z.notiz).filter(Boolean))]
             .concat(zeilen.filter(istTon).map(z => (z.text || '').trim()).filter(t => t && t !== '[keine Sprache erkannt]'))
             .join('\n\n');
+        // Datum des Historien-Eintrags: vorbelegt mit dem Tag, an dem die erste Datei kam.
+        const tag = (d) => { const x = new Date(d); return isNaN(x) ? null : x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
+        const vorDatum = zeilen.map(z => tag(z.created_at)).filter(Boolean).sort()[0] || tag(Date.now());
         let art = 'maschine', ziel = null;
         const f = fenster(zeilen.length + (zeilen.length === 1 ? ' Datei zuordnen' : ' Dateien zuordnen'),
             '<div class="fe-arten">' + ARTEN.map(a => '<button type="button" data-fe-art="' + a.id + '"' + (a.id === art ? ' class="active"' : '') + '>' + a.label + '</button>').join('') + '</div>' +
@@ -398,6 +401,8 @@
             '<ul class="fe-treffer" id="fe-treffer"></ul>' +
             '<div id="fe-text-block"><label class="form-label-caps" for="fe-titel">Titel</label>' +
             '<input class="fe-feld" id="fe-titel" value="' + (nurTon ? 'Sprachnotiz aus der Werkstatt' : hatTon ? 'Fotos und Sprachnotiz aus der Werkstatt' : 'Fotos aus der Werkstatt') + '">' +
+            '<label class="form-label-caps" for="fe-datum" style="margin-top:var(--space-2);display:block">Datum</label>' +
+            '<input type="date" class="fe-feld" id="fe-datum" value="' + vorDatum + '">' +
             '<label class="form-label-caps" for="fe-text" style="margin-top:var(--space-2);display:block">Text</label>' +
             '<textarea class="fe-feld" id="fe-text">' + esc(notizen) + '</textarea></div>' +
             '<p class="fe-hinweis" id="fe-hinweis"></p>',
@@ -417,6 +422,7 @@
             const mitTitel = art === 'maschine' || art === 'adresse';
             $('#fe-text-block').style.display = (mitTitel || hatTon) ? '' : 'none';
             $('#fe-titel').style.display = $('label[for="fe-titel"]').style.display = mitTitel ? '' : 'none';
+            $('#fe-datum').style.display = $('label[for="fe-datum"]').style.display = mitTitel ? '' : 'none';
             $('#fe-hinweis').textContent = {
                 maschine: 'Neuer Eintrag in der Historie der Maschine, mit allen gewählten Fotos.',
                 adresse: 'Neuer Eintrag im Verlauf der Adresse, mit allen gewählten Fotos.',
@@ -440,7 +446,7 @@
             const knopf = $('#fe-ok');
             knopf.disabled = true; knopf.textContent = 'Speichert …';
             try {
-                await eintragen(art, ziel, zeilen, $('#fe-titel').value.trim(), $('#fe-text').value.trim());
+                await eintragen(art, ziel, zeilen, $('#fe-titel').value.trim(), $('#fe-text').value.trim(), $('#fe-datum').value);
                 await tonWegraeumen(zeilen.filter(istTon));
                 f.zu();
                 toast(zeilen.length + (zeilen.length === 1 ? ' Datei' : ' Dateien') + ' zugeordnet: ' + ziel.titel, 'success');
@@ -456,7 +462,7 @@
         setTimeout(() => $('#fe-such').focus(), 30);
     }
 
-    async function eintragen(art, ziel, zeilen, titel, text) {
+    async function eintragen(art, ziel, zeilen, titel, text, datum) {
         const wer = (window.activeUser && window.activeUser.id) || null;
         if (art === 'maschine' || art === 'adresse') {
             const zeile = {
@@ -466,6 +472,13 @@
                 files: zeilen.filter(z => !istTon(z)).map(z => z.url),
                 created_by: wer
             };
+            // Gewähltes Datum (Historie sortiert nach created_at); heute = jetzige Uhrzeit, sonst 12:00.
+            if (datum && /^\d{4}-\d{2}-\d{2}$/.test(datum)) {
+                const jetzt = new Date();
+                const d = new Date(datum + 'T12:00:00');
+                if (d.toDateString() === jetzt.toDateString()) d.setHours(jetzt.getHours(), jetzt.getMinutes(), jetzt.getSeconds());
+                zeile.created_at = d.toISOString();
+            }
             if (art === 'maschine') {
                 zeile.machine_id = ziel.id;
                 const m = ziel.m;

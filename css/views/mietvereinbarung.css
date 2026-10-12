@@ -180,7 +180,7 @@
     box-sizing: border-box;
     /* Unten 27mm statt 22mm: der Umbruch kommt dadurch rund 5mm frueher
        und es bleibt sichtbar Luft ueber der unteren Briefbogenlinie. */
-    padding: 26.5mm 21mm 26mm;   /* Briefbogen: Linie oben 23 mm, unten 273 mm (2026-10-09 enger, mehr Platz) */
+    padding: 26.5mm 24mm 26mm 25mm;   /* Briefbogen: rote Linien 25–186 mm (oben 23 mm, unten 273 mm), Inhalt bündig dazu (2026-10-12) */
     margin: 0 auto 18px;
     background-color: #fff;
     background-image: url('../../assets/images/vorlage_bg.jpg');
@@ -245,7 +245,7 @@
 
 .miet-page-nr {
     position: absolute;
-    right: 21mm;
+    right: 25mm;
     bottom: 18mm;
     font-size: 9px;
     color: #6b7280;
@@ -1883,7 +1883,7 @@ textarea.miet-in {
     width: 210mm !important;
     height: 297mm !important;
     min-height: 0 !important;
-    padding: 26.5mm 21mm 26mm !important;
+    padding: 26.5mm 24mm 26mm 25mm !important;
     margin: 0 auto 18px !important;
     border-radius: 0 !important;
     background-image: url('../../assets/images/vorlage_bg.jpg') !important;
@@ -2453,3 +2453,9 @@ textarea.miet-in {
 @media print {
     .miet-vollbild-btn { display: none !important; }
 }
+
+/* „— bitte wählen —“ (Einweisung durch) nur am Bildschirm — auf Papier/PDF bleibt Platz zum Hineinschreiben. */
+@media print {
+    .miet-pick-hint { visibility: hidden !important; }
+}
+.miet-pages.miet-pdf .miet-pick-hint { visibility: hidden !important; }
