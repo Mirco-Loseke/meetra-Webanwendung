@@ -75,7 +75,7 @@
         const still = !!(opts && opts.still);
         if (!geladen) await laden();
         const vorhanden = new Map(eintraege.map(e => [schluessel(e), e]));
-        let neu = 0, wieder = 0;
+        let neu = 0, wieder = 0, geaendert = 0;
         const tagVon = v => v ? String(v).slice(0, 10) : '';
         (liste || []).forEach(x => {
             const e = {
@@ -86,7 +86,11 @@
             };
             const alt = vorhanden.get(schluessel(e));
             if (alt) {
-                if (!alt.erledigt && !alt.archiviert) { Object.assign(alt, { ki: e.ki, gruppe: e.gruppe, datumText: e.datumText, day: e.day }); return; }
+                if (!alt.erledigt && !alt.archiviert) {
+                    if (alt.ki !== e.ki || alt.gruppe !== e.gruppe || alt.datumText !== e.datumText || alt.day !== e.day) geaendert++;
+                    Object.assign(alt, { ki: e.ki, gruppe: e.gruppe, datumText: e.datumText, day: e.day });
+                    return;
+                }
                 // Schon abgehakt/entfernt: nur wieder aufnehmen, wenn danach ein NEUER Termin
                 // gesetzt wurde (z. B. neue Wiedervorlage) — sonst kommt es nicht noch einmal.
                 const weg = tagVon(alt.archiviertAm || alt.erledigtAm);
@@ -100,7 +104,7 @@
         });
         speichern();
         aufraeumenAlt();
-        if (still) { if (neu || wieder) { speichern(); zeichnen(); } return neu + wieder; }
+        if (still) { if (neu || wieder || geaendert) { speichern(); zeichnen(); } return neu + wieder; }
         toast(neu || wieder ? `${neu} neu${wieder ? `, ${wieder} wieder offen (neuer Termin)` : ''} — in die To-do-Liste übernommen.` : 'Nichts Neues — alles stand schon auf der Liste oder ist abgehakt.', 'success');
         window.openTodoListe();
     };
@@ -1262,7 +1266,7 @@
         const q = p => p.then(r => (r.error ? [] : r.data || [])).catch(() => []);
         const [faelligeV, mitSchritten, termine, teilnahmen, angebote] = await Promise.all([
             q(c.from('internal_processes').select('id, title, remind_at, assigned_users, customer_id, status, steps').neq('status', 'erledigt').not('remind_at', 'is', null).lte('remind_at', bis7).limit(300)),
-            q(c.from('internal_processes').select('id, title, assigned_users, customer_id, status, steps').neq('status', 'erledigt').contains('steps', JSON.stringify([{ done: false }])).limit(300)),
+            q(c.from('internal_processes').select('id, title, remind_at, assigned_users, customer_id, status, steps').neq('status', 'erledigt').contains('steps', JSON.stringify([{ done: false }])).limit(300)),
             q(c.from('maintenance_events').select('id, title, event_date, start_date, customer_id, created_by_user, machine_id, manual_machine, maintenance_types').or(`event_date.gte.${heute},start_date.gte.${heute}`).or(`event_date.lte.${bis},start_date.lte.${bis}`).limit(100)),
             q(c.from('event_participants').select('event_id, user_id, status').eq('user_id', window.activeUser.id).limit(300)),
             q(c.from('angebote').select('*').not('erinnerung', 'is', null).lte('erinnerung', heute).limit(200))
@@ -1277,15 +1281,19 @@
         });
         mitSchritten.forEach(p => (p.steps || []).forEach(st => {
             if (st.done) return;
-            const tag = st.remind_at ? String(st.remind_at).slice(0, 10) : '';
-            if (tag && tag > in7) return;
+            // Fälligkeit: Erinnerung des Schritts, sonst Wiedervorlage des Vorgangs
+            const wann = st.remind_at || p.remind_at || null;
+            const tag = wann ? String(wann).slice(0, 10) : '';
             const persoenlich = (st.assigned_id != null && st.assigned_id !== '') || !!st.assigned_to;
+            // Mir persönlich zugewiesene Schritte immer (mit Datum einsortiert), sonst nur die nächsten 7 Tage
+            if (tag && tag > in7 && !persoenlich) return;
             // Ohne Erinnerung nur, wenn der Schritt MIR persönlich zugewiesen ist
             if (!tag && !persoenlich) return;
             const fuerMich = persoenlich ? (istMeins(st.assigned_id) || istMeins(st.assigned_to)) : (p.assigned_users || []).some(istMeins);
             if (!fuerMich) return;
             neu.push({ typLabel: 'Vorgang', title: p.title || 'Vorgang', subject: 'Schritt: ' + (st.text || ''), targetType: 'process', targetId: p.id, customerId: p.customer_id || null,
-                day: tag, datumText: tag ? wtDatum(st.remind_at) : '', gruppe: gruppeNach(tag), auto: true,
+                // Ohne jedes Datum: trotzdem „Wichtig“ (mir zugewiesen), steht dort hinter den datierten
+                day: tag, datumText: tag ? wtDatum(wann) : '', gruppe: tag ? gruppeNach(tag) : 'Wichtig', auto: true,
                 ki: tag ? faelligText(tag, 'Schritt') : 'Schritt mir zugewiesen' });
         }));
         const meineTermine = new Set(teilnahmen.filter(t => t.status !== 'declined').map(t => String(t.event_id)));
