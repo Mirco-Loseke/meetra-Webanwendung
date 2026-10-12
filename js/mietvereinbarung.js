@@ -74,7 +74,7 @@
             pruefpunkte: {},   // "nr" -> { spaltenId: 'io' | 'nio' | null }
             auswahl: {},       // "nr" -> ['12 mm'] — gewählte Ausführungen
             trommeltyp: '',
-            sauberkeit: { gereinigt: {}, diesel: {}, sonstiges: '' },
+            sauberkeit: { gereinigt: {}, diesel: {}, adblue: {}, sonstiges: '' },
             einweisung: { erfolgt: null, durch_id: '', durch_name: '' },
             schaeden: [{ nr: '', position: '', beschreibung: '' }],
             fotos: { uebergabe: {}, ruecknahme: {} },
@@ -88,7 +88,7 @@
         };
         let nr = 1;
         (vorlage.baugruppen || []).forEach(g => (g.punkte || []).forEach(() => { d.pruefpunkte[nr] = {}; nr++; }));
-        (vorlage.spalten || []).forEach(s => { d.sauberkeit.gereinigt[s.id] = null; d.sauberkeit.diesel[s.id] = ''; });
+        (vorlage.spalten || []).forEach(s => { d.sauberkeit.gereinigt[s.id] = null; d.sauberkeit.diesel[s.id] = ''; d.sauberkeit.adblue[s.id] = ''; });
         return d;
     }
 
@@ -2279,6 +2279,10 @@
                     <td>${esc(f.diesel || 'Diesel Füllstand')}</td><td class="miet-num"></td>
                     ${sp.map(c => `<td class="${c.id === aktiv ? '' : 'miet-dim'}">${txt('sauberkeit.diesel.' + c.id, (s.diesel || {})[c.id] || '', 'z. B. Voll')}</td>`).join('')}
                 </tr>
+                ${vorlage.mit_adblue ? `<tr data-split>
+                    <td>${esc(f.adblue || 'AdBlue Füllstand')}</td><td class="miet-num"></td>
+                    ${sp.map(c => `<td class="${c.id === aktiv ? '' : 'miet-dim'}">${txt('sauberkeit.adblue.' + c.id, (s.adblue || {})[c.id] || '', 'z. B. Voll')}</td>`).join('')}
+                </tr>` : ''}
                 <tr data-split>
                     <td>${esc(f.sonstiges || 'Sonstiges:')}</td><td class="miet-num"></td>
                     <td colspan="${sp.length}">${txtZeilen('sauberkeit.sonstiges', s.sonstiges, 3)}</td>

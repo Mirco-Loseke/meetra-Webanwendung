@@ -59,6 +59,7 @@
             sauberkeit: 'Sauberkeit, Füllstand',
             gereinigt: 'Gereinigt',
             diesel: 'Diesel Füllstand',
+            adblue: 'AdBlue Füllstand',
             sonstiges: 'Sonstiges:',
             einweisung: 'Einweisung stattgefunden',
             unterschrift_vermieter: 'Unterschrift Vermieter',
@@ -329,6 +330,8 @@
             zusatzinfo: c.zusatzinfo != null ? c.zusatzinfo : s.zusatzinfo,
             // Geräte ohne Stundenzähler (z. B. Hebebühne): keine Betriebsstunden-Felder.
             ohne_betriebsstunden: !!c.ohne_betriebsstunden,
+            // Zeile „AdBlue Füllstand“ unter Diesel (z. B. Brecher).
+            mit_adblue: !!c.mit_adblue,
             schlusssatz: c.schlusssatz != null ? c.schlusssatz : s.schlusssatz,
             bloecke: Object.assign({}, s.bloecke, c.bloecke || {}),
             felder: Object.assign({}, s.felder, c.felder || {}),
@@ -505,6 +508,10 @@
         renderEditor();
     };
 
+    window.mietVorlageAdblue = function (an) {
+        if (bearbeitet && bearbeitet.config) bearbeitet.config.mit_adblue = !!an;
+    };
+
     window.mietVorlageOhneBs = function (an) {
         if (bearbeitet && bearbeitet.config) bearbeitet.config.ohne_betriebsstunden = !!an;
     };
@@ -636,7 +643,10 @@
             + feldZeile('Schlusssatz', 'schlusssatz', c.schlusssatz)
             + `<div class="miet-editor-row"><span>Betriebsstunden</span>
                 <label style="display:flex; align-items:center; gap:8px;"><input type="checkbox" ${c.ohne_betriebsstunden ? 'checked' : ''}
-                    onchange="window.mietVorlageOhneBs(this.checked)"> Gerät hat keinen Stundenzähler — Felder weglassen</label></div>`;
+                    onchange="window.mietVorlageOhneBs(this.checked)"> Gerät hat keinen Stundenzähler — Felder weglassen</label></div>`
+            + `<div class="miet-editor-row"><span>AdBlue</span>
+                <label style="display:flex; align-items:center; gap:8px;"><input type="checkbox" ${c.mit_adblue ? 'checked' : ''}
+                    onchange="window.mietVorlageAdblue(this.checked)"> Zeile „AdBlue Füllstand“ unter Diesel</label></div>`;
 
         // --- Überschriften
         const bloecke = Object.keys(c.bloecke).map(k =>
