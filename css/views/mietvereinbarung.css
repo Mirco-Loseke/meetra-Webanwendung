@@ -2496,3 +2496,7 @@ textarea.miet-in {
 }
 .miet-ew-schalter input { width: 18px; height: 18px; accent-color: var(--success, #22c55e); cursor: pointer; }
 @media print { .miet-ew-schalter { display: none !important; } }
+/* Eingabefeld in der Linie: ohne eigenen Rahmen, die Linie ist der Rahmen. */
+.miet-ew-linie .miet-txt { flex: 1; border: none !important; background: transparent !important; padding: 0 !important; min-height: 0; font-size: 13px; }
+/* Platzhalter („TT.MM.JJJJ“ u. a.) auch im gespeicherten PDF nicht zeigen. */
+.miet-pages.miet-pdf .miet-txt:empty::before { content: '' !important; }

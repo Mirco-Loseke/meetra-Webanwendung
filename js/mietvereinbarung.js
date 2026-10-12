@@ -77,6 +77,8 @@
             sauberkeit: { gereinigt: {}, diesel: {}, adblue: {}, sonstiges: '' },
             // „Unterschriftenseite Einweisungserklärung“ beilegen: 'ja' | 'nein' | null
             einweisungsseite: null,
+            // Zeilen der Unterschriftenseite: [0] = Einweiser, danach Teilnehmer. Datum leer.
+            einweisungsliste: Array.from({ length: 8 }, () => ({ datum: '', name: '' })),
             einweisung: { erfolgt: null, durch_id: '', durch_name: '' },
             schaeden: [{ nr: '', position: '', beschreibung: '' }],
             fotos: { uebergabe: {}, ruecknahme: {} },
@@ -318,6 +320,9 @@
             if (Array.isArray(d.schaeden) && d.schaeden.length) daten.schaeden = d.schaeden;
             if (d.trommeltyp != null) daten.trommeltyp = d.trommeltyp;
             if (d.einweisungsseite != null) daten.einweisungsseite = d.einweisungsseite;
+            if (Array.isArray(d.einweisungsliste)) d.einweisungsliste.slice(0, 8).forEach((z, i) => {
+                if (z) daten.einweisungsliste[i] = { datum: z.datum || '', name: z.name || '' };
+            });
             if (d.plan_id) daten.plan_id = d.plan_id;
             if (d.zusatz && typeof d.zusatz === 'object') daten.zusatz = { uebergabe: d.zusatz.uebergabe || [], ruecknahme: d.zusatz.ruecknahme || [] };
 
@@ -1783,6 +1788,7 @@
                         pruefpunkte: daten.pruefpunkte, auswahl: daten.auswahl, trommeltyp: daten.trommeltyp,
                         sauberkeit: daten.sauberkeit, einweisung: daten.einweisung,
                         einweisungsseite: daten.einweisungsseite || null,
+                        einweisungsliste: daten.einweisungsliste,
                         schaeden: daten.schaeden, unterschriften: daten.unterschriften,
                         plan_id: daten.plan_id || null,
                         zusatz: { uebergabe: zusatzListe('uebergabe'), ruecknahme: zusatzListe('ruecknahme') } },
@@ -2332,15 +2338,21 @@
     function einweisungsseiteBlock() {
         const g = daten.geraet || {}, m = daten.mieter || {};
         const geraet = [g.typ, g.bezeichnung, g.seriennummer ? '#' + g.seriennummer : ''].filter(Boolean).join(' · ');
-        const datum = daten.unterschriften.u_datum ? daten.unterschriften.u_datum.split('-').reverse().join('.') : '';
-        const zeile = (wer, d, name) => `
+        // Datum und Name sind am Bildschirm anklickbar (leer = Linie zum Ausfüllen von Hand).
+        // Der Einweiser-Name ist mit dem Einweiser aus dem Bogen vorbelegt, das Datum nie.
+        // Ältere Entwürfe/Vereinbarungen haben die Liste noch nicht.
+        if (!Array.isArray(daten.einweisungsliste)) daten.einweisungsliste = [];
+        while (daten.einweisungsliste.length < 8) daten.einweisungsliste.push({ datum: '', name: '' });
+        const L = daten.einweisungsliste;
+        if (!L[0].name && daten.einweisung && daten.einweisung.durch_name) L[0].name = daten.einweisung.durch_name;
+        const zeile = (wer, i) => `
             <div class="miet-ew-zeile">
-                <div><div class="miet-ew-linie">${esc(d || '')}</div><span>Tag der Einweisung, Abnahme, Übergabe</span></div>
-                <div><div class="miet-ew-linie">${esc(name || '')}</div><span>Name in Druckbuchstaben</span></div>
+                <div><div class="miet-ew-linie">${txt('einweisungsliste.' + i + '.datum', L[i].datum, 'TT.MM.JJJJ')}</div><span>Tag der Einweisung, Abnahme, Übergabe</span></div>
+                <div><div class="miet-ew-linie">${txt('einweisungsliste.' + i + '.name', L[i].name, '')}</div><span>Name in Druckbuchstaben</span></div>
                 <div><div class="miet-ew-linie"></div><span>${wer}</span></div>
             </div>`;
         let teilnehmer = '';
-        for (let i = 0; i < 7; i++) teilnehmer += zeile('Unterschrift des Fahrers/Mechanikers');
+        for (let i = 1; i < 8; i++) teilnehmer += zeile('Unterschrift des Fahrers/Mechanikers', i);
         return `
         <div class="miet-block miet-ew">
             <div class="miet-sheet-title">Einweisungserklärung</div>
@@ -2350,7 +2362,7 @@
             </div>
             <p class="miet-ew-text">Mit ihrer Unterschrift bestätigen die Teilnehmer, dass sie in die Bedienung, die Sicherheitshinweise und den bestimmungsgemäßen Gebrauch der oben genannten Maschine eingewiesen wurden.</p>
             <div class="miet-block-title">Einweiser</div>
-            ${zeile('Unterschrift des Einweisers', datum, daten.einweisung && daten.einweisung.durch_name)}
+            ${zeile('Unterschrift des Einweisers', 0)}
             <div class="miet-block-title" style="margin-top:6mm;">Teilnehmer der Einweisung</div>
             ${teilnehmer}
         </div>`;
