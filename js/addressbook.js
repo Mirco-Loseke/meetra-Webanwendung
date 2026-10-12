@@ -3038,7 +3038,7 @@
             return `
             <div class="ab-sub-card${gewaehlt ? ' ab-kombi-gewaehlt' : ''}"${kombi ? ` data-ab-action="proc-kombi-toggle" data-ab-id="${esc(p.id)}" style="cursor:pointer;"` : ''}>
                 <div class="ab-sub-card-head">
-                    ${kombi ? `<label class="ab-kombi-check" onclick="event.stopPropagation()"><input type="checkbox" data-ab-action="proc-kombi-toggle" data-ab-id="${esc(p.id)}" ${gewaehlt ? 'checked' : ''}></label>` : ''}
+                    ${kombi ? `<span class="ab-kombi-check"><input type="checkbox" data-ab-action="proc-kombi-toggle" data-ab-id="${esc(p.id)}" ${gewaehlt ? 'checked' : ''}></span>` : ''}
                     <div class="ab-link-icon" style="color:${ang ? '#facc15' : '#a78bfa'}; border-color:${ang ? 'rgba(250,204,21,0.35)' : 'rgba(167,139,250,0.3)'}; background:${ang ? 'rgba(250,204,21,0.1)' : 'rgba(167,139,250,0.1)'};">${ic('note', 18)}</div>
                     <div class="ab-sub-card-title">
                         <div class="ab-sub-name">
