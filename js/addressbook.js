@@ -3042,7 +3042,7 @@
                     <div class="ab-link-icon" style="color:${ang ? '#facc15' : '#a78bfa'}; border-color:${ang ? 'rgba(250,204,21,0.35)' : 'rgba(167,139,250,0.3)'}; background:${ang ? 'rgba(250,204,21,0.1)' : 'rgba(167,139,250,0.1)'};">${ic('note', 18)}</div>
                     <div class="ab-sub-card-title">
                         <div class="ab-sub-name">
-                            <span>${esc(ang ? ('Angebot ' + ((state.detail.angeboteListeByProcess || {})[String(p.id)] || [ang]).map(x => x.belegnummer || '').filter(Boolean).join(' + ')) : (p.title || 'Unbenannter Vorgang'))}</span>
+                            <span>${esc(p.title || (ang ? ('Angebot ' + ((state.detail.angeboteListeByProcess || {})[String(p.id)] || [ang]).map(x => x.belegnummer || '').filter(Boolean).join(' + ')) : 'Unbenannter Vorgang'))}</span>
                             <span class="ab-pill ${st.cls}" style="border-color:${st.color}66; color:${st.color}; background:${st.color}1a;">${esc(st.label)}</span>
                         </div>
                         <div class="ab-muted ab-small" style="margin-top:4px;">
@@ -3154,8 +3154,9 @@
             // Scheitert das Umhängen, NICHT löschen — sonst hingen die Angebote an
             // gelöschten Vorgängen (oder würden je nach Datenbank mitgelöscht).
             if (aErr) throw new Error('Angebote konnten nicht umgehängt werden (' + aErr.message + ') — die Vorgänge wurden nicht gelöscht.');
-            const { error: dErr } = await sb().from('internal_processes').delete().in('id', qIds);
+            const { data: weg, error: dErr } = await sb().from('internal_processes').delete().in('id', qIds).select('id');
             if (dErr) throw dErr;
+            if ((weg || []).length < qIds.length) window.showToast('Zusammengeführt, aber ' + (qIds.length - (weg || []).length) + ' alte(r) Vorgang/Vorgänge konnte(n) nicht gelöscht werden — bitte von Hand löschen.');
             // Lokal nachziehen — Vorgänge-Seite und Angebotsliste laden ohnehin per Realtime nach
             if (window.eventsState && Array.isArray(window.eventsState.processes)) {
                 window.eventsState.processes = window.eventsState.processes.filter(p => !qIds.includes(p.id));

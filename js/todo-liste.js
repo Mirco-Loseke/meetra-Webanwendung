@@ -269,7 +269,8 @@
             const liste = alle.filter(e => (e.gruppe || 'Wichtig') === g);
             if (!liste.length) return;
             // Offene zuerst, erledigte rutschen nach unten
-            liste.sort((a, b) => (a.erledigt - b.erledigt));
+            liste.sort((a, b) => (a.erledigt - b.erledigt)
+                || String(a.day || '9999').localeCompare(String(b.day || '9999')));
             html += `<div class="todo-gruppe">${esc(g)} <span>${liste.filter(e => !e.erledigt).length}</span></div>` + liste.map(eintragHtml).join('');
         });
         box.innerHTML = html + (ohneTabelle ? hinweisTabelle() : '');
@@ -1251,31 +1252,41 @@
         autoLetzte = Date.now();
         const heute = isoTag(new Date());
         const bis = heute + 'T23:59:59';
+        // Vorschau: was in den nächsten 7 Tagen fällig wird, steht schon auf der Liste.
+        const in7 = isoTag(new Date(Date.now() + 7 * 864e5));
+        const bis7 = in7 + 'T23:59:59';
+        // Gruppe nach Fälligkeit: überfällig/heute → Heute unbedingt, bis 7 Tage → Wichtig, sonst Wenn Zeit bleibt
+        const gruppeNach = (tag) => !tag ? 'Wenn Zeit bleibt' : tag <= heute ? 'Heute unbedingt' : tag <= in7 ? 'Wichtig' : 'Wenn Zeit bleibt';
+        const faelligText = (tag, art) => !tag ? art : tag < heute ? art + ' überfällig' : tag === heute ? art + ' heute' : art + ' am ' + wtDatum(tag);
         const c = sb();
         const q = p => p.then(r => (r.error ? [] : r.data || [])).catch(() => []);
         const [faelligeV, mitSchritten, termine, teilnahmen, angebote] = await Promise.all([
-            q(c.from('internal_processes').select('id, title, remind_at, assigned_users, customer_id, status').neq('status', 'erledigt').not('remind_at', 'is', null).lte('remind_at', bis).limit(300)),
+            q(c.from('internal_processes').select('id, title, remind_at, assigned_users, customer_id, status, steps').neq('status', 'erledigt').not('remind_at', 'is', null).lte('remind_at', bis7).limit(300)),
             q(c.from('internal_processes').select('id, title, assigned_users, customer_id, status, steps').neq('status', 'erledigt').contains('steps', JSON.stringify([{ done: false }])).limit(300)),
             q(c.from('maintenance_events').select('id, title, event_date, start_date, customer_id, created_by_user, machine_id, manual_machine, maintenance_types').or(`event_date.gte.${heute},start_date.gte.${heute}`).or(`event_date.lte.${bis},start_date.lte.${bis}`).limit(100)),
             q(c.from('event_participants').select('event_id, user_id, status').eq('user_id', window.activeUser.id).limit(300)),
             q(c.from('angebote').select('*').not('erinnerung', 'is', null).lte('erinnerung', heute).limit(200))
         ]);
         const neu = [];
-        const prio = () => 'Heute unbedingt';
         faelligeV.forEach(p => {
+            // procZustaendige zählt auch, wer nur in einem Schritt eingetragen ist
             if (!(window.procZustaendige ? window.procZustaendige(p) : (p.assigned_users || [])).some(istMeins)) return;
+            const tag = String(p.remind_at).slice(0, 10);
             neu.push({ typLabel: 'Vorgang', title: p.title || 'Vorgang', targetType: 'process', targetId: p.id, customerId: p.customer_id || null,
-                day: String(p.remind_at).slice(0, 10), datumText: wtDatum(p.remind_at), gruppe: prio(p.remind_at), auto: true,
-                ki: String(p.remind_at).slice(0, 10) < heute ? 'Wiedervorlage überfällig' : 'Wiedervorlage heute' });
+                day: tag, datumText: wtDatum(p.remind_at), gruppe: gruppeNach(tag), auto: true, ki: faelligText(tag, 'Wiedervorlage') });
         });
         mitSchritten.forEach(p => (p.steps || []).forEach(st => {
-            if (st.done || !st.remind_at || String(st.remind_at).slice(0, 10) > heute) return;
-            const fuerMich = st.assigned_id != null || st.assigned_to ? (istMeins(st.assigned_id) || istMeins(st.assigned_to)) : (p.assigned_users || []).some(istMeins);
+            if (st.done) return;
+            const tag = st.remind_at ? String(st.remind_at).slice(0, 10) : '';
+            if (tag && tag > in7) return;
+            const persoenlich = (st.assigned_id != null && st.assigned_id !== '') || !!st.assigned_to;
+            // Ohne Erinnerung nur, wenn der Schritt MIR persönlich zugewiesen ist
+            if (!tag && !persoenlich) return;
+            const fuerMich = persoenlich ? (istMeins(st.assigned_id) || istMeins(st.assigned_to)) : (p.assigned_users || []).some(istMeins);
             if (!fuerMich) return;
-            // Schritt hängt am Vorgang: ein Eintrag je Vorgang (gleicher Schlüssel), Text nennt den Schritt
             neu.push({ typLabel: 'Vorgang', title: p.title || 'Vorgang', subject: 'Schritt: ' + (st.text || ''), targetType: 'process', targetId: p.id, customerId: p.customer_id || null,
-                day: String(st.remind_at).slice(0, 10), datumText: wtDatum(st.remind_at), gruppe: 'Heute unbedingt', auto: true,
-                ki: String(st.remind_at).slice(0, 10) < heute ? 'Schritt-Erinnerung überfällig' : 'Schritt-Erinnerung heute' });
+                day: tag, datumText: tag ? wtDatum(st.remind_at) : '', gruppe: gruppeNach(tag), auto: true,
+                ki: tag ? faelligText(tag, 'Schritt') : 'Schritt mir zugewiesen' });
         }));
         const meineTermine = new Set(teilnahmen.filter(t => t.status !== 'declined').map(t => String(t.event_id)));
         termine.forEach(e => {
@@ -1294,7 +1305,13 @@
                 gruppe: 'Wichtig', auto: true, ki: 'Angebots-Erinnerung' });
         });
         if (!neu.length) return;
-        const n = await window.todoUebernehmen(neu, { still: true });
+        const je = new Map();
+        neu.forEach(x => {
+            const k = x.targetType + '|' + x.targetId;
+            const alt = je.get(k);
+            if (!alt || (x.day && (!alt.day || x.day < alt.day))) je.set(k, x);
+        });
+        const n = await window.todoUebernehmen([...je.values()], { still: true });
         if (n && !document.body.classList.contains('todo-offen')) {
             const fab = document.getElementById('todo-fab');
             if (fab) { fab.classList.remove('todo-puls'); void fab.offsetWidth; fab.classList.add('todo-puls'); }

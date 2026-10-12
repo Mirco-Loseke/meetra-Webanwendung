@@ -1345,6 +1345,10 @@
             const liste = await angeboteFuerSuche();
             const a = liste.find(x => String(x.id) === String(angebotId));
             if (!a) return;
+            // Zuordnung frisch aus der Datenbank: die Suchliste ist je Sitzung gepuffert und kennt
+            // den eigenen Angebots-Vorgang (vom Sage-Abgleich angelegt) oft noch nicht — dann
+            // wurde der alte Vorgang weder zusammengeführt noch gelöscht.
+            { const { data: frisch } = await window.supabaseClient.from('angebote').select('process_id').eq('id', angebotId).maybeSingle(); if (frisch) a.process_id = frisch.process_id; }
             const proc = (window.eventsState.processes || []).find(p => String(p.id) === String(processId));
             if (!proc) { window.showToast('Vorgang nicht geladen.'); return; }
 
@@ -1394,8 +1398,12 @@
                 .select('*, customers(name), angebot_notizen(id, content, created_at)').single();
             if (error) { window.showToast('Verknüpfen fehlgeschlagen: ' + error.message); return; }
             if (quelle) {
-                const { error: dErr } = await window.supabaseClient.from('internal_processes').delete().eq('id', quelle.id);
-                if (dErr) console.warn('Alter Angebots-Vorgang nicht gelöscht:', dErr.message);
+                // Fehler NICHT still schlucken: sonst bleibt der alte Vorgang stehen und keiner merkt es.
+                const { data: weg, error: dErr } = await window.supabaseClient.from('internal_processes').delete().eq('id', quelle.id).select('id');
+                if (dErr || !(weg && weg.length)) {
+                    console.warn('Alter Angebots-Vorgang nicht gelöscht:', dErr && dErr.message);
+                    window.showToast('Angebot verknüpft, aber der alte Vorgang „' + (quelle.title || '') + '“ konnte nicht gelöscht werden' + (dErr ? ': ' + dErr.message : ' (keine Löschberechtigung?)') + ' — bitte von Hand löschen.');
+                }
             }
 
             a.process_id = processId;
