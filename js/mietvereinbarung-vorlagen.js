@@ -62,7 +62,9 @@
             sonstiges: 'Sonstiges:',
             einweisung: 'Einweisung stattgefunden',
             unterschrift_vermieter: 'Unterschrift Vermieter',
-            unterschrift_mieter: 'Unterschrift Mieter'
+            unterschrift_mieter: 'Unterschrift Mieter',
+            // Steht über den Übergabe-Unterschriften; leer = kein Hinweis.
+            hinweis_anleitung: 'Der Maschine liegt eine Kurzbeschreibung zum Einsatz und zum bestimmungsgemäßen Gebrauch bei. Sie befindet sich in der Regel im Steuerkasten. Die Kurzbeschreibung ersetzt nicht die Original-Betriebsanleitung des Herstellers, die wir Ihnen auf Wunsch gerne zusenden.'
         },
 
         // Pruefspalten der Abnahmetabelle. Die erste gilt als Übergabe,

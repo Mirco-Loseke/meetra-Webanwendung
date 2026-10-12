@@ -180,7 +180,7 @@
     box-sizing: border-box;
     /* Unten 27mm statt 22mm: der Umbruch kommt dadurch rund 5mm frueher
        und es bleibt sichtbar Luft ueber der unteren Briefbogenlinie. */
-    padding: 30mm 25mm 27mm;
+    padding: 26.5mm 21mm 26mm;   /* Briefbogen: Linie oben 23 mm, unten 273 mm (2026-10-09 enger, mehr Platz) */
     margin: 0 auto 18px;
     background-color: #fff;
     background-image: url('../../assets/images/vorlage_bg.jpg');
@@ -245,7 +245,7 @@
 
 .miet-page-nr {
     position: absolute;
-    right: 25mm;
+    right: 21mm;
     bottom: 18mm;
     font-size: 9px;
     color: #6b7280;
@@ -1883,7 +1883,7 @@ textarea.miet-in {
     width: 210mm !important;
     height: 297mm !important;
     min-height: 0 !important;
-    padding: 30mm 25mm 27mm !important;
+    padding: 26.5mm 21mm 26mm !important;
     margin: 0 auto 18px !important;
     border-radius: 0 !important;
     background-image: url('../../assets/images/vorlage_bg.jpg') !important;
@@ -2097,6 +2097,14 @@ textarea.miet-in {
     border-top: 1px solid #d1d5db;
     break-inside: avoid;
     page-break-inside: avoid;
+}
+
+/* Hinweis Kurzbeschreibung/Originalanleitung über den Übergabe-Unterschriften. */
+.miet-hinweis-anleitung {
+    margin-bottom: 10px;
+    font-size: 0.82em;
+    line-height: 1.4;
+    color: #374151;
 }
 
 .miet-foto-sign .miet-sign-pad {
@@ -2386,3 +2394,31 @@ textarea.miet-in {
 }
 .miet-pages.miet-pdf .miet-photo-slot:not(.filled) { display: none !important; }
 .miet-pages.miet-pdf .miet-photo-grid:not(:has(.miet-photo-slot.filled)) { display: none !important; }
+
+/* Druck: Seite 1 per zoom statt transform verkleinern. Mit transform blieb
+   rechts ein breiter Streifen frei (die gegengerechnete Breite griff im
+   Druck nicht); zoom verkleinert das Layout selbst, die Breite füllt sich
+   bis zur roten Linie. */
+@media print {
+    .miet-fit {
+        transform: none !important;
+        zoom: var(--miet-fit-f, 1);
+        width: auto !important;
+    }
+}
+
+/* Seite 1 (Mieter, Gerät, Abnahme) eine halbe Stufe größer — auf dem Blatt
+   war unten und rechts noch Platz (2026-10-12). Reicht er nicht, verkleinert
+   ersteSeite() den Stapel ohnehin wieder. */
+.miet-pages .miet-page .miet-fit .miet-table { font-size: 13px !important; }
+.miet-pages .miet-page .miet-fit .miet-table th { font-size: 12px !important; }
+.miet-pages .miet-page .miet-fit .miet-table tr.miet-group td { font-size: 12.5px !important; }
+.miet-pages .miet-page .miet-fit .miet-check { font-size: 12px !important; }
+.miet-pages .miet-page .miet-fit .miet-block-title { font-size: 11.5px !important; }
+.miet-pages .miet-page .miet-fit .miet-sheet-title { font-size: 17.5px !important; }
+
+/* „Hier unterschreiben“ ist nur Bedienhilfe — auf Papier und im PDF leer lassen. */
+@media print {
+    .miet-sign-pad .miet-sign-hint { visibility: hidden !important; }
+}
+.miet-pages.miet-pdf .miet-sign-pad .miet-sign-hint { visibility: hidden !important; }

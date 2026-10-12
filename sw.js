@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = 'meetra-app-v861';
+﻿const CACHE_NAME = 'meetra-app-v868';
 
 // App shell — lokal gecachte Dateien beim ersten Besuch
 const PRECACHE = [

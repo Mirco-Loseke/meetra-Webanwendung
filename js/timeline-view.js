@@ -490,6 +490,7 @@
                 preis: isNaN(satz) ? null : satz,
                 kunde: mieter.name || kundeText(mieter.customer_id) || null,
                 einsatzort: mieter.einsatzort || null,
+                planId: dat.plan_id ? String(dat.plan_id) : null,
                 status: bis < key(HEUTE) ? 'zurueck' : (von > key(HEUTE) ? 'reserviert' : 'draussen')
             });
         });
@@ -2858,7 +2859,10 @@
                + (plan.aufWert && plan.art !== 'aufbereitung'
                    ? '<div class="kv"><span>Aufbereitung danach</span><b>' + esc(aufbereitungText(plan.aufWert, plan.aufEinheit)) + '</b></div>' : '')
                + (plan.notiz ? '<div class="kv"><span>Notiz</span><b>' + esc(plan.notiz) + '</b></div>' : '');
+            var vertrag = plan.art === 'miete' ? mietZuPlan(plan) : null;
             h += '<div class="acts">'
+               + (plan.art === 'miete' && typeof window.openMietvereinbarung === 'function'
+                   ? '<button class="btn-primary" id="tlv-plan-miet">' + (vertrag ? 'Mietvereinbarung bearbeiten' : 'In Mietvereinbarung übernehmen') + '</button>' : '')
                + '<button class="btn-primary" id="tlv-plan-bearb">Bearbeiten</button>'
                + (plan.unsicher ? '<button class="btn-secondary" id="tlv-plan-ok">Bestätigen</button>' : '')
                + '<button class="btn-secondary" id="tlv-plan-weg">Löschen</button>'
@@ -2870,6 +2874,8 @@
         if (plan) {
             var pb = document.getElementById('tlv-plan-bearb');
             if (pb) pb.onclick = function () { planDialog(plan); };
+            var pm = document.getElementById('tlv-plan-miet');
+            if (pm) pm.onclick = function () { planZuMiete(plan); };
             var pok = document.getElementById('tlv-plan-ok');
             if (pok) pok.onclick = function () { planBestaetigen(plan); };
             var pw = document.getElementById('tlv-plan-weg');
@@ -2939,6 +2945,29 @@
             }
         } catch (e) { console.error('[timeline] Öffnen fehlgeschlagen', e); }
     }
+
+    // Mietvereinbarung, die aus dieser Planung entstanden ist (data.plan_id).
+    function mietZuPlan(plan) {
+        for (var i = 0; i < ITEMS.length; i++)
+            if (ITEMS[i].quelle === 'rental_agreements' && ITEMS[i].planId === String(plan.dbId)) return ITEMS[i];
+        return null;
+    }
+    function planZuMiete(plan) {
+        var v = mietZuPlan(plan);
+        if (v) { window.openMietvereinbarung(v.maschine, v.dbId); return; }
+        window.openMietvereinbarung(plan.maschine, null, {
+            plan_id: plan.dbId, customer_id: plan.kundeId, kunde: plan.kunde, von: plan.von, bis: plan.bis
+        });
+    }
+    // Gespeicherte Mietvereinbarung sofort übernehmen, nicht erst nach 3 min.
+    document.addEventListener('mietvereinbarung:gespeichert', async function (e) {
+        var client = sb(); if (!client || !S.geladen || !e.detail || !e.detail.id) return;
+        var r = await client.from('rental_agreements').select('*').eq('id', e.detail.id).maybeSingle();
+        if (r.error || !r.data) return;
+        ITEMS = ITEMS.filter(function (i) { return i.id !== 'ra-' + r.data.id; });
+        ladeMieten([r.data]);
+        zeichne(); zeichnePanel();
+    });
 
     // ------------------------------------------------------------------
     // Planung anlegen/bearbeiten (Knopf „+ Vermietung“)

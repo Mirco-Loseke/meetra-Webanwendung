@@ -26,6 +26,13 @@
     let vorlage = null;    // Aufbau des Bogens (Einstellungen → Mietvereinbarungen)
     let maschine = null;   // Maschine, an der die Vereinbarung haengt
     let phase = 'uebergabe'; // 'uebergabe' | 'ruecknahme'
+    // Druck/PDF: Fotoblöcke ohne ein einziges Foto schrumpfen auf Überschrift +
+    // Unterschriften — Übergabe und Rücknahme passen dann auf EIN Blatt.
+    let ausgabe = false;
+    async function alsAusgabe(fn) {
+        ausgabe = true; zeichneInhalt();
+        try { return await fn(); } finally { ausgabe = false; zeichneInhalt(); }
+    }
     let a4Modus = false;   // auf dem Handy kurz auf echtes A4 umschalten (Druck/PDF)
     let gespeicherteId = null; // Zeile in rental_agreements, sobald einmal gespeichert
     let gespeichertesDoc = null; // zugehoeriges Dokument unter "Dokumente"
@@ -187,7 +194,8 @@
     // agreementId gesetzt = eine gespeicherte Mietvereinbarung wird zum
     // Bearbeiten geöffnet (Maschine → Ansehen → Mietvereinbarung).
     // Speichern überschreibt dann genau diese Zeile.
-    window.openMietvereinbarung = async function (machineId, agreementId) {
+    // vorbelegung (nur neuer Bogen): { plan_id, customer_id, kunde, von, bis } aus einer Timeline-Planung.
+    window.openMietvereinbarung = async function (machineId, agreementId, vorbelegung) {
         if (machineId === 'null' || machineId === 'undefined') machineId = null;
 
         // Vorlagen sicherheitshalber nachladen, falls das Vorladen beim
@@ -233,6 +241,8 @@
             daten.einweisung.durch_name = window.activeUser.name || '';
         }
 
+        if (!agreementId && vorbelegung) await planUebernehmen(vorbelegung);
+
         // Gespeicherten Stand laden, bevor gezeichnet wird — sonst blitzt
         // kurz ein leerer Bogen auf.
         const geladen = agreementId ? await ladeVereinbarung(agreementId) : false;
@@ -263,6 +273,26 @@
         if (!geladen) ladeBetriebsstunden();
     };
 
+    // Planung aus der Timeline: Kunde mit Anschrift, Zeitraum und die Verknüpfung
+    // (data.plan_id), an der die Timeline danach „bearbeiten“ statt „anlegen“ zeigt.
+    async function planUebernehmen(v) {
+        if (v.plan_id) daten.plan_id = String(v.plan_id);
+        if (v.von) daten.miete.beginn = v.von;
+        if (v.bis) daten.miete.ende = v.bis;
+        if (v.kunde) daten.mieter.name = v.kunde;
+        if (!v.customer_id) return;
+        daten.mieter.customer_id = v.customer_id;
+        if (!window.supabaseClient) return;
+        try {
+            const { data } = await window.supabaseClient.from('customers')
+                .select('*').eq('id', v.customer_id).maybeSingle();
+            if (!data) return;
+            daten.mieter.name = data.name || daten.mieter.name;
+            daten.mieter.street = data.street || '';
+            daten.mieter.zip_city = [data.zip_code, data.city].filter(Boolean).join(' ');
+        } catch (e) { console.warn('Kunde der Planung nicht geladen:', e); }
+    }
+
     // Eine gespeicherte Zeile aus rental_agreements in den Bogen holen.
     // Die Fotos liegen dort als Adressen in Cloudflare R2 (nicht mehr als
     // Daten-URL) — der Bogen zeigt beides gleich an.
@@ -285,6 +315,7 @@
             if (d.auswahl && typeof d.auswahl === 'object') daten.auswahl = d.auswahl;
             if (Array.isArray(d.schaeden) && d.schaeden.length) daten.schaeden = d.schaeden;
             if (d.trommeltyp != null) daten.trommeltyp = d.trommeltyp;
+            if (d.plan_id) daten.plan_id = d.plan_id;
             if (d.zusatz && typeof d.zusatz === 'object') daten.zusatz = { uebergabe: d.zusatz.uebergabe || [], ruecknahme: d.zusatz.ruecknahme || [] };
 
             (Array.isArray(data.photos) ? data.photos : []).forEach(f => {
@@ -1005,7 +1036,7 @@
         // Am Rechner druckt der Browser den Bogen direkt — das Ergebnis
         // stimmt und ist am schnellsten.
         if (!istHandy()) {
-            mitA4(() => window.print());
+            mitA4(() => alsAusgabe(() => window.print()));
             return;
         }
 
@@ -1016,7 +1047,7 @@
         // Weitergeben geöffnet — damit sieht es überall gleich aus.
         try {
             status('PDF wird erzeugt …');
-            const doc = await mitEingebettetenFotos(() => mitA4(() => pdfErzeugen()));
+            const doc = await mitEingebettetenFotos(() => mitA4(() => alsAusgabe(() => pdfErzeugen())));
             const blob = doc.output('blob');
             const url = URL.createObjectURL(blob);
             const fenster = window.open(url, '_blank');
@@ -1711,7 +1742,7 @@
             // (oder ein Bild, das nie fertig laedt), wartete man vorher
             // endlos ohne jede Rueckmeldung.
             const pdfLauf = mitZeitgrenze(
-                mitEingebettetenFotos(() => mitA4(() => pdfErzeugen())),
+                mitEingebettetenFotos(() => mitA4(() => alsAusgabe(() => pdfErzeugen()))),
                 180000, 'Das Erzeugen des PDFs')
                 .catch(e => ({ fehler: e }));
 
@@ -1728,6 +1759,7 @@
                         pruefpunkte: daten.pruefpunkte, auswahl: daten.auswahl, trommeltyp: daten.trommeltyp,
                         sauberkeit: daten.sauberkeit, einweisung: daten.einweisung,
                         schaeden: daten.schaeden, unterschriften: daten.unterschriften,
+                        plan_id: daten.plan_id || null,
                         zusatz: { uebergabe: zusatzListe('uebergabe'), ruecknahme: zusatzListe('ruecknahme') } },
                 photos: fotos,
                 folder_path: basis,
@@ -1744,6 +1776,9 @@
                 if (error) throw error;
                 gespeicherteId = neu.id;
             }
+
+            // Timeline zieht den Balken und den Knopf an der Planung nach.
+            document.dispatchEvent(new CustomEvent('mietvereinbarung:gespeichert', { detail: { id: gespeicherteId } }));
 
             // Historie der Maschine nachziehen (Mietvereinbarung + Betriebsstunden).
             await historieAbgleichen();
@@ -1762,7 +1797,7 @@
                     // zweiter Anlauf ohne ihn, lieber schlicht als gar nicht.
                     console.warn('Zweiter Anlauf ohne Briefbogen-Hintergrund.');
                     status('PDF wird ohne Briefbogen erzeugt …');
-                    doc = await mitEingebettetenFotos(() => mitA4(() => pdfErzeugen()));
+                    doc = await mitEingebettetenFotos(() => mitA4(() => alsAusgabe(() => pdfErzeugen())));
                     window.showToast('Das PDF wurde ohne den Briefbogen-Hintergrund erzeugt.');
                 }
                 if (!doc || doc.fehler) throw (doc && doc.fehler) || new Error('PDF fehlt.');
@@ -2330,6 +2365,14 @@
             : (b.fotos_ruecknahme || 'Fotos bei Rücknahme');
         const aktiv = welche === phase;
 
+        if (ausgabe && !fertig && !zusatzListe(welche).length) {
+            return `
+        <div class="miet-block miet-foto-ohne">
+            <div class="miet-block-title">${esc(welche === 'uebergabe' ? 'Übergabe' : 'Rücknahme')}</div>
+            ${fotoUnterschriften(welche)}
+        </div>`;
+        }
+
         const kacheln = pos_liste.map((pos, i) => {
             const bild = satz[pos];
             return `
@@ -2452,6 +2495,7 @@
              MUSS er erscheinen. data-nurerste blendet dort alles aus (das ist
              für Bedienknöpfe gedacht), damit fehlten die Unterschriften. -->
         <div class="miet-foto-sign" data-ersteseite>
+            ${u && f.hinweis_anleitung ? `<div class="miet-hinweis-anleitung"><strong>Hinweis zur Betriebsanleitung</strong><br>${esc(f.hinweis_anleitung)}</div>` : ''}
             <div class="miet-sign-row">
                 ${feldUnterschrift(u ? 'u_vermieter' : 'r_vermieter', f.unterschrift_vermieter || 'Unterschrift Vermieter', pfad, wert)}
                 ${feldUnterschrift(u ? 'u_mieter' : 'r_mieter', f.unterschrift_mieter || 'Unterschrift Mieter', pfad, wert)}
