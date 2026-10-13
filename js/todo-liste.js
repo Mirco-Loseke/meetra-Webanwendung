@@ -228,10 +228,32 @@
         eintraege = eintraege.filter(e => !e.archiviert || new Date(e.archiviertAm || 0).getTime() > grenze);
     }
     const sichtbar = () => eintraege.filter(e => !e.archiviert);
+
+    // Vorgänge, die inzwischen erledigt oder gelöscht sind, verschwinden von der Liste
+    // (archiviert wie „Erledigte weg“ — kommt ein neuer Termin, nimmt todoUebernehmen sie wieder auf).
+    async function vorgaengeAbgleichen() {
+        const offen = eintraege.filter(e => !e.archiviert && e.targetType === 'process' && e.targetId);
+        if (!offen.length || !sb()) return 0;
+        const ids = [...new Set(offen.map(e => String(e.targetId)))];
+        const da = new Map();
+        for (let i = 0; i < ids.length; i += 100) {
+            const { data, error } = await sb().from('internal_processes').select('id, status').in('id', ids.slice(i, i + 100));
+            if (error) return 0;   // im Zweifel nichts wegräumen
+            (data || []).forEach(r => da.set(String(r.id), r.status));
+        }
+        const jetzt = new Date().toISOString();
+        let weg = 0;
+        offen.forEach(e => {
+            const st = da.get(String(e.targetId));
+            if (st === undefined || st === 'erledigt') { e.archiviert = true; e.archiviertAm = jetzt; weg++; }
+        });
+        if (weg) { speichern(); zeichnen(); zaehlerSetzen && zaehlerSetzen(); }
+        return weg;
+    }
     // Suchfeld oben in der Liste: alle Wörter müssen irgendwo im Eintrag vorkommen.
     let suche = '';
     function passtSuche(e) {
-        const w = suche.toLowerCase().trim().split(/s+/).filter(Boolean);
+        const w = suche.toLowerCase().trim().split(/\s+/).filter(Boolean);
         if (!w.length) return true;
         const d = details[e.id] || {};
         const text = [e.typ, e.titel, e.subject, e.ki, e.notiz, e.datumText, e.gruppe, adresseName(e),
@@ -1254,6 +1276,7 @@
         if (!sofort && (document.hidden || (window.istHauptTab && !window.istHauptTab()))) return;
         if (!sofort && Date.now() - autoLetzte < AUTO_TAKT - 5000) return;
         autoLetzte = Date.now();
+        await vorgaengeAbgleichen();
         const heute = isoTag(new Date());
         const bis = heute + 'T23:59:59';
         // Vorschau: was in den nächsten 7 Tagen fällig wird, steht schon auf der Liste.
@@ -1332,7 +1355,7 @@
         if (!window.activeUser) return;
         aufbauen();
         autoAn(autoIstAn());
-        laden().then(() => { zaehlerSetzen(); setTimeout(() => autoPruefen(false), 4000); });
+        laden().then(() => { zaehlerSetzen(); setTimeout(() => { vorgaengeAbgleichen(); autoPruefen(false); }, 4000); });
         setInterval(() => autoPruefen(false), 60 * 1000);   // prüft nur alle 10 min wirklich (AUTO_TAKT)
         document.addEventListener('visibilitychange', () => { if (!document.hidden) autoPruefen(false); });
         document.addEventListener('haupttab:uebernommen', () => autoPruefen(false));

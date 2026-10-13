@@ -1053,7 +1053,8 @@
 
         const totalMachines = ownMachines.length + customMachines.length + linkedMachineCount;
         const contacts = state.contactCount.get(id) || 0;
-        const links = state.linkCount.get(id) || 0;
+        // Anzahl Adressen im Verbund inkl. dieser (A–B–C = 3), wie im Reiter „Verknüpfungen“
+        const links = clusterMeta.size ? clusterMeta.size + 1 : 0;
         const hue = avatarHue(a.name);
 
         const addressLine = [a.street, [a.zip_code, a.city].filter(Boolean).join(' ')]
@@ -1064,7 +1065,7 @@
             chips.push(`<span class="ab-chip ab-chip-machine">${ic('machine', 13)} ${totalMachines} ${totalMachines === 1 ? 'Maschine' : 'Maschinen'}</span>`);
         }
         if (contacts) chips.push(`<span class="ab-chip ab-chip-contact">${ic('user', 13)} ${contacts} ${contacts === 1 ? 'Kontakt' : 'Kontakte'}</span>`);
-        if (links) chips.push(`<span class="ab-chip ab-chip-link">${ic('link', 13)} ${links} verknüpft</span>`);
+        if (links) chips.push(`<span class="ab-chip ab-chip-link">${ic('link', 13)} ${links} im Verbund</span>`);
 
         const pos = state.selectMode ? state.selection.indexOf(id) : -1;
         const selected = pos >= 0;
@@ -1702,7 +1703,9 @@
         });
 
         // Gesamtzahl Verknüpfungen (alle verknüpften Adressen im Cluster)
-        const totalLinksCount = state.detail.clusterMeta ? state.detail.clusterMeta.size : links.length;
+        // Adressen im Verbund inkl. dieser: mit 2 weiteren verknüpft ⇒ 3
+        const clusterSize = state.detail.clusterMeta ? state.detail.clusterMeta.size : links.length;
+        const totalLinksCount = clusterSize ? clusterSize + 1 : 0;
 
         // Vorgänge: die Karten kommen aus state.detail.processes (nicht .tasks — das
         // wird nie gefüllt und ließ das Reiter-Badge dauerhaft 0 anzeigen).
@@ -2339,7 +2342,7 @@
 
         return `
         <div class="ab-section-head">
-            <span class="ab-muted">${entries.length} ${entries.length === 1 ? 'verknüpfte Adresse' : 'verknüpfte Adressen'}</span>
+            <span class="ab-muted">${entries.length ? `${entries.length + 1} Adressen im Verbund (diese + ${entries.length} verknüpfte)` : 'Keine verknüpften Adressen'}</span>
             <button class="ab-btn ab-btn-primary" data-ab-action="link-new">${ic('plus', 16)} Adresse verknüpfen</button>
         </div>
         ${entries.length

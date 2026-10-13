@@ -105,6 +105,11 @@
             };
         }
 
+        // Für js/vorgang-sicher.js: Speichern auch bei Tippen, Ziehen, Menüs.
+        window.processAutosaveSchedule = function () {
+            if (autosave && autosave.id && isOpen()) autosave.schedule();
+        };
+
         // Schließen: einmal alles wegschreiben — auch nach „Abbrechen“, damit
         // Getipptes nicht verfällt. Ohne Änderung geht auch nichts raus.
         const origClose = window.closeEditProcessModal;
