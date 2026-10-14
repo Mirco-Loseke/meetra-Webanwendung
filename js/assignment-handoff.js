@@ -30,7 +30,8 @@
     // 60 s statt 20 s: die Abfrage zieht alle offenen Vorgänge samt Schritten —
     // dreimal pro Minute in jedem Browser war ein spürbarer Teil des Egress.
     // 2 min: neue Zuweisungen kommen sofort per Realtime, der Takt ist nur das Netz darunter.
-    const TAKT = 120 * 1000;
+    // 5 min (2026-10-14, Log-Kontingent): Realtime ist der eigentliche Weg.
+    const TAKT = 300 * 1000;
     const MORGENS_STUNDE = 8;        // „morgen" heißt: morgen früh um 8
 
     // Später-Erinnern-Auswahl. Minuten, oder morgens = fester Zeitpunkt.

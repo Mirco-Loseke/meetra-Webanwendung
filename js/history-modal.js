@@ -701,19 +701,42 @@
                         photoGallery = gruppe(item.mietFotos.uebergabe, 'Übergabe', item.mietFotos.uDatum, '#10b981')
                             + gruppe(item.mietFotos.ruecknahme, 'Rückgabe', item.mietFotos.rDatum, '#f59e0b');
                     } else if (item.source === 'manuell' && item.files && Array.isArray(item.files) && item.files.length > 0) {
+                        // PDFs u. a. Dateien (z. B. aus dem Foto-Eingang) als Kachel, die die Datei öffnet —
+                        // nur Bilder gehen in die Lightbox.
+                        const urlVon = f => typeof f === 'string' ? f : (f && f.url) || '';
+                        const istBild = f => { const t = typeof f === 'string' ? '' : (f && f.type) || ''; return t.startsWith('image/') || /\.(jpe?g|png|gif|webp|heic|avif|bmp)(\?|$)/i.test(urlVon(f)); };
+                        const bilder = item.files.filter(istBild).map(urlVon);
+                        const bilderJson = JSON.stringify(bilder).replace(/"/g, '&quot;');
+                        const kachel = 'width: 80px; height: 80px; flex-shrink: 0; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: transform 0.2s; position: relative;';
                         photoGallery = `
                                 <div style="display: flex; gap: 8px; margin-top: 1rem; overflow-x: auto; padding-bottom: 4px;">
-                                    ${item.files.map((fileUrl, index) => `
-                                        <div onclick="openPhotosLightbox(${JSON.stringify(item.files).replace(/"/g, '&quot;')}, ${index})" 
-                                             style="width: 80px; height: 80px; flex-shrink: 0; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: transform 0.2s; position: relative;"
+                                    ${item.files.map(f => {
+                                        const url = urlVon(f);
+                                        if (!istBild(f)) {
+                                            const name = decodeURIComponent((url.split('?')[0].split('/').pop() || 'Datei')).replace(/^\d{10,}[-_]/, '');
+                                            const endung = ((/\.([a-z0-9]{2,5})(\?|$)/i.exec(url) || [])[1] || 'Datei').toUpperCase();
+                                            const typ = endung === 'PDF' ? 'application/pdf' : '';
+                                            const uA = url.replace(/'/g, '%27').replace(/"/g, '&quot;');
+                                            const nA = name.replace(/'/g, '’').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+                                            return `
+                                        <div onclick="window.previewDocument ? window.previewDocument('${uA}', '${nA}', '${typ}') : window.open('${uA}', '_blank')" title="${nA} — öffnen"
+                                             style="${kachel} background: rgba(236,72,153,0.1); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: #ec4899;"
+                                             onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                                            <span style="font-size: 0.7rem; font-weight: 700;">${endung}</span>
+                                        </div>`;
+                                        }
+                                        return `
+                                        <div onclick="openPhotosLightbox(${bilderJson}, ${bilder.indexOf(url)})" 
+                                             style="${kachel}"
                                              onmouseover="this.style.transform='scale(1.05)'; this.querySelector('.overlay').style.opacity='1'"
                                              onmouseout="this.style.transform='scale(1)'; this.querySelector('.overlay').style.opacity='0'">
-                                            <img src="${fileUrl}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;">
+                                            <img src="${url}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;">
                                             <div class="overlay" style="position: absolute; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;">
                                                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line><line x1="11" y1="8" x2="11" y2="14"></line><line x1="8" y1="11" x2="14" y2="11"></line></svg>
                                             </div>
-                                        </div>
-                                    `).join('')}
+                                        </div>`;
+                                    }).join('')}
                                 </div>
                             `;
                     }

@@ -75,9 +75,17 @@
         } catch (e) { /* nichts offen */ }
     }
 
+    // Höchstens EINE Karte gleichzeitig: solange eine steht, wartet die
+    // nächste; der Beobachter unten ruft naechste(), sobald sie weg ist.
+    function karteOffen() {
+        const box = document.getElementById('alarm-stack');
+        return !!(box && box.querySelector('[data-alarm-key]'));
+    }
+
     function naechste() {
         timer = null;
         if (!schlange.length) return;
+        if (karteOffen()) return;
         if (geraetStumm()) { schlange.length = 0; return; }
         const ruhe = pauseBis - Date.now();
         if (ruhe > 0) { timer = setTimeout(naechste, ruhe); return; }
@@ -86,7 +94,6 @@
         const m = schlange.shift();
         letzte = Date.now();
         try { m.zeigen(); } catch (e) { console.warn('Meldung konnte nicht angezeigt werden:', e); }
-        if (schlange.length) timer = setTimeout(naechste, ABSTAND);
     }
 
     // aktion(aktionsName) behandelt Knöpfe der Windows-Meldung; '' = Klick auf die Meldung selbst.
@@ -148,10 +155,11 @@
     }
     function zurueckgehalteneZeigen() {
         if (appImVordergrund()) return;
-        zurueckgehalten.forEach((args, key) => {
-            zurueckgehalten.delete(key);
-            if (karteSteht(key)) system(args[0], args[1], args[2]);
-        });
+        // Nur EINE Windows-Meldung: die zuletzt zurückgehaltene, deren Karte noch steht.
+        let letzteArgs = null;
+        zurueckgehalten.forEach((args, key) => { if (karteSteht(key)) letzteArgs = args; });
+        zurueckgehalten.clear();
+        if (letzteArgs) system(letzteArgs[0], letzteArgs[1], letzteArgs[2]);
     }
     window.addEventListener('blur', () => setTimeout(zurueckgehalteneZeigen, 300));
     window.addEventListener('focus', () => systemAlleZu());
@@ -174,6 +182,7 @@
             requireInteraction: true,
             renotify: true
         }, optionen || {});
+        await systemAlleZu();   // nie mehr als eine Windows-Meldung gleichzeitig
         const max = (typeof Notification !== 'undefined' && Notification.maxActions) || 2;
         try {
             if (navigator.serviceWorker && navigator.serviceWorker.ready) {
@@ -206,6 +215,8 @@
                 const key = n.getAttribute && n.getAttribute('data-alarm-key');
                 if (key) { zurueckgehalten.delete(key); systemZu(key); }
             }));
+            // Karte weg → die nächste aus der Schlange (kurz Luft lassen).
+            if (!karteOffen() && schlange.length && !timer) timer = setTimeout(naechste, 1500);
             leisteAktualisieren(box);
         }).observe(box, { childList: true });
     }

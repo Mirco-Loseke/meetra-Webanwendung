@@ -143,12 +143,35 @@ window.submitSupabaseLogin = async function() {
     }
 };
 
+// App lief ohne Sitzung an (offline / WLAN hing). Kommt die Sitzung später,
+// alles nachladen, was sonst leer bliebe — einmalig.
+let _sitzungWartet = false;
+function sitzungNachholen() {
+    if (_sitzungWartet || !window.supabaseClient) return;
+    _sitzungWartet = true;
+    const nachladen = () => {
+        ['fetchMachines', 'fetchServiceEntries', 'fetchTasks', 'fetchProcesses', 'cockpitAktualisieren']
+            .forEach(fn => { try { if (typeof window[fn] === 'function') window[fn](); } catch (e) { console.warn(fn, e); } });
+    };
+    try {
+        const { data } = window.supabaseClient.auth.onAuthStateChange((ev, session) => {
+            if (!session || (ev !== 'SIGNED_IN' && ev !== 'TOKEN_REFRESHED' && ev !== 'INITIAL_SESSION')) return;
+            if (data && data.subscription) data.subscription.unsubscribe();
+            _sitzungWartet = false;
+            nachladen();
+        });
+    } catch (e) { /* ältere Bibliothek */ }
+    // Netz wieder da → Sitzung aktiv erneuern (löst SIGNED_IN/TOKEN_REFRESHED aus).
+    window.addEventListener('online', () => { if (_sitzungWartet) window.supabaseClient.auth.refreshSession().catch(() => {}); }, { once: true });
+}
+
 window.checkAuth = async function() {
     if (!window.supabaseClient) return;
 
     // Offline: Session lässt sich nicht prüfen/erneuern — App trotzdem mit
     // zwischengespeicherten Daten öffnen, statt am Login-Bildschirm zu blockieren
     if (!navigator.onLine) {
+        sitzungNachholen();
         document.getElementById('supabase-login-screen').style.display = 'none';
 
         if (typeof window.fetchUsers === 'function') await window.fetchUsers();
@@ -182,8 +205,19 @@ window.checkAuth = async function() {
         const result = await window.withTimeout(window.supabaseClient.auth.getSession());
         session = result.data.session; error = result.error;
     } catch (timeoutErr) {
+        // Langsames WLAN: nach 6 s noch einmal mit mehr Geduld fragen. Ohne Sitzung
+        // liefert die Datenbank leere Listen statt Fehlern („keine Vorgänge“).
+        if (navigator.onLine) {
+            try {
+                const nochmal = await window.withTimeout(window.supabaseClient.auth.getSession(), 15000);
+                if (nochmal && nochmal.data && nochmal.data.session) {
+                    return window.checkAuth();
+                }
+            } catch (e) { /* weiter wie offline */ }
+        }
         // Netzwerk hängt (z.B. WLAN ohne echtes Internet) — wie offline behandeln,
         // statt den Nutzer am Login-Bildschirm zu blockieren
+        sitzungNachholen();
         document.getElementById('supabase-login-screen').style.display = 'none';
         if (typeof window.fetchUsers === 'function') await window.fetchUsers();
         else if (typeof fetchUsers === 'function') await fetchUsers();

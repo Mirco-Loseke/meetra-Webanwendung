@@ -2808,13 +2808,14 @@
             // Normalisiere Bilder-URLs: s.files kann Strings oder Objekte {url, name, type} enthalten
             const rawFiles = Array.isArray(mh.files) ? mh.files : [];
             const imageUrls = [];
+            const dokUrls = [];   // PDFs u. a. (z. B. aus dem Foto-Eingang) — öffnen statt Lightbox
             rawFiles.forEach(f => {
                 const url = typeof f === 'string' ? f : (f && f.url ? f.url : null);
                 if (url) {
-                    const isImg = url.match(/\.(jpg|jpeg|png|gif|webp)(\?.*)?$/i) || (typeof f === 'object' && f.type && f.type.startsWith('image/'));
-                    if (isImg || mh.type === 'photo') {
-                        imageUrls.push(url);
-                    }
+                    const isImg = url.match(/\.(jpg|jpeg|png|gif|webp|heic|avif|bmp)(\?.*)?$/i) || (typeof f === 'object' && f.type && f.type.startsWith('image/'));
+                    const isDok = !isImg && /\.[a-z0-9]{2,5}$/i.test(url.split('?')[0].split('/').pop() || '');
+                    if (isDok) dokUrls.push(url);
+                    else if (isImg || mh.type === 'photo') imageUrls.push(url);
                 }
             });
 
@@ -2833,6 +2834,15 @@
                         `).join('')}
                         ${imageUrls.length > 6 ? `<span style="font-size: 0.75rem; color: rgba(255,255,255,0.5);">+${imageUrls.length - 6} weitere Bilder</span>` : ''}
                     </div>`;
+            }
+            if (dokUrls.length > 0) {
+                filesHtml += `<div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">${dokUrls.map(u => {
+                    const name = decodeURIComponent(u.split('?')[0].split('/').pop() || 'Datei').replace(/^\d{10,}[-_]/, '');
+                    const typ = /\.pdf(\?|$)/i.test(u) ? 'application/pdf' : '';
+                    return `<button type="button" class="btn-secondary" style="font-size: var(--fs-xs); padding: 4px 10px;" title="Öffnen"
+                        data-dok-url="${esc(u)}" data-dok-name="${esc(name)}" data-dok-typ="${typ}"
+                        onclick="event.stopPropagation(); window.previewDocument ? window.previewDocument(this.dataset.dokUrl, this.dataset.dokName, this.dataset.dokTyp) : window.open(this.dataset.dokUrl, '_blank')">📄 ${esc(name)}</button>`;
+                }).join('')}</div>`;
             }
 
             let pdfBtnHtml = '';

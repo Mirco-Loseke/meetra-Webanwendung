@@ -119,8 +119,9 @@ window.syncFullServiceEntriesForOffline = async function() {
 // geöffneter Bericht hält sie per Heartbeat frisch; wird der Tab geschlossen
 // (oder stürzt ab), altert sie und ist nach wenigen Sekunden wieder frei —
 // so wird niemand mehr fälschlich als "drin" angezeigt.
-const SERVICEBERICHT_LOCK_STALE_SEC = 40;
-const SERVICEBERICHT_LOCK_HEARTBEAT_MS = 15000;
+// 30 s statt 15 s Herzschlag (2026-10-14): jede Aktualisierung ist eine Logzeile.
+const SERVICEBERICHT_LOCK_STALE_SEC = 75;
+const SERVICEBERICHT_LOCK_HEARTBEAT_MS = 30000;
 let _serviceLockHeartbeat = null;
 let _serviceLockId = null;
 
@@ -290,14 +291,33 @@ window.jumpToServicebericht = function (id) {
     }
 };
 
-window.openEditServicebericht = async function (id) {
-    const entryHeader = (window.allServiceEntries || []).find(e => e.id === id);
-    if (!entryHeader) return;
-
-    if (entryHeader.is_finalized) {
-        window.showToast('Dieser Servicebericht wurde abgeschlossen und kann nicht mehr bearbeitet werden.');
+// Abgeschlossen = nicht mehr bearbeitbar → PDF ansehen statt nur einer Meldung.
+async function berichtPdfZeigen(e) {
+    let url = e && e.pdf_url;
+    if (!url && window.supabaseClient && e && e.id != null) {
+        const { data } = await window.supabaseClient.from('service_entries').select('pdf_url').eq('id', e.id).maybeSingle();
+        url = data && data.pdf_url;
+    }
+    if (url) {
+        if (window.previewDocument) window.previewDocument(url, 'Servicebericht', 'application/pdf');
+        else window.open(url, '_blank', 'noopener');
         return;
     }
+    window.showToast('Dieser Servicebericht ist abgeschlossen; ein PDF liegt nicht vor.');
+}
+
+window.openEditServicebericht = async function (id) {
+    // Kennung kommt je nach Aufrufer als Zahl oder Text (data-Attribute).
+    let entryHeader = (window.allServiceEntries || []).find(e => String(e.id) === String(id));
+    if (!entryHeader && navigator.onLine && window.supabaseClient) {
+        // Noch nicht in der geladenen Liste (z. B. aus dem Startseiten-Cockpit) → einzeln holen.
+        const { data } = await window.supabaseClient.from('service_entries').select('id, is_finalized, pdf_url').eq('id', id).maybeSingle();
+        if (data) entryHeader = data;
+    }
+    if (!entryHeader) { window.showToast('Servicebericht nicht gefunden.'); return; }
+    id = entryHeader.id;
+
+    if (entryHeader.is_finalized) return berichtPdfZeigen(entryHeader);
 
     if (!navigator.onLine) {
         if (window.offlineService) {
@@ -333,9 +353,8 @@ window.openEditServicebericht = async function (id) {
         if (error) throw error;
         if (data) {
             if (data.is_finalized) {
-                window.showToast('Dieser Servicebericht wurde abgeschlossen und kann nicht mehr bearbeitet werden.');
                 if (typeof window.fetchServiceEntries === 'function') window.fetchServiceEntries();
-                return;
+                return berichtPdfZeigen(data);
             }
             const canOpen = await window.tryAcquireServiceberichtLock(data);
             if (!canOpen) return;

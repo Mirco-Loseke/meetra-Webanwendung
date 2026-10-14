@@ -20,30 +20,52 @@
             const existing = document.getElementById('service-attachments-modal');
             if (existing) existing.remove();
 
+            // Art je Datei — URLs können ?-Parameter tragen, deshalb Endung ohne Query prüfen.
+            const urlVon = f => typeof f === 'string' ? f : (f && f.url) || '';
+            const endung = u => ((/\.([a-z0-9]{2,5})$/i.exec(String(u).split('?')[0]) || [])[1] || '').toLowerCase();
+            const artVon = f => {
+                const u = urlVon(f), t = typeof f === 'string' ? '' : (f && f.type) || '', e = endung(u);
+                // Endung zuerst — manche Aufrufer setzen den Typ pauschal auf image/jpeg.
+                if (e === 'pdf') return 'pdf';
+                if (/^(docx?|xlsx?|pptx?|odt|ods|rtf)$/.test(e)) return 'office';
+                if (/^(jpe?g|png|gif|webp|svg|heic|avif|bmp)$/.test(e)) return 'bild';
+                if (t.includes('pdf')) return 'pdf';
+                if (/word|officedocument|excel|spreadsheet|powerpoint|presentation/.test(t)) return 'office';
+                if (t.startsWith('image/')) return 'bild';
+                return 'sonst';
+            };
+            const nameVon = f => {
+                if (typeof f !== 'string' && f && f.name) return f.name;
+                const roh = urlVon(f).split('?')[0].split('/').pop() || 'Datei';
+                try { return decodeURIComponent(roh); } catch (e) { return roh; }
+            };
+            const bildListe = files.filter(f => artVon(f) === 'bild').map(urlVon);
+            const escH = x => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+            const icon = (farbe, bg, txt) => `<div style="width:48px;height:48px;background:${bg};border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;color:${farbe};font-size:0.6rem;font-weight:800;gap:1px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>${txt}</div>`;
+
             const items = files.map((f, i) => {
-                const url = typeof f === 'string' ? f : f.url;
-                const name = typeof f === 'string' ? url.split('/').pop() : (f.name || url.split('/').pop());
-                const type = typeof f === 'string' ? '' : (f.type || '');
-                const isPdf = type.includes('pdf') || url.toLowerCase().endsWith('.pdf');
-                const isImage = type.startsWith('image/') || /\.(jpe?g|png|gif|webp|svg)$/i.test(url);
-
-                const thumb = isPdf
-                    ? `<div style="width:48px;height:48px;background:rgba(239,68,68,0.15);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg></div>`
-                    : isImage
-                        ? `<img src="${url}" loading="lazy" style="width:48px;height:48px;object-fit:cover;border-radius:8px;flex-shrink:0;">`
-                        : `<div style="width:48px;height:48px;background:rgba(255,255,255,0.08);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2.5"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg></div>`;
-
-                const onclick = isPdf
-                    ? `window.previewDocument('${url}', '${name.replace(/'/g,"\\'")}', 'application/pdf'); document.getElementById('service-attachments-modal').remove();`
-                    : isImage
-                        ? `window.openPhotosLightbox(${JSON.stringify(files.filter(f2 => { const u = typeof f2==='string'?f2:f2.url; return /\.(jpe?g|png|gif|webp|svg)$/i.test(u)||(typeof f2!=='string'&&f2.type?.startsWith('image/')); }).map(f2 => typeof f2==='string'?f2:f2.url))}, ${files.slice(0,i).filter(f2=>{ const u=typeof f2==='string'?f2:f2.url; return /\.(jpe?g|png|gif|webp|svg)$/i.test(u)||(typeof f2!=='string'&&f2.type?.startsWith('image/')); }).length})`
-                        : `window.open('${url}', '_blank')`;
-
-                return `<div onclick="${onclick}" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;cursor:pointer;transition:background 0.15s;background:rgba(255,255,255,0.03);" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">
+                const url = urlVon(f);
+                const art = artVon(f);
+                const e = endung(url).toUpperCase();
+                const thumb = art === 'pdf' ? icon('#ef4444', 'rgba(239,68,68,0.15)', 'PDF')
+                    : art === 'bild' ? `<img src="${escH(url)}" loading="lazy" style="width:48px;height:48px;object-fit:cover;border-radius:8px;flex-shrink:0;">`
+                    : art === 'office' ? icon('#3b82f6', 'rgba(59,130,246,0.15)', e || 'DOC')
+                    : icon('rgba(255,255,255,0.5)', 'rgba(255,255,255,0.08)', e);
+                return `<div data-sa-index="${i}" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;cursor:pointer;transition:background 0.15s;background:rgba(255,255,255,0.03);" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='rgba(255,255,255,0.03)'">
                     ${thumb}
-                    <span style="font-size:0.85rem;color:rgba(255,255,255,0.8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span>
+                    <span style="font-size:0.85rem;color:rgba(255,255,255,0.8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escH(nameVon(f))}</span>
                 </div>`;
             }).join('');
+            // Klick per Delegation statt Inline-onclick — Namen/URLs mit ' oder " brachen sonst das Attribut.
+            const anhangOeffnen = (i) => {
+                const f = files[i], url = urlVon(f), art = artVon(f);
+                if (art === 'bild') return window.openPhotosLightbox(bildListe, Math.max(0, bildListe.indexOf(url)));
+                const m = document.getElementById('service-attachments-modal');
+                if (m) m.remove();
+                const typ = art === 'pdf' ? 'application/pdf' : ((typeof f !== 'string' && f.type) || '');
+                if (window.previewDocument) window.previewDocument(url, nameVon(f), typ);
+                else window.open(url, '_blank');
+            };
 
             const imageUrls = files
                 .map(f => typeof f === 'string' ? f : f.url)
@@ -79,7 +101,11 @@
                         <span data-sa-status style="font-size:0.75rem;color:rgba(255,255,255,0.5);"></span>
                     </div>` : ''}
                 </div>`;
-            modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+            modal.addEventListener('click', e => {
+                if (e.target === modal) { modal.remove(); return; }
+                const z = e.target.closest('[data-sa-index]');
+                if (z) anhangOeffnen(parseInt(z.dataset.saIndex, 10));
+            });
             document.body.appendChild(modal);
         };
 

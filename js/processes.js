@@ -89,26 +89,155 @@ window.sortProcesses = function (list, mode) {
         .map(x => x.p);
 };
 
-window.fetchProcesses = async function() {
-    if (!window.supabaseClient) return;
-    
+// Ohne gültige Sitzung liefert Supabase (RLS) KEINEN Fehler, sondern 0 Zeilen —
+// die Ansicht zeigte dann „Keine internen Vorgänge gefunden“. Passiert beim
+// Start (getSession noch nicht fertig / Zeitüberschreitung im WLAN) und nach
+// dem Aufwachen mit abgelaufenem Token. Deshalb erst auf die Sitzung warten,
+// abgelaufene erneuern, und ein leeres Ergebnis nie ungeprüft übernehmen.
+async function vorgangSitzung() {
+    const auth = window.supabaseClient && window.supabaseClient.auth;
+    if (!auth) return null;
+    for (let i = 0; i < 20; i++) {
+        try {
+            const { data } = await auth.getSession();
+            let s = data && data.session;
+            if (s && s.expires_at && s.expires_at * 1000 < Date.now() + 30000) {
+                const r = await auth.refreshSession();
+                s = (r.data && r.data.session) || null;
+            }
+            if (s) return s;
+        } catch (e) { /* Netz hängt — gleich nochmal */ }
+        await new Promise(r => setTimeout(r, 500));
+    }
+    return null;
+}
+let _vorgaengeLaden = null;
+
+// Ältere erledigte Vorgänge: einmal je Sitzung, im Hintergrund, nachgemischt.
+let _vorgaengeAlt = null;
+let _angebotePuffer = null;        // { at, rows } — Angebote zu Vorgängen
+window.vorgangAngebotePufferLeeren = () => { _angebotePuffer = null; };          // Array, sobald geladen
+let _vorgaengeAltLaedt = false;
+function vorgaengeGrenze() {
+    const d = new Date(Date.now() - 90 * 864e5);
+    return d.toISOString().slice(0, 10);
+}
+function mitAltenVorgaengen(aktuell) {
+    if (!_vorgaengeAlt) { setTimeout(alteVorgaengeLaden, 4000); return aktuell; }
+    const ids = new Set(aktuell.map(p => String(p.id)));
+    return aktuell.concat(_vorgaengeAlt.filter(p => !ids.has(String(p.id))))
+        .sort((a, b) => String(b.process_date || '').localeCompare(String(a.process_date || '')));
+}
+async function alteVorgaengeLaden() {
+    if (_vorgaengeAlt || _vorgaengeAltLaedt || !window.supabaseClient) return;
+    _vorgaengeAltLaedt = true;
     try {
-        let { data, error } = await window.supabaseClient
+        const { data, error } = await window.supabaseClient
             .from('internal_processes')
             .select('*, machines(id, name, manufacturer, serial, year, company, operator_city, customer_id), customers(id, name)')
+            .eq('status', 'erledigt').lt('process_date', vorgaengeGrenze())
+            .order('process_date', { ascending: false });
+        if (error) throw error;
+        _vorgaengeAlt = data || [];
+        _vorgaengeAlt.forEach(p => window.procMailsAusStand && window.procMailsAusStand(p, false));
+        const liste = window.eventsState.processes || [];
+        const ids = new Set(liste.map(p => String(p.id)));
+        const neu = _vorgaengeAlt.filter(p => !ids.has(String(p.id)));
+        if (neu.length) {
+            window.eventsState.processes = liste.concat(neu)
+                .sort((a, b) => String(b.process_date || '').localeCompare(String(a.process_date || '')));
+            window.renderProcesses();
+        }
+    } catch (e) {
+        console.warn('Ältere Vorgänge nicht geladen:', e.message || e);
+    } finally { _vorgaengeAltLaedt = false; }
+}
+// Realtime-Änderung an einem alten Vorgang → im Puffer nachziehen.
+window.vorgangAltEntfernen = function (id) {
+    if (_vorgaengeAlt) _vorgaengeAlt = _vorgaengeAlt.filter(x => String(x.id) !== String(id));
+};
+window.vorgangAltAktualisieren = function (p) {
+    if (!_vorgaengeAlt || !p) return;
+    const i = _vorgaengeAlt.findIndex(x => String(x.id) === String(p.id));
+    if (i >= 0) _vorgaengeAlt[i] = p;
+};
+
+// Sitzung kommt später (Start im langsamen WLAN, Aufwachen) → leere Liste nachladen.
+document.addEventListener('DOMContentLoaded', () => {
+    // Angebot geändert → Angebote-Puffer der Vorgänge verwerfen.
+    ['angebotFeldSpeichern', 'updateAngebotStatus'].forEach(name => {
+        const orig = window[name];
+        if (typeof orig !== 'function') return;
+        window[name] = function () { _angebotePuffer = null; return orig.apply(this, arguments); };
+    });
+    const leer =() => !(window.eventsState && (window.eventsState.processes || []).length);
+    try {
+        window.supabaseClient && window.supabaseClient.auth.onAuthStateChange((ev, s) => {
+            if (s && (ev === 'SIGNED_IN' || ev === 'TOKEN_REFRESHED') && leer() && typeof window.fetchProcesses === 'function') {
+                setTimeout(() => window.fetchProcesses(), 300);
+            }
+        });
+    } catch (e) { /* ältere Bibliothek */ }
+    document.addEventListener('visibilitychange', () => {
+        const v = document.getElementById('processes');
+        if (!document.hidden && window.activeUser && leer() && v && !v.classList.contains('hidden')) window.fetchProcesses();
+    });
+});
+
+window.fetchProcesses = function() {
+    // Gleichzeitige Aufrufe (Start, Ansicht, Realtime) teilen sich einen Lauf.
+    if (_vorgaengeLaden) return _vorgaengeLaden;
+    _vorgaengeLaden = fetchProcessesLauf().finally(() => { _vorgaengeLaden = null; });
+    return _vorgaengeLaden;
+};
+
+async function fetchProcessesLauf(nochmal) {
+    if (!window.supabaseClient) return;
+
+    try {
+        const sitzung = await vorgangSitzung();
+        if (!sitzung) {
+            // Liste NICHT leeren — das Vorhandene bleibt stehen.
+            console.warn('Vorgänge: keine Anmelde-Sitzung, Laden ausgesetzt.');
+            ['processes-list-container', 'standalone-processes-container'].forEach(id => {
+                const c = document.getElementById(id);
+                if (c && !(window.eventsState.processes || []).length) {
+                    c.innerHTML = '<div style="text-align:center; color:#fbbf24; padding:2rem;">Vorgänge konnten nicht geladen werden — Anmeldung/Verbindung noch nicht bereit. <button type="button" class="btn-secondary" onclick="window.fetchProcesses()" style="margin-left:8px;">Erneut laden</button></div>';
+                }
+            });
+            return;
+        }
+
+        // Zweistufig (Egress + Tempo): jedes Mal nur offene + die letzten 90 Tage;
+        // ältere erledigte einmal je Sitzung im Hintergrund (_vorgaengeAlt), danach
+        // hält Realtime sie aktuell. Vorher kam bei jedem Speichern ALLES neu.
+        const grenze = vorgaengeGrenze();
+        const nurAktuell = q => q.or('status.neq.erledigt,status.is.null,process_date.is.null,process_date.gte.' + grenze);
+        let { data, error } = await nurAktuell(window.supabaseClient
+            .from('internal_processes')
+            .select('*, machines(id, name, manufacturer, serial, year, company, operator_city, customer_id), customers(id, name)'))
             .order('process_date', { ascending: false });
 
         if (error) {
             console.warn('Vorgänge-Join auf customers fehlgeschlagen, lade ohne Adressbezug:', error.message);
-            ({ data, error } = await window.supabaseClient
+            ({ data, error } = await nurAktuell(window.supabaseClient
                 .from('internal_processes')
-                .select('*, machines(id, name, manufacturer, serial, year, company, operator_city)')
+                .select('*, machines(id, name, manufacturer, serial, year, company, operator_city)'))
                 .order('process_date', { ascending: false }));
         }
+        if (!error && data) data = mitAltenVorgaengen(data);
 
         if (error) throw error;
 
+        // Leer, obwohl vorher etwas da war → fast sicher ein Sitzungsproblem:
+        // Token erneuern und genau einmal wiederholen, statt alles zu leeren.
+        if ((!data || !data.length) && !nochmal && (window.eventsState.processes || []).length) {
+            try { await window.supabaseClient.auth.refreshSession(); } catch (e) { /* egal */ }
+            return fetchProcessesLauf(true);
+        }
+
         const processes = data || [];
+        window.eventsState.processesGeladen = true;
         // „Wartet" gibt es seit 2026-09-16 nicht mehr — Altbestand zeigt sich als
         // „In Arbeit" (Datenbank: supabase_migrate_status_wartet.sql).
         processes.forEach(p => { if (p.status === 'wartet') p.status = 'in_bearbeitung'; });
@@ -141,10 +270,17 @@ window.fetchProcesses = async function() {
             // verknüpfte Angebote gibt es nur mit process_id.
             const map = {};
             const liste = {};
-            const { data: ang, error: angErr } = await window.supabaseClient
-                .from('angebote')
-                .select('*, customers(name), angebot_notizen(id, content, created_at)')
-                .not('process_id', 'is', null);
+            // 60 s Puffer: fetchProcesses läuft nach jedem Speichern — die
+            // Angebote (mit Notizen) jedes Mal komplett mitzuziehen war teuer.
+            // Einzelne Änderungen zieht applyProcessRealtime je Zeile nach.
+            let ang = _angebotePuffer && Date.now() - _angebotePuffer.at < 60000 ? _angebotePuffer.rows : null, angErr = null;
+            if (!ang) {
+                ({ data: ang, error: angErr } = await window.supabaseClient
+                    .from('angebote')
+                    .select('*, customers(name), angebot_notizen(id, content, created_at)')
+                    .not('process_id', 'is', null));
+                if (!angErr) _angebotePuffer = { at: Date.now(), rows: ang || [] };
+            }
             if (angErr) console.info('Angebote zu Vorgängen nicht geladen:', angErr.message);
             (ang || []).forEach(a => { map[String(a.process_id)] = a;  (liste[String(a.process_id)] = liste[String(a.process_id)] || []).push(a); });
             window.angeboteByProcess = map;
@@ -215,6 +351,7 @@ window.applyProcessRealtime = async function (payload) {
     if (payload.eventType === 'DELETE') {
         const i = list.findIndex(p => String(p.id) === String(id));
         if (i !== -1) list.splice(i, 1);
+        if (window.vorgangAltEntfernen) window.vorgangAltEntfernen(id);
         if (window.angeboteByProcess) delete window.angeboteByProcess[String(id)];
         window.renderProcesses();
         return true;
@@ -229,6 +366,7 @@ window.applyProcessRealtime = async function (payload) {
     if (row && row.status === 'wartet') row.status = 'in_bearbeitung';
     if (row) window.procMailsAusStand(row, true);
     if (error) return false;
+    if (row && window.vorgangAltAktualisieren) window.vorgangAltAktualisieren(row);
     if (!row) { // inzwischen gelöscht
         const i = list.findIndex(p => String(p.id) === String(id));
         if (i !== -1) { list.splice(i, 1); window.renderProcesses(); }
@@ -516,7 +654,7 @@ window.renderProcesses = function(targetId, opts) {
     if (filtered.length === 0) {
         html += `
             <div style="padding: 3rem 2rem; text-align: center; border-radius: 12px; background: rgba(255,255,255,0.01); border: 1px dashed rgba(255,255,255,0.08);">
-                <p style="color: #fff; font-size: 1rem; margin: 0;">Keine internen Vorgänge gefunden.</p>
+                <p style="color: #fff; font-size: 1rem; margin: 0;">${window.eventsState.processesGeladen ? 'Keine internen Vorgänge gefunden.' : 'Vorgänge werden geladen …'}</p>
             </div>
         `;
         container.innerHTML = html;

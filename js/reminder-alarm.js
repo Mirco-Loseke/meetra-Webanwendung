@@ -116,13 +116,19 @@
     // ---------------------------------------------------------------
     // Fällige Einträge sammeln
     // ---------------------------------------------------------------
-    async function faellige() {
-        if (!sb() || !uid()) return [];
-        const jetzt = Date.now();
-        const frueheste = jetzt - NACHLAUF_MIN * 60 * 1000;
-        const treffer = [];
+    // Vorrat statt Abfrage je Minute (2026-10-14): Termine von heute und Vorgänge,
+    // deren Erinnerung im Fenster [jetzt − NACHLAUF, jetzt + VORRAT_TAKT] liegt,
+    // werden nur alle VORRAT_TAKT geladen; jede Minute wird nur noch im Speicher
+    // geprüft. Vorher 3 Anfragen/Minute je Browser = größter Posten der Supabase-Logs.
+    // Ändert sich ein Vorgang/Termin (Realtime, Speichern), wird der Vorrat verworfen.
+    const VORRAT_TAKT = 10 * 60 * 1000;
+    let vorrat = null;   // { am, tag, bis, events, teilnehmer, procs }
+    window.weckerVorratVerwerfen = function () { vorrat = null; schrittCache.am = 0; };
 
-        // 1) Kalendereinträge mit Uhrzeit (heute)
+    async function vorratLaden(jetzt, frueheste) {
+        if (vorrat && vorrat.tag === heuteKey() && jetzt - vorrat.am < VORRAT_TAKT && jetzt <= vorrat.bis) return vorrat;
+        const neu = { am: jetzt, tag: heuteKey(), bis: jetzt + VORRAT_TAKT, events: [], teilnehmer: new Map(), procs: [] };
+        let ok = true;
         try {
             // Adressname per Join — fehlt die Verknüpfung (Migration nicht gelaufen),
             // wird das gemerkt und beim nächsten Mal gleich ohne Join gefragt
@@ -139,13 +145,62 @@
             if (error) throw error;
 
             // Wer ist eingeladen? Daraus ergibt sich, wen es etwas angeht.
-            let teilnehmer = new Map();
-            const ids = (data || []).map(e => e.id);
+            // Nur Termine mit Uhrzeit, die nicht schon vorbei sind.
+            neu.events = (data || []).filter(ev => {
+                if (!ev.start_time) return false;
+                const [h, m] = String(ev.start_time).split(':');
+                const w = new Date(); w.setHours(parseInt(h, 10) || 0, parseInt(m, 10) || 0, 0, 0);
+                return w.getTime() >= frueheste;
+            });
+            const ids = neu.events.map(e => e.id);
             if (ids.length && typeof window.loadParticipantsForEvents === 'function') {
-                try { teilnehmer = await window.loadParticipantsForEvents(ids); } catch (e) { /* egal */ }
+                try { neu.teilnehmer = await window.loadParticipantsForEvents(ids); } catch (e) { /* egal */ }
             }
+        } catch (e) {
+            ok = false;
+            console.warn('Wecker: Kalendereinträge nicht prüfbar:', e);
+        }
 
-            (data || []).forEach(ev => {
+        try {
+            const abfrage = (spalten) => sb()
+                .from('internal_processes')
+                .select(spalten)
+                .gte('remind_at', new Date(frueheste).toISOString())
+                .lte('remind_at', new Date(neu.bis).toISOString())
+                .limit(100);
+            // customers-Join / remark / created_by_user kommen aus Migrationen — fehlen sie,
+            // wird das gemerkt (js/app-core.js) statt es bei jedem Lauf erneut zu versuchen.
+            const procJoin = typeof window.dbKannDas !== 'function' || window.dbKannDas('proc_customers');
+            let { data, error } = await abfrage(procJoin ? PROC_SPALTEN + ', customers(name, zip_code, city)' : PROC_SPALTEN);
+            if (error && procJoin) {
+                if (typeof window.dbKannDasMerken === 'function') window.dbKannDasMerken('proc_customers', false);
+                ({ data, error } = await abfrage(PROC_SPALTEN));
+            } else if (!error && procJoin && typeof window.dbKannDasMerken === 'function') {
+                window.dbKannDasMerken('proc_customers', true);
+            }
+            if (error) ({ data, error } = await abfrage('id, title, remind_at, status, assigned_users, user_id'));
+            if (error) throw error;
+            neu.procs = data || [];
+        } catch (e) {
+            ok = false;
+            console.warn('Wecker: Vorgänge nicht prüfbar:', e);
+        }
+        // Bei Fehler nicht 10 min festhalten — nächste Minute erneut versuchen.
+        if (ok) vorrat = neu;
+        return neu;
+    }
+
+    async function faellige() {
+        if (!sb() || !uid()) return [];
+        const jetzt = Date.now();
+        const frueheste = jetzt - NACHLAUF_MIN * 60 * 1000;
+        const treffer = [];
+        const v = await vorratLaden(jetzt, frueheste);
+
+        // 1) Kalendereinträge mit Uhrzeit (heute)
+        try {
+            const teilnehmer = v.teilnehmer;
+            v.events.forEach(ev => {
                 if (!ev.start_time) return; // ohne Uhrzeit kein Wecker
                 const [h, m] = String(ev.start_time).split(':');
                 const wann = new Date();
@@ -180,28 +235,7 @@
 
         // 2) Vorgänge mit Erinnerungs-Zeitpunkt
         try {
-            // Nur was jetzt fällig ist, und nur die gebrauchten Spalten. Vorher:
-            // `*` mit Schritten, Stand-Verlauf und Anhängen für bis zu 300 Vorgänge —
-            // alle 20 Sekunden, in jedem offenen Browser. Das war ein Großteil des
-            // Supabase-Egress. Serverseitig gefiltert kommen meist 0 Zeilen zurück.
-            const abfrage = (spalten) => sb()
-                .from('internal_processes')
-                .select(spalten)
-                .gte('remind_at', new Date(frueheste).toISOString())
-                .lte('remind_at', new Date(jetzt).toISOString())
-                .limit(100);
-            // customers-Join / remark / created_by_user kommen aus Migrationen — fehlen sie,
-            // wird das gemerkt (js/app-core.js) statt es bei jedem Lauf erneut zu versuchen.
-            const procJoin = typeof window.dbKannDas !== 'function' || window.dbKannDas('proc_customers');
-            let { data, error } = await abfrage(procJoin ? PROC_SPALTEN + ', customers(name, zip_code, city)' : PROC_SPALTEN);
-            if (error && procJoin) {
-                if (typeof window.dbKannDasMerken === 'function') window.dbKannDasMerken('proc_customers', false);
-                ({ data, error } = await abfrage(PROC_SPALTEN));
-            } else if (!error && procJoin && typeof window.dbKannDasMerken === 'function') {
-                window.dbKannDasMerken('proc_customers', true);
-            }
-            if (error) ({ data, error } = await abfrage('id, title, remind_at, status, assigned_users, user_id'));
-            if (error) throw error;
+            const data = v.procs;
 
             (data || []).forEach(p => {
                 const wann = new Date(p.remind_at);
@@ -273,7 +307,7 @@
         };
     }
 
-    const SCHRITT_TAKT = 5 * 60 * 1000;
+    const SCHRITT_TAKT = 10 * 60 * 1000;   // wird bei Vorgangs-Änderung verworfen
     let schrittCache = { am: 0, liste: [] };
 
     async function schrittErinnerungen() {
@@ -572,10 +606,13 @@
         if (frageUnterdrueckt()) return;
         if (document.getElementById('alarm-ask')) return;
         if (window.meldungsTakt && window.meldungsTakt.geraetStumm()) return;   // Gerät stumm
+        // Nur eine Karte gleichzeitig (js/meldungs-takt.js): steht schon eine, später fragen.
+        if (document.querySelector('#alarm-stack [data-alarm-key]')) return;
 
         const karte = document.createElement('div');
         karte.className = 'alarm-card alarm-ask';
         karte.id = 'alarm-ask';
+        karte.setAttribute('data-alarm-key', 'alarm-ask');   // hält die Meldungs-Schlange an
         karte.innerHTML = `
             <div class="alarm-head">
                 <span class="alarm-bell">🔔</span>
@@ -613,8 +650,21 @@
         });
     }
 
+    // Jede Vorgangs-Änderung (Realtime, eigenes Speichern) und neue Termine verwerfen
+    // den Vorrat — eine eben gesetzte Erinnerung „in 5 Min." wartet sonst bis zu 10 Min.
+    function haken(name) {
+        const alt = window[name];
+        if (typeof alt !== 'function' || alt._wecker) return;
+        const neu = function () { window.weckerVorratVerwerfen(); return alt.apply(this, arguments); };
+        neu._wecker = true;
+        window[name] = neu;
+    }
+    function hakenSetzen() { ['applyProcessRealtime', 'createAppointment', 'saveEvent', 'updateProcess', 'saveProcess'].forEach(haken); }
+
     window.starteErinnerungsWecker = function () {
         if (timer) return;
+        hakenSetzen();
+        setTimeout(hakenSetzen, 15000);   // spät geladene Module
         // Kurz warten, damit die Karte nicht mitten in den Seitenaufbau platzt.
         setTimeout(frageZeigen, 4000);
         pruefen();

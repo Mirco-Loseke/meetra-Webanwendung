@@ -1554,6 +1554,27 @@ window.previewDocument = async function(url, title, mimeType) {
             console.error('PDF.js rendering failed, falling back to iframe:', err);
             target.innerHTML = `<iframe src="${cacheBustedUrl}" style="width: 100%; height: 100%; border: none; background: white;"></iframe>`;
         }
+    } else if (/word|officedocument|excel|spreadsheet|powerpoint|presentation/.test(mimeType || '')
+            || /\.(docx?|xlsx?|pptx?|odt|ods|rtf)$/i.test(url.split('?')[0])) {
+        // Word/Excel kann der Browser nicht anzeigen — ein iframe bliebe leer bzw. lädt
+        // stumm herunter. Deshalb: Herunterladen (öffnet in Word) oder Microsoft-Viewer.
+        _previewType = 'other';
+        const endung = ((/\.([a-z0-9]{2,5})$/i.exec(url.split('?')[0]) || [])[1] || 'Datei').toUpperCase();
+        const escA = x => String(x).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+        const viewer = 'https://view.officeapps.live.com/op/view.aspx?src=' + encodeURIComponent(url);
+        const istHttp = /^https?:/i.test(url);
+        target.innerHTML = `
+            <div style="padding: 3rem 1.5rem; text-align: center; color: var(--text-2, rgba(255,255,255,0.75)); display: flex; flex-direction: column; align-items: center; gap: 1rem;">
+                <div style="width: 72px; height: 72px; border-radius: 14px; background: rgba(59,130,246,0.15); color: #3b82f6; display: flex; align-items: center; justify-content: center; font-weight: 800;">${escA(endung)}</div>
+                <div style="font-weight: 600; word-break: break-word;">${escA(title || 'Dokument')}</div>
+                <div style="font-size: var(--fs-sm, 0.85rem); opacity: 0.7;">Diese Datei kann der Browser nicht direkt anzeigen.</div>
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center;">
+                    <button type="button" class="btn-primary" data-doc-laden>⬇ Herunterladen / In Word öffnen</button>
+                    ${istHttp ? `<a class="btn-secondary" href="${escA(viewer)}" target="_blank" rel="noopener">Im Browser ansehen (Microsoft)</a>` : ''}
+                </div>
+            </div>`;
+        const knopf = target.querySelector('[data-doc-laden]');
+        if (knopf) knopf.addEventListener('click', () => window.downloadDoc(url, title));
     } else {
         _previewType = 'other';
         target.innerHTML = `<iframe src="${url}" style="width: 100%; height: 100%; min-height: 80vh; border: none; background: white;"></iframe>`;
