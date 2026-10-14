@@ -157,3 +157,9 @@ Ein fest gesetztes `customer_id bigint` scheitert entweder am Fremdschlüssel
 |---|---|
 | `reparatur_2026-09-28_bericht_eys_backhus.sql` | **Einmalig, ZUERST.** Trennt den abgeschlossenen EYS-Bericht 2026-40109 wieder vom darübergeschriebenen Backhus-21.50-Bericht (23.09.): Backhus wird neuer offener Bericht, EYS zurück auf PDF-Stand. Bricht ab, wenn der Datensatz nicht eindeutig ist |
 | `supabase_protect_finalized_reports.sql` | **Danach.** Datenbank-Sperre: abgeschlossene Berichte lassen sich nur noch bei Anhängen, Auftragsnummer und PDF-Feldern ändern — unabhängig vom App-Code |
+
+## Dokumente an Vermietungen (2026-10-14)
+
+| Datei | Wofür |
+|---|---|
+| `supabase_add_planung_dateien.sql` | **MUSS laufen.** Spalte `timeline_planung.dateien` (JSONB) — Dokumente direkt an einer geplanten Vermietung in der Timeline; ohne sie meldet das Hochladen „Migration fehlt“ |

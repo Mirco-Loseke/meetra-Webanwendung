@@ -491,6 +491,8 @@
                 kunde: mieter.name || kundeText(mieter.customer_id) || null,
                 einsatzort: mieter.einsatzort || null,
                 planId: dat.plan_id ? String(dat.plan_id) : null,
+                pdfUrl: r.pdf_url || null,
+                anlagen: Array.isArray(dat.anlagen) ? dat.anlagen : [],
                 status: bis < key(HEUTE) ? 'zurueck' : (von > key(HEUTE) ? 'reserviert' : 'draussen')
             });
         });
@@ -520,7 +522,8 @@
             maschine: r.machine_id != null ? String(r.machine_id) : null,
             kunde: kunde, kundeId: r.customer_id || null, notiz: r.notiz || '',
             unsicher: !!r.unsicher,
-            aufWert: r.aufbereitung_wert, aufEinheit: r.aufbereitung_einheit || 'd'
+            aufWert: r.aufbereitung_wert, aufEinheit: r.aufbereitung_einheit || 'd',
+            dateien: Array.isArray(r.dateien) ? r.dateien : []
         };
         var haupt = Object.assign({}, basis, {
             id: 'tp-' + r.id,
@@ -2860,6 +2863,7 @@
                    ? '<div class="kv"><span>Aufbereitung danach</span><b>' + esc(aufbereitungText(plan.aufWert, plan.aufEinheit)) + '</b></div>' : '')
                + (plan.notiz ? '<div class="kv"><span>Notiz</span><b>' + esc(plan.notiz) + '</b></div>' : '');
             var vertrag = plan.art === 'miete' ? mietZuPlan(plan) : null;
+            if (plan.art !== 'aufbereitung') h += dokBlock(plan, vertrag);
             h += '<div class="acts">'
                + (plan.art === 'miete' && typeof window.openMietvereinbarung === 'function'
                    ? '<button class="btn-primary" id="tlv-plan-miet">' + (vertrag ? 'Mietvereinbarung bearbeiten' : 'In Mietvereinbarung übernehmen') + '</button>' : '')
@@ -2868,9 +2872,12 @@
                + '<button class="btn-secondary" id="tlv-plan-weg">Löschen</button>'
                + '</div>';
         } else {
+            if (it.quelle === 'rental_agreements') h += dokBlock(it.planId ? eintrag('tp-' + it.planId) : null, it);
             h += '<div class="acts">' + oeffnenKnopf(it) + '</div>';
         }
         p.innerHTML = h;
+        if (plan && plan.art !== 'aufbereitung') dokVerdrahten(p, plan, vertrag);
+        else if (!plan && it.quelle === 'rental_agreements') dokVerdrahten(p, it.planId ? eintrag('tp-' + it.planId) : null, it);
         if (plan) {
             var pb = document.getElementById('tlv-plan-bearb');
             if (pb) pb.onclick = function () { planDialog(plan); };
@@ -2947,6 +2954,137 @@
     }
 
     // Mietvereinbarung, die aus dieser Planung entstanden ist (data.plan_id).
+    // ------------------------------------------------------------------
+    // Dokumente an einer Vermietung (2026-10-14)
+    // Planung: timeline_planung.dateien (Migration supabase_add_planung_dateien.sql).
+    // Mietvereinbarung: ihr PDF + data.anlagen (die hängen beim Speichern hinten am PDF).
+    // Hinzufügen per Auswahl oder Drag & Drop; Hochladen nach R2 in den Maschinenordner.
+    // ------------------------------------------------------------------
+    function toast(t) { if (typeof window.showToast === 'function') window.showToast(t); else meldung(t, false); }
+    function dokName(d) {
+        if (d.name) return d.name;
+        var roh = String(d.url || '').split('?')[0].split('/').pop() || 'Datei';
+        try { return decodeURIComponent(roh); } catch (e) { return roh; }
+    }
+    function dokSymbol(d) {
+        var n = (d.type || '') + ' ' + dokName(d);
+        if (/pdf/i.test(n)) return '📄';
+        if (/image\/|\.(jpe?g|png|gif|webp|heic)\b/i.test(n)) return '🖼️';
+        return '📎';
+    }
+    // Liste der sichtbaren Dokumente: [{ d, weg: 'plan'|'vertrag'|null, i }]
+    function dokListe(plan, vertrag) {
+        var l = [];
+        if (vertrag && vertrag.pdfUrl) l.push({ d: { name: 'Mietvereinbarung (PDF)', url: vertrag.pdfUrl, type: 'application/pdf' }, weg: null });
+        ((vertrag && vertrag.anlagen) || []).forEach(function (d, i) { l.push({ d: d, weg: 'vertrag', i: i }); });
+        var bekannt = {};
+        l.forEach(function (x) { bekannt[x.d.url] = true; });
+        ((plan && plan.dateien) || []).forEach(function (d, i) { if (!bekannt[d.url]) l.push({ d: d, weg: 'plan', i: i }); });
+        return l;
+    }
+    function dokBlock(plan, vertrag) {
+        var l = dokListe(plan, vertrag);
+        return '<h5>Dokumente' + (l.length ? ' (' + l.length + ')' : '') + '</h5>'
+            + '<div class="tlv-dok-liste">'
+            + l.map(function (x, n) {
+                return '<div class="wl"><span class="tlv-dok-auf" data-dok="' + n + '" style="cursor:pointer;" title="Öffnen">'
+                    + dokSymbol(x.d) + ' ' + esc(dokName(x.d)) + '</span>'
+                    + (x.weg ? '<button type="button" class="tlv-dep-x" data-dok-weg="' + n + '" title="Entfernen">&times;</button>' : '')
+                    + '</div>';
+            }).join('')
+            + '</div>'
+            + '<div class="tlv-dok-drop" id="tlv-dok-drop" style="margin-top:6px;padding:10px;border:1.5px dashed rgba(255,255,255,0.25);border-radius:var(--radius-md, 10px);text-align:center;font-size:var(--fs-xs, 0.75rem);opacity:0.85;cursor:pointer;">'
+            + 'Dateien hierher ziehen oder <u>auswählen</u></div>';
+    }
+    function dokOeffnen(d) {
+        if (typeof window.previewDocument === 'function')
+            window.previewDocument(d.url, dokName(d), /pdf/i.test((d.type || '') + dokName(d)) ? 'application/pdf' : (d.type || ''));
+        else window.open(d.url, '_blank');
+    }
+    function dokOrdner(maschinenId) {
+        var m = maschinenId != null && window.machineById ? window.machineById(maschinenId) : null;
+        var basis = m && typeof window.getMachineFolderName === 'function'
+            ? window.getMachineFolderName(m.id, m.manufacturer, m.name, m.serial || m.serial_number, m.year)
+            : 'Maschinen/' + (maschinenId || 'ohne');
+        return basis + '/mietvereinbarungen/anlagen';
+    }
+    async function dokHochladen(dateien, plan, vertrag) {
+        var client = sb();
+        if (!client || !window.FileUploadService) { toast('Ohne Verbindung kann nichts hochgeladen werden.'); return; }
+        dateien = Array.prototype.slice.call(dateien || []);
+        if (!dateien.length) return;
+        var drop = document.getElementById('tlv-dok-drop');
+        if (drop) drop.textContent = dateien.length + ' Datei(en) werden hochgeladen …';
+        try {
+            var ordner = dokOrdner((vertrag || plan).maschine);
+            var neu = [];
+            for (var i = 0; i < dateien.length; i++) {
+                var f = dateien[i];
+                var up = await window.FileUploadService.uploadFile(f, {
+                    bucket: 'dateien', path: ordner + '/' + Date.now() + '-' + f.name.replace(/[^a-zA-Z0-9.\-_]/g, '_'),
+                    compress: false, provider: 'cloudflare-r2'
+                });
+                neu.push({ name: f.name, url: up.url, path: up.path, type: f.type || '' });
+            }
+            if (vertrag) await vertragAnlagenSetzen(vertrag, (vertrag.anlagen || []).concat(neu));
+            else await planDateienSetzen(plan, (plan.dateien || []).concat(neu));
+            toast(neu.length + ' Dokument(e) hinzugefügt.');
+        } catch (e) {
+            console.error('Dokument nicht hochgeladen:', e);
+            toast(/dateien/.test(String(e && e.message)) && /column|Spalte|schema/i.test(String(e && e.message))
+                ? 'Migration supabase_add_planung_dateien.sql fehlt noch.'
+                : 'Hochladen fehlgeschlagen: ' + (e && e.message || e));
+        }
+        zeichnePanel();
+    }
+    async function planDateienSetzen(plan, liste) {
+        var r = await sb().from('timeline_planung').update({ dateien: liste }).eq('id', plan.dbId);
+        if (r.error) throw r.error;
+        ITEMS.forEach(function (i) {
+            if ((i.quelle === 'timeline_planung' || i.quelle === 'timeline_planung_auf') && String(i.dbId) === String(plan.dbId)) i.dateien = liste;
+        });
+    }
+    async function vertragAnlagenSetzen(vertrag, liste) {
+        // data frisch lesen, nur anlagen ersetzen — sonst gingen parallele Änderungen verloren.
+        var r = await sb().from('rental_agreements').select('data').eq('id', vertrag.dbId).maybeSingle();
+        if (r.error) throw r.error;
+        var data = Object.assign({}, (r.data && r.data.data) || {}, { anlagen: liste });
+        var u = await sb().from('rental_agreements').update({ data: data }).eq('id', vertrag.dbId);
+        if (u.error) throw u.error;
+        vertrag.anlagen = liste;
+    }
+    function dokVerdrahten(p, plan, vertrag) {
+        var l = dokListe(plan, vertrag);
+        Array.prototype.forEach.call(p.querySelectorAll('.tlv-dok-auf'), function (el) {
+            el.onclick = function () { dokOeffnen(l[+el.dataset.dok].d); };
+        });
+        Array.prototype.forEach.call(p.querySelectorAll('[data-dok-weg]'), function (el) {
+            el.onclick = async function () {
+                var x = l[+el.dataset.dokWeg];
+                if (!confirm('„' + dokName(x.d) + '“ von dieser Vermietung entfernen?')) return;
+                try {
+                    if (x.weg === 'vertrag') await vertragAnlagenSetzen(vertrag, vertrag.anlagen.filter(function (_, i) { return i !== x.i; }));
+                    else await planDateienSetzen(plan, plan.dateien.filter(function (_, i) { return i !== x.i; }));
+                } catch (e) { toast('Entfernen fehlgeschlagen: ' + (e && e.message || e)); }
+                zeichnePanel();
+            };
+        });
+        var drop = document.getElementById('tlv-dok-drop');
+        if (!drop) return;
+        drop.onclick = function () {
+            var inp = document.createElement('input');
+            inp.type = 'file'; inp.multiple = true;
+            inp.onchange = function () { dokHochladen(inp.files, plan, vertrag); };
+            inp.click();
+        };
+        drop.ondragover = function (e) { e.preventDefault(); drop.style.borderColor = 'var(--success, #10b981)'; drop.style.background = 'rgba(16,185,129,0.08)'; };
+        drop.ondragleave = function () { drop.style.borderColor = ''; drop.style.background = ''; };
+        drop.ondrop = function (e) {
+            e.preventDefault(); drop.style.borderColor = ''; drop.style.background = '';
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) dokHochladen(e.dataTransfer.files, plan, vertrag);
+        };
+    }
+
     function mietZuPlan(plan) {
         for (var i = 0; i < ITEMS.length; i++)
             if (ITEMS[i].quelle === 'rental_agreements' && ITEMS[i].planId === String(plan.dbId)) return ITEMS[i];
@@ -2956,7 +3094,8 @@
         var v = mietZuPlan(plan);
         if (v) { window.openMietvereinbarung(v.maschine, v.dbId); return; }
         window.openMietvereinbarung(plan.maschine, null, {
-            plan_id: plan.dbId, customer_id: plan.kundeId, kunde: plan.kunde, von: plan.von, bis: plan.bis
+            plan_id: plan.dbId, customer_id: plan.kundeId, kunde: plan.kunde, von: plan.von, bis: plan.bis,
+            anlagen: plan.dateien || []
         });
     }
     // Gespeicherte Mietvereinbarung sofort übernehmen, nicht erst nach 3 min.

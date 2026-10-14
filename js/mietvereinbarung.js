@@ -286,6 +286,8 @@
         if (v.von) daten.miete.beginn = v.von;
         if (v.bis) daten.miete.ende = v.bis;
         if (v.kunde) daten.mieter.name = v.kunde;
+        // Dokumente der Planung (Timeline) werden Anlagen des Vertrags.
+        if (Array.isArray(v.anlagen) && v.anlagen.length) daten.anlagen = v.anlagen.filter(a => a && a.url).map(a => Object.assign({}, a));
         if (!v.customer_id) return;
         daten.mieter.customer_id = v.customer_id;
         if (!window.supabaseClient) return;
@@ -1535,7 +1537,7 @@
                     <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${esc(a.name)}">${/pdf/i.test(a.type || a.name) ? '📄' : '🖼️'} ${esc(a.name)}</span>
                     <button type="button" class="btn-secondary" data-anlage-weg="${i}" title="Entfernen" style="padding: 2px 8px;">✕</button>
                 </div>`).join('') : '<div style="padding: 6px 4px; opacity: 0.6;">Noch keine Anlage.</div>'}
-            <button type="button" class="btn-primary" data-anlage-neu style="width: 100%; margin-top: 8px;">＋ PDF oder Foto hinzufügen</button>`;
+            <div data-anlage-neu style="margin-top: 8px; padding: 14px 10px; border: 1.5px dashed rgba(255,255,255,0.3); border-radius: var(--radius-md, 10px); text-align: center; cursor: pointer; font-size: var(--fs-sm, 0.85rem);">PDF oder Foto hierher ziehen<br>oder <u>auswählen</u></div>`;
         document.body.appendChild(m);
         m.addEventListener('click', e => {
             e.stopPropagation();
@@ -1550,6 +1552,15 @@
             }
             if (e.target.closest('[data-anlage-neu]')) { m.remove(); anlageWaehlen(); }
         });
+        const zone = m.querySelector('[data-anlage-neu]');
+        zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = 'var(--success, #10b981)'; zone.style.background = 'rgba(16,185,129,0.08)'; });
+        zone.addEventListener('dragleave', () => { zone.style.borderColor = ''; zone.style.background = ''; });
+        zone.addEventListener('drop', e => {
+            e.preventDefault();
+            const dateien = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
+            m.remove();
+            if (dateien.length) anlagenHochladen(dateien);
+        });
         setTimeout(() => document.addEventListener('click', function zu() { m.remove(); document.removeEventListener('click', zu); }), 0);
     };
 
@@ -1560,32 +1571,35 @@
         input.multiple = true;
         input.style.display = 'none';
         document.body.appendChild(input);
-        input.onchange = async () => {
+        input.onchange = () => {
             const dateien = Array.from(input.files || []);
             input.remove();
-            if (!dateien.length) return;
-            if (!window.FileUploadService) { window.showToast('Ohne Verbindung kann nichts hochgeladen werden.'); return; }
-            status(`${dateien.length} Anlage(n) werden hochgeladen …`);
-            try {
-                const basis = `${ordnerName()}/mietvereinbarungen/anlagen`;
-                for (const datei of dateien) {
-                    const sauber = datei.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-                    const up = await window.FileUploadService.uploadFile(datei, {
-                        bucket: 'dateien', path: `${basis}/${Date.now()}-${sauber}`, compress: false, provider: 'cloudflare-r2'
-                    });
-                    if (!daten.anlagen) daten.anlagen = [];
-                    daten.anlagen.push({ name: datei.name, url: up.url, path: up.path, type: datei.type || '' });
-                }
-                anlagenZahlSetzen();
-                status('');
-                window.showToast(`${dateien.length} Anlage(n) hinzugefügt — Speichern hängt sie ans PDF.`);
-            } catch (e) {
-                console.error('Anlage nicht hochgeladen:', e);
-                status('');
-                window.showToast('Anlage konnte nicht hochgeladen werden: ' + (e && e.message || e));
-            }
+            if (dateien.length) anlagenHochladen(dateien);
         };
         input.click();
+    }
+
+    async function anlagenHochladen(dateien) {
+        if (!window.FileUploadService) { window.showToast('Ohne Verbindung kann nichts hochgeladen werden.'); return; }
+        status(`${dateien.length} Anlage(n) werden hochgeladen …`);
+        try {
+            const basis = `${ordnerName()}/mietvereinbarungen/anlagen`;
+            for (const datei of dateien) {
+                const sauber = datei.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+                const up = await window.FileUploadService.uploadFile(datei, {
+                    bucket: 'dateien', path: `${basis}/${Date.now()}-${sauber}`, compress: false, provider: 'cloudflare-r2'
+                });
+                if (!daten.anlagen) daten.anlagen = [];
+                daten.anlagen.push({ name: datei.name, url: up.url, path: up.path, type: datei.type || '' });
+            }
+            anlagenZahlSetzen();
+            status('');
+            window.showToast(`${dateien.length} Anlage(n) hinzugefügt — Speichern hängt sie ans PDF.`);
+        } catch (e) {
+            console.error('Anlage nicht hochgeladen:', e);
+            status('');
+            window.showToast('Anlage konnte nicht hochgeladen werden: ' + (e && e.message || e));
+        }
     }
 
     async function anlagenAnhaengen(doc) {
@@ -1602,6 +1616,9 @@
             doc.addImage(bild, 'JPEG', (W - w) / 2, (H - hh) / 2, w, hh);
         };
         for (const a of liste) {
+            // Nur PDF und Bilder lassen sich einbetten — Word & Co. bleiben reine Anlage (Timeline).
+            const art = (a.type || '') + ' ' + (a.name || a.url || '');
+            if (!/pdf|image\/|\.(jpe?g|png|gif|webp|heic|avif|bmp)\b/i.test(art)) continue;
             status(`Anlage „${a.name}“ wird angehängt …`);
             const r = await fetch(a.url, { mode: 'cors' });
             if (!r.ok) throw new Error(`Anlage „${a.name}“ nicht ladbar (HTTP ${r.status})`);
@@ -2528,7 +2545,7 @@
             <tr data-split>
                 <td class="miet-num">${txt(`schaeden.${i}.nr`, s.nr, '', 'text-align:center;')}</td>
                 <td style="width:32%;">${txt(`schaeden.${i}.position`, s.position)}</td>
-                <td>${txt(`schaeden.${i}.beschreibung`, s.beschreibung)}</td>
+                <td class="miet-schaden-letzte">${txt(`schaeden.${i}.beschreibung`, s.beschreibung)}<button type="button" class="miet-zeile-weg" onclick="window.mietSchadenWeg(${i})" title="Zeile entfernen">−</button></td>
             </tr>`).join('');
         return `
         <div class="miet-block">
@@ -2851,6 +2868,16 @@
             }
         }
         entwurfMerken();
+    };
+
+    window.mietSchadenWeg = function (i) {
+        const z = daten.schaeden[i];
+        const voll = z && (String(z.nr || '').trim() || String(z.position || '').trim() || String(z.beschreibung || '').trim());
+        if (voll && !confirm('Zeile ' + (z.nr || i + 1) + ' „' + (z.position || z.beschreibung || '') + '“ entfernen?')) return;
+        daten.schaeden.splice(i, 1);
+        // Eine leere Zeile bleibt immer stehen — sonst gäbe es nichts zum Eintippen.
+        if (!daten.schaeden.length) daten.schaeden.push({ nr: '', position: '', beschreibung: '' });
+        zeichneInhalt();
     };
 
     window.mietSchadenZeile = function () {
