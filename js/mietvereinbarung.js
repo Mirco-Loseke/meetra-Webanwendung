@@ -85,6 +85,8 @@
             // Weitere Bilder (Schäden, Details) über die Standardpositionen hinaus:
             // je Phase [{ pos, datum, text }] — das Bild selbst liegt in fotos[phase][pos].
             zusatz: { uebergabe: [], ruecknahme: [] },
+            // Hinten angehängte Dateien (z. B. unterschriebenes Original): [{ name, url, path, type }]
+            anlagen: [],
             unterschriften: {
                 u_vermieter: null, u_mieter: null, u_datum: heute(),   // Übergabe
                 r_vermieter: null, r_mieter: null, r_datum: ''       // Rücknahme
@@ -324,6 +326,7 @@
                 if (z) daten.einweisungsliste[i] = { datum: z.datum || '', name: z.name || '' };
             });
             if (d.plan_id) daten.plan_id = d.plan_id;
+            if (Array.isArray(d.anlagen)) daten.anlagen = d.anlagen.filter(a => a && a.url);
             if (d.zusatz && typeof d.zusatz === 'object') daten.zusatz = { uebergabe: d.zusatz.uebergabe || [], ruecknahme: d.zusatz.ruecknahme || [] };
 
             (Array.isArray(data.photos) ? data.photos : []).forEach(f => {
@@ -492,6 +495,9 @@
                         <input type="checkbox" ${daten.einweisungsseite === 'ja' ? 'checked' : ''} onchange="window.mietEinweisungsseite(this.checked)">
                         <span class="miet-lang">Einweisungserklärung</span><span class="miet-kurz">Einw.</span>
                     </label>
+                    <span class="miet-anlage-wrap" style="position: relative;">
+                        <button type="button" class="btn-secondary" id="miet-anlage-btn" onclick="window.mietAnlagenMenue(event)" title="Datei hinten ans PDF anhängen (z. B. unterschriebenes Original)">📎 <span class="miet-lang">Anlage</span><span id="miet-anlage-zahl">${(daten.anlagen || []).length ? ' (' + daten.anlagen.length + ')' : ''}</span></button>
+                    </span>
                     <button class="btn-secondary miet-foot-druck" onclick="window.mietDrucken()"><span class="miet-lang">Drucken / PDF</span><span class="miet-kurz">PDF</span></button>
                     <button class="btn-primary" id="miet-save-btn" onclick="window.mietSpeichern()">Speichern</button>
                 </div>
@@ -1064,7 +1070,9 @@
 
         // Am Rechner druckt der Browser den Bogen direkt — das Ergebnis
         // stimmt und ist am schnellsten.
-        if (!istHandy()) {
+        // Mit Anlagen (z. B. unterschriebenes Original) aber immer über das PDF —
+        // der Browser-Druck kennt nur den Bogen auf dem Bildschirm.
+        if (!istHandy() && !((daten && daten.anlagen) || []).length) {
             mitA4(() => alsAusgabe(() => window.print()));
             return;
         }
@@ -1498,6 +1506,142 @@
         }
     }
 
+    // ── Anlagen: Dateien hinten ans PDF (z. B. das unterschriebene Original) ──
+    // Hochgeladen wird sofort nach R2 (<Maschinenordner>/mietvereinbarungen/anlagen/),
+    // gemerkt in daten.anlagen (JSONB `data`). Beim Erzeugen des PDFs werden PDF-Seiten
+    // per pdf.js gerendert und Bilder eingepasst — jede Anlage-Seite als eigenes Blatt.
+    function anlagenZahlSetzen() {
+        const z = document.getElementById('miet-anlage-zahl');
+        const n = (daten && daten.anlagen || []).length;
+        if (z) z.textContent = n ? ' (' + n + ')' : '';
+    }
+
+    window.mietAnlagenMenue = function (ev) {
+        if (ev) ev.stopPropagation();
+        const alt = document.getElementById('miet-anlage-menue');
+        if (alt) { alt.remove(); return; }
+        const btn = document.getElementById('miet-anlage-btn');
+        if (!btn || !daten) return;
+        const liste = daten.anlagen || [];
+        const m = document.createElement('div');
+        m.id = 'miet-anlage-menue';
+        m.className = 'menu-panel';
+        const r = btn.getBoundingClientRect();
+        m.style.cssText = `position: fixed; z-index: 100000; min-width: 260px; max-width: 340px; left: ${Math.max(8, Math.min(r.left, window.innerWidth - 348))}px; bottom: ${window.innerHeight - r.top + 6}px; padding: 10px;`;
+        m.innerHTML = `
+            <div style="font-size: var(--fs-xs); opacity: 0.7; margin-bottom: 8px;">Wird beim Speichern hinten ans PDF gehängt.</div>
+            ${liste.length ? liste.map((a, i) => `
+                <div style="display: flex; align-items: center; gap: 8px; padding: 6px 4px;">
+                    <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${esc(a.name)}">${/pdf/i.test(a.type || a.name) ? '📄' : '🖼️'} ${esc(a.name)}</span>
+                    <button type="button" class="btn-secondary" data-anlage-weg="${i}" title="Entfernen" style="padding: 2px 8px;">✕</button>
+                </div>`).join('') : '<div style="padding: 6px 4px; opacity: 0.6;">Noch keine Anlage.</div>'}
+            <button type="button" class="btn-primary" data-anlage-neu style="width: 100%; margin-top: 8px;">＋ PDF oder Foto hinzufügen</button>`;
+        document.body.appendChild(m);
+        m.addEventListener('click', e => {
+            e.stopPropagation();
+            const weg = e.target.closest('[data-anlage-weg]');
+            if (weg) {
+                // Nur aus der Vereinbarung lösen — die Datei in R2 bleibt, bis gespeichert ist.
+                daten.anlagen.splice(parseInt(weg.dataset.anlageWeg, 10), 1);
+                anlagenZahlSetzen();
+                m.remove();
+                window.mietAnlagenMenue();
+                return;
+            }
+            if (e.target.closest('[data-anlage-neu]')) { m.remove(); anlageWaehlen(); }
+        });
+        setTimeout(() => document.addEventListener('click', function zu() { m.remove(); document.removeEventListener('click', zu); }), 0);
+    };
+
+    function anlageWaehlen() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'application/pdf,.pdf,image/*';
+        input.multiple = true;
+        input.style.display = 'none';
+        document.body.appendChild(input);
+        input.onchange = async () => {
+            const dateien = Array.from(input.files || []);
+            input.remove();
+            if (!dateien.length) return;
+            if (!window.FileUploadService) { window.showToast('Ohne Verbindung kann nichts hochgeladen werden.'); return; }
+            status(`${dateien.length} Anlage(n) werden hochgeladen …`);
+            try {
+                const basis = `${ordnerName()}/mietvereinbarungen/anlagen`;
+                for (const datei of dateien) {
+                    const sauber = datei.name.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+                    const up = await window.FileUploadService.uploadFile(datei, {
+                        bucket: 'dateien', path: `${basis}/${Date.now()}-${sauber}`, compress: false, provider: 'cloudflare-r2'
+                    });
+                    if (!daten.anlagen) daten.anlagen = [];
+                    daten.anlagen.push({ name: datei.name, url: up.url, path: up.path, type: datei.type || '' });
+                }
+                anlagenZahlSetzen();
+                status('');
+                window.showToast(`${dateien.length} Anlage(n) hinzugefügt — Speichern hängt sie ans PDF.`);
+            } catch (e) {
+                console.error('Anlage nicht hochgeladen:', e);
+                status('');
+                window.showToast('Anlage konnte nicht hochgeladen werden: ' + (e && e.message || e));
+            }
+        };
+        input.click();
+    }
+
+    async function anlagenAnhaengen(doc) {
+        const liste = (daten && daten.anlagen) || [];
+        if (!liste.length) return;
+        // Seite (Breite × Höhe in px) mittig und vollständig auf ein A4-Blatt einpassen;
+        // Querformat-Vorlagen bekommen ein Quer-Blatt.
+        const blatt = (bild, b, h) => {
+            const quer = b > h;
+            const W = quer ? 297 : 210, H = quer ? 210 : 297, rand = 5;
+            const f = Math.min((W - 2 * rand) / b, (H - 2 * rand) / h);
+            const w = b * f, hh = h * f;
+            doc.addPage('a4', quer ? 'landscape' : 'portrait');
+            doc.addImage(bild, 'JPEG', (W - w) / 2, (H - hh) / 2, w, hh);
+        };
+        for (const a of liste) {
+            status(`Anlage „${a.name}“ wird angehängt …`);
+            const r = await fetch(a.url, { mode: 'cors' });
+            if (!r.ok) throw new Error(`Anlage „${a.name}“ nicht ladbar (HTTP ${r.status})`);
+            const blob = await r.blob();
+            const istPdf = /pdf/i.test(a.type || blob.type) || /\.pdf$/i.test(a.name || '');
+            if (istPdf) {
+                if (typeof window.loadPDFReader === 'function') await window.loadPDFReader();
+                if (!window.pdfjsLib) throw new Error('PDF-Leser nicht verfügbar.');
+                const pdf = await window.pdfjsLib.getDocument({ data: new Uint8Array(await blob.arrayBuffer()) }).promise;
+                for (let n = 1; n <= pdf.numPages; n++) {
+                    const seite = await pdf.getPage(n);
+                    // ~150 dpi: Unterschrift gut lesbar, Datei bleibt klein.
+                    const vp = seite.getViewport({ scale: 2 });
+                    const c = document.createElement('canvas');
+                    c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+                    const ctx = c.getContext('2d');
+                    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+                    await seite.render({ canvasContext: ctx, viewport: vp }).promise;
+                    blatt(c.toDataURL('image/jpeg', 0.85), c.width, c.height);
+                    c.width = c.height = 0;
+                }
+                if (pdf.destroy) pdf.destroy();
+            } else {
+                const objUrl = URL.createObjectURL(blob);
+                try {
+                    const img = await new Promise((ok, fehl) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => fehl(new Error(`Bild „${a.name}“ nicht lesbar`)); i.src = objUrl; });
+                    // Große Handyfotos auf max. 2000 px verkleinern.
+                    const f = Math.min(1, 2000 / Math.max(img.naturalWidth, img.naturalHeight));
+                    const c = document.createElement('canvas');
+                    c.width = Math.round(img.naturalWidth * f); c.height = Math.round(img.naturalHeight * f);
+                    const ctx = c.getContext('2d');
+                    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+                    ctx.drawImage(img, 0, 0, c.width, c.height);
+                    blatt(c.toDataURL('image/jpeg', 0.85), c.width, c.height);
+                    c.width = c.height = 0;
+                } finally { URL.revokeObjectURL(objUrl); }
+            }
+        }
+    }
+
     // Der Bogen ist bereits auf A4-Seiten verteilt — er wird EINMAL
     // abfotografiert, und jedes Blatt wird daraus als ganzseitiges Bild ins
     // PDF gelegt. Dadurch sieht das PDF exakt aus wie der Ausdruck.
@@ -1625,6 +1769,7 @@
                 canvas.width = canvas.height = 0;
             }
             if (gesamt) gesamt.width = gesamt.height = 0;
+            await anlagenAnhaengen(doc);
             return doc;
         } finally {
             hintergrundZurueck();
@@ -1791,6 +1936,7 @@
                         einweisungsliste: daten.einweisungsliste,
                         schaeden: daten.schaeden, unterschriften: daten.unterschriften,
                         plan_id: daten.plan_id || null,
+                        anlagen: daten.anlagen || [],
                         zusatz: { uebergabe: zusatzListe('uebergabe'), ruecknahme: zusatzListe('ruecknahme') } },
                 photos: fotos,
                 folder_path: basis,

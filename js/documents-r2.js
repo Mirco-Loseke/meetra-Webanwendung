@@ -1633,14 +1633,32 @@ window.openDocAttachments = function(docId) {
     })));
 };
 
-window.downloadDoc = function(url, name) {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = name;
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+// Bei fremder Domain (R2) ignoriert der Browser `download` und öffnet die Datei
+// im Tab — Erweiterungen wie Adobe Acrobat fangen PDFs dann ab und hängen.
+// Deshalb erst als Blob holen (gleiche Herkunft → echter Download), nur bei
+// Fehler (z. B. CORS) der alte Weg.
+window.downloadDoc = async function(url, name) {
+    const klick = (href, neuerTab) => {
+        const link = document.createElement('a');
+        link.href = href;
+        link.download = name || '';
+        if (neuerTab) link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+    if (!url || url.startsWith('blob:') || url.startsWith('data:')) return klick(url, false);
+    try {
+        const r = await fetch(url, { mode: 'cors' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const blobUrl = URL.createObjectURL(await r.blob());
+        if (!name) { try { name = decodeURIComponent(url.split('?')[0].split('/').pop()); } catch (e) { name = 'Datei'; } }
+        klick(blobUrl, false);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    } catch (e) {
+        console.warn('Download als Blob nicht möglich, öffne direkt:', e && e.message);
+        klick(url, true);
+    }
 };
 
 window.deleteDocument = async function(id, filePath) {
