@@ -1066,6 +1066,9 @@
         }
         if (contacts) chips.push(`<span class="ab-chip ab-chip-contact">${ic('user', 13)} ${contacts} ${contacts === 1 ? 'Kontakt' : 'Kontakte'}</span>`);
         if (links) chips.push(`<span class="ab-chip ab-chip-link">${ic('link', 13)} ${links} im Verbund</span>`);
+        // Starker Dubletten-Verdacht schon auf der Karte (gleiche Schwelle wie im Detail-Kopf)
+        const dub = dublettenVerdacht(a);
+        if (dub) chips.push(`<span class="ab-chip" role="button" style="cursor:pointer; color:var(--warning, #f59e0b); border-color:rgba(245,158,11,0.5);" title="${esc('Möglicherweise doppelt mit ' + dub.addr.name + (dub.addr.address_number ? ' (Adr. ' + dub.addr.address_number + ')' : '') + ' — ' + dub.reasons.join(', ') + '. Klicken zum Zusammenführen.')}" onclick="event.stopPropagation(); window.adresseZusammenfuehren && window.adresseZusammenfuehren('${esc(id)}', '${esc(dub.addr.id)}')">⚠️ doppelt?</span>`);
 
         const pos = state.selectMode ? state.selection.indexOf(id) : -1;
         const selected = pos >= 0;
@@ -3562,6 +3565,19 @@
         A.forEach((v, k) => { total += v; if (B.has(k)) inter += Math.min(v, B.get(k)); });
         B.forEach(v => total += v);
         return total ? (2 * inter) / total : 0;
+    }
+
+    // Für die Karten: bester starker Treffer je Adresse, gepuffert solange state.addresses
+    // dasselbe Array ist (die Suche läuft über alle Adressen — nicht bei jedem Zeichnen neu).
+    let dubPuffer = { liste: null, map: new Map() };
+    function dublettenVerdacht(a) {
+        if (dubPuffer.liste !== state.addresses) dubPuffer = { liste: state.addresses, map: new Map() };
+        const k = String(a.id);
+        if (!dubPuffer.map.has(k)) {
+            const d = findDuplicateAddresses(a, a.id).filter(x => x.score >= 0.9);
+            dubPuffer.map.set(k, d[0] || null);
+        }
+        return dubPuffer.map.get(k);
     }
 
     // Ähnliche/identische Adressen zu einem Payload finden (für die Dublettenwarnung).

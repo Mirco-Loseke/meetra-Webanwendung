@@ -51,6 +51,12 @@
     async function zusammenfuehren(quelle, ziel) {
         const sb = window.supabaseClient;
         const bericht = [];
+        // Verknüpfung Quelle ↔ Ziel VOR dem Umhängen löschen: umgehängt würde sie zur
+        // Selbst-Verknüpfung, und die verbietet der Check customer_links_no_self.
+        for (const [a, b] of [[quelle.id, ziel.id], [ziel.id, quelle.id]]) {
+            const { error: eV } = await sb.from('customer_links').delete().eq('customer_id', a).eq('linked_customer_id', b);
+            if (eV && !fehlt(eV)) throw new Error('customer_links: ' + eV.message);
+        }
         for (const [tab, spalten] of VERWEISE) {
             for (const sp of spalten) {
                 const { data, error } = await sb.from(tab).update({ [sp]: ziel.id }).eq(sp, quelle.id).select('id');
