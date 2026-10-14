@@ -43,7 +43,7 @@
             const escH = x => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
             const icon = (farbe, bg, txt) => `<div style="width:48px;height:48px;background:${bg};border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;color:${farbe};font-size:0.6rem;font-weight:800;gap:1px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>${txt}</div>`;
 
-            const items = files.map((f, i) => {
+            const zeile = (f, i) => {
                 const url = urlVon(f);
                 const art = artVon(f);
                 const e = endung(url).toUpperCase();
@@ -55,7 +55,31 @@
                     ${thumb}
                     <span style="font-size:0.85rem;color:rgba(255,255,255,0.8);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escH(nameVon(f))}</span>
                 </div>`;
-            }).join('');
+            };
+            // Fotos und Dokumente getrennt — die Dokument-Spalte/der Reiter erscheint nur,
+            // wenn es Dokumente gibt (selten). Breit: nebeneinander, schmal: zwei Reiter.
+            const idxFotos = [], idxDoks = [];
+            files.forEach((f, i) => (artVon(f) === 'bild' ? idxFotos : idxDoks).push(i));
+            const liste = idx => idx.map(i => zeile(files[i], i)).join('');
+            const leer = '<div style="padding:14px;text-align:center;font-size:0.85rem;color:rgba(255,255,255,0.45);">Noch keine Anhänge.</div>';
+            const getrennt = idxDoks.length > 0 && idxFotos.length > 0;
+            const breit = getrennt && window.innerWidth >= 820;
+            const spalteKopf = (txt, n, farbe) => `<div style="font-size:0.72rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:${farbe};padding:2px 4px 6px;">${txt} (${n})</div>`;
+            const scroll = 'overflow-y:auto;display:flex;flex-direction:column;gap:4px;min-height:0;';
+            let inhalt;
+            if (!getrennt) {
+                inhalt = `<div style="${scroll}">${liste(files.map((f, i) => i)) || leer}</div>`;
+            } else if (breit) {
+                inhalt = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;min-height:0;flex:1;">
+                        <div style="display:flex;flex-direction:column;min-height:0;">${spalteKopf('Fotos', idxFotos.length, '#a78bfa')}<div style="${scroll}">${liste(idxFotos)}</div></div>
+                        <div style="display:flex;flex-direction:column;min-height:0;border-left:1px solid rgba(255,255,255,0.08);padding-left:16px;">${spalteKopf('Dokumente', idxDoks.length, '#60a5fa')}<div style="${scroll}">${liste(idxDoks)}</div></div>
+                    </div>`;
+            } else {
+                const reiter = (key, txt, n, aktiv) => `<button type="button" data-sa-reiter="${key}" style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid ${aktiv ? 'rgba(139,92,246,0.6)' : 'rgba(255,255,255,0.1)'};background:${aktiv ? 'rgba(139,92,246,0.25)' : 'transparent'};color:${aktiv ? '#fff' : 'rgba(255,255,255,0.6)'};font-weight:700;font-size:0.85rem;cursor:pointer;">${txt} (${n})</button>`;
+                inhalt = `<div style="display:flex;gap:8px;">${reiter('fotos', '📷 Fotos', idxFotos.length, true)}${reiter('doks', '📄 Dokumente', idxDoks.length, false)}</div>
+                    <div data-sa-panel="fotos" style="${scroll}">${liste(idxFotos)}</div>
+                    <div data-sa-panel="doks" style="${scroll}display:none;">${liste(idxDoks)}</div>`;
+            }
             // Klick per Delegation statt Inline-onclick — Namen/URLs mit ' oder " brachen sonst das Attribut.
             const anhangOeffnen = (i) => {
                 const f = files[i], url = urlVon(f), art = artVon(f);
@@ -80,7 +104,7 @@
             modal.id = 'service-attachments-modal';
             modal.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);backdrop-filter:blur(4px);';
             modal.innerHTML = `
-                <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:1.5rem;width:min(420px,90vw);max-height:80vh;display:flex;flex-direction:column;gap:12px;box-shadow:0 25px 60px rgba(0,0,0,0.5);">
+                <div style="background:#1e293b;border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:1.5rem;width:${breit ? 'min(820px,94vw)' : 'min(420px,90vw)'};max-height:80vh;display:flex;flex-direction:column;gap:12px;box-shadow:0 25px 60px rgba(0,0,0,0.5);">
                     <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
                         <span style="font-size:1rem;font-weight:600;color:white;display:flex;align-items:center;gap:8px;min-width:0;">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
@@ -91,18 +115,30 @@
                             <button onclick="document.getElementById('service-attachments-modal').remove()" style="background:rgba(255,255,255,0.08);border:none;color:rgba(255,255,255,0.6);border-radius:8px;width:32px;height:32px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;">✕</button>
                         </div>
                     </div>
-                    <div style="overflow-y:auto;display:flex;flex-direction:column;gap:4px;">${items || '<div style="padding:14px;text-align:center;font-size:0.85rem;color:rgba(255,255,255,0.45);">Noch keine Anhänge.</div>'}</div>
+                    ${inhalt}
                     ${entryId != null ? `
                     <div style="display:flex;align-items:center;gap:10px;border-top:1px solid rgba(255,255,255,0.08);padding-top:12px;">
                         <button onclick="window.addPhotosToServiceEntry(${entryId}, ${machineId == null ? 'null' : machineId})" style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;background:rgba(139,92,246,0.2);border:1px solid rgba(139,92,246,0.5);color:#a78bfa;border-radius:10px;padding:10px 14px;font-size:0.85rem;font-weight:700;cursor:pointer;">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-                            Fotos hinzufügen
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                            Hinzufügen
                         </button>
                         <span data-sa-status style="font-size:0.75rem;color:rgba(255,255,255,0.5);"></span>
                     </div>` : ''}
                 </div>`;
             modal.addEventListener('click', e => {
                 if (e.target === modal) { modal.remove(); return; }
+                const r = e.target.closest('[data-sa-reiter]');
+                if (r) {
+                    modal.querySelectorAll('[data-sa-reiter]').forEach(b => {
+                        const an = b === r;
+                        b.style.background = an ? 'rgba(139,92,246,0.25)' : 'transparent';
+                        b.style.borderColor = an ? 'rgba(139,92,246,0.6)' : 'rgba(255,255,255,0.1)';
+                        b.style.color = an ? '#fff' : 'rgba(255,255,255,0.6)';
+                    });
+                    modal.querySelectorAll('[data-sa-panel]').forEach(p => { p.style.display = p.dataset.saPanel === r.dataset.saReiter ? 'flex' : 'none'; });
+                    return;
+                }
                 const z = e.target.closest('[data-sa-index]');
                 if (z) anhangOeffnen(parseInt(z.dataset.saIndex, 10));
             });

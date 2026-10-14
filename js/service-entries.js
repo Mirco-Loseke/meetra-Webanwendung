@@ -753,7 +753,10 @@ window.renderServiceEntries = function () {
                     const url = typeof file === 'string' ? file : file.url;
                     const type = typeof file === 'string' ? '?' : file.type;
                     const name = typeof file === 'string' ? 'Datei' : file.name;
-                    const isImg = url.match(/\.(jpg|jpeg|png|gif|webp)$/i) || (type && type.startsWith('image/'));
+                    // Endung vor Typ — wie im Anhänge-Fenster (photo-lightbox.js), sonst zählen beide verschieden.
+                    const pfad = String(url || '').split('?')[0];
+                    const isImg = /\.(jpe?g|png|gif|webp|svg|heic|avif|bmp)$/i.test(pfad)
+                        || (!/\.(pdf|docx?|xlsx?|pptx?|odt|ods|rtf)$/i.test(pfad) && type && type.startsWith('image/'));
                     if (isImg) images.push(url);
                     else docs.push({ url, name });
                 });
@@ -856,11 +859,12 @@ window.renderServiceEntries = function () {
                             `}
                             ${(images.length > 0 || docs.length > 0 || e.is_finalized) ? `
                             <div style="position: relative; flex: none;">
-                                <button onclick="event.stopPropagation(); window.openServiceAttachments(window._sf${e.id}, ${e.id}, ${e.machine_id || 'null'})" title="${e.is_finalized ? 'Anhänge öffnen / Fotos hinzufügen' : 'Anhänge öffnen'}"
+                                <button onclick="event.stopPropagation(); window.openServiceAttachments(window._sf${e.id}, ${e.id}, ${e.machine_id || 'null'})" title="${e.is_finalized ? 'Anhänge öffnen / Fotos & Dokumente hinzufügen' : 'Anhänge öffnen'}"
                                     style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; background: rgba(139,92,246,0.85); border: 2.5px solid rgba(196,181,253,0.8); color: #ffffff; border-radius: 50%; cursor: pointer; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 4px 18px rgba(139,92,246,0.6); backdrop-filter: blur(12px); padding: 0;">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
                                 </button>
                                 ${(images.length + docs.length) > 0 ? `<span style="position: absolute; top: -4px; left: -4px; background: #ffffff; color: #7c3aed; font-size: 0.6rem; font-weight: 800; border-radius: 999px; min-width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; padding: 0 3px; line-height: 1; pointer-events: none;">${images.length + docs.length}</span>` : ''}
+                                ${docs.length > 0 ? `<span title="${docs.length} Dokument${docs.length === 1 ? '' : 'e'} (kein Foto)" style="position: absolute; bottom: -4px; right: -6px; background: #3b82f6; color: #ffffff; font-size: 0.6rem; font-weight: 800; border-radius: 999px; height: 16px; display: flex; align-items: center; gap: 1px; padding: 0 4px; line-height: 1; border: 1.5px solid #ffffff; pointer-events: none;">📄${docs.length}</span>` : ''}
                             </div>` : ''}
                             ${e.pdf_url ? `
                             <button onclick="event.stopPropagation(); window.previewDocument('${e.pdf_url}', 'Servicebericht', 'application/pdf')" title="PDF öffnen"
@@ -951,7 +955,8 @@ window.toggleServiceErledigtGroup = function() {
 window.addPhotosToServiceEntry = function (entryId, machineId) {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = 'image/*';
+    // Fotos und Dokumente (PDF, Word, Excel …) — Bilder werden beim Hochladen komprimiert, der Rest nicht.
+    input.accept = 'image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.rtf,.txt';
     input.multiple = true;
     input.style.display = 'none';
     document.body.appendChild(input);
@@ -962,13 +967,13 @@ window.addPhotosToServiceEntry = function (entryId, machineId) {
         if (!files.length) return;
 
         if (!window.supabaseClient || !window.FileUploadService) {
-            window.showToast('Ohne Verbindung können keine Fotos hochgeladen werden.');
+            window.showToast('Ohne Verbindung können keine Dateien hochgeladen werden.');
             return;
         }
 
         const modal = document.getElementById('service-attachments-modal');
         const status = modal && modal.querySelector('[data-sa-status]');
-        if (status) status.textContent = `${files.length} Foto(s) werden hochgeladen …`;
+        if (status) status.textContent = `${files.length} Datei(en) werden hochgeladen …`;
 
         try {
             const machine = (window.machineList || []).find(m => m.id == machineId);
@@ -1024,7 +1029,7 @@ window.addPhotosToServiceEntry = function (entryId, machineId) {
             if (typeof window.renderServiceEntries === 'function') window.renderServiceEntries();
             if (modal) modal.remove();
             window.openServiceAttachments(neu, entryId, machineId);
-            window.showToast(`${files.length} Foto(s) hinzugefügt.`);
+            window.showToast(`${files.length} Datei(en) hinzugefügt.`);
         } catch (err) {
             console.error('Fotos nicht anhängbar:', err);
             if (status) status.textContent = '';
