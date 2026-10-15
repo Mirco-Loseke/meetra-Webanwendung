@@ -490,6 +490,10 @@
             var satz = parseFloat(String(miete.tagessatz || '').replace(',', '.'));
             // Stand der Mietvereinbarung selbst — der Balken darf zum Planen davon abweichen.
             var mVon = ausDB(miete.beginn) || '', mBis = ausDB(miete.ende) || '';
+            /* In der Timeline verschoben, aber (noch) nicht übernommen: data.timeline
+               hält die Planungsposition — der Balken steht nach dem Neuladen dort. */
+            var tl = dat.timeline || {};
+            if (ausDB(tl.von)) { von = ausDB(tl.von); bis = ausDB(tl.bis) || von; if (bis < von) bis = von; vorlaeufig = false; }
             ITEMS.push({
                 id: 'ra-' + r.id, dbId: r.id, quelle: 'rental_agreements', sorte: 'miete',
                 titel: mieter.name || r.title || 'Vermietung',
@@ -794,9 +798,15 @@
                 await pruefe(client.from(it.quelle).update(f).eq('id', it.dbId));
 
             } else if (it.quelle === 'rental_agreements') {
-                /* Balken der Mietvereinbarung verschoben: bewusst NICHT sofort in die
-                   Vereinbarung schreiben — zum Planen soll man frei schieben können.
-                   Das Detailfenster zeigt die Abweichung mit „Übernehmen“ (mietAbweichung). */
+                /* Balken der Mietvereinbarung verschoben: Mietbeginn/-ende bleiben, nur die
+                   Planungsposition wird gemerkt (data.timeline). In die Vereinbarung kommt sie
+                   erst über „Übernehmen“ im Detailfenster (mietAbweichung). */
+                var resT = await client.from('rental_agreements').select('data').eq('id', it.dbId).single();
+                if (resT.error) throw resT.error;
+                var datT = resT.data.data || {};
+                if (it.von === it.mVon && it.bis === it.mBis) delete datT.timeline;
+                else datT.timeline = { von: it.von, bis: it.bis };
+                await pruefe(client.from('rental_agreements').update({ data: datT }).eq('id', it.dbId));
 
             } else if (it.quelle === 'absences') {
                 await pruefe(client.from('absences').update({ von: it.von, bis: it.bis }).eq('id', it.dbId));
@@ -854,6 +864,7 @@
             dat.miete = dat.miete || {};
             if (nimmVon) dat.miete.beginn = a.von;
             if (nimmBis) dat.miete.ende = a.bis;
+            if (dat.timeline && dat.miete.beginn === a.vertrag.von && dat.miete.ende === a.vertrag.bis) delete dat.timeline;
             await pruefe(client.from('rental_agreements').update({ data: dat }).eq('id', a.vertrag.dbId));
             if (nimmVon) a.vertrag.mVon = a.von;
             if (nimmBis) a.vertrag.mBis = a.bis;
