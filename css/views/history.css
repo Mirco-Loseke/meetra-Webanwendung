@@ -115,6 +115,33 @@
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
 }
 
+.history-tag-badge.is-rechts {
+    left: auto;
+    right: -10px;
+}
+
+/* Datum oben links auf dem Kartenrand (Rand = Farbe der Art, inline) */
+.history-date-badge {
+    position: absolute;
+    top: -12px;
+    left: -10px;
+    z-index: 5;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 12px;
+    border: 1.5px solid;
+    border-radius: 999px;
+    color: #fff;
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+}
+.history-date-badge.is-editable { cursor: pointer; }
+.history-date-badge.is-editable:hover { filter: brightness(1.25); }
+
 .history-user-initials {
     position: absolute;
     right: -8px;

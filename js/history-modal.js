@@ -520,11 +520,11 @@
                         lastYear = currentYear;
                     }
 
-                    const dateStr = item.date.toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' });
+                    const dateStr = item.date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
                     const sourceTag = item.source === 'manuell'
-                        ? `<span class="history-tag-badge" style="background: rgba(16,185,129,0.15); color: #10b981; border-color: rgba(16,185,129,0.3);">MANUELL</span>`
-                        : `<span class="history-tag-badge" style="background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.4);">SYSTEM</span>`;
+                        ? `<span class="history-tag-badge is-rechts" style="background: rgba(16,185,129,0.15); color: #10b981; border-color: rgba(16,185,129,0.3);">MANUELL</span>`
+                        : `<span class="history-tag-badge is-rechts" style="background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.4);">SYSTEM</span>`;
 
                     const isAdmin = window.activeUser && (window.activeUser.name === 'Mirco Loseke');
 
@@ -541,11 +541,13 @@
                         ? `window.updateManualEntryDate('${item.id}', this.value)`
                         : `window.updateSystemEntryDate('${item.itemType}', '${item.id}', this.value)`;
 
+                    // Datum als Plakette oben links auf dem Kartenrand: Rand in der Farbe der Art, Schrift + Symbol weiß
+                    const kalenderSvg = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>';
+                    const datumStil = `border-color: ${item.color}; background: color-mix(in srgb, ${item.color} 22%, #0f172a);`;
                     const dateBlock = darfDatumAendern
-                        ? `<div class="history-date-line is-editable" title="Datum ändern"
-                                onclick="this.nextElementSibling.showPicker ? this.nextElementSibling.showPicker() : this.nextElementSibling.click()">${dateStr}</div>
-                           <input type="date" value="${item.date.toISOString().split('T')[0]}" style="position: absolute; opacity: 0; width: 1px; height: 1px; pointer-events: none;" onchange="${datumAendernFn}">`
-                        : `<div class="history-date-line">${dateStr}</div>`;
+                        ? `<span class="history-date-badge is-editable" style="${datumStil}" title="Datum ändern"
+                                onclick="const i=this.querySelector('input'); i.showPicker ? i.showPicker() : i.click()">${kalenderSvg}${dateStr}<input type="date" value="${item.date.toISOString().split('T')[0]}" style="position: absolute; left: 0; bottom: 0; opacity: 0; width: 1px; height: 1px; pointer-events: none;" onclick="event.stopPropagation()" onchange="${datumAendernFn}"></span>`
+                        : `<span class="history-date-badge" style="${datumStil}">${kalenderSvg}${dateStr}</span>`;
                     // Use string comparison or conversion to avoid UUID type mismatch if table expects Integer
                     // Löschen hängt am Recht „Historie einer Maschine", nicht mehr am
                     // Namen des Nutzers — sonst zeigte die Liste anderen Löschknöpfe
@@ -743,6 +745,7 @@
 
                     html += `
                             <div class="history-item-premium">
+                                ${dateBlock}
                                 <div class="history-icon" style="position: absolute; left: -48px; top: 1.25rem; width: 32px; height: 32px; border-radius: 50%; background: ${item.color}20; border: 2.5px solid ${item.color}; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; box-shadow: 0 0 15px ${item.color}40; z-index: 2;">
                                     ${item.icon}
                                 </div>
@@ -763,7 +766,6 @@
                                         if (!t || t.toLowerCase() === typeLabel.toLowerCase()) return '';
                                         return `<h4 style="margin: 0 0 0.35rem 0; color: #fff; font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; white-space: pre-wrap;">${escHistoryText(t)}</h4>`;
                                     })()}
-                                    <div class="history-date-row">${dateBlock}</div>
                                     ${item.maintenanceScope ? `
                                     <div style="display:inline-flex; align-items:center; gap:5px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); color:var(--color-primary-green); border-radius:14px; padding:3px 10px; font-size:0.75rem; font-weight:700; margin-bottom:0.5rem;">
                                         Gewartet: ${escHistoryText(item.maintenanceScope)}
