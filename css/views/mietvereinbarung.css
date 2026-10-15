@@ -2503,13 +2503,15 @@ textarea.miet-in {
 /* Platzhalter („TT.MM.JJJJ“ u. a.) auch im gespeicherten PDF nicht zeigen. */
 .miet-pages.miet-pdf .miet-txt:empty::before { content: '' !important; }
 
-/* Schadenstabelle: Zeile entfernen (−) — sitzt rechts außerhalb der Tabelle, nicht auf Papier/PDF */
+/* Schadenstabelle: Zeile entfernen (−) — rechts IN der Zeile (außerhalb schnitt der
+   Blattrand es ab), nicht auf Papier/PDF */
 .miet-schaden-letzte {
     position: relative;
+    padding-right: 34px !important;
 }
 .miet-zeile-weg {
     position: absolute;
-    right: -30px;
+    right: 6px;
     top: 50%;
     transform: translateY(-50%);
     width: 22px;
@@ -2529,4 +2531,50 @@ textarea.miet-in {
 }
 .miet-zeile-weg:hover {
     background: #fee2e2;
+}
+
+/* ── Handy-Überstand (2026-10-14, gemessen bei 320/375/390 px) ─────────────────
+   1. Kopf „Zustand bei Übernahme“ darf umbrechen (nowrap galt auch für th).
+   2. Unterschriften unter den Fotos: Spalten dürfen schrumpfen, Beschriftung umbrechen.
+   3. Fußleiste: mit dem Knopf „Anlage“ war sie zu breit — kompakter.
+   4. iOS-Safari: input[type=date] ignoriert width:100% und hat eine feste
+      Mindestbreite → appearance:none + min-width:0, Wert linksbündig. */
+@media screen and (max-width: 768px) {
+    .miet-pages:not(.miet-a4) .miet-table:has(thead) th.miet-checkcell:not(.miet-dim) { white-space: normal; line-height: 1.2; }
+    .miet-pages:not(.miet-a4) .miet-sign-row { grid-template-columns: minmax(0, 1fr) !important; }
+    .miet-pages:not(.miet-a4) .miet-sign-row > div,
+    .miet-pages:not(.miet-a4) .miet-sign-pad { min-width: 0; max-width: 100%; box-sizing: border-box; }
+    .miet-pages:not(.miet-a4) .miet-sign-caption { flex-wrap: wrap; min-width: 0; }
+    .miet-pages:not(.miet-a4) .miet-sign-caption .miet-sign-name { white-space: normal; }
+
+    .miet-page input[type="date"],
+    .miet-page input[type="time"],
+    .miet-foto-sign-date input {
+        -webkit-appearance: none;
+        appearance: none;
+        min-width: 0;
+        max-width: 100%;
+        box-sizing: border-box;
+        display: block;
+    }
+    .miet-page .miet-sign-caption input[type="date"] { display: inline-block; width: auto; max-width: 150px; }
+    .miet-page input[type="date"]::-webkit-date-and-time-value,
+    .miet-page input[type="time"]::-webkit-date-and-time-value { text-align: left; min-width: 0; }
+
+    .miet-foot { gap: 6px; padding-left: 8px; padding-right: 8px; }
+    .miet-foot .btn-secondary, .miet-foot .btn-primary { padding: 0 10px; }
+    .miet-foot .btn-primary { min-width: 0; }
+    .miet-foot .miet-zoom button { padding: 0 8px; min-width: 32px; }
+    .miet-foot .miet-zoom #miet-zoom-wert { display: none; }
+}
+
+/* Kleine Handys (≤ 380 px, z. B. iPhone SE): Vertragstext einspaltig, Ankreuzspalte
+   schmaler, Fußleiste ohne Zoom-Knöpfe (Fingerzoom geht weiterhin). */
+@media screen and (max-width: 380px) {
+    .miet-pages:not(.miet-a4) .miet-recht > div { flex-direction: column !important; flex-wrap: nowrap !important; }
+    .miet-pages:not(.miet-a4) .miet-recht > div > * { width: 100% !important; max-width: 100% !important; min-width: 0 !important; }
+    .miet-pages:not(.miet-a4) .miet-recht-p { overflow-wrap: anywhere; hyphens: auto; }
+    .miet-pages:not(.miet-a4) .miet-table:has(thead) th.miet-checkcell:not(.miet-dim) { width: 128px !important; }
+    .miet-pages:not(.miet-a4) .miet-checkcell .miet-check { margin: 2px 2px 2px 0; gap: 2px; }
+    .miet-foot .miet-zoom { display: none !important; }
 }

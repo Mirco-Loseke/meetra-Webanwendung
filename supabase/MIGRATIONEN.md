@@ -163,3 +163,9 @@ Ein fest gesetztes `customer_id bigint` scheitert entweder am Fremdschlüssel
 | Datei | Wofür |
 |---|---|
 | `supabase_add_planung_dateien.sql` | **MUSS laufen.** Spalte `timeline_planung.dateien` (JSONB) — Dokumente direkt an einer geplanten Vermietung in der Timeline; ohne sie meldet das Hochladen „Migration fehlt“ |
+
+## Vorgänge zusammenführen (2026-10-14)
+
+| Datei | Wofür |
+|---|---|
+| `supabase_vorgaenge_zusammenfuehren.sql` | **MUSS laufen.** Funktion `vorgaenge_zusammenfuehren_loeschen(ziel, quellen)` (security definer): beim Kombinieren dürfen alle angemeldeten Nutzer die alten Vorgänge löschen, unabhängig vom Löschrecht „Vorgänge“ — nur wenn das Ziel existiert und keine Angebote mehr an den alten hängen. Ohne sie fällt die App auf das normale Löschen zurück (bleibt bei fehlendem Recht stehen) |

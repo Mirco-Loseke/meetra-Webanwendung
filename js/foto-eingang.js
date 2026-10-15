@@ -284,7 +284,7 @@
         let mitDatei = 0;
         liste.forEach(x => { const f = dateiPuffer.get(x.id); if (f && dt.items) { try { dt.items.add(f); mitDatei++; } catch (y) { /* Browser lässt es nicht zu */ } } });
         dt.setData('DownloadURL', (z.typ || 'image/jpeg') + ':' + dateiname(z) + ':' + z.url);
-        dt.setData('application/x-meetra-dateien', JSON.stringify(liste.map(x => ({ name: dateiname(x), url: x.url, type: x.typ || 'image/jpeg' }))));
+        dt.setData('application/x-meetra-dateien', JSON.stringify(liste.map(x => ({ name: dateiname(x), url: x.url, type: x.typ || 'image/jpeg', eingangId: x.id }))));
         const img = k.querySelector('img');
         if (img) dt.setDragImage(img, 40, 40);
         if (!mitDatei) toast('Foto lädt noch — falls nichts ankommt, kurz warten und nochmal ziehen, oder „📋 Bild kopieren“ und mit Strg+V einfügen.');
@@ -301,6 +301,8 @@
             c.getContext('2d').drawImage(bmp, 0, 0);
             const png = await new Promise(r => c.toBlob(r, 'image/png'));
             await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+            // Merker für den KI-Chat: dort eingefügt ⇒ Eingangszeile als zugeordnet markieren
+            window.fotoEingangKopiert = { id: z.id, groesse: png.size, zeit: Date.now() };
             toast('Bild kopiert — in der Mail mit Strg+V einfügen.', 'success');
         } catch (e) {
             console.warn('Foto-Eingang: kopieren', e);
@@ -790,5 +792,21 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
     else start();
 
-    window.fotoEingang = { laden, zuordnen, loeschen, handys, auswahlLeeren: () => { S.gewaehlt.clear(); zeichnen(); } };
+    // Von anderen Stellen (KI-Chat) verwendete Eingangsfotos als zugeordnet eintragen.
+    // Nur noch offene Zeilen — eine schon gemachte Zuordnung bleibt stehen.
+    async function extern(ids, art, zielId, titel) {
+        ids = [...new Set((ids || []).filter(Boolean))];
+        if (!ids.length || !sb()) return;
+        const { error } = await sb().from('foto_eingang').update({
+            zugeordnet_am: new Date().toISOString(),
+            zugeordnet_von: (window.activeUser && (window.activeUser.name || String(window.activeUser.id))) || null,
+            zugeordnet_typ: art, zugeordnet_id: String(zielId),
+            zugeordnet_text: (ARTEN.find(a => a.id === art) || { label: art }).label.split(' (')[0] + ': ' + (titel || '') + ' (KI)'
+        }).in('id', ids).is('zugeordnet_am', null);
+        if (error) { console.warn('Foto-Eingang: Zuordnung aus KI', error); return; }
+        S.gewaehlt.clear();
+        if (window.currentActiveView === 'foto-eingang') laden(); else zahlLaden();
+    }
+
+    window.fotoEingang = { laden, extern, zuordnen, loeschen, handys, auswahlLeeren: () => { S.gewaehlt.clear(); zeichnen(); } };
 })();

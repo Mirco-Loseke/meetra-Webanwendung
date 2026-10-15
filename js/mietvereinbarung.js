@@ -2877,6 +2877,8 @@
         daten.schaeden.splice(i, 1);
         // Eine leere Zeile bleibt immer stehen — sonst gäbe es nichts zum Eintippen.
         if (!daten.schaeden.length) daten.schaeden.push({ nr: '', position: '', beschreibung: '' });
+        // Neu durchzählen: jede Zeile mit Nummer bekommt ihre Position (1, 2, 3 …).
+        daten.schaeden.forEach((z, n) => { if (String(z.nr || '').trim()) z.nr = String(n + 1); });
         zeichneInhalt();
     };
 

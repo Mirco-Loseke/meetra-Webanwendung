@@ -3111,6 +3111,12 @@
             // beim Korrigieren eines Datums (z.B. von 22.06. auf 12.06.) die Korrektur ignorieren,
             // weil der alte, falsche Wert zufällig später lag. So spiegelt last_maintenance immer
             // den tatsächlich aktuellen Stand aller bekannten Wartungs-/Service-Termine wider.
+            // Wartungs-Schnelleintrag ohne Haken „Nächste Wartung neu setzen“: Kennzeichen im content.
+            // Solche Einträge zählen nicht für Letzte/Nächste Wartung.
+            window.WARTUNG_OHNE_TERMIN = '[ohne Termin]';
+            window.wartungOhneTermin = c => String(c || '').includes(window.WARTUNG_OHNE_TERMIN);
+            window.wartungOhneMarker = c => String(c || '').split(window.WARTUNG_OHNE_TERMIN).join('').trim();
+
             window.recalculateMachineMaintenanceFromHistory = async function (machineId) {
                 const numericMachineId = parseInt(machineId, 10);
                 try {
@@ -3135,7 +3141,7 @@
                     // berichte (ohne Wartungsprotokoll) setzen das Datum NICHT.
                     const entries = [];
                     (wartungRes.data || []).forEach(e => {
-                        if (e.created_at) entries.push({ date: e.created_at.split('T')[0], source: 'manual', note: e.content || null });
+                        if (e.created_at && !window.wartungOhneTermin(e.content)) entries.push({ date: e.created_at.split('T')[0], source: 'manual', note: e.content || null });
                     });
                     (serviceRes.data || []).forEach(e => {
                         if (!e.date) return;
@@ -3145,6 +3151,19 @@
                     });
 
                     if (!entries.length) {
+                        // Termin stammte aus der Historie (auto) und es gibt keine zählende Wartung mehr ⇒ wieder leer
+                        const auto = (machineRes.data.files || []).some(f => f && f.type === 'meta' && f.key === 'is_next_maintenance_auto');
+                        if (auto) {
+                            const rest = (machineRes.data.files || []).filter(f => !(f && f.type === 'meta' && f.key === 'is_next_maintenance_auto'));
+                            const { error: leerErr } = await window.supabaseClient.from('machines')
+                                .update({ last_maintenance: null, next_maintenance: null, last_maintenance_source: null, last_maintenance_note: null, files: rest })
+                                .eq('id', numericMachineId);
+                            if (leerErr) console.error('recalculateMachineMaintenanceFromHistory: Leeren fehlgeschlagen:', leerErr);
+                            else {
+                                if (typeof fetchMachines === 'function') await fetchMachines();
+                                if (window.showSyncToast) window.showSyncToast('Wartungstermin zurückgesetzt (keine Wartung mehr hinterlegt).', 'success');
+                            }
+                        }
                         console.warn('recalculateMachineMaintenanceFromHistory: Keine echten Wartungs-Daten für Maschine', numericMachineId, 'gefunden.');
                         return;
                     }

@@ -210,7 +210,9 @@
         p.addEventListener('click', klick);
         p.addEventListener('dragover', e => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) { e.preventDefault(); p.classList.add('kic-drop'); } });
         p.addEventListener('dragleave', e => { if (e.target === p) p.classList.remove('kic-drop'); });
-        p.addEventListener('drop', e => { e.preventDefault(); p.classList.remove('kic-drop'); bilderDazu(e.dataTransfer.files); });
+        p.addEventListener('drop', e => { e.preventDefault(); p.classList.remove('kic-drop'); let eingang = null;
+            try { eingang = JSON.parse(e.dataTransfer.getData('application/x-meetra-dateien') || 'null'); } catch (x) { /* nur Dateien */ }
+            bilderDazu(e.dataTransfer.files, eingang); });
         inp.addEventListener('paste', e => {
             const f = [...(e.clipboardData?.files || [])].filter(x => /^image\//.test(x.type));
             if (f.length) { e.preventDefault(); bilderDazu(f); }
@@ -321,15 +323,25 @@
             r.readAsDataURL(file);
         });
     }
-    async function bilderDazu(files) {
+    // eingang: [{name, eingangId}] aus dem Foto-Eingang gezogen; eingefügt: Merker vom „📋 Bild kopieren“
+    function eingangIdFuer(f, i, liste, eingang) {
+        if (eingang && eingang.length) {
+            const t = eingang.find(x => x.name === f.name) || (eingang.length === liste.length ? eingang[i] : null);
+            return t ? t.eingangId : null;
+        }
+        const k = window.fotoEingangKopiert;
+        if (k && Date.now() - k.zeit < 10 * 60000 && f.type === 'image/png' && Math.abs(f.size - k.groesse) < 64) return k.id;
+        return null;
+    }
+    async function bilderDazu(files, eingang) {
         const liste = [...(files || [])].filter(f => /^image\//.test(f.type));
         if (!liste.length) return;
         if (document.getElementById('kic-panel').hidden) oeffnen();
-        for (const f of liste.slice(0, 6)) {
+        for (const [i, f] of liste.slice(0, 6).entries()) {
             try {
                 const url = await verkleinern(f, 1280);
                 const nr = ++bildNr;
-                alleBilder[nr] = { url, file: f };
+                alleBilder[nr] = { url, file: f, eingangId: eingangIdFuer(f, i, liste, eingang) };
                 wartend.push({ nr, url, file: f });
             } catch (e) { toast('Bild konnte nicht gelesen werden: ' + f.name); }
         }
@@ -1078,12 +1090,29 @@ ${kontext}`;
             }
             a.status = 'fertig';
             render();
+            eingangAbhaken(a, k);
         } catch (e) {
             console.error('KI-Chat Aktion:', e);
             toast(e.message || 'Speichern fehlgeschlagen.');
             if (a.status === 'fertig') return render();
             btn.disabled = false; btn.textContent = 'Nochmal versuchen';
         }
+    }
+
+    // Bilder aus dem Foto-Eingang, die eine Aktion verwendet hat, dort als zugeordnet eintragen.
+    function eingangAbhaken(a, k) {
+        const ids = (a.bilder || []).map(nr => alleBilder[nr] && alleBilder[nr].eingangId).filter(Boolean);
+        if (!ids.length || !window.fotoEingang || !window.fotoEingang.extern) return;
+        const wert = sel => (k.querySelector(sel)?.value || '').trim();
+        let art = null, id = null, titel = '';
+        if (a.art === 'servicebericht') { art = 'servicebericht'; id = a.zielId; titel = 'Bericht'; }
+        else if (a.art === 'foto' || a.art === 'schaden' || a.art === 'handschrift') {
+            const m = wert('.kic-f-m') ? maschineAusFeld(wert('.kic-f-m')) : null;
+            const kd = !m && a.art === 'handschrift' && wert('.kic-f-adr') ? adresseAusFeld(wert('.kic-f-adr')) : null;
+            if (m) { art = 'maschine'; id = m.id; titel = machineLabel(m); }
+            else if (kd) { art = 'adresse'; id = kd.id; titel = kd.name || ''; }
+        }
+        if (art && id) window.fotoEingang.extern(ids, art, id, titel).catch(e => console.warn('Foto-Eingang abhaken', e));
     }
 
     function oeffneZiel(a) {

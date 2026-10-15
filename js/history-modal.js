@@ -1060,13 +1060,17 @@
                         <input type="text" id="manual-title" value="Wartung" class="glass-input" style="margin-bottom: 0.75rem;">
                         <label style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.5rem; display: block;">Art der Wartung</label>
                         <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 0.75rem;">
-                            ${['Motorwartung', 'SBA-Wartung', 'Hydraulikwartung', 'UVV-Wartung'].map(label => `
+                            ${['Motorwartung', 'SBA-Wartung', 'Hydraulikwartung', 'AdBlue-Wartung', 'UVV-Wartung'].map(label => `
                                 <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #fff; font-size: 0.9rem; padding: 8px 12px; border-radius: 8px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);">
                                     <input type="checkbox" class="manual-wartung-type" value="${label}" style="width: 18px; height: 18px; accent-color: #f97316; cursor: pointer;">
                                     ${label}
                                 </label>
                             `).join('')}
                         </div>
+                        <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; color: #fff; font-size: 0.9rem; padding: 10px 12px; border-radius: 8px; background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.35); margin-bottom: 0.75rem;">
+                            <input type="checkbox" id="manual-wartung-termin" checked style="width: 18px; height: 18px; accent-color: #f97316; cursor: pointer; flex-shrink: 0; margin-top: 2px;">
+                            <span><b>Nächste Wartung neu setzen</b> (+${wartungIntervall()} Monate ab diesem Datum)<br><span style="font-size: 0.8rem; color: rgba(255,255,255,0.55);">Ohne Haken bleibt der Termin der nächsten Wartung unverändert. Nachträglich abwählen stellt den vorherigen Termin wieder her.</span></span>
+                        </label>
                         <input type="hidden" id="manual-content">
                         <textarea id="manual-remark" placeholder="Notiz (optional)..." class="glass-input" style="min-height: 60px;"></textarea>
                     `;
@@ -1284,10 +1288,13 @@
 
                 // Wartung: angekreuzte Wartungsarten aus content (komma-getrennt) wiederherstellen
                 if (entry.type === 'wartung' && entry.content) {
-                    const checkedLabels = entry.content.split(',').map(s => s.trim());
+                    const ohne = window.wartungOhneTermin(entry.content);
+                    const checkedLabels = window.wartungOhneMarker(entry.content).split(',').map(s => s.trim());
                     document.querySelectorAll('.manual-wartung-type').forEach(cb => {
                         cb.checked = checkedLabels.includes(cb.value);
                     });
+                    const termin = document.getElementById('manual-wartung-termin');
+                    if (termin) termin.checked = !ohne;
                 }
 
                 // 4.5 Change button text and show delete button
@@ -1348,6 +1355,13 @@
             }
         };
 
+        // Intervall der aktuell geöffneten Maschine (wie recalculateMachineMaintenanceFromHistory)
+        function wartungIntervall() {
+            const m = (window.machineList || []).find(x => String(x.id) === String(window.currentHistoryMachineId));
+            const cat = m && (window.categoryList || []).find(c => c.id === m.category_id);
+            return (m && m.maintenance_interval_months) || (cat && cat.default_maintenance_interval_months) || 12;
+        }
+
         window.saveManualHistoryEntry = async function () {
             const submitBtn = document.querySelector('.btn-modal-save');
             if (submitBtn) {
@@ -1383,6 +1397,8 @@
                     return;
                 }
                 content = checkedTypes.join(', ');
+                const termin = document.getElementById('manual-wartung-termin');
+                if (termin && !termin.checked) content += ' ' + window.WARTUNG_OHNE_TERMIN;
             }
 
             if (!title) {

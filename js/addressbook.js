@@ -370,6 +370,7 @@
             ]);
 
             state.addresses = addresses;
+            dubIgnoriertLaden().then(() => { try { renderAddressList(); } catch (e) { /* egal */ } });
             state.byId = new Map(addresses.map(a => [String(a.id), a]));
 
             // Maschinen je Adresse (nur IDs/Kurzdaten – für Zähler auf der Karte)
@@ -1068,7 +1069,7 @@
         if (links) chips.push(`<span class="ab-chip ab-chip-link">${ic('link', 13)} ${links} im Verbund</span>`);
         // Starker Dubletten-Verdacht schon auf der Karte (gleiche Schwelle wie im Detail-Kopf)
         const dub = dublettenVerdacht(a);
-        if (dub) chips.push(`<span class="ab-chip" role="button" style="cursor:pointer; color:var(--warning, #f59e0b); border-color:rgba(245,158,11,0.5);" title="${esc('Möglicherweise doppelt mit ' + dub.addr.name + (dub.addr.address_number ? ' (Adr. ' + dub.addr.address_number + ')' : '') + ' — ' + dub.reasons.join(', ') + '. Klicken zum Zusammenführen.')}" onclick="event.stopPropagation(); window.adresseZusammenfuehren && window.adresseZusammenfuehren('${esc(id)}', '${esc(dub.addr.id)}')">⚠️ doppelt?</span>`);
+        if (dub) chips.push(`<span class="ab-chip" role="button" style="cursor:pointer; color:var(--warning, #f59e0b); border-color:rgba(245,158,11,0.5);" title="${esc('Möglicherweise doppelt mit ' + dub.addr.name + (dub.addr.address_number ? ' (Adr. ' + dub.addr.address_number + ')' : '') + ' — ' + dub.reasons.join(', ') + '. Klicken zum Zusammenführen; „Ignorieren“ in der Adresse.')}" onclick="event.stopPropagation(); window.adresseZusammenfuehren && window.adresseZusammenfuehren('${esc(id)}', '${esc(dub.addr.id)}')">⚠️</span>`);
 
         const pos = state.selectMode ? state.selection.indexOf(id) : -1;
         const selected = pos >= 0;
@@ -1563,6 +1564,8 @@
 
         // Vorgänge dieser Adresse + aller Cluster-Maschinen aus dem Vorgänge-Modul
         tasks.push((async () => {
+            // Je Adresse neu bewerten — vorher blieb ein einmaliger Fehler bis zum Neuladen stehen.
+            state.detail.processesError = null;
             try {
                 const allClusterCustomerIds = [id, ...Array.from(state.detail.clusterMeta.keys())];
                 const allClusterMachines = state.detail.allClusterMachines || [];
@@ -1595,7 +1598,7 @@
             } catch (err) {
                 console.warn('Vorgänge zur Adresse konnten nicht geladen werden:', err.message || err);
                 state.detail.processes = [];
-                state.detail.processesError = true;
+                state.detail.processesError = String((err && (err.message || err.code)) || err || 'unbekannt');
             }
         })());
 
@@ -1764,9 +1767,10 @@
             </header>
             ${(() => {
                 // Starker Dubletten-Verdacht (gleiche Anschrift/Mail/Telefon + ähnlicher Name) → Hinweis
-                const d = findDuplicateAddresses(a, a.id).filter(x => x.score >= 0.9);
+                const d = findDuplicateAddresses(a, a.id).filter(x => x.score >= 0.9 && !dubIstIgnoriert(a.id, x.addr.id));
                 if (!d.length) return '';
-                return `<div class="ab-dubletten-hinweis">⚠️ Möglicherweise doppelt: ${d.slice(0, 3).map(x => `<button type="button" class="ab-dublette-btn" onclick="window.adresseZusammenfuehren && window.adresseZusammenfuehren('${esc(a.id)}', '${esc(x.addr.id)}')" title="${esc(x.reasons.join(', '))}">${esc(x.addr.name)}${x.addr.address_number ? ' · Adr. ' + esc(x.addr.address_number) : ''}${x.addr.city ? ' · ' + esc(x.addr.city) : ''} → zusammenführen</button>`).join('')}</div>`;
+                // Dezent: eingeklappt, Klick zeigt die Vorschläge mit „Zusammenführen“ / „Ignorieren“.
+                return `<details class="ab-dubletten-hinweis"><summary>⚠️ Möglicherweise doppelt (${d.length > 3 ? 3 : d.length})</summary><div class="ab-dubletten-liste">${d.slice(0, 3).map(x => `<div class="ab-dublette-zeile"><span title="${esc(x.reasons.join(', '))}">${esc(x.addr.name)}${x.addr.address_number ? ' · Adr. ' + esc(x.addr.address_number) : ''}${x.addr.city ? ' · ' + esc(x.addr.city) : ''}</span><button type="button" class="ab-dublette-btn" onclick="window.adresseZusammenfuehren && window.adresseZusammenfuehren('${esc(a.id)}', '${esc(x.addr.id)}')">Zusammenführen</button><button type="button" class="ab-dublette-btn ab-dublette-ign" onclick="window.adresseDubletteIgnorieren('${esc(a.id)}', '${esc(x.addr.id)}')" title="Ist nicht doppelt — nicht mehr vorschlagen">Ignorieren</button></div>`).join('')}</div></details>`;
             })()}
 
             <nav class="ab-tabs">
@@ -3088,9 +3092,13 @@
             </div>`;
         }).join('');
 
-        const migrationHint = state.detail.processesError
+        // Nur wenn die Spalte wirklich fehlt, auf die Migration verweisen — sonst den echten Fehler
+        // (meist Netz/Anmeldung) mit „Erneut laden“ zeigen.
+        const pe = state.detail.processesError;
+        const migrationHint = !pe ? ''
+            : /customer_id/.test(pe) && /column|Spalte|does not exist|schema cache/i.test(pe)
             ? `<div class="ab-empty" style="border-color:rgba(248,113,113,0.4);"><div class="ab-empty-title" style="color:#f87171;">Adressbezug fehlt in der Datenbank</div><div class="ab-empty-text">Bitte <strong>supabase_add_process_customer.sql</strong> im Supabase SQL-Editor ausführen. Danach lassen sich Vorgänge an Adressen hängen.</div></div>`
-            : '';
+            : `<div class="ab-empty" style="border-color:rgba(248,113,113,0.4);"><div class="ab-empty-title" style="color:#f87171;">Vorgänge konnten nicht geladen werden</div><div class="ab-empty-text">${esc(pe)}</div><button type="button" class="ab-btn ab-btn-secondary" style="margin-top:10px;" onclick="window.addressbookDetailNeuLaden && window.addressbookDetailNeuLaden()">Erneut laden</button></div>`;
 
         return `
         <div class="ab-section-head">
@@ -3118,6 +3126,12 @@
     // dem ersten, der eines hat. Angebote (angebote.process_id) zeigen danach
     // alle auf das Ziel — die Angebotsliste öffnet damit denselben Vorgang und
     // zeigt dieselben Stände und Dokumente. Die Quellen werden gelöscht.
+    window.addressbookDetailNeuLaden = async function () {
+        if (!state.currentId) return;
+        await loadDetailData(state.currentId);
+        renderDetail();
+    };
+
     async function vorgaengeZusammenfuehren() {
         const ids = [...(state.detail.kombiAuswahl || [])];
         const alle = (state.detail.processes || []).filter(p => ids.includes(String(p.id)));
@@ -3170,9 +3184,18 @@
             // Scheitert das Umhängen, NICHT löschen — sonst hingen die Angebote an
             // gelöschten Vorgängen (oder würden je nach Datenbank mitgelöscht).
             if (aErr) throw new Error('Angebote konnten nicht umgehängt werden (' + aErr.message + ') — die Vorgänge wurden nicht gelöscht.');
-            const { data: weg, error: dErr } = await sb().from('internal_processes').delete().in('id', qIds).select('id');
-            if (dErr) throw dErr;
-            if ((weg || []).length < qIds.length) window.showToast('Zusammengeführt, aber ' + (qIds.length - (weg || []).length) + ' alte(r) Vorgang/Vorgänge konnte(n) nicht gelöscht werden — bitte von Hand löschen.');
+            // Löschen über die Datenbank-Funktion: darf jeder angemeldete Nutzer, unabhängig
+            // vom Löschrecht „Vorgänge“ (RLS ließ es sonst still stehen). Fehlt die Funktion
+            // (Migration supabase_vorgaenge_zusammenfuehren.sql nicht gelaufen) → normales Löschen.
+            let geloescht;
+            const rpc = await sb().rpc('vorgaenge_zusammenfuehren_loeschen', { ziel: String(ziel.id), quellen: qIds.map(String) });
+            if (!rpc.error) geloescht = rpc.data || 0;
+            else if (/function|could not find|PGRST202|42883/i.test((rpc.error.code || '') + ' ' + (rpc.error.message || ''))) {
+                const { data: weg, error: dErr } = await sb().from('internal_processes').delete().in('id', qIds).select('id');
+                if (dErr) throw dErr;
+                geloescht = (weg || []).length;
+            } else throw rpc.error;
+            if (geloescht < qIds.length) window.showToast('Zusammengeführt, aber ' + (qIds.length - geloescht) + ' alte(r) Vorgang/Vorgänge konnte(n) nicht gelöscht werden — Migration supabase_vorgaenge_zusammenfuehren.sql ausführen oder von Hand löschen.');
             // Lokal nachziehen — Vorgänge-Seite und Angebotsliste laden ohnehin per Realtime nach
             if (window.eventsState && Array.isArray(window.eventsState.processes)) {
                 window.eventsState.processes = window.eventsState.processes.filter(p => !qIds.includes(p.id));
@@ -3569,12 +3592,44 @@
 
     // Für die Karten: bester starker Treffer je Adresse, gepuffert solange state.addresses
     // dasselbe Array ist (die Suche läuft über alle Adressen — nicht bei jedem Zeichnen neu).
+    // „Ignorieren“: Paare, die NICHT doppelt sind — für alle Nutzer in app_settings
+    // (Schlüssel dubletten_ignoriert, Wert { paare: ['idA|idB', …] }, IDs sortiert),
+    // localStorage nur als schneller Start/Offline-Rückfall.
+    const DUB_KEY = 'dubletten_ignoriert';
+    let dubIgnoriert = new Set((() => { try { return JSON.parse(localStorage.getItem('meetra_' + DUB_KEY) || '[]'); } catch (e) { return []; } })());
+    const dubPaar = (a, b) => [String(a), String(b)].sort().join('|');
+    const dubIstIgnoriert = (a, b) => dubIgnoriert.has(dubPaar(a, b));
+    async function dubIgnoriertLaden() {
+        try {
+            const { data } = await sb().from('app_settings').select('value').eq('key', DUB_KEY).limit(1);
+            const paare = data && data[0] && data[0].value && data[0].value.paare;
+            if (Array.isArray(paare)) {
+                dubIgnoriert = new Set(paare);
+                try { localStorage.setItem('meetra_' + DUB_KEY, JSON.stringify(paare)); } catch (e) { /* egal */ }
+                dubPuffer = { liste: null, map: new Map() };
+            }
+        } catch (e) { /* offline — lokale Liste gilt */ }
+    }
+    window.adresseDubletteIgnorieren = async function (a, b) {
+        // Frisch lesen und ergänzen, damit gleichzeitige Einträge anderer nicht verloren gehen.
+        await dubIgnoriertLaden();
+        dubIgnoriert.add(dubPaar(a, b));
+        const paare = [...dubIgnoriert];
+        try { localStorage.setItem('meetra_' + DUB_KEY, JSON.stringify(paare)); } catch (e) { /* egal */ }
+        dubPuffer = { liste: null, map: new Map() };
+        const { error } = await sb().from('app_settings').upsert({ key: DUB_KEY, value: { paare } });
+        if (error) window.showToast('Nur in diesem Browser gemerkt: ' + error.message);
+        else window.showToast('Wird nicht mehr als doppelt vorgeschlagen.');
+        if (state.currentId) renderDetail();
+        try { renderAddressList(); } catch (e) { /* Liste evtl. nicht offen */ }
+    };
+
     let dubPuffer = { liste: null, map: new Map() };
     function dublettenVerdacht(a) {
         if (dubPuffer.liste !== state.addresses) dubPuffer = { liste: state.addresses, map: new Map() };
         const k = String(a.id);
         if (!dubPuffer.map.has(k)) {
-            const d = findDuplicateAddresses(a, a.id).filter(x => x.score >= 0.9);
+            const d = findDuplicateAddresses(a, a.id).filter(x => x.score >= 0.9 && !dubIstIgnoriert(a.id, x.addr.id));
             dubPuffer.map.set(k, d[0] || null);
         }
         return dubPuffer.map.get(k);
