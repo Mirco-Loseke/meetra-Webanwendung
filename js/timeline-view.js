@@ -488,6 +488,8 @@
             if (!bis) bis = von;
             if (bis < von) bis = von;
             var satz = parseFloat(String(miete.tagessatz || '').replace(',', '.'));
+            // Stand der Mietvereinbarung selbst — der Balken darf zum Planen davon abweichen.
+            var mVon = ausDB(miete.beginn) || '', mBis = ausDB(miete.ende) || '';
             ITEMS.push({
                 id: 'ra-' + r.id, dbId: r.id, quelle: 'rental_agreements', sorte: 'miete',
                 titel: mieter.name || r.title || 'Vermietung',
@@ -497,6 +499,7 @@
                 kunde: mieter.name || kundeText(mieter.customer_id) || null,
                 einsatzort: mieter.einsatzort || null,
                 planId: dat.plan_id ? String(dat.plan_id) : null,
+                mVon: mVon, mBis: mBis,
                 pdfUrl: r.pdf_url || null,
                 anlagen: Array.isArray(dat.anlagen) ? dat.anlagen : [],
                 status: bis < key(HEUTE) ? 'zurueck' : (von > key(HEUTE) ? 'reserviert' : 'draussen')
@@ -791,17 +794,15 @@
                 await pruefe(client.from(it.quelle).update(f).eq('id', it.dbId));
 
             } else if (it.quelle === 'rental_agreements') {
-                // Balken der Mietvereinbarung selbst verschoben: erst fragen, was übernommen wird.
-                await mietAbgleichen(it, it, it.von, it.bis, true);
+                /* Balken der Mietvereinbarung verschoben: bewusst NICHT sofort in die
+                   Vereinbarung schreiben — zum Planen soll man frei schieben können.
+                   Das Detailfenster zeigt die Abweichung mit „Übernehmen“ (mietAbweichung). */
 
             } else if (it.quelle === 'absences') {
                 await pruefe(client.from('absences').update({ von: it.von, bis: it.bis }).eq('id', it.dbId));
 
             } else if (it.quelle === 'timeline_planung') {
                 await pruefe(client.from('timeline_planung').update({ von: it.von, bis: it.bis }).eq('id', it.dbId));
-                // Hängt an dieser Planung schon eine Mietvereinbarung? Dann fragen, ob die Daten mit sollen.
-                var vertrag = mietZuPlan(it);
-                if (vertrag) await mietAbgleichen(vertrag, it, it.von, it.bis, false);
             }
         } catch (e) {
             console.error('[timeline] Speichern fehlgeschlagen', e);
@@ -811,67 +812,63 @@
     }
     async function pruefe(p) { var r = await p; if (r && r.error) throw r.error; return r; }
 
-    /* Mietvereinbarung nach dem Verschieben abgleichen. Gefragt wird nur nach dem,
-       was sich gegenüber der gespeicherten Vereinbarung geändert hat: Beginn, Ende
-       oder beides. vertrag = Balken der Vereinbarung (quelle rental_agreements),
-       selbst = true, wenn genau dieser Balken gezogen wurde — „Nicht übernehmen“
-       setzt ihn dann auf die gespeicherten Daten zurück. */
-    async function mietAbgleichen(vertrag, gezogen, von, bis, selbst) {
-        var client = sb();
-        var res = await client.from('rental_agreements').select('data').eq('id', vertrag.dbId).single();
-        if (res.error) throw res.error;
-        var dat = res.data.data || {};
-        dat.miete = dat.miete || {};
-        var altVon = dat.miete.beginn || '', altBis = dat.miete.ende || '';
-        var beginnNeu = von !== altVon, endeNeu = bis !== altBis;
-        if (!beginnNeu && !endeNeu) return;
-        var wahl = await mietFrage(vertrag, altVon, altBis, von, bis, beginnNeu, endeNeu);
-        var nimmVon = wahl === 'beides' || wahl === 'beginn';
-        var nimmBis = wahl === 'beides' || wahl === 'ende';
-        if (nimmVon) dat.miete.beginn = von;
-        if (nimmBis) dat.miete.ende = bis;
-        if (nimmVon || nimmBis) {
-            await pruefe(client.from('rental_agreements').update({ data: dat }).eq('id', vertrag.dbId));
-            meldung('Mietvereinbarung: ' + [nimmVon ? 'Beginn ' + dez(parse(von)) : '', nimmBis ? 'Ende ' + dez(parse(bis)) : ''].filter(Boolean).join(', ') + ' übernommen');
-        }
-        // Balken der Vereinbarung zeigt, was jetzt wirklich gespeichert ist
-        if (dat.miete.beginn) vertrag.von = dat.miete.beginn;
-        if (dat.miete.ende) vertrag.bis = dat.miete.ende;
-        if (vertrag.bis < vertrag.von) vertrag.bis = vertrag.von;
-        if (selbst && !(nimmVon && nimmBis)) meldung(nimmVon || nimmBis ? 'Nur teilweise übernommen — Balken zeigt die gespeicherten Daten' : 'Nicht übernommen — Balken zurück auf die Mietvereinbarung');
-        zeichne();
+    /* Abweichung zwischen Balken und gespeicherter Mietvereinbarung.
+       quelle = der Balken mit den gewünschten Daten (Planung oder Vereinbarung selbst),
+       vertrag = der Balken der Vereinbarung (mVon/mBis = gespeicherter Stand). */
+    function mietAbweichung(it) {
+        var vertrag = it.quelle === 'rental_agreements' ? it
+            : (it.quelle === 'timeline_planung' && it.art === 'miete' ? mietZuPlan(it) : null);
+        // Vereinbarung ohne Mietbeginn liegt nur vorläufig auf heute — erst nach dem Hinziehen vergleichen.
+        if (!vertrag || it.vorlaeufig) return null;
+        var beginnNeu = it.von !== vertrag.mVon, endeNeu = it.bis !== vertrag.mBis;
+        if (!beginnNeu && !endeNeu) return null;
+        return { vertrag: vertrag, von: it.von, bis: it.bis, beginnNeu: beginnNeu, endeNeu: endeNeu };
     }
-
-    function mietFrage(vertrag, altVon, altBis, von, bis, beginnNeu, endeNeu) {
-        return new Promise(function (fertig) {
-            var d = function (k) { return k ? dez(parse(k)) : '—'; };
-            var knoepfe = [];
-            if (beginnNeu && endeNeu) knoepfe.push(['beides', 'Beginn und Ende übernehmen', true]);
-            if (endeNeu) knoepfe.push(['ende', 'Nur Mietende übernehmen', !beginnNeu]);
-            if (beginnNeu) knoepfe.push(['beginn', 'Nur Mietbeginn übernehmen', !endeNeu]);
-            knoepfe.push(['nein', 'Nicht übernehmen', false]);
-            var hg = document.createElement('div');
-            hg.className = 'tlv-mf-hg';
-            hg.innerHTML = '<div class="tlv-mf" role="dialog" aria-modal="true">'
-                + '<h3>In Mietvereinbarung übernehmen?</h3>'
-                + '<p class="tlv-mf-wer">' + esc(vertrag.titel || 'Vermietung') + '</p>'
-                + '<div class="tlv-mf-zeilen">'
-                + '<div' + (beginnNeu ? ' class="neu"' : '') + '><span>Mietbeginn</span><b>' + d(altVon) + (beginnNeu ? ' → ' + d(von) : '') + '</b></div>'
-                + '<div' + (endeNeu ? ' class="neu"' : '') + '><span>Mietende</span><b>' + d(altBis) + (endeNeu ? ' → ' + d(bis) : '') + '</b></div>'
-                + '</div><div class="tlv-mf-knoepfe">'
-                + knoepfe.map(function (k) { return '<button type="button" data-w="' + k[0] + '" class="' + (k[2] ? 'btn-primary' : 'btn-secondary') + '">' + k[1] + '</button>'; }).join('')
-                + '</div></div>';
-            document.body.appendChild(hg);
-            function zu(w) { document.removeEventListener('keydown', taste); hg.remove(); fertig(w); }
-            function taste(e) { if (e.key === 'Escape') zu('nein'); }
-            document.addEventListener('keydown', taste);
-            hg.addEventListener('click', function (e) {
-                var b = e.target.closest('[data-w]');
-                if (b) zu(b.dataset.w);
-            });
-            var erster = hg.querySelector('.btn-primary') || hg.querySelector('button');
-            if (erster) erster.focus();
-        });
+    function abweichungBlock(it) {
+        var a = mietAbweichung(it);
+        if (!a) return '';
+        var d = function (k) { return k ? dez(parse(k)) : '—'; };
+        var knoepfe = [];
+        if (a.beginnNeu && a.endeNeu) knoepfe.push(['beides', 'Beginn und Ende übernehmen', true]);
+        if (a.endeNeu) knoepfe.push(['ende', a.beginnNeu ? 'Nur Ende' : 'Mietende übernehmen', !a.beginnNeu]);
+        if (a.beginnNeu) knoepfe.push(['beginn', a.endeNeu ? 'Nur Beginn' : 'Mietbeginn übernehmen', !a.endeNeu]);
+        return '<div class="tlv-abw">'
+            + '<div class="tlv-abw-kopf">Weicht von der Mietvereinbarung ab</div>'
+            + '<div class="tlv-mf-zeilen">'
+            + '<div' + (a.beginnNeu ? ' class="neu"' : '') + '><span>Mietbeginn</span><b>' + d(a.vertrag.mVon) + (a.beginnNeu ? ' → ' + d(a.von) : '') + '</b></div>'
+            + '<div' + (a.endeNeu ? ' class="neu"' : '') + '><span>Mietende</span><b>' + d(a.vertrag.mBis) + (a.endeNeu ? ' → ' + d(a.bis) : '') + '</b></div>'
+            + '</div><div class="tlv-abw-knoepfe">'
+            + knoepfe.map(function (k) { return '<button type="button" data-abw="' + k[0] + '" class="' + (k[2] ? 'btn-primary' : 'btn-secondary') + '">' + k[1] + '</button>'; }).join('')
+            + '</div></div>';
+    }
+    async function abweichungUebernehmen(it, wahl) {
+        var a = mietAbweichung(it); if (!a) return;
+        var nimmVon = (wahl === 'beides' || wahl === 'beginn') && a.beginnNeu;
+        var nimmBis = (wahl === 'beides' || wahl === 'ende') && a.endeNeu;
+        if (!nimmVon && !nimmBis) return;
+        try {
+            var client = sb();
+            var res = await client.from('rental_agreements').select('data').eq('id', a.vertrag.dbId).single();
+            if (res.error) throw res.error;
+            var dat = res.data.data || {};
+            dat.miete = dat.miete || {};
+            if (nimmVon) dat.miete.beginn = a.von;
+            if (nimmBis) dat.miete.ende = a.bis;
+            await pruefe(client.from('rental_agreements').update({ data: dat }).eq('id', a.vertrag.dbId));
+            if (nimmVon) a.vertrag.mVon = a.von;
+            if (nimmBis) a.vertrag.mBis = a.bis;
+            // Bei einer Planung zieht der Balken der Vereinbarung auf den neuen Stand mit.
+            if (a.vertrag !== it) {
+                if (nimmVon) a.vertrag.von = a.von;
+                if (nimmBis) a.vertrag.bis = a.bis;
+                if (a.vertrag.bis < a.vertrag.von) a.vertrag.bis = a.vertrag.von;
+            }
+            a.vertrag.vorlaeufig = false;
+            meldung('In Mietvereinbarung übernommen: ' + [nimmVon ? 'Beginn ' + dez(parse(a.von)) : '', nimmBis ? 'Ende ' + dez(parse(a.bis)) : ''].filter(Boolean).join(', '), false);
+            zeichne(); zeichnePanel();
+        } catch (e) {
+            meldung('Nicht übernommen: ' + (e && e.message ? e.message : e), false);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -1484,6 +1481,7 @@
                 if (i.unsicher) cls.push('unsicher');
                 if (i.sorte === 'aufbereitung') cls.push('aufbereitung');
                 if (i.sorte === 'abwesend') cls.push('abwesend');
+                if (i.sorte === 'miete' && mietAbweichung(i)) cls.push('abweichend');
                 // Maschine/WA (und bei eingeklappter Aufgabe "Verantwortlich: …")
                 // stehen zusaetzlich AUF dem Balken — jede Zeile laesst ihn
                 // (und seine Zeile) etwas hoeher werden, siehe zeilenBauen()
@@ -3163,6 +3161,7 @@
                + (plan.notiz ? '<div class="kv"><span>Notiz</span><b>' + esc(plan.notiz) + '</b></div>' : '');
             var vertrag = plan.art === 'miete' ? mietZuPlan(plan) : null;
             if (plan.art !== 'aufbereitung') h += dokBlock(plan, vertrag);
+            h += abweichungBlock(plan);
             h += '<div class="acts">'
                + (plan.art === 'miete' && typeof window.openMietvereinbarung === 'function'
                    ? '<button class="btn-primary" id="tlv-plan-miet">' + (vertrag ? 'Mietvereinbarung bearbeiten' : 'Mietvereinbarung erstellen') + '</button>' : '')
@@ -3175,6 +3174,7 @@
                 // Vermietung, die direkt im Mietbogen angelegt wurde (ohne Planung):
                 // gleiche Knöpfe wie bei geplanten — Bearbeiten und Löschen.
                 h += dokBlock(it.planId ? eintrag('tp-' + it.planId) : null, it);
+                h += abweichungBlock(it);
                 h += '<div class="acts"><button class="btn-primary" id="tlv-oeffnen">Mietvereinbarung bearbeiten</button>'
                    + '<button class="btn-secondary" id="tlv-miet-weg">Löschen</button></div>';
             } else h += '<div class="acts">' + oeffnenKnopf(it) + '</div>';
@@ -3197,6 +3197,9 @@
         if (zu) zu.onclick = function () { S.gewaehlt = null; zeichnePanel(); };
         var oeff = document.getElementById('tlv-oeffnen');
         if (oeff) oeff.onclick = function () { oeffne(it); };
+        Array.prototype.forEach.call(p.querySelectorAll('[data-abw]'), function (b) {
+            b.onclick = function () { abweichungUebernehmen(plan || it, b.dataset.abw); };
+        });
         var mWeg = document.getElementById('tlv-miet-weg');
         if (mWeg) mWeg.onclick = function () { mietLoeschen(it); };
 
