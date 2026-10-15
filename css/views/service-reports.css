@@ -465,3 +465,46 @@
         grid-column: 1 / -1;
     }
 }
+
+/* ── Servicebericht auf dem Handy: ein Rollbereich statt Mini-Kasten (2026-10-15) ──
+   Die Abschnitte 1–5 und die Knöpfe stehen im Markup AUSSERHALB von
+   .modal-scroll-area. Mit flex:1 bekam der Rollbereich (Maschine, Kunde,
+   Adresse) auf dem Handy nur den Rest der Höhe — rund 90 px, sichtbar war
+   nur das Suchfeld. Jetzt rollt das ganze Fenster am Stück. */
+@media (max-width: 768px) {
+    #servicebericht-modal .modal-content {
+        display: block !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        padding-bottom: 0 !important;
+    }
+    #servicebericht-modal .modal-scroll-area {
+        flex: none !important;
+        overflow: visible !important;
+        max-height: none !important;
+    }
+    /* Knöpfe bleiben unten erreichbar */
+    #servicebericht-modal .modal-actions {
+        position: sticky;
+        bottom: 0;
+        z-index: 5;
+        background: var(--bg-surface, #0f172a);
+        padding: var(--space-3) 0 calc(var(--space-3) + env(safe-area-inset-bottom)) !important;
+        margin-top: var(--space-3) !important;
+    }
+    /* Maschinenkarte kompakt: kleineres Bild, Name lesbar statt riesig */
+    #servicebericht-modal #selected-machine-preview {
+        padding: var(--space-3) !important;
+        margin-top: var(--space-3) !important;
+        border-radius: var(--radius-lg) !important;
+    }
+    #servicebericht-modal #selected-machine-preview > div:last-child { gap: var(--space-3) !important; }
+    #servicebericht-modal #preview-image { width: 56px !important; height: 56px !important; flex: none; }
+    #servicebericht-modal #preview-name { font-size: var(--fs-lg) !important; }
+    #servicebericht-modal #preview-category { font-size: var(--fs-sm) !important; margin-top: 2px !important; }
+    #servicebericht-modal #selection-lock-hint { right: 12px !important; }
+    #servicebericht-modal #selected-machine-customer-preview {
+        padding: var(--space-3) !important;
+        margin-top: var(--space-2) !important;
+    }
+}
