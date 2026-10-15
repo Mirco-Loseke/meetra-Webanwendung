@@ -2700,3 +2700,13 @@ textarea.miet-in {
 
 /* Lila Büroklammer in der Liste (Fotos der Vermietung) — Optik wie in der Historie */
 .miet-liste-klammer { position: relative; background: rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.4); color: #a78bfa; flex: none; }
+
+/* Leeres Unterschriftsdatum: im PDF und Ausdruck kein „tt.mm.jjjj“ — die Linie bleibt zum Eintragen von Hand */
+.miet-pdf .miet-sign-date.leer,
+.miet-pdf .miet-sign-date.leer::-webkit-datetime-edit { color: transparent !important; }
+@media print {
+    .miet-sign-date.leer,
+    .miet-sign-date.leer::-webkit-datetime-edit { color: transparent !important; }
+    .miet-sign-date.leer::-webkit-calendar-picker-indicator { display: none; }
+}
+.miet-pdf .miet-sign-date.leer::-webkit-calendar-picker-indicator { display: none; }

@@ -88,7 +88,7 @@
             // Hinten angehängte Dateien (z. B. unterschriebenes Original): [{ name, url, path, type }]
             anlagen: [],
             unterschriften: {
-                u_vermieter: null, u_mieter: null, u_datum: heute(),   // Übergabe
+                u_vermieter: null, u_mieter: null, u_datum: '',        // Übergabe — Datum trägt der Unterzeichner selbst ein
                 r_vermieter: null, r_mieter: null, r_datum: ''       // Rücknahme
             }
         };
@@ -2719,9 +2719,9 @@
             </div>
             <div class="miet-sign-caption">
                 <span class="miet-sign-name">${esc(beschriftung)}${datumPfad ? ',' : ''}</span>
-                ${datumPfad ? `<input type="date" class="miet-in miet-sign-date" data-signdate="${esc(datumPfad)}"
+                ${datumPfad ? `<input type="date" class="miet-in miet-sign-date${datumWert ? '' : ' leer'}" data-signdate="${esc(datumPfad)}"
                        value="${esc(datumWert || '')}" onclick="event.stopPropagation();"
-                       oninput="window.mietSignDatum('${datumPfad}', this.value)">` : ''}
+                       oninput="this.classList.toggle('leer', !this.value); window.mietSignDatum('${datumPfad}', this.value)">` : ''}
                 ${bild ? `<button type="button" onclick="event.stopPropagation(); window.mietSignLoeschen('${schluessel}')">löschen</button>` : ''}
             </div>
         </div>`;

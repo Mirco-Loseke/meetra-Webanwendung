@@ -508,3 +508,47 @@
         margin-top: var(--space-2) !important;
     }
 }
+
+/* ── Servicebericht Abschnitt 1: festes Raster (2026-10-15) ──
+   Beschriftung immer oben, gleiche Höhe und Breite für alle Felder. */
+#servicebericht-modal .sb-raster {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: var(--space-4) var(--space-5, 20px) !important;
+    margin: var(--space-3) 0 var(--space-5, 20px) !important;
+}
+#servicebericht-modal .sb-feld { display: flex; flex-direction: column; gap: 6px; min-width: 0; margin: 0; }
+#servicebericht-modal .sb-feld > label {
+    display: block;
+    margin: 0;
+    font-size: var(--fs-xs);
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--text-2);
+}
+#servicebericht-modal .sb-feld > .glass-form-input {
+    width: 100%;
+    height: 46px;
+    box-sizing: border-box;
+    margin: 0;
+}
+#servicebericht-modal .sb-wa { display: flex; align-items: center; gap: 2px; padding: 0 14px; }
+#servicebericht-modal .sb-wa span { color: #fff; font-weight: 600; user-select: none; }
+#servicebericht-modal .sb-wa input {
+    background: transparent;
+    border: 0;
+    outline: none;
+    color: #fff;
+    font-weight: 600;
+    font-size: inherit;
+    padding: 0;
+    height: 100%;
+}
+#servicebericht-modal .sb-wa .sb-wa-jahr { width: 1.1em; text-align: center; border-bottom: 1px dashed rgba(255, 255, 255, 0.35); height: 1.4em; }
+#servicebericht-modal .sb-wa .sb-wa-nr { flex: 1; min-width: 0; }
+@media (max-width: 768px) {
+    #servicebericht-modal .sb-raster { grid-template-columns: 1fr !important; gap: var(--space-3) !important; }
+    /* unter 16px zoomt iOS beim Antippen hinein */
+    #servicebericht-modal .sb-wa, #servicebericht-modal .sb-wa input { font-size: 16px !important; }
+}

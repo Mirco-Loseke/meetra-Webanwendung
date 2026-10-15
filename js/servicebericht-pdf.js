@@ -91,6 +91,31 @@
 
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF();
+                // Handbericht wird ausgedruckt und von Hand ausgefüllt: alle Linien und
+                // Kästen kräftiger und dunkler. Zentral hier, statt an den ~25 Stellen
+                // einzeln — dünne/helle Linien (0,1–0,3 mm, grau) verschwinden im Druck.
+                if (handbericht) {
+                    const DUNKEL = 70, MIN_LINIE = 0.45;
+                    const altBreite = doc.setLineWidth.bind(doc);
+                    doc.setLineWidth = w => altBreite(Math.max(Number(w) || 0, MIN_LINIE));
+                    const altFarbe = doc.setDrawColor.bind(doc);
+                    doc.setDrawColor = function (r, g, b) {
+                        // Nur Graustufen abdunkeln — farbige Linien (Kopfzeilen, Themenfarbe) bleiben.
+                        if (typeof r === 'number' && typeof g === 'number' && typeof b === 'number'
+                            && Math.max(r, g, b) - Math.min(r, g, b) < 40 && Math.min(r, g, b) > DUNKEL) {
+                            return altFarbe(DUNKEL, DUNKEL, DUNKEL);
+                        }
+                        return altFarbe.apply(null, arguments);
+                    };
+                    const altTabelle = doc.autoTable.bind(doc);
+                    doc.autoTable = function (o) {
+                        o = o || {};
+                        o.styles = Object.assign({}, o.styles);
+                        o.styles.lineColor = [DUNKEL, DUNKEL, DUNKEL];
+                        o.styles.lineWidth = Math.max(Number(o.styles.lineWidth) || 0, 0.35);
+                        return altTabelle(o);
+                    };
+                }
                 if (typeof window.registerUnicodeFont === 'function' && window.registerUnicodeFont(doc)) {
                     doc.setFont('helvetica', 'normal');
                 }
