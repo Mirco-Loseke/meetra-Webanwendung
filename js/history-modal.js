@@ -223,7 +223,97 @@
             return html;
         }
 
+        // ---------- Reiter Verlauf / Fotos / Dokumente ----------
+        // Fotos und Dokumente aller Einträge, gruppiert je Eintrag (Datum + Art + Titel als Überschrift).
+        let histReiter = 'verlauf';
+        const istBildDatei = f => {
+            const u = typeof f === 'string' ? f : (f && f.url) || '';
+            const t = typeof f === 'string' ? '' : (f && f.type) || '';
+            return t.startsWith('image/') || /\.(jpe?g|png|gif|webp|heic|bmp)(\?|$)/i.test(u);
+        };
+        const dateiUrl = f => typeof f === 'string' ? f : (f && f.url) || '';
+        const dateiName = f => (f && typeof f === 'object' && f.name) || decodeURIComponent((dateiUrl(f).split('?')[0].split('/').pop() || 'Datei'));
+        function medienJeEintrag(items) {
+            return items.map(it => {
+                const alle = (Array.isArray(it.files) ? it.files : []).filter(f => dateiUrl(f));
+                const bilder = alle.filter(istBildDatei).map(f => ({ url: dateiUrl(f), name: dateiName(f) }));
+                const doks = alle.filter(f => !istBildDatei(f)).map(f => ({ url: dateiUrl(f), name: dateiName(f), type: (f && f.type) || '' }));
+                if (it.pdf_url) doks.unshift({ url: it.pdf_url, name: String(it.type || 'Bericht').replace(/<[^>]*>/g, '') + ' (PDF)', type: 'application/pdf' });
+                if (it.mietFotos) {
+                    it.mietFotos.uebergabe.forEach(f => bilder.push({ url: f.url, name: 'Übergabe · ' + (f.name || '') }));
+                    it.mietFotos.ruecknahme.forEach(f => bilder.push({ url: f.url, name: 'Rücknahme · ' + (f.name || '') }));
+                }
+                return { it, bilder, doks };
+            });
+        }
+        function gruppenKopf(it) {
+            const typ = String(it.type || '').replace(/<[^>]*>/g, '').trim();
+            const t = (it.title || '').trim();
+            const datum = it.date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            return `<div class="hist-medien-kopf"><span class="history-date-badge" style="position: static; border-color: ${it.color}; background: color-mix(in srgb, ${it.color} 22%, #0f172a);">${datum}</span>`
+                + `<span class="hist-medien-typ" style="color: ${it.color};">${escHistoryText(typ)}</span>`
+                + (t && t.toLowerCase() !== typ.toLowerCase() ? `<span class="hist-medien-titel">${escHistoryText(t)}</span>` : '')
+                + `</div>`;
+        }
+        function historieReiterZeichnen(container, items) {
+            let leiste = document.getElementById('hist-reiter');
+            let medien = document.getElementById('hist-medien');
+            if (!leiste) {
+                leiste = document.createElement('div');
+                leiste.id = 'hist-reiter';
+                leiste.className = 'hist-reiter';
+                container.parentNode.insertBefore(leiste, container);
+                medien = document.createElement('div');
+                medien.id = 'hist-medien';
+                medien.className = 'hist-medien';
+                container.parentNode.insertBefore(medien, container.nextSibling);
+                leiste.addEventListener('click', e => {
+                    const b = e.target.closest('[data-hist-reiter]');
+                    if (!b) return;
+                    histReiter = b.dataset.histReiter;
+                    historieReiterZeichnen(container, leiste._items || []);
+                });
+                medien.addEventListener('click', e => {
+                    const bild = e.target.closest('[data-hm-bild]');
+                    if (bild) {
+                        const g = (medien._gruppen || [])[+bild.dataset.hmGruppe];
+                        if (g && window.openPhotosLightbox) window.openPhotosLightbox(g.bilder.map(b => b.url), +bild.dataset.hmBild, { titel: String(g.it.type || '').replace(/<[^>]*>/g, '') + ' ' + g.it.date.toLocaleDateString('de-DE'), namen: g.bilder.map(b => b.name) });
+                        return;
+                    }
+                    const dok = e.target.closest('[data-hm-dok]');
+                    if (dok) {
+                        const g = (medien._gruppen || [])[+dok.dataset.hmGruppe];
+                        const d = g && g.doks[+dok.dataset.hmDok];
+                        if (!d) return;
+                        if (window.previewDocument) window.previewDocument(d.url, d.name, d.type || (/\.pdf(\?|$)/i.test(d.url) ? 'application/pdf' : ''));
+                        else window.open(d.url, '_blank');
+                    }
+                });
+            }
+            leiste._items = items;
+            const gruppen = medienJeEintrag(items);
+            const nB = gruppen.reduce((n, g) => n + g.bilder.length, 0);
+            const nD = gruppen.reduce((n, g) => n + g.doks.length, 0);
+            const knopf = (id, text, n) => `<button type="button" data-hist-reiter="${id}" class="${histReiter === id ? 'aktiv' : ''}">${text}${n != null ? ` <span>${n}</span>` : ''}</button>`;
+            leiste.innerHTML = knopf('verlauf', 'Verlauf') + knopf('fotos', 'Fotos', nB) + knopf('dokumente', 'Dokumente', nD);
+            const verlauf = histReiter === 'verlauf';
+            container.style.display = verlauf ? '' : 'none';
+            medien.style.display = verlauf ? 'none' : '';
+            if (verlauf) return;
+            const fotos = histReiter === 'fotos';
+            medien._gruppen = gruppen;
+            const sichtbar = gruppen.map((g, i) => ({ g, i })).filter(x => fotos ? x.g.bilder.length : x.g.doks.length);
+            if (!sichtbar.length) { medien.innerHTML = `<div class="hist-medien-leer">${fotos ? 'Keine Fotos' : 'Keine Dokumente'} in der Historie dieser Maschine.</div>`; return; }
+            const dokSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>';
+            medien.innerHTML = sichtbar.map(({ g, i }) => `<section class="hist-medien-gruppe" style="border-color: ${g.it.color}66;">${gruppenKopf(g.it)}`
+                + (fotos
+                    ? `<div class="hist-medien-raster">${g.bilder.map((b, j) => `<button type="button" class="hist-medien-bild" data-hm-gruppe="${i}" data-hm-bild="${j}" title="${escHistoryText(b.name)}"><img src="${b.url}" loading="lazy" alt=""></button>`).join('')}</div>`
+                    : `<div class="hist-medien-doks">${g.doks.map((d, j) => `<button type="button" class="hist-medien-dok" data-hm-gruppe="${i}" data-hm-dok="${j}">${dokSvg}<span>${escHistoryText(d.name)}</span></button>`).join('')}</div>`)
+                + `</section>`).join('');
+        }
+
         window.openHistoryModal = async function (machineId) {
+            histReiter = 'verlauf';
             window.currentHistoryMachineId = machineId;
             window.toggleManualHistoryForm(null); // Reset form
             const modal = document.getElementById('machine-history-modal');
@@ -236,6 +326,7 @@
                 modal.classList.add('show');
             });
             container.innerHTML = '<div style="text-align: center; color: rgba(255,255,255,0.4); padding: 2rem;">Lade Historie...</div>';
+            historieReiterZeichnen(container, []);
 
             try {
                 // Fetch data concurrently
@@ -493,6 +584,18 @@
                 }
 
                 // Sort descending (newest top)
+                // Fotos der Eingangs-/Abnahmeprotokolle für den Reiter „Fotos“ (nur schmale Spalten)
+                const protIds = historyItems.filter(it => it.itemType === 'intake' || it.itemType === 'acceptance').map(it => it.id);
+                if (protIds.length) {
+                    const { data: protFotos, error: protFotoErr } = await window.supabaseClient
+                        .from('protocol_photos').select('protocol_id, protocol_type, file_url').in('protocol_id', protIds);
+                    if (protFotoErr) console.warn('Historie: Protokoll-Fotos', protFotoErr);
+                    (protFotos || []).forEach(ph => {
+                        const it = historyItems.find(x => x.itemType === ph.protocol_type && String(x.id) === String(ph.protocol_id));
+                        if (it && ph.file_url) (it.files = it.files || []).push({ url: ph.file_url, type: 'image/jpeg', name: it.type });
+                    });
+                }
+
                 historyItems.sort((a, b) => b.date - a.date);
 
                 if (historyItems.length === 0) {
@@ -828,6 +931,7 @@
                 });
 
                 container.innerHTML = `<div class="history-icon-connector"></div>` + html;
+                historieReiterZeichnen(container, historyItems);
 
                 // Nur bei Einträgen, die wirklich über die maximale Höhe hinausragen, die Fade
                 // + den "Mehr lesen"-Button einblenden — bei kurzen Einträgen bleibt beides weg.

@@ -1,4 +1,4 @@
-// Suche über alles — Lupe in der Kopfleiste (oder Strg+K).
+// Suche über alles — Lupe in der Kopfleiste (oder Strg+K / Strg+X).
 // Adressen, Maschinen, Vorgänge, Serviceberichte, Angebote, Aufgaben — nach Art
 // gruppiert, je Treffer mit kurzer zweiter Zeile; Antippen öffnet direkt.
 //
@@ -324,7 +324,7 @@
         const b = document.createElement('button');
         b.type = 'button';
         b.id = 'gs-btn';
-        b.title = 'Suchen (Strg+K)';
+        b.title = 'Suchen (Strg+K / Strg+X)';
         b.setAttribute('aria-label', 'Suchen');
         b.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>';
         b.addEventListener('click', oeffnenSuche);
@@ -333,6 +333,15 @@
     }
     document.addEventListener('keydown', ev => {
         if ((ev.ctrlKey || ev.metaKey) && (ev.key === 'k' || ev.key === 'K')) { ev.preventDefault(); oeffnenSuche(); }
+        // Strg+X zusätzlich (einhändig) — aber nur, wenn nichts auszuschneiden ist:
+        // in Eingabefeldern und bei markiertem Text bleibt es „Ausschneiden“.
+        else if ((ev.ctrlKey || ev.metaKey) && !ev.shiftKey && !ev.altKey && (ev.key === 'x' || ev.key === 'X')) {
+            const el = document.activeElement;
+            if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
+            const sel = window.getSelection && window.getSelection();
+            if (sel && String(sel).length) return;
+            ev.preventDefault(); oeffnenSuche();
+        }
     });
     // Daten veralten bei Änderungen im Adressbuch
     document.addEventListener('addressbook:changed', () => { pufferZeit = 0; });

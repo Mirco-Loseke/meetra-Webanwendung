@@ -50,7 +50,7 @@
  "css/base/responsive.css": "0f0922aea2ae50a4cc72376ec159de3acdc04325",
  "js/assets-on-demand.js": "3b0755ba260615d317154340de3311a42d585405",
  "css/views/login.css": "b70f5bfabdb6c7b31289a0dfb734cc25477cec07",
- "css/views/history.css": "23beb2176a2d034ae9679aee9722f3487d8188fb",
+ "css/views/history.css": "e82dcfedf7794c34f1bb5f98c878578f7e801550",
  "css/base/landscape.css": "096042b7d0cd733d932d646b755b37505e1627c0",
  "css/components/voice-dictation.css": "a900f5575946978552491d47934abce6415db008",
  "css/views/machine-modal.css": "7408b6fd104f2357110c6c69bcf380674a061a86",
@@ -79,7 +79,7 @@
  "js/machine-modal.js": "c5717ea46a76d63b6b9806a6ac4ddef8715a0b9b",
  "js/service-report-form.js": "ba200f42e94f4a08db674f47e081071f6d345cbe",
  "js/service-list.js": "538c7ad05dc254996437ec104e6a14a5cc415ecd",
- "js/history-modal.js": "ca7c99526a6cee36b9cb16d96b810fa35ce46b6d",
+ "js/history-modal.js": "d7ca24172c569efc879a9035c3a6f98f63480773",
  "js/calendar-events.js": "2a0d8fcd155fb62e111c87f657719927fff1bc1f",
  "js/processes-ui.js": "a2798c9412fe93bf1db5368df9f5183487e4bcf6",
  "js/process-attachments.js": "0c09ec65011d94ee97471b5fedfcd7cb5144e64f",
@@ -172,6 +172,6 @@
  "js/timeline-view.js": "1fc15a1b12d38f49b91185ffd69a43ade3de4c6f",
  "js/voice-dictation.js": "bf0a608232ba33e4bd6e0e152f5d0cbba88e1870",
  "js/handy-check.js": "67ad5bc218d59c8abdb0b620d1e6cffc93304f25",
- "js/globale-suche.js": "cf509a1a3249c94f221c4532a07d0f9de56d9ae1",
+ "js/globale-suche.js": "d4bd2c170efb47a5de281ff0925c160828fa167a",
  "js/foto-eingang.js": "d61ce532771436de113708d9b90b9afc70e08e5f"
 }

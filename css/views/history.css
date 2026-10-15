@@ -115,9 +115,20 @@
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
 }
 
+/* Manuell/System: sichtbar in der Kopfzeile der Karte statt versteckt auf dem Rand */
 .history-tag-badge.is-rechts {
-    left: auto;
-    right: -10px;
+    position: static;
+    box-shadow: none;
+    backdrop-filter: none;
+    font-size: var(--fs-xs);
+    padding: 3px 10px;
+}
+
+/* Nur ein Kasten je Eintrag: der Innenkasten verliert Hintergrund und Rand */
+.history-item-premium > .history-content-inner {
+    background: none;
+    border: 0;
+    padding: 0;
 }
 
 /* Datum oben links auf dem Kartenrand (Rand = Farbe der Art, inline) */
@@ -374,7 +385,7 @@
    darin rollt wie bisher. Handy bleibt unverändert (responsive.css). */
 @media (min-width: 900px) {
     #machine-history-modal > .modal-content {
-        max-width: min(1200px, 94vw) !important;
+        max-width: min(1010px, 94vw) !important;
         width: 94vw !important;
         height: 92vh;
         max-height: 92vh !important;
@@ -397,3 +408,44 @@
 .hist-miet-bild img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .hist-miet-bild span { position: absolute; left: 3px; bottom: 3px; padding: 0 5px; border-radius: 6px; background: rgba(0, 0, 0, .6); color: #fff; font-size: .62rem; font-weight: 700; }
 .hist-miet-bild:hover { border-color: var(--hm-farbe); }
+
+/* Reiter Verlauf / Fotos / Dokumente (js/history-modal.js, historieReiterZeichnen) */
+.hist-reiter { display: flex; gap: var(--space-2); margin: 0 0 var(--space-4); flex-wrap: wrap; }
+.hist-reiter button {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.75);
+    border-radius: 999px;
+    padding: 6px 16px;
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    cursor: pointer;
+}
+.hist-reiter button span { opacity: 0.6; margin-left: 4px; }
+.hist-reiter button.aktiv { background: rgba(59, 130, 246, 0.2); border-color: #3b82f6; color: #fff; }
+.hist-medien { display: flex; flex-direction: column; gap: var(--space-4); }
+.hist-medien-gruppe { border: 1px solid; border-radius: var(--radius-lg); padding: var(--space-4); background: rgba(255, 255, 255, 0.03); }
+.hist-medien-kopf { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-3); }
+.hist-medien-typ { font-size: var(--fs-2xs); font-weight: 900; text-transform: uppercase; letter-spacing: 1.5px; }
+.hist-medien-titel { color: #fff; font-weight: 700; font-size: var(--fs-sm); }
+.hist-medien-raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: var(--space-2); }
+.hist-medien-bild { padding: 0; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--radius-md); overflow: hidden; aspect-ratio: 1; cursor: pointer; background: #0f172a; }
+.hist-medien-bild img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hist-medien-doks { display: flex; flex-direction: column; gap: var(--space-1); }
+.hist-medien-dok {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    text-align: left;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
+    color: #fff;
+    padding: 8px 12px;
+    font-size: var(--fs-sm);
+    cursor: pointer;
+}
+.hist-medien-dok:hover, .hist-medien-bild:hover { border-color: rgba(255, 255, 255, 0.3); }
+.hist-medien-dok span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.hist-medien-leer { text-align: center; color: rgba(255, 255, 255, 0.4); padding: 2rem; }
