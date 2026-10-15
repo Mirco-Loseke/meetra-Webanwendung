@@ -1595,3 +1595,106 @@ textarea.tlv-plan-input { height: auto; min-height: 64px; padding: 10px 12px; re
         max-width: calc(100vw - 24px);
     }
 }
+
+/* Rückfrage „In Mietvereinbarung übernehmen?“ (mietFrage in js/timeline-view.js) */
+.tlv-mf-hg {
+    position: fixed;
+    inset: 0;
+    z-index: 10050;
+    background: rgba(2, 6, 23, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4);
+}
+.tlv-mf {
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-3);
+    padding: var(--space-5);
+    width: min(440px, 100%);
+    color: #fff;
+}
+.tlv-mf h3 { margin: 0 0 var(--space-1); font-size: var(--fs-lg); }
+.tlv-mf-wer { margin: 0 0 var(--space-4); color: var(--text-2); font-size: var(--fs-sm); }
+.tlv-mf-zeilen { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-4); }
+.tlv-mf-zeilen div {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.04);
+    font-size: var(--fs-sm);
+}
+.tlv-mf-zeilen div.neu { background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.35); }
+.tlv-mf-zeilen span { color: var(--text-2); }
+.tlv-mf-knoepfe { display: flex; flex-direction: column; gap: var(--space-2); }
+.tlv-mf-knoepfe button { width: 100%; }
+
+/* ---------- Gesamtüberblick + Abwesenheiten (2026-10-15) ---------- */
+#timeline { --tlv-abwesend: #94a3b8; }
+.tlv-bar.abwesend {
+    background: repeating-linear-gradient(135deg, rgba(148, 163, 184, 0.28) 0 6px, rgba(148, 163, 184, 0.12) 6px 12px);
+    border-color: rgba(148, 163, 184, 0.6);
+    color: #e2e8f0;
+}
+.tlv-kennzahlen {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    margin: 0 0 var(--space-3);
+}
+.tlv-kennzahlen[hidden] { display: none; }
+.tlv-kz-achse { display: inline-flex; border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 999px; overflow: hidden; }
+.tlv-kz-achse button {
+    background: transparent;
+    border: 0;
+    color: var(--text-2);
+    padding: 6px 14px;
+    font-size: var(--fs-sm);
+    font-weight: 700;
+    cursor: pointer;
+}
+.tlv-kz-achse button.aktiv { background: rgba(59, 130, 246, 0.22); color: #fff; }
+.tlv-kz-zahlen { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.tlv-kz-heute { color: var(--text-2); font-size: var(--fs-sm); font-weight: 700; }
+.tlv-kz {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    padding: 5px 12px;
+    color: #fff;
+    font-size: var(--fs-sm);
+    cursor: pointer;
+}
+.tlv-kz i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
+.tlv-kz b { font-weight: 800; }
+.tlv-kz.aktiv { border-color: var(--c); background: color-mix(in srgb, var(--c) 18%, transparent); }
+.tlv-ab-fenster label { display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-sm); color: var(--text-2); margin-bottom: var(--space-3); }
+.tlv-ab-fenster .tlv-input { width: 100%; box-sizing: border-box; color-scheme: dark; }
+.tlv-ab-reihe { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.tlv-ab-gruende { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-3); }
+.tlv-ab-gruende button {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #fff;
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: var(--fs-sm);
+    cursor: pointer;
+}
+.tlv-ab-gruende button.aktiv { background: rgba(148, 163, 184, 0.3); border-color: #cbd5e1; font-weight: 700; }
+.tlv-ab-fehler { color: var(--danger); font-size: var(--fs-sm); margin: 0 0 var(--space-2); }
+.tlv-ab-knoepfe { flex-direction: row; justify-content: flex-end; }
+.tlv-ab-knoepfe button { width: auto; }
+.tlv-ab-knoepfe .tlv-ab-weg { margin-right: auto; color: var(--danger); }
+@media (max-width: 768px) {
+    .tlv-ab-reihe { grid-template-columns: 1fr; }
+    .tlv-kz-zahlen { width: 100%; }
+}

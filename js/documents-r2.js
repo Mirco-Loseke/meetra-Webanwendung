@@ -962,7 +962,7 @@ window.renderDocuments = function() {
 
         html += `
             <div class="doc-card"
-                 onclick="window.previewDocument('${doc.url}', '${escapedName}', '${doc.mime_type}')"
+                 onclick="${doc.rental_agreement_id ? `window.mietDokumenteAnsehen ? window.mietDokumenteAnsehen('${doc.rental_agreement_id}') : window.previewDocument('${doc.url}', '${escapedName}', '${doc.mime_type}')` : `window.previewDocument('${doc.url}', '${escapedName}', '${doc.mime_type}')`}"
                  draggable="true"
                  ondragstart="window.handleDragStart(event, 'document', '${doc.id}')">
                 <div class="doc-date-label">${dateStr}</div>

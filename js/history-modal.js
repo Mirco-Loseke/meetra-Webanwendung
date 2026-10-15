@@ -351,14 +351,8 @@
                     window.supabaseClient.from('internal_processes').select('id, title, process_date, created_at, steps').eq('machine_id', machineId)
                 ]);
 
-                // Volle Datensätze weiterhin für die Offline-Bearbeitung cachen — bewusst NICHT
-                // Teil des Promise.all oben, damit die Historie nicht auf die schweren JSONB-Felder
-                // warten muss; läuft einfach im Hintergrund nach, sobald fertig.
-                if (window.offlineService) {
-                    window.supabaseClient.from('service_entries').select('*').eq('machine_id', machineId)
-                        .then(({ data }) => { if (data) window.offlineService.cacheFullEntries(data).catch(() => {}); })
-                        .catch(() => {});
-                }
+                // Offline-Kopie der vollen Berichte pflegt syncFullServiceEntriesForOffline
+                // (service-entries.js, nur geänderte) — hier kein zweites select('*') mehr (Egress).
 
                 let historyItems = [];
 

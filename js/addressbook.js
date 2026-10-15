@@ -1530,7 +1530,8 @@
                 ];
                 if (mIds.length > 0) {
                     abfragen.push(sb().from('manual_history_entries').select('*').in('machine_id', mIds).order('created_at', { ascending: false }));
-                    abfragen.push(sb().from('service_entries').select('*').in('machine_id', mIds).order('date', { ascending: false }));
+                    // Nur was die Liste zeigt — ohne Unterschriften, Arbeitszeiten, Prüfpläne (Egress)
+                    abfragen.push(sb().from('service_entries').select('id, machine_id, title, description, date, created_at, pdf_url, files').in('machine_id', mIds).order('date', { ascending: false }));
                 }
                 const [custHistRes, mHistRes, sEntriesRes] = await Promise.all(abfragen);
 

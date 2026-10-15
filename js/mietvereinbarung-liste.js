@@ -56,7 +56,14 @@
                 .eq('machine_id', maschineId)
                 .order('created_at', { ascending: false });
             if (error) throw error;
-            liste = data || [];
+            // Nach Mietbeginn, neueste zuerst; ohne Beginn ans Ende (dann nach Speicherdatum).
+            const beginn = v => (v.data && v.data.miete && v.data.miete.beginn) || '';
+            liste = (data || []).sort((a, b) => {
+                const x = beginn(a), y = beginn(b);
+                if (x && y) return y.localeCompare(x);
+                if (x || y) return x ? -1 : 1;
+                return String(b.created_at || '').localeCompare(String(a.created_at || ''));
+            });
             zeichne();
         } catch (e) {
             console.error('Mietvereinbarungen konnten nicht geladen werden:', e);
@@ -100,6 +107,93 @@
         }
     };
 
+    // ---------- Alle Dokumente einer Mietvereinbarung untereinander ----------
+    // Online-PDF + Anlagen (z. B. das eingescannte, unterschriebene Original) in
+    // EINEM Fenster: PDFs per pdf.js als Seiten gerendert, Bilder direkt, man scrollt
+    // einfach durch. Oben je Dokument ein Sprungknopf. Nichts wird zusammengefügt.
+    window.mietDokumenteAnsehen = async function (idOderZeile, startIndex) {
+        let v = idOderZeile && typeof idOderZeile === 'object' ? idOderZeile : liste.find(x => String(x.id) === String(idOderZeile));
+        if (!v && window.supabaseClient) {
+            const { data } = await window.supabaseClient.from('rental_agreements').select('*').eq('id', idOderZeile).maybeSingle();
+            v = data;
+        }
+        if (!v) { window.showToast('Mietvereinbarung nicht gefunden.'); return; }
+        const d = v.data || {};
+        const doks = [];
+        if (v.pdf_url) doks.push({ name: 'Mietvereinbarung', url: v.pdf_url, type: 'application/pdf' });
+        (Array.isArray(d.anlagen) ? d.anlagen : []).filter(a => a && a.url).forEach(a => doks.push({ name: a.name || 'Anlage', url: a.url, type: a.type || '', anlage: true }));
+        if (!doks.length) { window.showToast('Zu dieser Mietvereinbarung gibt es noch kein Dokument.'); return; }
+
+        const alt = document.getElementById('miet-doks-overlay'); if (alt) alt.remove();
+        const mieter = (d.mieter && d.mieter.name) || 'Mietvereinbarung';
+        const ov = document.createElement('div');
+        ov.id = 'miet-doks-overlay';
+        ov.className = 'miet-doks-overlay';
+        ov.innerHTML = `
+            <div class="miet-doks-fenster">
+                <div class="miet-doks-kopf">
+                    <div class="miet-doks-titel"><h2>${esc(mieter)}</h2>
+                        <div class="miet-doks-sprung">${doks.map((x, i) => `<button type="button" data-sprung="${i}">${x.anlage ? '📎 ' : '📄 '}${esc(x.name)}</button>`).join('')}</div></div>
+                    <button type="button" class="miet-close" data-zu title="Schließen">&times;</button>
+                </div>
+                <div class="miet-doks-inhalt">${doks.map((x, i) => `
+                    <section class="miet-doks-teil" id="miet-dok-${i}">
+                        <div class="miet-doks-teilkopf"><b>${x.anlage ? 'Anlage: ' : ''}${esc(x.name)}</b>
+                            <a href="${esc(x.url)}" target="_blank" rel="noopener">In neuem Tab öffnen ↗</a></div>
+                        <div class="miet-doks-seiten" data-i="${i}"><p class="miet-doks-laedt">Wird geladen …</p></div>
+                    </section>`).join('')}
+                </div>
+            </div>`;
+        document.body.appendChild(ov);
+        const zu = () => { document.removeEventListener('keydown', taste); ov.remove(); };
+        const taste = e => { if (e.key === 'Escape') zu(); };
+        document.addEventListener('keydown', taste);
+        ov.addEventListener('click', e => {
+            if (e.target === ov || e.target.closest('[data-zu]')) return zu();
+            const b = e.target.closest('[data-sprung]');
+            if (b) document.getElementById('miet-dok-' + b.dataset.sprung).scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        if (startIndex) setTimeout(() => { const z = document.getElementById('miet-dok-' + startIndex); if (z) z.scrollIntoView({ block: 'start' }); }, 50);
+
+        const inhalt = ov.querySelector('.miet-doks-inhalt');
+        for (let i = 0; i < doks.length; i++) {
+            if (!document.body.contains(ov)) return;
+            const x = doks[i];
+            const ziel = ov.querySelector(`.miet-doks-seiten[data-i="${i}"]`);
+            const art = (x.type || '') + ' ' + x.url;
+            try {
+                if (/pdf/i.test(art)) {
+                    if (typeof window.loadPDFReader === 'function') await window.loadPDFReader();
+                    if (!window.pdfjsLib) throw new Error('PDF-Leser nicht verfügbar');
+                    const pdf = await window.pdfjsLib.getDocument({ url: x.url }).promise;
+                    ziel.innerHTML = '';
+                    const breite = Math.min(inhalt.clientWidth - 32, 1000);
+                    for (let n = 1; n <= pdf.numPages; n++) {
+                        if (!document.body.contains(ov)) return;
+                        const seite = await pdf.getPage(n);
+                        const basis = seite.getViewport({ scale: 1 });
+                        const f = (breite / basis.width) * Math.min(window.devicePixelRatio || 1, 2);
+                        const vp = seite.getViewport({ scale: f });
+                        const c = document.createElement('canvas');
+                        c.width = Math.round(vp.width); c.height = Math.round(vp.height);
+                        c.className = 'miet-doks-seite';
+                        ziel.appendChild(c);
+                        await seite.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+                    }
+                } else if (/image\/|\.(jpe?g|png|gif|webp|heic|avif|bmp)(\?|$)/i.test(art)) {
+                    ziel.innerHTML = `<img class="miet-doks-seite" src="${esc(x.url)}" alt="">`;
+                } else {
+                    ziel.innerHTML = `<p class="miet-doks-laedt">Diese Datei lässt sich hier nicht anzeigen — oben „In neuem Tab öffnen“.</p>`;
+                }
+            } catch (e) {
+                console.warn('Mietvereinbarung: Dokument nicht darstellbar', x, e);
+                // pdf.js scheitert z. B. an fehlender CORS-Freigabe — dann den Viewer des Browsers nehmen.
+                if (/pdf/i.test(art)) { ziel.innerHTML = `<iframe class="miet-doks-rahmen" src="${esc(x.url)}" title="${esc(x.name)}"></iframe>`; continue; }
+                ziel.innerHTML = `<p class="miet-doks-laedt">Konnte nicht angezeigt werden (${esc(e.message || e)}) — oben „In neuem Tab öffnen“.</p>`;
+            }
+        }
+    };
+
     function zeile(v) {
         const d = v.data || {};
         const mieter = (d.mieter && d.mieter.name) || 'ohne Mieter';
@@ -110,6 +204,7 @@
             ? `${von ? von.split('-').reverse().join('.') : '—'} bis ${bis ? bis.split('-').reverse().join('.') : 'offen'}`
             : '';
         const bilder = Array.isArray(v.photos) ? v.photos.length : 0;
+        const anlagen = (Array.isArray(d.anlagen) ? d.anlagen : []).filter(a => a && a.url);
 
         return `
         <div class="miet-liste-zeile">
@@ -117,9 +212,10 @@
                 <strong>${esc(mieter)}</strong>
                 <span>${esc(zeitraum)}${ort ? ' · ' + esc(ort) : ''}</span>
                 <small>Gespeichert ${esc(datum(v.updated_at || v.created_at))}${bilder ? ` · ${bilder} Foto${bilder === 1 ? '' : 's'}` : ''}</small>
+                ${anlagen.length ? `<div class="miet-liste-anlagen">${anlagen.map((a, i) => `<button type="button" class="miet-anlage-chip" onclick="window.mietDokumenteAnsehen('${esc(v.id)}', ${i + 1})" title="Anlage ansehen">📎 ${esc(a.name || 'Anlage')}</button>`).join('')}</div>` : ''}
             </div>
             <div class="miet-liste-knoepfe">
-                ${v.pdf_url ? `<button type="button" class="btn-secondary" onclick="window.mietListePdf('${esc(v.pdf_url)}')" title="PDF ansehen">PDF</button>` : ''}
+                ${v.pdf_url || anlagen.length ? `<button type="button" class="btn-secondary" onclick="window.mietDokumenteAnsehen('${esc(v.id)}')" title="Mietvereinbarung${anlagen.length ? ' und Anlagen' : ''} ansehen">PDF${anlagen.length ? ' + ' + anlagen.length : ''}</button>` : ''}
                 <button type="button" class="btn-primary" onclick="window.mietListeBearbeiten('${esc(v.id)}')">Bearbeiten</button>
                 <button type="button" class="btn-secondary delete-permission-required" data-del-area="mietvereinbarungen miet-liste-weg" onclick="window.mietListeLoeschen('${esc(v.id)}')" title="Löschen">&times;</button>
             </div>

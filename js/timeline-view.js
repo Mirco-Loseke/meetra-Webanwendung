@@ -34,7 +34,8 @@
         miete:     { label: 'Vermietung',    farbe: 'var(--tlv-miete)' },
         service:   { label: 'Serviceeinsatz', farbe: 'var(--tlv-service)' },
         aufgabe:   { label: 'Aufgabe',       farbe: 'var(--tlv-aufgabe)' },
-        aufbereitung: { label: 'Aufbereitung', farbe: 'var(--tlv-aufbereitung)' }
+        aufbereitung: { label: 'Aufbereitung', farbe: 'var(--tlv-aufbereitung)' },
+        abwesend:  { label: 'Abwesenheit',   farbe: 'var(--tlv-abwesend)' }
     };
     var SORTE_QUELLE = {
         miete: 'rental_agreements', service: 'service_entries', aufgabe: 'tasks'
@@ -48,18 +49,22 @@
         timeline_planung:   { von: 'von', bis: 'bis', schreibbar: true,
                               braucht: 'supabase_add_timeline_planung.sql' },
         subtasks:           { von: 'start_date', bis: 'end_date', schreibbar: true,
-                              braucht: 'supabase_add_subtask_planung.sql' }
+                              braucht: 'supabase_add_subtask_planung.sql' },
+        absences:           { von: 'von', bis: 'bis', schreibbar: true,
+                              braucht: 'supabase_add_absences.sql' }
     };
     /* Standort der Maschine. Ohne Werkstatt- und Wartungsdaten bleiben nur
        zwei Zustaende uebrig: bei uns oder vermietet. */
     var ORTE = {
         hof:       { label: 'bei uns',   farbe: '#94a3b8' },
-        vermietet: { label: 'vermietet', farbe: '#22c55e' }
+        vermietet: { label: 'vermietet', farbe: '#22c55e' },
+        werkstatt: { label: 'in Werkstatt', farbe: '#f59e0b' }
     };
     /* Eigene Gruppe fuer alles ohne Monteur — steht in der Monteur-Ansicht
        unter dem Team und ist beim Oeffnen zugeklappt. */
     var GRP_OHNE = 'ohne Zuordnung';
     var PRESETS = {
+        uebersicht: { label: 'Gesamtüberblick', achse: 'maschine', sorten: ['miete', 'aufbereitung', 'service', 'aufgabe', 'abwesend'] },
         vermiet:   { label: 'Vermietflotte',    achse: 'maschine', sorten: ['miete', 'aufbereitung'] },
         service:   { label: 'Serviceeinsätze',  achse: 'monteur',  sorten: ['service'] },
         aufgaben:  { label: 'Aufgaben',         achse: 'aufgabe',  sorten: ['aufgabe'] }
@@ -359,10 +364,11 @@
             if (!von) return;
             if (bis < von) bis = von;
             ABWESEND.push({
-                id: 'ab-' + a.id, dbId: a.id, sorte: 'abwesend',
+                id: 'ab-' + a.id, dbId: a.id, sorte: 'abwesend', quelle: 'absences',
                 titel: a.grund || 'Abwesend',
                 notiz: a.notiz || '',
                 personen: a.user_id != null ? [String(a.user_id)] : [],
+                monteur: a.user_id != null ? String(a.user_id) : null,
                 name: a.user_name || '', von: von, bis: bis
             });
         });
@@ -557,7 +563,11 @@
     // ------------------------------------------------------------------
     function maschine(id) { for (var i = 0; i < MASCHINEN.length; i++) if (MASCHINEN[i].id === id) return MASCHINEN[i]; return null; }
     function monteur(id) { for (var i = 0; i < MONTEURE.length; i++) if (MONTEURE[i].id === id) return MONTEURE[i]; return null; }
-    function eintrag(id) { for (var i = 0; i < ITEMS.length; i++) if (ITEMS[i].id === id) return ITEMS[i]; return null; }
+    function eintrag(id) {
+        for (var i = 0; i < ITEMS.length; i++) if (ITEMS[i].id === id) return ITEMS[i];
+        for (var j = 0; j < ABWESEND.length; j++) if (ABWESEND[j].id === id) return ABWESEND[j];
+        return null;
+    }
     /* Eine Miete ohne eingetragenen Zeitraum liegt nur vorlaeufig auf heute —
        sie darf die Maschine nicht als belegt/vermietet ausweisen. */
     // Unbestätigte Planung blockt ebenfalls nicht — sie „könnte“ nur sein.
@@ -583,15 +593,60 @@
         });
         return s;
     }
+    /* Beschriftung für Zeile und Detailfenster: Vorführung statt Vermietung,
+       „geplante …“ solange die Planung noch nicht bestätigt ist (unsicher). */
+    function mietArtText(i, gross) {
+        var t = i.art === 'vorfuehrung' ? 'Vorführung' : 'Vermietung';
+        if (i.unsicher) t = (gross ? 'Geplante ' : 'geplante ') + t;
+        return t;
+    }
+    /* In der Werkstatt = eine offene Aufgabe an dieser Maschine läuft an diesem Tag. */
+    function inWerkstatt(mid, x) {
+        return ITEMS.some(function (i) {
+            return i.quelle === 'tasks' && i.maschine === mid && !i.vorlaeufig && i.status !== 'completed'
+                && parse(i.von) <= x && x <= parse(i.bis);
+        });
+    }
+    function standortAnzeige(mid, x) {
+        var fest = null, geplant = null;
+        ITEMS.forEach(function (i) {
+            if (i.maschine !== mid || i.sorte !== 'miete' || i.vorlaeufig) return;
+            if (!(parse(i.von) <= x && x <= parse(i.bis))) return;
+            if (!i.unsicher) { if (!fest || i.art === 'vorfuehrung') fest = i; }
+            else if (!geplant) geplant = i;
+        });
+        if (fest) return { farbe: ORTE.vermietet.farbe, label: fest.art === 'vorfuehrung' ? 'Vorführung' : ORTE.vermietet.label };
+        if (inWerkstatt(mid, x)) return ORTE.werkstatt;
+        if (geplant) return { farbe: ORTE.vermietet.farbe, label: mietArtText(geplant, false), blass: true };
+        return ORTE.hof;
+    }
     function gehoertZu(i, pid) {
         if (!pid) return true;
         if (i.personen && i.personen.length) return i.personen.indexOf(pid) >= 0;
         return i.monteur === pid;
     }
     function sichtbar() {
-        return ITEMS.filter(function (i) {
+        var l = ITEMS.filter(function (i) {
+            if (S.achse === 'maschine' && i.eltern) return false;   // Unteraufgabe stünde doppelt in der Maschinenzeile
             return S.sorten.has(i.sorte) && gehoertZu(i, S.person);
         });
+        // Abwesenheiten gehören zu Personen — in der Maschinen-Ansicht hätten sie keine Zeile.
+        if (S.sorten.has('abwesend') && S.achse === 'monteur')
+            l = l.concat(ABWESEND.filter(function (a) { return gehoertZu(a, S.person); }));
+        return l;
+    }
+    /* Einsatz an einem Tag, an dem die zugeordnete Person abwesend ist → gelbe Warnung. */
+    function abwesendWarnungen(list, w) {
+        list.forEach(function (i) {
+            if (i.sorte === 'abwesend' || i.sorte === 'miete' || i.sorte === 'aufbereitung') return;
+            var leute = (i.personen && i.personen.length) ? i.personen : (i.monteur ? [i.monteur] : []);
+            if (!leute.length) return;
+            var kollision = ABWESEND.some(function (a) {
+                return a.personen.some(function (pid) { return leute.indexOf(pid) >= 0; }) && a.von <= i.bis && i.von <= a.bis;
+            });
+            if (kollision) { w[i.id] = 1; i.abwesendKonflikt = true; } else i.abwesendKonflikt = false;
+        });
+        return w;
     }
     function trifft(i) {
         if (!S.suche) return null;
@@ -609,7 +664,8 @@
         Object.keys(proM).forEach(function (mid) {
             var arr = proM[mid].slice().sort(function (a, b) { return a.von < b.von ? -1 : 1; });
             for (var a = 0; a < arr.length; a++) for (var b = a + 1; b < arr.length; b++)
-                if (arr[b].von <= arr[a].bis) { k[arr[a].id] = 1; k[arr[b].id] = 1; }
+                // Gleicher Tag Ende/Anfang = Wechseltag (Rückgabe + neue Übergabe), kein Konflikt
+                if (arr[b].von < arr[a].bis) { k[arr[a].id] = 1; k[arr[b].id] = 1; }
         });
         return k;
     }
@@ -735,17 +791,17 @@
                 await pruefe(client.from(it.quelle).update(f).eq('id', it.dbId));
 
             } else if (it.quelle === 'rental_agreements') {
-                // Die Termine liegen im JSONB — deshalb lesen, aendern, schreiben.
-                var res = await client.from('rental_agreements').select('data').eq('id', it.dbId).single();
-                if (res.error) throw res.error;
-                var dat = res.data.data || {};
-                dat.miete = dat.miete || {};
-                dat.miete.beginn = it.von;
-                dat.miete.ende = it.bis;
-                await pruefe(client.from('rental_agreements').update({ data: dat }).eq('id', it.dbId));
+                // Balken der Mietvereinbarung selbst verschoben: erst fragen, was übernommen wird.
+                await mietAbgleichen(it, it, it.von, it.bis, true);
+
+            } else if (it.quelle === 'absences') {
+                await pruefe(client.from('absences').update({ von: it.von, bis: it.bis }).eq('id', it.dbId));
 
             } else if (it.quelle === 'timeline_planung') {
                 await pruefe(client.from('timeline_planung').update({ von: it.von, bis: it.bis }).eq('id', it.dbId));
+                // Hängt an dieser Planung schon eine Mietvereinbarung? Dann fragen, ob die Daten mit sollen.
+                var vertrag = mietZuPlan(it);
+                if (vertrag) await mietAbgleichen(vertrag, it, it.von, it.bis, false);
             }
         } catch (e) {
             console.error('[timeline] Speichern fehlgeschlagen', e);
@@ -754,6 +810,69 @@
         }
     }
     async function pruefe(p) { var r = await p; if (r && r.error) throw r.error; return r; }
+
+    /* Mietvereinbarung nach dem Verschieben abgleichen. Gefragt wird nur nach dem,
+       was sich gegenüber der gespeicherten Vereinbarung geändert hat: Beginn, Ende
+       oder beides. vertrag = Balken der Vereinbarung (quelle rental_agreements),
+       selbst = true, wenn genau dieser Balken gezogen wurde — „Nicht übernehmen“
+       setzt ihn dann auf die gespeicherten Daten zurück. */
+    async function mietAbgleichen(vertrag, gezogen, von, bis, selbst) {
+        var client = sb();
+        var res = await client.from('rental_agreements').select('data').eq('id', vertrag.dbId).single();
+        if (res.error) throw res.error;
+        var dat = res.data.data || {};
+        dat.miete = dat.miete || {};
+        var altVon = dat.miete.beginn || '', altBis = dat.miete.ende || '';
+        var beginnNeu = von !== altVon, endeNeu = bis !== altBis;
+        if (!beginnNeu && !endeNeu) return;
+        var wahl = await mietFrage(vertrag, altVon, altBis, von, bis, beginnNeu, endeNeu);
+        var nimmVon = wahl === 'beides' || wahl === 'beginn';
+        var nimmBis = wahl === 'beides' || wahl === 'ende';
+        if (nimmVon) dat.miete.beginn = von;
+        if (nimmBis) dat.miete.ende = bis;
+        if (nimmVon || nimmBis) {
+            await pruefe(client.from('rental_agreements').update({ data: dat }).eq('id', vertrag.dbId));
+            meldung('Mietvereinbarung: ' + [nimmVon ? 'Beginn ' + dez(parse(von)) : '', nimmBis ? 'Ende ' + dez(parse(bis)) : ''].filter(Boolean).join(', ') + ' übernommen');
+        }
+        // Balken der Vereinbarung zeigt, was jetzt wirklich gespeichert ist
+        if (dat.miete.beginn) vertrag.von = dat.miete.beginn;
+        if (dat.miete.ende) vertrag.bis = dat.miete.ende;
+        if (vertrag.bis < vertrag.von) vertrag.bis = vertrag.von;
+        if (selbst && !(nimmVon && nimmBis)) meldung(nimmVon || nimmBis ? 'Nur teilweise übernommen — Balken zeigt die gespeicherten Daten' : 'Nicht übernommen — Balken zurück auf die Mietvereinbarung');
+        zeichne();
+    }
+
+    function mietFrage(vertrag, altVon, altBis, von, bis, beginnNeu, endeNeu) {
+        return new Promise(function (fertig) {
+            var d = function (k) { return k ? dez(parse(k)) : '—'; };
+            var knoepfe = [];
+            if (beginnNeu && endeNeu) knoepfe.push(['beides', 'Beginn und Ende übernehmen', true]);
+            if (endeNeu) knoepfe.push(['ende', 'Nur Mietende übernehmen', !beginnNeu]);
+            if (beginnNeu) knoepfe.push(['beginn', 'Nur Mietbeginn übernehmen', !endeNeu]);
+            knoepfe.push(['nein', 'Nicht übernehmen', false]);
+            var hg = document.createElement('div');
+            hg.className = 'tlv-mf-hg';
+            hg.innerHTML = '<div class="tlv-mf" role="dialog" aria-modal="true">'
+                + '<h3>In Mietvereinbarung übernehmen?</h3>'
+                + '<p class="tlv-mf-wer">' + esc(vertrag.titel || 'Vermietung') + '</p>'
+                + '<div class="tlv-mf-zeilen">'
+                + '<div' + (beginnNeu ? ' class="neu"' : '') + '><span>Mietbeginn</span><b>' + d(altVon) + (beginnNeu ? ' → ' + d(von) : '') + '</b></div>'
+                + '<div' + (endeNeu ? ' class="neu"' : '') + '><span>Mietende</span><b>' + d(altBis) + (endeNeu ? ' → ' + d(bis) : '') + '</b></div>'
+                + '</div><div class="tlv-mf-knoepfe">'
+                + knoepfe.map(function (k) { return '<button type="button" data-w="' + k[0] + '" class="' + (k[2] ? 'btn-primary' : 'btn-secondary') + '">' + k[1] + '</button>'; }).join('')
+                + '</div></div>';
+            document.body.appendChild(hg);
+            function zu(w) { document.removeEventListener('keydown', taste); hg.remove(); fertig(w); }
+            function taste(e) { if (e.key === 'Escape') zu('nein'); }
+            document.addEventListener('keydown', taste);
+            hg.addEventListener('click', function (e) {
+                var b = e.target.closest('[data-w]');
+                if (b) zu(b.dataset.w);
+            });
+            var erster = hg.querySelector('.btn-primary') || hg.querySelector('button');
+            if (erster) erster.focus();
+        });
+    }
 
     // ------------------------------------------------------------------
     // Abhaengigkeiten (Aufgabe A muss vor Aufgabe B fertig sein)
@@ -968,12 +1087,12 @@
 
         if (S.achse === 'maschine') {
             var mZeilen = MASCHINEN.map(function (m) {
-                var o = ORTE[standort(m.id, HEUTE)];
+                var o = standortAnzeige(m.id, HEUTE);
                 return {
                     schluessel: m.id, grp: m.kat, band: true, zuweisung: 'maschine',
                     rc: farbeVon('m' + m.id),
                     n: esc(m.name),
-                    m: '<span class="ort"><i style="background:' + o.farbe + '"></i>' + o.label + '</span>'
+                    m: '<span class="ort"><i style="background:' + o.farbe + (o.blass ? ';opacity:.45' : '') + '"></i>' + o.label + '</span>'
                        + (m.nr ? ' · ' + esc(m.nr) : ''),
                     items: nurImFenster(list.filter(function (i) { return i.maschine === m.id; }))
                 };
@@ -1154,6 +1273,9 @@
         presetAbgleichen();
         filterZahlAbgleichen();
         aufbereitungNachziehen();
+        kennzahlenZeichnen();
+        var abBtn = document.getElementById('tlv-ab-neu');
+        if (abBtn) abBtn.hidden = !ABWESEND_DA;
         var neuBtn = document.getElementById('tlv-plan-neu');
         if (neuBtn) neuBtn.hidden = !(S.achse === 'maschine' && S.sorten.has('miete'));
         // „Wer ist frei?“ gehört zu Service und Aufgaben, nicht zur Vermietflotte.
@@ -1205,7 +1327,7 @@
         var sp = [];
         for (var i = 0; i < n; i++) { var x = new Date(start); x.setDate(x.getDate() + i * sw); sp.push(x); }
 
-        var list = sichtbar(), konf = konflikte(list), warn = abhaengigkeitsWarnungen(list);
+        var list = sichtbar(), konf = konflikte(list), warn = abwesendWarnungen(list, abhaengigkeitsWarnungen(list));
         /* Kopfzeile: bei Tagesraster zwei Zeilen — oben die Kalenderwoche
            ueber ihre Tage gespannt, darunter jeder Tag mit vollem Datum
            (02.09.). Beim Wochenraster ist jede Spalte schon eine Woche. */
@@ -1339,6 +1461,10 @@
             z.items.forEach(function (i) {
                 var a = Math.max(0, spalteVon(i.von, start)), b = Math.min(n - 1, spalteVon(i.bis, start));
                 if (b < 0 || a > n - 1) return;
+                // Wechseltag: endet ein Balken am Tag, an dem ein anderer in derselben Zeile
+                // beginnt, teilen sich beide den Tag je zur Hälfte statt sich zu überdecken.
+                var halbL = S.raster !== 'woche' && z.items.some(function (j) { return j !== i && j.bis === i.von && j.von < i.von; }) && a === spalteVon(i.von, start) ? 0.5 : 0;
+                var halbR = S.raster !== 'woche' && z.items.some(function (j) { return j !== i && j.von === i.bis && j.bis > i.bis; }) && b === spalteVon(i.bis, start) ? 0.5 : 0;
                 var cls = [];
                 if (i.status === 'angefragt') cls.push('angefragt');
                 if (konf[i.id]) cls.push('konflikt'); else if (warn[i.id]) cls.push('warnung');
@@ -1357,6 +1483,7 @@
                 if (i.vorlaeufig) cls.push('vorlaeufig');
                 if (i.unsicher) cls.push('unsicher');
                 if (i.sorte === 'aufbereitung') cls.push('aufbereitung');
+                if (i.sorte === 'abwesend') cls.push('abwesend');
                 // Maschine/WA (und bei eingeklappter Aufgabe "Verantwortlich: …")
                 // stehen zusaetzlich AUF dem Balken — jede Zeile laesst ihn
                 // (und seine Zeile) etwas hoeher werden, siehe zeilenBauen()
@@ -1404,8 +1531,8 @@
                      // Aufgabe — dort ist ohnehin alles dieselbe Sorte, und so
                      // passen Balken und Farbstreifen links zusammen.
                      + ' style="--c:' + (z.rc && S.achse === 'aufgabe' ? z.rc : SORTEN[i.sorte].farbe)
-                     + ';left:calc(var(--tlv-day-w)*' + a + ' + 2px)'
-                     + ';width:calc(var(--tlv-day-w)*' + (b - a + 1) + ' - 4px)">'
+                     + ';left:calc(var(--tlv-day-w)*' + (a + halbL) + ' + 2px)'
+                     + ';width:calc(var(--tlv-day-w)*' + (b - a + 1 - halbL - halbR) + ' - 4px)">'
                      + '<div class="grip l"></div>'
                      + '<i class="punkt"></i>'
                      + (i.gesperrt ? '<span class="s">🔒</span>' : '')
@@ -2712,10 +2839,11 @@
         var neu = (r && r.data && r.data[0]) || null;
         ABWESEND.push({
             id: 'ab-' + (neu ? neu.id : Date.now()), dbId: neu ? neu.id : null,
-            sorte: 'abwesend', titel: grund, notiz: '',
-            personen: [String(pid)], name: zeile.user_name, von: von, bis: bis
+            sorte: 'abwesend', quelle: 'absences', titel: grund, notiz: '',
+            personen: [String(pid)], monteur: String(pid), name: zeile.user_name, von: von, bis: bis
         });
         zeichneFrei();
+        zeichne();
     }
     async function abwesenheitLoeschen(id) {
         if (!id || id === 'null') return;
@@ -2726,7 +2854,177 @@
             if (r && r.error) { meldung('Löschen fehlgeschlagen: ' + r.error.message, false); return; }
         }
         ABWESEND = ABWESEND.filter(function (a) { return String(a.dbId) !== String(id); });
-        zeichneFrei();
+        if (S.gewaehlt && S.gewaehlt.sorte === 'abwesend' && String(S.gewaehlt.dbId) === String(id)) { S.gewaehlt = null; zeichnePanel(); }
+        if (document.getElementById('tlv-frei-dlg') || document.querySelector('.tlv-frei')) { try { zeichneFrei(); } catch (e) { /* Übersicht zu */ } }
+        zeichne();
+    }
+
+    // ------------------------------------------------------------------
+    // Gesamtüberblick: Umschalter Maschine/Mitarbeiter + Zahlen für heute
+    // ------------------------------------------------------------------
+    var FOKUS = {
+        alles:     { sorten: PRESETS.uebersicht.sorten },
+        miete:     { sorten: ['miete', 'aufbereitung'], achse: 'maschine' },
+        werkstatt: { sorten: ['aufgabe'], achse: 'maschine' },
+        service:   { sorten: ['service'], achse: 'monteur' },
+        abwesend:  { sorten: ['abwesend', 'service', 'aufgabe'], achse: 'monteur' }
+    };
+    function kennzahlen() {
+        var h = new Date(HEUTE); h.setHours(12, 0, 0, 0);
+        var heuteK = key(HEUTE);
+        var mo = montag(HEUTE), so = new Date(mo); so.setDate(so.getDate() + 6);
+        var moK = key(mo), soK = key(so);
+        var vermietet = {}, vorf = {}, werkst = {}, service = 0, abw = {};
+        ITEMS.forEach(function (i) {
+            var heute = i.von <= heuteK && heuteK <= i.bis;
+            if (i.sorte === 'miete' && heute && blockt(i) && i.maschine) (i.art === 'vorfuehrung' ? vorf : vermietet)[i.maschine] = 1;
+            if (i.sorte === 'service' && i.von <= soK && moK <= i.bis) service++;
+        });
+        MASCHINEN.forEach(function (m) { if (!vermietet[m.id] && !vorf[m.id] && inWerkstatt(m.id, h)) werkst[m.id] = 1; });
+        ABWESEND.forEach(function (a) { if (a.von <= heuteK && heuteK <= a.bis) a.personen.forEach(function (pid) { abw[pid] = 1; }); });
+        return {
+            miete: Object.keys(vermietet).length, vorf: Object.keys(vorf).length,
+            werkstatt: Object.keys(werkst).length, service: service, abwesend: Object.keys(abw).length
+        };
+    }
+    function kennzahlenZeichnen() {
+        var buehne = document.getElementById('tlv-buehne');
+        if (!buehne) return;
+        var leiste = document.getElementById('tlv-kennzahlen');
+        if (!leiste) {
+            leiste = document.createElement('div');
+            leiste.id = 'tlv-kennzahlen';
+            leiste.className = 'tlv-kennzahlen';
+            buehne.parentNode.insertBefore(leiste, buehne);
+            leiste.addEventListener('click', function (e) {
+                var a = e.target.closest('[data-achse]');
+                if (a) { S.achse = a.dataset.achse; zeichne(); return; }
+                var f = e.target.closest('[data-fokus]');
+                if (!f) return;
+                var fk = FOKUS[f.dataset.fokus]; if (!fk) return;
+                S.fokus = f.dataset.fokus;
+                S.sorten = new Set(fk.sorten);
+                if (fk.achse) S.achse = fk.achse;
+                chipsAbgleichen(); zeichne();
+            });
+        }
+        leiste.hidden = !S.gesamt;
+        if (!S.gesamt || !S.geladen) return;
+        var k = kennzahlen();
+        var chip = function (id, farbe, zahl, text) {
+            return '<button type="button" class="tlv-kz' + (S.fokus === id ? ' aktiv' : '') + '" data-fokus="' + id + '" style="--c:' + farbe + '">'
+                + '<i></i><b>' + zahl + '</b> ' + text + '</button>';
+        };
+        leiste.innerHTML = '<div class="tlv-kz-achse" role="group" aria-label="Zeilen">'
+            + '<button type="button" data-achse="maschine" class="' + (S.achse === 'maschine' ? 'aktiv' : '') + '">Nach Maschine</button>'
+            + '<button type="button" data-achse="monteur" class="' + (S.achse === 'monteur' ? 'aktiv' : '') + '">Nach Mitarbeiter</button>'
+            + '</div><div class="tlv-kz-zahlen"><span class="tlv-kz-heute">Heute:</span>'
+            + chip('alles', 'var(--text-2)', '', 'Alles')
+            + chip('miete', 'var(--tlv-miete)', k.miete + k.vorf, 'vermietet' + (k.vorf ? ' (davon ' + k.vorf + ' Vorführung)' : ''))
+            + chip('werkstatt', '#f59e0b', k.werkstatt, 'in Werkstatt')
+            + chip('service', 'var(--tlv-service)', k.service, 'Serviceeinsätze diese Woche')
+            + (ABWESEND_DA ? chip('abwesend', 'var(--tlv-abwesend)', k.abwesend, 'abwesend') : '')
+            + '</div>';
+    }
+
+    // ------------------------------------------------------------------
+    // Abwesenheit: eigenes Fenster (neu / bearbeiten) und Panel
+    // ------------------------------------------------------------------
+    var AB_GRUENDE = ['Urlaub', 'Krank', 'Schulung', 'Frei', 'Sonstiges'];
+    function abwDialog(ab, vorgabe) {
+        if (!ABWESEND_DA) { meldung('Die Tabelle für Abwesenheiten fehlt noch — supabase/supabase_add_absences.sql ausführen.', false); return; }
+        vorgabe = vorgabe || {};
+        var alt = document.getElementById('tlv-ab-dlg'); if (alt) alt.remove();
+        var pid = ab ? (ab.personen[0] || '') : (vorgabe.pid || S.person || '');
+        var von = ab ? ab.von : (vorgabe.von || key(HEUTE));
+        var bis = ab ? ab.bis : (vorgabe.bis || von);
+        var grund = ab ? ab.titel : 'Urlaub';
+        var hg = document.createElement('div');
+        hg.id = 'tlv-ab-dlg';
+        hg.className = 'tlv-mf-hg';
+        hg.innerHTML = '<div class="tlv-mf tlv-ab-fenster" role="dialog" aria-modal="true">'
+            + '<h3>' + (ab ? 'Abwesenheit bearbeiten' : 'Abwesenheit eintragen') + '</h3>'
+            + '<label>Mitarbeiter<select id="tlv-abd-person" class="tlv-input tlv-select tlv-block"><option value="">— bitte wählen —</option>'
+            + MONTEURE.map(function (m) { return '<option value="' + esc(m.id) + '"' + (m.id === String(pid) ? ' selected' : '') + '>' + esc(m.name) + '</option>'; }).join('')
+            + '</select></label>'
+            + '<div class="tlv-ab-reihe"><label>Von<input type="date" id="tlv-abd-von" class="tlv-input" value="' + esc(von) + '"></label>'
+            + '<label>Bis<input type="date" id="tlv-abd-bis" class="tlv-input" value="' + esc(bis) + '"></label></div>'
+            + '<div class="tlv-ab-gruende">' + AB_GRUENDE.map(function (g) {
+                return '<button type="button" data-grund="' + g + '" class="' + (g === grund || (AB_GRUENDE.indexOf(grund) < 0 && g === 'Sonstiges') ? 'aktiv' : '') + '">' + g + '</button>';
+            }).join('') + '</div>'
+            + '<label>Notiz (optional)<input type="text" id="tlv-abd-notiz" class="tlv-input" value="' + esc(ab ? ab.notiz : '') + '" placeholder="z. B. halber Tag, Arzttermin …"></label>'
+            + '<p class="tlv-ab-fehler" id="tlv-abd-fehler" hidden></p>'
+            + '<div class="tlv-mf-knoepfe tlv-ab-knoepfe">'
+            + (ab ? '<button type="button" class="btn-secondary tlv-ab-weg" id="tlv-abd-weg">Löschen</button>' : '')
+            + '<button type="button" class="btn-secondary" id="tlv-abd-abbr">Abbrechen</button>'
+            + '<button type="button" class="btn-primary" id="tlv-abd-ok">Speichern</button></div></div>';
+        document.body.appendChild(hg);
+        var gewaehlt = AB_GRUENDE.indexOf(grund) >= 0 ? grund : 'Sonstiges';
+        hg.querySelector('.tlv-ab-gruende').addEventListener('click', function (e) {
+            var b = e.target.closest('[data-grund]'); if (!b) return;
+            gewaehlt = b.dataset.grund;
+            Array.prototype.forEach.call(hg.querySelectorAll('[data-grund]'), function (x) { x.classList.toggle('aktiv', x === b); });
+        });
+        var vonEl = hg.querySelector('#tlv-abd-von'), bisEl = hg.querySelector('#tlv-abd-bis');
+        vonEl.addEventListener('change', function () { if (!bisEl.value || bisEl.value < vonEl.value) bisEl.value = vonEl.value; });
+        function zu() { document.removeEventListener('keydown', taste); hg.remove(); }
+        function taste(e) { if (e.key === 'Escape') zu(); }
+        document.addEventListener('keydown', taste);
+        hg.addEventListener('click', function (e) { if (e.target === hg) zu(); });
+        hg.querySelector('#tlv-abd-abbr').onclick = zu;
+        var weg = hg.querySelector('#tlv-abd-weg');
+        if (weg) weg.onclick = function () { zu(); abwesenheitLoeschen(ab.dbId); };
+        hg.querySelector('#tlv-abd-ok').onclick = async function () {
+            var person = hg.querySelector('#tlv-abd-person').value;
+            var v = vonEl.value, b = bisEl.value || v;
+            var notiz = hg.querySelector('#tlv-abd-notiz').value.trim();
+            var fehler = hg.querySelector('#tlv-abd-fehler');
+            if (!person || !v) { fehler.textContent = 'Bitte Mitarbeiter und Datum angeben.'; fehler.hidden = false; return; }
+            if (b < v) { var t = v; v = b; b = t; }
+            var mo = monteur(person);
+            var zeile = { user_id: Number(person), user_name: mo ? mo.name : null, von: v, bis: b, grund: gewaehlt, notiz: notiz || null };
+            var res;
+            if (ab && ab.dbId) res = await sb().from('absences').update(zeile).eq('id', ab.dbId).select();
+            else {
+                zeile.created_by = (window.activeUser && Number(window.activeUser.id)) || null;
+                res = await sb().from('absences').insert(zeile).select();
+            }
+            // Ältere Tabelle ohne Spalte „notiz“: ohne sie erneut versuchen.
+            if (res && res.error && /notiz/.test(res.error.message || '')) {
+                delete zeile.notiz;
+                res = ab && ab.dbId ? await sb().from('absences').update(zeile).eq('id', ab.dbId).select() : await sb().from('absences').insert(zeile).select();
+            }
+            if (res && res.error) { fehler.textContent = 'Nicht gespeichert: ' + res.error.message; fehler.hidden = false; return; }
+            var row = (res && res.data && res.data[0]) || null;
+            var eintragNeu = {
+                id: 'ab-' + (row ? row.id : Date.now()), dbId: row ? row.id : (ab && ab.dbId), sorte: 'abwesend', quelle: 'absences',
+                titel: gewaehlt, notiz: notiz, personen: [String(person)], monteur: String(person),
+                name: zeile.user_name || '', von: v, bis: b
+            };
+            ABWESEND = ABWESEND.filter(function (a) { return !ab || a.id !== ab.id; });
+            ABWESEND.push(eintragNeu);
+            zu();
+            meldung('Abwesenheit gespeichert: ' + (zeile.user_name || '') + ', ' + dez(parse(v)) + (b !== v ? ' – ' + dez(parse(b)) : '') + ' (' + gewaehlt + ')', false);
+            if (S.gewaehlt && S.gewaehlt.sorte === 'abwesend') { S.gewaehlt = eintragNeu; zeichnePanel(); }
+            zeichne();
+        };
+        (pid ? vonEl : hg.querySelector('#tlv-abd-person')).focus();
+    }
+    function abwesendPanel(p, it) {
+        var pe = monteur(it.personen[0]);
+        p.innerHTML = '<div style="display:flex;align-items:flex-start;gap:8px">'
+            + '<div style="flex:1"><span class="tlv-badge" style="--c:var(--tlv-abwesend)">Abwesenheit</span><h2>' + esc(it.titel) + '</h2></div>'
+            + '<button class="btn-secondary" id="tlv-panel-zu">&times;</button></div>'
+            + '<div class="kv"><span>Mitarbeiter</span><b>' + esc(pe ? pe.name : (it.name || '—')) + '</b></div>'
+            + '<div class="kv"><span>Zeitraum</span><b>' + esc(zeitraumText(it)) + '</b></div>'
+            + '<div class="kv"><span>Grund</span><b>' + esc(it.titel) + '</b></div>'
+            + (it.notiz ? '<div class="kv"><span>Notiz</span><b>' + esc(it.notiz) + '</b></div>' : '')
+            + '<div class="tlv-panel-knoepfe" style="display:flex;gap:8px;margin-top:16px">'
+            + '<button class="btn-primary" id="tlv-ab-bearb">Bearbeiten</button>'
+            + '<button class="btn-secondary" id="tlv-ab-loesch">Löschen</button></div>';
+        p.querySelector('#tlv-panel-zu').onclick = function () { S.gewaehlt = null; zeichnePanel(); };
+        p.querySelector('#tlv-ab-bearb').onclick = function () { abwDialog(it); };
+        p.querySelector('#tlv-ab-loesch').onclick = function () { abwesenheitLoeschen(it.dbId); };
     }
 
     // ------------------------------------------------------------------
@@ -2758,10 +3056,11 @@
         var m = maschine(it.maschine), pe = monteur(it.monteur);
         var eltern = it.eltern ? eintrag(it.eltern) : null;
         p.classList.add('an');
+        if (it.sorte === 'abwesend') { abwesendPanel(p, it); return; }
 
         var h = '<div style="display:flex;align-items:flex-start;gap:8px">'
             + '<div style="flex:1"><span class="tlv-badge" style="--c:' + SORTEN[it.sorte].farbe + '">'
-            + SORTEN[it.sorte].label + '</span><h2>' + (it.gesperrt ? '🔒 ' : '') + esc(it.titel) + '</h2></div>'
+            + (it.sorte === 'miete' && (it.quelle === 'timeline_planung' || it.unsicher) ? mietArtText(it, true) : SORTEN[it.sorte].label) + '</span><h2>' + (it.gesperrt ? '🔒 ' : '') + esc(it.titel) + '</h2></div>'
             + '<button class="btn-secondary" id="tlv-panel-zu">&times;</button></div>'
             + '<div class="kv"><span>Zeitraum</span><b>' + esc(zeitraumText(it)) + '</b></div>'
             // Dauer zum Eintippen — nur wenn der Termin verschiebbar ist und
@@ -2866,14 +3165,19 @@
             if (plan.art !== 'aufbereitung') h += dokBlock(plan, vertrag);
             h += '<div class="acts">'
                + (plan.art === 'miete' && typeof window.openMietvereinbarung === 'function'
-                   ? '<button class="btn-primary" id="tlv-plan-miet">' + (vertrag ? 'Mietvereinbarung bearbeiten' : 'In Mietvereinbarung übernehmen') + '</button>' : '')
+                   ? '<button class="btn-primary" id="tlv-plan-miet">' + (vertrag ? 'Mietvereinbarung bearbeiten' : 'Mietvereinbarung erstellen') + '</button>' : '')
                + '<button class="btn-primary" id="tlv-plan-bearb">Bearbeiten</button>'
                + (plan.unsicher ? '<button class="btn-secondary" id="tlv-plan-ok">Bestätigen</button>' : '')
                + '<button class="btn-secondary" id="tlv-plan-weg">Löschen</button>'
                + '</div>';
         } else {
-            if (it.quelle === 'rental_agreements') h += dokBlock(it.planId ? eintrag('tp-' + it.planId) : null, it);
-            h += '<div class="acts">' + oeffnenKnopf(it) + '</div>';
+            if (it.quelle === 'rental_agreements') {
+                // Vermietung, die direkt im Mietbogen angelegt wurde (ohne Planung):
+                // gleiche Knöpfe wie bei geplanten — Bearbeiten und Löschen.
+                h += dokBlock(it.planId ? eintrag('tp-' + it.planId) : null, it);
+                h += '<div class="acts"><button class="btn-primary" id="tlv-oeffnen">Mietvereinbarung bearbeiten</button>'
+                   + '<button class="btn-secondary" id="tlv-miet-weg">Löschen</button></div>';
+            } else h += '<div class="acts">' + oeffnenKnopf(it) + '</div>';
         }
         p.innerHTML = h;
         if (plan && plan.art !== 'aufbereitung') dokVerdrahten(p, plan, vertrag);
@@ -2893,6 +3197,8 @@
         if (zu) zu.onclick = function () { S.gewaehlt = null; zeichnePanel(); };
         var oeff = document.getElementById('tlv-oeffnen');
         if (oeff) oeff.onclick = function () { oeffne(it); };
+        var mWeg = document.getElementById('tlv-miet-weg');
+        if (mWeg) mWeg.onclick = function () { mietLoeschen(it); };
 
         Array.prototype.forEach.call(p.querySelectorAll('.tlv-dep-x'), function (btn) {
             btn.onclick = function () { abhaengigkeitEntfernen(it, btn.dataset.dep); };
@@ -2919,6 +3225,19 @@
                 wIn.value = fmtDe(w);
                 dauerSetzen(it, tageAusWochen(w));
             };
+        }
+    }
+    async function mietLoeschen(it) {
+        if (typeof window.canDelete === 'function' && !window.canDelete('Mietvereinbarungen')) return;
+        if (typeof window.deleteRentalAgreement !== 'function') return;
+        if (!confirm('Diese Mietvereinbarung endgültig löschen? PDF und Fotos werden ebenfalls gelöscht.')) return;
+        try {
+            await window.deleteRentalAgreement(it.dbId);
+            ITEMS = ITEMS.filter(function (i) { return i.id !== it.id; });
+            S.gewaehlt = null; zeichnePanel(); zeichne();
+            meldung('Mietvereinbarung gelöscht.', false);
+        } catch (e) {
+            meldung('Löschen fehlgeschlagen: ' + (e && e.message ? e.message : e), false);
         }
     }
     function oeffnenKnopf(it) {
@@ -3397,6 +3716,7 @@
     function setzePreset(k) {
         var p = PRESETS[k]; if (!p) return;
         S.preset = k; S.achse = p.achse; S.sorten = new Set(p.sorten);
+        S.gesamt = k === 'uebersicht'; S.fokus = 'alles';
         var a = document.getElementById('tlv-achse'); if (a) a.value = p.achse;
         chipsAbgleichen();
     }
@@ -3603,6 +3923,17 @@
         an('tlv-next', 'click', function () { schiebe(1); });
         an('tlv-frei-btn', 'click', function () { zeichneFrei(); });
         an('tlv-plan-neu', 'click', function () { planDialog(null); });
+        an('tlv-ab-neu', 'click', function () { abwDialog(null); });
+        // Doppelklick auf eine freie Stelle in einer Mitarbeiter-Zeile: Abwesenheit für diese Person und diesen Tag.
+        document.addEventListener('dblclick', function (e) {
+            var tr = e.target.closest && e.target.closest('#tlv-buehne .tlv-track');
+            if (!tr || S.achse !== 'monteur' || e.target.closest('.tlv-bar') || !tlStart) return;
+            var pid = tr.dataset.row || '';
+            if (!monteur(pid)) return;
+            var off = Math.max(0, Math.floor((e.clientX - tr.getBoundingClientRect().left) / dayW()));
+            var tag = new Date(tlStart); tag.setDate(tag.getDate() + off * schritt());
+            abwDialog(null, { pid: pid, von: key(tag), bis: key(tag) });
+        });
         an('tlv-ics', 'click', function () { icsExport(); });
         an('tlv-weiter', 'click', function () { weiterRechts(); });
         an('tlv-enger', 'click', function () { engerMachen(); });

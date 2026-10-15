@@ -172,8 +172,10 @@
     var FUNKTION = 'https://rtnpyziwyaqrlfazxkyr.supabase.co/functions/v1/foto-eingang';
     var KEY = 'meetra_fotos_schluessel';
     var NAME = 'meetra_fotos_name';
-    var JE_ANFRAGE = 4;
-    var MAX_KANTE = 2200;
+    var JE_ANFRAGE = 3;      // Dateien je Anfrage
+    var GLEICHZEITIG = 3;    // Anfragen parallel unterwegs
+    var MAX_KANTE = 1920;    // reicht für Werkstattfotos, ~400 KB statt 1–2 MB
+    var QUALITAET = 0.8;
 
     var $ = function (id) { return document.getElementById(id); };
     var dateien = [];
@@ -253,14 +255,15 @@
     // Große Fotos verkleinern (Handyfotos haben oft 5–10 MB). Was der Browser
     // nicht lesen kann (z. B. HEIC in Chrome), geht unverändert raus.
     async function verkleinern(f) {
-        if (!/^image\/(jpeg|png|webp)$/.test(f.type) || f.size < 900 * 1024 || !window.createImageBitmap) return f;
+        if (!/^image\/(jpeg|png|webp)$/.test(f.type) || f.size < 450 * 1024 || !window.createImageBitmap) return f;
         try {
             var bmp = await createImageBitmap(f, { imageOrientation: 'from-image' });
             var s = Math.min(1, MAX_KANTE / Math.max(bmp.width, bmp.height));
             var c = document.createElement('canvas');
             c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
             c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
-            var blob = await new Promise(function (res) { c.toBlob(res, 'image/jpeg', 0.85); });
+            if (bmp.close) bmp.close();
+            var blob = await new Promise(function (res) { c.toBlob(res, 'image/jpeg', QUALITAET); });
             if (!blob || blob.size >= f.size) return f;
             return new File([blob], f.name.replace(/\.\w+$/, '') + '.jpg', { type: 'image/jpeg' });
         } catch (e) { return f; }
@@ -274,25 +277,38 @@
         var notiz = $('notiz').value.trim();
         var gesamt = dateien.length, fertig = 0, fehler = [];
         meldung('Wird geschickt …', 'info');
-        var rest = dateien.slice();
-        while (rest.length) {
-            var teil = rest.splice(0, JE_ANFRAGE);
-            var fd = new FormData();
-            fd.append('notiz', notiz);
-            for (var i = 0; i < teil.length; i++) fd.append('fotos', await verkleinern(teil[i]), teil[i].name);
-            try {
-                var r = await fetch(FUNKTION, { method: 'POST', headers: { 'x-foto-schluessel': k }, body: fd });
-                var j = await r.json().catch(function () { return {}; });
-                if (r.status === 403) throw new Error('Dieses Handy ist gesperrt oder der Schlüssel ist ungültig.');
-                fertig += j.angekommen || 0;
-                (j.fehler || []).forEach(function (t) { fehler.push(t); });
-                if (!r.ok && !j.angekommen) fehler.push(j.error || ('Fehler ' + r.status));
-            } catch (e) {
-                fehler.push(e.message === 'Failed to fetch' ? 'Keine Verbindung' : e.message);
-                if (/gesperrt/.test(e.message)) break;
+        // Pakete zu JE_ANFRAGE Dateien; GLEICHZEITIG Pakete laufen parallel — während eines
+        // hochlädt, wird das nächste schon verkleinert.
+        var pakete = [];
+        for (var p = 0; p < dateien.length; p += JE_ANFRAGE) pakete.push(dateien.slice(p, p + JE_ANFRAGE));
+        var naechstes = 0, erledigt = 0, gesperrt = false;
+        async function arbeiter() {
+            while (!gesperrt && naechstes < pakete.length) {
+                var teil = pakete[naechstes++];
+                try {
+                    var klein = [];
+                    for (var i = 0; i < teil.length; i++) klein.push(await verkleinern(teil[i]));
+                    var fd = new FormData();
+                    fd.append('notiz', notiz);
+                    for (var i2 = 0; i2 < klein.length; i2++) fd.append('fotos', klein[i2], klein[i2].name || teil[i2].name);
+                    var r = await fetch(FUNKTION, { method: 'POST', headers: { 'x-foto-schluessel': k }, body: fd });
+                    var j = await r.json().catch(function () { return {}; });
+                    if (r.status === 403) throw new Error('Dieses Handy ist gesperrt oder der Schlüssel ist ungültig.');
+                    fertig += j.angekommen || 0;
+                    (j.fehler || []).forEach(function (t) { fehler.push(t); });
+                    if (!r.ok && !j.angekommen) fehler.push(j.error || ('Fehler ' + r.status));
+                } catch (e) {
+                    fehler.push(e.message === 'Failed to fetch' ? 'Keine Verbindung' : e.message);
+                    if (/gesperrt/.test(e.message)) gesperrt = true;
+                }
+                erledigt += teil.length;
+                balken.firstElementChild.style.width = Math.round(erledigt / gesamt * 100) + '%';
+                meldung('Wird geschickt … ' + erledigt + ' / ' + gesamt, 'info');
             }
-            balken.firstElementChild.style.width = Math.round((gesamt - rest.length) / gesamt * 100) + '%';
         }
+        var arbeiterListe = [];
+        for (var a = 0; a < Math.min(GLEICHZEITIG, pakete.length); a++) arbeiterListe.push(arbeiter());
+        await Promise.all(arbeiterListe);
         knopf.disabled = false;
         setTimeout(function () { balken.classList.add('hidden'); balken.firstElementChild.style.width = '0'; }, 600);
         if (fertig === gesamt) {
@@ -377,7 +393,7 @@
             var img = document.createElement('img'); img.src = URL.createObjectURL(blob);
             var st = $('serie-streifen'); st.appendChild(img); st.scrollLeft = st.scrollWidth;
             serieZahl();
-        }, 'image/jpeg', 0.85);
+        }, 'image/jpeg', QUALITAET);
     }
     function serieEnde(uebernehmen) {
         if (!uebernehmen && serie.fotos.length && !confirm(serie.fotos.length + ' Fotos verwerfen?')) return;

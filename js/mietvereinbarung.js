@@ -498,7 +498,7 @@
                         <span class="miet-lang">Einweisungserklärung</span><span class="miet-kurz">Einw.</span>
                     </label>
                     <span class="miet-anlage-wrap" style="position: relative;">
-                        <button type="button" class="btn-secondary" id="miet-anlage-btn" onclick="window.mietAnlagenMenue(event)" title="Datei hinten ans PDF anhängen (z. B. unterschriebenes Original)">📎 <span class="miet-lang">Anlage</span><span id="miet-anlage-zahl">${(daten.anlagen || []).length ? ' (' + daten.anlagen.length + ')' : ''}</span></button>
+                        <button type="button" class="btn-secondary" id="miet-anlage-btn" onclick="window.mietAnlagenMenue(event)" title="Anlage hinzufügen (z. B. eingescanntes, unterschriebenes Original) — wird zusammen mit der Mietvereinbarung angezeigt">📎 <span class="miet-lang">Anlage</span><span id="miet-anlage-zahl">${(daten.anlagen || []).length ? ' (' + daten.anlagen.length + ')' : ''}</span></button>
                     </span>
                     <button class="btn-secondary miet-foot-druck" onclick="window.mietDrucken()"><span class="miet-lang">Drucken / PDF</span><span class="miet-kurz">PDF</span></button>
                     <button class="btn-primary" id="miet-save-btn" onclick="window.mietSpeichern()">Speichern</button>
@@ -1508,10 +1508,10 @@
         }
     }
 
-    // ── Anlagen: Dateien hinten ans PDF (z. B. das unterschriebene Original) ──
+    // ── Anlagen (z. B. das eingescannte, unterschriebene Original) ──
     // Hochgeladen wird sofort nach R2 (<Maschinenordner>/mietvereinbarungen/anlagen/),
-    // gemerkt in daten.anlagen (JSONB `data`). Beim Erzeugen des PDFs werden PDF-Seiten
-    // per pdf.js gerendert und Bilder eingepasst — jede Anlage-Seite als eigenes Blatt.
+    // gemerkt in daten.anlagen (JSONB `data`). Sie werden NICHT ins PDF eingefügt,
+    // sondern zusammen mit ihm angezeigt: window.mietDokumenteAnsehen (mietvereinbarung-liste.js).
     function anlagenZahlSetzen() {
         const z = document.getElementById('miet-anlage-zahl');
         const n = (daten && daten.anlagen || []).length;
@@ -1599,63 +1599,6 @@
             console.error('Anlage nicht hochgeladen:', e);
             status('');
             window.showToast('Anlage konnte nicht hochgeladen werden: ' + (e && e.message || e));
-        }
-    }
-
-    async function anlagenAnhaengen(doc) {
-        const liste = (daten && daten.anlagen) || [];
-        if (!liste.length) return;
-        // Seite (Breite × Höhe in px) mittig und vollständig auf ein A4-Blatt einpassen;
-        // Querformat-Vorlagen bekommen ein Quer-Blatt.
-        const blatt = (bild, b, h) => {
-            const quer = b > h;
-            const W = quer ? 297 : 210, H = quer ? 210 : 297, rand = 5;
-            const f = Math.min((W - 2 * rand) / b, (H - 2 * rand) / h);
-            const w = b * f, hh = h * f;
-            doc.addPage('a4', quer ? 'landscape' : 'portrait');
-            doc.addImage(bild, 'JPEG', (W - w) / 2, (H - hh) / 2, w, hh);
-        };
-        for (const a of liste) {
-            // Nur PDF und Bilder lassen sich einbetten — Word & Co. bleiben reine Anlage (Timeline).
-            const art = (a.type || '') + ' ' + (a.name || a.url || '');
-            if (!/pdf|image\/|\.(jpe?g|png|gif|webp|heic|avif|bmp)\b/i.test(art)) continue;
-            status(`Anlage „${a.name}“ wird angehängt …`);
-            const r = await fetch(a.url, { mode: 'cors' });
-            if (!r.ok) throw new Error(`Anlage „${a.name}“ nicht ladbar (HTTP ${r.status})`);
-            const blob = await r.blob();
-            const istPdf = /pdf/i.test(a.type || blob.type) || /\.pdf$/i.test(a.name || '');
-            if (istPdf) {
-                if (typeof window.loadPDFReader === 'function') await window.loadPDFReader();
-                if (!window.pdfjsLib) throw new Error('PDF-Leser nicht verfügbar.');
-                const pdf = await window.pdfjsLib.getDocument({ data: new Uint8Array(await blob.arrayBuffer()) }).promise;
-                for (let n = 1; n <= pdf.numPages; n++) {
-                    const seite = await pdf.getPage(n);
-                    // ~150 dpi: Unterschrift gut lesbar, Datei bleibt klein.
-                    const vp = seite.getViewport({ scale: 2 });
-                    const c = document.createElement('canvas');
-                    c.width = Math.round(vp.width); c.height = Math.round(vp.height);
-                    const ctx = c.getContext('2d');
-                    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
-                    await seite.render({ canvasContext: ctx, viewport: vp }).promise;
-                    blatt(c.toDataURL('image/jpeg', 0.85), c.width, c.height);
-                    c.width = c.height = 0;
-                }
-                if (pdf.destroy) pdf.destroy();
-            } else {
-                const objUrl = URL.createObjectURL(blob);
-                try {
-                    const img = await new Promise((ok, fehl) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => fehl(new Error(`Bild „${a.name}“ nicht lesbar`)); i.src = objUrl; });
-                    // Große Handyfotos auf max. 2000 px verkleinern.
-                    const f = Math.min(1, 2000 / Math.max(img.naturalWidth, img.naturalHeight));
-                    const c = document.createElement('canvas');
-                    c.width = Math.round(img.naturalWidth * f); c.height = Math.round(img.naturalHeight * f);
-                    const ctx = c.getContext('2d');
-                    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
-                    ctx.drawImage(img, 0, 0, c.width, c.height);
-                    blatt(c.toDataURL('image/jpeg', 0.85), c.width, c.height);
-                    c.width = c.height = 0;
-                } finally { URL.revokeObjectURL(objUrl); }
-            }
         }
     }
 
@@ -1786,7 +1729,6 @@
                 canvas.width = canvas.height = 0;
             }
             if (gesamt) gesamt.width = gesamt.height = 0;
-            await anlagenAnhaengen(doc);
             return doc;
         } finally {
             hintergrundZurueck();
@@ -2023,7 +1965,9 @@
             // Dokument unter "Dokumente" anlegen bzw. aktualisieren.
                 messPunkt('PDF-Upload');
             const folderId = await ordnerId();
-            const anhaenge = fotos.map(f => ({ name: f.name, url: f.url, path: f.path, type: 'image/jpeg' }));
+            // Anlagen (eingescanntes Original) zuerst, dann die Fotos — alles über die Büroklammer unter „Dokumente“ erreichbar.
+            const anhaenge = ((daten && daten.anlagen) || []).filter(a => a && a.url).map(a => ({ name: a.name, url: a.url, path: a.path, type: a.type || '' }))
+                .concat(fotos.map(f => ({ name: f.name, url: f.url, path: f.path, type: 'image/jpeg' })));
             const dokument = {
                 name: dateiName.replace(/\.pdf$/, ''),
                 category: MIET_ORDNER,

@@ -2578,3 +2578,79 @@ textarea.miet-in {
     .miet-pages:not(.miet-a4) .miet-checkcell .miet-check { margin: 2px 2px 2px 0; gap: 2px; }
     .miet-foot .miet-zoom { display: none !important; }
 }
+
+/* ---------- Anlagen in der Liste + gemeinsame Dokument-Ansicht (2026-10-15) ---------- */
+.miet-liste-anlagen { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.miet-anlage-chip {
+    background: rgba(59, 130, 246, 0.14);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    color: #bfdbfe;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: var(--fs-xs);
+    cursor: pointer;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.miet-anlage-chip:hover { background: rgba(59, 130, 246, 0.25); }
+.miet-doks-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10060;
+    background: rgba(2, 6, 23, 0.75);
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    padding: var(--space-4);
+}
+.miet-doks-fenster {
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: var(--radius-lg);
+    width: min(1080px, 100%);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.miet-doks-kopf {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-4);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.miet-doks-titel h2 { margin: 0 0 var(--space-2); font-size: var(--fs-lg); color: #fff; }
+.miet-doks-sprung { display: flex; flex-wrap: wrap; gap: 6px; }
+.miet-doks-sprung button {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    color: #fff;
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: var(--fs-sm);
+    cursor: pointer;
+}
+.miet-doks-inhalt { flex: 1; overflow-y: auto; padding: var(--space-4); background: #1e293b; }
+.miet-doks-teil { margin-bottom: var(--space-6, 32px); scroll-margin-top: 8px; }
+.miet-doks-teilkopf {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-3);
+    color: #fff;
+    margin-bottom: var(--space-2);
+    font-size: var(--fs-sm);
+}
+.miet-doks-teilkopf a { color: #93c5fd; font-size: var(--fs-xs); white-space: nowrap; }
+.miet-doks-seiten { display: flex; flex-direction: column; align-items: center; gap: var(--space-3); }
+.miet-doks-seite { width: 100%; max-width: 1000px; height: auto; background: #fff; box-shadow: var(--shadow-2); border-radius: 2px; }
+.miet-doks-laedt { color: var(--text-2); text-align: center; padding: var(--space-4); }
+@media (max-width: 768px) {
+    .miet-doks-overlay { padding: 0; }
+    .miet-doks-fenster { border-radius: 0; }
+    .miet-doks-inhalt { padding: var(--space-2); }
+}
+.miet-doks-rahmen { width: 100%; max-width: 1000px; height: 85vh; border: 0; background: #fff; border-radius: 2px; }

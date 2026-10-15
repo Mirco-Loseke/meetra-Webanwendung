@@ -209,16 +209,17 @@ Deno.serve(async (req) => {
     let angekommen = 0;
     const fehler: string[] = [];
 
-    for (const [i, f] of dateien.entries()) {
+    // Alle Dateien einer Anfrage parallel ablegen statt nacheinander
+    await Promise.all(dateien.map(async (f, i) => {
         const typ = f.type || 'image/jpeg';
-        if (!ERLAUBT.test(typ)) { fehler.push(`${f.name}: Dateityp nicht erlaubt`); continue; }
-        if (f.size > MAX_DATEI) { fehler.push(`${f.name}: größer als 25 MB`); continue; }
+        if (!ERLAUBT.test(typ)) { fehler.push(`${f.name}: Dateityp nicht erlaubt`); return; }
+        if (f.size > MAX_DATEI) { fehler.push(`${f.name}: größer als 25 MB`); return; }
         const pfad = `foto-eingang/${tag}/${geraet.id}/${Date.now()}-${i}-${crypto.randomUUID().slice(0, 8)}.${endung(f.name || '', typ)}`;
         const daten = await f.arrayBuffer();
         const res = await aws.fetch(`${R2_ENDPOINT}/${R2_BUCKET}/${pfad}`, {
             method: 'PUT', headers: { 'Content-Type': typ }, body: daten,
         });
-        if (!res.ok) { fehler.push(`${f.name}: Ablage fehlgeschlagen`); continue; }
+        if (!res.ok) { fehler.push(`${f.name}: Ablage fehlgeschlagen`); return; }
         const istTon = typ.startsWith('audio/');
         const { data: neu, error } = await db.from('foto_eingang').insert({
             geraet_id: geraet.id, absender: geraet.name, notiz,
@@ -228,12 +229,12 @@ Deno.serve(async (req) => {
         if (error) {
             await aws.fetch(`${R2_ENDPOINT}/${R2_BUCKET}/${pfad}`, { method: 'DELETE' });
             fehler.push(`${f.name}: ${error.message}`);
-            continue;
+            return;
         }
         angekommen++;
         // Nicht abwarten: das Handy ist sofort fertig, der Text kommt per Realtime in der App an.
         if (istTon && neu) imHintergrund(abschreiben(neu.id, typ, daten));
-    }
+    }));
 
     await db.from('foto_geraete').update({ letzte_nutzung: new Date().toISOString() }).eq('id', geraet.id);
     return json({ ok: angekommen > 0, angekommen, fehler }, angekommen ? 200 : 500);
