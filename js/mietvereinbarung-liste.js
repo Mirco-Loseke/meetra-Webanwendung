@@ -194,6 +194,20 @@
         }
     };
 
+    // Lila Büroklammer: Fotos der Vermietung (Übergabe/Rücknahme) in der Anhang-Ansicht der App.
+    window.mietListeFotos = function (id) {
+        const v = liste.find(x => String(x.id) === String(id));
+        const fotos = (v && Array.isArray(v.photos) ? v.photos : []).filter(f => f && f.url);
+        if (!fotos.length) return;
+        const PHASE = { uebergabe: 'Übergabe', ruecknahme: 'Rücknahme' };
+        const dateien = fotos.map(f => ({
+            name: [PHASE[f.phase] || '', f.position || ''].filter(Boolean).join(' · ') || 'Foto',
+            url: f.url, type: 'image/jpeg'
+        }));
+        if (typeof window.openServiceAttachments === 'function') window.openServiceAttachments(dateien);
+        else if (typeof window.openPhotosLightbox === 'function') window.openPhotosLightbox(dateien.map(d => d.url), 0);
+    };
+
     function zeile(v) {
         const d = v.data || {};
         const mieter = (d.mieter && d.mieter.name) || 'ohne Mieter';
@@ -215,6 +229,7 @@
                 ${anlagen.length ? `<div class="miet-liste-anlagen">${anlagen.map((a, i) => `<button type="button" class="miet-anlage-chip" onclick="window.mietDokumenteAnsehen('${esc(v.id)}', ${i + 1})" title="Anlage ansehen">📎 ${esc(a.name || 'Anlage')}</button>`).join('')}</div>` : ''}
             </div>
             <div class="miet-liste-knoepfe">
+                ${bilder ? `<button type="button" class="btn-icon-circular hist-anhang-btn miet-liste-klammer" onclick="window.mietListeFotos('${esc(v.id)}')" title="${bilder} Foto${bilder === 1 ? '' : 's'} der Vermietung ansehen"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg><span class="hist-anhang-zahl">${bilder}</span></button>` : ''}
                 ${v.pdf_url || anlagen.length ? `<button type="button" class="btn-secondary" onclick="window.mietDokumenteAnsehen('${esc(v.id)}')" title="Mietvereinbarung${anlagen.length ? ' und Anlagen' : ''} ansehen">PDF${anlagen.length ? ' + ' + anlagen.length : ''}</button>` : ''}
                 <button type="button" class="btn-primary" onclick="window.mietListeBearbeiten('${esc(v.id)}')">Bearbeiten</button>
                 <button type="button" class="btn-secondary delete-permission-required" data-del-area="mietvereinbarungen miet-liste-weg" onclick="window.mietListeLoeschen('${esc(v.id)}')" title="Löschen">&times;</button>

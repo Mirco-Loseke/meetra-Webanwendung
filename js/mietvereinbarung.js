@@ -1527,20 +1527,23 @@
         const liste = daten.anlagen || [];
         const m = document.createElement('div');
         m.id = 'miet-anlage-menue';
-        m.className = 'menu-panel';
+        m.className = 'miet-anlage-menue';
         const r = btn.getBoundingClientRect();
-        m.style.cssText = `position: fixed; z-index: 100000; min-width: 260px; max-width: 340px; left: ${Math.max(8, Math.min(r.left, window.innerWidth - 348))}px; bottom: ${window.innerHeight - r.top + 6}px; padding: 10px;`;
+        m.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 368)) + 'px';
+        m.style.bottom = (window.innerHeight - r.top + 8) + 'px';
         m.innerHTML = `
-            <div style="font-size: var(--fs-xs); opacity: 0.7; margin-bottom: 8px;">Wird beim Speichern hinten ans PDF gehängt.</div>
+            <div class="miet-am-kopf">📎 Anlagen</div>
+            <div class="miet-am-hinweis">z. B. das eingescannte, unterschriebene Original. Wird beim Ansehen zusammen mit der Mietvereinbarung angezeigt.</div>
             ${liste.length ? liste.map((a, i) => `
-                <div style="display: flex; align-items: center; gap: 8px; padding: 6px 4px;">
-                    <span style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${esc(a.name)}">${/pdf/i.test(a.type || a.name) ? '📄' : '🖼️'} ${esc(a.name)}</span>
-                    <button type="button" class="btn-secondary" data-anlage-weg="${i}" title="Entfernen" style="padding: 2px 8px;">✕</button>
-                </div>`).join('') : '<div style="padding: 6px 4px; opacity: 0.6;">Noch keine Anlage.</div>'}
-            <div data-anlage-neu style="margin-top: 8px; padding: 14px 10px; border: 1.5px dashed rgba(255,255,255,0.3); border-radius: var(--radius-md, 10px); text-align: center; cursor: pointer; font-size: var(--fs-sm, 0.85rem);">PDF oder Foto hierher ziehen<br>oder <u>auswählen</u></div>`;
+                <div class="miet-am-zeile">
+                    <a href="${esc(a.url)}" target="_blank" rel="noopener" title="Öffnen: ${esc(a.name)}">${/pdf/i.test(a.type || a.name) ? '📄' : '🖼️'} ${esc(a.name)}</a>
+                    <button type="button" data-anlage-weg="${i}" title="Entfernen">✕</button>
+                </div>`).join('') : '<div class="miet-am-leer">Noch keine Anlage.</div>'}
+            <div data-anlage-neu class="miet-am-zone">PDF oder Foto hierher ziehen<br>oder <u>auswählen</u></div>`;
         document.body.appendChild(m);
         m.addEventListener('click', e => {
             e.stopPropagation();
+            if (e.target.closest('a')) return;
             const weg = e.target.closest('[data-anlage-weg]');
             if (weg) {
                 // Nur aus der Vereinbarung lösen — die Datei in R2 bleibt, bis gespeichert ist.

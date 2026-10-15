@@ -2654,3 +2654,49 @@ textarea.miet-in {
     .miet-doks-inhalt { padding: var(--space-2); }
 }
 .miet-doks-rahmen { width: 100%; max-width: 1000px; height: 85vh; border: 0; background: #fff; border-radius: 2px; }
+
+/* Anlagen-Menü im Mietbogen: deckend statt Glas — lag sonst unlesbar über dem weißen Blatt */
+.miet-anlage-menue {
+    position: fixed;
+    z-index: 100000;
+    width: 360px;
+    max-width: calc(100vw - 16px);
+    box-sizing: border-box;
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+    padding: var(--space-4);
+    color: #fff;
+}
+.miet-am-kopf { font-weight: 800; font-size: var(--fs-md); margin-bottom: 4px; }
+.miet-am-hinweis { font-size: var(--fs-xs); color: var(--text-2); margin-bottom: var(--space-3); }
+.miet-am-zeile {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+}
+.miet-am-zeile a { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #bfdbfe; text-decoration: none; font-size: var(--fs-sm); }
+.miet-am-zeile a:hover { text-decoration: underline; }
+.miet-am-zeile button { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #fca5a5; border-radius: 6px; padding: 2px 8px; cursor: pointer; }
+.miet-am-leer { color: var(--text-2); font-size: var(--fs-sm); padding: 4px 0 8px; }
+.miet-am-zone {
+    margin-top: var(--space-2);
+    padding: 16px 10px;
+    border: 2px dashed rgba(96, 165, 250, 0.55);
+    background: rgba(59, 130, 246, 0.08);
+    border-radius: var(--radius-md);
+    text-align: center;
+    cursor: pointer;
+    font-size: var(--fs-sm);
+    color: #fff;
+}
+.miet-am-zone:hover { background: rgba(59, 130, 246, 0.16); }
+
+/* Lila Büroklammer in der Liste (Fotos der Vermietung) — Optik wie in der Historie */
+.miet-liste-klammer { position: relative; background: rgba(139, 92, 246, 0.15); border-color: rgba(139, 92, 246, 0.4); color: #a78bfa; flex: none; }
