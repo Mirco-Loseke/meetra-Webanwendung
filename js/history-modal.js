@@ -530,6 +530,12 @@
                                 // Stunden nicht mehr als "1450 Std."-Text, sondern als blaues Badge (mit "h").
                                 mOperatingHours = String(m.content).trim().replace(/\s*(h|std\.?|stunden)\s*$/i, '').trim();
                                 mDescription = '';
+                                // Zweiter Zähler (sender = Bezeichnung, recipient = Wert): beide Badges beschriftet.
+                                const t1 = (m.title || '').trim();
+                                if (m.recipient || (t1 && t1 !== 'Betriebsstunden')) {
+                                    mOperatingHours = [{ label: t1 || 'Betriebsstunden', wert: mOperatingHours }];
+                                    if (m.recipient) mOperatingHours.push({ label: m.sender || 'Zähler 2', wert: String(m.recipient).trim() });
+                                }
                             } else if (m.type === 'email') {
                                 mEmailHtml = buildEmailHistoryHtml(m);
                             }
@@ -858,6 +864,7 @@
                                     ${(() => {
                                         // Titel weglassen, wenn er nur die Typ-Bezeichnung wiederholt
                                         // (z.B. "Servicebericht"/"Betriebsstunden") — die steht oben schon farbig.
+                                        if (item.rawType === 'hours') return '';   // Bezeichnung steht im Stunden-Badge
                                         const t = (item.title || '').trim();
                                         const typeLabel = String(item.type || '').replace(/<[^>]*>/g, '').trim();
                                         const editT = histTextEditierbar(item) ? ` class="hist-edit" data-hist-edit="title" data-hist-id="${item.id}" title="Klicken zum Bearbeiten"` : '';
@@ -868,11 +875,11 @@
                                     <div style="display:inline-flex; align-items:center; gap:5px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); color:var(--color-primary-green); border-radius:14px; padding:3px 10px; font-size:0.75rem; font-weight:700; margin-bottom:0.5rem;">
                                         Gewartet: ${escHistoryText(item.maintenanceScope)}
                                     </div>` : ''}
-                                    ${item.operatingHours ? `
+                                    ${item.operatingHours ? (Array.isArray(item.operatingHours) ? item.operatingHours : [{ label: '', wert: item.operatingHours }]).map(z => `
                                     <div style="display:inline-flex; align-items:center; gap:5px; background:rgba(59,130,246,0.12); border:1px solid rgba(59,130,246,0.35); color:#60a5fa; border-radius:14px; padding:3px 10px; font-size:0.75rem; font-weight:700; margin-bottom:0.5rem; margin-left:0.4rem;">
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                                        ${escHistoryText(item.operatingHours)} h
-                                    </div>` : ''}
+                                        ${z.label ? escHistoryText(z.label) + ': ' : ''}${escHistoryText(z.wert)} h
+                                    </div>`).join('') : ''}
                                     ${item.linkedReportId ? `
                                     <div onclick="window.jumpToServicebericht(${item.linkedReportId})" title="Zum ${item.isFollowUpReport ? 'vorherigen Bericht' : 'Folgebericht'} springen"
                                         style="cursor:pointer; display:inline-flex; align-items:center; gap:5px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); color:var(--color-primary-green); border-radius:14px; padding:3px 10px; font-size:0.75rem; font-weight:700; margin-bottom:0.5rem;">
@@ -1191,10 +1198,22 @@
                         <textarea id="manual-remark" placeholder="Bemerkung (optional, interne Notiz)..." class="glass-input" style="min-height: 60px;"></textarea>
                     `;
             } else if (type === 'hours') {
+                // Zwei Zähler je Eintrag (z. B. Maschine + Generator/Diesel). Ohne Migration:
+                // Zähler 1 = title/content (wie bisher — alle Leser von content bleiben gültig),
+                // Zähler 2 = sender (Bezeichnung) / recipient (Wert).
+                const lbl = 'font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.4rem; display: block;';
                 html = `
-                        <input type="hidden" id="manual-title" value="Betriebsstunden">
-                        <label style="font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 0.4rem; display: block;">Betriebsstunden</label>
-                        <input type="number" id="manual-content" placeholder="z.B. 1234" class="glass-input" min="0" step="1" style="margin-bottom: 0.75rem;">
+                        <datalist id="manual-hours-namen"><option value="Betriebsstunden"><option value="Maschinenstunden"><option value="Motorstunden"><option value="Dieselstunden"><option value="Generatorstunden"></datalist>
+                        <label style="${lbl}">Zähler 1</label>
+                        <div style="display: flex; gap: 8px; margin-bottom: 0.75rem;">
+                            <input type="text" id="manual-title" value="Betriebsstunden" list="manual-hours-namen" placeholder="Bezeichnung" class="glass-input" style="flex: 1.4; min-width: 0;">
+                            <input type="number" id="manual-content" placeholder="z.B. 1234" class="glass-input" min="0" step="1" style="flex: 1; min-width: 0;">
+                        </div>
+                        <label style="${lbl}">Zähler 2 (optional)</label>
+                        <div style="display: flex; gap: 8px; margin-bottom: 0.75rem;">
+                            <input type="text" id="manual-sender" list="manual-hours-namen" placeholder="z.B. Generatorstunden" class="glass-input" style="flex: 1.4; min-width: 0;">
+                            <input type="number" id="manual-recipient" placeholder="z.B. 560" class="glass-input" min="0" step="1" style="flex: 1; min-width: 0;">
+                        </div>
                     `;
             } else if (type === 'whatsapp') {
                 html = `
@@ -1524,7 +1543,7 @@
 
             const id = document.getElementById('manual-history-id').value;
             const type = document.getElementById('manual-history-type').value;
-            const title = document.getElementById('manual-title').value;
+            const title = document.getElementById('manual-title').value.trim() || (type === 'hours' ? 'Betriebsstunden' : '');
             let content = document.getElementById('manual-content') ? document.getElementById('manual-content').value : '';
             const machineId = window.currentHistoryMachineId;
             const entryDateInput = document.getElementById('manual-entry-date');
@@ -1534,9 +1553,11 @@
             const endDateInput = document.getElementById('manual-end-date');
             const endDate = endDateInput ? (endDateInput.value || null) : null;
             const senderInput = document.getElementById('manual-sender');
-            const sender = senderInput ? (senderInput.value || null) : null;
+            let sender = senderInput ? (senderInput.value || null) : null;
             const recipientInput = document.getElementById('manual-recipient');
             const recipient = recipientInput ? (recipientInput.value || null) : null;
+            // Betriebsstunden: Bezeichnung von Zähler 2 nur mit Wert, sonst Standardname.
+            if (type === 'hours') sender = recipient ? (sender || 'Zähler 2') : null;
             const remarkInput = document.getElementById('manual-remark');
             const remark = remarkInput ? (remarkInput.value || null) : null;
 

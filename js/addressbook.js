@@ -2930,7 +2930,9 @@
                         ${pdfBtnHtml}
                         ${processBtnHtml}
                     </div>
-                    ${mh.content ? `<div class="ab-timeline-text" style="white-space: pre-wrap;">${esc(mh.content)}</div>` : ''}
+                    ${mh.content ? `<div class="ab-timeline-text" style="white-space: pre-wrap;">${esc(mh.type === 'hours'
+                        ? `${mh.content} h${mh.recipient ? ` · ${mh.sender || 'Zähler 2'}: ${mh.recipient} h` : ''}`
+                        : mh.content)}</div>` : ''}
                     ${filesHtml}
                     ${dokHtml}
                 </div>
