@@ -1327,6 +1327,8 @@
         await loadDetailData(String(state.currentId));
         renderDetail();
     };
+    // Nur neu zeichnen (ohne Laden) — Unterreiter der Ablage (js/medien-ablage.js)
+    window.refreshAddressDetailAnsicht = function () { if (state.currentId) renderDetail(); };
 
     // Zugriff auf die Modul-Interna für js/addressbook-live.js. Bewusst
     // schmal gehalten: nur was Auto-Speichern und Live-Update brauchen.
@@ -1572,16 +1574,25 @@
                 const allClusterMachines = state.detail.allClusterMachines || [];
                 const mIds = allClusterMachines.map(m => m.id);
 
-                let procQuery = sb().from('internal_processes').select('*');
-                if (mIds.length > 0) {
-                    procQuery = procQuery.or(`customer_id.in.(${allClusterCustomerIds.join(',')}),machine_id.in.(${mIds.join(',')})`);
-                } else {
-                    procQuery = procQuery.in('customer_id', allClusterCustomerIds);
-                }
+                const filtern = q => mIds.length > 0
+                    ? q.or(`customer_id.in.(${allClusterCustomerIds.join(',')}),machine_id.in.(${mIds.join(',')})`)
+                    : q.in('customer_id', allClusterCustomerIds);
 
-                const { data, error } = await procQuery.order('process_date', { ascending: false });
+                /* Offene Vorgänge komplett. Erledigte nur schmal (ohne Beschreibung,
+                   Dokumente, Mails, Verlauf) — sie stehen im Reiter „Vorgänge“
+                   eingeklappt und werden erst beim Aufklappen vollständig geladen
+                   (procErledigteLaden). Historie und KI-Zusammenfassung kommen mit
+                   den schmalen Zeilen aus. */
+                const { data, error } = await filtern(sb().from('internal_processes').select('*').neq('status', 'erledigt'))
+                    .order('process_date', { ascending: false });
                 if (error) throw error;
-                state.detail.processes = data || [];
+                let erl = await filtern(sb().from('internal_processes').select(PROC_SCHMAL).eq('status', 'erledigt'))
+                    .order('process_date', { ascending: false });
+                if (erl.error) erl = await filtern(sb().from('internal_processes').select('*').eq('status', 'erledigt')).order('process_date', { ascending: false });
+                if (erl.error) throw erl.error;
+                const schmal = !(erl.data || []).some(x => 'attachments' in x);
+                state.detail.processes = (data || []).concat((erl.data || []).map(x => (schmal ? Object.assign(x, { _schmal: true }) : x)));
+                state.detail.erledigteAuf = false;
                 if (typeof window.procMailsAusStand === 'function') state.detail.processes.forEach(p => window.procMailsAusStand(p, true));
 
                 // Angebote, die an diesen Vorgängen hängen (Angebot = Vorgang,
@@ -1737,13 +1748,14 @@
             { key: 'tasks', label: 'Vorgänge', count: tasksList.length },
             { key: 'appointments', label: 'Termine', count: (state.detail.appointments || []).length },
             { key: 'mails', label: 'Mails' },
-            { key: 'history', label: 'Historie', count: historyCount }
+            { key: 'history', label: 'Historie', count: historyCount },
+            { key: 'ablage', label: 'Ablage', count: window.adressAblageAnzahl ? window.adressAblageAnzahl(state.detail) : undefined }
         ];
         if (darfBelegeSehen()) {
             const geladen = belegeCache.get(state.currentId);
             const anzahl = geladen ? geladen.zeilen.length : belegeAnzahl.get(state.currentId);
             if (anzahl === undefined) zaehleBelege(state.currentId);
-            tabs.push({ key: 'belege', label: 'Belege', count: anzahl === null ? undefined : anzahl });
+            tabs.push({ key: 'belege', label: 'Rechnungen', count: anzahl === null ? undefined : anzahl });
         }
         else if (state.detailTab === 'belege') state.detailTab = 'overview';
 
@@ -1798,6 +1810,7 @@
             case 'mails': return renderMailsTab(a);
             case 'belege': return renderBelegeTab();
             case 'history': return renderHistoryTab();
+            case 'ablage': return window.adressAblageHtml ? window.adressAblageHtml(state.detail, state.currentId) : '';
             default: return renderOverviewTab(a);
         }
     }
@@ -2817,9 +2830,11 @@
             const rawFiles = Array.isArray(mh.files) ? mh.files : [];
             const imageUrls = [];
             const dokUrls = [];   // PDFs u. a. (z. B. aus dem Foto-Eingang) — öffnen statt Lightbox
+            const videoUrls = [];
             rawFiles.forEach(f => {
                 const url = typeof f === 'string' ? f : (f && f.url ? f.url : null);
-                if (url) {
+                if (url && window.medienArt && window.medienArt(f) === 'video') videoUrls.push(url);
+                else if (url) {
                     const isImg = url.match(/\.(jpg|jpeg|png|gif|webp|heic|avif|bmp)(\?.*)?$/i) || (typeof f === 'object' && f.type && f.type.startsWith('image/'));
                     const isDok = !isImg && /\.[a-z0-9]{2,5}$/i.test(url.split('?')[0].split('/').pop() || '');
                     if (isDok) dokUrls.push(url);
@@ -2842,6 +2857,9 @@
                         `).join('')}
                         ${imageUrls.length > 6 ? `<span style="font-size: 0.75rem; color: rgba(255,255,255,0.5);">+${imageUrls.length - 6} weitere Bilder</span>` : ''}
                     </div>`;
+            }
+            if (videoUrls.length > 0) {
+                filesHtml += `<div class="mv-video-reihe">${videoUrls.map(u => window.videoKachelHtml(u, 'mv-video-klein')).join('')}</div>`;
             }
             if (dokUrls.length > 0) {
                 filesHtml += `<div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">${dokUrls.map(u => {
@@ -2962,8 +2980,28 @@
         erledigt: { label: 'Erledigt', cls: 'ab-pill-success', color: '#10b981' }
     };
 
+    // Spalten, die Historie, KI-Zusammenfassung und die zugeklappte Liste von erledigten
+    // Vorgängen brauchen — alle aus dem bisherigen select('*') im Gebrauch.
+    const PROC_SCHMAL = 'id, title, status, process_type, process_date, created_at, machine_id, customer_id, '
+        + 'remark, steps, status_updates, assigned_users, contact_name, remind_at, workshop_order_number';
+
+    async function procErledigteLaden() {
+        const fehlend = (state.detail.processes || []).filter(p => p._schmal).map(p => p.id);
+        if (!fehlend.length) return true;
+        const { data, error } = await sb().from('internal_processes').select('*').in('id', fehlend);
+        if (error) { window.showToast('Erledigte Vorgänge konnten nicht geladen werden: ' + error.message); return false; }
+        const voll = new Map((data || []).map(x => [String(x.id), x]));
+        state.detail.processes = state.detail.processes.map(p => voll.get(String(p.id)) || p);
+        if (typeof window.procMailsAusStand === 'function') (data || []).forEach(p => window.procMailsAusStand(p, true));
+        return true;
+    }
+
     function renderTasksTab() {
-        const procList = state.detail.processes || [];
+        const procAlle = state.detail.processes || [];
+        const procOffen = procAlle.filter(p => p.status !== 'erledigt');
+        const procErl = procAlle.filter(p => p.status === 'erledigt');
+        const erlAuf = !!state.detail.erledigteAuf;
+        const procList = erlAuf ? procOffen.concat(procErl) : procOffen;
 
         const rows = procList.map(p => {
             const st = PROC_STATUS[p.status] || PROC_STATUS.offen;
@@ -3103,21 +3141,23 @@
 
         return `
         <div class="ab-section-head">
-            <span class="ab-muted">${procList.length} ${procList.length === 1 ? 'Vorgang' : 'Vorgänge'} an dieser Adresse</span>
+            <span class="ab-muted">${procOffen.length} offen${procErl.length ? ` · ${procErl.length} erledigt` : ''}</span>
             <div style="display:flex; gap:8px; flex-wrap:wrap;">
                 <button class="ab-btn ab-btn-ai" data-ab-action="task-ai" title="Aus Freitext automatisch Vorgänge erzeugen">
                     <span style="font-size:1.05rem;">✨</span>
                     KI-Erfassung
                 </button>
-                ${procList.length > 1 ? `<button class="ab-btn ab-btn-secondary${state.detail.kombiModus ? ' active' : ''}" data-ab-action="proc-kombi" title="Mehrere Vorgänge zu einem zusammenführen: Titel, Schritte, Stände, Dokumente und Angebote werden zusammengelegt">${ic('link', 15)} Vorgänge kombinieren</button>` : ''}
+                ${procAlle.length > 1 ? `<button class="ab-btn ab-btn-secondary${state.detail.kombiModus ? ' active' : ''}" data-ab-action="proc-kombi" title="Mehrere Vorgänge zu einem zusammenführen: Titel, Schritte, Stände, Dokumente und Angebote werden zusammengelegt">${ic('link', 15)} Vorgänge kombinieren</button>` : ''}
                 <button class="ab-btn ab-btn-primary" data-ab-action="task-new">${ic('plus', 16)} Vorgang erstellen</button>
             </div>
         </div>
         ${state.detail.kombiModus ? `<div class="ab-kombi-leiste"><span><strong>${(state.detail.kombiAuswahl || new Set()).size}</strong> ausgewählt — Vorgänge anklicken, die zu einem werden sollen. Der älteste bleibt bestehen und bekommt alles aus den anderen.</span><div style="display:flex; gap:8px;"><button class="ab-btn ab-btn-secondary" data-ab-action="proc-kombi-cancel">Abbrechen</button><button class="ab-btn ab-btn-primary" data-ab-action="proc-kombi-go" ${(state.detail.kombiAuswahl || new Set()).size < 2 ? 'disabled' : ''}>${ic('link', 15)} Zusammenführen</button></div></div>` : ''}
         ${migrationHint}
-        ${procList.length
+        ${procOffen.length || (erlAuf && procErl.length)
             ? `<div class="ab-sub-grid">${rows}</div>`
-            : (migrationHint ? '' : '<div class="ab-empty"><div class="ab-empty-title">Noch keine Vorgänge</div><div class="ab-empty-text">Erstelle Vorgänge für diese Adresse. Sie liegen in derselben Tabelle wie die Vorgänge auf der Vorgänge-Seite und erscheinen dort unter dem Firmennamen.</div></div>')}`;
+            : (procErl.length ? '<div class="ab-empty"><div class="ab-empty-title">Keine offenen Vorgänge</div></div>' : '')}
+        ${procErl.length ? `<button type="button" class="ab-erledigt-knopf" data-ab-action="proc-erledigte">${erlAuf ? '▴ Erledigte Vorgänge einklappen' : `▾ Erledigte Vorgänge anzeigen (${procErl.length})`}</button>` : ''}
+        ${procAlle.length ? '' : (migrationHint ? '' : '<div class="ab-empty"><div class="ab-empty-title">Noch keine Vorgänge</div><div class="ab-empty-text">Erstelle Vorgänge für diese Adresse. Sie liegen in derselben Tabelle wie die Vorgänge auf der Vorgänge-Seite und erscheinen dort unter dem Firmennamen.</div></div>')}`;
     }
 
     // ---- Vorgänge zusammenführen ----
@@ -3135,6 +3175,8 @@
 
     async function vorgaengeZusammenfuehren() {
         const ids = [...(state.detail.kombiAuswahl || [])];
+        // Schmal geladene (erledigte) erst vollständig holen — sonst gingen Dokumente/Texte verloren.
+        if ((state.detail.processes || []).some(p => p._schmal && ids.includes(String(p.id))) && !(await procErledigteLaden())) return;
         const alle = (state.detail.processes || []).filter(p => ids.includes(String(p.id)));
         if (alle.length < 2) { window.showToast('Mindestens zwei Vorgänge auswählen.'); return; }
         const zeit = p => new Date(p.process_date || p.created_at || 0).getTime();
@@ -6136,6 +6178,11 @@
                 }
                 break;
             }
+            case 'proc-erledigte':
+                if (state.detail.erledigteAuf) { state.detail.erledigteAuf = false; renderDetail(); break; }
+                el.disabled = true; el.textContent = 'Lade erledigte Vorgänge …';
+                procErledigteLaden().then(ok => { if (ok) state.detail.erledigteAuf = true; renderDetail(); });
+                break;
             case 'proc-kombi':
                 state.detail.kombiModus = !state.detail.kombiModus;
                 state.detail.kombiAuswahl = new Set();

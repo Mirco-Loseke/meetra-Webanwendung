@@ -2188,3 +2188,19 @@ details.ab-dubletten-hinweis[open] > summary { margin-bottom: var(--space-2); }
 .ab-dublette-zeile { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
 .ab-dublette-zeile > span { flex: 1 1 160px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); }
 .ab-dublette-ign { background: transparent; border-color: rgba(255, 255, 255, 0.2); color: var(--text-2); }
+
+/* Adresse → Vorgänge: erledigte eingeklappt (2026-10-15) */
+.ab-erledigt-knopf {
+    width: 100%;
+    margin-top: var(--space-3);
+    padding: 10px 14px;
+    background: rgba(16, 185, 129, 0.06);
+    border: 1px dashed rgba(16, 185, 129, 0.35);
+    border-radius: var(--radius-md);
+    color: #6ee7b7;
+    font-weight: 700;
+    font-size: var(--fs-sm);
+    cursor: pointer;
+}
+.ab-erledigt-knopf:hover { background: rgba(16, 185, 129, 0.12); }
+.ab-erledigt-knopf:disabled { opacity: 0.6; cursor: wait; }

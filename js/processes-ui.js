@@ -1399,7 +1399,15 @@
             if (error) { window.showToast('Verknüpfen fehlgeschlagen: ' + error.message); return; }
             if (quelle) {
                 // Fehler NICHT still schlucken: sonst bleibt der alte Vorgang stehen und keiner merkt es.
-                const { data: weg, error: dErr } = await window.supabaseClient.from('internal_processes').delete().eq('id', quelle.id).select('id');
+                // Löschen über die Datenbank-Funktion wie beim „Vorgänge kombinieren“ (addressbook.js):
+                // darf jeder angemeldete Nutzer, unabhängig vom Löschrecht „Vorgänge“ — die Funktion
+                // prüft, dass kein Angebot mehr am alten Vorgang hängt. Fehlt sie → normales Löschen.
+                let weg = null, dErr = null;
+                const rpc = await window.supabaseClient.rpc('vorgaenge_zusammenfuehren_loeschen', { ziel: String(processId), quellen: [String(quelle.id)] });
+                if (!rpc.error) weg = rpc.data ? [quelle.id] : [];
+                else if (/function|could not find|PGRST202|42883/i.test((rpc.error.code || '') + ' ' + (rpc.error.message || ''))) {
+                    ({ data: weg, error: dErr } = await window.supabaseClient.from('internal_processes').delete().eq('id', quelle.id).select('id'));
+                } else dErr = rpc.error;
                 if (dErr || !(weg && weg.length)) {
                     console.warn('Alter Angebots-Vorgang nicht gelöscht:', dErr && dErr.message);
                     window.showToast('Angebot verknüpft, aber der alte Vorgang „' + (quelle.title || '') + '“ konnte nicht gelöscht werden' + (dErr ? ': ' + dErr.message : ' (keine Löschberechtigung?)') + ' — bitte von Hand löschen.');

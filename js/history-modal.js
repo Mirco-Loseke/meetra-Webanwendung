@@ -860,8 +860,9 @@
                                         // (z.B. "Servicebericht"/"Betriebsstunden") — die steht oben schon farbig.
                                         const t = (item.title || '').trim();
                                         const typeLabel = String(item.type || '').replace(/<[^>]*>/g, '').trim();
-                                        if (!t || t.toLowerCase() === typeLabel.toLowerCase()) return '';
-                                        return `<h4 style="margin: 0 0 0.35rem 0; color: #fff; font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; white-space: pre-wrap;">${escHistoryText(t)}</h4>`;
+                                        const editT = histTextEditierbar(item) ? ` class="hist-edit" data-hist-edit="title" data-hist-id="${item.id}" title="Klicken zum Bearbeiten"` : '';
+                                        if (!t || (!editT && t.toLowerCase() === typeLabel.toLowerCase())) return '';
+                                        return `<h4${editT} style="margin: 0 0 0.35rem 0; color: #fff; font-size: 1rem; font-weight: 700; letter-spacing: -0.01em; white-space: pre-wrap;">${escHistoryText(t)}</h4>`;
                                     })()}
                                     ${item.maintenanceScope ? `
                                     <div style="display:inline-flex; align-items:center; gap:5px; background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.35); color:var(--color-primary-green); border-radius:14px; padding:3px 10px; font-size:0.75rem; font-weight:700; margin-bottom:0.5rem;">
@@ -893,6 +894,8 @@
                                                     ${item.emailHtml}
                                                 </div>
                                             `;
+                                        } else if (histTextEditierbar(item)) {
+                                            inner = `<p class="hist-edit" data-hist-edit="content" data-hist-id="${item.id}" data-leer="+ Notiz hinzufügen" title="Klicken zum Bearbeiten" style="margin: 0; color: rgba(255,255,255,0.7); font-size: 0.95rem; line-height: 1.6; white-space: pre-wrap;">${escHistoryText(item.description || '')}</p>`;
                                         } else if (item.description) {
                                             inner = `<p style="margin: 0; color: ${item.itemType === 'workshop' ? '#fff' : 'rgba(255,255,255,0.7)'}; font-size: 0.95rem; line-height: 1.6; font-weight: ${item.itemType === 'workshop' ? '700' : '400'}; white-space: pre-wrap;">${escHistoryText(item.description)}</p>`;
                                         }
@@ -1016,6 +1019,54 @@
                 console.error('Error navigating to process:', err);
             }
         };
+
+        // Titel/Notiz manueller Einträge direkt in der Karte bearbeiten
+        // (z. B. Notiz aus der Kamera-App „meetra Fotos“). Speichern beim Verlassen, Esc verwirft.
+        function histTextEditierbar(item) {
+            return item && item.source === 'manuell' && item.id && !['whatsapp', 'email', 'hours', 'wartung'].includes(item.rawType);
+        }
+        if (!window.__histEditAn) {
+            window.__histEditAn = true;
+            document.addEventListener('click', e => {
+                const el = e.target.closest('.hist-edit');
+                if (!el || el.isContentEditable) return;
+                e.stopPropagation();
+                const wrap = el.closest('.history-clamp-wrap');
+                if (wrap) wrap.classList.add('expanded');
+                el.dataset.alt = el.textContent;
+                el.contentEditable = 'plaintext-only';
+                if (el.contentEditable !== 'plaintext-only') el.contentEditable = 'true';
+                el.focus();
+                const r = document.createRange(); r.selectNodeContents(el); r.collapse(false);
+                const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+            }, true);
+            document.addEventListener('keydown', e => {
+                const el = e.target.closest && e.target.closest('.hist-edit[contenteditable]');
+                if (!el) return;
+                if (e.key === 'Escape') { e.stopPropagation(); el.textContent = el.dataset.alt || ''; el.removeAttribute('contenteditable'); el.blur(); }
+                else if (e.key === 'Enter' && (el.dataset.histEdit === 'title' || e.ctrlKey)) { e.preventDefault(); el.blur(); }
+            }, true);
+            document.addEventListener('focusout', async e => {
+                const el = e.target.closest && e.target.closest('.hist-edit[contenteditable]');
+                if (!el) return;
+                el.removeAttribute('contenteditable');
+                const neu = el.innerText.replace(/ /g, ' ').trim();
+                if (neu === (el.dataset.alt || '').trim()) { el.textContent = el.dataset.alt || ''; return; }
+                if (el.dataset.histEdit === 'title' && !neu) { el.textContent = el.dataset.alt || ''; return; }
+                el.textContent = neu;
+                const { error } = await window.supabaseClient.from('manual_history_entries')
+                    .update({ [el.dataset.histEdit]: neu || null }).eq('id', el.dataset.histId);
+                if (error) {
+                    console.error('Historie: Text speichern fehlgeschlagen', error);
+                    el.textContent = el.dataset.alt || '';
+                    if (window.showToast) window.showToast('Speichern fehlgeschlagen: ' + error.message, 'error');
+                } else {
+                    el.dataset.alt = neu;
+                    if (window.showToast) window.showToast('Gespeichert', 'success');
+                    document.dispatchEvent(new CustomEvent('addressbook:changed'));
+                }
+            }, true);
+        }
 
         window.updateManualEntryDate = async function (id, newDate) {
             if (!id || !newDate) return;

@@ -2211,6 +2211,103 @@ textarea.miet-in {
     font-size: var(--fs-sm, 0.85rem) !important;
 }
 
+/* „Letzte Bilder“: Auswahl aus früheren Vereinbarungen derselben Maschine. */
+.miet-photo-letzte {
+    background: transparent;
+    color: #047857;
+}
+
+.miet-photo-letzte:hover {
+    color: #fff;
+}
+
+.miet-quelle-card.miet-letzte-card {
+    width: min(720px, 100%);
+    max-height: calc(100dvh - 40px);
+}
+
+.miet-letzte-liste {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4, 16px);
+}
+
+.miet-letzte-kopf {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+    margin-bottom: var(--space-2, 8px);
+    font-size: var(--fs-sm, 0.85rem);
+    color: var(--text-2, rgba(255, 255, 255, 0.75));
+}
+
+.miet-quelle-card .miet-letzte-alle {
+    width: auto;
+    margin-left: auto;
+    padding: 4px 12px;
+    font-size: var(--fs-sm, 0.85rem);
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--text-1, #f8fafc);
+}
+
+.miet-letzte-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: var(--space-2, 8px);
+}
+
+.miet-quelle-card .miet-letzte-bild {
+    position: relative;
+    padding: 0;
+    overflow: hidden;
+    border: 2px solid transparent;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-sm, 8px);
+    opacity: 0.55;
+}
+
+.miet-quelle-card .miet-letzte-bild.an {
+    border-color: var(--success, #10a068);
+    opacity: 1;
+}
+
+.miet-letzte-bild img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+}
+
+.miet-letzte-bild span {
+    display: block;
+    padding: 3px 6px;
+    font-size: var(--fs-xs, 0.72rem);
+    color: var(--text-1, #f8fafc);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: left;
+}
+
+.miet-letzte-bild.an::after {
+    content: "✓";
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--success, #10a068);
+    color: #fff;
+    font-weight: 800;
+    line-height: 22px;
+    text-align: center;
+}
+
 /* Bilder hereinziehen (Rechner): Ziel unter dem Zeiger hervorheben. */
 .miet-photo-slot.miet-drop-on,
 .miet-photo-grid.miet-drop-on {

@@ -449,3 +449,17 @@
 .hist-medien-dok:hover, .hist-medien-bild:hover { border-color: rgba(255, 255, 255, 0.3); }
 .hist-medien-dok span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .hist-medien-leer { text-align: center; color: rgba(255, 255, 255, 0.4); padding: 2rem; }
+
+/* Titel/Notiz manueller Einträge per Klick bearbeiten (js/history-modal.js, histTextEditierbar) */
+.hist-edit {
+    cursor: text;
+    border-radius: var(--radius-xs);
+    transition: background var(--dur-fast) var(--ease-out);
+}
+.hist-edit:hover { background: rgba(255, 255, 255, 0.05); }
+.hist-edit:empty::before { content: attr(data-leer); color: var(--text-3); font-style: italic; }
+.hist-edit[contenteditable] {
+    outline: 1px solid var(--color-primary-green);
+    background: rgba(255, 255, 255, 0.06);
+    padding: var(--space-1) var(--space-2);
+}

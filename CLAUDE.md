@@ -77,6 +77,7 @@ Reihenfolge der ausgelagerten Module:
 | Foto-Eingang: Werkstatt-Handys ohne Anmeldung schicken Fotos (`fotos/` = eigene Startbildschirm-App „meetra Fotos“, Android-Teilen über `sw.js`), Zuordnen an Maschine/Adresse/Bericht/Vorgang, „📱 Handys“ = Schlüssel je Gerät. Function `foto-eingang` (`--no-verify-jwt`), Migration `supabase_add_foto_eingang.sql` | `js/foto-eingang.js`, `partials/views/foto-eingang.html`, `css/views/foto-eingang.css`, `fotos/index.html` |
 | Startseite-Cockpit (Favoriten, Jetzt zuerst, Demnächst 7 Tage, Kennzahlen; alte Startseite unter „Mehr anzeigen“). Rückgängig je Browser: Knopf „Klassische Startseite“ (`meetra_cockpit_aus`); ganz: 2 Zeilen index.html + 2 in sw.js | `js/cockpit.js`, `css/components/cockpit.css` |
 | Entwürfe in allen Fenstern (localStorage, Leiste „Wiederherstellen/Verwerfen“); Vorgänge: Stand/Schritte automatisch speichern | `js/entwurf-sicher.js`, `css/components/entwurf-sicher.css`, `js/vorgang-sicher.js` |
+| Video-Vorschau (Standbild + Dauer, `videoKachelHtml`, `medienArt`, Abspiel-Overlay) + Adress-Reiter „Ablage“ (Dokumente/Fotos/Videos nach Datum + Überschrift, Hochladen → `manual_history_entries` mit `customer_id`, R2 `adressen/<id>/ablage/`) | `js/medien-ablage.js`, `css/components/medien-ablage.css` |
 | Benutzer bearbeiten (Reiter, Schalter, „Rechte übernehmen von") | `partials/modals/user-edit-modal.html`, `css/views/user-edit.css`, `js/users.js` |
 
 ## Zuerst hier nachschlagen (spart das Durchsuchen)
@@ -291,7 +292,7 @@ einem Inline-`style` suchen.
 `manifest.json` + `assets/icons/app-icon-{192,512}.png`, `-maskable-*` (Pfeile auf 60 % für Androids Zuschnitt), `apple-touch-icon.png` (180, iPhone-Home-Bildschirm), `favicon-32.png` — alle aus `meetra_arrows_icon.png` erzeugt (weißer Grund). `display_override: minimal-ui` = Zurück- und Aktualisieren-Knopf im installierten App-Fenster (Chrome/Edge); iPhone ignoriert das und bleibt Vollbild. Neues Logo ⇒ alle neu erzeugen und in `PRECACHE` lassen.
 
 ## Aktueller Stand
-`sw.js` CACHE_NAME: v962 (Stand 2026-10-02) — bei jeder Änderung hochzählen.
+`sw.js` CACHE_NAME: v970 (Stand 2026-10-02) — bei jeder Änderung hochzählen.
 
 **To-do-Liste (2026-10-02).** Vollbild per Knopf/Doppelklick auf den Kopf (`body.todo-vollbild`, je Browser gemerkt), Diktieren an Stand, Notiz, eigenem Punkt (`micButtonHtml`). `js/todo-liste.js` + `css/components/todo-liste.css`: Knopf links neben dem KI-Knopf (Handy: über der Leiste), Panel mit Einträgen je Stufe, aufklappbar — Vorgang (Schritte abhaken, Stand eintragen), Termin, Adresse (Tel/Mail/Route), Notiz. Gefüllt aus dem Briefing über „✅ Als To-do übernehmen" (`kiAuswahl` in `ai-briefing.js`, gleiche KI-Auswahl wie der Druck) → `window.todoUebernehmen(liste)`. Ablage `todo_listen` (eine Zeile je Benutzer, Migration `supabase_add_todo_listen.sql`), ohne Tabelle Rückfall localStorage.
 **Angebote im Briefing + Mail aus der To-do-Liste (2026-10-02).** Briefing lädt zusätzlich offene Angebote der letzten 6 Monate (`angebotOffen` = Regex wie `classifyAngebotStatus`, „Nur meine" über `assigned_users` des Angebots-Vorgangs), eigener KI-Abschnitt „Angebote" und darunter eine echte Liste mit 📄 PDF / ✉ Mail / ＋ To-do (`window.todoAktion.pdf/mail`). To-do-Eintrag Angebot/Vorgang zeigt Status, Alter, Betrag, PDFs (`attachments` des Vorgangs ohne `step_id`), Ansprechpartner (`customer_contacts`). „✉ Mail" → Auswahl Empfänger (Adresse + Ansprechpartner, Vorschlag über `contact_name`) + Anhänge → `window.mailSchreiben(an, betreff, html, dateien)` — 4. Parameter neu, lädt `[{name,url,type}]` als Anhang. Gesendet wird nie automatisch.
@@ -322,6 +323,7 @@ wie im gedruckten Original). Unterschrieben wird **unter den Fotos** — je zwei
 plus Datum für Übergabe und Rücknahme (`fotoUnterschriften`); die Felder der nicht
 gewählten Phase sind grau (`.miet-dim`). Eine eigene Bestätigungsseite am Ende gibt es
 nicht mehr.
+**Letzte Bilder (2026-10-16):** Knopf je Fotoblock → `mietLetzteBilder(welche)` übernimmt Fotos früherer Vereinbarungen derselben Maschine **nur als R2-Adresse** (eine Datei, beide zeigen sie). `deleteRentalAgreement` löscht deshalb keine Foto-Datei, die eine andere Vereinbarung der Maschine noch nennt; `fotoPfade` hält den R2-Pfad über erneutes Speichern.
 **Tagessätze nach Ausstattung (2026-09-15):** in der Vorlage `config.preise`
 (Regeln aus Prüfpunkt-Ausführungen / optionalen Prüfpunkten → Betrag, per
 Prüfpunkt-**Text** verknüpft). `window.mietPreisErmitteln` wählt die Regel mit den

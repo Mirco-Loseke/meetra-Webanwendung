@@ -82,13 +82,14 @@
                 id: neueId(), typ: x.typLabel || x.typ || 'Notiz', titel: x.title || x.titel || '', subject: x.subject || '',
                 datumText: x.datumText || '', ki: x.ki || '', gruppe: x.gruppe || 'Wichtig', auto: !!x.auto, neu: !!x.auto,
                 targetType: x.targetType || null, targetId: x.targetId || null, customerId: x.customerId || null,
-                day: x.day || '', erledigt: false, notiz: '', am: new Date().toISOString()
+                day: x.day || '', erledigt: false, notiz: '', am: new Date().toISOString(),
+                zeit: x.zeit || '', betrag: x.betrag != null ? x.betrag : null, seit: x.seit || ''
             };
             const alt = vorhanden.get(schluessel(e));
             if (alt) {
                 if (!alt.erledigt && !alt.archiviert) {
                     if (alt.ki !== e.ki || alt.gruppe !== e.gruppe || alt.datumText !== e.datumText || alt.day !== e.day) geaendert++;
-                    Object.assign(alt, { ki: e.ki, gruppe: e.gruppe, datumText: e.datumText, day: e.day });
+                    Object.assign(alt, { ki: e.ki, gruppe: e.gruppe, datumText: e.datumText, day: e.day, zeit: e.zeit, betrag: e.betrag, seit: e.seit });
                     return;
                 }
                 // Schon abgehakt/entfernt: nur wieder aufnehmen, wenn danach ein NEUER Termin
@@ -268,6 +269,118 @@
         speichern(); zeichnen();
     }
 
+    // ---------------------------------------------------------- Was ist JETZT dran?
+    /* Feste Regeln, keine KI. Höchste Punktzahl zuerst:
+         Termin in den nächsten 2 Std. (oder gerade begonnen)  1000 − Minuten bis Beginn
+         überfällig                                            800 + 10 je Tag
+         heute fällig                                          600 (Termine heute 550)
+         in den nächsten 7 Tagen                               300 − 20 je Tag
+         Angebot: + Betrag (1 Punkt je 1.000 €, max. 100) + Alter in Tagen (max. 60)
+       „Später“ (e.spaeterBis) nimmt den Punkt bis dahin aus „Jetzt dran“. */
+    const JETZT_MAX = 3;
+    let restAuf = false;
+    const tagIso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    const tagKurz = k => { const d = new Date(k + 'T12:00:00'); return isNaN(d) ? k : d.toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' }); };
+    function hatUhrzeit(v) { return /T\d\d:\d\d/.test(String(v || '')) && !/T00:00/.test(String(v)); }
+    function spaeterAktiv(e) { return e.spaeterBis && new Date(e.spaeterBis) > new Date(); }
+    function wichtigkeit(e) {
+        const jetzt = new Date(), heute = tagIso(jetzt);
+        let punkte = 100, grund = '';
+        const tag = e.day || '';
+        if ((e.typ === 'Termin' || e.typ === 'Wartung') && hatUhrzeit(e.zeit) && tag === heute) {
+            const min = Math.round((new Date(e.zeit) - jetzt) / 60000);
+            const uhr = new Date(e.zeit).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+            if (min <= 120 && min >= -60) { punkte = 1000 - Math.max(min, 0); grund = min > 0 ? 'Termin in ' + (min >= 60 ? Math.floor(min / 60) + ' Std. ' + (min % 60 ? (min % 60) + ' Min.' : '') : min + ' Min.') + ' (' + uhr + ')' : 'Termin läuft seit ' + uhr; }
+            else if (min > 120) { punkte = 550; grund = 'Termin heute ' + uhr; }
+            else { punkte = 150; grund = 'Termin war ' + uhr; }
+        } else if (tag && tag < heute) {
+            const tage = Math.round((new Date(heute) - new Date(tag)) / 864e5);
+            punkte = 800 + 10 * tage; grund = 'überfällig seit ' + tagKurz(tag) + (tage > 1 ? ' (' + tage + ' Tage)' : '');
+        } else if (tag === heute) {
+            punkte = e.typ === 'Termin' || e.typ === 'Wartung' ? 550 : 600; grund = 'heute fällig';
+        } else if (tag) {
+            const tage = Math.round((new Date(tag) - new Date(heute)) / 864e5);
+            punkte = tage <= 7 ? 300 - 20 * tage : 100; grund = 'fällig ' + tagKurz(tag);
+        } else if (e.gruppe === 'Heute unbedingt') { punkte = 580; grund = 'für heute vorgemerkt'; }
+        else if (e.gruppe === 'Wichtig') { punkte = 250; grund = 'wichtig'; }
+        if (e.typ === 'Angebot') {
+            const b = parseFloat(String(e.betrag == null ? '' : e.betrag).replace(/\.(?=\d{3})/g, '').replace(',', '.'));
+            if (!isNaN(b)) { punkte += Math.min(100, Math.round(b / 1000)); grund += (grund ? ' · ' : '') + b.toLocaleString('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }); }
+            if (e.seit) {
+                const alt = Math.round((jetzt - new Date(e.seit)) / 864e5);
+                if (alt > 0) { punkte += Math.min(60, alt); grund += (grund ? ' · ' : '') + 'seit ' + alt + ' Tagen offen'; }
+            }
+        }
+        return { punkte, grund };
+    }
+    /* Die konkrete nächste Handlung statt nur des Titels. */
+    function handlung(e) {
+        const sub = String(e.subject || '');
+        if (/^Schritt:\s*/.test(sub)) return sub.replace(/^Schritt:\s*/, '');
+        const d = details[e.id];
+        const offenSt = d && d.proc && Array.isArray(d.proc.steps) ? d.proc.steps.find(x => !x.done && x.text) : null;
+        if (offenSt) return offenSt.text;
+        if (e.typ === 'Angebot') return (e.titel || 'Angebot nachfassen');
+        if (e.typ === 'Termin' || e.typ === 'Wartung') return e.titel || 'Termin';
+        if (/Wiedervorlage/.test(e.ki || '')) return 'Wiedervorlage: ' + (e.titel || 'Vorgang');
+        return e.titel || '(ohne Titel)';
+    }
+    function jetztListe(alle) {
+        return alle.filter(e => !e.erledigt && !spaeterAktiv(e))
+            .map(e => ({ e, w: wichtigkeit(e) }))
+            .filter(x => x.w.punkte >= 250)
+            .sort((a, b) => b.w.punkte - a.w.punkte)
+            .slice(0, JETZT_MAX);
+    }
+    function jetztHtml(x) {
+        const e = x.e, auf = offen.has(e.id);
+        const farbe = TYP_FARBE[e.typ] || '#94a3b8';
+        const adr = adresseName(e);
+        const tun = handlung(e);
+        return `
+        <div class="todo-eintrag todo-jetzt${auf ? ' auf' : ''}" data-id="${esc(e.id)}" style="--todo-farbe:${farbe}">
+            <div class="todo-zeile" data-todo="klappen">
+                <label class="todo-haken" title="Erledigt"><input type="checkbox" data-todo-erledigt><span></span></label>
+                <div class="todo-text">
+                    <div class="todo-oben"><span class="todo-typ">${esc(e.typ)}</span>${x.w.grund ? `<span class="todo-jetzt-grund">${esc(x.w.grund)}</span>` : ''}</div>
+                    <div class="todo-jetzt-tun">${esc(tun)}</div>
+                    ${tun !== (e.titel || '') && e.titel ? `<div class="todo-sub">${esc(e.titel)}</div>` : ''}
+                    ${adr ? `<div class="todo-adresse">📍 ${esc(adr)}</div>` : ''}
+                </div>
+            </div>
+            <div class="todo-jetzt-knoepfe">
+                <button type="button" class="todo-kk" data-todo="klappen">${auf ? 'Weniger' : 'Details'}</button>
+                <button type="button" class="todo-kk" data-todo="spaeter">⏰ Später</button>
+            </div>
+            ${auf ? `<div class="todo-koerper">${koerperHtml(e)}</div>` : ''}
+        </div>`;
+    }
+    function spaeterMenu(e, anker) {
+        const jetzt = new Date();
+        const um = (h, plusTag) => { const d = new Date(jetzt); if (plusTag) d.setDate(d.getDate() + 1); d.setHours(h, 0, 0, 0); return d; };
+        const wahl = [['In 1 Stunde', new Date(jetzt.getTime() + 36e5)]];
+        if (jetzt.getHours() < 13) wahl.push(['Heute Nachmittag (14 Uhr)', um(14)]);
+        wahl.push(['Morgen früh (8 Uhr)', um(8, true)]);
+        menuAuf(anker, wahl.map((w, i) => `<button type="button" class="todo-menu-punkt" data-sp="${i}">${esc(w[0])}</button>`).join(''), m => {
+            m.addEventListener('click', ev => {
+                const b = ev.target.closest('[data-sp]'); if (!b) return;
+                e.spaeterBis = wahl[+b.dataset.sp][1].toISOString();
+                offen.delete(e.id);
+                menuZu(); speichern(); zeichnen();
+                toast('Später: ' + wahl[+b.dataset.sp][0] + ' — der nächste Punkt rückt nach.');
+            });
+        });
+    }
+    // Abgelaufenes „Später“: Punkt kommt von selbst zurück, solange die Liste offen ist.
+    setInterval(() => {
+        if (!document.body.classList.contains('todo-offen')) return;
+        const jetzt = new Date();
+        if (eintraege.some(e => e.spaeterBis && new Date(e.spaeterBis) <= jetzt && !e._spaeterZurueck)) {
+            eintraege.forEach(e => { if (e.spaeterBis && new Date(e.spaeterBis) <= jetzt) { e.spaeterBis = null; } });
+            speichern(); zeichnen();
+        }
+    }, 60000);
+
     function zeichnen() {
         const box = document.getElementById('todo-liste');
         if (!box) return;
@@ -289,10 +402,26 @@
             </div>${ohneTabelle ? hinweisTabelle() : ''}`;
             return;
         }
-        const gruppen = GRUPPEN.concat([...new Set(alle.map(e => e.gruppe).filter(g => g && !GRUPPEN.includes(g)))]);
+        const top = suche.trim() ? [] : jetztListe(alle);
+        const topIds = new Set(top.map(x => x.e.id));
+        const rest = alle.filter(e => !topIds.has(e.id));
         let html = '';
+        if (top.length) {
+            html += `<div class="todo-jetzt-kopf">🔥 Jetzt dran <span>${top.length}</span></div>` + top.map(jetztHtml).join('');
+        } else if (!suche.trim() && alle.some(e => !e.erledigt)) {
+            html += '<div class="todo-jetzt-kopf">✅ Gerade nichts Dringendes</div><div class="todo-jetzt-ruhe">Nichts überfällig oder heute fällig. Unten steht, was als Nächstes kommt.</div>';
+        }
+        const zeigeRest = restAuf || !!suche.trim() || !top.length;
+        const restOffen = rest.filter(e => !e.erledigt).length;
+        if (rest.length && !zeigeRest) {
+            html += `<button type="button" class="todo-rest-knopf" data-todo="rest">Alle weiteren anzeigen (${restOffen} offen${rest.length > restOffen ? ', ' + (rest.length - restOffen) + ' erledigt' : ''}) ▾</button>`;
+            box.innerHTML = html + (ohneTabelle ? hinweisTabelle() : '');
+            return;
+        }
+        if (rest.length && top.length) html += '<button type="button" class="todo-rest-knopf" data-todo="rest">Weitere einklappen ▴</button>';
+        const gruppen = GRUPPEN.concat([...new Set(rest.map(e => e.gruppe).filter(g => g && !GRUPPEN.includes(g)))]);
         gruppen.forEach(g => {
-            const liste = alle.filter(e => (e.gruppe || 'Wichtig') === g);
+            const liste = rest.filter(e => (e.gruppe || 'Wichtig') === g);
             if (!liste.length) return;
             // Offene zuerst, erledigte rutschen nach unten
             liste.sort((a, b) => (a.erledigt - b.erledigt)
@@ -328,7 +457,7 @@
             <div class="todo-zeile" data-todo="klappen">
                 <label class="todo-haken" title="${e.erledigt ? 'Wieder offen' : 'Erledigt'}"><input type="checkbox" data-todo-erledigt ${e.erledigt ? 'checked' : ''}><span></span></label>
                 <div class="todo-text">
-                    <div class="todo-oben"><span class="todo-typ">${esc(e.typ)}</span>${e.datumText ? `<span class="todo-wann">${esc(e.datumText)}</span>` : ''}${e.neu && !e.erledigt ? '<span class="todo-neu-badge">neu</span>' : (e.auto ? '<span class="todo-auto-badge" title="Automatisch übernommen">⚡</span>' : '')}</div>
+                    <div class="todo-oben"><span class="todo-typ">${esc(e.typ)}</span>${e.datumText ? `<span class="todo-wann">${esc(e.datumText)}</span>` : ''}${spaeterAktiv(e) && !e.erledigt ? `<span class="todo-spaeter-badge" title="Zurückgestellt">⏰ ${esc(new Date(e.spaeterBis).toLocaleString('de-DE', { weekday: 'short', hour: '2-digit', minute: '2-digit' }))}</span>` : ''}${e.neu && !e.erledigt ? '<span class="todo-neu-badge">neu</span>' : (e.auto ? '<span class="todo-auto-badge" title="Automatisch übernommen">⚡</span>' : '')}</div>
                     ${(() => { const n = adresseName(e); return n ? `<div class="todo-adresse" title="Adresse">📍 ${esc(n)}</div>` : ''; })()}
                     <div class="todo-name">${esc(e.titel || '(ohne Titel)')}</div>
                     ${e.subject && e.subject !== adresseName(e) ? `<div class="todo-sub">${esc(e.subject)}</div>` : ''}
@@ -882,6 +1011,7 @@
             window.kalenderTodoDrucken(liste, 'Meine To-dos' + (suche.trim() ? ' — Suche „' + suche.trim() + '“' : ''));
             return;
         }
+        if (was === 'rest') { restAuf = !restAuf; zeichnen(); return; }
         if (was === 'aufraeumen') {
             const weg = sichtbar().filter(x => x.erledigt);
             if (!weg.length) { toast('Nichts erledigt zum Entfernen.'); return; }
@@ -897,6 +1027,7 @@
             return;
         }
         if (was === 'entfernen') { archivieren([e]); return; }
+        if (was === 'spaeter') return spaeterMenu(e, a);
         if (was === 'stand') return standSpeichern(e.id);
         if (was === 'schritt') return schrittNeu(e.id);
         if (was === 'staende') { e._alleStaende = !e._alleStaende; zeichnen(); return; }
@@ -1300,7 +1431,7 @@
             if (!(window.procZustaendige ? window.procZustaendige(p) : (p.assigned_users || [])).some(istMeins)) return;
             const tag = String(p.remind_at).slice(0, 10);
             neu.push({ typLabel: 'Vorgang', title: p.title || 'Vorgang', targetType: 'process', targetId: p.id, customerId: p.customer_id || null,
-                day: tag, datumText: wtDatum(p.remind_at), gruppe: gruppeNach(tag), auto: true, ki: faelligText(tag, 'Wiedervorlage') });
+                day: tag, zeit: p.remind_at, datumText: wtDatum(p.remind_at), gruppe: gruppeNach(tag), auto: true, ki: faelligText(tag, 'Wiedervorlage') });
         });
         mitSchritten.forEach(p => (p.steps || []).forEach(st => {
             if (st.done) return;
@@ -1316,7 +1447,7 @@
             if (!fuerMich) return;
             neu.push({ typLabel: 'Vorgang', title: p.title || 'Vorgang', subject: 'Schritt: ' + (st.text || ''), targetType: 'process', targetId: p.id, customerId: p.customer_id || null,
                 // Ohne jedes Datum: trotzdem „Wichtig“ (mir zugewiesen), steht dort hinter den datierten
-                day: tag, datumText: tag ? wtDatum(wann) : '', gruppe: tag ? gruppeNach(tag) : 'Wichtig', auto: true,
+                day: tag, zeit: wann || '', datumText: tag ? wtDatum(wann) : '', gruppe: tag ? gruppeNach(tag) : 'Wichtig', auto: true,
                 ki: tag ? faelligText(tag, 'Schritt') : 'Schritt mir zugewiesen' });
         }));
         const meineTermine = new Set(teilnahmen.filter(t => t.status !== 'declined').map(t => String(t.event_id)));
@@ -1326,13 +1457,14 @@
             if (!meineTermine.has(String(e.id)) && !istMeins(e.created_by_user)) return;
             const wartung = !!(e.machine_id || e.manual_machine || e.maintenance_types);
             neu.push({ typLabel: wartung ? 'Wartung' : 'Termin', title: e.title || 'Termin', targetType: 'event', targetId: e.id, customerId: e.customer_id || null,
-                day: heute, datumText: wtDatum(wann), gruppe: 'Heute unbedingt', auto: true, ki: 'Termin heute' });
+                day: heute, zeit: wann, datumText: wtDatum(wann), gruppe: 'Heute unbedingt', auto: true, ki: 'Termin heute' });
         });
         angebote.forEach(a => {
             if (a.erinnerung_by != null ? !istMeins(a.erinnerung_by) : true) return;   // nur eigene Erinnerungen
             if (/verloren|abgelehnt|absage|abgesagt|storniert|kein interesse|gewonnen|auftrag|bestellt|verkauft|angenommen|zusage/i.test(a.status || '')) return;
             neu.push({ typLabel: 'Angebot', title: 'Angebot ' + (a.belegnummer || '') + ' nachfassen', subject: ((a.customers && a.customers.name) || a.kundenmatchcode || '') + (a.status ? ' · ' + a.status : ''),
                 targetType: 'angebot', targetId: a.id, customerId: a.customer_id || null, day: String(a.erinnerung).slice(0, 10), datumText: wtDatum(a.erinnerung),
+                betrag: a.nettobetrag != null && a.nettobetrag !== '' ? a.nettobetrag : null, seit: a.belegdatum || a.created_at || '',
                 gruppe: 'Wichtig', auto: true, ki: 'Angebots-Erinnerung' });
         });
         if (!neu.length) return;

@@ -1,0 +1,159 @@
+/* Video-Vorschau (Standbild + Dauer) und Reiter „Ablage" an der Adresse — js/medien-ablage.js */
+
+.mv-video {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-sm);
+    background: #000;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform var(--dur-fast) var(--ease-out);
+}
+button.mv-video:hover { transform: scale(1.03); }
+.mv-video video { width: 100%; height: 100%; object-fit: cover; display: block; pointer-events: none; }
+.mv-play {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 2.2em;
+    height: 2.2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-circle);
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    font-size: var(--fs-sm);
+    pointer-events: none;
+}
+.mv-dauer {
+    position: absolute;
+    right: var(--space-1);
+    bottom: var(--space-1);
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-xs);
+    background: rgba(0, 0, 0, 0.75);
+    color: #fff;
+    font-size: var(--fs-2xs);
+    font-weight: var(--fw-semibold);
+    line-height: var(--lh-normal);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+}
+.mv-dauer:empty { display: none; }
+.mv-video.mv-fehler::after {
+    content: "🎬";
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--fs-2xl);
+}
+
+/* klein in der Historie, neben den Bild-Daumen */
+.mv-video-reihe { display: flex; gap: var(--space-2); margin-top: var(--space-2); flex-wrap: wrap; }
+.mv-video-klein { width: 96px; height: 56px; aspect-ratio: auto; }
+/* Foto-Eingang: füllt die Kachel */
+.mv-video-fe { height: 100%; aspect-ratio: auto; border: 0; border-radius: 0; }
+
+/* Abspiel-Fenster */
+#mv-player {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4);
+    background: rgba(0, 0, 0, 0.85);
+}
+.mv-player-box { display: flex; flex-direction: column; gap: var(--space-2); max-width: 100%; max-height: 100%; }
+.mv-player-box video { max-width: min(1100px, 100%); max-height: calc(100vh - 120px); border-radius: var(--radius-sm); background: #000; }
+.mv-player-leiste { display: flex; justify-content: flex-end; gap: var(--space-3); }
+.mv-player-leiste a,
+.mv-player-leiste button {
+    min-height: 40px;
+    padding: var(--space-2) var(--space-4);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-size: var(--fs-sm);
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Reiter „Ablage" */
+.ab-ablage-leiste { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-4); }
+.ab-ablage-reiterleiste { display: flex; gap: var(--space-1); padding: var(--space-1); border-radius: var(--radius-md); background: rgba(255, 255, 255, 0.05); }
+.ab-ablage-reiter {
+    min-height: 40px;
+    padding: var(--space-2) var(--space-4);
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-2);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.ab-ablage-reiter:hover { color: var(--text-1); background: rgba(255, 255, 255, 0.06); }
+.ab-ablage-reiter.active { color: var(--text-1); background: rgba(16, 160, 104, 0.25); }
+
+.ab-ablage-tag { margin-bottom: var(--space-6); }
+.ab-ablage-datum {
+    margin: 0 0 var(--space-2);
+    padding-bottom: var(--space-1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-1);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-bold);
+}
+.ab-ablage-gruppe { margin-bottom: var(--space-3); }
+.ab-ablage-kopf { margin-bottom: var(--space-2); color: var(--text-2); font-size: var(--fs-xs); font-weight: var(--fw-semibold); }
+.ab-ablage-raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--space-2); }
+.ab-ablage-raster-dok { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.ab-ablage-item { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.ab-ablage-name { color: var(--text-3); font-size: var(--fs-2xs); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ab-ablage-bild {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: transform var(--dur-fast) var(--ease-out);
+}
+.ab-ablage-bild:hover { transform: scale(1.03); }
+.ab-ablage-dok {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 44px;
+    min-width: 0;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid rgba(16, 185, 129, 0.25);
+    border-radius: var(--radius-sm);
+    background: rgba(16, 185, 129, 0.08);
+    color: var(--text-1);
+    font-size: var(--fs-sm);
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--dur-fast) var(--ease-out);
+}
+.ab-ablage-dok:hover { background: rgba(16, 185, 129, 0.16); }
+.ab-ablage-dok span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 768px) {
+    .ab-ablage-reiterleiste { width: 100%; }
+    .ab-ablage-reiter { flex: 1; padding: var(--space-2); }
+    .ab-ablage-raster { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+    .ab-ablage-raster-dok { grid-template-columns: 1fr; }
+    .ab-ablage-leiste .ab-btn { width: 100%; min-height: 44px; }
+}

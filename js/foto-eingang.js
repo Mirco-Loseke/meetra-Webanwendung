@@ -104,6 +104,7 @@
         const an = S.gewaehlt.has(z.id);
         const inhalt = istBild(z)
             ? '<img src="' + esc(z.url) + '" loading="lazy" alt="" draggable="false">'
+            : (window.medienArt && window.medienArt({ url: z.url, type: z.typ || '' }) === 'video' && window.videoKachelHtml) ? window.videoKachelHtml(z.url, 'mv-video-fe', true)
             : '<div class="fe-datei">' + esc(z.dateiname || z.pfad.split('/').pop()) + '</div>';
         return '<div class="fe-kachel' + (an ? ' gewaehlt' : '') + '" draggable="true" title="Ziehen: in einen Windows-Ordner, ins Mail-Fenster der App oder in eine Mail" data-fe-id="' + esc(z.id) + '">' + inhalt +
             '<span class="fe-haken">' + (an ? '✓' : '') + '</span>' +
@@ -222,7 +223,7 @@
             const bilder = S.zeilen.filter(istBild);
             const z = S.zeilen.find(x => x.id === lupe.dataset.feLupe);
             if (!z) return;
-            if (!istBild(z)) { window.open(z.url, '_blank', 'noopener'); return; }
+            if (!istBild(z)) { if (window.medienArt && window.medienArt({ url: z.url, type: z.typ || '' }) === 'video' && window.videoAbspielen) window.videoAbspielen(z.url); else window.open(z.url, '_blank', 'noopener'); return; }
             if (window.openPhotosLightbox) window.openPhotosLightbox(bilder.map(b => b.url), bilder.indexOf(z));
             else window.open(z.url, '_blank', 'noopener');
             return;

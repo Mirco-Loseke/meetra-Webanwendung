@@ -38,6 +38,9 @@
     let gespeichertesDoc = null; // zugehoeriges Dokument unter "Dokumente"
     // Was in dieser Sitzung schon in R2 liegt: "phase|position" -> { bild, eintrag }
     let hochgeladeneFotos = {};
+    // R2-Adresse → R2-Pfad bereits gespeicherter Fotos (geladen oder per
+    // „Letzte Bilder“ übernommen), damit der Pfad beim Speichern erhalten bleibt.
+    const fotoPfade = {};
     let padZiel = null;    // welches Unterschriftenfeld gerade gezeichnet wird
     let schadenLeer = true; // Stand beim letzten Zeichnen: Schadenstabelle ohne Eintrag
 
@@ -335,6 +338,7 @@
                 if (!f || !f.url || !f.phase || !f.position) return;
                 if (!daten.fotos[f.phase]) daten.fotos[f.phase] = {};
                 daten.fotos[f.phase][f.position] = f.url;
+                if (f.path) fotoPfade[f.url] = f.path;
             });
 
             gespeicherteId = data.id;
@@ -1758,7 +1762,7 @@
                 const bild = satz[pos];
                 if (!bild) return;
                 // Schon in R2 (geladene Vereinbarung) — nicht noch einmal hoch.
-                if (!/^data:/.test(bild)) { ergebnis.push({ phase: p, position: pos, url: bild, path: null, name: pos }); return; }
+                if (!/^data:/.test(bild)) { ergebnis.push({ phase: p, position: pos, url: bild, path: fotoPfade[bild] || null, name: pos }); return; }
                 // In dieser Sitzung bereits hochgeladen (z. B. weil beim
                 // ersten Mal nur das PDF scheiterte) — Eintrag wiederverwenden,
                 // sonst liegt dasselbe Bild mehrfach im Speicher.
@@ -2146,7 +2150,16 @@
 
         const wege = [];
         if (zeile.pdf_path) wege.push(zeile.pdf_path);
-        (Array.isArray(zeile.photos) ? zeile.photos : []).forEach(f => { if (f && f.path) wege.push(f.path); });
+        // Fotos, die eine andere Vereinbarung per „Letzte Bilder“ mitbenutzt, bleiben liegen.
+        let fremd = new Set();
+        try {
+            const { data: andere } = await window.supabaseClient.from('rental_agreements')
+                .select('photos').eq('machine_id', zeile.machine_id).neq('id', id);
+            (andere || []).forEach(a => (Array.isArray(a.photos) ? a.photos : []).forEach(f => { if (f && f.url) fremd.add(f.url); }));
+        } catch (e) { console.warn('Mitbenutzte Fotos nicht geprüft:', e); fremd = null; }
+        (Array.isArray(zeile.photos) ? zeile.photos : []).forEach(f => {
+            if (f && f.path && fremd && !fremd.has(f.url)) wege.push(f.path);
+        });
 
         for (const pfad of wege) {
             try {
@@ -2589,6 +2602,8 @@
             <div class="miet-block-title">${esc(titel)}</div>
             <div class="miet-photo-progress" data-nurerste>${fertig} von ${pos_liste.length} Positionen erfasst${fertig < pos_liste.length
                 ? ` <button type="button" class="miet-photo-start" onclick="window.mietFotoserie('${esc(welche)}')">Rundgang starten</button>`
+                : ''}${maschine
+                ? ` <button type="button" class="miet-photo-start miet-photo-letzte" onclick="window.mietLetzteBilder('${esc(welche)}')">Letzte Bilder</button>`
                 : ''}</div>
             <div class="miet-photo-grid" data-splitbox data-drop-welche="${esc(welche)}">${kacheln}</div>
             ${zusatzBlock(welche)}
@@ -3258,6 +3273,130 @@
         const offen = offenePositionen(welche);
         if (!offen.length) { window.showToast('Für diesen Satz sind bereits alle Bilder vorhanden.'); return; }
         fotosHolen(welche, offen, 'Rundgang starten');
+    };
+
+    // „Letzte Bilder“: Fotos früherer Vereinbarungen derselben Maschine
+    // übernehmen (typisch: Rücknahme-Bilder als neue Übergabe). Übernommen
+    // wird nur die R2-Adresse — die Datei liegt einmal und wird von beiden
+    // Vereinbarungen angezeigt. deleteRentalAgreement löscht sie deshalb nur,
+    // wenn keine andere Vereinbarung sie noch benutzt.
+    window.mietLetzteBilder = async function (welche) {
+        if (!maschine || !window.supabaseClient) return;
+        const box = document.createElement('div');
+        box.className = 'miet-quelle';
+        box.innerHTML = `<div class="miet-quelle-card miet-letzte-card"><h3>Letzte Bilder</h3><p>Wird geladen …</p></div>`;
+        box.addEventListener('click', (e) => { if (e.target === box) box.remove(); });
+        document.body.appendChild(box);
+        const karte = box.firstElementChild;
+
+        let zeilen = [];
+        try {
+            let q = window.supabaseClient.from('rental_agreements')
+                .select('id, created_at, data, photos')
+                .eq('machine_id', maschine.id).order('created_at', { ascending: false }).limit(10);
+            if (gespeicherteId) q = q.neq('id', gespeicherteId);
+            const { data, error } = await q;
+            if (error) throw error;
+            zeilen = data || [];
+        } catch (e) {
+            console.error('Letzte Bilder nicht geladen:', e);
+            karte.querySelector('p').textContent = 'Die früheren Vereinbarungen konnten nicht geladen werden.';
+            return;
+        }
+
+        const datumText = (s) => { if (!s) return ''; const [j, m, t] = String(s).slice(0, 10).split('-'); return t ? `${t}.${m}.${j}` : s; };
+        const gruppen = [];
+        zeilen.forEach(z => {
+            const d = z.data || {};
+            const u = d.unterschriften || {};
+            const zusatz = d.zusatz || {};
+            ['ruecknahme', 'uebergabe'].forEach(ph => {
+                const bilder = (Array.isArray(z.photos) ? z.photos : [])
+                    .filter(f => f && f.url && f.phase === ph)
+                    .map(f => {
+                        const zs = (zusatz[ph] || []).find(x => x && x.pos === f.position);
+                        return { url: f.url, path: f.path || null, pos: f.position, zusatz: zs ? { text: zs.text || '', datum: zs.datum || '' } : null };
+                    });
+                if (!bilder.length) return;
+                const datum = (ph === 'ruecknahme' ? u.r_datum : u.u_datum) || z.created_at;
+                gruppen.push({
+                    titel: `${ph === 'ruecknahme' ? 'Rücknahme' : 'Übergabe'} ${datumText(datum)}`,
+                    mieter: (d.mieter && d.mieter.name) || '',
+                    bilder
+                });
+            });
+        });
+
+        if (!gruppen.length) {
+            karte.innerHTML = `<h3>Letzte Bilder</h3><p>Zu dieser Maschine gibt es noch keine gespeicherten Bilder.</p>
+                <button type="button" class="miet-quelle-abbruch">Schließen</button>`;
+            karte.querySelector('button').onclick = () => box.remove();
+            return;
+        }
+
+        const gewaehlt = new Set(gruppen[0].bilder.map((_, i) => `0|${i}`));   // jüngste Gruppe vorgewählt
+        const wort = welche === 'uebergabe' ? 'Übergabe' : 'Rücknahme';
+        karte.innerHTML = `
+            <h3>Letzte Bilder → ${esc(wort)}</h3>
+            <p>Bilder antippen zum Auswählen. Gleiche Ansichten landen auf ihrer Position, alles andere unter „Weitere Bilder“.</p>
+            <div class="miet-letzte-liste">${gruppen.map((g, gi) => `
+                <div class="miet-letzte-gruppe">
+                    <div class="miet-letzte-kopf"><b>${esc(g.titel)}</b>${g.mieter ? ` · ${esc(g.mieter)}` : ''} · ${g.bilder.length}
+                        <button type="button" class="miet-letzte-alle" data-gruppe="${gi}">Alle</button></div>
+                    <div class="miet-letzte-grid">${g.bilder.map((b, bi) => `
+                        <button type="button" class="miet-letzte-bild" data-key="${gi}|${bi}" title="${esc(b.pos)}">
+                            <img loading="lazy" decoding="async" src="${esc(b.url)}" alt=""><span>${esc(b.zusatz ? (b.zusatz.text || 'Zusatz') : b.pos)}</span>
+                        </button>`).join('')}</div>
+                </div>`).join('')}</div>
+            <button type="button" class="btn-primary" data-ok></button>
+            <button type="button" class="miet-quelle-abbruch" data-abbruch>Abbrechen</button>`;
+
+        const okKnopf = karte.querySelector('[data-ok]');
+        const auffrischen = () => {
+            karte.querySelectorAll('.miet-letzte-bild').forEach(el => el.classList.toggle('an', gewaehlt.has(el.dataset.key)));
+            okKnopf.textContent = `${gewaehlt.size} Bild${gewaehlt.size === 1 ? '' : 'er'} übernehmen`;
+            okKnopf.disabled = !gewaehlt.size;
+        };
+        karte.querySelectorAll('.miet-letzte-bild').forEach(el => el.addEventListener('click', () => {
+            gewaehlt.has(el.dataset.key) ? gewaehlt.delete(el.dataset.key) : gewaehlt.add(el.dataset.key);
+            auffrischen();
+        }));
+        karte.querySelectorAll('.miet-letzte-alle').forEach(el => el.addEventListener('click', () => {
+            const gi = el.dataset.gruppe;
+            const keys = gruppen[gi].bilder.map((_, i) => `${gi}|${i}`);
+            const alle = keys.every(k => gewaehlt.has(k));
+            keys.forEach(k => alle ? gewaehlt.delete(k) : gewaehlt.add(k));
+            auffrischen();
+        }));
+        karte.querySelector('[data-abbruch]').onclick = () => box.remove();
+        okKnopf.onclick = () => {
+            const positionen = fotoPositionen();
+            const satz = daten.fotos[welche] || (daten.fotos[welche] = {});
+            const liste = zusatzListe(welche);
+            const datum = (welche === 'uebergabe' ? daten.unterschriften.u_datum : daten.unterschriften.r_datum) || heute();
+            const schonDa = new Set(Object.values(satz));
+            let n = 0;
+            [...gewaehlt].forEach(k => {
+                const [gi, bi] = k.split('|').map(Number);
+                const b = gruppen[gi].bilder[bi];
+                if (schonDa.has(b.url)) return;
+                if (b.path) fotoPfade[b.url] = b.path;
+                if (!b.zusatz && positionen.includes(b.pos)) {
+                    satz[b.pos] = b.url;
+                } else {
+                    const pos = 'Zusatz ' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+                    satz[pos] = b.url;
+                    liste.push({ pos, datum, text: (b.zusatz && b.zusatz.text) || (b.zusatz ? '' : b.pos) });
+                }
+                schonDa.add(b.url);
+                n++;
+            });
+            box.remove();
+            entwurfMerken();
+            zeichneInhalt();
+            window.showToast(n ? `${n} Bild${n === 1 ? '' : 'er'} übernommen.` : 'Diese Bilder sind schon im Bogen.');
+        };
+        auffrischen();
     };
 
     // Alle Positionen ab "start" (oder ab Anfang), die noch kein Bild haben.
