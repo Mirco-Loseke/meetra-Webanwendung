@@ -1133,6 +1133,21 @@
                 }
             } catch (e) {}
 
+            // Hotel / Unterkunft: beim Öffnen eines gespeicherten Berichts wiederherstellen (fehlte — dadurch war das Hotel
+            // nicht zu sehen und fehlte im PDF; beim erneuten Speichern wäre es sogar gelöscht worden)
+            try {
+                const hatHotel = !!(d.hotel_company || d.hotel_street || d.hotel_zip || d.hotel_city);
+                setVal('service-hotel-company', d.hotel_company);
+                setVal('service-hotel-street', d.hotel_street);
+                setVal('service-hotel-zip', d.hotel_zip);
+                setVal('service-hotel-city', d.hotel_city);
+                setVal('service-hotel-country', d.hotel_country || (hatHotel ? 'Deutschland' : ''));
+                const hw = document.getElementById('service-hotel-fields-wrapper');
+                if (hw) { hw.classList.toggle('hidden', !hatHotel); hw.style.display = hatHotel ? 'block' : 'none'; }
+                const hb = document.getElementById('btn-toggle-hotel');
+                if (hb) hb.textContent = hatHotel ? '- Hotel entfernen' : '+ Hotel hinzufügen';
+            } catch (e) {}
+
             window._servicePreviousReportId = d.previous_report_id || null;
             if (typeof window.renderServiceLinkField === 'function') window.renderServiceLinkField();
         };

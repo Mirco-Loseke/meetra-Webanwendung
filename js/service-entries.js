@@ -518,6 +518,8 @@ window.openServiceberichtModal = function (editData = null) {
             });
             const hotelFieldsWrapper = document.getElementById('service-hotel-fields-wrapper');
             if (hotelFieldsWrapper) { hotelFieldsWrapper.classList.add('hidden'); hotelFieldsWrapper.style.display = 'none'; }
+            const hotelToggleBtn = document.getElementById('btn-toggle-hotel');
+            if (hotelToggleBtn) hotelToggleBtn.textContent = '+ Hotel hinzufügen';
 
             window.serviceFiles = [];
             window.existingServiceFiles = [];
