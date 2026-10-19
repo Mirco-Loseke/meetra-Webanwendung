@@ -573,3 +573,4 @@ a.mz-chip-link:hover { border-color: rgba(16, 185, 129, 0.6); }
 .mz-karte h3 { font-size: 1.1875rem; color: var(--text-1); letter-spacing: 0.04em; margin-bottom: var(--space-4); }
 .mz-tab .mz-gruppe > h4 { font-size: 1.3125rem; }
 .mz-karte h3 .mz-mehr { font-size: var(--fs-md); }
+body.mz-offen #mobile-sidebar-toggle { display: none !important; }
