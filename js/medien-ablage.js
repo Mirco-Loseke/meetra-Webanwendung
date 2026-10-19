@@ -122,7 +122,7 @@
     }
     function tagText(k) {
         if (k === '0000-00-00') return 'Ohne Datum';
-        return new Date(k + 'T12:00:00').toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric' });
+        return new Date(k + 'T12:00:00').toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
     }
 
     function postenHtml(p, alleBilder, gi) {

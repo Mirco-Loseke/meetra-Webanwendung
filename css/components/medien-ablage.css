@@ -181,3 +181,14 @@ button.mv-video:hover { transform: scale(1.03); }
 /* Reiter der Adress-Ablage (Dokumente / Fotos / Videos): größer */
 .ab-ablage-reiter { min-height: 48px; padding: var(--space-2) var(--space-5); font-size: 1.1875rem; font-weight: var(--fw-bold, 700); }
 .ab-ablage-reiter .ab-tab-count { font-size: var(--fs-sm); }
+
+/* Dokumente in der Adress-Ablage: ruhig grau statt rot/grün leuchtend */
+.ab-ablage-dok, .ab-ablage-dok:not(#_):not(#_) { background: rgba(255, 255, 255, 0.06) !important; border: 1px solid rgba(255, 255, 255, 0.18) !important; color: var(--text-1) !important; box-shadow: none !important; }
+.ab-ablage-dok:hover, .ab-ablage-dok:not(#_):not(#_):hover { background: rgba(255, 255, 255, 0.12) !important; border-color: rgba(255, 255, 255, 0.32) !important; }
+
+/* Adress-Ablage: Datum und Eintragstitel zwei Schriftgrößen größer */
+.ab-ablage-datum { font-size: 1.3125rem; padding-bottom: var(--space-2); margin-bottom: var(--space-3); }
+.ab-ablage-kopf { font-size: 1.1875rem; font-weight: var(--fw-bold); color: var(--text-1); margin-bottom: var(--space-3); }
+.ab-ablage-name { font-size: var(--fs-sm); }
+.ab-ablage-dok { font-size: var(--fs-md); }
+h4.ab-ablage-datum, .ab-ablage .ab-ablage-tag h4.ab-ablage-datum { font-size: 1.3125rem !important; }

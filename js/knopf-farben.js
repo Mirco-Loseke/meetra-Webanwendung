@@ -13,7 +13,7 @@
     'use strict';
     const LOESCHEN = /^(🗑\s*)?(löschen|entfernen|endgültig löschen)$|\blöschen\b/i;
     const BEARBEITEN = /^(✎|✏️|✏)?\s*(bearbeiten|ändern|edit)$|\bbearbeiten\b/i;
-    const AUSNAHME = '#mail, .mz-mehr, .ql-toolbar, .knopf-x, [data-knopf-farbe="aus"]';
+    const AUSNAHME = '#mail, .ab-ablage-dok, .mz-mehr, .ql-toolbar, .knopf-x, [data-knopf-farbe="aus"]';
 
     function pruefen(b) {
         if (!b || b.nodeType !== 1 || b.dataset.knopfFarbe) return;

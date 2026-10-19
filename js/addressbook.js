@@ -5312,13 +5312,11 @@
     }
 
     function openMachine(machineId) {
+        // Maschinen-Zentrale (alles zur Maschine, Bearbeiten über das Stift-Symbol dort) — früher fehlten die beiden
+        // Funktionen openMachineDetail/openEditMachineModal, dadurch passierte beim Klick nichts.
         closeModal('addressbook-detail-modal');
-        if (typeof window.switchView === 'function') window.switchView('machines');
-        if (typeof window.openMachineDetail === 'function') {
-            window.openMachineDetail(machineId);
-        } else if (typeof window.openEditMachineModal === 'function') {
-            window.openEditMachineModal(machineId);
-        }
+        if (typeof window.openMaschinenZentrale === 'function') window.openMaschinenZentrale(machineId);
+        else if (typeof window.openMachineDetails === 'function') window.openMachineDetails(machineId);
     }
 
     // ---------- Manuelle (lokale) Maschinen für Adressen ----------

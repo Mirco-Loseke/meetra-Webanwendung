@@ -564,3 +564,12 @@ a.mz-chip-link:hover { border-color: rgba(16, 185, 129, 0.6); }
 /* Videos im Verlauf: Vorschaubild in Fotogröße, Dauer klein in der Ecke (js/medien-ablage.js) */
 .mz-fotos .mv-video { width: 100%; aspect-ratio: 4 / 3; height: auto; border-radius: 8px; }
 .mz-videos { margin-top: var(--space-2); }
+
+/* Fenster fast bildschirmfüllend (wie die Adress-Ansicht) */
+.mz-overlay { padding: calc(env(safe-area-inset-top, 0px) + 2vh) 2vw 2vh; }
+.mz-panel { width: min(1760px, 100%); min-height: 96vh; }
+
+/* Gruppen-/Kartenüberschriften größer */
+.mz-karte h3 { font-size: 1.1875rem; color: var(--text-1); letter-spacing: 0.04em; margin-bottom: var(--space-4); }
+.mz-tab .mz-gruppe > h4 { font-size: 1.3125rem; }
+.mz-karte h3 .mz-mehr { font-size: var(--fs-md); }
