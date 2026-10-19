@@ -50,10 +50,6 @@
             <form id="servicebericht-form">
                 <input type="hidden" id="service-report-title" value="Servicebericht">
 
-                <!-- Verknüpfung mit einem bestehenden Bericht derselben Maschine.
-                     Inhalt kommt aus window.renderServiceLinkField
-                     (js/service-report-form.js); beim Anlegen ausgeblendet. -->
-                <div class="form-section" id="service-link-field" style="display:none;"></div>
 
                 <!-- Step 1: Machine Selection -->
                 <div class="form-section">
@@ -589,6 +585,11 @@
                     </div>
                 </div>
 
+                <!-- Verknüpft: mit welchem Bericht dieser verbunden ist, bestehende Berichte verknüpfen oder einen neuen
+                     verknüpften anlegen. Inhalt kommt aus window.renderServiceLinkField (js/service-report-form.js);
+                     beim Anlegen eines neuen Berichts ausgeblendet. -->
+                <div class="form-section" id="service-link-field" style="display:none; margin-top: 2rem;"></div>
+
                 <div class="modal-actions"
                     style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1.5rem; margin-top: 2rem; display: flex; gap: 10px; justify-content: flex-end; align-items: stretch; flex-wrap: wrap; width: 100%;">
 
@@ -597,10 +598,6 @@
                         Abbrechen
                     </button>
 
-                    <button type="button" class="btn-modal-base hidden" id="btn-servicebericht-follow-up" onclick="window.createFolgebericht()" title="Neuen Servicebericht anlegen, der mit diesem verknüpft ist" style="gap: 8px; flex: 1;" onmouseover="this.style.background='rgba(16,185,129,0.28)'" onmouseout="this.style.background='rgba(16,185,129,0.15)'">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
-                        Folgebericht
-                    </button>
 
                     <button type="button" class="btn-modal-base" id="btn-servicebericht-preview" onclick="window.previewServiceberichtPDF()" style="gap: 8px; flex: 1;" onmouseover="this.style.background='rgba(139,92,246,0.28)'" onmouseout="this.style.background='rgba(139,92,246,0.15)'">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>

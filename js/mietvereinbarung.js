@@ -276,7 +276,9 @@
         // ausgerechnet dann, wenn der Empfang schlecht ist.
         ladeHtml2Canvas().catch(() => { });
         if (typeof window.loadPDFGenerators === 'function') { try { window.loadPDFGenerators(); } catch (e) { } }
-        uebernehmeEinweiserUnterschrift();
+        // Automatisch nur bei einem NEUEN Bogen — in gespeicherten Bögen und wiederhergestellten Entwürfen bleibt, was dort steht
+        // (auch eine bewusst entfernte Unterschrift)
+        if (!geladen && !(entwurf && entwurf.daten)) uebernehmeEinweiserUnterschrift(false);
         // Wiederhergestellter Entwurf gilt als ungespeichert, alles andere als Grundstand.
         basisStand = (entwurf && entwurf.daten && !agreementId && !entwurf.gespeicherteId) ? '' : standJetzt();
         if (!geladen) ladeBetriebsstunden();
@@ -2853,20 +2855,35 @@
         const u = (window.userList || []).find(x => String(x.id) === String(id));
         daten.einweisung.durch_id = id || '';
         daten.einweisung.durch_name = u ? u.name : '';
-        uebernehmeEinweiserUnterschrift();
+        uebernehmeEinweiserUnterschrift(true);
         zeichneInhalt();
     };
 
     // Die hinterlegte Unterschrift des Einweisers wandert in das
     // Vermieter-Feld der Uebergabe — genau wie beim Servicebericht.
-    function uebernehmeEinweiserUnterschrift() {
+    // wechsel = true: der Einweiser wurde gewechselt → die Unterschrift wechselt mit (neue hinterlegte Unterschrift
+    // oder, wenn keine hinterlegt ist, entfernen). wechsel = false (neuer Bogen): nur eintragen, wenn noch leer.
+    function uebernehmeEinweiserUnterschrift(wechsel) {
         const id = daten.einweisung.durch_id;
-        if (!id || typeof window.userSignatur !== 'function') return;
+        if (!id) {
+            if (wechsel && daten.unterschriften.u_vermieter) { daten.unterschriften.u_vermieter = null; if (typeof zeichneInhalt === 'function') zeichneInhalt(); }
+            return;
+        }
+        if (typeof window.userSignatur !== 'function') return;
+        const hatteSig = !!daten.unterschriften.u_vermieter;
         // Bild wird nachgeladen (nicht mehr Teil der Nutzerliste); danach neu zeichnen.
         window.userSignatur(id).then(sig => {
-            if (!sig || String(daten.einweisung.durch_id) !== String(id)) return;
-            if (daten.unterschriften.u_vermieter === sig) return;
-            daten.unterschriften.u_vermieter = sig;
+            if (String(daten.einweisung.durch_id) !== String(id)) return;
+            if (wechsel) {
+                const neu = sig || null;
+                if (daten.unterschriften.u_vermieter === neu) return;
+                daten.unterschriften.u_vermieter = neu;
+                if (hatteSig && window.showToast) window.showToast(sig ? 'Unterschrift auf ' + daten.einweisung.durch_name + ' umgestellt.'
+                    : 'Unterschrift entfernt — ' + daten.einweisung.durch_name + ' hat keine hinterlegte Unterschrift, bitte unterschreiben.', sig ? 'success' : 'warn');
+            } else {
+                if (!sig || daten.unterschriften.u_vermieter) return;
+                daten.unterschriften.u_vermieter = sig;
+            }
             if (typeof zeichneInhalt === 'function') zeichneInhalt();
         });
     }

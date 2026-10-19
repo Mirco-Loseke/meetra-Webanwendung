@@ -645,26 +645,21 @@
             applyAutoTechSignature(vorherErster);
         };
 
-        // Füllt die Techniker-Unterschrift mit der hinterlegten Unterschrift des ersten
-        // ausgewählten Technikers (bei mehreren Technikern bewusst nur einer, nicht alle).
-        // Wechselt der Techniker (Timo → Gerd), wechselt die Unterschrift mit — auch in
-        // einem gespeicherten Bericht, sofern dort die hinterlegte Unterschrift des
-        // bisherigen Technikers steht. Eine von Hand gezeichnete bleibt unangetastet.
+        // Techniker-Unterschrift folgt dem ERSTEN ausgewählten Techniker (bei mehreren bewusst nur einer).
+        // Wechselt er (Timo → Gerd), wechselt die Unterschrift IMMER mit — auch eine von Hand gezeichnete und auch in einem
+        // gespeicherten Bericht: sie wird durch die hinterlegte Unterschrift des neuen Technikers ersetzt oder, wenn
+        // der keine hat, entfernt. So steht nie die Unterschrift von jemandem im Bericht, der nichts damit zu tun hatte.
+        // Bleibt der erste Techniker gleich, wird nichts angefasst.
         async function applyAutoTechSignature(vorherErster) {
             const techSigInput = document.getElementById('service-tech-signature');
             if (!techSigInput) return;
-            if (techSigInput.value && !window._techSigIsAutofilled) {
-                if (vorherErster == null || typeof window.userSignatur !== 'function') return;
-                if (String(selectedTechs[0]) === String(vorherErster)) return;   // Erster unverändert
-                const alteSig = (await window.userSignatur(vorherErster)) || '';
-                if (!alteSig || techSigInput.value !== alteSig) return;          // von Hand gezeichnet
-            }
-
             const primaryTechId = selectedTechs.length > 0 ? selectedTechs[0] : null;
+            if (String(primaryTechId) === String(vorherErster)) return;   // Erster unverändert
+            const hatteSig = !!techSigInput.value;
             // Unterschriftsbild wird nicht mehr mit der Nutzerliste geladen, sondern hier nachgeholt.
             const sig = primaryTechId != null && typeof window.userSignatur === 'function' ? (await window.userSignatur(primaryTechId)) || '' : '';
             // Inzwischen anderer Techniker gewählt? Dann gilt der spätere Aufruf.
-            if (primaryTechId != null && String(selectedTechs[0]) !== String(primaryTechId)) return;
+            if (String(selectedTechs.length > 0 ? selectedTechs[0] : null) !== String(primaryTechId)) return;
 
             techSigInput.value = sig;
             const img = document.getElementById('tech-signature-preview-img');
@@ -680,6 +675,11 @@
                 if (ph) ph.classList.remove('hidden');
                 if (btn) btn.classList.add('hidden');
                 window._techSigIsAutofilled = false;
+            }
+            if (hatteSig && window.showToast) {
+                const name = id => { const u = (window.userList || []).find(x => String(x.id) === String(id)); return u ? u.name : ''; };
+                window.showToast(sig ? 'Unterschrift auf ' + name(primaryTechId) + ' umgestellt.'
+                    : 'Unterschrift entfernt' + (primaryTechId != null ? ' — ' + name(primaryTechId) + ' hat keine hinterlegte Unterschrift, bitte unterschreiben.' : '.'), sig ? 'success' : 'warn');
             }
         }
 
@@ -1184,20 +1184,32 @@
                 return `${datum} — ${e.title || 'Servicebericht'}`;
             };
 
+            // Berichte, die an diesen angehängt sind (Folgeberichte)
+            const folge = (window.allServiceEntries || [])
+                .filter(e => String(e.previous_report_id || '') === eigene)
+                .sort((x, y) => new Date(x.date || x.created_at || 0) - new Date(y.date || y.created_at || 0));
+            const h = x => String(x).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+            const zeile = (e, text) => `<div style="display:flex; align-items:center; gap:8px; padding:6px 0;">
+                <span style="flex:1; min-width:0;">${h(text)} ${h(fmt(e))}</span>
+                <button type="button" class="btn-secondary" style="padding:6px 12px; font-size:0.82rem;" onclick="window.jumpToServicebericht(${e.id})">Ansehen</button></div>`;
+            const vorher = gewaehlt ? (window.allServiceEntries || []).find(e => String(e.id) === gewaehlt) : null;
+
             box.innerHTML = `
-                <label class="form-label-caps" style="display:block; margin-bottom:0.4rem;">Gehört zu Bericht</label>
-                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-                    <select id="service-link-select" class="glass-form-input" style="flex:1; min-width:220px;">
-                        <option value="">— keine Verknüpfung —</option>
-                        ${kandidaten.map(e => `<option value="${e.id}"${String(e.id) === gewaehlt ? ' selected' : ''}>${
-                            String(fmt(e)).replace(/&/g, '&amp;').replace(/</g, '&lt;')
-                        }</option>`).join('')}
-                    </select>
-                    ${gewaehlt ? `<button type="button" class="btn-secondary" style="padding:8px 12px; font-size:0.82rem;"
-                        onclick="window.jumpToServicebericht(${gewaehlt})">Ansehen</button>` : ''}
+                <label class="form-label-caps" style="display:block; margin-bottom:0.6rem; font-size:0.95rem;">Verknüpft</label>
+                <div style="padding:12px 14px; border:1px solid rgba(255,255,255,0.1); border-radius:12px; background:rgba(255,255,255,0.03);">
+                    ${vorher ? zeile(vorher, 'Gehört zu:') : ''}
+                    ${folge.map(e => zeile(e, 'Folgebericht:')).join('')}
+                    ${!vorher && !folge.length ? '<div style="color:rgba(255,255,255,0.55); padding:4px 0 8px;">Mit keinem Bericht verknüpft.</div>' : ''}
+                    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:8px;">
+                        <select id="service-link-select" class="glass-form-input" style="flex:1; min-width:220px;">
+                            <option value="">— mit bestehendem Bericht verknüpfen —</option>
+                            ${kandidaten.map(e => `<option value="${e.id}"${String(e.id) === gewaehlt ? ' selected' : ''}>${h(fmt(e))}</option>`).join('')}
+                        </select>
+                        <button type="button" class="btn-secondary" style="padding:8px 14px;" onclick="window.createFolgebericht()" title="Neuen Servicebericht anlegen, der direkt mit diesem verknüpft ist">＋ Neuen verknüpften Bericht erstellen</button>
+                    </div>
                 </div>
-                <small style="display:block; margin-top:5px; color:rgba(255,255,255,0.45); font-size:0.75rem;">
-                    Dieser Bericht wird als Folgebericht des gewählten geführt. Wirksam nach dem Speichern.
+                <small style="display:block; margin-top:6px; color:rgba(255,255,255,0.45); font-size:0.78rem;">
+                    Die Auswahl macht diesen Bericht zum Folgebericht des gewählten — wirksam nach dem Speichern.
                     ${kandidaten.length ? '' : 'Für diese Maschine gibt es keinen weiteren Bericht.'}
                 </small>`;
 
